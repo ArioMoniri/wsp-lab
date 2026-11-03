@@ -47,3 +47,5 @@
 | 2026-11-03 | Board A feat/plots-design | claude_aio_gmail_api/claude-haiku-5-5 | running |
 | 2026-11-03 | zoo REVISE round (1st) | codex/gpt-6.1-terra high | partial, WIP committed |
 | 2026-11-03 | zoo REVISE round (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-03 | Board A feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | REVISE (4 blocking) |
+| 2026-11-03 | heretic+lora REVISE round | codex/gpt-6.1-sol high | running |
