@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 PHASE="${WSP_PHASE:-P0}"; MIRROR="board/$PHASE.md"; mkdir -p board
 REPO="${WSP_GH_REPO:-$(git remote get-url origin 2>/dev/null | sed -E 's#.*github.com[:/]##; s#\.git$##' || true)}"
 issue_num() { gh issue list -R "$REPO" --label board --search "in:title [board] $PHASE" --json number --jq '.[0].number' 2>/dev/null || true; }
-post() { local body="$1"; printf '%s\n' "$body" >> "$MIRROR"
+post() { local body; body=$(printf "%s" "$1" | sed -E "s/(secret_wsp_|hf_|gho_|glpat-|sk-)[A-Za-z0-9_.-]+/<redacted>/g"); printf '%s\n' "$body" >> "$MIRROR"
   if [ -n "$REPO" ]; then n=$(issue_num); if [ -z "$n" ]; then n=$(gh issue create -R "$REPO" --label board --title "[board] $PHASE" --body "Agent message board for $PHASE (docs/BOARD.md)" 2>/dev/null | grep -oE "[0-9]+$"); fi
     gh issue comment "$n" -R "$REPO" --body "$body" >/dev/null 2>&1 || printf '%s\n' "$body" >> board/.queue; fi; }
 ts() { date -u +%FT%TZ; }
