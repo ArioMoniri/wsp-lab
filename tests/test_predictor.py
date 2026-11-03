@@ -41,3 +41,25 @@ def test_can_overfit_tiny_trajectory_dataset():
         loss.backward()
         opt.step()
     assert loss.item() < 0.01
+
+
+def test_chunked_scan_matches_loop():
+    from wsp.predictor.scan import selective_scan
+
+    torch.manual_seed(4)
+    u = torch.randn(2, 130, 8)
+    dt = torch.rand_like(u) * 0.1
+    a = -torch.rand(8, 4)
+    b = torch.randn(2, 130, 4)
+    c = torch.randn_like(b)
+    d = torch.randn(8)
+    h = torch.zeros(2, 8, 4)
+    expected = []
+    for t in range(u.shape[1]):
+        h = (dt[:, t, :, None] * a).exp() * h + dt[:, t, :, None] * b[:, t, None, :] * u[
+            :, t, :, None
+        ]
+        expected.append((h * c[:, t, None, :]).sum(-1) + d * u[:, t])
+    torch.testing.assert_close(
+        selective_scan(u, dt, a, b, c, d), torch.stack(expected, 1), atol=1e-4, rtol=1e-4
+    )

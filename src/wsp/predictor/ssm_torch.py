@@ -11,6 +11,8 @@ import logging
 import torch
 from torch import nn
 
+from .scan import selective_scan
+
 log = logging.getLogger(__name__)
 
 try:  # pragma: no cover - depends on CUDA build
@@ -52,14 +54,7 @@ class SelectiveSSMBlock(nn.Module):
         Bm, Cm, dt = bcd.split([self.A_log.shape[1], self.A_log.shape[1], 1], dim=-1)
         dt = torch.nn.functional.softplus(self.dt_proj(dt))  # (B,T,d_inner)
         A = -torch.exp(self.A_log)  # (d_inner, d_state)
-        h = torch.zeros(x.shape[0], self.d_inner, A.shape[1], device=x.device, dtype=u.dtype)
-        ys = []
-        for t in range(x.shape[1]):
-            dA = torch.exp(dt[:, t, :, None] * A)  # (B,d_inner,d_state)
-            dBu = dt[:, t, :, None] * Bm[:, t, None, :] * u[:, t, :, None]
-            h = dA * h + dBu
-            ys.append((h * Cm[:, t, None, :]).sum(-1) + self.D * u[:, t])
-        y = torch.stack(ys, dim=1) * torch.nn.functional.silu(z)
+        y = selective_scan(u, dt, A, Bm, Cm, self.D) * torch.nn.functional.silu(z)
         return res + self.out_proj(y)
 
 

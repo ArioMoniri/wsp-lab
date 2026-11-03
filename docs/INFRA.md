@@ -22,3 +22,19 @@
 - Remote bootstrap: `scripts/lambda_bootstrap.sh` clones this repo, makes the venv, pulls models, and
   `rsync`s `data/evals` and `data/features` back here (the server is the single source of truth).
 - Needed from the user: `LAMBDA_API_KEY` (asked when P5 starts) and an SSH key registered in Lambda.
+
+## mamba-ssm
+
+On 2026-11-03, the latest 30 GitHub releases of state-spaces/mamba and
+Dao-AILab/causal-conv1d had no torch 2.15 / CUDA 13 wheel. A source build is
+running in `wsp-mamba2`, log `~/agent-logs/wsp-mamba2-20261103-231214.log`:
+
+```sh
+source .venv/bin/activate
+export TORCH_CUDA_ARCH_LIST=12.0 MAX_JOBS=4 CUDA_HOME=/usr/local/cuda
+uv pip install --no-build-isolation causal-conv1d mamba-ssm
+```
+
+The causal-conv1d build system generates many CUDA architectures despite
+`TORCH_CUDA_ARCH_LIST`; completion and import remain unverified. The previous
+build failed compiling extension objects; see `~/agent-logs/wsp-mamba-20261103-225608.log`.
