@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import json
 import math
 import random
@@ -13,10 +14,11 @@ import numpy as np
 import torch
 import transformers
 from datasets import load_dataset
+from heretic.model import get_model_class
 from peft import LoraConfig, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
 
-from wsp.schema import EditDescriptor
+from wsp.schema import EditDescriptor, write_manifest
 
 TARGET_MAP = {
     "q": "q_proj",
@@ -64,123 +66,6 @@ def compute_adapter_stats(peft_model: torch.nn.Module) -> tuple[list[str], float
     return sorted(touched_tensors), math.sqrt(fro_sq)
 
 
-class ToyTransformer(torch.nn.Module):
-    """Minimal 2-layer toy model for CPU unit tests (~50k params)."""
-
-    def __init__(self, d: int = 32, ff: int = 64):
-        super().__init__()
-        self.layers = torch.nn.ModuleList(
-            [
-                torch.nn.ModuleDict(
-                    {
-                        "attn": torch.nn.ModuleDict(
-                            {
-                                "q_proj": torch.nn.Linear(d, d, bias=False),
-                                "k_proj": torch.nn.Linear(d, d, bias=False),
-                                "v_proj": torch.nn.Linear(d, d, bias=False),
-                                "o_proj": torch.nn.Linear(d, d, bias=False),
-                            }
-                        ),
-                        "mlp": torch.nn.ModuleDict(
-                            {
-                                "gate_proj": torch.nn.Linear(d, ff, bias=False),
-                                "down_proj": torch.nn.Linear(ff, d, bias=False),
-                                "up_proj": torch.nn.Linear(d, ff, bias=False),
-                            }
-                        ),
-                    }
-                )
-                for _ in range(2)
-            ]
-        )
-        self.head = torch.nn.Linear(d, 32, bias=False)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        h = x
-        for layer in self.layers:
-            attn = layer["attn"]
-            mlp = layer["mlp"]
-            q = attn["q_proj"](h)
-            k = attn["k_proj"](h)
-            v = attn["v_proj"](h)
-            o = attn["o_proj"](q + k + v)
-            h = h + o
-            up = mlp["up_proj"](h)
-            down = mlp["down_proj"](up)
-            h = h + down
-        return self.head(h)
-
-
-def _generate_toy(
-    params: dict[str, Any],
-    seed: int,
-    out_dir: Path,
-) -> EditDescriptor:
-    """Run toy SFT on CPU without external weights."""
-    torch.manual_seed(seed)
-    toy = ToyTransformer()
-    rank = int(params.get("rank", 4))
-    lr = float(params.get("lr", 1e-3))
-    steps = int(params.get("steps", 3))
-    raw_targets = params.get("targets", ["o", "up", "down"])
-    targets = map_targets(raw_targets)
-
-    lora_cfg = LoraConfig(
-        r=rank,
-        lora_alpha=rank,
-        target_modules=targets,
-        bias="none",
-    )
-    peft_model = get_peft_model(toy, lora_cfg)
-    optimizer = torch.optim.AdamW(peft_model.parameters(), lr=lr)
-
-    loss_curve = []
-    g = torch.Generator().manual_seed(seed)
-    for step in range(steps):
-        x = torch.randn(2, 4, 32, generator=g)
-        target = torch.randn(2, 4, 32, generator=g)
-        out = peft_model(x)
-        loss = torch.nn.functional.mse_loss(out, target)
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        loss_curve.append(
-            {
-                "step": step + 1,
-                "loss": float(loss.item()),
-            }
-        )
-
-    lora_dir = out_dir / "lora"
-    lora_dir.mkdir(parents=True, exist_ok=True)
-    peft_model.save_pretrained(str(lora_dir))
-
-    train_file = out_dir / "train.json"
-    train_data = {
-        "loss_curve": loss_curve,
-        "params": params,
-        "seed": seed,
-    }
-    train_file.write_text(json.dumps(train_data, indent=2))
-
-    touched_tensors, delta_fro_norm = compute_adapter_stats(peft_model)
-
-    desc_params = dict(params)
-    desc_params["delta_format"] = "lora"
-    desc = EditDescriptor(
-        family="lora_sft",
-        params=desc_params,
-        seed=seed,
-        base_model="toy",
-        base_revision="main",
-        git_sha=get_git_sha(),
-        touched_tensors=touched_tensors,
-        delta_fro_norm=delta_fro_norm,
-    )
-    (out_dir / "edit.json").write_text(desc.to_json())
-    return desc
-
-
 def generate(
     base_model: str,
     params: dict[str, Any],
@@ -190,7 +75,7 @@ def generate(
     """Run PEFT LoRA SFT and save the adapter.
 
     Args:
-        base_model: Model name/path (or 'toy' for CPU testing).
+        base_model: Hugging Face model ID or local model path.
         params: Hyperparameters (rank, lr, steps, targets, dataset, etc.).
         seed: Random seed.
         out_dir: Directory where edit.json, lora/, and train.json will be written.
@@ -200,9 +85,6 @@ def generate(
     """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    if base_model == "toy" or params.get("mock", False):
-        return _generate_toy(params, seed, out_dir)
 
     # Fixed seeds for reproducibility
     torch.manual_seed(seed)
@@ -223,14 +105,18 @@ def generate(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    tokenizer = AutoTokenizer.from_pretrained(base_model)
+    if steps < 1 or rank < 1 or batch_size < 1:
+        raise ValueError("steps, rank, and batch_size must be positive")
+    revision = params.get("base_revision", "main")
+    tokenizer = AutoTokenizer.from_pretrained(base_model, revision=revision)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    model = AutoModelForCausalLM.from_pretrained(
+    model = get_model_class(base_model).from_pretrained(
         base_model,
-        torch_dtype=torch.bfloat16,
+        revision=revision,
+        dtype=torch.bfloat16,
         device_map="auto" if torch.cuda.is_available() else None,
     )
 
@@ -240,23 +126,30 @@ def generate(
         target_modules=targets,
         lora_dropout=0.0,
         bias="none",
-        task_type="CAUSAL_LM",
     )
     peft_model = get_peft_model(model, lora_config)
     peft_model.train()
+    peft_model.config.use_cache = False
 
     # Load dataset
-    if dataset_name == "alpaca_cleaned_5k":
-        ds = load_dataset("mlabonne/harmless_alpaca", split="train[:5000]")
-        prompts = [str(item["text"]) for item in ds]
-    else:  # default: gsm8k_train
+    if "texts" in params:
+        prompts = list(params["texts"])
+    elif dataset_name == "alpaca_cleaned_5k":
+        ds = load_dataset("yahma/alpaca-cleaned", split="train[:5000]")
+        prompts = [f"{item['instruction']}\n{item['input']}\n{item['output']}" for item in ds]
+    elif dataset_name == "gsm8k_train":
         ds = load_dataset("openai/gsm8k", "main", split="train")
         prompts = [f"Question: {item['question']}\nAnswer: {item['answer']}" for item in ds]
+
+    else:
+        raise ValueError(f"unknown SFT dataset: {dataset_name}")
+    if not prompts:
+        raise ValueError("SFT requires nonempty training texts")
 
     rng = random.Random(seed)
     rng.shuffle(prompts)
 
-    optimizer = torch.optim.AdamW(peft_model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW((p for p in peft_model.parameters() if p.requires_grad), lr=lr)
 
     loss_curve: list[dict[str, Any]] = []
     prompt_idx = 0
@@ -312,14 +205,23 @@ def generate(
         params=desc_params,
         seed=seed,
         base_model=base_model,
-        base_revision="main",
+        base_revision=revision,
         git_sha=get_git_sha(),
         touched_tensors=touched_tensors,
         delta_fro_norm=delta_fro_norm,
     )
     (out_dir / "edit.json").write_text(desc.to_json())
 
-    # Free memory
+    write_manifest(
+        out_dir / "manifest.json",
+        seed=seed,
+        config_hash=desc.id,
+        git_sha=desc.git_sha,
+        model_revisions={base_model: revision},
+        params=desc_params,
+    )
+    del outputs, loss, inputs, optimizer, peft_model, model
+    gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import json
 import math
 import subprocess
@@ -10,16 +11,15 @@ from typing import Any
 
 import optuna
 import torch
-from heretic.config import ModifierConfig, Settings
+from heretic.config import InitOnlySettings as Settings
 from heretic.evaluator import Evaluator
 from heretic.model import Model
 from heretic.modifiers import ara
 from heretic.plugin import Context
 from heretic.system import empty_cache
 from optuna.samplers import TPESampler
-from peft import LoraConfig, get_peft_model
 
-from wsp.schema import EditDescriptor
+from wsp.schema import EditDescriptor, write_manifest
 
 
 def get_git_sha() -> str:
@@ -84,114 +84,6 @@ def compute_adapter_stats(peft_model: torch.nn.Module) -> tuple[list[str], float
     return sorted(touched_tensors), math.sqrt(fro_sq)
 
 
-class ToyTransformer(torch.nn.Module):
-    """Minimal 2-layer toy model for CPU unit tests (~50k params)."""
-
-    def __init__(self, d: int = 32, ff: int = 64):
-        super().__init__()
-        self.layers = torch.nn.ModuleList(
-            [
-                torch.nn.ModuleDict(
-                    {
-                        "attn": torch.nn.ModuleDict({"o_proj": torch.nn.Linear(d, d, bias=False)}),
-                        "mlp": torch.nn.ModuleDict(
-                            {
-                                "down_proj": torch.nn.Linear(ff, d, bias=False),
-                                "up_proj": torch.nn.Linear(d, ff, bias=False),
-                            }
-                        ),
-                    }
-                )
-                for _ in range(2)
-            ]
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x
-
-
-def _generate_toy(
-    params: dict[str, Any],
-    seed: int,
-    out_dir: Path,
-) -> EditDescriptor:
-    """Run toy ARA on CPU without downloading external weights."""
-    g = torch.Generator().manual_seed(seed)
-    toy = ToyTransformer()
-    rank = int(params.get("lora_rank", 4))
-    n_trials = int(params.get("trials", 2))
-    p_weight = float(params.get("preserve_good_behavior_weight", 1.0))
-    kl_target = params.get("kl_divergence_target")
-
-    lora_cfg = LoraConfig(
-        r=rank,
-        lora_alpha=rank,
-        target_modules=["o_proj", "down_proj", "up_proj"],
-        bias="none",
-    )
-    peft_model = get_peft_model(toy, lora_cfg)
-
-    trial_records = []
-    for i in range(1, n_trials + 1):
-        # Simulate realistic trial values
-        trial_refusal = float(torch.rand(1, generator=g).item()) * 0.5 / i
-        trial_kl = float(torch.rand(1, generator=g).item()) * 0.2 * i
-        trial_records.append(
-            {
-                "trial": i,
-                "parameters": {
-                    "start_layer_index": 0,
-                    "end_layer_index": 2,
-                    "preserve_good_behavior_weight": p_weight,
-                    "steer_bad_behavior_weight": 0.1 * i,
-                    "overcorrect_relative_weight": 0.5,
-                    "neighbor_count": 5,
-                },
-                "refusals": trial_refusal,
-                "kl_divergence": trial_kl,
-            }
-        )
-
-    best_trial = select_best_trial(trial_records, kl_divergence_target=kl_target)
-
-    # Apply small non-zero weights for best trial to simulate optimization
-    with torch.no_grad():
-        for module in peft_model.modules():
-            if hasattr(module, "lora_B") and "default" in module.lora_B:
-                module.lora_B["default"].weight.normal_(generator=g, std=0.01)
-                module.lora_A["default"].weight.normal_(generator=g, std=0.01)
-
-    lora_dir = out_dir / "lora"
-    lora_dir.mkdir(parents=True, exist_ok=True)
-    peft_model.save_pretrained(str(lora_dir))
-
-    study_file = out_dir / "study.json"
-    study_data = {
-        "trials": trial_records,
-        "best_trial": best_trial,
-        "seed": seed,
-        "params": params,
-    }
-    study_file.write_text(json.dumps(study_data, indent=2))
-
-    touched_tensors, delta_fro_norm = compute_adapter_stats(peft_model)
-
-    desc_params = dict(params)
-    desc_params["delta_format"] = "lora"
-    desc = EditDescriptor(
-        family="heretic_ara",
-        params=desc_params,
-        seed=seed,
-        base_model="toy",
-        base_revision="main",
-        git_sha=get_git_sha(),
-        touched_tensors=touched_tensors,
-        delta_fro_norm=delta_fro_norm,
-    )
-    (out_dir / "edit.json").write_text(desc.to_json())
-    return desc
-
-
 def generate(
     base_model: str,
     params: dict[str, Any],
@@ -201,7 +93,7 @@ def generate(
     """Run Heretic ARA modifier programmatically and save the PEFT LoRA adapter.
 
     Args:
-        base_model: Model name/path (or "toy" for CPU tests).
+        base_model: Hugging Face model ID or local model path.
         params: Hyperparameters (preserve_good_behavior_weight, trials, kl_divergence_target, etc.).
         seed: Random seed.
         out_dir: Directory where edit.json, lora/, and study.json will be written.
@@ -212,26 +104,30 @@ def generate(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    if base_model == "toy" or params.get("mock", False):
-        return _generate_toy(params, seed, out_dir)
-
+    torch.manual_seed(seed)
     n_trials = int(params.get("trials", 40))
+    if n_trials < 1:
+        raise ValueError("trials must be positive")
     lora_rank = int(params.get("lora_rank", 50))
     p_weight = params.get("preserve_good_behavior_weight")
     kl_target = params.get("kl_divergence_target")
 
-    settings = Settings(
-        model=base_model,
-        seed=seed,
-        batch_size=4,
-        n_trials=n_trials,
-        modifiers=[ModifierConfig(plugin="heretic.modifiers.ara.ARA")],
-    )
+    settings_values = {
+        "model": base_model,
+        "seed": seed,
+        "model_commit": params.get("base_revision"),
+        "batch_size": int(params.get("batch_size", 1)),
+        "dtypes": ["bfloat16"],
+        "device_map": params.get("device_map", "auto"),
+        "max_response_length": int(params.get("max_response_length", 100)),
+    }
+    settings_values.update(params.get("heretic_settings", {}))
+    settings = Settings(**settings_values)
 
     model = Model(settings)
     evaluator = Evaluator(settings, model)
 
-    ara_settings = ara.Settings(lora_rank=lora_rank)
+    ara_settings = ara.Settings(lora_rank=lora_rank, **params.get("ara_settings", {}))
     modifier = ara.ARA(heretic_settings=settings, settings=ara_settings)
     ctx = Context(settings=settings, model=model)
     modifier.init(ctx)
@@ -314,14 +210,24 @@ def generate(
         params=desc_params,
         seed=seed,
         base_model=base_model,
-        base_revision="main",
+        base_revision=params.get("base_revision", "main"),
         git_sha=get_git_sha(),
         touched_tensors=touched_tensors,
         delta_fro_norm=delta_fro_norm,
     )
     (out_dir / "edit.json").write_text(desc.to_json())
 
-    # Free memory
+    write_manifest(
+        out_dir / "manifest.json",
+        seed=seed,
+        config_hash=desc.id,
+        git_sha=desc.git_sha,
+        model_revisions={base_model: desc.base_revision},
+        params=desc_params,
+    )
+    # Break the objective closure and release all live tensors before emptying CUDA cache.
+    ctx = modifier = evaluator = model = None
+    gc.collect()
     empty_cache()
 
     return desc

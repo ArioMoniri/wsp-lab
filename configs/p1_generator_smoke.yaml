@@ -1,0 +1,28 @@
+base_model: Qwen/Qwen3.5-0.8B
+heretic_ara:
+  preserve_good_behavior_weight: 1.0
+  trials: 2
+  lora_rank: 4
+  batch_size: 1
+  max_response_length: 8
+  heretic_settings:
+    device_map: cuda:0
+    scorer:
+      KeywordRate:
+        prompts: {dataset: mlabonne/harmful_behaviors, split: 'test[:2]', column: text}
+      KLDivergence:
+        prompts: {dataset: mlabonne/harmless_alpaca, split: 'test[:2]', column: text}
+  ara_settings:
+    good_prompts: {dataset: mlabonne/harmless_alpaca, split: 'train[:4]', column: text}
+    bad_prompts: {dataset: mlabonne/harmful_behaviors, split: 'train[:4]', column: text}
+    n_optimization_steps: 1
+    max_iter: 2
+    history_size: 2
+lora_sft:
+  rank: 4
+  lr: 0.0002
+  steps: 5
+  targets: [q, v]
+  batch_size: 1
+  max_length: 64
+  dataset: gsm8k_train

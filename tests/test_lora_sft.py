@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 
@@ -20,7 +21,7 @@ def test_map_targets():
     assert map_targets(["q_proj", "custom"]) == ["q_proj", "custom"]
 
 
-def test_generate_lora_sft_toy(tmp_path: Path):
+def test_generate_lora_sft_toy(tmp_path: Path, fake_sft):
     out_dir = tmp_path / "lora_sft_toy"
     params = {
         "rank": 4,
@@ -66,13 +67,13 @@ def test_generate_lora_sft_toy(tmp_path: Path):
 @pytest.mark.gpu
 @pytest.mark.slow
 def test_generate_lora_sft_smoke_gpu(tmp_path: Path, cuda):
-    out_dir = tmp_path / "lora_sft_gpu"
-    params = {
-        "rank": 4,
-        "lr": 2e-4,
-        "steps": 5,
-        "targets": ["q", "v"],
-    }
+    out_dir = Path(__file__).parents[1] / "data/runs/p1-generator-smoke/lora_sft"
+    import yaml
+
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "configs/p1_generator_smoke.yaml").read_text()
+    )
+    params = config["lora_sft"]
     desc = generate(
         base_model="Qwen/Qwen3.5-0.8B",
         params=params,
@@ -86,3 +87,72 @@ def test_generate_lora_sft_smoke_gpu(tmp_path: Path, cuda):
     train_data = json.loads((out_dir / "train.json").read_text())
     assert len(train_data["loss_curve"]) == 5
     assert (out_dir / "lora" / "adapter_config.json").exists()
+
+
+@pytest.fixture
+def fake_sft(monkeypatch, toy_model):
+    import torch
+    from transformers import BatchEncoding
+
+    from wsp.zoo import lora_sft
+
+    class Tokenizer:
+        pad_token = None
+        eos_token = "eos"
+
+        @classmethod
+        def from_pretrained(cls, *args, **kwargs):
+            return cls()
+
+        def __call__(self, texts, **kwargs):
+            ids = torch.tensor([[ord(c) % 31 + 1 for c in text[:8]] for text in texts])
+            mask = torch.ones_like(ids)
+            mask[:, -1] = 0
+            return BatchEncoding({"input_ids": ids, "attention_mask": mask})
+
+    loaded_models = []
+
+    class Loader:
+        @staticmethod
+        def from_pretrained(*args, **kwargs):
+            model = copy.deepcopy(toy_model)
+            loaded_models.append(model)
+            return model
+
+    monkeypatch.setattr(lora_sft, "AutoTokenizer", Tokenizer)
+    monkeypatch.setattr(lora_sft, "get_model_class", lambda _: Loader)
+    monkeypatch.setattr(lora_sft.torch.cuda, "is_available", lambda: False)
+    monkeypatch.setattr(
+        lora_sft, "load_dataset", lambda *a, **kw: [{"question": "1+1?", "answer": "2"}]
+    )
+    return loaded_models
+
+
+def test_sft_seed_reproduces_saved_adapter_and_freezes_base(tmp_path, fake_sft, toy_model):
+    import torch
+    from safetensors.torch import load_file
+
+    before = {k: v.clone() for k, v in toy_model.state_dict().items()}
+    params = {"rank": 2, "steps": 2, "targets": ["o", "down"], "lr": 0.001}
+    a = generate("toy", params, 8, tmp_path / "a")
+    b = generate("toy", params, 8, tmp_path / "b")
+    assert a.id == b.id and a.delta_fro_norm > 0
+    wa = load_file(tmp_path / "a/lora/adapter_model.safetensors")
+    wb = load_file(tmp_path / "b/lora/adapter_model.safetensors")
+    assert all(torch.equal(wa[k], wb[k]) for k in wa)
+    for model in fake_sft:
+        for name, value in model.state_dict().items():
+            if "lora_" not in name:
+                original_name = name.replace(".base_layer", "")
+                assert torch.equal(value, before[original_name])
+        assert all(
+            not p.requires_grad for name, p in model.named_parameters() if "lora_" not in name
+        )
+    assert all("o_proj" in name or "down_proj" in name for name in a.touched_tensors)
+    assert json.loads((tmp_path / "a/manifest.json").read_text())["seed"] == 8
+
+
+@pytest.mark.parametrize("params", [{"steps": 0}, {"rank": 0}, {"batch_size": 0}])
+def test_sft_invalid_parameters_fail_before_loading(params, tmp_path):
+    with pytest.raises(ValueError, match="positive"):
+        generate("unused", params, 0, tmp_path)
