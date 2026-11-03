@@ -45,6 +45,11 @@ All with fixed seeds, temperature 0 unless the task card forbids. Store per-item
   pooled φ_svd(Δθ_t) ⊕ edit descriptor embedding; output = y_t for all K benchmarks
 - M3 JEPA: encoder E_θ on φ_svd(θ_t), predictor P(E_θ(θ_{t−1}), e_t) ≈ sg(E_θ(θ_t)), VICReg variance term;
   linear head on latent → y_t; trained in two stages like JEPAWG
+- M5 (Board C pick, competes with M2 on H2): trajectory Transformer, per-tensor W2T tokens + causally-masked
+  attention over edits, ≤ 2 layers d=256; acceptance ≥ 15 % rel. MAE reduction vs M1 on T ≥ 4 and ≥ M2 on all splits
+- M6 (Board C pick, competes with M3 on H1/H3): Tabular-JEPA pretraining on φ_stats with ResidualPred, dz=32,
+  frozen encoder + MLP head; acceptance H3 transfer ρ ≥ 0.5 on ≥ 6 of K benchmarks, no collapsed seeds
+  (details: docs/MODEL_CANDIDATES.md)
 - M4 LLM-reader: GPT-6 Astra / Claude Fable 5.1 given the same φ_stats + top SVD components as text,
   asked for Δy; prompt in `src/wsp/agents/reader_prompt.md`
 - Gate: H1–H4 tables filled in `docs/RESULTS.md` with CIs (bootstrap over edits)
