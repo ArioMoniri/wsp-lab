@@ -23,3 +23,5 @@
 | 2026-11-03 | zoo builder (2nd) | codex/gpt-6.1-terra high | running |
 | 2026-11-03 | plots+lottie (1st) | opencode/glm-5.3 | failed: OpenCode cap; WIP committed |
 | 2026-11-03 | plots+lottie (2nd) | copilot/auto | running |
+| 2026-11-03 | Board C survey (2nd) | opencode/glm-5.3 | failed: OpenCode cap |
+| 2026-11-03 | Board C survey (3rd) | codex/gpt-6-luna medium | running |
