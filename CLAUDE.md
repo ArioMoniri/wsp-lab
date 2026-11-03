@@ -9,3 +9,7 @@
 - Every artefact has a `manifest.json` with seed, config hash, git SHA, model revisions.
 - Record what you did in the current `sessions/*.md` (scripts/session.sh current).
 - Role definitions: `.claude/agents/*.md`. Orchestration: `docs/ORCHESTRATOR.md`.
+- The GitHub repo is PUBLIC-facing: never paste keys, tokens, IPs of rented instances, or raw logs into commits,
+  board posts, docs, or sessions. `scripts/secret_scan.sh` runs on commit and push; `board.sh` redacts tokens.
+- Lambda instances must be terminated right after a job (`scripts/lambda.sh terminate <id>`); only touch
+  instances whose name starts with `wsp-lab`.
