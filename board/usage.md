@@ -42,7 +42,7 @@
 | 2026-11-03 | Board A feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (5 blocking) |
 | 2026-11-03 | zoo builder REVISE round | codex/gpt-6.1-terra high | running |
 | 2026-11-03 | Board B re-review docs/refs-venue | codex/gpt-6.1-terra medium | REVISE (0 non-verbatim; 9 claims weakened) |
-| 2026-11-03 | refs round 3 (restore strong claims w/ extra excerpts) | codex/gpt-6.1-sol medium | running |
+| 2026-11-03 | refs round 3 | codex/gpt-6.1-sol medium | done 5b25c6e (3 restored, 6 kept weak), merged |
 | 2026-11-03 | plots+lottie (2nd) | copilot/auto | done 536ba07 |
 | 2026-11-03 | Board A feat/plots-design | claude_aio_gmail_api/claude-haiku-5-5 | running |
 | 2026-11-03 | zoo REVISE round (1st) | codex/gpt-6.1-terra high | partial, WIP committed |
