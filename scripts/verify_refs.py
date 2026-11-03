@@ -49,10 +49,13 @@ def main():
         path = ROOT / entry.get('source_file', f'data/papers/{ident or entry["key"]}.txt')
         try: source = normalize(path.read_text(errors='replace'))
         except OSError: source = ''; problems.append('source missing')
-        for field in ('supporting_excerpt', 'supporting_excerpt_2'):
+        fields = ['supporting_excerpt'] + sorted(
+            field for field in entry if re.fullmatch(r'supporting_excerpt_[0-9]+', field)
+        )
+        for field in fields:
             excerpt = entry.get(field)
             if not excerpt:
-                if field == 'supporting_excerpt': problems.append('excerpt missing')
+                problems.append(field + ': excerpt missing')
                 continue
             needle = normalize(excerpt)
             if len(needle.split()) > 60: problems.append(field + ': exceeds 60 words')

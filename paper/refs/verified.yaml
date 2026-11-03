@@ -99,8 +99,8 @@
   - Zehong Wang
   year: 2026
   venue: arXiv:2603.15990
-  claim_we_make: W2T canonicalizes LoRA updates with QR decomposition followed by SVD, then tokenizes the components
-    for a Transformer weight-space embedding.
+  claim_we_make: Canonical QR-SVD LoRA tokens feed rank-level and position-level Transformers; Table 2 reports ARC-LoRA
+    test MAE 0.32 and Spearman 95.35 (%).
   supporting_excerpt: To this end, we propose W2T (Weight-to-Token), which maps each LoRA update to a provably canonical
     form via QR decomposition followed by SVD, so that all equivalent factorizations share the same representation.
     The resulting components are then tokenized and processed by a Transformer to produce a weight-space embedding.
@@ -111,6 +111,48 @@
       MAE 0.32 and Spearman 95.4 on ARC-Easy performance prediction.
     reason: Replaced with the narrower claim directly supported by the located source passages.
   source_file: data/papers/2603.15990.txt
+  supporting_excerpt_2: 'These tokens are then processed by the W2T encoder, which operates in two hierarchical
+    stages: a
+
+    rank-level Transformer models interactions among
+
+    rank tokens within each position and aggregates'
+  supporting_excerpt_3: 'Position-level modeling. Position tokens are augmented with learnable embeddings for layer
+    depth
+
+    and module type (Figure 2(d)):
+
+    t̃p = tp + elayer (ℓ(p)) + emodule (m(p)),
+
+
+    (6)
+
+
+    then processed by a position-level Transformer fpos
+
+    that captures cross-position dependencies:'
+  supporting_excerpt_4: 'Valid 0.34
+
+    W2T (Ours) Test 0.32
+
+
+    0.72
+
+    0.67
+
+
+    99.37
+
+    98.98
+
+
+    95.26
+
+    95.35'
+  history:
+  - claim_we_make: W2T canonicalizes LoRA updates with QR decomposition followed by SVD, then tokenizes the components
+      for a Transformer weight-space embedding.
+    reason: Round 2 narrower claim; round 3 restores source-supported detail.
 - key: sarangi2026finite
   arxiv_id: '2609.33901'
   title: 'Finite Probes Suffice: Identifiability and Universality for Weight-Space Learning'
@@ -178,8 +220,8 @@
   - Damian Borth
   year: 2025
   venue: arXiv:2504.10141
-  claim_we_make: Including models trained on different image datasets substantially affects weight-space generation
-    performance and generalization in and out of distribution.
+  claim_we_make: Model zoo size and dataset diversity affect weight-space model generation and generalization; increasing
+    single-zoo training sample size significantly improves generation performance.
   supporting_excerpt: Our extensive experimental evaluation shows that including models with varying underlying
     image datasets has a high impact on performance and generalization, for both in- and out-of-distribution settings.
   location: PDF pp. 1, 2
@@ -189,6 +231,15 @@
       dictate representation quality in weight-space learning.
     reason: Replaced with the narrower claim directly supported by the located source passages.
   source_file: data/papers/2504.10141.txt
+  supporting_excerpt_2: 'However, the single-zoo performance improves significantly over
+
+    the experiments with lower single-zoo sample size as well. This shows that the model zoo size used
+
+    for backbone training has a large impact on the model generation performance.'
+  history:
+  - claim_we_make: Including models trained on different image datasets substantially affects weight-space generation
+      performance and generalization in and out of distribution.
+    reason: Round 2 narrower claim; round 3 restores source-supported detail.
 - key: position2026weightspace
   arxiv_id: '2605.18632'
   title: 'Position: Weight Space Should Be a First-Class Generative AI Modality'
@@ -290,6 +341,27 @@
       dz=16 and Adam lr 3e-4 to predict weight embeddings from parameters.
     reason: Replaced with the narrower claim directly supported by the located source passages.
   source_file: data/papers/2607.07127.txt
+  supporting_excerpt_2: 'Throughout, we set dz = 16,
+
+    deliberately over-sizing the latent space relative to the twodimensional coupling manifold so that any concentration
+
+    onto fewer dimensions is a learned property rather than an
+
+    architectural constraint.'
+  supporting_excerpt_3: 'mapping couplings g = (m2 , λ) to coupling embeddings
+
+    zg = Eg (g), (iii) a predictor P : Rdz → Rdz mapping coupling embeddings into the weight embedding space, trained
+
+    so that P (zg ) ≈ zθ , and (iv) a decoder Dθ : Rdz → Rdθ
+
+    mapping predicted weight embeddings back to parameter
+
+    vectors.'
+  history:
+  - claim_we_make: The JEPAWG main-text configuration omits the VICReg covariance term (gamma = 0), allowing a lower-dimensional
+      latent representation.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
 - key: jepawg2026bifurcations
   arxiv_id: '2610.30847'
   title: 'Bifurcations from Weight Space: JEPAWG on Parametric Dynamical Systems'
@@ -354,6 +426,15 @@
       to accelerate neural network convergence.
     reason: Replaced with the narrower claim directly supported by the located source passages.
   source_file: data/papers/2602.19580.txt
+  supporting_excerpt_2: 'Finite-difference predictors (linear, quadratic) succeed where momentum fails: at 124M,
+    they achieve 24% strict acceptance at
+
+    K=5 in stable regimes; at 1.5B, they achieve 37% strict acceptance in transition regimes.'
+  history:
+  - claim_we_make: Leap+Verify proposes speculative future-weight prediction; predictions are accepted only after
+      validation against a held-out loss criterion.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
 - key: jepahmm2026
   arxiv_id: '2608.13621'
   title: 'Your Probabilistic JEPA Is Secretly a Hidden Markov Model: A State-Space Interpretation of Joint-Embedding
@@ -373,6 +454,13 @@
       in hidden Markov and state-space models.
     reason: Replaced with the narrower claim directly supported by the located source passages.
   source_file: data/papers/2608.13621.txt
+  supporting_excerpt_2: Sequence-level HMM equivalence additionally requires Markov, emission, marginalconsistency,
+    and filtering-consistency conditions,
+  history:
+  - claim_we_make: The paper distinguishes four levels of JEPA/HMM correspondence and gives sufficient conditions
+      for exact sequence-level HMM equivalence.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
 - key: drivedecay2026
   arxiv_id: '2610.02344'
   title: 'Drive vs. Decay: On the Training Dynamics of Joint-Embedding Predictive Architectures'
@@ -587,8 +675,9 @@
   - Tony Cristofano
   year: 2026
   venue: arXiv:2601.08489
-  claim_we_make: SRA orthogonalizes a refusal vector against protected capability and stylistic concept atoms using
-    ridge-regularized spectral residualization.
+  claim_we_make: SRA orthogonalizes refusal against protected concept atoms; across five tested models it reports
+    0–2% refusal, mean perplexity change about +0.02 and mean first-token KL about 0.025, supporting limited measured
+    collateral disruption rather than universal capability preservation.
   supporting_excerpt: SRA constructs a registry of independent Concept Atoms representing protected capabilities
     and stylistic confounds, and uses ridge-regularized spectral residualization to orthogonalize the refusal vector
     against these directions.
@@ -599,6 +688,14 @@
     previous_claim_we_make: Disentangles refusal directions from capability subspaces using concept atoms and spectral
       residualization to avoid collateral degradation.
     reason: Narrowed to what the located passage establishes.
+  supporting_excerpt_2: 'Across five models (Qwen3-VL-2B/4B/8B, Ministral-3B/14B), SRA achieves deep refusal reduction
+    (0–2% on our harmful suite) with negligible perplexity impact on wikitext_2_raw
+
+    (mean ∆PPL ≈ +0.02) and minimal measured distribution drift (mean first-token KL ≈ 0.025).'
+  history:
+  - claim_we_make: SRA orthogonalizes a refusal vector against protected capability and stylistic concept atoms
+      using ridge-regularized spectral residualization.
+    reason: Round 2 narrower claim; round 3 restores source-supported detail.
 - key: refusalbeyond2026
   arxiv_id: '2606.13720'
   title: 'Refusal Beyond a Single Direction: A Preliminary Comparison of Diff-in-Means and INLP'
@@ -640,6 +737,11 @@
   supporting_excerpt_2: 'A category-concentrated residue survives every edit we tried: subspaces fitted on violence,
     sexual content and hate leave measurable refusal at every rank from 1 to 12.'
   source_file: data/papers/2609.09793.txt
+  history:
+  - claim_we_make: Directional ablation is applied to GLM-5.3-Flash (320B), but measurable refusal survives every
+      tested edit, including subspaces of ranks 1–12.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
 - key: decoy2026direction
   arxiv_id: '2609.16204'
   title: 'Decoy Direction Optimization: A Post-Hoc Defense Against LLM Abliteration'
@@ -698,6 +800,11 @@
       standard gradient fine-tuning.
     reason: Replaced with the narrower claim directly supported by the located source passages.
   source_file: data/papers/2511.05408.txt
+  history:
+  - claim_we_make: Contrastive weight steering subtracts deltas from two small fine-tunes with opposite behaviors,
+      then adds or removes the resulting direction.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
 - key: harness2026recursive
   arxiv_id: '2610.14224'
   title: 'Harness^2: Recursive Agent Harnessing for an Open World'
@@ -727,3 +834,8 @@
   supporting_excerpt_2: Harnessing-level recursion then extracts experience from these edits to update a continual
     improvement harness, enabling the agent to better adapt to future tasks.
   source_file: data/papers/2610.14224.txt
+  history:
+  - claim_we_make: Harness2 improves task harnesses with Propose–Probe–Compose and uses harnessing-level recursion
+      to transfer experience to future tasks.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
