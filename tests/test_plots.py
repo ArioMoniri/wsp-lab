@@ -6,7 +6,6 @@ import matplotlib
 
 matplotlib.use("Agg")  # headless, CPU-only test tier
 
-import runpy
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -268,5 +267,3 @@ def test_small_multiples_accept_run_matrices_and_reject_empty():
 
 
 # ----------------------------------------------------------------- demo ----
-
-
