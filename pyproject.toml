@@ -27,6 +27,7 @@ dependencies = [
   "rich",
   "lm-eval>=0.4.13",
   "heretic-llm>=2.0.0",
+  "flash-linear-attention",
 ]
 [project.optional-dependencies]
 dev = ["pytest", "pytest-timeout", "ruff", "mypy", "ipykernel", "jupyter"]

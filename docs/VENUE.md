@@ -1,16 +1,16 @@
-# Target venue
+# Target venue and submission requirements
 
-**Primary: TMLR (Transactions on Machine Learning Research).** Rolling submission via OpenReview, mandatory
-`tmlr.sty`/`tmlr.bst`, no fixed page limit stated on the submission page, appendix after references, explicit
-welcome for careful negative/replication results, double-blind. Fits: hypothesis-driven study with mixed
-results expected, reproducibility focus, no deadline pressure. Template: Overleaf "TMLR journal submission"
-(https://www.overleaf.com/latex/templates/tmlr-journal-submission/fcjxjtfqrsqb); guidelines
-https://jmlr.org/tmlr/submissions.html and https://jmlr.csail.mit.edu/tmlr/author-guide.html.
-TMLR certifications to aim for: *Reproducibility* (code + zoo release) and, if H1 holds at 27B, *Featured*.
+The primary target is [TMLR](https://jmlr.org/tmlr/), which accepts submissions
+through [OpenReview](https://openreview.net/group?id=TMLR). Check the current
+[TMLR author guide](https://jmlr.org/tmlr/author-guide.html) and
+[editorial policies](https://jmlr.org/tmlr/editorial-policies.html) before
+submission; they govern formatting, anonymity, review and certifications.
 
-**Secondary:** ICLR 2027 workshop on weight-space learning (if announced), or NeurIPS 2027 Datasets &
-Benchmarks track for the edit zoo alone.
+The official [TMLR style repository](https://github.com/JmlrOrg/tmlr-style-file)
+is available in `paper/template/`.
 
-Checklist for TMLR (kept in `paper/CHECKLIST.md`): anonymised repo link, broader-impact paragraph covering
-the abliteration sub-study (we release no new uncensored weights, only deltas' statistics), compute report,
-licence statement for Heretic (AGPL) usage.
+Potential alternatives include [ACL 2027](https://2027.aclweb.org/),
+[ICML](https://icml.cc/), and [COLM](https://colmweb.org/). Check their
+current official calls before planning a submission. The
+[ACL Rolling Review schedule](https://github.com/acl-org/aclrollingreview/blob/main/dates.md)
+lists its review cycles.
