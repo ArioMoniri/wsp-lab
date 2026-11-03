@@ -213,6 +213,10 @@ def write_results(out, records, generation, manifest):
     out.mkdir(parents=True, exist_ok=True)
     (out / "records.jsonl").write_text("".join(json.dumps(asdict(r)) + "\n" for r in records))
     summary = aggregate(records)
+    kl = [r for r in records if r.benchmark == "kl_to_base"]
+    if kl:
+        summary["kl_first_token_mean"] = sum(r.extra["first_token_kl"] for r in kl) / len(kl)
+        summary["kl_full_sequence_mean"] = sum(r.extra["full_sequence_kl"] for r in kl) / len(kl)
     summary["generation"] = generation
     summary["counts"] = {
         b: sum(r.benchmark == b for r in records) for b in aggregate(records) if b != "loop_rate"

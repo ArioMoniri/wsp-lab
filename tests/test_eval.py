@@ -157,3 +157,18 @@ def test_report_reads_only_complete_runs_and_calculates_blog_gap(tmp_path):
     (tmp_path / "run" / "manifest.json").write_text(json.dumps({"status": "running"}))
     with pytest.raises(ValueError):
         report([tmp_path / "run"], out, "job.log")
+
+
+def test_summary_contains_both_kl_means(tmp_path):
+    records = [
+        EvalRecord(
+            "base", "kl_to_base", "0", 0.2, extra={"first_token_kl": 0.1, "full_sequence_kl": 0.2}
+        ),
+        EvalRecord(
+            "base", "kl_to_base", "1", 0.4, extra={"first_token_kl": 0.3, "full_sequence_kl": 0.4}
+        ),
+    ]
+    summary = write_results(tmp_path, records, {}, {"seed": 0})
+    assert summary["kl_to_base"] == pytest.approx(0.3)
+    assert summary["kl_first_token_mean"] == pytest.approx(0.2)
+    assert summary["kl_full_sequence_mean"] == pytest.approx(0.3)
