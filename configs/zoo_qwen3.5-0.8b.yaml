@@ -1,0 +1,39 @@
+# P1 zoo config — Qwen3.5-0.8B (thinking on), local GPU
+base_model: Qwen/Qwen3.5-0.8B
+base_revision: main
+dtype: bfloat16
+out_dir: data/zoo/qwen3.5-0.8b
+seed: 0
+families:
+  random_dir:
+    n: 150
+    layers: [8, 12, 15, 17, 19, 21]          # include blog's layers 15/19
+    tensors: [mlp.down_proj, self_attn.o_proj]
+    weight: {min: 0.25, max: 1.0}
+    n_directions: {choices: [1, 2, 4]}
+  abliteration:                                 # Heretic classic modifier, sampled kernels (not optimised)
+    n: 200
+    direction_index: {min: -1, max: 24}
+    max_weight: {min: 0.3, max: 1.3}
+    max_weight_position: {min: 0, max: 24}
+    min_weight: {min: 0.0, max: 0.6}
+    min_weight_distance: {min: 1, max: 12}
+    components: [attn, mlp, both]
+  heretic_ara:
+    n: 60
+    preserve_good_behavior_weight: {choices: [0.5, 1, 2, 4]}
+    trials: 40
+  lora_sft:
+    n: 120
+    datasets: [gsm8k_train, alpaca_cleaned_5k]
+    rank: {choices: [4, 8, 16, 32]}
+    lr: {log_min: 2.0e-5, log_max: 5.0e-4}
+    steps: {choices: [50, 150, 400, 800]}
+  task_vector:
+    n: 80
+    scale: {min: -0.5, max: 1.5}
+  chain:
+    n: 150
+    length: {min: 2, max: 8}
+eval:
+  config: configs/eval_cheap.yaml

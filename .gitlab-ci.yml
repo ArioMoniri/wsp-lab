@@ -1,0 +1,30 @@
+# CI on the on-prem GitLab runner (docker executor, GPU passthrough) registered from this server.
+# GitHub Actions is intentionally NOT used.
+stages: [lint, test, gpu]
+default:
+  image: nvidia/cuda:13.2.0-runtime-ubuntu24.04
+  tags: [t3, gpu]            # runner tags set at registration (adjust via scripts/ci-register)
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq python3.12 python3.12-venv curl git >/dev/null
+    - curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=$HOME/.local/bin:$PATH
+    - uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -e ".[dev]" -q
+    - . .venv/bin/activate
+lint:
+  stage: lint
+  script: [ruff check src tests, ruff format --check src tests]
+test-cpu:
+  stage: test
+  script: [pytest -q -m "not gpu and not slow and not net" --junitxml=report.xml]
+  artifacts: {reports: {junit: report.xml}}
+test-gpu:
+  stage: gpu
+  script: [nvidia-smi, pytest -q -m gpu --junitxml=report-gpu.xml]
+  artifacts: {reports: {junit: report-gpu.xml}}
+  rules: [{if: $CI_COMMIT_BRANCH == "main"}, {if: $CI_PIPELINE_SOURCE == "merge_request_event"}]
+paper:
+  stage: test
+  image: texlive/texlive:latest
+  tags: [t3]
+  script: [cd paper && (latexmk -pdf -interaction=nonstopmode main.tex || true), ls -la paper/*.pdf || true]
+  artifacts: {paths: [paper/main.pdf], expire_in: 2 weeks}
+  allow_failure: true

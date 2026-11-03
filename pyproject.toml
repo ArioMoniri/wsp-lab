@@ -1,0 +1,43 @@
+[project]
+name = "wsp-lab"
+version = "0.1.0"
+description = "Weight-Space Programming lab: predict LLM performance change from weight change (SSM/JEPA predictor over edit trajectories)"
+requires-python = ">=3.12"
+dependencies = [
+  "torch>=2.15",
+  "transformers>=5.22",
+  "accelerate",
+  "safetensors",
+  "datasets",
+  "peft",
+  "huggingface_hub[cli]",
+  "einops",
+  "optuna",
+  "numpy",
+  "scipy",
+  "scikit-learn",
+  "lightgbm",
+  "pandas",
+  "pyarrow",
+  "tqdm",
+  "pyyaml",
+  "typer",
+  "rich",
+  "lm-eval>=0.4.13",
+  "heretic-llm>=2.0.0",
+]
+[project.optional-dependencies]
+dev = ["pytest", "pytest-timeout", "ruff", "mypy", "ipykernel", "jupyter"]
+ssm = ["mamba-ssm>=2.3", "causal-conv1d"]
+serve = ["vllm"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 600
+markers = ["gpu: needs CUDA", "slow: long-running", "net: needs network/HF"]
+[tool.ruff]
+line-length = 100
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+[tool.setuptools.packages.find]
+where = ["src"]

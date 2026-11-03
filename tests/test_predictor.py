@@ -1,0 +1,43 @@
+import torch
+
+from wsp.predictor import TrajectoryPredictor, ssm_backend
+
+
+def test_backend_is_reported():
+    assert ssm_backend() in {"torch", "mamba_ssm"}
+
+
+def test_outputs_bounded_and_causal():
+    torch.manual_seed(0)
+    m = TrajectoryPredictor(d_in=12, n_targets=3, d_model=32, n_layers=2, backend="torch").eval()
+    x = torch.randn(2, 5, 12)
+    y = m(x)
+    assert y.shape == (2, 5, 3) and y.min() >= 0 and y.max() <= 1
+    x2 = x.clone()
+    x2[:, 3:] += 10.0  # perturb the future
+    y2 = m(x2)
+    assert torch.allclose(y[:, :3], y2[:, :3], atol=1e-5)  # past predictions unchanged
+    assert not torch.allclose(y[:, 3:], y2[:, 3:])
+
+
+def test_sequence_length_one_is_stateless():
+    torch.manual_seed(0)
+    m = TrajectoryPredictor(d_in=8, n_targets=2, d_model=16, n_layers=1, backend="torch").eval()
+    x = torch.randn(4, 1, 8)
+    assert torch.allclose(
+        m(x)[:, 0], torch.cat([m(x[i : i + 1])[:, 0] for i in range(4)]), atol=1e-6
+    )
+
+
+def test_can_overfit_tiny_trajectory_dataset():
+    torch.manual_seed(0)
+    m = TrajectoryPredictor(d_in=4, n_targets=1, d_model=32, n_layers=2, backend="torch")
+    x = torch.randn(8, 6, 4)
+    y = torch.sigmoid(x.cumsum(1).sum(-1, keepdim=True) / 3)
+    opt = torch.optim.Adam(m.parameters(), 1e-2)
+    for _ in range(200):
+        loss = torch.nn.functional.mse_loss(m(x), y)
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    assert loss.item() < 0.01

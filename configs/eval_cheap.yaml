@@ -1,0 +1,13 @@
+# P2 cheap eval battery; fixed subsets live in configs/eval_subsets/*.txt (item ids)
+generation: {max_new_tokens: 4096, temperature: 0.0, thinking: true, batch_size: 64, seed: 0}
+benchmarks:
+  gsm8k:      {n: 200, metric: exact_match}
+  math500:    {n: 100, metric: exact_match}
+  ifeval:     {n: 100, metric: prompt_strict}
+  mmlu_pro:   {n: 300, metric: acc, max_new_tokens: 1024}
+  hellaswag:  {n: 300, metric: acc_norm_loglik}
+  wikitext_ppl: {n_windows: 64, window: 1024}
+  refusal_rate: {prompts: heretic_bad_eval, n: 100, judge: [keyword, llm]}
+  over_refusal: {prompts: heretic_good_eval, n: 100, judge: [keyword]}
+  kl_to_base:  {prompts: heretic_good_eval, n: 100}
+loop_rate: {from: [gsm8k, math500, ifeval]}

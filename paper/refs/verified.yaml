@@ -1,0 +1,11 @@
+# Every citation used in paper/sections must have an entry here with status: verified (see ref-checker role).
+- key: takehi2026wsp
+  url: https://rikiyat.github.io/blog/weight-space-programming/
+  title: "Sparks of Weight-Space Programming: LLMs can natively read & write neural network weights"
+  authors: Takehi, Teoh, Zhang, Khattab
+  year: 2026
+  venue: blog (MIT CSAIL), 2 Nov 2026
+  claim_we_make: "Editing 0.016% of Qwen3.5-0.8B weights raised MATH-500 from 7.9% to 48.1% without gradients."
+  supporting_excerpt: "Astra identifies an issue in its weights causing reasoning loops ... fixes this by natively editing 0.016% of the weights. With the same sampling settings, this weight correction raises MATH-500 from 7.9% to 48.1%"
+  location: TL;DR
+  status: verified

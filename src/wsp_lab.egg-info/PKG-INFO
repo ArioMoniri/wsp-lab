@@ -1,0 +1,38 @@
+Metadata-Version: 2.4
+Name: wsp-lab
+Version: 0.1.0
+Summary: Weight-Space Programming lab: predict LLM performance change from weight change (SSM/JEPA predictor over edit trajectories)
+Requires-Python: >=3.12
+Requires-Dist: torch>=2.15
+Requires-Dist: transformers>=5.22
+Requires-Dist: accelerate
+Requires-Dist: safetensors
+Requires-Dist: datasets
+Requires-Dist: peft
+Requires-Dist: huggingface_hub[cli]
+Requires-Dist: einops
+Requires-Dist: optuna
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: scikit-learn
+Requires-Dist: lightgbm
+Requires-Dist: pandas
+Requires-Dist: pyarrow
+Requires-Dist: tqdm
+Requires-Dist: pyyaml
+Requires-Dist: typer
+Requires-Dist: rich
+Requires-Dist: lm-eval>=0.4.13
+Requires-Dist: heretic-llm>=2.0.0
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-timeout; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: ipykernel; extra == "dev"
+Requires-Dist: jupyter; extra == "dev"
+Provides-Extra: ssm
+Requires-Dist: mamba-ssm>=2.3; extra == "ssm"
+Requires-Dist: causal-conv1d; extra == "ssm"
+Provides-Extra: serve
+Requires-Dist: vllm; extra == "serve"
