@@ -27,3 +27,5 @@
 | 2026-11-03 | Board C survey (3rd) | codex/gpt-6-luna medium | done 71e5682, merged |
 | 2026-11-03 | Board A perf/ssm-kernels (1st) | opencode/glm-5.3 | failed: OpenCode cap |
 | 2026-11-03 | Board A perf/ssm-kernels (2nd) | claude_info/claude-haiku-5-5 | running |
+| 2026-11-03 | ref ledger repair (2nd) | grok/grok-4.7 | failed: Grok quota |
+| 2026-11-03 | ref ledger repair (3rd) | claude_aio_gmail_api/claude-sonnet-5-5 | running |
