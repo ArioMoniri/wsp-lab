@@ -96,7 +96,11 @@ def report(runs, out, log):
     )
     path = Path(out)
     previous = path.read_text() if path.exists() else "# Results\n"
-    prefix = previous.split("## P2 base-model reproduction")[0].rstrip()
+    prefix = (
+        previous.split("## P2 base-model reproduction")[0]
+        .split("## P2 reproduction status")[0]
+        .rstrip()
+    )
     path.write_text(prefix + "\n\n" + "\n".join(lines))
 
 
