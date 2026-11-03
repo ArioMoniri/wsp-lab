@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Write one demo figure per wsp.plots panel into paper/figures/demo_*.png (+ .pdf).
+"""Write one demo figure per wsp.plots panel into docs/figures_demo/demo_*.png (+ .pdf). SYNTHETIC toy data only; never cite.
 
 Each figure shows the intended JEPAWG look (docs/FIGURE_STYLE.md) on toy data,
 so the style can be checked before any real zoo/eval run exists. Deterministic
@@ -51,16 +51,20 @@ def _toy_latent(rng):
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--out", default=str(FIGURES_DIR), help="output dir (default: paper/figures)")
+    ap.add_argument("--out", default=str(FIGURES_DIR.parent.parent / "docs" / "figures_demo"), help="output dir (default: docs/figures_demo; never paper/figures)")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args(argv)
     out = Path(args.out)
     rng = np.random.default_rng(args.seed)
     written: list[Path] = []
 
+    def _stamp(fig):
+        fig.text(0.5, 0.98, "TOY DATA — synthetic demo, not a result", ha="center", va="top", fontsize=7, color="#b00020")
+        return fig
+
     z, score, fam = _toy_latent(rng)
     written += savefig(
-        latent_scatter(z, score, fam, title="latent (2-D PCA), toy zoo"),
+        _stamp(latent_scatter(z, score, fam, title="latent (2-D PCA), toy zoo")),
         "demo_latent_scatter",
         outdir=out,
     )
@@ -68,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     x = np.linspace(0.0, 1.0, 9)
     runs = 0.06 - 0.16 * x[:, None] + 0.025 * rng.normal(size=(9, 5))
     written += savefig(
-        sweep_with_ci(x, runs, "SSM predictor", color=OKABE_ITO["blue"], ylabel="Δ MATH-500"),
+        _stamp(sweep_with_ci(x, runs, "SSM predictor", color=OKABE_ITO["blue"], ylabel="Δ MATH-500")),
         "demo_sweep_with_ci",
         outdir=out,
     )
@@ -77,9 +81,9 @@ def main(argv: list[str] | None = None) -> int:
     pred = -0.30 * s**1.2
     meas = pred + 0.02 * rng.normal(size=8)
     written += savefig(
-        pred_vs_measured(
+        _stamp(pred_vs_measured(
             pred, meas, s, "abliteration", title="abliteration: predicted vs. measured"
-        ),
+        )),
         "demo_pred_vs_measured",
         outdir=out,
     )
@@ -89,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     cis = [(0.06, 0.12), (0.12, 0.18), (0.21, 0.27), (0.24, 0.30), (0.33, 0.39), (0.31, 0.37)]
     mask = [True, True, False, False, False, False]
     written += savefig(
-        method_bars(methods, scores, cis, mask, ylabel="Spearman ρ on MATH-500"),
+        _stamp(method_bars(methods, scores, cis, mask, ylabel="Spearman ρ on MATH-500")),
         "demo_method_bars",
         outdir=out,
     )
@@ -102,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         "MMLU-Pro": (xm, -0.04 * xm[:, None] + 0.015 * rng.normal(size=(11, 4))),
     }
     written += savefig(
-        small_multiples(series, xlabel="abliteration strength"),
+        _stamp(small_multiples(series, xlabel="abliteration strength")),
         "demo_small_multiples",
         outdir=out,
     )
