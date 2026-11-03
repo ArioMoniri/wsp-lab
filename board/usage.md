@@ -29,3 +29,5 @@
 | 2026-11-03 | Board A perf/ssm-kernels (2nd) | claude_info/claude-haiku-5-5 | running |
 | 2026-11-03 | ref ledger repair (2nd) | grok/grok-4.7 | failed: Grok quota |
 | 2026-11-03 | ref ledger repair (3rd) | claude_aio_gmail_api/claude-sonnet-5-5 | running |
+| 2026-11-03 | zoo builder (2nd) | codex/gpt-6.1-terra high | partial c744719 (abliteration family missing) |
+| 2026-11-03 | zoo builder abliteration family (3rd) | codex/gpt-6.1-terra high | running |
