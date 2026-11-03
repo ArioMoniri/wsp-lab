@@ -43,7 +43,7 @@ def main():
                     parser = Text(); parser.feed(result.stdout.decode('utf-8', errors='replace'))
                     target.write_text(''.join(parser.parts))
             if ident:
-                subprocess.run(['pdftotext', '-layout', str(target), str(OUT / (ident + '.txt'))], check=True)
+                subprocess.run(['pdftotext', str(target), str(OUT / (ident + '.txt'))], check=True)
             print(entry['key'], 'ok', flush=True)
         except (subprocess.SubprocessError, OSError, ValueError) as exc:
             print(entry['key'], 'FAILED', exc, flush=True); failures.append(entry['key'])

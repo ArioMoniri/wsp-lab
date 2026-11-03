@@ -37,13 +37,14 @@ def main():
         for item in root.findall('a:entry', ns):
             ident = item.findtext('a:id', namespaces=ns).rsplit('/', 1)[-1]
             ident = re.sub(r'v\d+$', '', ident)
-            api[ident] = ([x.findtext('a:name', namespaces=ns) for x in item.findall('a:author', ns)], item.findtext('a:published', namespaces=ns)[:4])
+            api[ident] = ([x.findtext('a:name', namespaces=ns) for x in item.findall('a:author', ns)], item.findtext('a:published', namespaces=ns)[:4], normalize(item.findtext('a:title', namespaces=ns)))
     except Exception as exc:
         print('arXiv API error:', exc, file=sys.stderr)
     failed = False
     print(f'{"key":38} result')
     for entry in entries:
         problems = []
+        if entry.get('status') != 'verified': problems.append('status is not verified')
         ident = str(entry.get('arxiv_id', ''))
         path = ROOT / entry.get('source_file', f'data/papers/{ident or entry["key"]}.txt')
         try: source = normalize(path.read_text(errors='replace'))
@@ -54,6 +55,7 @@ def main():
                 if field == 'supporting_excerpt': problems.append('excerpt missing')
                 continue
             needle = normalize(excerpt)
+            if len(needle.split()) > 60: problems.append(field + ': exceeds 60 words')
             if '...' in needle or '…' in needle: problems.append(field + ': ellipsis')
             elif needle not in source:
                 problems.append(field + ': mismatch')
@@ -68,10 +70,11 @@ def main():
             meta = api.get(ident)
             if not meta: problems.append('API metadata missing')
             else:
-                authors, year = meta
+                authors, year, title = meta
                 ba, by = bib_fields(bib, entry['key'])
                 if entry.get('authors') != authors: problems.append('YAML authors differ')
                 if str(entry.get('year')) != year: problems.append('YAML year differs')
+                if normalize(entry.get('title', '')) != title: problems.append('YAML title differs')
                 if ba != authors: problems.append('BibTeX authors differ')
                 if by != year: problems.append('BibTeX year differs')
         print(f'{entry["key"]:38} {", ".join(problems) if problems else "verified"}')
