@@ -41,3 +41,5 @@
 | 2026-11-03 | Board B re-review docs/refs-venue | codex/gpt-6.1-terra medium | running |
 | 2026-11-03 | Board A feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (5 blocking) |
 | 2026-11-03 | zoo builder REVISE round | codex/gpt-6.1-terra high | running |
+| 2026-11-03 | Board B re-review docs/refs-venue | codex/gpt-6.1-terra medium | REVISE (0 non-verbatim; 9 claims weakened) |
+| 2026-11-03 | refs round 3 (restore strong claims w/ extra excerpts) | codex/gpt-6.1-sol medium | running |
