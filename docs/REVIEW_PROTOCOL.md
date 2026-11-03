@@ -28,3 +28,13 @@ scribe; the reference checker runs after the humanizer. The board B reviewer re-
 ## Board records
 Every review is posted on the agent board (`scripts/board.sh review …`) and saved under
 `reviews/<phase>/<task>-<board>-<date>.md`.
+
+## Board C — Architecture assessor (every phase from P3 on)
+Role file `.claude/agents/reviewer-arch.md`. For each predictor result, the assessor must state whether a
+different model family would plausibly do better for this purpose and why, drawing on current literature:
+JEPA variants (I-/V-JEPA 2, JEPAWG), latent world models (Dreamer-style RSSM, TD-MPC2-style latent dynamics,
+LeCun-style hierarchical JEPA world models), SSMs (Mamba-2/3, S5), test-time-training / Titans layers, xLSTM,
+neural functionals and graph metanetworks (UNF, GMN), set/permutation-equivariant encoders, diffusion or
+flow models over weights, and plain Transformers. Output: a ranked shortlist with expected gain, cost, and
+the smallest experiment that would decide it; kept current in `docs/MODEL_CANDIDATES.md`. The orchestrator
+must schedule at least the top-ranked untested candidate as a competing run before a phase is closed.
