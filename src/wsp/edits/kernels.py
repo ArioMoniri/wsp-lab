@@ -19,10 +19,9 @@ def layer_weight_profile(
     profile: dict[int, float] = {}
     for layer in layers:
         dist = abs(layer - max_weight_position)
-        if dist >= min_weight_distance:
-            profile[layer] = min_weight
-        else:
-            profile[layer] = max_weight - (dist / min_weight_distance) * (max_weight - min_weight)
+        if dist > min_weight_distance:
+            continue
+        profile[layer] = max_weight + (dist / min_weight_distance) * (min_weight - max_weight)
     return profile
 
 
@@ -63,6 +62,8 @@ def heretic_abliteration_kernel(
     )
     touched: list[str] = []
     for layer in layers:
+        if layer not in profile or profile[layer] == 0:
+            continue
         if isinstance(refusal_dirs, dict):
             dirs = refusal_dirs[layer]
             d = dirs[int(direction_index) % dirs.shape[0]]

@@ -63,11 +63,14 @@ def test_dry_run_writes_manifest_without_model(tmp_path):
     assert all(m["git_sha"] == "testsha" for m in manifest)
     assert all("id" in m and "seed" in m and "config_hash" in m for m in manifest)
 
-    manifest_path = zoo_dir / "manifest.jsonl"
+    manifest_path = zoo_dir / "manifest.dryrun.jsonl"
     assert manifest_path.exists()
     lines = [json.loads(line) for line in manifest_path.read_text().strip().split("\n")]
     assert len(lines) == 3
     assert lines == manifest
+
+    assert build_zoo(cfg_path, dry_run=True, git_sha="testsha") == manifest
+    assert not (zoo_dir / "manifest.jsonl").exists()
 
     # No per-entry artefacts and no delta files in dry run
     assert not list(zoo_dir.glob("*/edit.json"))

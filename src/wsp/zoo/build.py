@@ -477,7 +477,7 @@ def build_zoo(
     if not dry_run:
         base_state = _load_base_state(config)
 
-    manifest_path = zoo_dir / "manifest.jsonl"
+    manifest_path = zoo_dir / ("manifest.dryrun.jsonl" if dry_run else "manifest.jsonl")
     manifest: list[dict[str, Any]] = []
     if manifest_path.exists():
         with manifest_path.open() as f:
@@ -513,8 +513,9 @@ def build_zoo(
                         "config_hash": cfg_hash,
                         "git_sha": git_sha,
                     }
-                    manifest.append(line)
-                    _append_manifest(manifest_path, line)
+                    if not any(m.get("id") == line["id"] for m in manifest):
+                        manifest.append(line)
+                        _append_manifest(manifest_path, line)
                 else:
                     delta = {
                         k: (new_state[k] - base_state[k]).to(dtype)
@@ -530,8 +531,9 @@ def build_zoo(
                         "config_hash": cfg_hash,
                         "git_sha": git_sha,
                     }
-                    manifest.append(line)
-                    _append_manifest(manifest_path, line)
+                    if not any(m.get("id") == line["id"] for m in manifest):
+                        manifest.append(line)
+                        _append_manifest(manifest_path, line)
     return manifest
 
 

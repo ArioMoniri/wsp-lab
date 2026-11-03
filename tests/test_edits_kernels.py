@@ -19,9 +19,9 @@ def test_layer_weight_profile_peaks_and_tapers():
     assert profile[3] == 1.0
     assert profile[2] == pytest.approx(0.55, rel=1e-3)
     assert profile[4] == pytest.approx(0.55, rel=1e-3)
-    assert profile[1] == 0.1
-    assert profile[0] == 0.1
-    assert profile[5] == 0.1
+    assert profile[1] == pytest.approx(0.1)
+    assert 0 not in profile
+    assert profile[5] == pytest.approx(0.1)
 
 
 def test_heretic_kernel_contract_on_toy_weights(toy_weights):
