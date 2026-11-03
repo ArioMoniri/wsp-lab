@@ -1,6 +1,9 @@
 import pytest
 import torch
 
+# Tiny fixtures run faster without oversubscribing the shared build host.
+torch.set_num_threads(min(2, torch.get_num_threads()))
+
 
 @pytest.fixture(scope="session")
 def toy_weights():
