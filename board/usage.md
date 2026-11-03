@@ -44,3 +44,4 @@
 | 2026-11-03 | Board B re-review docs/refs-venue | codex/gpt-6.1-terra medium | REVISE (0 non-verbatim; 9 claims weakened) |
 | 2026-11-03 | refs round 3 (restore strong claims w/ extra excerpts) | codex/gpt-6.1-sol medium | running |
 | 2026-11-03 | plots+lottie (2nd) | copilot/auto | done 536ba07 |
+| 2026-11-03 | Board A feat/plots-design | claude_aio_gmail_api/claude-haiku-5-5 | running |
