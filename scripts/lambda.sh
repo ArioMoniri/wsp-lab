@@ -4,10 +4,11 @@ set -euo pipefail
 : "${LAMBDA_API_KEY:?set LAMBDA_API_KEY in ~/.config/wsp/env}"
 API=https://cloud.lambda.ai/api/v1; H=(-H "Authorization: Bearer $LAMBDA_API_KEY" -H "Content-Type: application/json")
 case "${1:-}" in
-  types) curl -s "${H[@]}" "$API/instance-types" | python3 -c 'import sys,json; d=json.load(sys.stdin)["data"]
+  types) curl -s "${H[@]}" "$API/instance-types" | python3 -c 'import sys,json
+d=json.load(sys.stdin)["data"]
 for k,v in sorted(d.items(), key=lambda kv: kv[1]["instance_type"]["price_cents_per_hour"]):
-  t=v["instance_type"]; r=[x["name"] for x in v["regions_with_capacity_available"]]
-  print(f"{k:28s} ${t[\"price_cents_per_hour\"]/100:6.2f}/h  {t[\"specs\"][\"gpus\"]}xGPU  regions={r}")' ;;
+    t=v["instance_type"]; r=[x["name"] for x in v["regions_with_capacity_available"]]
+    print("%-28s $%6.2f/h %sxGPU regions=%s" % (k, t["price_cents_per_hour"]/100, t["specs"]["gpus"], r))' ;;
   ls) curl -s "${H[@]}" "$API/instances" | python3 -c 'import sys,json; [print(i["id"],i["name"],i["instance_type"]["name"],i["status"],i["region"]["name"]) for i in json.load(sys.stdin)["data"]]' ;;
   launch) : "${MAX_USD_PER_H:?set MAX_USD_PER_H as a hard price cap}"
      price=$(curl -s "${H[@]}" "$API/instance-types" | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['$2']['instance_type']['price_cents_per_hour']/100)")
