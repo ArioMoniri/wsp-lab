@@ -45,3 +45,5 @@
 | 2026-11-03 | refs round 3 (restore strong claims w/ extra excerpts) | codex/gpt-6.1-sol medium | running |
 | 2026-11-03 | plots+lottie (2nd) | copilot/auto | done 536ba07 |
 | 2026-11-03 | Board A feat/plots-design | claude_aio_gmail_api/claude-haiku-5-5 | running |
+| 2026-11-03 | zoo REVISE round (1st) | codex/gpt-6.1-terra high | partial, WIP committed |
+| 2026-11-03 | zoo REVISE round (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
