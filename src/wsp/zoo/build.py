@@ -57,6 +57,8 @@ def sample_param(rng: random.Random, spec: dict[str, Any]) -> Any:
         {choices: [a, b, c]}   -> uniform choice
         {log_min: x, log_max: y} -> uniform float in log space
     """
+    if isinstance(spec, list):
+        return rng.choice(spec)
     if "choices" in spec:
         return rng.choice(spec["choices"])
     if "log_min" in spec and "log_max" in spec:
@@ -150,6 +152,8 @@ def build_random_dir(
     for layer in params["layers"]:
         for tensor_name in params["tensors"]:
             key = _model_key(layer, tensor_name)
+            if key not in new_state and tensor_name == "self_attn.o_proj":
+                key = _model_key(layer, "linear_attn.out_proj")
             if key not in new_state:
                 raise KeyError(f"tensor {key} not found in base model")
             W = new_state[key]
@@ -296,7 +300,7 @@ def build_task_vector(
         return [(_descriptor("task_vector", params, seed, config, parent_id, "", [], None), {}, [])]
 
     parent_delta = load_file(zoo_dir / parent_id / "delta.safetensors")
-    new_state = {k: v.clone() for k, v in base_state.items()}
+    new_state = dict(base_state)
     touched: list[str] = []
     for key, dv in parent_delta.items():
         if key in new_state:
@@ -379,6 +383,7 @@ def build_chain(
 
     cumulative = dict(base_state)
     entries = []
+    all_touched: set[str] = set()
     parent_id = None
     for step in range(length):
         family = rng.choice(available)
@@ -387,7 +392,8 @@ def build_chain(
         inner_entries = _build_single_family(
             family, config, inner_cfg, step_seed, cumulative, zoo_dir, manifest, dry_run=False
         )
-        inner_desc, cumulative, _ = inner_entries[0]
+        inner_desc, cumulative, step_touched = inner_entries[0]
+        all_touched.update(step_touched)
         params = {
             "length": length,
             "step": step,
@@ -396,7 +402,7 @@ def build_chain(
             "inner_seed": step_seed,
         }
         desc = _descriptor("chain", params, seed, config, parent_id, "", [], None)
-        entries.append((desc, cumulative, []))
+        entries.append((desc, cumulative, sorted(all_touched)))
         parent_id = desc.id
     return entries
 
@@ -490,6 +496,7 @@ def build_zoo(
                     fam, config, family_cfg, seed, base_state, zoo_dir, manifest, dry_run=dry_run
                 )
             for desc, new_state, touched in entries:
+                desc.git_sha = git_sha
                 if dry_run:
                     line = {
                         "id": desc.id,
@@ -505,7 +512,7 @@ def build_zoo(
                     delta = {
                         k: (new_state[k] - base_state[k]).to(dtype)
                         for k in touched
-                        if k in base_state
+                        if k in base_state and not torch.equal(new_state[k], base_state[k])
                     }
                     _write_entry(zoo_dir, desc, delta, dtype)
                     line = {

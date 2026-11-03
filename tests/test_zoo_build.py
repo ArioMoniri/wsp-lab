@@ -85,3 +85,9 @@ def test_build_unknown_family_raises(tmp_path):
     p.write_text(yaml.safe_dump(cfg))
     with pytest.raises(ValueError, match="unknown edit family"):
         build_zoo(p, dry_run=True)
+
+
+def test_sample_param_accepts_component_list():
+    import random
+
+    assert sample_param(random.Random(0), ["attn", "mlp", "both"]) in {"attn", "mlp", "both"}
