@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import torch
 
+from wsp.edits.refusal import interpolate_direction
 from wsp.zoo.random_dir import ablate_direction
 
 
@@ -28,9 +29,9 @@ def layer_weight_profile(
 @torch.no_grad()
 def heretic_abliteration_kernel(
     state_dict: dict[str, torch.Tensor],
-    refusal_dirs: dict[int, torch.Tensor],
+    refusal_dirs: torch.Tensor | dict[int, torch.Tensor],
     layer_tensors: dict[int, list[str]],
-    direction_index: int,
+    direction_index: float,
     max_weight: float,
     max_weight_position: int,
     min_weight: float,
@@ -40,9 +41,9 @@ def heretic_abliteration_kernel(
 
     Args:
         state_dict: full model state dictionary.
-        refusal_dirs: mapping layer_index -> tensor of shape (n_directions, d_model).
+        refusal_dirs: residual directions including the embedding direction.
         layer_tensors: mapping layer_index -> list of state-dict keys to edit in that layer.
-        direction_index: which refusal direction to use per layer (wrapped modulo n_directions).
+        direction_index: fractional Heretic layer index, with -1 for embeddings.
         max_weight: peak ablation weight.
         max_weight_position: layer at which the weight peaks.
         min_weight: floor weight applied far from the peak.
@@ -62,15 +63,11 @@ def heretic_abliteration_kernel(
     )
     touched: list[str] = []
     for layer in layers:
-        if layer not in refusal_dirs:
-            raise KeyError(f"layer {layer} missing from refusal_dirs")
-        dirs = refusal_dirs[layer]
-        if dirs.ndim != 2:
-            raise ValueError(
-                f"refusal_dirs[{layer}] must be 2-D (n_directions, d_model), got {dirs.shape}"
-            )
-        idx = direction_index % dirs.shape[0]
-        d = dirs[idx]
+        if isinstance(refusal_dirs, dict):
+            dirs = refusal_dirs[layer]
+            d = dirs[int(direction_index) % dirs.shape[0]]
+        else:
+            d = interpolate_direction(refusal_dirs, direction_index)
         weight = profile[layer]
         for key in layer_tensors[layer]:
             if key not in new_state:

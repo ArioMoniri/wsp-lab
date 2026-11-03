@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import random
@@ -20,6 +21,7 @@ import yaml
 from safetensors.torch import load_file, save_file
 
 from wsp.edits.kernels import heretic_abliteration_kernel
+from wsp.edits.refusal import extract_directions
 from wsp.schema import EditDescriptor
 from wsp.zoo.random_dir import ablate_direction, random_unit_direction
 
@@ -174,11 +176,11 @@ def build_random_dir(
 
 def sample_abliteration_params(rng: random.Random, family_cfg: dict[str, Any]) -> dict[str, Any]:
     return {
-        "direction_index": int(sample_param(rng, family_cfg["direction_index"])),
+        "direction_index": float(sample_param(rng, family_cfg["direction_index"])),
         "max_weight": float(sample_param(rng, family_cfg["max_weight"])),
-        "max_weight_position": int(sample_param(rng, family_cfg["max_weight_position"])),
+        "max_weight_position": float(sample_param(rng, family_cfg["max_weight_position"])),
         "min_weight": float(sample_param(rng, family_cfg["min_weight"])),
-        "min_weight_distance": int(sample_param(rng, family_cfg["min_weight_distance"])),
+        "min_weight_distance": float(sample_param(rng, family_cfg["min_weight_distance"])),
         "components": sample_param(rng, family_cfg["components"]),
     }
 
@@ -196,17 +198,8 @@ def build_abliteration(
     if dry_run:
         return [(_descriptor("abliteration", params, seed, config, None, "", [], None), {}, [])]
 
-    cache_path = zoo_dir / "refusal_dirs.pt"
-    if not cache_path.exists():
-        raise FileNotFoundError(
-            f"Refusal direction cache not found at {cache_path}. "
-            "Compute it first (e.g. via agent-tmux refusal-calc)."
-        )
-    refusal_dirs = torch.load(cache_path, map_location="cpu", weights_only=True)
-    if not isinstance(refusal_dirs, dict):
-        raise TypeError(f"refusal_dirs.pt must contain a dict, got {type(refusal_dirs)}")
-
-    layers = family_cfg.get("layers", sorted(refusal_dirs.keys()))
+    refusal_dirs = extract_directions(config, zoo_dir)
+    layers = family_cfg.get("layers", list(range(len(refusal_dirs) - 1)))
     components = params["components"]
     tensor_names: list[str] = []
     if components in ("attn", "both"):
@@ -214,6 +207,12 @@ def build_abliteration(
     if components in ("mlp", "both"):
         tensor_names.append("mlp.down_proj")
     layer_tensors = {layer: [_model_key(layer, tn) for tn in tensor_names] for layer in layers}
+
+    for layer, keys in layer_tensors.items():
+        layer_tensors[layer] = [
+            key if key in base_state else key.replace("self_attn.o_proj", "linear_attn.out_proj")
+            for key in keys
+        ]
 
     new_state, touched = heretic_abliteration_kernel(
         base_state,
@@ -354,7 +353,15 @@ def build_chain(
     rng = random.Random(seed)
     length = int(sample_param(rng, family_cfg["length"]))
     single_families = ["random_dir", "abliteration", "heretic_ara", "lora_sft"]
-    available = [f for f in single_families if f in config.get("families", {})]
+    available = [
+        f
+        for f in single_families
+        if f in config.get("families", {})
+        and (
+            f not in ("heretic_ara", "lora_sft")
+            or importlib.util.find_spec(f"wsp.zoo.{f}") is not None
+        )
+    ]
     if not available:
         raise ValueError("no single-edit families configured; chain cannot be built")
 
