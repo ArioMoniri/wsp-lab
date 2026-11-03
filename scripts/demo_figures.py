@@ -16,10 +16,10 @@ import matplotlib
 
 matplotlib.use("Agg")  # headless, CPU only
 
-import numpy as np  # noqa: E402
-from matplotlib import pyplot as plt  # noqa: E402
+import numpy as np
+from matplotlib import pyplot as plt
 
-from wsp.plots import (  # noqa: E402
+from wsp.plots import (
     latent_scatter,
     method_bars,
     pred_vs_measured,
@@ -27,15 +27,19 @@ from wsp.plots import (  # noqa: E402
     small_multiples,
     sweep_with_ci,
 )
-from wsp.plots.style import FIGURES_DIR, OKABE_ITO  # noqa: E402
+from wsp.plots.style import FIGURES_DIR, OKABE_ITO
 
 PNG_BUDGET = 300 * 1024
 
 
 def _toy_latent(rng):
     fams = ["random_dir", "abliteration", "heretic_ara", "lora_sft"]
-    centers = {"random_dir": (0.0, 0.0), "abliteration": (1.6, -0.4),
-               "heretic_ara": (1.1, 1.2), "lora_sft": (-1.2, 1.0)}
+    centers = {
+        "random_dir": (0.0, 0.0),
+        "abliteration": (1.6, -0.4),
+        "heretic_ara": (1.1, 1.2),
+        "lora_sft": (-1.2, 1.0),
+    }
     z, fam, score = [], [], []
     for f in fams:
         zz = np.asarray(centers[f]) + rng.normal(size=(35, 2)) * 0.45
@@ -64,8 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     x = np.linspace(0.0, 1.0, 9)
     runs = 0.06 - 0.16 * x[:, None] + 0.025 * rng.normal(size=(9, 5))
     written += savefig(
-        sweep_with_ci(x, runs, "SSM predictor", color=OKABE_ITO["blue"],
-                      ylabel="Δ MATH-500"),
+        sweep_with_ci(x, runs, "SSM predictor", color=OKABE_ITO["blue"], ylabel="Δ MATH-500"),
         "demo_sweep_with_ci",
         outdir=out,
     )
@@ -74,8 +77,9 @@ def main(argv: list[str] | None = None) -> int:
     pred = -0.30 * s**1.2
     meas = pred + 0.02 * rng.normal(size=8)
     written += savefig(
-        pred_vs_measured(pred, meas, s, "abliteration",
-                         title="abliteration: predicted vs. measured"),
+        pred_vs_measured(
+            pred, meas, s, "abliteration", title="abliteration: predicted vs. measured"
+        ),
         "demo_pred_vs_measured",
         outdir=out,
     )

@@ -3,7 +3,8 @@
 import json
 from pathlib import Path
 
-from PIL import Image  # noqa: E402
+import pytest
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 LOTTIE = ROOT / "assets" / "lottie" / "pipeline.json"
@@ -18,7 +19,7 @@ OKABE_RGB = {
     "yellow": (0.941, 0.894, 0.259),
     "blue": (0.0, 0.447, 0.698),
     "vermillion": (0.835, 0.369, 0.0),
-    "reddish_purple": (0.8, 0.471, 0.655),
+    "reddish_purple": (0.8, 0.475, 0.655),
 }
 
 
@@ -27,7 +28,7 @@ def _layer_names_and_texts(anim):
     for layer in anim["layers"]:
         if layer.get("ty") == 5:  # text layer
             doc = layer["t"]["d"]["k"][0]["s"]
-            names.append(doc[1])
+            names.append(doc["t"])
     return names
 
 
@@ -70,8 +71,24 @@ def test_lottie_layers_are_well_formed_and_in_range():
         assert "ks" in layer and all(k in layer["ks"] for k in ("o", "p", "a", "s"))
         if layer.get("ty") == 4:
             assert layer.get("shapes"), f"shape layer {layer.get('nm')} has no shapes"
+            for group in layer["shapes"]:
+                assert group["ty"] == "gr"
+                assert group["it"][-1]["ty"] == "tr"
         if layer.get("ty") == 5:
             assert "t" in layer and "d" in layer["t"]
+
+
+def test_lottie_animates_three_edits_tokens_state_and_forecast():
+    anim = json.loads(LOTTIE.read_text())
+    names = [layer.get("nm", "") for layer in anim["layers"]]
+    edit_arrows = [name for name in names if name.startswith("edit-arrow-")]
+    assert len(edit_arrows) == 3
+    assert {"delta-token-bars", "ssm-block", "forecast-curve"} <= set(names)
+    state_layers = [layer for layer in anim["layers"] if "ssm-state-flow" in layer.get("nm", "")]
+    assert len(state_layers) >= 3
+    assert all(layer["ks"]["p"]["a"] == 1 for layer in state_layers)
+    forecast = next(layer for layer in anim["layers"] if layer["nm"] == "forecast-curve")
+    assert forecast["ks"]["o"]["a"] == 1
 
 
 def test_lottie_covers_the_pipeline_stages_in_okabe_ito():
@@ -89,9 +106,11 @@ def test_lottie_covers_the_pipeline_stages_in_okabe_ito():
 
 def test_lottie_generator_reproduces_committed_json(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.argv", ["make_lottie.py", "--out", str(tmp_path)])
-    import runpy  # noqa: E402
+    import runpy
 
-    runpy.run_path(str(SCRIPTS / "make_lottie.py"), run_name="__main__")
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_path(str(SCRIPTS / "make_lottie.py"), run_name="__main__")
+    assert exc.value.code == 0
     regen = json.loads((tmp_path / "pipeline.json").read_text())
     assert regen == json.loads(LOTTIE.read_text())
 
@@ -102,10 +121,15 @@ def test_gif_fallback_is_an_animated_3_to_4_second_loop():
     with Image.open(GIF) as img:
         assert getattr(img, "is_animated", False)
         n = img.n_frames
-        per_frame_ms = img.info.get("duration", 0)
         assert 90 <= n <= 120
-        assert per_frame_ms == 33  # 30 fps
-        assert 2.7 <= n * per_frame_ms / 1000 <= 4.4
+        durations = []
+        for frame in range(n):
+            img.seek(frame)
+            durations.append(img.info.get("duration", 0))
+        total_ms = sum(durations)
+        assert set(durations) <= {30, 40}  # GIF stores delays in 10 ms ticks.
+        assert 2.7 <= total_ms / 1000 <= 4.4
+        assert 29 <= n / (total_ms / 1000) <= 31
         assert 4.0 <= img.size[0] / img.size[1] <= 6.5  # hero banner aspect
 
 

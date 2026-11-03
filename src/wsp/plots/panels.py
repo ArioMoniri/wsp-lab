@@ -56,7 +56,11 @@ def _bootstrap_ci(
     Whole runs are resampled jointly (paired bootstrap), so run-level structure
     survives; deterministic for a given `seed`.
     """
-    m, n = y.shape
+    if y.ndim != 2 or y.shape[1] < 2:
+        raise ValueError("bootstrap input must contain at least two runs")
+    if n_boot < 1:
+        raise ValueError("n_boot must be positive")
+    _, n = y.shape
     rng = np.random.default_rng(seed)
     idx = rng.integers(0, n, size=(n_boot, n))
     means = y[:, idx].mean(axis=-1)  # (m, n_boot)
@@ -76,7 +80,7 @@ def _sweep_into_ax(
     legend: bool = True,
 ) -> None:
     """Mean line + bootstrap band (+ thin per-run lines when n_runs ≤ 10)."""
-    m, n = y.shape
+    _, n = y.shape
     mean = y.mean(axis=1)
     if n >= 2:
         lo, hi = _bootstrap_ci(y, n_boot=n_boot, seed=seed)
@@ -128,15 +132,17 @@ def latent_scatter(
     apply_style()
     z = np.asarray(z2d, dtype=float)
     c = np.asarray(color, dtype=float)
-    if z.ndim != 2 or z.shape[1] != 2:
+    if z.ndim != 2 or z.shape[1] != 2 or len(z) == 0:
         raise ValueError(f"z2d must have shape (n, 2), got {z.shape}")
-    if len(c) != len(z):
+    if c.ndim != 1 or len(c) != len(z):
         raise ValueError(f"color has {len(c)} entries for {len(z)} points")
+    if not np.isfinite(z).all() or not np.isfinite(c).all():
+        raise ValueError("z2d and color must contain only finite values")
     if isinstance(marker_family, str):
         fams = np.array([marker_family] * len(z))
     else:
         fams = np.asarray(marker_family)
-        if len(fams) != len(z):
+        if fams.ndim != 1 or len(fams) != len(z):
             raise ValueError(f"marker_family has {len(fams)} entries for {len(z)} points")
     for f in fams:
         _check_family(str(f))
@@ -203,8 +209,12 @@ def sweep_with_ci(
     y = np.asarray(y_runs, dtype=float)
     if y.ndim == 1:
         y = y[:, None]
+    if y.ndim != 2 or y.shape[0] == 0 or y.shape[1] == 0:
+        raise ValueError("y_runs must have shape (sweep points, runs) with at least one of each")
     if xv.ndim != 1 or len(xv) != y.shape[0]:
         raise ValueError(f"x has shape {xv.shape} but y_runs gives {y.shape[0]} sweep points")
+    if not np.isfinite(xv).all() or not np.isfinite(y).all():
+        raise ValueError("x and y_runs must contain only finite values")
 
     fig, ax = plt.subplots(figsize=(COL_WIDTH, 2.3))
     _sweep_into_ax(
@@ -242,8 +252,12 @@ def pred_vs_measured(
     p = np.asarray(pred, dtype=float)
     m = np.asarray(meas, dtype=float)
     s = np.asarray(strength, dtype=float)
+    if p.ndim != 1 or m.ndim != 1 or s.ndim != 1 or len(p) == 0:
+        raise ValueError("pred, meas and strength must be non-empty one-dimensional sequences")
     if not (len(p) == len(m) == len(s)):
         raise ValueError("pred, meas and strength must have the same length")
+    if not (np.isfinite(p).all() and np.isfinite(m).all() and np.isfinite(s).all()):
+        raise ValueError("pred, meas and strength must contain only finite values")
 
     fig, ax = plt.subplots(figsize=(COL_WIDTH, 2.4))
     ax.axhline(0.0, color="0.55", linewidth=0.6, linestyle=(0, (4, 3)), zorder=1)
@@ -296,11 +310,19 @@ def method_bars(
     """
     apply_style()
     k = len(methods)
+    if k == 0:
+        raise ValueError("methods is empty")
     if not (len(scores) == len(cis) == len(baseline_mask) == k):
         raise ValueError("methods, scores, cis and baseline_mask must have equal lengths")
     scores_a = np.asarray(scores, dtype=float)
-    lo = np.array([float(c[0]) for c in cis])
-    hi = np.array([float(c[1]) for c in cis])
+    intervals = np.asarray(cis, dtype=float)
+    if intervals.shape != (k, 2):
+        raise ValueError("cis must contain one (lower, upper) pair per method")
+    if not np.isfinite(scores_a).all() or not np.isfinite(intervals).all():
+        raise ValueError("scores and cis must contain only finite values")
+    lo, hi = intervals.T
+    if np.any(lo > scores_a) or np.any(scores_a > hi):
+        raise ValueError("each confidence interval must contain its method score")
     err = np.vstack([np.clip(scores_a - lo, 0, None), np.clip(hi - scores_a, 0, None)])
 
     width = COL_WIDTH if k <= 4 else DBL_WIDTH
@@ -312,13 +334,22 @@ def method_bars(
     for i, (name, score, is_base) in enumerate(zip(methods, scores_a, baseline_mask)):
         yerr = np.array([[err[0, i]], [err[1, i]]])  # (2, 1): lo and hi offsets for one bar
         if is_base:
-            ax.bar(xs[i], score, width=0.62, facecolor="0.82", hatch="///", yerr=yerr,
-                   error_kw=error_kw, **edge_kw)
+            ax.bar(
+                xs[i],
+                score,
+                width=0.62,
+                facecolor="0.82",
+                hatch="///",
+                yerr=yerr,
+                error_kw=error_kw,
+                **edge_kw,
+            )
         else:
             color = CATEGORICAL_CYCLE[main_i % len(CATEGORICAL_CYCLE)]
             main_i += 1
-            ax.bar(xs[i], score, width=0.62, facecolor=color, yerr=yerr, error_kw=error_kw,
-                   **edge_kw)
+            ax.bar(
+                xs[i], score, width=0.62, facecolor=color, yerr=yerr, error_kw=error_kw, **edge_kw
+            )
     ax.set_xticks(xs, [str(m) for m in methods], rotation=20, rotation_mode="anchor", ha="right")
     ax.yaxis.grid(True, color="0.9", linewidth=0.5)
     ax.set_axisbelow(True)
@@ -354,10 +385,21 @@ def small_multiples(
         x, y = dict_of_series[key]
         xv = np.asarray(x, dtype=float)
         yv = np.asarray(y, dtype=float)
+        if xv.ndim != 1 or len(xv) == 0 or not np.isfinite(xv).all():
+            raise ValueError(f"{key!r} x values must be a non-empty finite 1-D sequence")
         if yv.ndim == 1:
+            if len(yv) != len(xv) or not np.isfinite(yv).all():
+                raise ValueError(f"{key!r} y values must match x and be finite")
             color = CATEGORICAL_CYCLE[i % len(CATEGORICAL_CYCLE)]
             ax.plot(xv, yv, color=color, linewidth=1.0, marker="o", markersize=2.5, zorder=3)
         else:
+            if (
+                yv.ndim != 2
+                or yv.shape[0] != len(xv)
+                or yv.shape[1] == 0
+                or not np.isfinite(yv).all()
+            ):
+                raise ValueError(f"{key!r} y values must have shape (len(x), runs) and be finite")
             _sweep_into_ax(
                 ax,
                 xv,

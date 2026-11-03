@@ -18,6 +18,8 @@ dependencies = [
   "scikit-learn",
   "lightgbm",
   "pandas",
+  "matplotlib>=3.8",
+  "pillow>=10",
   "pyarrow",
   "tqdm",
   "pyyaml",

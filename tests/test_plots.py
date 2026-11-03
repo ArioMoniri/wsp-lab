@@ -6,15 +6,15 @@ import matplotlib
 
 matplotlib.use("Agg")  # headless, CPU-only test tier
 
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import pytest  # noqa: E402
-import runpy  # noqa: E402
-from matplotlib.collections import PolyCollection  # noqa: E402
+import runpy
 
-import wsp.plots  # noqa: E402  (importing applies the house style)
-from wsp.plots import panels, style  # noqa: E402
-from wsp.schema import EDIT_FAMILIES  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
+import pytest
+from matplotlib.collections import PolyCollection
+
+from wsp.plots import panels, style
+from wsp.schema import EDIT_FAMILIES
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 
@@ -80,7 +80,7 @@ def test_savefig_exports_pdf_and_png(tmp_path):
 
 
 def test_savefig_rejects_unsafe_names(tmp_path):
-    fig, ax = plt.subplots()
+    fig, _ax = plt.subplots()
     with pytest.raises(ValueError):
         style.savefig(fig, "../escape", outdir=tmp_path)
     with pytest.raises(ValueError):
@@ -133,6 +133,13 @@ def test_latent_scatter_rejects_unknown_family():
         panels.latent_scatter(z[:4], color[:4], ["magic"] * 4)
 
 
+def test_latent_scatter_rejects_empty_or_non_finite_data():
+    with pytest.raises(ValueError, match="shape"):
+        panels.latent_scatter([], [], [])
+    with pytest.raises(ValueError, match="finite"):
+        panels.latent_scatter([[0.0, np.nan]], [0.5], "base")
+
+
 def test_sweep_with_ci_draws_bootstrap_band_and_seed_markers():
     rng = np.random.default_rng(1)
     x = np.linspace(0.0, 1.0, 9)
@@ -157,8 +164,8 @@ def test_sweep_with_ci_band_is_deterministic_and_hides_runs_above_ten():
     y_runs = 0.05 * x[:, None] + 0.03 * rng.normal(size=(12, 12))
     f1 = panels.sweep_with_ci(x, y_runs, "a", seed=3)
     f2 = panels.sweep_with_ci(x, y_runs, "a", seed=3)
-    b1 = [c for c in f1.axes[0].collections if isinstance(c, PolyCollection)][0]
-    b2 = [c for c in f2.axes[0].collections if isinstance(c, PolyCollection)][0]
+    b1 = next(c for c in f1.axes[0].collections if isinstance(c, PolyCollection))
+    b2 = next(c for c in f2.axes[0].collections if isinstance(c, PolyCollection))
     v1 = b1.get_paths()[0].vertices
     v2 = b2.get_paths()[0].vertices
     assert np.array_equal(v1, v2)
@@ -171,10 +178,15 @@ def test_sweep_with_ci_band_covers_mean_of_many_runs():
     x = np.linspace(0.0, 1.0, 15)
     y_runs = 0.2 - 0.3 * x[:, None] + 0.01 * rng.normal(size=(15, 40))
     fig = panels.sweep_with_ci(x, y_runs, "b")
-    band = [c for c in fig.axes[0].collections if isinstance(c, PolyCollection)][0]
+    band = next(c for c in fig.axes[0].collections if isinstance(c, PolyCollection))
     verts = band.get_paths()[0].vertices[:, 1]
     mean = y_runs.mean(axis=1)
     assert (verts.max() >= mean.max() - 1e-9) and (verts.min() <= mean.min() + 1e-9)
+
+
+def test_sweep_with_ci_rejects_invalid_run_matrix():
+    with pytest.raises(ValueError, match="shape"):
+        panels.sweep_with_ci([0, 1], np.zeros((2, 1, 1)), "bad")
 
 
 def test_pred_vs_measured_overlays_measured_points():
@@ -214,7 +226,7 @@ def test_method_bars_hatch_only_baselines_with_error_bars():
     assert len(bars) == len(methods)
     for bar, is_base in zip(bars, mask):
         assert (bar.get_hatch() == "///") == is_base
-    from matplotlib.container import BarContainer  # noqa: E402
+    from matplotlib.container import BarContainer
 
     for c in ax.containers:
         if isinstance(c, BarContainer):
@@ -259,9 +271,7 @@ def test_small_multiples_accept_run_matrices_and_reject_empty():
 
 
 def test_demo_figures_script_writes_one_example_per_panel(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        "sys.argv", ["demo_figures.py", "--out", str(tmp_path), "--seed", "0"]
-    )
+    monkeypatch.setattr("sys.argv", ["demo_figures.py", "--out", str(tmp_path), "--seed", "0"])
     with pytest.raises(SystemExit) as exc:
         runpy.run_path(str(SCRIPTS / "demo_figures.py"), run_name="__main__")
     assert exc.value.code == 0
