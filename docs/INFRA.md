@@ -26,8 +26,7 @@
 ## mamba-ssm
 
 On 2026-11-03, the latest 30 GitHub releases of state-spaces/mamba and
-Dao-AILab/causal-conv1d had no torch 2.15 / CUDA 13 wheel. A source build is
-running in `wsp-mamba2`, log `~/agent-logs/wsp-mamba2-20261103-231214.log`:
+Dao-AILab/causal-conv1d had no torch 2.15 / CUDA 13 wheel. A source build failed in `wsp-mamba2`, log `~/agent-logs/wsp-mamba2-20261103-231214.log`:
 
 ```sh
 source .venv/bin/activate
@@ -36,5 +35,7 @@ uv pip install --no-build-isolation causal-conv1d mamba-ssm
 ```
 
 The causal-conv1d build system generates many CUDA architectures despite
-`TORCH_CUDA_ARCH_LIST`; completion and import remain unverified. The previous
-build failed compiling extension objects; see `~/agent-logs/wsp-mamba-20261103-225608.log`.
+`TORCH_CUDA_ARCH_LIST`. The mamba-ssm extension compilation uses C++17,
+while the installed PyTorch headers require C++20 (`#error C++20 or later
+compatible compiler is required`); `import mamba_ssm` still fails. The previous
+build also failed compiling extension objects; see `~/agent-logs/wsp-mamba-20261103-225608.log`.
