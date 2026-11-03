@@ -51,3 +51,5 @@
 | 2026-11-03 | heretic+lora REVISE round | codex/gpt-6.1-sol high | running |
 | 2026-11-03 | scribe: intro + related (paper) | copilot/auto | running |
 | 2026-11-03 | Board A feat/plots-design | claude_aio_gmail_api/claude-haiku-5-5 | REVISE → fixed by orchestrator, merged |
+| 2026-11-03 | Board A perf/ssm-kernels (2nd) | claude_info/claude-haiku-5-5 | REVISE (chunked scan slower, no dispatch) |
+| 2026-11-03 | perf REVISE: mamba-ssm c++20 build + dispatch | codex/gpt-6.1-terra high | running |
