@@ -45,3 +45,6 @@ Reviews are always a new `delegate_task` with `role="review"`.
   claude-fable-5-1, gpt-6-astra) only for H4 reads and unblocking after two failed T2 attempts.
 - Ledger: every delegation is appended to `board/usage.md` (date, task, provider/model, outcome) so remaining
   credits can be judged per provider; the orchestrator reviews it before each new wave.
+- Fallback order when a provider hits a quota (user rule, 3 Nov 2026): switch immediately to another provider,
+  including the API-billed instances (`claude_aio_gmail_api` "Claude API" for Claude models) rather than waiting;
+  record the switch in `board/usage.md`. Report exact needs to the user in the BLUF line.
