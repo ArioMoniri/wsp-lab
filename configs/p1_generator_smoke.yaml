@@ -2,6 +2,7 @@ base_model: Qwen/Qwen3.5-0.8B
 heretic_ara:
   preserve_good_behavior_weight: 1.0
   trials: 2
+  kl_divergence_target: 1.0
   lora_rank: 4
   batch_size: 1
   max_response_length: 8

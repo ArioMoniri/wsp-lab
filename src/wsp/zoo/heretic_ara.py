@@ -5,7 +5,6 @@ from __future__ import annotations
 import gc
 import json
 import math
-import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -20,17 +19,7 @@ from heretic.system import empty_cache
 from optuna.samplers import TPESampler
 
 from wsp.schema import EditDescriptor, write_manifest
-
-
-def get_git_sha() -> str:
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except (subprocess.SubprocessError, OSError):
-        return "unknown"
+from wsp.zoo.common import compute_adapter_stats, get_git_sha, git_provenance, resolve_base_revision
 
 
 def select_best_trial(
@@ -41,23 +30,20 @@ def select_best_trial(
 
     If kl_divergence_target is given, chooses the trial with lowest refusal rate
     among those satisfying kl_divergence <= kl_divergence_target. If none qualify,
-    chooses the one closest to kl_divergence_target.
+    raises rather than exporting an infeasible edit.
     Otherwise, chooses the trial minimizing (refusals, kl_divergence).
     """
     if not trials:
         raise ValueError("Cannot select from an empty trial list.")
 
+    for trial in trials:
+        if not all(math.isfinite(trial[key]) for key in ("refusals", "kl_divergence")):
+            raise ValueError("Nonfinite trial metrics")
     if kl_divergence_target is not None:
-        eligible = [t for t in trials if t.get("kl_divergence", 0.0) <= kl_divergence_target]
-        if eligible:
-            return min(eligible, key=lambda t: t.get("refusals", float("inf")))
-        return min(
-            trials,
-            key=lambda t: (
-                abs(t.get("kl_divergence", 0.0) - kl_divergence_target),
-                t.get("refusals", float("inf")),
-            ),
-        )
+        eligible = [t for t in trials if t["kl_divergence"] <= kl_divergence_target]
+        if not eligible:
+            raise ValueError("No trial satisfies KL divergence target")
+        return min(eligible, key=lambda t: t["refusals"])
 
     return min(
         trials,
@@ -65,23 +51,37 @@ def select_best_trial(
     )
 
 
-def compute_adapter_stats(peft_model: torch.nn.Module) -> tuple[list[str], float]:
-    """Inspect PEFT model adapters to find touched tensors and compute Frobenius norm."""
-    touched_tensors: list[str] = []
-    fro_sq = 0.0
+class FixedWeightTrial:
+    """Keep a configured weight out of the sampler's search dimensions."""
 
-    for name, module in peft_model.named_modules():
-        if hasattr(module, "lora_A") and "default" in module.lora_A:
-            A = module.lora_A["default"].weight
-            B = module.lora_B["default"].weight
-            scaling = getattr(module, "scaling", {}).get("default", 1.0)
-            delta_W = (B @ A) * scaling
-            norm_sq = float((delta_W.float() ** 2).sum().item())
-            if norm_sq > 0:
-                touched_tensors.append(f"{name}.weight")
-                fro_sq += norm_sq
+    def __init__(self, trial, weight):
+        self.trial, self.weight = trial, weight
 
-    return sorted(touched_tensors), math.sqrt(fro_sq)
+    def __getattr__(self, name):
+        return getattr(self.trial, name)
+
+    def suggest_float(self, name, low, high, **kwargs):
+        if name == "preserve_good_behavior_weight" and self.weight is not None:
+            return self.trial.suggest_float(name, float(self.weight), float(self.weight))
+        return self.trial.suggest_float(name, low, high, **kwargs)
+
+
+def extract_trial_metrics(evaluator, scores):
+    """Match Heretic plugin instances to their actual output labels."""
+    from heretic.scorers.keyword_rate import KeywordRate
+    from heretic.scorers.kl_divergence import KLDivergence
+
+    values = dict(scores)
+    metrics = []
+    for plugin in (KeywordRate, KLDivergence):
+        names = [e.name for e in evaluator._scorer_entries if isinstance(e.scorer, plugin)]
+        if len(names) != 1 or names[0] not in values:
+            raise ValueError(f"Missing or ambiguous {plugin.__name__} output: {names}")
+        value = float(values[names[0]].value)
+        if not math.isfinite(value):
+            raise ValueError(f"Nonfinite {names[0]}")
+        metrics.append(value)
+    return tuple(metrics)
 
 
 def generate(
@@ -115,119 +115,113 @@ def generate(
     settings_values = {
         "model": base_model,
         "seed": seed,
-        "model_commit": params.get("base_revision"),
+        "model_commit": resolve_base_revision(base_model, params.get("base_revision")),
         "batch_size": int(params.get("batch_size", 1)),
         "dtypes": ["bfloat16"],
         "device_map": params.get("device_map", "auto"),
         "max_response_length": int(params.get("max_response_length", 100)),
     }
     settings_values.update(params.get("heretic_settings", {}))
+    settings_values["model_commit"] = resolve_base_revision(
+        base_model, settings_values["model_commit"]
+    )
     settings = Settings(**settings_values)
 
-    model = Model(settings)
-    evaluator = Evaluator(settings, model)
-
-    ara_settings = ara.Settings(lora_rank=lora_rank, **params.get("ara_settings", {}))
-    modifier = ara.ARA(heretic_settings=settings, settings=ara_settings)
-    ctx = Context(settings=settings, model=model)
-    modifier.init(ctx)
-
-    trial_records: list[dict[str, Any]] = []
-
-    def objective(trial: optuna.Trial) -> tuple[float, ...]:
-        parameters = modifier.suggest_parameters(ctx, trial)
-        if p_weight is not None:
-            parameters.preserve_good_behavior_weight = float(p_weight)
-
-        modifier.reset_model(ctx)
-        modifier.modify_model(ctx, parameters)
-
-        scores = evaluator.get_scores()
-        objective_values = evaluator.get_objective_values(scores)
-
-        refusals = next(
-            (
-                s.value
-                for name, s in scores
-                if "refusal" in name.lower() or "keyword" in name.lower()
-            ),
-            scores[0][1].value if scores else 0.0,
-        )
-        kl_div = next(
-            (s.value for name, s in scores if "kl" in name.lower()),
-            scores[1][1].value if len(scores) > 1 else 0.0,
-        )
-
-        trial_records.append(
-            {
-                "trial": trial.number + 1,
-                "parameters": parameters.to_dict(),
-                "scores": {name: score.value for name, score in scores},
-                "refusals": float(refusals),
-                "kl_divergence": float(kl_div),
-            }
-        )
-        return objective_values
-
-    sampler = TPESampler(
-        n_startup_trials=min(10, n_trials),
-        n_ei_candidates=128,
-        multivariate=True,
-        seed=seed,
-    )
-    study = optuna.create_study(
-        sampler=sampler,
-        directions=evaluator.get_objective_directions(),
-        study_name="heretic_ara",
-    )
-
-    study.optimize(objective, n_trials=n_trials)
-
-    best_trial = select_best_trial(trial_records, kl_divergence_target=kl_target)
-    best_params = ara.Parameters(**best_trial["parameters"])
-    modifier.reset_model(ctx)
-    modifier.modify_model(ctx, best_params)
-
-    lora_dir = out_dir / "lora"
-    lora_dir.mkdir(parents=True, exist_ok=True)
-    model.model.save_pretrained(str(lora_dir))
-
-    study_file = out_dir / "study.json"
-    study_data = {
-        "trials": trial_records,
-        "best_trial": best_trial,
-        "seed": seed,
-        "params": params,
-    }
-    study_file.write_text(json.dumps(study_data, indent=2))
-
-    touched_tensors, delta_fro_norm = compute_adapter_stats(model.model)
-
-    desc_params = dict(params)
-    desc_params["delta_format"] = "lora"
-    desc = EditDescriptor(
-        family="heretic_ara",
-        params=desc_params,
-        seed=seed,
-        base_model=base_model,
-        base_revision=params.get("base_revision", "main"),
-        git_sha=get_git_sha(),
-        touched_tensors=touched_tensors,
-        delta_fro_norm=delta_fro_norm,
-    )
-    (out_dir / "edit.json").write_text(desc.to_json())
-
-    write_manifest(
-        out_dir / "manifest.json",
-        seed=seed,
-        config_hash=desc.id,
-        git_sha=desc.git_sha,
-        model_revisions={base_model: desc.base_revision},
-        params=desc_params,
-    )
-    # Break the objective closure and release all live tensors before emptying CUDA cache.
     ctx = modifier = evaluator = model = None
-    gc.collect()
-    empty_cache()
+    try:
+        model = Model(settings)
+        evaluator = Evaluator(settings, model)
+
+        ara_settings = ara.Settings(**{"lora_rank": lora_rank, **params.get("ara_settings", {})})
+        modifier = ara.ARA(heretic_settings=settings, settings=ara_settings)
+        ctx = Context(settings=settings, model=model)
+        modifier.init(ctx)
+
+        trial_records: list[dict[str, Any]] = []
+
+        def objective(trial: optuna.Trial) -> tuple[float, ...]:
+            parameters = modifier.suggest_parameters(ctx, FixedWeightTrial(trial, p_weight))
+
+            modifier.reset_model(ctx)
+            modifier.modify_model(ctx, parameters)
+
+            scores = evaluator.get_scores()
+            objective_values = evaluator.get_objective_values(scores)
+
+            refusals, kl_div = extract_trial_metrics(evaluator, scores)
+
+            trial_records.append(
+                {
+                    "trial": trial.number + 1,
+                    "parameters": parameters.to_dict(),
+                    "scores": {name: score.value for name, score in scores},
+                    "refusals": float(refusals),
+                    "kl_divergence": float(kl_div),
+                }
+            )
+            return objective_values
+
+        sampler = TPESampler(
+            n_startup_trials=30,
+            n_ei_candidates=128,
+            multivariate=True,
+            seed=seed,
+        )
+        study = optuna.create_study(
+            sampler=sampler,
+            directions=evaluator.get_objective_directions(),
+            study_name="heretic_ara",
+        )
+
+        study.optimize(objective, n_trials=n_trials)
+
+        best_trial = select_best_trial(trial_records, kl_divergence_target=kl_target)
+        best_params = ara.Parameters(**best_trial["parameters"])
+        modifier.reset_model(ctx)
+        modifier.modify_model(ctx, best_params)
+
+        lora_dir = out_dir / "lora"
+        lora_dir.mkdir(parents=True, exist_ok=True)
+        model.model.save_pretrained(str(lora_dir))
+
+        study_file = out_dir / "study.json"
+        study_data = {
+            "trials": trial_records,
+            "best_trial": best_trial,
+            "kl_constraint_met": kl_target is None or best_trial["kl_divergence"] <= kl_target,
+            "seed": seed,
+            "params": params,
+        }
+        study_file.write_text(json.dumps(study_data, indent=2))
+
+        touched_tensors, delta_fro_norm = compute_adapter_stats(model.model)
+
+        desc_params = dict(params)
+        desc_params["delta_format"] = "lora"
+        desc_params.update(git_provenance())
+        desc = EditDescriptor(
+            family="heretic_ara",
+            params=desc_params,
+            seed=seed,
+            base_model=base_model,
+            base_revision=settings_values["model_commit"],
+            git_sha=get_git_sha(),
+            touched_tensors=touched_tensors,
+            delta_fro_norm=delta_fro_norm,
+        )
+        (out_dir / "edit.json").write_text(desc.to_json())
+
+        write_manifest(
+            out_dir / "manifest.json",
+            seed=seed,
+            config_hash=desc.id,
+            git_sha=desc.git_sha,
+            model_revisions={base_model: desc.base_revision},
+            params=desc_params,
+        )
+    finally:
+        ctx = modifier = evaluator = model = None
+        gc.collect()
+        empty_cache()
 
     return desc

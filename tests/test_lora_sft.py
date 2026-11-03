@@ -80,12 +80,32 @@ def test_generate_lora_sft_smoke_gpu(tmp_path: Path, cuda):
         seed=42,
         out_dir=out_dir,
     )
+    import math
+
+    from huggingface_hub import hf_hub_download
+
+    from wsp.zoo.common import get_git_sha, resolve_base_revision
+
+    assert desc.git_sha == get_git_sha()
+    assert not desc.params["git_dirty"]
+    assert desc.base_revision == resolve_base_revision(desc.base_model)
+    index = json.loads(
+        Path(
+            hf_hub_download(
+                desc.base_model, "model.safetensors.index.json", revision=desc.base_revision
+            )
+        ).read_text()
+    )
+    assert set(desc.touched_tensors) <= set(index["weight_map"])
+    assert desc.touched_tensors and math.isfinite(desc.delta_fro_norm) and desc.delta_fro_norm > 0
+    assert json.loads((out_dir / "manifest.json").read_text())["git_sha"] == get_git_sha()
     assert desc.family == "lora_sft"
     assert desc.params["delta_format"] == "lora"
     assert (out_dir / "edit.json").exists()
     assert (out_dir / "train.json").exists()
     train_data = json.loads((out_dir / "train.json").read_text())
     assert len(train_data["loss_curve"]) == 5
+    assert all(math.isfinite(x["loss"]) for x in train_data["loss_curve"])
     assert (out_dir / "lora" / "adapter_config.json").exists()
 
 
@@ -95,6 +115,8 @@ def fake_sft(monkeypatch, toy_model):
     from transformers import BatchEncoding
 
     from wsp.zoo import lora_sft
+
+    monkeypatch.setattr(lora_sft, "resolve_base_revision", lambda *a: "a" * 40)
 
     class Tokenizer:
         pad_token = None

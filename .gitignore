@@ -26,3 +26,6 @@ data/papers/*.pdf
 data/hf/
 .swarm/
 *.sqlite*
+
+.venv
+data/hf

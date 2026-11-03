@@ -33,9 +33,8 @@ def test_select_best_trial_with_kl_target():
     best = select_best_trial(trials, kl_divergence_target=0.20)
     assert best["trial"] == 3
 
-    # If no trial satisfies KL target, pick the one closest to target
-    best_fallback = select_best_trial(trials, kl_divergence_target=0.01)
-    assert best_fallback["trial"] == 1
+    with pytest.raises(ValueError, match="No trial"):
+        select_best_trial(trials, kl_divergence_target=0.01)
 
 
 def test_generate_heretic_ara_toy(tmp_path: Path, fake_heretic):
@@ -45,7 +44,7 @@ def test_generate_heretic_ara_toy(tmp_path: Path, fake_heretic):
         "trials": 2,
         "lora_rank": 4,
         "ara_settings": {"n_optimization_steps": 1, "max_iter": 2},
-        "kl_divergence_target": 0.25,
+        "kl_divergence_target": 100.0,
     }
     desc = generate(base_model="toy", params=params, seed=42, out_dir=out_dir)
 
@@ -99,6 +98,25 @@ def test_generate_heretic_ara_smoke_gpu(tmp_path: Path, cuda):
         seed=123,
         out_dir=out_dir,
     )
+    import math
+
+    from huggingface_hub import hf_hub_download
+
+    from wsp.zoo.common import get_git_sha, resolve_base_revision
+
+    assert desc.git_sha == get_git_sha()
+    assert not desc.params["git_dirty"]
+    assert desc.base_revision == resolve_base_revision(desc.base_model)
+    index = json.loads(
+        Path(
+            hf_hub_download(
+                desc.base_model, "model.safetensors.index.json", revision=desc.base_revision
+            )
+        ).read_text()
+    )
+    assert set(desc.touched_tensors) <= set(index["weight_map"])
+    assert desc.touched_tensors and math.isfinite(desc.delta_fro_norm) and desc.delta_fro_norm > 0
+    assert json.loads((out_dir / "manifest.json").read_text())["git_sha"] == get_git_sha()
     assert desc.family == "heretic_ara"
     assert desc.params["delta_format"] == "lora"
     assert (out_dir / "edit.json").exists()
@@ -116,6 +134,8 @@ def fake_heretic(monkeypatch, toy_model):
     from peft import LoraConfig, get_peft_model
 
     from wsp.zoo import heretic_ara
+
+    monkeypatch.setattr(heretic_ara, "resolve_base_revision", lambda *a: "a" * 40)
 
     class Model:
         def __init__(self, settings):
@@ -157,6 +177,15 @@ def fake_heretic(monkeypatch, toy_model):
     class Evaluator:
         def __init__(self, settings, model):
             self.model = model
+            from types import SimpleNamespace
+
+            from heretic.scorers.keyword_rate import KeywordRate
+            from heretic.scorers.kl_divergence import KLDivergence
+
+            self._scorer_entries = [
+                SimpleNamespace(scorer=object.__new__(KeywordRate), name="Refusals"),
+                SimpleNamespace(scorer=object.__new__(KLDivergence), name="KL divergence"),
+            ]
 
         def get_scores(self):
             _, norm = heretic_ara.compute_adapter_stats(self.model.model)
@@ -207,3 +236,61 @@ def test_ara_seed_reproduces_saved_adapter(tmp_path, fake_heretic):
 def test_select_best_trial_rejects_empty():
     with pytest.raises(ValueError, match="empty"):
         select_best_trial([])
+
+
+def test_scores_use_plugin_output_names_not_position():
+    from types import SimpleNamespace
+
+    from heretic.scorer import Score
+    from heretic.scorers.keyword_rate import KeywordRate
+    from heretic.scorers.kl_divergence import KLDivergence
+
+    from wsp.zoo.heretic_ara import extract_trial_metrics
+
+    evaluator = SimpleNamespace(
+        _scorer_entries=[
+            SimpleNamespace(scorer=object.__new__(KeywordRate), name="Safety - custom"),
+            SimpleNamespace(scorer=object.__new__(KLDivergence), name="Divergence"),
+        ]
+    )
+    scores = [
+        ("unrelated", Score(99, "", "")),
+        ("Divergence", Score(0.4, "", "")),
+        ("Safety - custom", Score(0.1, "", "")),
+    ]
+    assert extract_trial_metrics(evaluator, scores) == (0.1, 0.4)
+    with pytest.raises(ValueError, match="Divergence"):
+        extract_trial_metrics(evaluator, scores[::2])
+
+
+def test_selection_rejects_missing_kl():
+    with pytest.raises((ValueError, KeyError)):
+        select_best_trial([{"refusals": 0}], kl_divergence_target=0.2)
+
+
+def test_fake_study_filters_violating_trial(tmp_path, fake_heretic, monkeypatch):
+    from heretic.scorer import Score
+
+    from wsp.zoo import heretic_ara
+
+    outputs = iter([(0.1, 0.9), (0.6, 0.1)])
+
+    def scores(self):
+        refusal, kl = next(outputs)
+        return [("KL divergence", Score(kl, "", "")), ("Refusals", Score(refusal, "", ""))]
+
+    monkeypatch.setattr(heretic_ara.Evaluator, "get_scores", scores)
+    generate(
+        "toy",
+        {
+            "trials": 2,
+            "lora_rank": 2,
+            "kl_divergence_target": 0.2,
+            "ara_settings": {"n_optimization_steps": 1, "max_iter": 2},
+        },
+        2,
+        tmp_path,
+    )
+    study = json.loads((tmp_path / "study.json").read_text())
+    assert study["best_trial"]["trial"] == 2
+    assert study["kl_constraint_met"] is True
