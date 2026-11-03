@@ -37,7 +37,7 @@ Reviews are always a new `delegate_task` with `role="review"`.
 
 ## Routing and budget policy (3 Nov 2026)
 - Provider health: OpenCode (`kimi-k2.7-code`, `glm-5.3`, `deepseek-v4-pro` since the workspace was set to Global)
-  OK; Codex (`gpt-6.1-sol`, `gpt-6.1-terra`) OK; Antigravity `gemini-3.8-flash` OK, `gpt-oss-120b` route broken
+  OK; Codex (`gpt-6.1-sol`, `gpt-6.1-terra`) OK; Antigravity: `gemini-3.8-flash` quota exhausted until ~10 Nov 2026, `gpt-oss-120b` route broken
   (malformed messages payload) — do not use; Claude providers reserved.
 - Concurrency cap: at most 5 delegated agents at once (one GPU, 8 CPUs; contention already slowed tests).
 - Credit tiers: T1 cheap/default (glm-5.3-flash, gemini-3.8-flash, claude-haiku-5-5, kimi), T2 mid (glm-5.3,
