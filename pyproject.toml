@@ -31,6 +31,7 @@ dev = ["pytest", "pytest-timeout", "ruff", "mypy", "ipykernel", "jupyter"]
 ssm = ["mamba-ssm>=2.3", "causal-conv1d"]
 serve = ["vllm"]
 [tool.pytest.ini_options]
+addopts = "-m 'not gpu and not slow and not net'"
 testpaths = ["tests"]
 timeout = 600
 markers = ["gpu: needs CUDA", "slow: long-running", "net: needs network/HF"]
