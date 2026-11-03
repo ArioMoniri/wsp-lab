@@ -11,7 +11,7 @@ import logging
 import torch
 from torch import nn
 
-from .scan import selective_scan
+from .scan import loop_scan, selective_scan
 
 log = logging.getLogger(__name__)
 
@@ -31,8 +31,11 @@ def ssm_backend() -> str:
 class SelectiveSSMBlock(nn.Module):
     """Minimal selective scan (S6): h_t = exp(Δ_t A) h_{t-1} + Δ_t B_t x_t ; y_t = C_t h_t + D x_t."""
 
-    def __init__(self, d_model: int, d_state: int = 16, expand: int = 2):
+    def __init__(self, d_model: int, d_state: int = 16, expand: int = 2, backend: str = "loop"):
+        if backend not in {"loop", "chunked"}:
+            raise ValueError(f"Unknown scan backend: {backend}")
         super().__init__()
+        self.backend = backend
         self.d_inner = d_model * expand
         self.in_proj = nn.Linear(d_model, 2 * self.d_inner)
         self.x_proj = nn.Linear(self.d_inner, 2 * d_state + 1)
@@ -54,7 +57,8 @@ class SelectiveSSMBlock(nn.Module):
         Bm, Cm, dt = bcd.split([self.A_log.shape[1], self.A_log.shape[1], 1], dim=-1)
         dt = torch.nn.functional.softplus(self.dt_proj(dt))  # (B,T,d_inner)
         A = -torch.exp(self.A_log)  # (d_inner, d_state)
-        y = selective_scan(u, dt, A, Bm, Cm, self.D) * torch.nn.functional.silu(z)
+        scan = loop_scan if self.backend == "loop" else selective_scan
+        y = scan(u, dt, A, Bm, Cm, self.D) * torch.nn.functional.silu(z)
         return res + self.out_proj(y)
 
 
@@ -69,16 +73,21 @@ class TrajectoryPredictor(nn.Module):
         backend: str | None = None,
     ):
         super().__init__()
-        self.backend = backend or _BACKEND
+        self.backend = backend or ("mamba_ssm" if _Mamba2 is not None else "loop")
+        if self.backend == "torch":
+            self.backend = "loop"
+        if self.backend not in {"loop", "chunked", "mamba_ssm"}:
+            raise ValueError(f"Unknown backend: {self.backend}")
+        if self.backend == "mamba_ssm" and _Mamba2 is None:
+            raise ImportError("mamba_ssm is unavailable")
         self.inp = nn.Linear(d_in, d_model)
         if self.backend == "mamba_ssm" and _Mamba2 is not None:
             self.blocks = nn.ModuleList(
                 [_Mamba2(d_model=d_model, d_state=d_state) for _ in range(n_layers)]
             )
         else:
-            self.backend = "torch"
             self.blocks = nn.ModuleList(
-                [SelectiveSSMBlock(d_model, d_state) for _ in range(n_layers)]
+                [SelectiveSSMBlock(d_model, d_state, backend=self.backend) for _ in range(n_layers)]
             )
         self.head = nn.Sequential(nn.LayerNorm(d_model), nn.Linear(d_model, n_targets))
         log.info("TrajectoryPredictor backend=%s", self.backend)
@@ -86,5 +95,5 @@ class TrajectoryPredictor(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # (B,T,d_in) -> (B,T,K) in [0,1]
         h = self.inp(x)
         for b in self.blocks:
-            h = b(h) if self.backend == "torch" else h + b(h)
+            h = b(h) if self.backend != "mamba_ssm" else h + b(h)
         return torch.sigmoid(self.head(h))

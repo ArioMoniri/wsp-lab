@@ -31,6 +31,12 @@ def selective_scan(u, dt, a, b, c, d, chunk_size=64):
     return torch.cat(outputs, dim=1)
 
 
-def compiled_selective_scan(**kwargs):
-    """Create an optionally configured torch.compile version of the scan."""
-    return torch.compile(selective_scan, **kwargs)
+def loop_scan(u, dt, a, b, c, d):
+    h = u.new_zeros(u.shape[0], u.shape[2], a.shape[1])
+    outputs = []
+    for t in range(u.shape[1]):
+        h = (dt[:, t, :, None] * a).exp() * h + dt[:, t, :, None] * b[:, t, None, :] * u[
+            :, t, :, None
+        ]
+        outputs.append((h * c[:, t, None, :]).sum(-1) + d * u[:, t])
+    return torch.stack(outputs, 1)

@@ -39,3 +39,11 @@ The causal-conv1d build system generates many CUDA architectures despite
 while the installed PyTorch headers require C++20 (`#error C++20 or later
 compatible compiler is required`); `import mamba_ssm` still fails. The previous
 build also failed compiling extension objects; see `~/agent-logs/wsp-mamba-20261103-225608.log`.
+
+The reproducible C++20 patch build is `bash scripts/build_mamba.sh`. It fetches
+both pinned PyPI sdists into `data/build`, changes every `-std=c++17` in their
+setup scripts to `-std=c++20`, and installs each with uv using
+`--no-build-isolation --no-deps`, `TORCH_CUDA_ARCH_LIST=12.0` and `MAX_JOBS=4`.
+The first attempt found that the shared venv has no pip (log
+`~/agent-logs/wsp-mamba3-20261103-235340.log`); the revised uv build is in
+`~/agent-logs/wsp-mamba3b-20261103-235407.log`.

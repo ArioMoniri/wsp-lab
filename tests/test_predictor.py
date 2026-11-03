@@ -63,3 +63,29 @@ def test_chunked_scan_matches_loop():
     torch.testing.assert_close(
         selective_scan(u, dt, a, b, c, d), torch.stack(expected, 1), atol=1e-4, rtol=1e-4
     )
+
+
+def test_scan_backend_dispatch_and_gradients():
+    from wsp.predictor.ssm_torch import SelectiveSSMBlock
+
+    torch.manual_seed(42)
+    loop = SelectiveSSMBlock(8, 4, backend="loop").double()
+    chunked = SelectiveSSMBlock(8, 4, backend="chunked").double()
+    chunked.load_state_dict(loop.state_dict())
+    x = torch.randn(2, 65, 8, dtype=torch.float64, requires_grad=True)
+    y = loop(x)
+    z = chunked(x)
+    torch.testing.assert_close(y, z)
+    torch.testing.assert_close(
+        torch.autograd.grad(y.sum(), x)[0], torch.autograd.grad(z.sum(), x)[0]
+    )
+    future = x.detach().clone()
+    future[:, 64:] += 10
+    torch.testing.assert_close(chunked(future)[:, :64], z[:, :64])
+
+
+def test_default_backend_is_loop_when_mamba_unavailable(monkeypatch):
+    import wsp.predictor.ssm_torch as module
+
+    monkeypatch.setattr(module, "_Mamba2", None)
+    assert module.TrajectoryPredictor(8, 2).backend == "loop"
