@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
 set -e; cd "$(dirname "$0")/.."; . scripts/env.sh
 ruff check src tests && ruff format --check src tests && pytest -q
+if ! python scripts/verify_refs.py; then
+  echo 'Warning: reference verification failed; paper review requires it to pass.' >&2
+fi

@@ -1,0 +1,840 @@
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+T HE I MPACT OF M ODEL Z OO S IZE AND C OMPOSITION
+ON W EIGHT S PACE L EARNING
+
+arXiv:2504.10141v1 [cs.LG] 14 Apr 2025
+
+Damian Falk, Konstantin Schürholt, Damian Borth
+AIML Lab,
+School of Computer Science,
+University of St.Gallen
+{first.last}@unisg.ch
+
+A BSTRACT
+Re-using trained neural network models is a common strategy to reduce training cost and transfer knowledge. Weight space learning - using the weights
+of trained models as data modality - is a promising new field to re-use populations of pre-trained models for future tasks. Approaches in this field have
+demonstrated high performance both on model analysis and weight generation
+tasks. However, until now their learning setup requires homogeneous model
+zoos where all models share the same exact architecture, limiting their capability to generalize beyond the population of models they saw during training. In
+this work, we remove this constraint and propose a modification to a common
+weight space learning method to accommodate training on heterogeneous populations of models. We further investigate the resulting impact of model diversity on generating unseen neural network model weights for zero-shot knowledge
+transfer. Our extensive experimental evaluation shows that including models with
+varying underlying image datasets has a high impact on performance and generalization, for both in- and out-of-distribution settings. Code is available on
+github.com/HSG-AIML/MultiZoo-SANE.
+
+1
+
+I NTRODUCTION
+
+When training neural networks for computer vision applications, we follow a dominant paradigm of
+pre-training and fine-tuning (Pan & Yang, 2010; Yosinski et al., 2014), either by using pre-trained
+models trained from single datasets (Mensink et al., 2021) or pre-trained foundation models, which
+can be used for fine-tuning to multiple downstream tasks (Bommasani et al., 2021; Qiu et al., 2024).
+Given the vast amounts of pre-trained models, which have been deployed and released publicly on
+platforms such as Pytorch Hub or Huggingface, the research community has extended this paradigm
+by proposing the transfer or distillation of knowledge not only from one model but rather from a
+collection or population of pre-trained models. These works can be categorized into training-based
+knowledge distillation methods (Hinton et al., 2015; Lee et al., 2019; Luo et al., 2020; Jing et al.,
+2021; Yang et al., 2022a), where activation behavior or features are transferred, or training-free
+model merging (Shu et al., 2021; Yang et al., 2022b; Wortsman et al., 2022a; Ainsworth et al., 2023;
+Xu et al., 2024), where model weights are aggregated given different heuristics.
+Recently, Weight Space Learning has emerged as an additional approach to re-use populations of
+pre-trained models (Schürholt et al., 2021; 2022a; Navon et al., 2023a;b; Knyazev et al., 2023; Zhou
+et al., 2023a; Schürholt et al., 2024; Kofinas et al., 2023; Lim et al., 2024; Meynent et al., 2025).
+This area of work could be categorized as training-based knowledge distillation done directly on
+model weights.
+Although training-based, weight space learning approaches do not need access to image datasets to
+create activation behavior as needed by training-based knowledge distillation methods. On the other
+side, being training-based, weight space learning methods might provide more adaptivity to unseen
+setups as training-free model merging techniques might be able to do.
+1
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+Weight space learning aims to learn a lower-dimensional representation of model weights given a
+population of models i.e., a model zoo. Such learned representations can be then exploited for multiple downstream tasks e.g., predicting the accuracy of neural networks directly from its weights
+or generating unseen neural network model weights. While previous work successfully demonstrated applications of weight space learning to the computer vision domain (Schürholt et al., 2021;
+Knyazev et al., 2023; Schürholt et al., 2024), its scope was mostly limited to training representations
+on neural network models trained on the same image dataset e.g., CIFAR100. Such homogeneous
+single-zoo-training setups neglect known benefits large and diverse pre-training datasets provide in
+machine learning (Mensink et al., 2021; Brown et al., 2020; Steiner et al., 2021). To close this
+gap and motivated by the platonic representation hypothesis (Huh et al., 2024), which posits that
+representations learned by neural networks (NNs) converge, given sufficiently large model size and
+capacity, in this work, we investigate the effect of model zoo diversity on weight space learning
+beyond single-zoo-training using the SANE encoder-decoder backbone Schürholt et al. (2024). To
+that end, we identify sources of diversity in weight space learning as the model architecture, image
+dataset, and training hyperparameters of the underlying model zoo. We extend SANE training to a
+multi-zoo-setup, where multiple model zoos trained on different image datasets are used for SANE
+backbone training. To make SANE suitable for non-homogeneous model zoo training, we adopt a
+novel per-token data normalization to enable and simplify data-processing for multiple model zoos
+at once. We evaluate the proposed modification along two groups of model zoos: (i) a set of CNN
+model zoos representing smaller neural network architectures trained on 4 different image datasets
+with in total 4000 model samples, and (ii) a set of ResNet models zoos representing larger neural
+network architectures trained on 3 image datasets containing in total 3000 model samples. We test
+SANE’s capability to zero-shot transfer knowledge in-distribution on model zoos that it already saw
+during training and out-of-distribution on models which it did not see during training. In both setups
+with the proposed modifications and suitable diversity, we outperform previous work and improve
+over single zoo training by on average 29.65 and up to 42.8% (CIFAR100 to EuroSAT) on ResNets,
+respectively. In summary, our contributions are as follows:
+• We extend SANE style weight space learning to accommodate pre-training on inhomogeneous model zoos.
+• We identify axes for adding diversity as the model’s architectures, datasets, and training
+hyper-parameters.
+• We define an evaluation framework for analyzing the impact of diversity on weight space
+learning for both in- and out-of-distribution settings.
+• Using that framework, we systematically evaluate the performance impact of diversity in
+the pre-training data and model zoo size for different model sizes.
+
+2
+
+R ELATED W ORK
+
+We structure this section according to the primary area of related work about weight space learning
+and the secondary area of related work about data diversity in pre-training.
+Weight Space Learning Based on the observation that neural network weights become structured
+during training (Martin & Mahoney, 2019), several approaches have been recently proposed to learn
+representations of model weights to make latent structure accessible: by extracting high-information
+weight features to predict model properties (Eilertsen et al., 2020; Unterthiner et al., 2020; Martin
+et al., 2021), by training weight-decoders (Ha et al., 2017; Zhang et al., 2019; Knyazev et al., 2021;
+Peebles et al., 2022; Knyazev et al., 2023; Wang et al., 2024), or as general encoder-decoder models
+for both tasks (Schürholt et al., 2021; 2022a; Berardi et al., 2022; Langosco et al., 2023; Schürholt
+et al., 2024; Meynent et al., 2025).
+In this context, several underlying learning backbones have been proposed ranging from simple
+MLPs (Eilertsen et al., 2020; Unterthiner et al., 2020), to CNNs (Berardi et al., 2022), RNNs
+(Herrmann et al., 2024), attention-based Transformers (Schürholt et al., 2021; 2022a; Peebles et al.,
+2022; Andreis et al., 2023; Schürholt et al., 2024; Soro et al., 2024), or Graph Neural Networks
+(Knyazev et al., 2021; Navon et al., 2023a; Kofinas et al., 2023; Zhou et al., 2023b;a; Lim et al.,
+2024; Knyazev et al., 2024). In conjunction with backbone architectures, data augmentations have
+2
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+been proposed to improve generalization of weight space learning methods (Schürholt et al., 2021;
+Shamsian et al., 2024).
+To the best of our knowledge, this work is the first which aims at a multi-zoo-training setup using
+an encoder-decoder architecture in weight space learning.
+Diversity in Knowledge Transfer Diversity of the underlying data plays a crucial role in transferring knowledge from source to target (Mensink et al., 2021; Shu et al., 2021; You et al., 2022; Qiu
+et al., 2024). In particular, in setups where transfer is done from multiple sources or model zoos as
+in Shu et al. (2021), where more diverse training setups were able to outperform simple fine-tuning
+from a single pretrained model. In You et al. (2022) B-Tuning was proposed, which ranks multiple
+models given a model zoo according their suitability for finetuning. In experiments, the authors
+observed that knowledge transfer was consistently better when tuning with multiple models than a
+single one. However, in both works (Shu et al., 2021; You et al., 2022), a naive setup using all models from a model zoo does not necessarily yield best performance rendering the problem of selecting
+or combining the models non-trivial. Similar results have been reported in Wortsman et al. (2022a),
+where a linear combination or aggregation of model weights from a model yields improved results
+over single model performance of the zoo. In this work, a performance-based selection of models
+from the zoo is preferred over an aggregation of all models weights from the zoo. A different setup
+is outlined in Qiu et al. (2024), where the goal is to transfer knowledge from multiple foundation
+models to smaller downstream tasks models. For vision foundation models, the authors report a
+consistent out-performance of knowledge transfer from multiple foundation models over a single
+foundation model (independently of the underlying knowledge transfer approach). Similar results
+have been reported in Rodriguez-Opazo et al. (2024), where diverse variations of CLIP encoder
+models are combined and consistently outperform single CLIP models on a variety of underlying
+image datasets. In both works, the effect is particularly visible in zero-shot scenarios.
+
+3
+
+M ETHODS
+
+In this section, we summarize the weight space learning we extend in this paper. Subsequently, we
+present an adaptation to make it suitable for inhomogeneous model weights.
+Learning Backbone While there are various weight space learning methods, we base this work
+on encoder-decoder-based methods for their versatility. In particular, we extend SANE Schürholt
+et al. (2024). The core idea of SANE is to tokenize model weights and express entire models as
+sequences of token vectors. Using sequence models allows learning representations on chunks of the
+sequences, and still use the same SANE model on model sequences of different lengths, underlying
+architectures, and sizes.
+To that end, the model weights are reshaped into 2D matrices, then sliced into tokens Tn of size dt .
+Zero padding or splitting is applied where needed to achieve same-size token vectors. For simplicity,
+we drop the sequence indices n in the following. Each token is augmented by a 3-dimensional
+positional embedding, P = [n, l, k], to indicate sequence position n, layer index l, and within-layer
+position k. A binary mask M distinguishes signal from padding.
+The SANE model consists of an encoder gθ that maps token sequences to sequences of token embeddings z = gθ (T, P), as well as a decoder hψ that maps the token embedding sequence back
+b = hψ (z, P). To structure the embedding space with a contrastive
+to the original token space T
+loss, a projection hat pϕ projects the latent embedding sequence to a lower dimensional space as
+zp = pϕ (z).
+SANE is trained on chunks of token sequences with a combination of reconstruction and contrastive
+loss L = (1 − γ)Lrec + γLc :
+
+
+b ∥2
+Lrec = ∥M ⊙ T − T
+(1)
+2
+Lc = N T Xent(pϕ (zi ), pϕ (zj )).
+
+(2)
+
+Here, the mask M indicates signal with 1 and padding with 0, to ensure that the loss is only computed on actual weights. The contrastive loss uses the augmented views i, j and projection head pϕ .
+3
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+Masked Per-Token Loss Normalization Previous weight space learning work established that
+different weight distributions between different layers present a challenge for weight representation
+learning (Peebles et al., 2022; Schürholt et al., 2022a; 2024). As remedies, they propose to either
+normalize the weights per layer across the entire dataset as a preprocessing step, or normalize the
+loss contribution accordingly. Both approaches present challenges for large, inhomogeneous weight
+datasets. They are not immediately applicable for varying architectures since they compute normalizations per layer and thus require matching architectures. Further, such normalizations may
+fail for different computer vision datasets with different weight distributions. Normalizing the loss
+per layer inherits these constraints and adds chunk-layer matching challenges if training is done
+on model chunks SANE-style. Therefore, since existing approaches do not work on zoos with inhomogeneous models, a new normalization mechanism is required to guide the backbone during
+training.
+Since normalizing the loss contribution is arguably more relevant for increased diversity, we therefore propose to normalize loss contributions per-token at runtime. This has two benefits: (i) it simplifies the normalization and operates across different model architectures and weight distributions, (ii)
+the representation learning model still operates in weight space, which simplifies evaluating weight
+generation.
+We standardize the target T and prediction Tb tokens as:
+T =
+
+Ts,n − Tµ
+,
+Tσ
+
+Td
+s,n − Tµ
+Tb =
+,
+Tσ
+
+(3)
+
+where Tµ and Tσ are the mean and std of the target token, respectively. Depending on the architecture, SANE tokenization includes 0-padding to harmonize token size. Including the padding in the
+normalization would skew mean and std, usually towards zero. As an effect, this would overly increase the weight on tokens with more padding. To account for padding in the tokens, we normalize
+only on the signal as:
+1
+Tµ = PN
+
+N
+X
+
+i=1 Mi i=1
+
+v
+u
+u
+1
+Tσ = t PN
+
+Mi · Ts,n ,
+
+N
+X
+
+i=1 Mi i=1
+
+Mi · (Ts,n − Tµ )2 + ϵ,
+
+(4)
+
+(5)
+
+where Mi is a binary mask that is 1 for valid elements and 0 for zero-padded elements, ensuring
+only valid data points contribute to the mean and standard deviation calculations.
+
+4
+
+E XPERIMENTS
+
+In this section, we test the proposed multi-zoo-training setup and our hypothesis that increasing
+diversity in model weights can help transfer knowledge from the pre-training model population to
+out-of-distribution tasks. To that end, we first evaluate model weight averaging (also known as model
+souping) as baseline. Subsequently, we turn to mutli-zoo SANE where we first evaluate the impact
+of per-token loss normalization. Subsequently, we use the differently trained SANE backbones to
+sample novel model weights and use the generated neural networks to evaluate their classification
+performance on the test split of different image datasets - either on an in-distribution (ID) or an
+out-of-distribution (OOD) image dataset.
+Experiment Setup For SANE training, we follow the experimental setup of Schürholt et al.
+(2024). As model zoo datasets, we use both small CNNs trained on MNIST (LeCun et al., 1998),
+SVHN (Netzer et al., 2011), USPS (Hull, 1994), and FMNIST (Xiao et al., 2017) as well as ResNet18s trained on CIFAR10, CIFAR100 (Krizhevsky, 2009), TinyImageNet (Le & Yang, 2015), SVHN,
+and EuroSAT (Helber et al., 2019) from the model zoo dataset (Schürholt et al., 2022b). Following
+previous work, we select models at epochs 21-25 for SANE training. We randomly split the models
+of the model zoo in train-validation-test splits of [70,15,15]. To pre-train SANE and sample models,
+we follow the training setup from Schürholt et al. (2024). The training parameters are summarized
+in Table 3 in App. A.1.
+4
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+4.1
+
+K NOWLEDGE AGGREGATION VIA M ODEL S OUPING
+
+To establish a baseline, we explore and evaluate a viable alternative before we continue with the
+proposed multi-zoo-training setup of the SANE backbone for knowledge transfer. Recently, merging models directly in weight space has gained attention. Different training-free methods have been
+proposed, averaging different training epochs of the same model (Wortsman et al., 2022b), or averaging fine-tuned models that share a pre-trained model (Wortsman et al., 2022a; Rame et al., 2023).
+Since populations of trained models do not generally share a single pre-trained model, an interesting
+approach is to re-align models before weight averaging. One such approach, git re-basin (Ainsworth
+et al., 2023), searches the permutation which changes the order of neurons per layer such that the
+weight distance between models is minimal.
+To evaluate the suitability of weight-averaging
+models to aggregate knowledge, we therefore
+perform experiments on four model zoos, two
+with small CNN models, and two with larger
+ResNets. We randomly select models at epoch
+25, average their weights, and evaluate their
+test performance on their original dataset. We
+evaluate averaging a varying number of models,
+with and without aligning, using git re-basin.
+Experimental evaluations on model soups with
+averaged weights show that weight averaging
+between different models is a challenging prob- Figure 1: Test accuracy of model soups over a
+lem, as seen in Figure 1. The performance number of averaged models. Increasing the numof weight-averaged models decreases with the ber of models, aligned or not aligned, decreases
+number of source models, compared to the performance.
+single-model baseline. Aligning models generally improves performance over non-aligned source models, but only slightly.
+Further, performance decreases with task and model complexity. Notably, even averaging aligned
+models decreases performance over the base population. This indicates that averaging weights
+of models that are not close to each other generally does not improve performance. While
+non-uniform weight averaging may improve the results, this indicates that new methods are needed
+for aggregation or knowledge transfer between populations of trained models. In the following, we
+evaluate SANE trained on multiple zoos.
+4.2
+
+M ASKED P ER -T OKEN L OSS N ORMALIZATION
+
+Figure 2: Comparison of weight distributions of a selection of ResNet layers between original
+weights (blue/left) vs reconstructed weights (right). We compare reconstruction without normalization (orange), with per-token normalization (green) and with masked per-token normalization
+(red). As in previous work, without normalization, weights of layers with narrow distributions are
+squashed towards the mean. Normalizing per-token fixes that issue. Ignoring the mask introduces
+a strong bias, particularly for batch-norm layers. Reconstructions with the masked per-token normalization match the original the closest. On the right we show the mean±std performance of 10
+sampled ResNet-18 models on CIFAR100 with the different normalizations.
+For the first experiment, we evaluate whether our extension to SANE enabling training on inhomogeneous zoos allows the SANE backbone to adequately capture the different weight distributions
+5
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+of different layers and models. This is crucial, since the encoder-decoder approach we are using as
+backbone operates in raw weight space, and skewed or squashed distributions - even of just individual layers - can have a catastrophic impact on the performance of generated models. To that end, we
+train SANE on CIFAR100 ResNet-18 models. Subsequently, we use models from the test split of
+the corresponding model zoos to be reconstructed by SANE (which corresponds to a simple forward
+pass through the encoder-decoder backbone).
+Following previous work, we use the match of weight distribution as a proxy for how wellreconstructed models mirror the original models (Schürholt et al., 2022a). Additionally we validate
+the results by sampling ResNet-18 models for CIFAR100 comparing the different normalization
+options. Results are shown in Figure 2.
+Loss normalization allows SANE training on inhomogeneous zoos Our experiments demonstrate that training with per-token loss normalization allows training on inhomogeneous zoos without
+global weight normalization at dataset preprocessing time. Further, we did not encounter training instabilities, which might have been introduced for padding-heavy tokens. Lastly, masked loss normalization achieves a more accurate alignment between the reconstructed distribution and the original
+weight distribution across model parameters, see Figure 2, particularly of batch-norm layer weights.
+This alignment is especially pronounced in the larger ResNet-18 model zoos, where previous tokenlevel normalization failed to capture the diverse weight behaviors accurately. By focusing on signal
+values only, the masked normalization more effectively maintains the original weight distributions,
+reducing reconstruction error and providing a stable signal even in high-parameter regimes. These
+experiments confirm that SANE representations can be trained on inhomogeneous zoos with our
+masked per-token loss normalization. This allows us to evaluate the impact of different underlying
+computer vision datasets and other variations on knowledge transfer in the next section.
+4.3
+
+G ENERATING M ODELS FOR K NOWLEDGE T RANSFER
+
+In the following, we evaluate whether sampling model weights with SANE to generate unseen neural
+networks can transfer knowledge from diverse populations. Specifically, we are interested if sampled
+models generalize better with increased diversity in SANE backbone pre-training given the proposed
+multi-zoo-training setup. Further, we are interested in the relation between the number of models of
+the corresponding model zoo used for SANE backbone training and the classification performance
+of generated models using the SANE backbone.
+Evaluation Criteria Our emphasis for this work is to assess how well generating models using
+SANE can transfer knowledge from the pre-training model populations to the sampled models. To
+that end, we use the subsampling weight generation method as introduced in Schürholt et al. (2024)
+using anchor samples to account for the different architecture. Note that these models are generated
+by sampling in the latent of the learned representations and passed through the SANE decoder to
+generate an entirely new neural network model in a forward pass. In contrast to Schürholt et al.
+(2024), no fine-tuning of the sampled models is done, which corresponds to the “zero-shot” setup.
+Table 1: Accuracy (mean ± std) of sampled ResNet-18 models on the downstream image datasets.
+The single-zoo datasets each have 100 models with a total of 5M weight tokens each, while the
+multi-zoo dataset combines both having 200 models with a total of 10M weight tokens for training.
+Single vs. Multi
+
+In-Distribution
+
+NOOD
+
+FOOD
+
+AVG
+
+Zoo
+
+CIFAR10
+
+CIFAR100
+
+TIN
+
+SVHN
+
+EuroSAT
+
+CIFAR10
+CIFAR100
+
+30.2±1.3
+18.5±0.6
+
+14.9±0.8
+8.1±0.4
+
+8.5±0.4
+4.8±0.4
+
+18.9±0.0
+21.3±1.5
+
+43.9±1.4
+29.3±2.9
+
+23.3±0.8
+16.4±1.2
+
+CIFAR10 + 100
+
+62.5±0.9
+
+32.0±0.4
+
+27.2±0.2
+
+53.9±1.3
+
+72.1±1.2
+
+49.5±0.8
+
+We rigorously evaluate the generated models on in-distribution (ID) model zoos i.e., model zoos
+the SANE backbone was trained on, near-out-of-distribution (NOOD) and far out-of-distribution
+(FOOD) tasks i.e., model zoos which the SANE backbone did not see during training. We borrow
+the task relation from Zhang et al. (2024) and detail the evaluation tasks in Table 2.
+
+6
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+Increasing model zoo diversity during SANE
+training improves both ID and OOD performance Transferring knowledge from multiple models trained on different datasets to a single target model is a challenging task. To test if
+SANE can be utilized for such scenarios, we
+first test the impact of the used model zoo for
+SANE backbone training on the performance
+of generated models and their classification performance on the corresponding image dataset.
+
+Table 2: Evaluation task classification for generated models. Models trained on some or all of
+the ID tasks form the pre-training model zoo for
+SANE. Models generated with SANE are systematically evaluated on in-distribution (ID) as well
+as corresponding near- (NOOD) and far out-ofdistribution (FOOD) tasks. NOOD and FOOD
+terminology is borrowed from Zhang et al. (2024).
+Model Size
+
+ID
+
+NOOD
+
+FOOD
+
+MNIST,
+We therefore train SANE backbones in two seCNN
+USPS
+FMNIST
+SVHN
+tups: single-zoo and multi-zoo. In the singlezoos experiments, the model zoo dataset conCIFAR10, TinyImageNet SVHN,
+tains only models which have been trained on
+ResNet-18
+CIFAR100
+EuroSAT
+(TIN)
+the same underlying image dataset, e.g. CIFAR10, while in a multi-zoo experiments we
+combine multiple model zoos together to form one larger and more diverse model zoo used for
+SANE backbone training.
+
+We perform the experiments on both small CNNs (∼2.5k params) to validate the method as well
+as larger ResNet-18 models (∼12M params) to test if the method scales, following the evaluation
+scheme as outlined in Table 2. We focus on the ResNet-18 experiments in the paper and supplement
+the results on the smaller CNN zoos in App. A.2.
+The results on the larger ResNet-18 model zoos as shown in Table 1 show a clear benefit of training
+on multiple zoos. SANE trained on both CIFAR10 and CIFAR100 models outperforms the singlezoo baselines across all metrics. Notably, the benefits are significant even over the respective ID
+training zoos, which suggests a positive knowledge transfer via SANE, even in ID experiments.
+The OOD evaluations show similar performance gains, which demonstrates that training SANE on
+models from multiple datasets allows to combine their knowledge for stronger OOD generalization.
+What is more, the results outperform previous results from Schürholt et al. (2024) for the more
+complex datasets by ∼ 15% on TinyImageNet and ∼ 10% on CIFAR100 while showing slightly
+lower performance on CIFAR10 (∼ 5% below SANE).
+
+Figure 3: Comparison of 0-shot performance of sampled models on the downstream image datasets
+when varying model zoo composition and sample size. SANE is trained with [50/100/150/200/300]
+samples (2.5 - 15M weight tokens) for 60 epochs using data taken from one to three model zoos.
+Training on more models improves transfer performance In our previous experiment, the size
+of the multi-zoo dataset is the combination of the two single-zoo datasets, and therefore has double
+the number of training samples. To evaluate how much impact the number of models has, we next
+evaluate with ResNet single-zoo and ResNet multi-zoo datasets with varying sample size and model
+zoo composition. When training the single-zoo baselines with the same sample size as the multi-zoo
+backbones, significant improvements of multi-zoo training can still be observed (for details see App.
+A.2 Table 5 compared to Table 1). However, the single-zoo performance improves significantly over
+the experiments with lower single-zoo sample size as well. This shows that the model zoo size used
+for backbone training has a large impact on the model generation performance.
+To further explore the relation between model zoo composition and sample size, we extend our experiments on ResNet-18s along both axes, training on one to three datasets (CIFAR10, CIFAR100,
+TIN) with varying sample size. The results are shown in Figure 3 and show that while model
+7
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+zoo size has a large impact on downstream performance irrespective of the number of model zoos
+used for training, important nuances can be observed. Increasing model count alone peaks earlier
+without further improving performance when adding more training samples, while increasing diversity without sufficient samples appears to undersample the more complex domain, leading to
+worse downstream performance. Interestingly, single-zoo backbones exhibit specific biases in OOD
+performance depending on class structure similarities. For example, a CIFAR10 trained backbone
+shows better performance on SVHN and EuroSAT, which share the same number of classes, whereas
+a CIFAR100 trained backbone excels on TinyImageNet but underperforms on EuroSAT and SVHN.
+In contrast, the multi-zoo backbones demonstrate a more balanced generalization, managing to perform reasonably well across both low- and high-class-count datasets. This suggests that diversity in
+training data supports broader adaptability and generalization across varying task complexities.
+SANE initialized weights are amenable to further fine-tuning Next, we compare our approach
+to a HyperNetwork (Ha et al., 2017) as an additional baseline. A key distinction is that HyperNetworks require image data to generate weights, while SANE learns purely from weight structure.
+This makes SANE’s generated weights effective initializations that remain amenable to fine-tuning.
+Therefore, SANE is orthogonal to and combinable with HyperNetworks or other data-driven weight
+generation methods. To validate this, we compare (i) SANE pre-trained on CIFAR10, CIFAR100 &
+TIN with (ii) a HyperNetwork trained on CIFAR10, CIFAR100 & TIN data, with task embeddings
+and architecture optimized as strong baseline, and (iii) random initialization as weak baseline. We
+pre-train (i) and (ii), and fine-tune SANE sampled weights and HyperNetworks on the individual
+datasets.
+
+Figure 4: Comparison of SANE to HyperNetworks and random initialization during fine-tuning.
+Results (Fig. 4) demonstrate SANE’s advantages: models initialized with SANE achieve both faster
+training and better final performance. While HyperNetworks perform reasonably well on OOD
+datasets, they show clear signs of overfitting during pre-training and gain no benefit from additional
+fine-tuning on the ID datasets despite hyperparameter optimization. This demonstrates that SANE’s
+weight generation provides decent performance as is, and is also suitable for fine-tuning since it has
+not been trained on image data.
+
+5
+
+C ONCLUSION
+
+In this paper, we evaluate the impact of variations in the weight training data on weight space learning. In particular, we evaluate an auto-encoder-based approach to weight-representation learning
+called SANE and evaluate the effect of combining model populations trained on different computer
+vision datasets. To facilitate this, we adapt SANE to handle heterogeneous model populations without prior weight normalization. Our experiments revealed that training SANE on diverse populations
+of models yields an intriguing effect: training on inhomogenous model zoos significantly enhances
+generalization when using enough training samples. Only increasing the sample size but not varying
+the composition of models used for training saturates earlier than when training on inhomogenous
+data. Single zoo baselines generalize well to OOD datasets with a similar number of classes but perform worse when sampling for datasets with more significant differences, indicating that multi-zoo
+training is a viable approach to improve generalization. As a baseline, we demonstrate that direct
+weight-averaging methods like model soups or git re-basin struggle to aggregate the knowledge of
+several models. Furthermore, other weight-generation methods such as HyperNetworks are prone to
+overfitting the training data and struggle to improve during finetuning. In contrast, SANE initialized
+models are also amenable to finetuning, since SANE does not use image data directly during training.
+8
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+R EFERENCES
+Samuel K. Ainsworth, Jonathan Hayase, and Siddhartha S. Srinivasa. Git re-basin: Merging models
+modulo permutation symmetries. In The Eleventh International Conference on Learning Representations, ICLR 2023, Kigali, Rwanda, May 1-5, 2023. OpenReview.net, 2023.
+Bruno Andreis, Soro Bedionita, and Sung Ju Hwang. Set-based Neural Network Encoding, May
+2023.
+Gianluca Berardi, Luca De Luigi, Samuele Salti, and Luigi Di Stefano. Learning the Space of Deep
+Models, June 2022.
+Rishi Bommasani, Drew A Hudson, Ehsan Adeli, Russ Altman, Simran Arora, Sydney von Arx,
+Michael S Bernstein, Jeannette Bohg, Antoine Bosselut, Emma Brunskill, et al. On the opportunities and risks of foundation models. arXiv preprint arXiv:2108.07258, 2021.
+Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal,
+Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M.
+Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin,
+Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford,
+Ilya Sutskever, and Dario Amodei. Language Models are Few-Shot Learners, July 2020.
+Gabriel Eilertsen, Daniel Jönsson, Timo Ropinski, Jonas Unger, and Anders Ynnerman. Classifying
+the classifier: Dissecting the weight space of neural networks. In ECAI 2020. IOS Press, February
+2020.
+David Ha, Andrew Dai, and Quoc V. Le. HyperNetworks. In Proceedings of the International
+Conference on Learning Representations (ICLR), 2017.
+Patrick Helber, Benjamin Bischke, Andreas Dengel, and Damian Borth. EuroSAT: A Novel Dataset
+and Deep Learning Benchmark for Land Use and Land Cover Classification. IEEE JSTAR, 12(7):
+2217–2226, 2019.
+Vincent Herrmann, Francesco Faccio, and Jürgen Schmidhuber. Learning Useful Representations
+of Recurrent Neural Network Weight Matrices, March 2024.
+Geoffrey Hinton, Oriol Vinyals, and Jeff Dean. Distilling the Knowledge in a Neural Network,
+March 2015.
+Minyoung Huh, Brian Cheung, Tongzhou Wang, and Phillip Isola. The Platonic Representation
+Hypothesis, 2024. URL https://arxiv.org/abs/2405.07987. Version Number: 1.
+J.J. Hull. A database for handwritten text recognition research. IEEE Transactions on Pattern
+Analysis and Machine Intelligence, 16(5):550–554, May 1994. ISSN 1939-3539. doi: 10.1109/
+34.291440.
+Yongcheng Jing, Yiding Yang, Xinchao Wang, Mingli Song, and Dacheng Tao. Amalgamating
+knowledge from heterogeneous graph neural networks. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pp. 15709–15718, 2021.
+Boris Knyazev, Michal Drozdzal, Graham W Taylor, and Adriana Romero Soriano. Parameter
+prediction for unseen deep architectures. Advances in Neural Information Processing Systems,
+34:29433–29448, 2021.
+Boris Knyazev, Doha Hwang, and Simon Lacoste-Julien. Can we scale transformers to predict
+parameters of diverse imagenet models? In International Conference on Machine Learning, pp.
+17243–17259. PMLR, 2023.
+Boris Knyazev, Abhinav Moudgil, Guillaume Lajoie, Eugene Belilovsky, and Simon Lacoste-Julien.
+Accelerating Training with Neuron Interaction and Nowcasting Networks, October 2024.
+9
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+Miltiadis Kofinas, Boris Knyazev, Yan Zhang, Yunlu Chen, Gertjan J. Burghouts, Efstratios Gavves,
+Cees G. M. Snoek, and David W. Zhang. Graph Neural Networks for Learning Equivariant Representations of Neural Networks. In The Twelfth International Conference on Learning Representations, October 2023.
+Alex Krizhevsky. Learning Multiple Layers of Features from Tiny Images. Technical report, 2009.
+Lauro Langosco, Neel Alex, William Baker, David Quarel, Herbie Bradley, and David Krueger.
+Detecting Backdoors with Meta-Models. In NeurIPS 2023 Workshop on Backdoors in Deep
+Learning - The Good, the Bad, and the Ugly, October 2023.
+Ya Le and Xuan Yang. Tiny ImageNet Visual Recognition Challenge, 2015.
+Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner. Gradient-Based Learning Applied to Document
+Recognition. Proceedings of the IEEE, 86(11):2278–2324, November 1998.
+Joshua Lee, Prasanna Sattigeri, and Gregory Wornell. Learning new tricks from old dogs: Multisource transfer learning from pre-trained networks. Advances in neural information processing
+systems, 32, 2019.
+Derek Lim, Haggai Maron, Marc T. Law, Jonathan Lorraine, and James Lucas. Graph metanetworks
+for processing diverse neural architectures. In The Twelfth International Conference on Learning
+Representations (ICLR), 2024.
+Sihui Luo, Wenwen Pan, Xinchao Wang, Dazhou Wang, Haihong Tang, and Mingli Song. Collaboration by competition: Self-coordinated knowledge amalgamation for multi-talent student
+learning. In Computer Vision–ECCV 2020: 16th European Conference, Glasgow, UK, August
+23–28, 2020, Proceedings, Part VI 16, pp. 631–646. Springer, 2020.
+Charles H. Martin and Michael W. Mahoney. Traditional and Heavy-Tailed Self Regularization in
+Neural Network Models. In PMLR, January 2019.
+Charles H. Martin, Tongsu (Serena) Peng, and Michael W. Mahoney. Predicting trends in the quality
+of state-of-the-art neural networks without access to training or testing data. Nature Communications, 12(1):4122, July 2021. ISSN 2041-1723. doi: 10.1038/s41467-021-24025-8.
+Thomas Mensink, Jasper Uijlings, Alina Kuznetsova, Michael Gygli, and Vittorio Ferrari. Factors
+of Influence for Transfer Learning across Diverse Appearance Domains and Task Types. IEEE
+Transactions on Pattern Analysis and Machine Intelligence, November 2021.
+Léo Meynent, Ivan Melev, Konstantin Schürholt, Goeran Kauermann, and Damian Borth. Structure
+is not enough: Leveraging behavior for neural network weight reconstruction. In ICLR Workshop
+on Neural Network Weights as a New Data Modality, 2025.
+Aviv Navon, Aviv Shamsian, Idan Achituve, Ethan Fetaya, Gal Chechik, and Haggai Maron. Equivariant architectures for learning in deep weight spaces. In International Conference on Machine
+Learning, pp. 25790–25816. PMLR, 2023a.
+Aviv Navon, Aviv Shamsian, Ethan Fetaya, Gal Chechik, Nadav Dym, and Haggai Maron. Equivariant deep weight space alignment. arXiv preprint arXiv:2310.13397, 2023b.
+Yuval Netzer, Tao Wang, Adam Coates, Alessandro Bissacco, Bo Wu, and Andrew Y Ng. Reading Digits in Natural Images with Unsupervised Feature Learning. In NIPS Workshop on Deep
+Learning and Unsupervised Feature Learning 2011, pp. 9, 2011.
+Sinno Jialin Pan and Qiang Yang. A Survey on Transfer Learning. IEEE Transactions on Knowledge
+and Data Engineering, 22(10):1345–1359, October 2010. ISSN 1558-2191. doi: 10.1109/TKDE.
+2009.191.
+William Peebles, Ilija Radosavovic, Tim Brooks, Alexei A. Efros, and Jitendra Malik. Learning to
+Learn with Generative Models of Neural Network Checkpoints, September 2022.
+Shikai Qiu, Boran Han, Danielle C Maddix, Shuai Zhang, Yuyang Wang, and Andrew Gordon
+Wilson. Transferring knowledge from large foundation models to small downstream models. Int.
+Conference on Machine Learning (ICML), 2024.
+10
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+Alexandre Rame, Kartik Ahuja, Jianyu Zhang, Matthieu Cord, Leon Bottou, and David Lopez-Paz.
+Model Ratatouille: Recycling Diverse Models for Out-of-Distribution Generalization. In Proceedings of the 40th International Conference on Machine Learning, pp. 28656–28679. PMLR,
+July 2023.
+Cristian Rodriguez-Opazo, Ehsan Abbasnejad, Damien Teney, Edison Marrese-Taylor, Hamed
+Damirchi, and Anton van den Hengel. Synergy and diversity in clip: Enhancing performance
+through adaptive backbone ensembling. arXiv preprint arXiv:2405.17139, 2024.
+Konstantin Schürholt, Dimche Kostadinov, and Damian Borth. Self-Supervised Representation
+Learning on Neural Network Weights for Model Characteristic Prediction. In Conference on
+Neural Information Processing Systems (NeurIPS), volume 35, 2021.
+Konstantin Schürholt, Boris Knyazev, Xavier Giró-i-Nieto, and Damian Borth.
+HyperRepresentations as Generative Models: Sampling Unseen Neural Network Weights. In ThirtySixth Conference on Neural Information Processing Systems (NeurIPS), September 2022a.
+Konstantin Schürholt, Diyar Taskiran, Boris Knyazev, Xavier Giró-i-Nieto, and Damian Borth.
+Model Zoos: A Dataset of Diverse Populations of Neural Network Models. In Thirty-Sixth Conference on Neural Information Processing Systems (NeurIPS) Datasets and Benchmarks Track,
+September 2022b.
+Konstantin Schürholt, Michael W. Mahoney, and Damian Borth. Towards Scalable and Versatile
+Weight Space Learning. In Proceedings of the 41st International Conference on Machine Learning, pp. 43947–43966. PMLR, July 2024.
+Aviv Shamsian, Aviv Navon, David W. Zhang, Yan Zhang, Ethan Fetaya, Gal Chechik, and Haggai
+Maron. Improved Generalization of Weight Space Networks via Augmentations, February 2024.
+Yang Shu, Zhi Kou, Zhangjie Cao, Jianmin Wang, and Mingsheng Long. Zoo-Tuning: Adaptive
+Transfer from a Zoo of Models. In International Conference on Machine Learning (ICML), pp.
+12, 2021.
+Bedionita Soro, Bruno Andreis, Hayeon Lee, Song Chong, Frank Hutter, and Sung Ju Hwang.
+Diffusion-based Neural Network Weights Generation, February 2024.
+Andreas Steiner, Alexander Kolesnikov, Xiaohua Zhai, Ross Wightman, Jakob Uszkoreit, and Lucas
+Beyer. How to train your ViT? Data, Augmentation, and Regularization in Vision Transformers.
+arXiv:2106.10270 [cs], June 2021.
+Thomas Unterthiner, Daniel Keysers, Sylvain Gelly, Olivier Bousquet, and Ilya Tolstikhin. Predicting neural network accuracy from weights. arXiv preprint arXiv:2002.11448, 2020.
+Kai Wang, Zhaopan Xu, Yukun Zhou, Zelin Zang, Trevor Darrell, Zhuang Liu, and Yang You.
+Neural Network Parameter Diffusion, May 2024.
+Mitchell Wortsman, Gabriel Ilharco, Samir Yitzhak Gadre, Rebecca Roelofs, Raphael GontijoLopes, Ari S Morcos, Hongseok Namkoong, Ali Farhadi, Yair Carmon, Simon Kornblith, and
+Ludwig Schmidt. Model soups: Averaging weights of multiple fine-tuned models improves accuracy without increasing inference time. In International Conference on Machine Learning,
+2022a.
+Mitchell Wortsman, Gabriel Ilharco, Jong Wook Kim, Mike Li, Simon Kornblith, Rebecca Roelofs,
+Raphael Gontijo-Lopes, Hannaneh Hajishirzi, Ali Farhadi, Hongseok Namkoong, and Ludwig
+Schmidt. Robust fine-tuning of zero-shot models. In Conference on Computer Vision and Pattern
+Recognition (CVPR), 2022b.
+Han Xiao, Kashif Rasul, and Roland Vollgraf. Fashion-MNIST: A Novel Image Dataset for Benchmarking Machine Learning Algorithms, September 2017.
+Zhengqi Xu, Ke Yuan, Huiqiong Wang, Yong Wang, Mingli Song, and Jie Song. Training-free
+pretrained model merging. In Proceedings of the IEEE/CVF Conference on Computer Vision and
+Pattern Recognition, pp. 5915–5925, 2024.
+11
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+Xingyi Yang, Jingwen Ye, and Xinchao Wang. Factorizing knowledge in neural networks. In
+European Conference on Computer Vision, pp. 73–91. Springer, 2022a.
+Xingyi Yang, Daquan Zhou, Songhua Liu, Jingwen Ye, and Xinchao Wang. Deep model reassembly.
+Advances in neural information processing systems, 35:25739–25753, 2022b.
+Jason Yosinski, Jeff Clune, Yoshua Bengio, and Hod Lipson. How transferable are features in deep
+neural networks? In Neural Information Processing Systems (NeurIPS), November 2014.
+Kaichao You, Yong Liu, Ziyang Zhang, Jianmin Wang, Michael I Jordan, and Mingsheng Long.
+Ranking and tuning pre-trained models: A new paradigm for exploiting model hubs. Journal of
+Machine Learning Research, 23(209):1–47, 2022.
+Chris Zhang, Mengye Ren, and Raquel Urtasun. Graph HyperNetworks for Neural Architecture
+Search. In International Conference on Learning Representations (ICLR), 2019.
+Jingyang Zhang, Jingkang Yang, Pengyun Wang, Haoqi Wang, Yueqian Lin, Haoran Zhang, Yiyou
+Sun, Xuefeng Du, Yixuan Li, Ziwei Liu, Yiran Chen, and Hai Li. OpenOOD v1.5: Enhanced
+Benchmark for Out-of-Distribution Detection, September 2024. URL http://arxiv.org/
+abs/2306.09301. arXiv:2306.09301 [cs].
+Allan Zhou, Kaien Yang, Kaylee Burns, Adriano Cardace, Yiding Jiang, Samuel Sokota, J Zico
+Kolter, and Chelsea Finn. Permutation equivariant neural functionals. Advances in Neural Information Processing Systems, 36, 2023a.
+Allan Zhou, Kaien Yang, Yiding Jiang, Kaylee Burns, Winnie Xu, Samuel Sokota, J. Zico Kolter,
+and Chelsea Finn. Neural Functional Transformers. Advances in Neural Information Processing
+Systems, 36:77485–77502, December 2023b.
+
+A
+
+A PPENDIX
+
+A.1
+
+I MPLEMENTATION D ETAILS
+
+Experiments are performed in two phases: pre-training SANE on small CNN zoos and extending
+the analysis to larger ResNet-18 zoos. Model zoos are chosen based on their similarity in data
+and architecture to test SANE’s generalization ability across ID, NOOD, and FOOD domains. The
+hyperparameters used for training SANE are based on the SANE approach (Schürholt et al., 2024)
+and kept constant unless a modification is required to achieve stable training. They are summarized
+in Table 3. Code to reproduce the experiments will be made available upon publication.
+Table 3: Architecture and hyperparameter choices for SANE. Unless otherwise specified, all experiments use the hyperparameters outlined below. The hyperparameters are based on the SANE
+approach (Schürholt et al., 2024) with modifications to the number of training epochs and learning
+rate to allow stable training with the proposed new loss normalization.
+Hyper-Parameter
+
+CNNs
+
+ResNet-18
+
+Tokensize (Tdim )
+Sequence Length
+Window Size (Ws )
+Model Dim. (Dmodel )
+Latent Dim. (Dlat )
+Num. Transformer Layers
+Num. Attention Heads
+Num. Training Epochs
+Learning Rate (LR)
+Weight Decay (WD)
+Batch Size
+
+289
+∼50
+32
+1024
+128
+4
+8
+50
+1e − 4
+3e − 9
+32
+
+288
+∼50k
+256
+2048
+128
+8
+8
+60
+2e − 5
+3e − 9
+32
+
+12
+
+Accepted at the ICLR Workshop on Neural Network Weights as a New Data Modality 2025
+
+Model Sampling Model sampling is evaluated based on the performance of the sampled models
+on the downstream image dataset. All experiments use 5 prompt examples chosen from the model
+zoos at random to model the prior distribution out of which the decoder generates new weights. If
+there are no model zoos available, 5 models examples are trained for 25 epochs. For all experiments,
+the prompt example is chosen from the 25th epoch of training. Sampled models are evaluated
+without any updates of the trainable parameters (i.e. without any additional finetuning after sampling
+from SANE). Following the subsampling method, we sample 200 candidates and keep the 10 best
+models on validation data. As in SANE, batch-norm conditioning is performed before evaluation to
+update batch-norm statistics.
+A.2
+
+A DDITIONAL R ESULTS
+
+Table 4: Accuracy (mean ± std) of sampled CNN models on the downstream image datasets. The
+single-zoo datasets contain 200 models (10k weight tokens) each, the multi-zoo dataset is the combination of both and contains 400 models (20k weight tokens).
+
+Single vs. Multi
+Zoo
+
+In-Distribution
+MNIST
+
+NOOD
+
+FOOD
+
+USPS
+
+FMNIST
+
+SVHN
+
+AVG
+
+MNIST
+84.7±0.1 40.7±2.4 52.0±2.9 66.8±0.1 61.1±1.4
+SVHN
+83.4±0.2 70.1±0.1 68.0±1.1 69.8±0.1 72.9±0.4
+MNIST+SVHN 85.0±0.1 70.2±0.2 68.1±0.4 70.1±0.1 73.3±0.2
+The experiments on CNN models show that combining different training zoos marginally outperforms the single-zoo baseline on the respective dataset, see Table 4. However, there are noticeable
+improvements on the other ID image datasets, compare, e.g., MNIST to SVHN. The results indicate
+that SANE backbone training on multiple zoos creates a superset of in-distribution datasets. The
+improvements are even more pronounced in OOD datasets. SANE backbone training on multiple
+model zoos (MNIST + SVHN), consistently outperforms single-zoo baselines across in-distribution
+(ID), near- (NOOD) and far out-of-distribution (FOOD) domains.
+Table 5: In contrast to results in Table 1, this Table shows experiments, where we provide the same
+number of models (=tokens) for single-zoo-training and multi-zoo-training. SANE backbones are
+trained for each of the single zoo setups with 200 models (10M weight tokens), while the multi-zoo
+as combination is limited to 200 models (10M weight tokens). We report accuracy (mean ± std) of
+sampled ResNet-18 models on the downstream image datasets.
+Single vs. Multi
+
+In-Distribution
+
+NOOD
+
+FOOD
+
+Zoo
+
+CIFAR10
+
+CIFAR100
+
+TIN
+
+SVHN
+
+EuroSAT
+
+CIFAR10
+CIFAR100
+CIFAR10 + 100
+
+60.1±0.7
+55.0±1.8
+62.5±0.9
+
+21.2±0.3
+29.0±0.7
+32.0±0.4
+
+14.7±0.2
+24.8±0.5
+27.2±0.2
+
+49.3±1.2
+44.7±2.3
+54.0±1.3
+
+70.7±3.3
+61.5±1.3
+72.1±1.2
+
+13
+
+AVG
+43.2±1.1
+43.0±1.4
+49.5±0.8
+
+

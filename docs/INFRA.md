@@ -1,7 +1,7 @@
 # Infrastructure
 
 ## This server
-- AWS `eu-central-1`, instance `i-0c76db91358eee850` (g7.2xlarge), host `ip-172-31-31-23`
+- AWS `eu-central-1`, instance `<instance-id>` (g7.2xlarge), host `<aws-host>`
 - GPU: NVIDIA RTX PRO 4500 Blackwell Server Edition, 32,623 MiB, compute capability 12.0, driver 595.112, CUDA 13.2
 - 8 vCPU, 30 GiB RAM, 922 GB free disk
 - Nightly DR tarballs + AMIs exist (see `~/DR-RESTORE.md`), so project data under `~/projects` is backed up.

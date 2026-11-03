@@ -8,6 +8,7 @@ A task / PR / worktree is done when **all** of the following hold:
       in the session note.
 - [ ] Data artefacts are under `data/` with a `manifest.json` (seed, config hash, git SHA, model revisions).
 - [ ] Config used is committed under `configs/` and referenced by the artefact manifest.
+- [ ] No demo/mock/placeholder values in paper, docs, figures or analyses (real run artefacts only, run id in caption).
 - [ ] Numbers that will be quoted appear in `docs/RESULTS.md` with n, CI method and the run id.
 - [ ] Session note in `sessions/YYYY-MM-DD-NNN.md` updated: what changed, what was learned, open questions.
 - [ ] If a hypothesis gate was touched, `docs/ROADMAP.md` checkbox updated.

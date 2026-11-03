@@ -19,7 +19,7 @@ Two layers, both configured in this repo:
 | `.claude/agents/features-mathematician.md` | symmetry/linear-algebra nerd | Claude `claude-opus-5-5` | `src/wsp/features`, W2T canonicalisation, invariance tests |
 | `.claude/agents/ssm-researcher.md` | Mamba/JEPA researcher | Claude `claude-fable-5-1` | `src/wsp/predictor`, training loops, ablations |
 | `.claude/agents/weight-reader.md` | the blog's "Astra" character | Codex `gpt-6-astra` (xhigh) | H4: reads weight summaries, predicts Δy, explains |
-| `.claude/agents/reviewer.md` | adversarial reviewer | OpenCode `deepseek-v4-pro` | reviews every worktree against `docs/DOD.md` |
+| `.claude/agents/reviewer-ml.md`, `reviewer-journal.md`, `reviewer-arch.md` | Boards A, B, C (correctness, claims, architecture alternatives) | OpenCode `deepseek-v4-pro` | reviews every worktree against `docs/DOD.md` |
 | `.claude/agents/infra-ops.md` | tmux/Lambda operator | Claude `claude-sonnet-5-5` | `scripts/`, Lambda bursts, rsync back |
 | `.claude/agents/scribe.md` | documentation | OpenCode `claude-haiku-5-5` | `sessions/`, `docs/RESULTS.md` |
 
@@ -34,3 +34,17 @@ delegate_task(role="implementation", isolation="worktree", title="P1 zoo: hereti
   task="Read .claude/agents/zoo-engineer.md, docs/ROADMAP.md §P1, docs/TDD.md. Implement … Make tests/… green.")
 ```
 Reviews are always a new `delegate_task` with `role="review"`.
+
+## Routing and budget policy (3 Nov 2026)
+- Provider health (23:45 UTC 3 Nov): OpenCode Go 5-hour cap reached (kimi/glm/deepseek unavailable until it resets or Extra Usage is enabled); Grok quota exhausted; Copilot OK; Claude API instance OK since 23:46 UTC (workspace header set in ~/.claude-api/settings.json);
+  OK; Codex (`gpt-6.1-sol`, `gpt-6.1-terra`) OK; Antigravity: `gemini-3.8-flash` quota exhausted until ~10 Nov 2026, `gpt-oss-120b` route broken
+  (malformed messages payload) — do not use; Claude providers reserved.
+- Concurrency cap: at most 5 delegated agents at once (one GPU, 8 CPUs; contention already slowed tests).
+- Credit tiers: T1 cheap/default (glm-5.3-flash, gemini-3.8-flash, claude-haiku-5-5, kimi), T2 mid (glm-5.3,
+  gpt-6.1-terra, kimi for code), T3 reviewers (deepseek-v4-pro, gpt-6.1-sol high), T4 reserved (claude-opus-5-5,
+  claude-fable-5-1, gpt-6-astra) only for H4 reads and unblocking after two failed T2 attempts.
+- Ledger: every delegation is appended to `board/usage.md` (date, task, provider/model, outcome) so remaining
+  credits can be judged per provider; the orchestrator reviews it before each new wave.
+- Fallback order when a provider hits a quota (user rule, 3 Nov 2026): switch immediately to another provider,
+  including the API-billed instances (`claude_aio_gmail_api` "Claude API" for Claude models) rather than waiting;
+  record the switch in `board/usage.md`. Report exact needs to the user in the BLUF line.

@@ -18,6 +18,8 @@ dependencies = [
   "scikit-learn",
   "lightgbm",
   "pandas",
+  "matplotlib>=3.8",
+  "pillow>=10",
   "pyarrow",
   "tqdm",
   "pyyaml",
@@ -25,12 +27,14 @@ dependencies = [
   "rich",
   "lm-eval>=0.4.13",
   "heretic-llm>=2.0.0",
+  "flash-linear-attention",
 ]
 [project.optional-dependencies]
 dev = ["pytest", "pytest-timeout", "ruff", "mypy", "ipykernel", "jupyter"]
 ssm = ["mamba-ssm>=2.3", "causal-conv1d"]
 serve = ["vllm"]
 [tool.pytest.ini_options]
+addopts = "-m 'not gpu and not slow and not net'"
 testpaths = ["tests"]
 timeout = 600
 markers = ["gpu: needs CUDA", "slow: long-running", "net: needs network/HF"]

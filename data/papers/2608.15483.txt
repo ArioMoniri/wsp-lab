@@ -1,0 +1,5901 @@
+Measuring Structured Predictability in Neural Training Dynamics: A Cross-Regime
+Study
+Fanqi Wang, Weisheng Tang, and Hairong Qi∗
+Department of Electrical Engineering and Computer Science, University of Tennessee, Knoxville
+
+arXiv:2608.15483v1 [cs.LG] 16 Aug 2026
+
+Abstract
+Modern deep networks are trained through long update trajectories, yet their temporal organization remains less systematically characterized than architectures, losses, or optimizers.
+We study short-horizon predictability as a measure of temporal
+redundancy: where, when, and under which training conditions
+recent updates contain information about near-future parameter
+motion. We combine three complementary probe families—
+displacement-direction, subspace-residual, and predictor-based
+probes—with convention-aware, null-calibrated group-level
+readouts, and apply them to multi-pass vision training on
+CIFAR and public Pythia pretraining checkpoints. Across
+both regimes, vector-like tensors such as normalization parameters and biases (auxiliary parameters) exhibit simpler
+short-horizon dynamics than matrix-like feature-transforming
+weights (bulk parameters), whose predictable behavior concentrates in localized, time-varying pockets. Agreement within
+and across probe families, and with independent trajectory
+diagnostics, indicates that these measurements capture intrinsic trajectory structure, while probe differences distinguish
+complementary forms of temporal organization. Controlled
+CIFAR comparisons further show that architecture and training recipe systematically modulate the measured structure. A
+Pythia-70M case study further exposes a sequence of role-,
+depth-, and scale-dependent events, including bulk ESA falling
+below the random sign-agreement level and the emergence and
+redistribution of predictable qkv pockets across layers. These
+results position short-horizon predictability as a retrospective,
+parameter-resolved diagnostic of training dynamics.
+
+1
+
+Introduction
+
+Modern neural networks are trained through long sequences of
+gradient evaluations and parameter updates, making iterative
+optimization a central computational bottleneck as models,
+datasets, and training horizons grow. A large body of work has
+studied architectures, losses, optimizers, final representations,
+gradient geometry, and loss-landscape structure (Gur-Ari,
+Roberts, and Dyer 2018; Li et al. 2018a; Goodfellow, Vinyals,
+and Saxe 2014; Draxler et al. 2018; Cohen et al. 2021; Papyan,
+Han, and Donoho 2020). In contrast, the temporal organization of the training trajectory remains less systematically
+characterized. Recent trajectory-level work (Singh et al. 2025)
+has begun to characterize the global directional geometry of
+checkpoint paths, yet the short-horizon temporal redundancy
+∗
+
+Corresponding author.
+
+of successive updates—the extent to which recent motion is
+informative about near-future displacement—has not been
+systematically characterized.
+This gap is particularly relevant to predictive acceleration.
+Weight nowcasting, update extrapolation, predictive differential training, and related methods rely on recent history being
+informative about near-future parameter evolution (Sinha
+et al. 2017; Jang et al. 2023; Knyazev et al. 2024; Wang
+et al. 2026; Guan et al. 2024). Their success suggests that
+such information can exist, but not that it is uniform across
+parameters, training stages, architectures, or optimization
+recipes; indeed, Predictive Differential Training showed that
+selective prediction can be more reliable than prediction applied uniformly across a model. This motivates a more basic
+measurement question: where, when, and under what training
+conditions do neural update trajectories exhibit exploitable
+short-horizon structure?
+To answer this question, we develop three complementary probe families of increasing complexity. Displacementdirection probes test whether recent movement directions
+persist; subspace-residual probes ask whether future displacement remains within the span of recent updates; and
+predictor-based probes fit explicit local dynamics to capture
+richer temporal structure. We evaluate them at aggregate, tensor, and within-tensor group scales, with convention-aware
+and null-calibrated readouts for comparing localized structure
+under different grouping choices. Agreement and disagreement across the probes reveal shared and complementary
+forms of temporal organization.
+Across multi-pass vision training on CIFAR and one-pass
+pretraining of Pythia, the probes reveal a common spatial organization. Auxiliary, vector-like parameters exhibit simpler
+short-horizon dynamics than bulk, matrix-like parameters. Under the deepest probes considered here, bulk tensors are largely
+unpredictable in aggregate but contain localized subsets with
+elevated predictability whose identities shift over training.
+We call these localized, time-varying subsets predictable
+pockets. Beyond locating this structure, the probes reveal
+how it evolves with optimization. In controlled vision runs,
+directional readouts closely track movement directedness and
+gradient signal-to-noise ratio; ESA rapidly falls toward an antipersistent floor, with later departures depending on parameter
+role and training condition. In Pythia, temporal changes differ
+across QKV, attention-output, and MLP parameters and are
+
+not reducible to a single event in the scalar loss curve. More
+broadly, the short-horizon organization of training dynamics
+is jointly conditioned on optimization position, architecture,
+and training recipe; its parameter-resolved structure reveals
+where these differences are expressed within the model.
+In summary, our contributions are:
+1. We introduce a convention-aware, multiscale framework
+for measuring short-horizon temporal structure through
+three graded probe families: displacement-direction,
+subspace-residual, and predictor-based probes. The framework resolves aggregate, tensor, and within-tensor group
+structure, operates retrospectively on stored checkpoints,
+and provides a geometric ceiling for predictors constrained
+to the recent-history span.
+2. Across multi-pass vision training and one-pass languagemodel pretraining, we identify a shared organization of
+predictability. Auxiliary and bulk parameters separate systematically in short-horizon dynamics, while bulk tensors
+contain localized, time-varying predictable pockets rather
+than uniformly predictable structure.
+3. We show that the probe readings provide a state-sensitive,
+parameter-resolved view of optimization. They track realized movement structure, distinguish role-specific temporal events, and respond systematically to architecture
+and training recipe. These results position short-horizon
+predictability as a retrospective diagnostic of temporal
+redundancy, distinct from optimizer quality and only conditionally relevant to predictive reuse.
+
+2
+
+Related Work and Positioning
+
+Predicting future weights or updates has been explored as a
+way to accelerate neural training. Introspection learns weightevolution patterns across runs (Sinha et al. 2017); weight
+nowcasting and neuron-interaction nowcasting train auxiliary predictors to forecast near-future parameters (Jang et al.
+2023; Knyazev et al. 2024); Predictive Differential Training
+uses Koopman/DMD-style forecasts with selective trainingdynamics masks (Wang et al. 2026); and optimizer-rule-based
+prediction has also been used to modify gradient-based training (Guan et al. 2024). DMD and Koopman methods provide
+a natural linear-dynamical language for time-resolved trajectories (Schmid 2010; Tu et al. 2014; Dogra and Redman 2020).
+These works motivate the possibility of predictive training,
+but they are primarily predictor- or acceleration-centered.
+They do not systematically ask where short-horizon temporal
+regularity exists inside a model, whether it is localized or
+global, or how it changes with parameter role, training stage,
+architecture, optimizer, and training regime.
+The closest work to ours studies the optimization trajectory
+as an object in its own right: Singh et al. (2025) show that
+the directional geometry of raw checkpoint paths saturates
+early at the macro level, oscillates at finer scales later, and is
+shaped in part by weight decay and momentum. We look at
+a different object. Rather than the path of the raw weights,
+we study the sequence of updates; rather than describing past
+geometry, we ask how well the recent past predicts the next few
+steps; and we answer at aggregate, tensor, and within-tensor
+scales. Existing trajectory-level studies characterize selected
+
+geometric properties of optimization paths, but a multiscale
+account of short-horizon parameter predictability spanning
+directional persistence, recent-history subspace structure, and
+explicit prediction remains missing.
+A separate body of work shows that neural training has
+rich structure. Gradients can align with low-dimensional Hessian subspaces (Gur-Ari, Roberts, and Dyer 2018), randomsubspace experiments estimate intrinsic dimension (Li et al.
+2018a), and recent work questions whether such alignment
+identifies trainable projected subspaces (Song, Ahn, and Yun
+2024). Loss-landscape studies reveal interpolation structure,
+mode connectivity, and useful weight averaging or ensembling along trajectories (Goodfellow, Vinyals, and Saxe 2014;
+Li et al. 2018b; Draxler et al. 2018; Garipov et al. 2018; Izmailov et al. 2018; Huang et al. 2017; Wortsman et al. 2022).
+Stage-wise analyses study edge-of-stability behavior, neural
+collapse, grokking, and lazy or kernel-like regimes (Cohen
+et al. 2021; Papyan, Han, and Donoho 2020; Power et al.
+2022; Jacot, Gabriel, and Hongler 2018; Chizat, Oyallon, and
+Bach 2019). These studies establish that optimization is structured, but they mainly concern spatial geometry, trainable
+subspaces, final representations, or named training regimes.
+Our object is the short-horizon temporal organization of
+parameter displacements, and where inside the model that
+structure resides.
+A further line of work uses pretraining suites with released
+intermediate checkpoints, most prominently Pythia (Biderman
+et al. 2023), to study how capabilities and circuits form along
+training, from the early emergence of induction heads (Olsson
+et al. 2022; Tigges et al. 2024) to compute-optimal accounts
+of over-training (Hoffmann et al. 2022). We use the Pythia
+checkpoints as our one-pass regime but measure something
+else: the temporal redundancy of the weight trajectory itself,
+not behaviors or circuits. When our readings line up in
+time with events reported in this literature, we note the
+correspondence and make no mechanistic claim.
+Architecture and optimizer choices are also known to reshape optimization. Normalization, attention, and adaptive
+methods change Transformer optimization behavior (Zhang
+et al. 2020; Xiong et al. 2020; Zhang et al. 2024); momentum, weight decay, sharpness-aware perturbations, slow–fast
+weight coupling, and matrix-structured updates alter the geometry of update sequences (Kingma and Ba 2014; Loshchilov
+and Hutter 2017; Foret et al. 2020; Zhang et al. 2019; Ma and
+Yarats 2018; Jordan et al. 2024). Weight decay in particular
+has well-studied mechanisms, through its interaction with
+normalization and effective learning rates (van Laarhoven
+2017; d’Angelo et al. 2024). Existing efficient-training methods reduce cost through pruning, sparse training, data selection, sample selection, or gradient and communication
+compression (Frankle and Carbin 2018; Evci et al. 2020;
+Mirzasoleiman, Bilmes, and Leskovec 2020; Killamsetty et al.
+2021; Jiang et al. 2019; Lin et al. 2017; Vogels, Karimireddy, and Jaggi 2019). We take a complementary view: the
+optimizer trajectory itself may contain localized temporal
+redundancy. We therefore study short-horizon predictability as a trajectory-level measurement problem, rather than
+as an optimizer leaderboard or the performance of a single
+predictor, and we carry the same instruments across two
+
+training regimes — multi-pass vision training and one-pass
+language-model pretraining.
+
+3
+
+Measurement Framework
+
+We study short-horizon predictability as a property of a training trajectory rather than the performance of a single forecasting algorithm. Let wt ∈ Rd denote the trainable parameters
+at checkpoint t, ∆wt = wt+1 − wt the one-step update, and
+(τ )
+∆wa = wa+τ − wa the displacement realized over horizon
+τ from anchor a. The preceding npast updates form the local
+history Ha = [∆wa−npast , . . . , ∆wa−1 ]. Probes are evaluated on a measurement unit S, either a whole trainable tensor
+(τ )
+or one of K disjoint within-tensor groups; ∆wt,S , ∆wa,S ,
+and Ha,S denote the corresponding restrictions. Every probe
+uses only history available before a and is evaluated retrospectively against the displacement after a. Architectural roles
+are assigned only after measurement, for interpreting where
+predictable structure occurs. The choices of τ , npast , K, and
+grouping convention are specified with the experiments.
+We use three complementary probe families of increasing
+representational complexity. Displacement-direction probes
+test whether the latest update persists into the near-future
+displacement. Subspace-residual probes ask whether that displacement remains within the low-dimensional span of recent
+updates, even when no single direction persists. Predictorbased probes test whether an explicit local model can exploit
+richer temporal structure. The families are therefore related
+but non-equivalent measurements of short-horizon organization.
+Displacement-direction probes. For element j of unit
+(τ )
+(τ )
+S, let ea,S,j = 1{sign(∆wa−1,S,j ) = sign(∆wa,S,j )}.
+Element-wise sign agreement (ESA) and vector cosine similarity (VCS) are
+1 X (τ )
+ESAS (a, τ ) =
+ea,S,j ,
+|S|
+j∈S
+(1)
+(τ )
+⟨∆wa−1,S , ∆wa,S ⟩
+VCSS (a, τ ) =
+.
+(τ )
+∥∆wa−1,S ∥2 ∥∆wa,S ∥2
+ESA weights coordinates equally, whereas VCS weights them
+by displacement magnitude.
+Subspace-residual probes. Let Pa,S project onto the retained span of the recent-update matrix Ha,S . The future
+residual ratio (FRR) is
+(τ )
+
+FRRS (a, τ ) =
+
+∥(I − Pa,S )∆wa,S ∥2
+(τ )
+
+∥∆wa,S ∥2
+
+,
+
+(2)
+
+where lower values indicate stronger containment in the recenthistory span. An in-window control analogously evaluates
+the latest update against the span of the preceding npast − 1
+updates. For groups {Gg }K
+g=1 , the low-residual group fraction
+(LRGF) summarizes localization,
+K
+
+LRGF(a, τ ; θ) =
+
+1 X
+1{FRRGg (a, τ ) < θ}.
+K g=1
+
+(3)
+
+Because the fixed threshold θ is convention-dependent,
+LRGFcal instead uses the α = 0.05 quantile of a sizematched permutation-null FRR distribution; under the null,
+its expected fraction is approximately α, and we report excess
+over α where indicated.
+Predictor-based probes. A predictor maps the recent
+(τ )
+history to a predicted displacement fbP,a,S . We compare
+(τ )
+three increasingly expressive local models: inertia, fbin,a,S =
+τ ∆wa−1,S ; a per-element linear trend fitted to recent updates
+and integrated over the next τ steps; and DMD, which fits
+and rolls forward a local linear map between consecutive
+update-history matrices. Because predicted magnitudes depend strongly on horizon and optimizer state, we emphasize
+direction and selection. The selector-free predicted-direction
+cosine is
+(τ )
+
+(τ )
+
+P,a,S
+
+a,S
+
+⟨fbP,a,S , ∆wa,S ⟩
+cosP,S (a, τ ) = (τ )
+,
+(τ )
+∥fb
+∥2 ∥∆w ∥2
+
+P ∈ {in, lin, DMD}.
+
+(4)
+Since cosine ignores scale, cosin ≡ VCS.
+Predictor outputs also define a selector ma,S,j =
+(τ )
+1{sign(fba,S,j ) = sign(∆wa−1,S,j )}. The selected elementwise sign agreement (SESA) and its selectivity lift over the
+unselected baseline are
+P
+(τ )
+j∈S ma,S,j ea,S,j
+P
+SESAS (m; a, τ ) =
+,
+(5)
+j∈S ma,S,j
+LiftS (m; a, τ ) = SESAS (m; a, τ ) − ESAS (a, τ ). (6)
+SESA is defined when the selected subset is nonempty; positive lift means that the predictor isolates coordinates whose
+latest observed direction is more reliable than the unselective
+baseline. Under our construction, DMD predictions remain
+in the recent-history span, linking their attainable directional
+alignment to FRR. Full predictor constructions, rank selection,
+null generation, grouping rules, and numerical conventions
+are deferred to the appendix.
+
+4
+
+Empirical Analysis
+
+Experimental setup. We analyze stored weight trajectories
+in two complementary training regimes. Multi-pass vision
+training. Our CIFAR-10 panel contains 30 model–optimizer
+cells, crossing five architectures (a CIFAR-style ResNet, two
+ViT scales, AlexNet, and an MLP) with six training configurations (SGD, SGD with momentum, SGD with weight
+decay, SAM, Adam, and AdaGrad). Models are trained for
+50 epochs with batch size 128 and a cosine learning-rate
+schedule, with weights recorded at every epoch boundary. Unless otherwise stated, probes are evaluated at anchor epochs
+{5, 10, 20, 30, 40}. Section 4.4 additionally uses Muon and
+controlled weight-decay and momentum dose arms.
+One-pass language-model pretraining. We analyze the
+public checkpoint trajectories of Pythia 70M, 160M, and
+410M (Biderman et al. 2023). For each model, checkpoints are
+spaced by 1,000 optimization steps; we evaluate 123 admissible post-warmup anchors spanning steps 7,000–129,000.
+
+Unless otherwise stated, both regimes use horizon τ = 5
+and history length npast = 5. The measurement clock is
+regime-specific: one probe step corresponds to one epoch for
+CIFAR and one released checkpoint for Pythia. Vision tensors
+use flat K = 16 within-tensor groups by default, whereas
+Pythia tensors use architecture-aligned groups within the
+qkv, attention-output, MLP, and vector segments. All probes
+are causal at the anchor and depend only on the preceding
+weight history. FRR- and LRGF-based results always state
+their grouping convention; fixed-threshold LRGFθ is used
+for matched cross-layer comparisons, while shuffle-calibrated
+LRGFcal is used along the within-layer time axis. Complete
+configurations, checkpoint accounting, and measurement
+details are provided in Appendix A of the supplementary
+material.
+
+4.1 Probe families are coherent but non-equivalent
+Within-family coherence under explicit conventions We
+first examine within-family agreement to test whether alternative readouts yield coherent measurements rather than
+idiosyncratic behavior of a single readout. Figure 1 summarizes one comparison for each probe family over the controlled
+vision panel of 30 model–optimizer cells and five anchors.
+Displacement-direction. ESA and group-mean VCS weight
+the same displacement pair differently: ESA gives each coordinate one sign vote, whereas VCS weights coordinates by
+displacement magnitude. Under a centered bivariate Gaussian
+reference, the corresponding sign agreement and correlation
+satisfy ESA = 1 − arccos(VCS)/π (Schmid and Schmidt
+2007). As shown in Fig. 1(a), 28 of the 30 cells closely follow
+this parameter-free curve across anchors. Departures occur primarily in cells with many near-zero-displacement coordinates
+(coordinates whose displacement is zero or numerically negligible over one or both intervals): these coordinates contribute
+little to VCS but remain sensitive to ESA’s coordinate-wise
+sign convention, and restricting the comparison to coordinates
+that move in both intervals largely restores agreement.
+Subspace-residual. Out-of-window and in-window FRR
+are strongly correlated (median per-cell Spearman ρS =
+0.83; Fig. 1(b)), consistent with local smoothness across
+nearby target windows. FRR is computed within contiguous,
+structure-aligned parameter groups using a model-specific,
+empirically selected granularity, which determines the spatial
+scale at which local subspace structure and predictable pockets
+can be resolved.
+Predictor-based. DMD and linear-trend selectors induce
+strongly consistent SESA orderings (median per-cell ρS =
+0.89), while DMD achieves systematically higher values
+(Fig. 1(c)), consistent with its ability to exploit coupled lowrank dynamics in the recent trajectory rather than extrapolating
+a single linear trend. Alternative grouping granularities and
+additional within-family checks are reported in Appendix B.
+Cross-family relations across levels of complexity We
+next compare representative readouts across probe families
+at the tensor level. Correlations are computed across tensors
+within each model–optimizer cell and summarized by the
+median over the 30 cells, avoiding correlations induced by
+pooling different training recipes.
+
+Direction–subspace. ESA and out-of-window FRR are
+strongly anticorrelated (median per-cell Spearman ρS =
+−0.74; Fig. 2(a)): tensors with more persistent coordinatewise directions also tend to keep their future displacement
+closer to the span of recent updates. The two probes therefore detect closely related structure from different geometric
+perspectives.
+Subspace–predictor. Under our construction, the DMD
+prediction lies in the recent-history subspace, giving the
+geometric bound
+p
+cosDMD ≤ 1 − FRR2 .
+DMD direction cosine is correspondingly strongly anticorrelated with FRR (median per-cell Spearman ρS = −0.75;
+Fig. 2(b)), with 37% of tensor-level observations lying within
+0.15 of the bound. FRR thus characterizes the directional
+headroom available to a predictor constructed from the recenthistory subspace.
+Direction–predictor. DMD lift satisfies the headroom
+bound
+Lift = SESA − ESA ≤ 1 − ESA.
+Its binned median peaks at 0.118 for ESA ∈ [0.6, 0.7], rather
+than at the highest ESA values (Fig. 2(c)). High ESA already
+indicates strong predictability from directional persistence
+alone, leaving little residual error for DMD-based selection
+to remove; low lift in this region therefore does not imply
+low predictability. At very low ESA, the trajectory also offers
+less stable structure to exploit. The largest lift occurs at
+intermediate ESA, where DMD can recover additional lowrank temporal structure beyond coordinate-wise persistence
+while sufficient headroom remains.
+Together, these results show that predictability can be characterized at complementary levels of complexity: coordinatewise directional persistence, local history-subspace structure,
+and additional temporal structure recoverable by an explicit
+predictor.
+
+4.2
+
+Predictability is spatially localized across
+parameter scales
+
+We next ask where the measured short-horizon structure
+resides. We partition trainable tensors into two predefined
+morphological classes: auxiliary tensors include vector-like
+parameters such as normalization parameters and biases,
+whereas bulk tensors include matrix-like feature-transforming
+weights such as attention projections, MLP weights, and
+convolutional kernels. Exact tensor membership and partition
+audits are provided in Appendix C.
+Figure 3 shows a stable tensor-scale separation within
+matched trajectories. Auxiliary tensors exceed bulk tensors
+in 29/32 trajectory-level comparisons under ESA and in
+32/32 comparisons under the DMD direction cosine. Before
+temporal aggregation, the same ordering holds at all 246
+Pythia model–checkpoint snapshots under both probes. The
+recurring paired ordering shows that this coarse spatial organization is shared across multi-pass vision training and one-pass
+language-model pretraining, rather than arising from a single
+probe or training regime. We do not compare the magnitudes
+
+1.0
+
+0.9
+
+re
+
+0.8
+
+ESA
+
+nce
+
+0.7
+
+Ga
+
+0.6
+
+e
+ref
+ian
+
+uss
+
+0.5
+0.00
+
+0.25
+
+0.50
+
+VCS
+
+0.75
+
+1.00
+
+(b)
+
+1.0
+
+SESA (linear selector)
+
+(a)
+FRR (in-window)
+
+1.0
+
+0.8
+y=
+
+0.6
+
+x
+
+0.4
+0.2
+0.2
+
+0.4
+
+0.6
+
+0.8
+
+FRR (out-of-window)
+
+1.0
+
+(c)
+
+0.9
+0.8
+0.7
+
+y=
+
+x
+
+0.6
+0.5
+0.6
+
+0.8
+
+SESA (DMD selector)
+
+1.0
+
+Figure 1: Within-family agreement on the controlled vision panel. (a) ESA versus group-mean VCS; (b) out-of-window versus
+in-window FRR; (c) SESA under DMD and linear-trend selectors. Circled points mark cells with near-zero-displacement
+coordinates.
+
+Figure 2: Cross-family relations on the controlled vision panel. (a) ESA versus out-of-window FRR; (b) out-of-window FRR
+versus DMD direction cosine; (c) ESA versus DMD lift. Circled points mark cells flagged by the near-zero-displacement
+diagnostic.
+of the CIFAR and Pythia gaps because their grouping and
+checkpoint protocols differ.
+Despite their lower aggregate predictability, bulk tensors
+contain a small minority of within-tensor groups with substantially elevated predictability. We refer to these localized
+groups as predictable pockets. Under the reported structural
+cuts and reference convention, they account for approximately
+6% of pooled group–anchor observations. Most pockets are
+transient: their identities change across training anchors, although the degree of persistence varies by parameter role.
+Detailed pocket trajectories and persistence analyses are reported in Appendix D.
+
+4.3 Probe readings track the realized optimization
+state
+The proposed probes need not be interpreted in isolation.
+We compare their readings with complementary diagnostics
+derived from realized trajectory motion and training telemetry.
+For ESA, we use movement directedness—the ratio of net
+
+displacement to path length over the future window—and
+a loss-side estimate of gradient coherence based on loss
+decrease, learning rates, and gradient norms. Across heterogeneous CIFAR training conditions, ESA correlates with these
+quantities at ρ = 0.978 and ρ = 0.804, respectively. Formal
+definitions, their relation to prior gradient-coherence and
+signal-to-noise measures, and the complete comparisons are
+provided in Appendix E.
+We next use Pythia-70M as a case study to examine how
+these state-level correspondences unfold within a one-pass
+pretraining trajectory. Figure 5 jointly resolves the public loss
+trajectory and probe readings across parameter roles, layers,
+and grouping scales.
+The auxiliary vector segment remains clearly separated
+from the bulk roles throughout training. Although the bulk
+tensors contain most of the model parameters, all three bulk
+roles undergo a rapid initial decline in ESA and cross below
+the 0.5 sign-agreement reference. They continue to evolve
+within this sub-0.5 regime rather than settling to a common
+
+1.0
+
+0.9
+
+0.8
+
+0.8
+
+0.6
+
+cosDMD
+
+ESA
+
+(a)
+
+0.7
+0.6
+0.5
+
+(b)
+
+CIFAR run (30)
+Pythia run (2)
+
+0.4
+0.2
+
+Aux > bulk: 29/32
+aux
+
+bulk
+
+0.0 Aux > bulk: 32/32
+aux
+
+bulk
+
+Figure 3: Auxiliary–bulk separation across training regimes. Each line connects the auxiliary and bulk summaries within a
+matched CIFAR run or Pythia trajectory; circles denote CIFAR runs and stars denote Pythia trajectories. Auxiliary tensors exceed
+bulk tensors in 29/32 comparisons under ESA and 32/32 under the selector-free DMD direction cosine. Because the two regimes
+use different grouping protocols, we compare the within-line ordering rather than absolute levels across regimes.
+The temporal proximity between the loss reversal and the
+later qkv ESA excursion is a retrospective correspondence,
+not evidence that either event causes or uniquely explains
+the other. The role-, depth-, and grouping-resolved readings
+nevertheless reveal trajectory reorganizations that are not
+localized by the scalar loss curve alone. Complete results for
+the other Pythia scales, together with cross-group diagnostics
+and pocket-evolution analyses, are reported in Appendix F.
+
+4.4 Training conditions modulate state-dependent
+temporal redundancy
+
+Figure 4: Distribution
+pof FRR excess above the approximate
+isotropic reference (D − r)/D − FRR over structurally
+grouped bulk parameters, with r = 5. The highlighted tail
+(excess > 0.3) contains approximately 6% of pooled group–
+anchor observations.
+
+floor. The clearest mid-to-late turn occurs in qkv: its ESA
+bends upward near the smoothed loss minimum around 50k
+steps, reaches a local maximum near 75k after the loss has
+begun to rise, and subsequently declines again. Attentionoutput and MLP exhibit smaller, non-identical variations over
+the same interval.
+The finer-resolution views expose an earlier reorganization
+within qkv at a different spatial scale. Head-aligned LRGFcal
+excess is concentrated near the beginning of training and
+largely fades around 20k steps. Row-level low-FRR pockets,
+however, are initially sparse and emerge only after some
+training, first in deeper layers and later across deep and intermediate layers. The fading of head-aligned excess therefore
+should not be read as a global disappearance of predictable
+structure. Rather, the detectable qkv structure changes its
+localization and its relation to the chosen grouping scale.
+
+Across our controlled CIFAR experiments, temporal redundancy varies systematically with architecture, optimizer family, weight decay, and momentum. Size-controlled architecture comparisons and controlled weight-decay and momentum dose studies are reported in Appendix G; here we use
+optimizer-family variation as a compact main-text example.
+Because optimizer families traverse the loss trajectory at
+different rates, Figure 6 compares them along training loss
+rather than checkpoint index. Distinct profiles remain visible
+over the shared range: SAM occupies the highest-ESA regime,
+Muon remains near the 0.5 reference, Adam lies below SGD
+over most of their overlap, and SGD and AdaGrad approach
+a similar low-loss plateau. Thus, optimization position organizes the evolution of predictability, while the training recipe
+also conditions its level and local directional structure.
+Higher predictability should not be interpreted as better
+optimization: optimizers with strong final performance occupy
+both high- and low-predictability regimes. The complete
+optimizer panel, predictability–accuracy comparison, and
+the architecture, weight-decay, and momentum results are
+provided in Appendix G.
+
+5
+
+Discussion, Limitations, and Future
+Directions
+
+The proposed measurements provide a parameter-resolved
+and time-local view of the temporal organization of training
+
+1.0
+0.9
+0.8
+0.7
+0.6
+0.5
+0.4
+
+50
+
+tokens (B)
+
+100
+
+150
+
+200
+
+250
+
+vec (= aux)
+
+chance 0.5
+
+qkv
+
+attn_out
+
+mlp
+
+(b) training loss
+
+layer
+
+0
+1
+2
+3
+4
+5
+0
+1
+2
+3
+4
+5
+
+(c) qkv rows
+
+LRGF_cal excess rows with FRR < 0.7
+
+2.95
+2.90
+2.85
+
+layer
+
+train lm-loss
+
+ESA (group mean)
+
+(a) ESA by role
+
+0.3
+0.2
+0.1
+0.0
+
+(d) qkv heads
+
+25
+
+50
+
+75
+
+100
+
+training step (k)
+
+125
+
+0.6
+0.4
+0.2
+0.0
+
+Figure 5: Pythia-70M case study. (a) ESA by parameter role.
+(b) Released training loss and its smoothed trajectory. (c)
+Fraction of qkv row groups satisfying FRR < 0.7. (d) Headaligned qkv LRGFcal excess. Vertical lines mark the early
+fading of head-aligned excess, the loss minimum, and the
+later qkv ESA rise.
+
+dynamics. They localize short-horizon structure across parameter roles, layers, tensors, and within-tensor groups, while
+tracking how that structure emerges, disappears, or changes
+its spatial organization. Directional, subspace, and predictorbased probes provide complementary views: their agreement
+supports shared trajectory structure, whereas their differences
+distinguish non-equivalent forms of temporal organization.
+The framework can therefore support retrospective analysis of checkpoint-rich runs with sufficiently fine temporal
+resolution.
+The probes nevertheless capture a restricted class of dynamics, emphasizing low-order directional relations and structure
+representable within short, locally low-dimensional history
+
+Figure 6: Optimizer-family profiles for ViT-mid along training
+loss (horizontal axis reversed), with canonical bulk ESA on
+the vertical axis. All-family comparisons use the common
+support loss ≈ 0.9–1.4; matched loss does not imply matched
+optimizer state. Dashed line: 0.5 sign-agreement reference.
+spaces rather than arbitrary nonlinear, long-memory, or highrank dependence. Their readings also depend on checkpoint
+spacing, horizon, history length, grouping convention, and
+null calibration, which define the scale of observation. Because ESA and FRR use realized post-anchor displacement,
+they are retrospective or delayed measurements rather than
+immediately available online signals, and temporal alignment
+with loss or other events should not be interpreted as mechanistic evidence. Our current coverage of controlled vision
+training and public Pythia trajectories also does not establish
+generality across larger models or other learning paradigms.
+Future work should extend these measurements across
+broader scales and regimes, and study the emergence, migration, and disappearance of predictable pockets together with
+their alignment to representation formation, circuit development, and interpretable parameter communities. The sub-0.5
+ESA regimes further motivate examining possible connections to edge-of-stability behavior (Cohen et al. 2021) and
+Ornstein–Uhlenbeck-like mean reversion(Mandt, Hoffman,
+and Blei 2017). Another direction is to develop delayed-online
+or history-only diagnostics that complement scalar loss. Our
+preliminary online example suggests that restricting predictive write-back to a higher-confidence auxiliary subset can
+be more reliable than broad prediction (Appendix H), motivating future use of these instruments for adaptive prediction,
+selective updating, skipping, and compression.
+
+References
+Biderman, S.; Schoelkopf, H.; Anthony, Q. G.; Bradley, H.;
+O’Brien, K.; Hallahan, E.; Khan, M. A.; Purohit, S.; Prashanth,
+U. S.; Raff, E.; Skowron, A.; Sutawika, L.; and van der Wal, O.
+2023. Pythia: A Suite for Analyzing Large Language Models
+Across Training and Scaling. In International Conference on
+Machine Learning, 2397–2430. PMLR.
+
+Chatterjee, S. 2020. Coherent gradients: An approach to
+understanding generalization in gradient descent-based optimization. arXiv preprint arXiv:2002.10657.
+Chizat, L.; Oyallon, E.; and Bach, F. 2019. On lazy training in
+differentiable programming. Advances in neural information
+processing systems, 32.
+Cohen, J. M.; Kaur, S.; Li, Y.; Kolter, J. Z.; and Talwalkar, A.
+2021. Gradient descent on neural networks typically occurs
+at the edge of stability. arXiv preprint arXiv:2103.00065.
+d’Angelo, F.; Andriushchenko, M.; Varre, A.; and Flammarion, N. 2024. Why do we need weight decay in modern
+deep learning? Advances in Neural Information Processing
+Systems, 37: 23191–23223.
+Dogra, A. S.; and Redman, W. 2020. Optimizing neural
+networks via Koopman operator theory. Advances in Neural
+Information Processing Systems, 33: 2087–2097.
+Draxler, F.; Veschgini, K.; Salmhofer, M.; and Hamprecht,
+F. 2018. Essentially no barriers in neural network energy
+landscape. In International conference on machine learning,
+1309–1318. PMLR.
+Evci, U.; Gale, T.; Menick, J.; Castro, P. S.; and Elsen, E.
+2020. Rigging the lottery: Making all tickets winners. In
+International conference on machine learning, 2943–2952.
+PMLR.
+Feng, Y.; and Tu, Y. 2021. Phases of learning dynamics in
+artificial neural networks: with or without mislabeled data.
+arXiv preprint arXiv:2101.06509.
+Foret, P.; Kleiner, A.; Mobahi, H.; and Neyshabur, B. 2020.
+Sharpness-aware minimization for efficiently improving generalization. arXiv preprint arXiv:2010.01412.
+Frankle, J.; and Carbin, M. 2018. The lottery ticket hypothesis:
+Finding sparse, trainable neural networks. arXiv preprint
+arXiv:1803.03635.
+Garipov, T.; Izmailov, P.; Podoprikhin, D.; Vetrov, D. P.; and
+Wilson, A. G. 2018. Loss surfaces, mode connectivity, and
+fast ensembling of dnns. Advances in neural information
+processing systems, 31.
+Goodfellow, I. J.; Vinyals, O.; and Saxe, A. M. 2014. Qualitatively characterizing neural network optimization problems.
+arXiv preprint arXiv:1412.6544.
+Guan, L.; Li, D.; Shi, Y.; and Meng, J. 2024. XGrad: Boosting
+gradient-based optimizers with weight prediction. IEEE
+Transactions on Pattern Analysis and Machine Intelligence,
+46(10): 6731–6747.
+Gur-Ari, G.; Roberts, D. A.; and Dyer, E. 2018. Gradient descent happens in a tiny subspace. arXiv preprint
+arXiv:1812.04754.
+Hoffmann, J.; Borgeaud, S.; Mensch, A.; Buchatskaya, E.;
+Cai, T.; Rutherford, E.; Casas, D. d. L.; Hendricks, L. A.;
+Welbl, J.; Clark, A.; et al. 2022. Training Compute-Optimal
+Large Language Models. In Advances in Neural Information
+Processing Systems.
+Huang, G.; Li, Y.; Pleiss, G.; Liu, Z.; Hopcroft, J. E.; and
+Weinberger, K. Q. 2017. Snapshot ensembles: Train 1, get m
+for free. arXiv preprint arXiv:1704.00109.
+
+Izmailov, P.; Podoprikhin, D.; Garipov, T.; Vetrov, D.; and
+Wilson, A. G. 2018. Averaging weights leads to wider optima
+and better generalization. arXiv preprint arXiv:1803.05407.
+Jacot, A.; Gabriel, F.; and Hongler, C. 2018. Neural tangent
+kernel: Convergence and generalization in neural networks.
+Advances in neural information processing systems, 31.
+Jang, J.; Yun, W.-h.; Kim, W. H.; Yoon, Y.; Kim, J.; Lee, J.;
+and Han, B. 2023. Learning to boost training by periodic
+nowcasting near future weights. In International Conference
+on Machine Learning, 14730–14757. PMLR.
+Jiang, A. H.; Wong, D. L.-K.; Zhou, G.; Andersen, D. G.;
+Dean, J.; Ganger, G. R.; Joshi, G.; Kaminksy, M.; Kozuch, M.;
+Lipton, Z. C.; et al. 2019. Accelerating deep learning by focusing on the biggest losers. arXiv preprint arXiv:1910.00762.
+Jordan, K.; Jin, Y.; Boza, V.; Jiacheng, Y.; Cesista, F.;
+Newhouse, L.; and Bernstein, J. 2024. Muon: An optimizer for hidden layers in neural networks, 2024. URL
+https://kellerjordan.github.io/posts/muon, 6(3): 4.
+Killamsetty, K.; Durga, S.; Ramakrishnan, G.; De, A.; and Iyer,
+R. 2021. Grad-match: Gradient matching based data subset
+selection for efficient deep model training. In International
+Conference on Machine Learning, 5464–5474. PMLR.
+Kingma, D. P.; and Ba, J. 2014. Adam: A method for stochastic
+optimization. arXiv preprint arXiv:1412.6980.
+Knyazev, B.; Moudgil, A.; Lajoie, G.; Belilovsky, E.; and
+Lacoste-Julien, S. 2024. Accelerating training with neuron interaction and nowcasting networks. arXiv preprint
+arXiv:2409.04434.
+Li, C.; Farkhoor, H.; Liu, R.; and Yosinski, J. 2018a. Measuring the intrinsic dimension of objective landscapes. arXiv
+preprint arXiv:1804.08838.
+Li, H.; Xu, Z.; Taylor, G.; Studer, C.; and Goldstein, T. 2018b.
+Visualizing the loss landscape of neural nets. Advances in
+neural information processing systems, 31.
+Lin, Y.; Han, S.; Mao, H.; Wang, Y.; and Dally, W. J.
+2017. Deep gradient compression: Reducing the communication bandwidth for distributed training. arXiv preprint
+arXiv:1712.01887.
+Loshchilov, I.; and Hutter, F. 2017. Decoupled weight decay
+regularization. arXiv preprint arXiv:1711.05101.
+Ma, J.; and Yarats, D. 2018. Quasi-hyperbolic momentum and
+Adam for deep learning. arXiv preprint arXiv:1810.06801.
+Mandt, S.; Hoffman, M. D.; and Blei, D. M. 2017. Stochastic
+gradient descent as approximate bayesian inference. Journal
+of Machine Learning Research, 18(134): 1–35.
+Mirzasoleiman, B.; Bilmes, J.; and Leskovec, J. 2020. Coresets for data-efficient training of machine learning models. In
+International Conference on Machine Learning, 6950–6960.
+PMLR.
+Olsson, C.; Elhage, N.; Nanda, N.; Joseph, N.; DasSarma,
+N.; Henighan, T.; Mann, B.; Askell, A.; Bai, Y.; Chen, A.;
+et al. 2022. In-context learning and induction heads. arXiv
+preprint arXiv:2209.11895.
+Papyan, V.; Han, X.; and Donoho, D. L. 2020. Prevalence of
+neural collapse during the terminal phase of deep learning
+
+training. Proceedings of the National Academy of Sciences,
+117(40): 24652–24663.
+Power, A.; Burda, Y.; Edwards, H.; Babuschkin, I.; and Misra,
+V. 2022. Grokking: Generalization beyond overfitting on
+small algorithmic datasets. arXiv preprint arXiv:2201.02177.
+Schmid, F.; and Schmidt, R. 2007. Nonparametric inference
+on multivariate versions of Blomqvist’s beta and related
+measures of tail dependence. Metrika, 66(3): 323–354.
+Schmid, P. J. 2010. Dynamic mode decomposition of numerical and experimental data. Journal of fluid mechanics, 656:
+5–28.
+Singh, S. P.; He, B.; Hofmann, T.; and Schölkopf, B. 2025.
+The Directionality of Optimization Trajectories in Neural
+Networks. In The Thirteenth International Conference on
+Learning Representations.
+Sinha, A.; Sarkar, M.; Mukherjee, A.; and Krishnamurthy, B.
+2017. Introspection: Accelerating neural network training by
+learning weight evolution. arXiv preprint arXiv:1704.04959.
+Song, M.; Ahn, K.; and Yun, C. 2024. Does SGD really
+happen in tiny subspaces? arXiv preprint arXiv:2405.16002.
+Tigges, C.; Hanna, M.; Yu, Q.; and Biderman, S. 2024.
+LLM circuit analyses are consistent across training and scale.
+Advances in Neural Information Processing Systems, 37:
+40699–40731.
+Tu, J. H.; Rowley, C. W.; Luchtenburg, D. M.; Brunton, S. L.;
+and Kutz, J. N. 2014. On dynamic mode decomposition:
+Theory and applications. Journal of Computational Dynamics,
+1(2): 391–421.
+van Laarhoven, T. 2017. L2 Regularization versus Batch and
+Weight Normalization. arXiv:1706.05350.
+Vogels, T.; Karimireddy, S. P.; and Jaggi, M. 2019. PowerSGD:
+Practical low-rank gradient compression for distributed optimization. Advances in Neural Information Processing Systems, 32.
+Wang, F.; Tang, W.; Harris, L.; Qi, H.; Wilson, D.; and Mezic,
+I. 2026. Predictive Differential Training Guided by Training
+Dynamics. In The Fourteenth International Conference on
+Learning Representations.
+Wortsman, M.; Ilharco, G.; Gadre, S. Y.; Roelofs, R.; GontijoLopes, R.; Morcos, A. S.; Namkoong, H.; Farhadi, A.; Carmon,
+Y.; Kornblith, S.; et al. 2022. Model soups: averaging weights
+of multiple fine-tuned models improves accuracy without
+increasing inference time. In International conference on
+machine learning, 23965–23998. PMLR.
+Xiong, R.; Yang, Y.; He, D.; Zheng, K.; Zheng, S.; Xing, C.;
+Zhang, H.; Lan, Y.; Wang, L.; and Liu, T. 2020. On layer
+normalization in the transformer architecture. In International
+conference on machine learning, 10524–10533. PMLR.
+Zhang, J.; Karimireddy, S. P.; Veit, A.; Kim, S.; Reddi, S.;
+Kumar, S.; and Sra, S. 2020. Why are adaptive methods
+good for attention models? Advances in Neural Information
+Processing Systems, 33: 15383–15393.
+Zhang, M.; Lucas, J.; Ba, J.; and Hinton, G. E. 2019. Lookahead optimizer: k steps forward, 1 step back. Advances in
+neural information processing systems, 32.
+
+Zhang, Y.; Chen, C.; Ding, T.; Li, Z.; Sun, R.; and Luo,
+Z.-Q. 2024. Why transformers need adam: A hessian perspective. Advances in neural information processing systems, 37:
+131786–131823.
+
+Supplementary Material for
+Measuring Structured Predictability in Neural Training Dynamics: A Cross-Regime
+Study
+Fanqi Wang, Weisheng Tang, and Hairong Qi*
+Department of Electrical Engineering and Computer Science, University of Tennessee, Knoxville
+*
+Corresponding author
+This document is the supplementary material for the submission Measuring Structured Predictability in Neural Training
+Dynamics: A Cross-Regime Study. Notation, probe definitions,
+and terminology are those of Section 3; references prefixed
+by “Section”, “Figure”, or “Eq.” point into the main paper,
+and “Appendix A” to “Appendix H” point into this document.
+
+Contents
+A Experimental Coverage and Protocol Details
+A.1 Vision Panel: Architectures, Optimizers, and Recipes
+A.2 Additional Run Families . . . . . . . . . . . . . .
+A.3 Pretraining Checkpoint Coverage . . . . . . . . .
+A.4 Measurement Clocks, Anchors, and Seeds . . . .
+
+1
+1
+1
+2
+3
+
+B Probe Conventions, Calibration, and Robustness
+B.1 Measurement Units and Grouping Conventions . .
+B.2 Predictor Constructions . . . . . . . . . . . . . .
+B.3 Rank Selection . . . . . . . . . . . . . . . . . . .
+B.4 Null Generation and the Calibrated Readout . . . .
+B.5 Numerical Conventions and the Sign Rule . . . . .
+B.6 Grouping Sensitivity and Within-Family Checks .
+B.7 Reporting Discipline . . . . . . . . . . . . . . . .
+
+5
+5
+7
+8
+8
+8
+9
+10
+
+C Spatial Localization: the Auxiliary–Bulk Partition
+C.1 The Partition Rule . . . . . . . . . . . . . . . . .
+C.2 Vision Panel: Attribution and Dual-Definition Audit
+C.3 Pythia: Segment Taxonomy and the Vector Segment
+C.4 Cross-Regime Comparability . . . . . . . . . . .
+
+11
+11
+12
+13
+13
+
+D Pocket Trajectories, Persistence, and Overlap Registrations
+14
+D.1 Census and Residence . . . . . . . . . . . . . . . 14
+D.2 Emergence and Survival . . . . . . . . . . . . . . 16
+D.3 The One Discontinuous Event . . . . . . . . . . . 18
+D.4 Overlap Registrations . . . . . . . . . . . . . . . 19
+E Movement Directedness and Gradient-Coherence Correspondence
+22
+E.1 Two Externally Defined Quantities . . . . . . . . 22
+E.2 Relation to Existing Coherence and Noise Measures 24
+E.3 The Full Comparison . . . . . . . . . . . . . . . 24
+F Pythia Scale Extensions
+F.1 Coverage and Protocol . . . . . . . . . . . . . . .
+F.2 The Auxiliary–Bulk Partition Holds at Every Size
+F.3 Segment Division of Labour . . . . . . . . . . . .
+F.4 Where the Calibrated Signal Survives . . . . . . .
+F.5 Co-location Registry for Late Events . . . . . . .
+F.6 Open Questions . . . . . . . . . . . . . . . . . .
+
+25
+25
+25
+27
+27
+28
+29
+
+G Architecture- and Recipe-Conditioned Results
+G.1 Size-Controlled Architecture Comparison . . . . .
+G.2 Optimizer Families along Training Loss . . . . . .
+G.3 Weight-Decay and Momentum Dose Ladders . . .
+G.4 Predictability Is Not an Optimizer Ranking . . . .
+
+30
+30
+30
+31
+32
+
+H Online Selective Prediction
+H.1 Protocol and Selection Rule . . . . . . . . . . . .
+H.2 Multi-Seed Results . . . . . . . . . . . . . . . .
+H.3 What This Does and Does Not Show . . . . . . .
+
+32
+32
+33
+33
+
+A
+
+Experimental Coverage and Protocol
+Details
+
+This appendix records the training corpus behind Section 4,
+the checkpoint accounting for both regimes, and the measurement constants shared by every probe. Appendix A.1 covers
+the controlled vision panel and Appendix A.2 the further run
+families that Section 4.4 draws on. Appendix A.3 covers the
+pretraining checkpoints, and Appendix A.4 the measurement
+clocks, anchor construction, and seeds.
+
+A.1
+
+Vision Panel: Architectures, Optimizers, and
+Recipes
+
+The controlled vision panel crosses five architectures with six
+training configurations. The architectures span three structural
+families: an MLP; AlexNet and a CIFAR-style ResNet-18
+variant with its last stage removed; and two ViT scales, written
+ViT and ViT-mid. The six configurations are plain SGD, SGD
+with momentum, SGD with weight decay, Adam, AdaGrad,
+and SAM. Table 1 gives the shared recipe, the optimizer
+definitions, and the learning rate of every cell together with
+the parameter count of each architecture.
+All cells train from scratch for 50 epochs at batch size 128
+under a cosine schedule stepped once per epoch, with seed
+42, and weights are recorded at every epoch boundary. That
+epoch-level snapshot cadence is what sets the probe time step
+on this side. Most cells take the model-default learning rate;
+the hand-tuned exceptions are listed in the table. AlexNet is
+the one architecture with a different input pipeline, since it
+resizes to 128 pixels and trains without augmentation.
+
+A.2
+
+Additional Run Families
+
+Around the panel, six further families vary one ingredient at
+a time while holding the shared recipe fixed (Table 2). Two
+of them supply the controlled comparisons of Section 4.4: a
+Muon arm over the same five architectures, and a weight-decay
+and momentum dose ladder on plain SGD. The remaining
+families support the robustness and calibration checks: seed
+replicates on five cells, a transfer-dynamics family between
+
+(a) Shared recipe
+Item
+
+Setting
+
+Dataset
+Loss / batch size
+Epochs / schedule
+Cosine schedule
+Augmentation
+AlexNet exception
+Normalization
+
+CIFAR-10 (full 50k train / 10k test); CIFAR-100 only in the transfer family
+cross-entropy; batch size 128 everywhere
+50 epochs; schedules stepped once per epoch
+CosineAnnealingLR to 0 with Tmax = epochs
+RandomCrop(32, padding=4) + RandomHorizontalFlip
+Resize(128), Normalize(0.5, 0.5), no augmentation
+CIFAR-10: mean (0.4914, 0.4822, 0.4465), std (0.2023, 0.1994, 0.2010)
+CIFAR-100: mean (0.5071, 0.4865, 0.4409), std (0.2673, 0.2564, 0.2762)
+the transfer and calibration families pin CIFAR-10 statistics for all their runs,
+including the CIFAR-100 ones, so transfer pairs see identical input statistics
+42 for the panel; 43 and 44 for replicates
+weights recorded at every epoch boundary
+
+Statistics pinning
+Seed
+Snapshots
+
+(b) Optimizer definitions
+Name
+
+Rule
+
+Momentum
+
+Weight decay
+
+Other
+
+SGD
+SGD-mom
+SGD-wd
+Adam
+AdaGrad
+SAM
+
+SGD
+SGD
+SGD
+Adam
+AdaGrad
+SAM over plain SGD
+
+0
+0.9
+0
+β = (0.9, 0.999)
+—
+0
+
+0
+0
+5 × 10−4
+0
+0
+0
+
+—
+—
+—
+—
+—
+ρ = 0.05
+
+(c) Architectures and per-cell learning rates
+Architecture
+MLP
+AlexNet
+ResNet
+ViT
+ViT-mid
+
+Params
+
+SGD
+
+3,805,450
+57,044,810
+2,777,674
+546,186
+2,855,562
+
+0.1
+0.05
+0.1
+0.1
+0.05
+
+SGD-mom
+0.01
+0.01
+0.1
+0.01
+0.05
+
+SGD-wd
+0.1
+0.05
+0.1
+0.1
+0.05
+
+Adam
+−3
+
+10
+10−3
+10−3
+10−3s
+5 × 10−4
+
+AdaGrad
+−2
+
+10
+5 × 10−3
+10−2
+10−2
+5 × 10−3
+
+SAM
+0.05
+0.01
+0.1s
+0.05s†
+0.025s†
+
+All 30 cells are trained from scratch under the shared recipe of panel (a) with seed 42. Parameter counts are for the 10-class heads; ViT-mid has
+2,875,812 parameters with the 100-class head used in the transfer family. Most cells take the model-default learning rate; a few were
+hand-tuned, including ViT with SAM (0.05) and ViT-mid with SAM (0.025). s Cell additionally re-trained with seeds 43 and 44. † Those two
+SAM re-runs used the model-default learning rate (0.1 and 0.05), twice the hand-tuned seed-42 value, so these two cells are not
+learning-rate-matched across seeds.
+
+Table 1: Vision panel: shared recipe, optimizer definitions, and per-cell learning rates. (a) the recipe held fixed across every run
+in this appendix; (b) the six training configurations of the panel; (c) the five architectures with their parameter counts and the
+learning rate of each cell.
+CIFAR-10 and CIFAR-100, and a probe-calibration batch
+covering a schedule zoo, basin slices, a learning-rate dose
+ladder, and a blind audit whose configurations were withheld
+from the analysis side. The corpus is 139 training runs and
+one frozen source checkpoint.
+Two runs in the momentum ladder collapsed and are excluded from every readout while being kept on disk: MLP
+at momentum 0.95, which ends at 0.170 test accuracy, and
+AlexNet at momentum 0.95, which ends at 0.100, the chance
+level for ten classes. Neither contributes to the momentum
+comparisons.
+
+A.3
+
+Pretraining Checkpoint Coverage
+
+Table 3 lists the released checkpoint series we analyze, and
+Figure 1 places the measured anchor domain on the trainingstep axis of each size. The main panel is Pythia-70M, 160M,
+
+and 410M. The extended sizes 14M, 31M, 1B, and 1.4B are
+processed under the identical protocol. Six of the seven sizes
+enter the cross-scale readings of Appendix F; 1B is covered
+by the coverage accounting here but is excluded from every
+cross-scale reading, on the three grounds given there.
+Checkpoints are released every 1,000 steps after a dense
+early grid, giving 154 revisions up to step 143,000. We
+evaluate 123 anchors on a 1,000-step grid spanning steps
+7,000 to 129,000. Both edges are protocol choices rather
+than data limits. The lower edge keeps the five-checkpoint
+history window, which reaches back to step 2,000, clear of
+the 1,430-step learning-rate warmup. The upper edge leaves
+a complete future window for the longest horizon, since
+143,000 − 14,000 = 129,000 at τ = 14 checkpoints.
+Public training-loss telemetry and the official zero-shot
+evaluations are used only as external context, and their prove-
+
+Family
+
+Runs
+
+Panel
+
+30
+
+The five architectures of Table 1(c) crossed with the six configurations of Table 1(b);
+from scratch, seed 42.
+
+Recipe deltas with respect to the panel
+
+Muon arm
+
+5
+
+The same five architectures under Muon (momentum 0.95, ns_steps=5), learning
+rates 0.02 (MLP), 0.01 (AlexNet), 0.02 (ResNet), 0.005 (ViT), 0.01 (ViT-mid). One
+additional stalled diagnostic run at the ViT model-default learning rate 0.02 is kept on
+disk and excluded from readouts.
+
+Weight-decay and momentum dose
+
+26
+
+Plain SGD at the model-default learning rate, cosine, 50 epochs, seed 42. Weight-decay
+ladder {10−4 , 10−3 , 2 × 10−3 } over the five architectures, with the override applied
+to plain SGD only; momentum ladder {0.5, 0.95} over the five architectures; one
+further MLP run at momentum 0.7. Two runs collapsed and are kept on disk but
+excluded from every readout: MLP at momentum 0.95 (final test accuracy 0.170) and
+AlexNet at momentum 0.95 (final test accuracy 0.100, chance level).
+
+Seed replicates
+
+10
+
+Five panel cells re-trained at seeds 43 and 44, recipe otherwise identical: ResNet–SAM,
+ResNet–Muon, ViT–Adam, ViT–SAM, ViT-mid–SAM. The two SAM re-runs are not
+learning-rate-matched (Table 1 note †).
+
+Transfer dynamics
+
+22
+
+All ViT-mid under plain SGD (momentum 0, weight decay 0), CIFAR-10 statistics
+pinned, plus one frozen source checkpoint. CIFAR-10 to CIFAR-100 and CIFAR-100
+to CIFAR-10 at constant learning rate, two arms (0.005 and 0.025), seeds 42/43/44
+with weight seed k and data-order seed 1000+k; scratch controls on both datasets;
+a stationary continuation (+50 epochs at 0.025) and step learning-rate switches at
+epoch 25.
+
+Probe calibration
+
+45
+
+Plain SGD, seed 42, CIFAR-10 statistics pinned. A 16-run schedule zoo (ResNet and
+ViT-mid over linear, two step schedules, exponential, warmup-cosine and cosine-withfloor, two ResNet constant-rate runs, a 100-epoch cosine run and a basin anneal);
+10 basin slices (early and late basins crossed with five constant rates, 12 epochs); a
+1
+1 1
+5-run learning-rate dose ladder (×{ 25
+, 10
+, 2 , 2, 4} of base 0.025); two stationary
+continuations; and a 12-run blind audit whose configurations were withheld from the
+analysis side.
+
+Total
+
+139
+
+training runs, plus one frozen source checkpoint
+
+Table 2: Run families of the vision corpus. The panel is the set analyzed throughout Section 4.1 to Section 4.3; the Muon arm and
+the dose ladders supply the controlled comparisons of Section 4.4; the remaining families support the robustness and calibration
+checks. The two collapsed momentum runs are kept on disk and excluded from every readout.
+nance is recorded in panel (b) of the table, including the
+two sizes whose released telemetry is assembled from more
+than one run. One size carries a checkpoint defect: revision
+step116000 of the 1B series is wrong upstream, and the
+cells whose history or future window touches it are masked
+at read time. The masking windows are listed in the table
+footnote and are applied wherever 1B appears.
+
+A.4
+
+Measurement Clocks, Anchors, and Seeds
+
+Clocks. One probe step is one epoch on the vision side and
+one released checkpoint on the pretraining side. A checkpoint
+step spans 1,000 optimization steps, or about 2.10 billion
+tokens at 2,097,152 tokens per step. The two clocks index
+different amounts of optimization, which is why cross-regime
+readings compare the ordering within a matched trajectory
+rather than levels across regimes.
+Anchors and windows. Both regimes use horizon τ = 5
+and history length npast = 5 unless stated otherwise, with
+(τ )
+the reference direction ∆wa−1 and the future target ∆wa
+as defined in Section 3. Vision probes are evaluated at anchor
+epochs {5, 10, 20, 30, 40}. An anchor is admissible only when
+
+its full history window and its full future window lie inside
+the recorded trajectory, which is what fixes the edges of
+the pretraining anchor domain above. The pretraining panel
+additionally records τ ∈ {1, 2, 3, 5, 10, 14} so that horizon
+sensitivity can be read from the same shards.
+Seeds and determinism. The panel trains at seed 42, with
+replicates at 43 and 44 on the five cells listed in Table 2.
+On the measurement side, three seeds are fixed and shared
+across every lane so that a recomputation reproduces the same
+numbers: the rank-selection sample (Appendix B.3), the perlayer group subsample (Appendix B.1), and the permutationnull draws (Appendix B.4), whose seed is composed from
+the draw index, anchor, layer, and segment.
+Compute. The vision corpus was trained on a single workstation with two NVIDIA RTX A6000 GPUs (48 GB each),
+one run per GPU. Median wall-clock for a 50-epoch run, taken
+over each architecture’s optimizer cells, is about 12 minutes
+for the MLP, 15 for ViT, 22 for AlexNet, 23 for ViT-mid, and
+38 for the ResNet; the slowest single run is AlexNet under
+Muon at about 4.8 hours, where the orthogonalization step
+dominates on the largest weight matrices. Probe and panel
+
+(a) Sizes, architecture, and coverage on disk
+Parameters
+Model
+Main panel
+Pythia-70M
+Pythia-160M
+Pythia-410M
+
+total non-embedding L × dmodel Coverage
+18,915,328
+85,056,000
+302,311,424
+
+6 × 512
+12 × 768
+24 × 1024
+
+154 revisions; 123 anchors
+154 revisions; 123 anchors
+123 anchors (246 shards); spectrum 154 rev.
+
+Extended set, reported in Appendix F
+Pythia-14M
+14,067,712
+1,189,888
+Pythia-31M
+30,494,720
+4,739,072
+Pythia-1B†
+1,011,781,632
+805,736,448
+Pythia-1.4B 1,414,647,808 1,208,602,624
+
+6 × 128
+6 × 256
+16 × 2048
+24 × 2048
+
+123 anchors (246 shards); spectrum 154 rev.
+123 anchors (246 shards); spectrum 154 rev.
+123 anchors (246 shards); spectrum 154 rev.
+123 anchors (246 shards); spectrum 154 rev.
+
+70,426,624
+162,322,944
+405,334,016
+
+“Total” counts pure parameters of the released fp16 weights, with no buffers; “non-embedding” excludes the untied input and output
+embeddings (vocabulary 50,304). The 70M and 160M values are read from the verified reference card; the five remaining sizes are recomputed
+from the on-disk group sizes, by a method that reproduces the reference card exactly on 70M. The extended sizes were processed at a second
+compute site under the identical engine and protocol, with per-size equivalence gates passing at zero maximum relative error (1260 units at
+14M and 31M, 4824 at 410M and 1.4B, 3240 at 1B); the gate tables carry non-empty exemption counts for degenerate units, and every
+non-exempt row passes. Anchors are steps 7000 to 129000 at spacing 1000, and each anchor produces one panel and one segment shard.
+(b) Public telemetry and evaluation provenance
+Model
+
+Public train-loss telemetry
+
+Splice check
+
+Official zero-shot evals
+
+Pythia-14M
+Pythia-31M
+Pythia-70M
+Pythia-160M
+Pythia-410M
+Pythia-1B†
+
+none public
+none public
+32t0zbcs (to 143k)
+3mvtbwii (to 143k)
+3jg1upg7 [1, 35k) + 12j05401 [35k, 143k]
+339s0ka6 + 1ena81fo + 318z89xb (restart
+chain, bf16)
+qiu9n7a6 (fp16)
+
+—
+—
+single run
+single run
+overlap |∆loss| ≤ 0.019
+49-step overlaps, ∆loss ≤ 4 × 10−16
+
+none public
+none public
+27 JSON records
+27 JSON records
+28 JSON records
+28 JSON records
+
+single run
+
+28 JSON records
+
+Pythia-1.4B
+
+All telemetry comes from the public training project of the checkpoint release, in the run group matching the released weights, with
+configurations cross-checked item by item against the published training configurations. The 1B chain starts at step 2001; steps 0 to 2000 are
+missing and the analysis domain starts at 7000, so the gap is outside it. Official zero-shot evaluations come from the release repository and were
+produced by an older harness, so only within-harness trends are read from them.
+†
+Pythia-1B checkpoint defect. Revision step116000 of the 1B series has wrong content upstream: it is the only 1B revision exported by a
+different release pipeline, and tensor forensics place it as an inserted state from a different run, with w115k ≈ w117k . The defect dates from the
+first weight upload and is not repairable downstream. Affected cells are masked at read time, by probe family: base-anchor rows at a=116k for
+all τ ; history-window anchors a=116k to 121k for all τ ; the future-endpoint cells
+(a, τ ) ∈ {(115k, 1), (114k, 2), (113k, 3), (111k, 5), (106k, 10), (102k, 14)}; and the step116000 row of the embedding-spectrum series.
+Public telemetry and the official evaluations are unaffected, since neither is derived from local checkpoints.
+
+Table 3: Pretraining checkpoint coverage. (a) parameter counts, architecture, and on-disk coverage, split into the main panel and
+the extended set reported in Appendix F; (b) public telemetry and evaluation provenance, including the splice checks for the two
+series whose released telemetry is assembled from more than one run. The 1B rows carry the step116000 checkpoint defect
+and its masking windows.
+
+0
+
+50B
+
+100B
+
+tokens (2,097,152 per step)
+150B
+
+200B
+
+250B
+
+300B
+
+14M
+31M
+70M
+160M
+410M
+1B
+1.4B
+0
+
+20k
+checkpoint revisions (154)
+S2 anchor domain (123)
+
+40k
+
+60k
+
+80k
+
+training step
+
+public train-loss telemetry
+telemetry splice
+
+100k
+
+120k
+
+140k
+
+masked S2 cells (1B)
+
+Figure 1: Checkpoint and anchor coverage across the pretraining scales. Each row is one model scale on a shared training-step
+axis, with tokens on the top axis at 2,097,152 per step. Ticks give the 154 public checkpoint revisions, released on the schedule
+0, 1, 2, 4, . . . , 512 and every 1k steps thereafter up to step 143k. Bars give the anchor domain actually measured, 123 anchors on
+a 1k grid spanning 7k to 129k for every scale. The domain is trimmed at both ends for protocol reasons rather than for data
+availability: the head drops the warmup phase and leaves room for the backward history window, and the tail reserves a complete
+future window for the longest horizon (143k − 14k = 129k at τ =14). Lines give the span of public training-loss telemetry, and
+the two smallest scales carry no line because no public run exists for them. Triangles mark splices where the released telemetry is
+assembled from more than one run. Hatching on the 1B row marks the step-116k checkpoint defect and the anchors masked
+because of it, with short ticks at the horizon-specific future endpoints; the telemetry line and the official evaluations are unaffected
+by the masking.
+computation is CPU-only and in double precision, on a 16core machine with 128 GB of memory: one pretraining anchor
+of the full panel protocol, including its permutation nulls,
+takes about 10 minutes at 160M and 25 at 410M. The panels
+for the two largest sizes ran on large-memory CPU nodes (64
+cores, 2 TB) with anchors processed in 8 to 10 parallel lanes,
+at roughly 17 to 19 hours per size; the embedding-spectrum
+sweep is checkpoint-bound, at seconds to about a minute
+per revision. The stored checkpoint packs occupy 24, 54,
+126, 311, and 436 GB for 70M, 160M, 410M, 1B, and 1.4B.
+Software: Python 3 with PyTorch, used only to deserialize
+checkpoints, together with NumPy, SciPy, and pandas.
+
+B
+
+Probe Conventions, Calibration, and
+Robustness
+
+Section 3 defers five implementation details to this appendix:
+the exact predictor constructions, the rank-selection rule, the
+null generation procedure, the grouping rules, and the numerical conventions. Appendices B.1 to B.5 give them, in
+that order. Appendix B.6 then reports what the group-level
+readouts do when the grouping convention is changed, together with the full versions of the within-family comparisons
+summarized in Section 4.1, and Appendix B.7 states the
+reporting rules that follow from those measurements.
+
+B.1
+
+Measurement Units and Grouping
+Conventions
+
+Every group-level readout in this paper is conditional on a
+rule that partitions a tensor’s scalars into measurement units.
+We call such a rule a cut. Tables 4 and 5 list all cuts used in
+the paper together with their group sizes and their status with
+respect to chance passing.
+Flat K=16, the main protocol. Each tensor’s parameter
+vector is flattened in row-major order and split into consecutive disjoint blocks of K=16 scalars. A trailing block shorter
+than K is dropped, and a tensor holding fewer than K scalars
+carries no group at all; on the vision panel this removes only
+the ten-parameter classifier bias of each model. The cut is
+cheap, uniform in group size, and identical across architectures, which is what keeps the group size, and therefore the
+chance geometry, matched in cross-architecture comparisons.
+It is not aligned to the architecture. In row-major layout a
+flat block of a convolutional tensor is approximately one 3×3
+kernel, whereas for a feature-dimension linear tensor it is 16
+adjacent input dimensions with no functional identity, and
+the two readings are not the same measurement.
+Structural cuts (vision). Structural cuts take the unit from
+the architecture instead of from the memory layout. For the
+ViT family a group is one head’s q, k, or v row block of the
+fused qkv tensor, one head’s projection rows, or one hidden
+
+Cut
+
+One group is
+
+D
+
+Flat protocol, the main measurement convention
+flat K=16
+16 contiguous scalars of 16
+the row-major flattened
+tensor
+
+Structural cuts, physical and functional axes
+filter 3×3
+one ResNet output
+channel’s full 3×3
+kernel stack
+
+27–2304
+
+row 1×1
+
+64–128
+
+head qkv
+
+head proj
+neuron pair
+
+one 1×1-convolution
+row
+per-head q/k/v row
+block of the fused qkv
+tensor
+per-head projection
+rows
+hidden neuron fan-in
+and fan-out
+concatenated
+
+Magnitude cut, causal activity axis
+magnitude, 16 bins per-tensor rank by
+pre-anchor window
+∥∆w∥2 , 16 equal bins
+(causal)
+
+What it reads
+
+Chance status at θ=0.7
+
+Between-group ESA dispersion sits at the binomial sampling floor (1.1×, median over 30 cells),
+so blocks are statistically homogeneous. Bulk
+group-level FRR hugs the chance floor (median
+excess .014, against .148 for the auxiliary class).
+Cross-architecture ordering claims do not survive
+recutting.
+
+Not immune: of the 31.2%
+bulk pass rate, about 25 pp
+is chance (nullθ median
+.23 to .25), so the
+calibrated readout is
+required.
+
+Names the unit behind ResNet’s flat readout: 66 Immune.
+to 87% of ResNet flat LRGF is intra-kernel
+coherence, destroyed by within-tensor permutation (1×1 shortcut ∆=.0025). FRR<0.7: 1.5%.
+ESA dispersion 1.9× floor, not coupled to FRR.
+Essentially no pockets: FRR<0.7 = 0.1%.
+Immune.
+
+4096 / 12544 Strongest structural unit: ESA dispersion 4.4× Immune (pass rate ≈0 for
+floor; FRR<0.7 of 19.8% (ViT-mid) and 5.2% D≥448).
+(ViT); restores group-level ESA–FRR coupling
+(cell-wide median −.42 against −.16 for flat).
+4096 / 12544 FRR<0.7: 10.0% (ViT-mid), 1.2% (ViT).
+Immune.
+256 / 448
+
+FRR<0.7: 12.7% (ViT-mid), 6.9% (ViT).
+
+108–36864
+
+Strongest single-axis density sorter and not a raiser Immune (all D≥108).
+of totals: monotone 16-bin gradient (FRR<0.7
+pooled 0% to 20.1%; ESA>0.7 0.1 to 27.2;
+VCS>0.4 0.2 to 36.4); the top three bins concentrate 2 to 3× (ViT-mid 27.9% against head
+qkv 19.8%); totals slightly lower than structural
+(0.4/3.2/8.1 against 1.3/6.7/12.9 for ResNet,
+ViT, ViT-mid).
+
+Immune.
+
+Table 4: Grouping conventions on the vision panel. D is the number of scalars per group. “Immune” means the membershipresample null passes θ=0.7 at a rate near zero, so the raw pass fractions carry a negligible chance contribution. The flat K=16
+protocol is the one cut where a large share of raw passes is chance, which is what motivated the calibrated readout LRGFcal .
+Levels are not comparable across cuts, since group sizes and chance floors differ, so every level claim in this paper names its cut.
+Structural and magnitude readouts are pooled over the 18 recipe cells of the group-level lanes and anchors 5 to 40.
+neuron’s fan-in and fan-out concatenated. For ResNet a group
+is one output channel’s full 3×3 kernel stack, or one 1×1
+convolution row. Group sizes run from 27 to 12,544.
+Magnitude cut (vision). Within each tensor, coordinates
+are ranked by the L2 norm of their pre-anchor update window
+and split into 16 equal bins. The ranking reads only pre-anchor
+history, so the cut is causal and carries no information from
+the target window.
+Pythia segments. Each transformer layer contributes four
+segments. The fused [3d, d] qkv tensor is stored head-major,
+and one group is the block belonging to one head and one of
+q, k, v, of size dhead d (32,768 at 70M); groups are enumerated part-major, that is, all q blocks, then all k, then all v. In
+attention.dense the input axis carries the concatenated
+head outputs, so one group is one head’s column block. In the
+
+MLP one group is a neuron pair: row j of dense_h_to_4h
+joined with column j of dense_4h_to_h, of size 2d. In
+the vector segment each vector parameter is its own group.
+The two embedding matrices form separate segments and stay
+outside every aggregation (Appendix C.3). Two finer conventions are used for the granularity studies in Appendix B.6: one
+Wqkv row (D=d), and the two MLP halves taken separately.
+
+Group subsampling. Layers with more than 1,500 groups
+are subsampled to that cap before group-level statistics are
+formed, with a seed derived from the layer name so that the
+same groups are drawn on any recomputation. Tensor-level
+and pooled readouts use all groups.
+
+Cut
+
+One group is
+
+Wqkv row
+
+magnitude
+
+MLP input half
+MLP output half
+
+Chance status at θ=0.7
+
+What it reads
+3
+
+5
+
+Reference convention of the Pythia protocol. Bare θ blind at large D;
+Within-tensor permutation raises the flat qkv calibrated readout used.
+reading (∆= − .140, structural .099 against permuted .239), the signature of comoving mass
+concentrated in a few strong coordinates.
+per-head output block
+32768
+Excess +.263 at step 70k while the bare-θ col- Calibrated only.
+umn reads .000, the sharpest case of large-D
+blindness.
+one qkv row, the natural 512 (70M) Absolute pockets revive at row granularity: θ legal (analytic floor ≈0).
+coherence scale
+FRR<0.7 stable at 4 to 5%, against ≈ 0
+at head level. Row-length invariance across
+D=128 to 3072 (410M peaks .432/.434/.438
+at D=1024/512/256; 160M scan; 1B below
+0.5% after masking).
+within (layer, segment), as reference Loses to head grouping on qkv at step 10k Null shared with the
+coordinates sorted by
+(LRGFcal .333/.389 against .104/.069 at 70M positional cut
+pre-anchor L2 and
+and 160M); MLP sensitivity is local (70M layer (grouping-independent).
+chunked to the same
+5 mid-training, about 3×) with 7 of 10 grid cells
+(n, D)
+negative; at most 0.12% on absolute θ across five
+sizes.
+neuron input row (win ) dmodel
+Reads near zero (mean 0.04%).
+θ legal.
+neuron output column
+dmodel
+Real emergence carried by the deepest layer: the θ legal.
+(wout )
+70M layer-5 wave rises from 64k to a peak of
+5.4% at 96k. Across five model sizes the output
+half is the only MLP cut with signal (peaks 1.8
+to 15.7%), with the input half and the magnitude
+cut near zero.
+
+positional (reference) qkv: per-head block;
+MLP: neuron pair
+
+attn_out head
+
+D
+10 –10
+
+Table 5: Grouping conventions on the Pythia side. All Pythia readings are registered as correspondences and are not used to certify
+one another. Column conventions follow Table 4. The last two rows are the recut used for the granularity ladder in Appendix B.6.
+
+B.2
+
+Predictor Constructions
+
+All three predictors read only the npast one-step updates
+before the anchor. For a unit S write the history columns as
+h1 , . . . , hm with m = npast , so that hm = ∆wa−1,S .
+Inertia. fbin = τ hm .
+Linear trend. Per coordinate, an affine model hs ≈ α + βs
+is fitted by least squares over s = 0, . . . , m − 1, and the fitted
+updates are summed over the next τ steps,
+fblin =
+
+τ
+−1
+X
+
+
+α + β(m + q) = τ α + β
+
+q=0
+
+τ
+−1
+X
+
+(m + q).
+
+(1)
+
+q=0
+
+The fit is on updates rather than on weights, so the output is a
+displacement and not an extrapolated checkpoint.
+DMD. The construction has three steps. (i) Standardization. Each coordinate row of the history is divided by its
+standard deviation over the m columns. Rows whose standard
+deviation falls below 10−30 are left unscaled, and any unit
+containing such a row is predicted as zero. Write H̃ for the
+standardized history. (ii) Fit. With X = [h̃1 , . . . , h̃m−1 ] and
+Y = [h̃2 , . . . , h̃m ], take the thin SVD X = U ΣV ⊤ , truncate
+to r = min(|S|, m − 1), which is four columns under the
+default protocol, and form the reduced map
+Ã = Ur⊤ Y Vr Σ−1
+r ,
+
+(2)
+
+with singular values below 10−10 inverted to zero. (iii) Rollout.
+Eigendecompose Ã = W ΛW −1 , lift the eigenvectors to
+Φ = Ur W , and expand the last standardized update in them,
+b = Φ† h̃m . The τ -step prediction is
+τ
+n X
+ o
+fbDMD = ℜ Φ
+Λk b ,
+
+(3)
+
+k=1
+
+with each coordinate rescaled by the standard deviation removed in step (i). Summing Λk over k = 1, . . . , τ instead
+of applying Λτ is what makes the output the cumulative
+displacement over the horizon, which is the quantity the target
+(τ )
+∆wa,S measures.
+Containment in the recent-history span. Because Φ =
+Ur W , the prediction lies in the column space of Ur , and the
+row standardization cancels exactly between the fit in step (ii)
+and the rescaling in step (iii). The DMD prediction therefore
+lies in the span of the first m−1 raw history columns, which is
+contained in the span the FRR projector retains whenever that
+projector covers the full history rank. This is the containment
+behind reading FRR as the directional headroom available
+to a predictor built from the recent history, as in Section 4.1:
+the residual fraction that FRR measures bounds how well
+any vector drawn from that span can align with the realized
+displacement.
+
+B.3
+
+Rank Selection
+
+The FRR projector retains a rank chosen by the Gavish–
+Donoho optimal hard threshold. For a unit whose history
+matrix has singular values s1 ≥ · · · ≥ sp and aspect ratio
+β = min(|S|, m)/ max(|S|, m), the threshold is
+θGD = ω(β) median(s),
+3
+
+2
+
+(4)
+
+ω(β) = 0.56β − 0.95β + 1.82β + 1.43,
+
+and the retained rank is max 2, |{i : si > θGD }| . The floor
+of two is part of the protocol rather than a numerical guard,
+and the rank is capped at the number of history columns.
+Applying the rule per unit would force one projection per
+group. The default rule instead draws 256 units per model–
+anchor cell with a fixed seed, computes their Gavish–Donoho
+ranks, and applies the median rank uniformly to all units of
+that cell, which keeps the projection batched at one rank per
+cell. The flat-protocol group readouts reported in this paper are
+computed at the full history rank r = npast = 5. The pooled
+bulk group-level
+p FRR median is 0.815, just below the isotropic
+reference (D − r)/D = 0.829 that this rank and D=16
+imply. This is the same isotropic-reference construction that
+Figure 4 measures excess against, evaluated there at each
+structural group’s own size rather than at D=16.
+
+B.4
+
+Null Generation and the Calibrated Readout
+
+FRR compares a D-dimensional target with an r-dimensional
+subspace, so a target with no temporal structure at all still
+passes a fixed threshold at a rate that depends on D and r. A
+readout compared across group sizes therefore needs a chance
+reference computed at its own geometry.
+Membership resampling. Within one pool of comparable
+units, a tensor on the vision side and a (layer, segment) block
+on the Pythia side, all scalar coordinate histories are collected,
+permuted, and re-chunked into groups whose size multiset
+is exactly that of the observed cut. FRR is then recomputed
+on the permuted groups under the same window, horizon,
+rank rule, and normalization. The permutation leaves every
+coordinate’s own trajectory untouched and destroys only
+which coordinates share a group, so the resulting distribution
+isolates the contribution of group membership and nothing
+else.
+Pooling and seeds. Null values are pooled per (segment,
+group size, horizon, protocol). The
+ number of draws per
+segment is max 5, ⌈200/ngroups ⌉ , so that at least about 200
+null values stand behind every threshold. Each draw takes
+a seed composed from the draw index, anchor, layer, and
+segment, so any lane that recomputes the null reproduces it.
+The two readouts. The fixed-threshold readout LRGFθ
+counts groups with FRR < θ, with θ = 0.7 throughout.
+The calibrated readout LRGFcal replaces θ by the α = 0.05
+quantile of the matched null pool and is reported as excess
+over α. LRGFcal is a comparability convention: it places
+segments whose group size and null geometry differ on a
+single axis. It does not correct individual FRR values, and
+it does not make a level comparable to a level read under a
+different cut. Where the fixed threshold is used, we also report
+
+the null pool’s own pass rate at θ, written nullθ , which is the
+share of the observed fraction that membership alone would
+produce.
+
+B.5
+
+Numerical Conventions and the Sign Rule
+
+The sign rule and zero displacement. Signs are compared
+exactly on the stored floating-point values, with sign(0) = 0
+and no tolerance band. A coordinate that does not move
+in either interval therefore counts as an agreement, and a
+coordinate that moves in exactly one of the two counts as a
+disagreement. We keep the exact rule because it leaves ESA
+a parameter-free function of the realized trajectory, but it
+makes ESA sensitive to coordinates whose displacement is
+zero or numerically negligible over one or both intervals, in
+a way that VCS is not: VCS weights each coordinate by its
+displacement magnitude, so those coordinates barely enter it.
+This is the mechanism behind the two departures from the
+parameter-free reference curve ESA = 1 − arccos(VCS)/π
+in Figure 1(a). At the five reported anchors the two departing
+cells are AlexNet with AdaGrad and AlexNet with Adam,
+in which up to 79% of coordinates have zero reference displacement and up to 69% are zero over both intervals. Their
+median vertical departure from the reference curve is +0.276
+and +0.221. Restricting both probes to the coordinates that
+move in both intervals reduces those departures to +0.008
+and +0.007, while the median absolute departure over the
+remaining 28 cells is 0.003 and is unchanged by the restriction.
+Degenerate units. VCS is undefined when either vector
+has norm below 10−30 ; such units are recorded as missing
+and dropped from denominators rather than counted as zero.
+SESA is undefined when the selector is empty, and those units
+are dropped in the same way. Non-finite FRR values leave the
+LRGF denominator.
+Other numerical choices. The probe layer works in double
+precision. FRR denominators carry an additive 10−12 guard.
+FRR is computed on the raw history, whereas the DMD fit
+standardizes coordinate rows. On the Pythia side a second
+FRR protocol normalizes each history column to unit norm
+within the group, with a 10−30 guard, and degenerate columns
+are counted rather than absorbed; both FRR protocols are
+reported side by side wherever the column-normalized variant
+is used.
+Group-mean and full-vector VCS. Figure 1(a) plots one
+point per model–configuration cell and anchor, pairing that
+cell’s ESA with its group-mean VCS, the mean of the pergroup cosines. The full-vector cosine of the same cell is
+recorded alongside it and differs because it weights coordinates by magnitude across the whole unit rather than within
+each group. The two are close on most cells (median difference +0.006, interquartile range −0.017 to +0.023) but
+diverge sharply on a few, up to ±0.45. The group mean is the
+readout that belongs on the parameter-free reference curve:
+its median absolute departure from 1 − arccos(VCS)/π is
+0.005, against 0.011 for the full-vector cosine on the same
+cells.
+
+B.6
+
+Grouping Sensitivity and Within-Family
+Checks
+
+What the Flat Protocol Reads A dedicated audit compared
+the flat readout with three probes that involve no grouping
+at all: element-level ESA, tensor-level VCS, and tensor-level
+FRR. On all three, ViT-mid reads as more predictable than
+ResNet at every anchor of every matched pair, whereas the
+flat LRGF reference orders the same runs and anchors the
+other way (Figure 2). Under a within-tensor membership
+permutation the flat ordering reverses to ViT-mid at or above
+ResNet in 24 of 24 pair–anchor comparisons.
+The decomposition names the mechanism (Figure 3). Permuting block membership destroys 66 to 87% of ResNet’s flat
+LRGF, and the destroyed part localizes on the 3×3 kernels,
+with 1×1 shortcut convolutions contributing ∆ ≈ .003. On
+ViT-mid, 82 to 94% of the reading survives the same permutation. A flat-LRGF level is therefore a statement about a
+grouping convention as much as about an architecture.
+Two further properties of the flat protocol matter for reading
+the main paper. Between-group ESA dispersion sits at the
+binomial sampling floor (1.1×, median over 30 cells), so
+flat blocks are statistically homogeneous, and group-level
+coupling between ESA and FRR is largely erased (cell-wide
+median −.16). And bulk group-level FRR sits close to its
+chance floor: of the 31.2% of bulk groups passing θ=0.7,
+about 25 percentage points are chance passing (nullθ median
+.23 to .25). This is the concrete reason the time-axis readouts
+use LRGFcal .
+Structural and Magnitude Cuts on the Vision Panel Recutting along physical or functional axes changes what the
+instrument resolves. Structural units raise between-group
+ESA dispersion off the floor (head qkv 4.4×, filter 3×3 1.9×,
+neuron pair 1.7×, row 1×1 1.2×, against 1.1× for flat) and
+restore group-level ESA–FRR coupling (cell-wide median
+−.42 against −.16). The restoration is architecture-resolved:
+ViT and ViT-mid couple in every recipe cell (−.28 to −.77),
+while ResNet’s plain recipes stay flat (SGD −.14; momentum,
+Adam, and Muon near 0) and only the recipe cells couple
+(weight decay −.45, SAM −.35, AdaGrad −.30). Under the
+calibrated readout the same reordering is visible over training anchors (Figure 4): whole patch filters and head-level
+qkv groups carry clear above-chance excess, while slab and
+projection cuts sit near chance.
+Pocket density under structural cuts is architecture-stratified
+(Figure 5): FRR < 0.7 reaches 19.8% of ViT-mid head-qkv
+groups and 12.7% of neuron pairs, against 1.5% for ResNet
+kernels and 0.1% for 1×1 rows. These cuts have large group
+sizes, where the membership-resample null passes θ=0.7 at a
+rate near zero, so essentially none of the passes is attributable
+to chance, unlike the flat bars in the same figure. Structural
+excess decays over training, from a median of .070 at anchor
+5 to .036 at anchor 40, which places pockets in an early-tomid-training population.
+The magnitude cut is the strongest single-axis sorter of
+pocket density and not a raiser of totals. Totals sit slightly below the structural cut (0.4/3.2/8.1% against 1.3/6.7/12.9%
+for ResNet, ViT, and ViT-mid), but the density gradient is
+monotone across all 16 bins and steep at the top: pooled
+
+FRR < 0.7 rises from 0% at bin 0 to 20.1% at bin 15,
+ESA > 0.7 from 0.1% to 27.2%, and VCS > 0.4 from 0.2%
+to 36.4%, three instrument families ordered the same way
+along one causal axis (Figure 6). The top three bins concentrate density beyond the best structural cut (ViT-mid 27.9%
+against head qkv 19.8%). ResNet stays low under every probe
+of the magnitude cut (2.1/4.4/12.4% for FRR, ESA, and
+VCS on the top three bins), so the architecture stratification
+is itself cut-robust.
+An axis-independent check bounds what any cut could
+reach (Figure 7): the top-five eigenvalue mass of the
+coordinate-trajectory correlation spectrum exceeds a matched
+independent null by two to four times in every tensor family
+of all three architectures. Co-moving structure is present
+everywhere; which grouping axis can access it is what differs
+by architecture.
+Pythia Cuts and the Granularity Ladder The Pythia
+readings are registered as correspondences and are not used
+to certify one another. The flat audit finds a third permutation
+signature here, distinct from both vision architectures: on
+qkv, permuting block membership raises the flat reading
+(∆ = −.140, structural .099 against permuted .239), which is
+what comoving mass concentrated in a few strong coordinates
+produces when random blocks inherit it and contiguous blocks
+isolate it.
+Head grouping and magnitude grouping are adjudicated
+at anchor 10k. Head grouping retains far stronger calibrated
+signal on qkv (LRGFcal .333/.389 against .104/.069 at 70M
+and 160M), so the head unit is an organizational axis of its
+own rather than a shadow of coordinate magnitude. On the
+MLP, magnitude sensitivity is local (70M layer 5 in midtraining, about 3×) and the grid is negative in 7 of 10 cells,
+so the MLP’s modest calibrated readout is modest under both
+conventions.
+Granularity is a separate axis. At head granularity
+(D=32,768) the absolute θ columns read near zero while
+calibrated excess is large, for instance +.263 for attn_out
+at anchor 70k, which is the sharpest case of large-D blindness in the fixed threshold. Stepping down to one Wqkv
+row (D=512) revives an absolute pocket population, with
+FRR < 0.7 stable at 4 to 5% of rows and the D=512 and
+D=128 distributions nearly coincident. The row convention
+is invariant across D=128 to 3072 (410M peak fractions
+.432/.434/.438 at D=1024/512/256; a 160M scan over the
+same range; 1B below 0.5% throughout after masking), so no
+per-size adjustment is needed. Recutting the MLP resolves
+an asymmetry between its halves: the input half and the
+magnitude cut read near zero on absolute θ (means 0.04%
+and 0.01%), while the output half carries a late wave in the
+deepest layer (70M layer 5: rising from 64k to a peak of 5.4%
+at 96k, fading by 128k). Across five model sizes the output
+half is the only MLP cut with signal (peaks 1.8 to 15.7%).
+Within-Family Agreement, per Cell The two withinfamily summaries quoted in Section 4.1 are medians over
+per-cell Spearman correlations, each computed across the
+tensors of one model–configuration cell. Their dispersion is
+as follows. Out-of-window and in-window FRR correlate at
+a median ρS = 0.83, with per-cell values from 0.53 to 0.97;
+
+(a) ESA (element level)
+ViT-mid
+ResNet
+
+0.60
+0.55
+0.50
+
+(b) VCS (tensor median)
+0.2
+
+0.95
+
+0.3
+
+0.90
+
+0.2
+
+chance 0
+
+10 25
+
+45
+
+anchor (epoch)
+
+90
+
+0.4
+
+0.1
+
+0.85
+
+0.2
+
+0.45
+
+(d) flat K = 16 LRGF
+
+0.4
+
+0.0
+
+chance 0.5
+
+(c) FRR (tensor median)
+
+1.00
+
+10 25
+
+45
+
+anchor (epoch)
+
+90
+
+10 25
+
+45
+
+anchor (epoch)
+
+90
+
+10 25
+
+45
+
+anchor (epoch)
+
+90
+
+Figure 2: Probes that use no grouping convention, against the flat readout (bulk scope; one line per run, 8 matched ViT-mid
+and ResNet pairs; the long-cosine ViT-mid run extends to epoch 90). On all three cut-free probes, (a) element-level ESA, (b)
+tensor-level VCS, and (c) tensor-level FRR, where lower means more predictable, ViT-mid reads as more predictable than ResNet
+at every anchor, while (d) the flat K=16 LRGF reference orders the same runs and anchors the other way (7 to 8 of 8 pairs).
+Canonical protocol (npast =5, τ =5, θ=0.7); dashed grey lines mark chance (ESA 0.5, VCS 0).
+
+(a) LRGF, structural blocking
+0.4
+0.3
+0.2
+0.1
+10
+
+25
+
+45
+
+anchor (epoch)
+
+(b) LRGF, permutation null
+
+ViT-mid 0.30
+ResNet
+0.25
+0.20
+0.15
+0.10
+0.05
+0.00
+90
+10
+
+25
+
+45
+
+anchor (epoch)
+
+(c) = struct null
+
+90
+
+0.30
+0.25
+0.20
+0.15
+0.10
+0.05
+0.00
+
+ResNet
+(kernel coherence)
+
+ViT-mid
+
+10
+
+25
+
+45
+
+anchor (epoch)
+
+90
+
+Figure 3: Permutation-null decomposition of the flat K=16 LRGF (bulk scope; one line per run): (a) structural blocking, (b) the
+membership-permutation null (mean of 5 draws, shading gives min to max), and (c) their difference ∆, which is the intra-block
+coherence contribution. Permutation destroys 66 to 87% of ResNet’s flat readout and the destroyed part localizes on the 3×3
+kernels (1×1 shortcut convolutions: ∆ ≈ .003), whereas 82 to 94% of ViT-mid’s readout survives and the architecture ordering
+flips to ViT-mid at or above ResNet on the null column (24/24 pairs). A flat-LRGF level is therefore a statement about a grouping
+convention as well as about an architecture.
+the low end is occupied by AdaGrad cells (ViT 0.62, ViT-mid
+0.63) together with one further cell at 0.53. SESA under
+the DMD and linear-trend selectors correlates at a median
+ρS = 0.89, with per-cell values from 0.44 to 1.00; the one low
+value is AlexNet with AdaGrad (0.44), which is also one of the
+two cells identified in Appendix B.5. The two displacementdirection readouts correlate at a median ρS = 0.93. Correlations between the DMD and linear-trend lift readouts are
+much weaker (median 0.15); lift is a within-predictor quantity, and the two selectors define different denominators, so
+the comparison is reported only as dispersion and not as an
+agreement check.
+
+B.7
+
+Reporting Discipline
+
+Five rules follow from the measurements above, and every
+group-level statement in this paper obeys them.
+
+1. Claims travel with the grouping convention. Any grouplevel ordering or level statement names its cut, and an
+ordering that reverses under recutting is reported as conditional on the convention rather than as a property of the
+architectures.
+2. Levels are not comparable across cuts. Paired flat and
+structural FRR readouts rank consistently (ρS = .79)
+but carry a systematic level offset (median ∆ = +.082,
+structural above flat), so cross-cut comparisons use ranks
+or calibrated excess and never raw levels.
+3. Chance immunity is cut-dependent. Large-group cuts
+make θ=0.7 essentially chance-free, while the flat protocol
+passes about 25 percentage points of bulk groups by
+chance. Raw θ fractions are quoted only for cuts whose
+null pass rate is near zero, and calibrated excess is used
+otherwise.
+
+(a) ViT-mid
+
+(b) ResNet
+3×3 filter (D=27)
+3×3 filter (D=576)
+3×3 filter (D=1152)
+
+excess = LRGFcal 0.05
+
+0.8
+
+3×3 filter (D=2304)
+1×1 row (D=64)
+1×1 row (D=128)
+
+0.6
+patch filter (D=48)
+head qkv (D=12544)
+head pair (D=50176)
+
+0.4
+
+neuron pair (D=448)
+head proj (D=12544)
+neuron slab (D=16)
+
+0.2
+0.0
+
+chance
+
+10
+
+25
+
+45
+
+90
+
+anchor (epoch)
+
+10
+
+25
+
+anchor (epoch)
+
+45
+
+groups with FRR < 0.7 (%)
+
+Figure 4: Structural-axis cuts under the calibrated readout: excess = LRGFcal − α (α=0.05, so zero is chance), median over
+runs. (a) ViT-mid: physically defined groups surface above-chance structure that the flat axis does not resolve, with whole patch
+filters reaching .61 and head-level qkv groups .21 at anchor 45, while slab and projection cuts sit near chance. (b) ResNet: whole
+3×3 filters reach .55 to .62 and 1×1 rows .18. Each cut carries a size-matched membership-permutation null that preserves the
+group-size multiset, and groups use only pre-anchor information. Group size differs across cuts, so levels are comparable only
+through the calibrated excess.
+
+35
+
+flat
+
+30
+
+29.8
+
+structural
+ResNet
+ViT
+
+magnitude
+
+ViT-mid
+chance-pass
+
+27.9
+
+25 23.5
+20
+
+18.6
+
+19.8
+
+10.0
+
+10
+
+0
+
+5. Selectivity lift is not compared across predictors. Lift
+is a within-predictor quantity, since SESA is evaluated on
+the selector that predictor produces.
+
+C
+
+15
+
+5
+
+4. Time-axis readouts use LRGFcal . Where a bare θ fraction is reported across layers, it is accompanied by its
+nullθ reference.
+
+13.2
+
+12.7
+6.9
+
+5.2
+1.2
+
+1.5
+
+flat head head neuron filter
+K=16 qkv proj pair 3×3
+
+0.1
+
+row
+1×1
+
+2.1
+
+mag.
+top-3
+
+Figure 5: Pocket density by grouping cut and architecture on
+the vision panel: share of groups with FRR < 0.7, pooled
+over the 18 recipe cells and anchors 5 to 40 of the group-level
+lanes (bulk tensors, out-of-window target). The structural
+cuts and the magnitude cut (top three of 16 causal bins) are
+chance-immune at θ=0.7, so the chance contribution to their
+bars is negligible. The flat K=16 bars are pooled over the
+same 18 cells weighted by group count and are stacked: the
+hatched portion is the measured chance-pass fraction under
+the membership-resample null (6.0, 15.5, and 26.6 pp of the
+23.5/18.6/29.8% totals for ResNet, ViT, and ViT-mid). Most
+of the ViT-family flat readout is chance passing, and most
+of the ResNet flat readout is intra-kernel coherence. Group
+size differs across cuts, so levels are comparable within a bar
+group only in the chance-immune sense.
+
+Spatial Localization: the Auxiliary–Bulk
+Partition
+
+Section 4.2 splits trainable tensors into two morphological classes and reads the auxiliary–bulk separation within
+matched trajectories. This appendix gives the membership
+rule, the tensor-by-tensor attribution it produces in each training regime, and the audits that bound how much the choice
+of rule could matter.
+
+C.1
+
+The Partition Rule
+
+The primary definition is morphological. A parameter tensor is
+auxiliary if it is vector-like, which covers normalization scales
+and shifts, biases, and token and positional embedding vectors,
+and bulk if it is a matrix-like weight, which covers linear
+and attention projections, MLP weights, and convolutional
+kernels. The definition refers to the shape and function of the
+tensor, not to its size.
+The vision pipeline realizes this rule through a size threshold on coarse role classes: a tensor is auxiliary if the total
+parameter count of its role class within that model falls below
+105 . The threshold applies to role-class totals rather than to
+individual tensors, so a small individual matrix inside a large
+class, such as the 1,280-parameter ViT classifier head, stays
+bulk. Every quantitative auxiliary–bulk readout in the paper
+uses this operational assignment, and Appendix C.2 audits
+it against the morphological definition. On Pythia the same
+
+excess = LRGFcal 0.05
+
+0.7
+0.6
+0.5
+0.4
+0.3
+0.2
+0.1
+0.0
+
+(a) ViT-mid
+
+mlp.0
+
+(b) ResNet
+
+attn.proj
+attn.qkv
+mlp.2
+chance
+
+conv 3×3
+conv 1×1
+
+patch embed
+
+0
+
+4
+
+8
+
+12
+
+| w| magnitude bin (0 = weakest)
+
+15
+
+0
+
+4
+
+8
+
+12
+
+| w| magnitude bin (0 = weakest)
+
+15
+
+Figure 6: Magnitude-stratified cut at anchor 45: groups are 16 equal-width bins of the per-tensor pre-anchor ∥∆w∥2 rank (bin
+0 weakest, bin 15 strongest), reported as excess over chance, median over runs; the floor at −0.05 means no group passes. (a)
+ViT-mid feature-dimension tensors show a monotone concentration signature (top bins .38 to .66), while the patch embedding
+stays at the floor because its structure lies on the spatial axis (Figure 4). (b) ResNet reads near zero under the same cut. This is the
+strongest single-axis sorter on the ViT side, and its architecture contrast runs opposite to the flat readout.
+
+patch embed
+attn.qkv
+attn.proj
+mlp.2
+mlp.0
+conv 3×3
+conv 1×1
+attn out
+mlp out
+qkv
+mlp in
+embed out
+embed in
+
+iid null (min-max of 5)
+
+ViT-mid
+
+ResNet
+
+Pythia-70M
+
+0.05 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45
+
+top-5 eigenvalue mass fraction
+
+Figure 7: Spectrum diagnostic at the late anchors (anchor 45 on
+the vision panel, step 70k on Pythia): top-five eigenvalue mass
+of the coordinate-trajectory correlation spectrum per tensor
+family, against a simulated independent null of matching
+shape (grey band gives min to max over 5 draws), median
+over runs. Every family of all three architectures exceeds the
+null by two to four times, so co-moving structure is present
+in every family; which grouping axis can access it is what
+differs by architecture.
+
+rule is expressed through a segment taxonomy rather than a
+threshold, because the segment structure already separates
+matrices from vectors exactly (Appendix C.3). The Pythia
+partition additionally coincides with optimizer treatment: normalization parameters and all biases are exempt from weight
+decay under the released recipe, so auxiliary–bulk contrasts
+at that scale register a parameter-role difference under the
+recipe rather than an isolated effect of tensor shape.
+
+C.2 Vision Panel: Attribution and Dual-Definition
+Audit
+Table 6 lists the attribution per model, the composition of
+the auxiliary class by coarse role, and the audit of the two
+definitions against each other.
+The two definitions agree on 213 of 214 unique model–
+tensor pairs (99.5%), and on 1,196 of 1,203 cell–tensor instances (99.4%). The defector list is a single tensor: the ResNet
+final classifier head linear.weight (2,560 parameters),
+which is matrix-like under the morphological definition but
+auxiliary under the operational one, because its linear role
+class totals only those same 2,560 parameters. It recurs in all
+seven ResNet optimizer cells, which is 35 of 6,015 panel rows.
+Because the reported readouts use the operational assignment,
+this tensor is counted as auxiliary throughout.
+Two properties of the audit are worth stating explicitly.
+First, the agreement is a property of the role-class form of
+the threshold: applying the same 105 threshold per tensor
+instead of per role class would agree with the morphological
+definition on only 175 of 214 tensors (81.8%). Second, the
+four ResNet tensors filed under the bias bucket are the
+shortcut batch-normalization affine parameters, which the
+coarse name rule places there because their names carry no
+bn marker. They are vector-like under either reading, so the
+audit is unaffected.
+The panel covers the parameter vector only, with no batchnormalization running statistics, and excludes tensors holding
+
+(a) Per-model attribution
+Tensors
+
+Parameters
+
+Model
+
+aux
+
+bulk
+
+aux
+
+bulk
+
+aux share
+
+aux composition (tensors)
+
+MLP
+ViT
+ViT-mid
+ResNet
+AlexNet
+
+3
+37
+61
+31
+7
+
+4
+18
+30
+15
+8
+
+1,792
+14,464
+32,704
+7,040
+9,344
+
+3,803,648
+531,712
+2,822,848
+2,770,624
+57,035,456
+
+0.05%
+2.65%
+1.15%
+0.25%
+0.02%
+
+bias 3
+ln 18, bias 17, tok 2
+ln 30, bias 29, tok 2
+bn 26, bias 4, linear 1
+bias 7
+
+All
+
+139
+
+75
+
+65,344
+
+66,964,288
+
+0.10%
+
+—
+
+(b) Dual-definition audit
+Audit level
+
+total
+
+agree
+
+defect
+
+agreement
+
+model × tensor
+cell × tensor
+panel rows (5 anchors)
+
+214
+1,203
+6,015
+
+213
+1,196
+5,980
+
+1
+7
+35
+
+99.53%
+99.42%
+99.42%
+
+Table 6: Auxiliary–bulk attribution and dual-definition audit on the vision panel. (a) Per-model tensor attribution under the
+operational split, with the composition of the auxiliary class by coarse role (ln/bn/bias/tok; the single defector appears as linear).
+(b) Agreement between the morphological and operational definitions at three audit levels; the complete defector list is the single
+tensor discussed in Appendix C.2. Definitions are given in Appendix C.1. Data: the tensor-level table of the canonical group-level
+panel, with attribution fields constant across anchors and optimizer cells. Parameter counts cover the parameter vector only, with
+no batch-normalization running statistics.
+fewer than 16 scalars, because the K=16 grouping cannot
+be formed there. On the vision side this excludes exactly one
+tensor per model, the ten-parameter classifier bias, for 50
+parameters in total.
+
+C.3
+
+Pythia: Segment Taxonomy and the Vector
+Segment
+
+Table 7 lists the segment scheme with shapes, tensor counts,
+and parameter shares at 70M, and Figure 8 places every
+parameter tensor in the architecture.
+Each transformer layer contributes three matrix segments,
+qkv
+(attention.query_key_value.weight),
+attn_out (attention.dense.weight), and mlp
+(dense_h_to_4h and dense_4h_to_h weights),
+which together constitute bulk, and one vector segment
+collecting the two per-layer LayerNorms with their weights
+and biases, all four linear biases, and the final LayerNorm.
+The auxiliary series of the aggregation is an alias of the
+vector segment, with a per-anchor difference identically 0.0,
+so the vector segment is the auxiliary class: all vector-like
+parameters including the final LayerNorm. At 70M this is
+50 tensors and 40,960 parameters, against 24 tensors and
+18,874,368 parameters for bulk.
+Embeddings. The two untied embedding matrices,
+embed_in and embed_out, form their own segments
+and stay outside the auxiliary–bulk aggregation. They hold
+73.1% of the parameter count, so the aggregation covers the
+remaining 26.9%. One labeling imprecision is registered:
+in the existing level–time aggregation the embedding rows
+enter the bulk side with 0.016% row weight, which has no
+numerical effect on any reported readout.
+
+The duplicate bias pair. Under the parallel residual of GPT-NeoX, attention.dense.bias and
+mlp.dense_4h_to_h.bias receive identical per-step
+gradients, and their trajectories coincide: bitwise on 70M over
+all released checkpoints, and within one half-precision unit in
+the last place on 160M. Both rows are kept in the panel with
+a duplicate flag, and every aggregate counts the pair once.
+Weight decay. The vector segment is entirely exempt from
+weight decay in the released pretraining configuration, while
+the matrix segments and both embeddings take wd = 0.1.
+This is a property of the public training recipe rather than a
+choice of ours, and it is one of the conditions under which
+the auxiliary–bulk contrast in Figure 3 is read.
+
+C.4
+
+Cross-Regime Comparability
+
+The membership rule, vector-like to auxiliary, is the same
+in both regimes. The one difference is which embeddingadjacent tensors exist and where they land. On the vision side
+the token and positional embedding vectors are vector-like
+and therefore auxiliary. On Pythia the embedding matrices are
+not vector-like, and they are excluded as separate segments
+rather than assigned to bulk.
+Two further protocol differences keep absolute levels from
+being compared across regimes, and Figure 3 accordingly
+compares the within-line ordering rather than levels. The
+vision panel uses flat K=16 groups on an epoch clock,
+whereas the Pythia panel uses architecture-aligned segment
+groups on a released-checkpoint clock, and the two clocks
+index different amounts of optimization per probe step.
+
+Segment
+
+Class
+
+Tensor patterns
+
+Shape (70M)
+
+n
+
+Params (70M)
+
+Share
+
+qkv
+attn_out
+mlp
+
+bulk
+bulk
+bulk
+
+4,718,592
+1,572,864
+12,582,912
+
+6.70%
+2.23%
+17.87%
+
+aux
+
+50
+
+40,960
+
+0.058%
+
+embed_in
+embed_out
+
+excluded
+excluded
+
+1536 × 512
+512 × 512
+2048 × 512
+512 × 2048
+512
+512
+1536
+512
+2048
+512
+512
+50304 × 512
+50304 × 512
+
+6
+6
+12
+
+vec
+
+attention.query_key_value.weight
+attention.dense.weight
+mlp.dense_h_to_4h.weight
+mlp.dense_4h_to_h.weight
+input_layernorm.{weight,bias}
+post_attention_layernorm.{weight,bias}
+attention.query_key_value.bias
+attention.dense.bias ≡
+mlp.dense_h_to_4h.bias
+mlp.dense_4h_to_h.bias ≡
+final_layer_norm.{weight,bias} ∗
+gpt_neox.embed_in.weight ∗
+embed_out.weight ∗
+
+1
+1
+
+25,755,648
+25,755,648
+
+36.57%
+36.57%
+
+bulk
+aux
+excluded
+total
+
+= qkv + attn_out + mlp
+= vec (all vector-like parameters incl. final LN)
+= embed_in + embed_out (untied)
+
+24
+50
+2
+76
+
+18,874,368
+40,960
+51,511,296
+70,426,624
+
+26.80%
+0.06%
+73.14%
+100%
+
+Per-layer patterns carry the prefix gpt_neox.layers.i. and repeat over the L = 6 layers; ∗ marks whole-model tensors, with
+final_layer_norm counted inside vec and the two embedding matrices forming their own segments. Shapes are the 70M reference and
+scale with model size (160M: d=768, L=12, dmlp =3072, so the qkv weights become 2304 × 768); shares are of the 70M parameter total
+70,426,624. ≡ attention.dense.bias and mlp.dense_4h_to_h.bias coincide under the parallel residual, so both rows are kept
+in the panel with a duplicate flag and all aggregates count the pair once. The auxiliary series of the aggregation is an alias of the vec segment,
+with a per-anchor difference identically 0.0. The vec segment is exempt from weight decay in the released pretraining recipe, while the matrix
+segments and both embeddings take wd = 0.1.
+
+Table 7: Pythia segment scheme and its mapping to the auxiliary–bulk partition, with shapes and parameter counts at 70M.
+
+D
+
+Pocket Trajectories, Persistence, and
+Overlap Registrations
+
+Section 4.2 reports that predictable pockets are a small minority of bulk group–anchor observations, that most of them
+are transient, and that the degree of persistence varies by
+parameter role. This appendix gives the trajectories behind
+those statements: what the pocket population looks like at a
+given time, when it appears and how long individual pockets survive, the one event on the pretraining side at which
+the population changes discontinuously, and the measured
+overlaps between pocket membership and indicators defined
+outside the subspace-residual family.
+Units. As everywhere in this paper, each readout below
+names the unit it is read on and the threshold convention
+it uses (Appendix B.7). Two units appear. At group level a
+pocket is a functional group whose FRR falls below the sizematched 5% null quantile at that anchor (τ =5, raw protocol);
+this is the census unit, and it is read as excess over the null.
+At row level, meaning one Wqkv row, one dhead slice of the
+attention output projection, or one output column of an MLP
+neuron, the reported quantity is the fraction of rows with
+FRR < 0.7; at those group sizes the membership-resample
+pass rate is near zero (Appendix B.4), so that fraction is read
+as an absolute population. The two are not interchangeable
+and are never pooled.
+Reading discipline. The overlap subsection is written as
+a registry. Each entry is a measured overlap between pocket
+membership and one indicator; the entries are not treated
+as evidence for one another, and none of them supports a
+
+statement about what pocket membership represents.
+
+D.1
+
+Census and Residence
+
+Group-level census. The census covers 123 anchors at
+1k-step spacing for both 70M and 160M. The population is
+stratified by segment and, within a segment, concentrated in
+a few layers: averaging the bulk-segment share over anchors,
+70M runs from 0.056 at layer 2 to 0.173 at layer 4, and 160M
+from 0.046 at layer 5 to 0.155 at layer 11, a factor of about
+three between the quietest and the busiest layer at both sizes.
+Stability follows the same stratification. Table 8 reports
+membership overlap between consecutive anchors together
+with residence run lengths. Vector and qkv pockets are close
+to persistent (vector Jaccard 1.000 at k=1, with residence
+median 7.5 anchors at 70M and maximum 62 at 160M; qkv
+Jaccard .875 and .842, with residence median 5 at 70M, p95 of
+19 to 20, and maximum 56), attention-output is intermediate
+(.333 and .476), and MLP pockets are strongly transient
+(Jaccard .141 at both sizes, residence median 1 anchor).
+Counted over residence runs rather than over segments, the
+population is dominated by the MLP: 103,465 of 104,030
+runs at 70M and 239,191 of 240,808 at 160M, more than 99%
+at both sizes, and those runs have median length one anchor.
+The transient majority reported in Section 4.2 is therefore
+a statement about the pocket population by count, and the
+segment-resolved view here is what the same sentence means
+by persistence varying with parameter role.
+Multi-pass recomputation. The same census recomputed
+on two vision runs with the same functional units, over
+anchors 5 to 45 at τ =5 epochs, moves in opposite direc-
+
+aux (vector-like)
+
+bulk (weight matrices)
+
+excluded from aggregation
+
+(a) Pythia-70M (GPT-NeoX)
+
+(b) ViT-mid (CIFAR-10)
+
+L=6, d=512 · shapes = 70M reference
+
+L=7, d=224 · tok (cls/pos) = aux, not excluded
+
+logits
+
+logits (10)
+
+embed_out
+
+W_head
+
+[50304×512] · untied
+
+[10×224]
+
+final LN [512] w+b
+
+final LN [224] w+b
+
+b_head†
+
+×6
+
+sequential residual
+
+≡
+
++
+
+≡ +
+
+W_o
+
+b_o
+
+b_down
+
+×7
++
+
+b_proj
+
+b_2
+
+W_2
+
+[512×512]
+
+[512×2048]
+
+[224×224]
+
+[224×448]
+
+RoPE · softmax attn
+b_qkv
+
+GELU
+
+softmax attn
+b_qkv
+
+GELU
+
+W_qkv
+[1536×512]
+LN1 [512] w+b
+
+W_up
+
+b_up
+
+skip
+
+W_proj
+
+identity
+
+W_down
+
+b_1
+
+W_qkv
+
+W_1
+
+[2048×512]
+
+[672×224]
+
+[448×224]
+
+LN2 [512] w+b
+
+LN1 [224] w+b
+
+LN2 [224] w+b
+
+x
+
+embed_in
+
+skip
+
+parallel residual
+
+x
+
+cls [1×1×224] + pos [1×65×224]
+
+[50304×512] · untied
+token ids
+
+W_pe
+
+b_pe
+
+patch embed · [224×48]
+patchify 4×4
+image 32×32×3
+
+≡ attention.dense.bias and mlp.dense_4h_to_h.bias coincide under the parallel residual (bitwise on 70M);
+both rows are kept in the panel, aggregates count the pair once.
+† head bias (10 params) is below the K=16 grouping minimum and sits outside the panel.
+
+Figure 8: Where the auxiliary–bulk partition sits in the architecture. One box per parameter tensor (LayerNorm boxes carry
+weight and bias jointly; linear biases are drawn as chips on their matrix box), with fill colour giving the partition class: orange
+for auxiliary, which is the vector segment and covers all vector-like parameters including the final LayerNorm; blue for bulk,
+the weight matrices (qkv, attn_out, MLP); hatched grey for tensors excluded from the aggregation. (a) Pythia-70M: one
+parallel-residual block, repeated six times, plus the top level; the two untied embedding matrices are their own segments and are
+excluded. The marked bias pair (≡) coincides under the parallel residual, so both rows are kept in the panel while aggregates
+count the pair once. (b) ViT-mid: sequential residuals, repeated seven times; here the token and positional embedding vectors are
+vector-like and therefore auxiliary, which is the one cross-regime difference from (a), and the ten-parameter head bias (†) is below
+the K=16 grouping minimum and is the only tensor excluded on the vision side. Shapes are the 70M reference.
+tions for the two architectures. On ViT-mid the MLP, vector, and qkv shares decay (.233 → .104, .250 → .095,
+.219 → .182 from the early to the tail period) while the
+patch share rises steeply (.194 → .487 → .791). On ResNet
+both convolutional families rise (3×3 .143 → .381 → .472,
+1×1 .106 → .162 → .261) while the vector share decays
+(.283 → .100). Adjacent-anchor Jaccard is .658 for ViTmid qkv, .733 to .750 for vector groups, .480 for ViT-mid
+MLP, .446 for ResNet 3×3, and .244 for 1×1. The frozencoordinate fraction is zero throughout both runs, so no reading
+in this census is carried by inactive units.
+Two riders travel with the cross-regime comparison. The
+time unit differs: one pretraining anchor spans about 0.8%
+
+of training against about 2% for one vision epoch, so the
+sparser vision sampling mechanically depresses its Jaccard
+values. The contrast that survives that bias is the transient
+MLP population (.141 against ViT-mid MLP .480), which
+runs against the direction of the bias; the qkv contrast is partly
+attributable to it. And a blanket reading that one-pass pockets
+are more stable does not hold, because the stratification pattern
+itself differs between the two regimes.
+Dependence on the unit. Persistence is a property of the
+unit as much as of the run. Under a top-q group-level agreement definition, the transfer family gives cross-run Jaccard
+0.115 to 0.135 against a chance level of 0.111, with a withinrun adjacent-anchor ceiling of only 0.127 to 0.156: at that
+
+unit the objects have almost no memory. Moving to tensorlevel units on the same runs, at the same chance level, gives
+within-run persistence 0.57 to 0.73 in every condition. On
+the tensor-level definition the late-training pocket location is
+also conserved across transfer regimes: the three continuingdescent arms converge to 0.57 to 0.71 against a same-anchor
+cross-seed reference band of 0.58 to 0.80, while at early
+anchors every cross-regime overlap sits at 0.23 to 0.38, far
+below the band, and the two anti-persistent arms stay below it
+throughout. We register that as a time-resolved reading: early
+pocket locations are regime-specific and late ones are not.
+
+D.2
+
+Emergence and Survival
+
+Size-ordered timing. Table 9 collects the row-level emergence readings for five sizes and Figure 9 shows the underlying
+depth-by-time maps. Both the pool-coherence onset, which is
+where the null line descends, and the row-level pocket onset
+move later with model size, and the two do not move together.
+70M has both at 20k. 160M has a two-stage null-line descent,
+moderate at 13k and deep over about 72 to 76k, with pocket
+onset at 20k. 410M has pocket onset at 48k with the null-line
+onset only at 92k. Neither 1B nor 1.4B meets either criterion
+inside the 129k window. The ordering is not a function of
+parameter count alone: at equal width 2048 the deeper model
+starts (1.4B, 24 layers, rising from about 100k) while the
+shallower one does not (1B, 16 layers), and at equal depth 24
+the narrower model starts much earlier (410M at 48k against
+1.4B at the window edge).
+At 410M the row-level population starts at 48k while the
+pool-coherence onset is at 92k, so the row-level population
+is not gated by the pool-level onset. The two are separable
+events and no ordering between them is asserted beyond what
+each run’s readings show.
+Layer relay within a run. At 70M the row-level population
+is a sequence of layer-localized waves rather than a diffuse
+few percent: layer 5 rises first (7.6% at 20k, peaking at 22.1%
+at 28k, then decaying), layer 3 takes over from 32k with a
+double-humped trace (13.2% at 56k and 12.3% at 76k), the
+main layer-4 wave follows (peaking at 42.1% at 84k and
+staying elevated over 50 to 120k), and a later wave arrives
+near 115k. At 160M the relay runs layer 8 (peak 32.8% at
+92k) into layer 7, which reaches 30.3% at 116k. At 410M the
+deep block, layers 18 to 21, rises together into a broad 110 to
+120k band with the maximum at layer 21 (43.2% at 116k).
+The attention block moves together. Figure 10 places the
+three bulk segments on a common scale. At head granularity
+the attention output projection shows no pocket population
+at all (median FRR 0.993 to 0.9996 across sizes). At row
+granularity it does: 19.3% at 70M layer 4 at 80k against qkv’s
+42.1% at layer 4 at 84k, and 15.7% at 160M layer 8 at 104k
+against qkv’s 32.8% at layer 8 at 92k, about half the qkv
+fraction in the same layer over the same period. The carrier
+layers of the three segments agree closely within a size (qkv,
+attention output, MLP: 70M 4/4/5; 160M 8/8/11), and their
+peak times separate only at 160M, where qkv leads at 92k
+and the other two follow at 104k and 108k. We register this
+at the level of the attention block: the population appears on
+
+Pythia (one-pass)
+
+CIFAR (multi-pass)
+
+Segment
+
+70M
+
+160M
+
+counterpart
+
+qkv
+vec
+mlp
+attn_out
+
+0.875
+1.000
+0.141
+0.333
+
+0.842
+1.000
+0.141
+0.476
+
+0.658 (ViT-mid qkv)
+0.733–0.750 (ViT-mid / ResNet vec)
+0.480 (ViT-mid mlp)
+—
+
+Pythia 70M
+
+Pythia 160M
+
+Segment
+
+p50
+
+p95
+
+max
+
+n
+
+p50
+
+p95
+
+max
+
+n
+
+qkv
+vec
+mlp
+attn_out
+
+5
+7.5
+1
+1
+
+19
+25.5
+3
+6
+
+56
+32
+123
+40
+
+175
+14
+103 465
+376
+
+2
+2
+1
+1
+
+20
+20
+3
+10
+
+56
+62
+123
+30
+
+612
+50
+239 191
+955
+
+Run lengths count consecutive anchors (1 anchor = 1000 steps)
+that a group spends inside the pocket; n is the number of residence
+runs. Key readings: vec p50 7.5 anchors (70M) with max 62
+(160M); qkv p50 5 (70M), p95 19–20, max 56; mlp p50 = 1 at
+both sizes.
+
+Table 8: Pocket stability across training regimes. Top: Jaccard
+overlap of pocket membership between consecutive anchors
+(k=1, median over anchors), at the group-level unit defined at
+the start of Appendix D. Bottom: residence run lengths on the
+pretraining side, counting consecutive anchors a group spends
+inside the pocket set, with n the number of runs. Stability
+is stratified by segment and the stratification pattern differs
+between the two regimes, so a blanket ordering between them
+does not hold. At k=1 one pretraining anchor spans about
+0.8% of training against about 2% for one vision epoch, so the
+sparser vision sampling mechanically depresses its values; the
+transient MLP contrast runs against that bias and is the most
+robust entry. These overlaps are registered as descriptions of
+pocket dynamics under the two regimes and are not treated
+as cross-regime confirmation of a shared mechanism.
+the read-in and the write-out projection together, not on qkv
+alone.
+The MLP asymmetry. Re-cutting the MLP separates its
+two halves. Across all five sizes the output half is the only
+cut carrying signal, with peaks from 1.8 to 15.7%, while
+the input half and the magnitude cut stay at or below 1.6%
+and 0.12%. This is a third independent negative reading for
+the magnitude hypothesis on the MLP (Appendix B.6). The
+carrier is the deepest layer in every size without exception.
+The late waves occur only in the models that have crossed
+their transition (6.9% at 84k for 70M, 15.7% at 108k for
+160M, 5.2% at 116k for 410M), whereas the 1B and 1.4B
+maxima sit at 8k and 12k and are early-training residue.
+Head-scale and row-scale do not coincide. Within a layer,
+the head-granularity calibrated readout fades before the rowlevel population appears. Measured with a symmetric ±32k
+window around each layer’s pocket onset, so that the search
+is not restricted to the pre-onset side, the median lag from
+the calibrated trough to row-level onset is +20k steps at 1.4B
+(four of four layers) and +24k at 410M (eight of eleven layers
+earlier, three reversed). The horizontal counterpart runs the
+
+0
+4
+8
+12
+16
+20
+
+(a) 70M 6 layers dmodel 512
+onset 20k
+
+0.45
+
+(b) 160M 12 layers dmodel 768
+
+0.30
+
+onset 20k
+
+(c) 410M 24 layers dmodel 1024
+
+row-level FRR < 0.7 fraction
+
+70M
+layer
+160M
+layer
+
+0
+2
+4
+6
+8
+10
+
+410M
+layer
+
+0
+2
+4
+
+0.15
+
+onset 48k
+
+0.05
+
+1.4B
+layer
+
+(d) 1.4B 24 layers dmodel 2048
+
+0 no onset inside the window (L15 still rising at the window edge)
+4
+8
+12
+16
+20
+20
+40
+60
+
+carrier layer
+FRR < 0.7 (%)
+
+(e) carrier layer of each size, same step axis
+
+40
+30
+20
+10
+0
+
+70M L4, peak 42.1% @84k
+160M L8, peak 32.8% @92k
+
+80
+
+100
+
+120
+
+0.00
+
+410M L21, peak 43.2% @116k
+1.4B L15, peak 3.0% @128k
+5% onset criterion
+
+20
+
+40
+
+60
+
+training step (k)
+
+80
+
+100
+
+120
+
+Figure 9: Row-level pocket emergence across four pretraining scales (qkv). Every panel shows the fraction of rows with
+FRR < 0.7 resolved by depth and training step, where one row is one Wqkv row (D = dmodel ); at these group sizes the
+membership-resample pass rate at θ=0.7 is near zero, so the fraction is read as an absolute population rather than as excess over a
+null. Panels (a) to (d) share one colour scale and one colour bar, so the four sizes are directly comparable; the pooled maximum is
+0.4323 (410M layer 21 at 116k). Dashed vertical lines mark the row-level pocket onset, the earliest anchor at which some layer
+stays above 5% for three consecutive anchors of the 4k scan grid: 20k at 70M and 160M, 48k at 410M, and none inside the
+window at 1.4B, whose layer-15 population is still rising at the edge. Rings mark the maximum over layer and anchor. Panel (e)
+shows the carrier layer of each size on the same step axis with the 5% criterion as a reference line. The 1B series is excluded from
+this figure on the grounds registered in Appendix F, and its row-level fraction stays at or below 0.33% throughout in any case. All
+entries are single-run readings on the public checkpoint series, registered as descriptions of those runs; no ordering between the
+row-level onset and the pool-coherence onset is asserted here.
+
+qkv, row level (D = one Wqkv row)
+Model
+(L / dmodel )
+
+Null-line
+onset
+
+Pocket Main peak
+onset (layer @ step)
+
+70M (6 / 512)
+20k
+20k
+160M (12 / 768)
+13k†
+20k
+410M (24 / 1024)
+92k
+48k
+1B (16 / 2048)
+none in window none
+1.4B (24 / 2048) none in window none‡
+
+Later wave
+(layer @ step)
+
+attn_out
+
+mlp (out-half)
+
+Peak
+(layer @ step)
+
+Peak
+(layer @ step)
+
+42.1% (L4 @ 84k)
+12.3% (L5 @ 116k)
+19.3% (L4 @ 80k)
+6.9% (L5 @ 84k)
+32.8% (L8 @ 92k)
+30.3% (L7 @ 116k)
+15.7% (L8 @ 104k) 15.7% (L11 @ 108k)
+43.2% (L21 @ 116k) 32–38% (L18–L20 @ 116k)
+not scanned
+5.2% (L23 @ 116k)
+0.3% (L1 @ 8k)
+—
+not scanned
+1.8% (L15 @ 8k)
+3.0% (L15 @ 128k) —
+not scanned
+1.8% (L23 @ 12k)
+
+Criteria. Null-line onset: the pooled membership-resample q05 of qkv FRR (layer level, τ =5, raw; median over layers) stays below 0.90 for
+five consecutive 1k anchors. Pocket onset: some layer’s row-level FRR<0.7 fraction stays above 5% for three consecutive anchors of the 4k
+row-scan grid. Peak = maximum over (layer, anchor) of the row-level FRR<0.7 fraction; “later wave” is the largest reading after the main
+peak’s anchor. At these group sizes the membership-resample pass rate at θ=0.7 is ≈0, so the fractions are read as absolute rather than as
+excess over a null. Notes. † 160M descends in two stages (moderate at 13k, deep at ∼72–76k); the deep stage sits near this run’s smoothed
+loss minimum (77.3k). ‡ 1.4B does not meet the three-anchor criterion inside the window: its row-level fraction starts rising at ∼100k in
+L11–L15/L21/L23 and reaches 3.0% at the window edge (128k) while still increasing, so this is a window-edge case rather than a negative
+reading. 1B is read with the checkpoint-116000 masking window applied (anchors whose τ =5 window uses that checkpoint as base or
+history, 116–121k, plus the future endpoint 111k; 7 of 123 anchors dropped); its row-level fraction stays ≤0.33% throughout the remaining
+window. 1B is registered here for completeness but is left out of the cross-scale trend figures and of the cross-scale appendix: it is the one
+suite member trained in bf16 rather than fp16, and at 16 × 2048 its depth ordering crosses the parameter-count ordering, so it does not sit
+on the depth/width axis those readings use. Released checkpoint dtype is fp16 at every size, so the container precision our pipeline reads is
+not special for 1B. attn_out row scans exist for 70M/160M only (410M/1B/1.4B requested); groups are flattened on (dmodel , dhead ) with
+dhead as the unit, a convention less clean than for qkv (70M D=64 gives 19.3% vs. 13.1% at D=512; 160M 15.7% vs. 16.7%). The mlp
+column reports the out-half (wout columns) cut, the only mlp cut carrying signal: in-half and magnitude cuts peak at ≤1.6% and ≤0.12%
+across all five sizes, and the mlp carrier is the deepest layer in every size. The row-length convention is invariant over D=128..3072, so no
+per-size adjustment is applied. Large-size mlp readings are quoted from full-protocol scans only; the 10%-sampled preview lane is not
+quoted as an S2 reading. All entries are single-run readings on the public Pythia checkpoint series, registered as descriptions of those runs.
+
+Table 9: Row-level emergence readings across five pretraining scales, with the onset criteria and the per-segment conventions
+given in the table footer.
+other way and must be reported alongside: across cells the
+Spearman correlation between the row-level fraction and the
+calibrated readout is positive (+0.10 overall, +0.34 late), and
+the cells where the row-level population emerges have the
+same median calibrated readout as the rest (0.208 against
+0.208). A low calibrated readout therefore does not imply
+a pocket. What is registered here is a within-layer temporal
+ordering, not a horizontal association.
+
+Form of the emerging population. At 70M qkv the coordinates carrying the coherent motion rotate continuously:
+adjacent-anchor membership Jaccard of the comoving family
+is .14 to .18, while cross-head timing sharing stays at 0.75 to
+0.99 throughout. Within a head the family condenses into two
+or three row blocks, at four to eight times chance adjacency
+and 20 times at layer 5. In shallow and middle layers the
+per-head block directions are private (cross-head direction
+cosine near chance at .035) and only the timing is shared; at
+layer 5 both are shared (cross-head cosine .82, effective rank
+1). The granularity ladder settles the unit, since the one-row
+and quarter-row distributions nearly coincide, so within the
+tested ladder the coherent object is row-scale. Pooled over
+all layers the model-wide row-level fraction is stable across
+training (3.7%, 4.8%, 4.4% at 24k, 60k, 120k), so the layerlocalized waves ride on a small standing population rather
+than replacing it.
+
+D.3
+
+The One Discontinuous Event
+
+Where the ∼20k event sits. Between anchors 19k and 20k
+at 70M the qkv pocket set collapses from 51 groups to 3 and
+the layer-level median calibrated readout drops from .354 to
+.000, while the measured median FRR of the same groups
+does not move at all (.9959 to .9952, staying near .995 before
+and after). What moves is the null: the pooled membershipresample q05 falls from .9937 to .7201 and stays at .59 to .72
+through 25k (Figure 11). The calibrated readout is a difference
+between a measurement and its null, so this event is located
+on the null side of that difference. This is what lies behind the
+caution in Section 4.3 that the fading of head-aligned excess
+should not be read as a global disappearance of predictable
+structure.
+Composition of the null pool. A single-anchor diagnostic
+at 70M at 25k finds the null FRR distribution long-tailed and
+bimodal (q10 = .67 with a jump to q25 = .992), and across
+resampled groups the FRR tracks the share of squared update
+energy carried by the top 1% of coordinates at r = −.996.
+The reading is that about 1% of large-magnitude coordinates
+move coherently across heads and dominate the resampled
+groups.
+Turnover across the event. The set that survives is not a
+subset of the one that collapsed (Figure 12). Jaccard against
+the final set is near zero before 48k (maximum .061), rises
+to .5 to .8 over 52 to 70k, and settles at 1 in the tail, while
+the adjacent-anchor Jaccard after the collapse has median
+
+30
+
+32.8%
+L8
+19.3%
+L4
+
+20
+
+15.7% 15.7%
+L8
+L11
+
+6.9%
+L5
+
+10
+0
+
+70M
+
+160M
+
+5.2%
+L23
+
+3.0%
+L15
+
+410M
+
+mlp (out-half)
+not scanned
+
+1.8%
+L23
+
+1.4B
+
+(c) 160M carrier-layer trajectories
+
+(b) 70M carrier-layer trajectories
+40
+
+qkv
+attn_out
+
+43.2%
+L21
+
+not scanned
+
+40
+
+42.1%
+L4
+
+not scanned
+
+peak row-level FRR < 0.7 (%)
+carrier layer FRR < 0.7 (%)
+
+(a) peak over (layer, anchor); bar label = carrier layer
+
+qkv (L4)
+attn_out (L4)
+mlp (out-half) (L5)
+
+qkv (L8)
+attn_out (L8)
+mlp (out-half) (L11)
+
+30
+20
+10
+0
+
+20
+
+40
+
+60
+
+80
+
+training step (k)
+
+100
+
+120
+
+20
+
+40
+
+60
+
+80
+
+training step (k)
+
+100
+
+120
+
+Figure 10: The same row-level population on three segments. (a) peak fraction of rows with FRR < 0.7, maximized over layer
+and anchor, for qkv, the attention output projection, and the MLP output half at four sizes, with the bar label giving the carrier
+layer; row scans of the attention output projection exist for 70M and 160M only, and the missing cells are drawn as explicit
+markers rather than as gaps. (b) and (c) trajectories of the carrier layer of each segment at 70M and 160M. Two conventions travel
+with the figure: the attention-output granularity is less clean than qkv’s, since groups are flattened on (dmodel , dhead ) with dhead
+as the unit and 70M reads 19.3% at D=64 against 13.1% at D=512; and group size differs between segments, so levels are
+compared within a segment across sizes rather than across segments. The 1B series is excluded on the grounds registered in
+Appendix F.
+.88: the surviving set is stable from anchor to anchor but
+shares almost no membership with the pre-collapse population.
+On the attention output projection the sets never stabilize
+(adjacent-anchor median .33, versus-final median .09).
+A co-located depth reading. An independent lane measures the effective rank of the qkv update column space, as
+participation ratio divided by output dimension, in phasediagram windows. In the ballistic window both qkv and MLP
+read 0.24 to 0.44 at every depth. In the floor windows the
+MLP stays at 0.75 to 0.77 (70M) and 0.65 to 0.85 (160M)
+and shallow qkv at 0.59 to 0.70, while deep qkv collapses,
+to .011 and .007 at 70M layers 3 and 4 and to .007 to .030
+at 160M layers 6 to 10. Those depths overlap the layers that
+carry the persistent calibrated band after the event. The two
+lanes read the same update sequence, so this is registered as a
+co-located depth pattern between two readouts of one record.
+No multi-pass counterpart. The vision runs show no event
+of this kind. Pocket counts grow monotonically (ViT-mid
+patch 34 to 192, ResNet 3×3 280 to 903) and the Jaccard
+against the final set rises steadily from about 0.2 to about 0.8,
+which is cumulative expansion rather than replacement; the
+1×1 family is the exception, with a versus-final median of
+
+.12.
+
+D.4
+
+Overlap Registrations
+
+Table 10 is the registry. Every entry is a measured overlap
+between pocket membership and an indicator that is not a
+probe of the subspace-residual family.
+SignedPnorm-change proxy. A signed norm-change proxy
+Si = t wi (t)∆wi (t) is built from checkpoint differences
+alone; preconditioning is not removed, and S is not a curvaturebased importance measure. Against an equal-cardinality hypergeometric null, qkv pocket coordinates overlap the top-K
+movement set well above the null band (4.0× at 70k, 9.0×
+at 129k), the ViT-mid magnitude-bin families sit just above
+their upper bound (.142 to .217 against .125), ResNet 3×3
+exceeds its bound by only 1.04 to 1.08×, and 1×1 falls below
+it (Figure 13). The attention output projection reverses at late
+anchors, with its terminal pocket set displaced towards the
+low end of the signed movement axis.
+Because the pocket sets themselves change size and membership over time, the overlap is also measured anchor by
+anchor (Figure 14). On qkv the ratio hugs the random line
+before the collapse (0.98 to 1.25 over 7 to 19k, when the
+set holds 51 to 64 groups) and steps to 3.77 at 20k, staying
+
+Indicator pair
+
+Paradigm side Direction
+
+Key readings
+Null convention
+Caveat registered
+P
+qkv above the precision .195 at a70k (4.0× hypergeometric,
+Si =
+t wi (t)∆wi (t)
+null band
+null .0486) and .312 at a129k equal cardinality (K from checkpoint differ(9.0× null .0347); time-resolved = number of pocket ences only; AdamW preratio steps 0.98 → 3.77 across scalars), with 95% conditioning not removed.
+19k→20k, then stays high (cumula- interval
+Pocket sets change both
+tive median 7.5×, recent-window
+membership and size bemedian 9.6×, max 16.2× at 23k);
+tween anchors, so a twopocket coordinates sit at family
+anchor comparison mixes
+movement quantile p50 =.93 at
+overlap change with set
+a129k
+turnover
+Pythia attn_out below the precision .093 vs. null .167 at same
+small sets (1–15 groups)
+(70M), late an- null band on a129k; for anchors ≥100k the cuwith heavy turnover
+chors
+signed-top mulative top ratio has median 0.34
+(adjacent-anchor Jaccard
+and the cumulative bottom ratio
+median .33, Jaccard vs.
+1.90, while both recent-window rafinal set median .09);
+tios sit at ≈0.6
+the two time conventions
+disagree, and both are
+reported
+CIFAR (ViT- above
+ViT-mid magnitude-bin families same
+ViT-mid patch at a45:
+mid, ResNet) the upper .142–.217 vs. null .125 (five
+the cut is near saturabound,
+families, both anchors); ResNet
+tion (K/N =86%), which
+small mar- conv3×3 .304/.382 vs. null
+narrows the null intergin
+.282/.367 (1.08×/1.04×); patchval mechanically; ResNet
+filter inside the band at both anchors
+conv1×1 falls below the
+lower bound at a25
+
+Movement top-K Pythia
+× pocket coordi- (70M)
+nates
+
+LN outlier co- Pythia 70M co-located
+ordinates
+× (13 LN gains);
+per-coordinate
+ViT-mid condynamics
+trol (15)
+
+outlier vs. non-outlier median ESA robust z > 3 on the final LN is saturated
+higher in 12/13 tensors (e.g. post5 |gain| at the late an- (ESA and coherence =
+.992 vs. .854); median coherence chor; a top-1% con- 1.0 on all 512 coordihigher in 11/13 (e.g. in2 .898 vs. trol cut reproduces nates, no resolution). ViT.114); ρS (z, coherence) positive in every direction
+mid gain range is narrow
+11/13 (.78–.94), negative for in0
+(|gain| ≤ 1.05) and only
+(−.37) and post0 (−.48); cross4/105 cross-layer pairs
+layer outlier Jaccard concentrates
+are non-zero. Outlier-set
+on adjacent LN pairs (median .023,
+formation times are nonp90 .32, max .56 for post3×post4)
+monotone (final LN set
+size 49 at 88k, 9 at 129k)
+
+M8
+low-partici- Pythia
+pation heads × qkv
+pocket membership
+
+70M co-located
+
+18 heads fall below the pooled-bulk Tukey fence (pooled participation ratio and
+Tukey fence (prnorm < .9047); 8 bulk Q1 − 1.5 IQR) pocket flag are computed
+of them are layer-4 q-heads; the on
+dimension- from the same update hisseven lowest (prnorm .262–.622) normalised partici- tory, so this is registered
+are exactly the a70k pocket set pation ratio
+as co-location of two read{L4:q_h0,1,2,4,5,6,7}
+outs of one record, not as
+two independent measurements
+
+qkv column-space Pythia
+effective rank × 160M
+calibrated-readout
+extinction
+
+70M, co-located
+in depth
+
+floor window: 70M qkv L3/L4 none (descriptive ra- window boundaries are
+participation ratio per dimension tio; no resampling operational
+(ballistic
+.011/.007 against .59–.66 in shal- null defined for this [1k, 10k) plus phaselow qkv layers and .75–.77 in mlp; quantity)
+diagram floor windows),
+160M hump-rise window L6–L10
+the two readouts share the
+.007–.030 against .65–.85 in mlp.
+same ∆W sequence, and
+The same depths carry the persisfp16 quantisation noise on
+tent LRGFcal band after the 20k
+per-coordinate increments
+step
+is registered for this lane
+
+Group-level FRR CIFAR struc- co-elevated
+× ESA × VCS
+tural cuts (3 architectures × 7
+recipes × 5 anchors)
+
+P (VCS>0.4 | FRR<0.7) = membershipthe three probes read the
+88.4% against a base rate of resample null at same ∆w history and are
+38.9% (ViT-mid); P (ESA>0.7 | large D: σnull is not independent instruFRR<0.7) lifts by 3.4× (ViT- .005–.024 for ESA ments. Their time profiles
+mid) to 23.8× (ResNet); all three and
+.011–.047 separate: pooled ESA and
+thresholds are passed by 6.7% / for VCS, so all VCS shares decay mono3.3% / 0.3% of ViT-mid / ViT / three thresholds are tonically (18.4%/49.0%
+ResNet groups
+chance-immune
+at a5 to 0.9%/6.1% at
+a40) while the FRR
+share peaks at a10–a20
+(3.7/10.0/10.0/5.9/3.4%);
+learning-rate schedule is
+not disentangled
+
+Loss-curve events Pythia
+× qkv transition
+160M
+
+70M: calibrated qkv readout fades none (event co- one run per size; loss
+at ∼19.5–20k (layer-level median location on the time minima are read from
+LRGFcal .354 → .000 across axis)
+smoothed curves with a
+
+70M, co-located
+in time
+
+160M
+qkv layer
+
+0
+
+3 at 19k 20k
+
+0.60
+
+0.40
+
+(c) 160M LRGFcal by layer
+
+3
+
+0.20
+
+6
+9
+20
+
+40
+
+60
+
+FRR (axis inverted)
+
+group set 51
+
+(b) 70M measurement vs its null
+
+LRGFcal
+
+0
+1
+2
+3
+4
+5
+
+0.79
+
+80
+
+training step (k)
+
+100
+
+120
+
+0.00
+
+FRR (axis inverted)
+
+70M
+qkv layer
+
+(a) 70M LRGFcal by layer
+
+0.5
+0.6
+0.7
+0.8
+0.9
+1.0
+
+null-line onset 20k
+
+membership-resample null q05
+median FRR .996 .995 (unchanged)
+
+20
+
+40
+
+60
+
+80
+
+100
+
+120
+
+(d) 160M measurement vs its null
+
+0.5 two-stage descent
+0.6
+0.7
+0.8
+0.9 13k
+moderate
+1.0
+20
+40
+60
+
+72 76k
+deep
+
+80
+
+100
+
+120
+
+Figure 11: Where the ∼20k qkv event sits, in the measurement or in its null. (a) and (c) layer-level calibrated readout for qkv
+(τ =5, raw) at 70M and 160M on a common scale. (b) and (d) the same lane read as two curves: the measured median FRR of
+those layers (solid) and the pooled membership-resample q05 (dashed), with the FRR axis inverted so that upward means lower
+FRR and the null pool merged across layers per segment and group size. At 70M the pocket set collapses from 51 groups to 3
+between anchors 19k and 20k and the layer-level median calibrated readout falls from .354 to .000, while the measured median
+FRR of the same groups is unchanged (.9959 to .9952). What moves is the null, whose q05 falls from .9937 to .7201 and stays
+at .59 to .72 through 25k. The calibrated readout is a difference between a measurement and its null, so the event is located
+on the null side of that difference and is not described here as a change in the predictability of the groups. The 160M null line
+descends in two stages, a moderate descent at 13k and a deep one over about 72 to 76k, the latter in the neighbourhood of that
+run’s smoothed loss minimum (77.3k); the time co-location with the loss landmark is registered as a correspondence only.
+high for the rest of training (cumulative median 7.5×, recentwindow median 9.6× with a maximum of 16.2× at 23k).
+ViT-mid patch filters sit slightly above the band early and
+inside it from epoch 23 apart from single-epoch excursions;
+ResNet 3×3 sits below the band over epochs 9 to 16 and
+above it from epoch 17.
+
+Normalization gain outliers. Coordinates whose normalization gain is a robust-z outlier above 3 at the late anchor have
+higher median ESA than their non-outlier neighbours in 12
+of 13 pretraining tensors and higher median coherence in 11
+of 13, with the rank correlation between the outlier score and
+coherence between .78 and .94 in those 11 and negative in the
+two exceptions (Figure 15). A top-1% control cut reproduces
+every direction including the exceptions. Outlier sets overlap
+across layers mainly between adjacent normalization pairs
+(median Jaccard .023, p90 .32). Their formation times are not
+monotone: sets grow from early training and first reach half
+of their final membership between 11k and 101k depending
+on the tensor. On the ViT-mid control the gain range is narrow
+and the outlier sets hold at most four coordinates, and two
+of its three chains read with the opposite sign. The final normalization tensor is saturated, with agreement and coherence
+both at 1.0 on all 512 coordinates, and carries no resolution.
+
+Low-participation heads. Eighteen qkv heads fall below
+the pooled-bulk fence on dimension-normalized participation
+ratio; eight of them are 70M layer-4 q-heads, and the seven
+lowest are exactly the 70k pocket set. Participation ratio and
+pocket flag are computed from the same update history, so this
+is registered as a co-location of two readouts of one record.
+Cross-probe overlap at group level. On the vision structural cuts the three group-level probes concentrate on overlapping populations. Conditioning on FRR < 0.7 raises the
+VCS > 0.4 rate from a base of 38.9% to 88.4% on ViT-mid,
+and raises the ESA > 0.7 rate by 3.4× on ViT-mid to 23.8×
+on ResNet; all three thresholds are passed simultaneously by
+6.7%, 3.3%, and 0.3% of ViT-mid, ViT, and ResNet groups.
+At these group sizes the thresholds are chance-immune. The
+three probes read the same update history and are not independent instruments, and their time profiles separate: pooled
+ESA and VCS shares decay monotonically from 18.4% and
+49.0% at anchor 5 to 0.9% and 6.1% at anchor 40, while
+the FRR share peaks at anchors 10 to 20. The learning-rate
+schedule is not disentangled from these profiles.
+Loss-curve landmarks. The transition markers co-locate in
+time with loss-curve landmarks at both sizes (70M: calibrated
+fade near 20k, smoothed loss minimum 49.7k, main row-level
+wave 80 to 85k; 160M: loss minimum 77.3k, deep null-line
+
+(a) pocket-set size (groups)
+
+(b) Jaccard vs. previous anchor
+
+51 → 3 at 19 → 20k
+
+Jaccard
+
+groups
+
+10
+
+2
+
+101
+qkv
+attn_out
+
+100
+
+25
+
+1.0
+
+0.5
+
+0.5
+
+0.0
+50
+
+75
+
+100
+
+25
+
+75
+
+100
+
+125
+
+25
+
+102
+
+30
+
+40
+
+75
+
+100
+
+125
+
+(f)
+1.0
+
+ViT-mid patch
+ResNet conv3×3
+ResNet conv1×1
+
+0.5
+
+0.5
+
+0.0
+20
+
+50
+
+step (×103)
+
+(e)
+1.0
+
+Jaccard
+
+groups
+
+50
+
+step (×103)
+
+(d)
+
+10
+
+qkv ≤ .06 before 48k
+
+0.0
+
+125
+
+step (×103)
+103
+
+(c) Jaccard vs. final anchor
+
+1.0
+
+0.0
+10
+
+epoch
+
+20
+
+30
+
+40
+
+10
+
+epoch
+
+20
+
+30
+
+40
+
+epoch
+
+Figure 12: Turnover of the pocket set itself, at group level, for the one-pass 70M run (top row, dashed vertical at the 19 to 20k
+anchor pair) and the two multi-pass vision runs (bottom row). Columns: set size on a log scale, Jaccard against the previous
+anchor, and Jaccard against the final anchor. On qkv the set collapses from 51 groups to 3 and then holds 2 to 11 groups, with
+Jaccard against the final set at or below .06 before 48k, rising to .5 to .8 over 52 to 70k, while the adjacent-anchor Jaccard after
+the collapse has median .88. The attention output projection never stabilizes. The multi-pass runs show no event of this kind, with
+counts growing monotonically and the Jaccard against the final set rising steadily, which is cumulative expansion rather than
+replacement. This panel sets the reading conditions for the two-anchor movement overlaps: because the pocket set changes both
+size and membership between anchors, an anchor-to-anchor difference in overlap contains both a change in overlap and turnover
+of the set, and the two are separated only by reporting them side by side.
+descent about 72 to 76k). This is one run per size, the loss
+minima are read from smoothed curves with a rule-dependent
+resolution, and the event windows are wide relative to the
+anchor spacing. The co-location is discussed in Section 4.3
+and is registered here only for completeness.
+
+E Movement Directedness and
+Gradient-Coherence Correspondence
+Section 4.3 compares the probe readings with two quantities
+that are defined without reference to any probe, and reports
+the correlations ρ = 0.978 and ρ = 0.804. This appendix
+gives the two definitions, their relation to existing gradientcoherence and signal-to-noise measures, and the comparison
+in full.
+
+E.1
+
+Two Externally Defined Quantities
+
+Movement directedness. For an anchor a and horizon τ ,
+movement directedness is the net displacement of the future
+window divided by the path length actually travelled inside it,
+wa+τ,S − wa,S 2
+MDS (a, τ ) = Pa+τ −1
+.
+(5)
+∆wt,S 2
+t=a
+It lies in [0, 1], equals one when the window is traversed in
+a straight line, and falls towards zero when the steps cancel.
+
+It is a property of the realized trajectory alone: no probe, no
+history window, and no model of the dynamics enters it. It is
+also not causally prior to the probes, since both read the same
+stored weights; the comparison below is a correspondence
+between two summaries of one record.
+
+Loss-side gradient coherence. The second quantity is built
+only from scalar training telemetry. Over the same window
+it compares the realized loss decrease with the loss decrease
+that the same gradient magnitudes would have produced had
+every step been perfectly aligned,
+La−1 − La+τ −1
+
+,
+∥gs ∥22 s∈W
+s∈W ηs
+
+GC(a, τ ) = P
+
+(6)
+
+where W is the set of optimization steps inside the window, ηs
+is the learning rate at step s, and gs is the gradient restricted to
+the bulk backbone. The numerator is read from the loss curve
+and the denominator from recorded per-step learning rates
+and gradient norms, so the estimate contains no parameterdirection information at all. This is what makes it a noncircular comparison for a directional probe.
+
+quantile position in family movement S
+
+(a) overlap vs. hypergeometric null
+4.00 ×
+
+Pythia-70M qkv a70k
+
+8.98 ×
+
+Pythia-70M qkv a129k
+
+1.00 ×
+
+Pythia-70M attn_out a70k
+0.56 ×
+
+Pythia-70M attn_out a129k
+ViT-mid patch a25
+ViT-mid patch a45
+ViT-mid mag. bins a25
+ViT-mid mag. bins a45
+ResNet conv3×3 a25
+
+null 95% interval
+null K/N
+observed (Pythia)
+observed (ViT-mid)
+observed (ResNet)
+
+ResNet conv3×3 a45
+ResNet conv1×1 a25
+ResNet conv1×1 a45
+
+0.03
+
+0.1
+
+0.3
+
+1.0
+
+1.00
+
+(b) Q-Q of pocket coordinates
+
+0.75
+
+0.50
+
+0.25
+
+0.00
+0.00
+
+precision of the equal-cardinality top-K movement set
+
+y = x: no association
+Pythia qkv a129k
+Pythia qkv a70k
+Pythia attn_out a129k
+ViT-mid patch a45
+
+0.25
+
+0.50
+
+0.75
+
+1.00
+
+pocket coordinates, sorted (fraction)
+
+Figure 13: Overlap between pocket coordinates and the top-K set of the signed norm-change
+proxy, labelled movement in the
+P
+panels, registered against an equal-cardinality hypergeometric null. The proxy Si = t wi (t)∆wi (t) is built from checkpoint
+differences alone; preconditioning is not removed and S is not a curvature-based importance measure. (a) observed precision
+of the top-K movement set restricted to pocket coordinates, against the null K/N and its 95% interval, with the pretraining
+rows annotated by the ratio. (b) quantile position of the pocket coordinates inside their family’s movement distribution, with the
+diagonal as the no-association reference; the qkv set at 129k sits at median quantile .93 against about .50 for the vision reference,
+so the whole set is displaced rather than a tail of it. Pocket sets are the group-level flag at τ =5, raw, head granularity. The two
+anchors carry different pocket sets in both size and membership, so a two-anchor comparison mixes a change in overlap with
+turnover of the set itself. Each reading is a registration of a measured overlap and is not used to support any statement about what
+pocket membership represents.
+
+overlap ratio (obs / null)
+
+(a) Pythia-70M qkv
+Swin5
+
+24
+
+2
+
+bottom-K
+
+2
+
+(c) ViT-mid patch filters
+
+2
+
+(d) ResNet conv3×3
+
+20
+
+23
+
+2−2
+
+22
+Scum
+
+1
+
+1
+
+2−4
+
+21
+20
+
+(b) Pythia-70M attn_out
+2
+
+null 95%
+
+2−6
+pocket set 51 → 3
+
+20
+
+50
+
+100
+
+step (×103)
+
+Scum top-K
+Swin5 top-K
+
+≥ 100k
+
+0.5
+20
+
+50
+
+100
+
+step (×103)
+
+0.5
+10
+
+20
+
+30
+
+epoch
+
+40
+
+10
+
+20
+
+30
+
+40
+
+epoch
+
+Figure 14: The same overlap resolved anchor by anchor, with the pocket set re-matched at every anchor. The readout is the ratio of
+the observed overlap to its hypergeometric expectation, with the grey band giving the null 95% interval. Two time conventions for
+the movement proxy are reported side by side: one accumulates from the start of training, the other over the last five checkpoint
+or epoch pairs, matching the probe’s history window. (a) qkv: the ratio hugs the random line over 7 to 19k, steps to 3.77 at 20k in
+one anchor, and stays high for the rest of training. (b) the attention output projection, on small sets with heavy turnover, where the
+two time conventions disagree and both are reported. (c) ViT-mid patch filters sit slightly above the band early and inside it from
+epoch 23 apart from single-epoch excursions; the late approach to one has a mechanical component, since the cut approaches
+saturation. (d) ResNet 3×3 sits below the band over epochs 9 to 16 and above it from epoch 17. Every curve is a registration of a
+measured overlap over time.
+
+(b) drift coherence, outlier vs. non-outlier
+
+post4
+
+post5
+
+final†
+
+ln2_6
+
+final
+
+post3
+
+ln1_6
+
+post2
+
+post1
+
+post0
+
+in5
+
+in4
+
+in0
+
+0.0
+
+final†
+
+post5
+
+post4
+
+post3
+
+post2
+
+post1
+
+post0
+
+in5
+
+in4
+
+in3
+
+in2
+
+in1
+
+outlier (z > 3)
+non-outlier
+outlier not higher
+
+(c) rank correlation of outlier score with coherence
+Pythia-70M (13 LN gains): 11/13 positive, 0.78--0.94
+
+1
+
+ViT-mid control (15)
+
+0
+
+ln2_5
+
+ln1_5
+
+ln2_4
+
+ln1_4
+
+ln2_3
+
+ln1_3
+
+ln2_2
+
+ln1_2
+
+ln2_1
+
+ln1_1
+
+ln2_0
+
+final
+
+post5
+
+post4
+
+post3
+
+post2
+
+post1
+
+post0
+
+in5
+
+in4
+
+in3
+
+in2
+
+in1
+
+−1
+in0
+
+ρS(z, coherence)
+
+in0
+
+0.0
+
+0.5
+
+in3
+
+chance 0.5
+
+in2
+
+0.5
+
+outlier higher in 11/13
+
+1.0
+
+in1
+
+1.0
+
+median coherence
+
+outlier higher in 12/13
+
+ln1_0
+
+median ESA
+
+(a) ESA, outlier vs. non-outlier median
+
+outlier-set size
+
+(d) outlier-set formation over training (Pythia-70M)
+input LN (in0--in5)
+post-attention LN (post0--post5)
+
+60
+
+final LN
+first J(t, final) ≥ 0.5
+
+in5
+final
+
+post0
+
+40
+20
+0
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+120
+
+step (×103)
+
+Figure 15: Normalization gain outliers and per-coordinate dynamics on the same gain trajectories. A coordinate is an outlier
+when the robust z of its absolute gain at the late anchor exceeds 3. (a) and (b) per-tensor medians for outlier against non-outlier
+coordinates across the 13 pretraining gain vectors: median ESA is higher for the outliers in 12 of 13 tensors and median drift
+coherence in 11 of 13, with connectors marking the tensors where it is not. The final normalization tensor is saturated, with
+agreement and coherence equal to 1.0 on all 512 coordinates, so it carries no resolution and is drawn only for completeness. (c)
+rank correlation between the outlier score and coherence per tensor, positive in 11 of 13 pretraining tensors and negative in two.
+On the ViT-mid control one chain reads with the same sign and the others with the opposite sign; its gain range is narrow and its
+outlier sets hold at most four coordinates. A top-1% control cut reproduces every direction in both regimes.
+
+E.2
+
+Relation to Existing Coherence and Noise
+Measures
+
+Both quantities have close relatives in the literature, and the
+differences matter for how the comparison should be read.
+Gradient coherence in the sense of Chatterjee (2020) is
+defined on gradients: it measures how much per-example
+gradients agree with one another within a batch, and it requires access to those per-example gradients. Equation (6)
+instead reads coherence off the loss curve, as the fraction of
+the available first-order decrease that the optimizer actually
+realized, and needs only telemetry that a training run already
+logs. It therefore measures agreement across steps within a
+window rather than across examples within a step, and the
+two can come apart whenever the loss surface curves inside
+the window.
+Movement directedness is a trajectory-level quantity of the
+kind studied by Singh et al. (2025), and it is related to, but not
+the same as, the observation that optimization concentrates
+
+in a low-dimensional subspace (Gur-Ari, Roberts, and Dyer
+2018). A trajectory can stay inside a small subspace while
+doubling back inside it, which lowers Eq. (5) without changing
+the subspace, and this is exactly the distinction that separates
+the displacement-direction family from the subspace-residual
+family in Section 3. Values of Eq. (5) well below one over
+short windows are also the signature of the diffusion-like
+regimes described by Mandt, Hoffman, and Blei (2017) and
+Feng and Tu (2021).
+None of these quantities is used here to certify another.
+They are registered as independent summaries of the same
+stored trajectories.
+
+E.3
+
+The Full Comparison
+
+Figure 16 shows both comparisons over the transfer family of
+Appendix A.2, on the bulk backbone scope at τ = 5: eight
+training conditions, five anchors each, over the seeds of that
+family. The conditions differ in dataset, in whether the run
+
+is fine-tuned or trained from scratch, in learning rate, and in
+schedule, so the grid deliberately mixes regimes that a single
+training curve would not connect.
+Across that grid ESA forms a tight monotone relation
+with movement directedness (ρ = 0.978). Trajectories whose
+future window covers more net distance relative to its path
+length retain more coordinate-wise directional agreement, and
+conditions that sit far apart in loss, learning rate, and dataset
+fall on one curve. The association with the loss-side coherence
+estimate is weaker but still strong (ρ = 0.804), which is what
+should be expected of a quantity that discards all directional
+information and keeps only the scalar bookkeeping.
+Two readings follow. The probes respond to the realized
+geometry of parameter motion rather than to checkpoint index,
+since the grid contains conditions at very different points
+of very different schedules. And the sub-0.5 regimes that
+Section 4.3 reports in the pretraining case study correspond to
+low directedness, that is, to windows whose steps substantially
+cancel, rather than to an absence of measurable structure.
+Scope. Both relations are retrospective and observational.
+The comparison is on the vision side only, at one horizon and
+one scope, and the two quantities are computed from the same
+stored trajectories as the probes, so a high correlation registers
+consistency between summaries and not an independent
+confirmation. The loss-side estimate additionally inherits
+every confound of the loss curve it is read from, including
+schedule shape and batch composition.
+
+F
+
+Pythia Scale Extensions
+
+Section 4.3 uses Pythia-70M as its case study and defers the
+rest to this appendix. Six sizes enter the cross-scale registry,
+and every statement below is a registration of readings and
+co-occurrences rather than a directional claim.
+
+F.1
+
+Coverage and Protocol
+
+The six sizes are 14M, 31M, 70M, 160M, 410M, and 1.4B.
+They share the pretraining schedule that makes step numbers
+comparable: 143,000 optimizer steps, a single cosine decay
+whose decay length equals the training length so that there
+is no constant tail, a 1% warmup of 1,430 steps, a floor
+at 10% of the peak rate, decoupled weight decay 0.1 with
+normalization parameters and all biases exempt, and a global
+batch of 1024 sequences of 2048 tokens, or 2,097,152 tokens
+per step. Peak learning rate is the one recipe quantity that
+varies with size, from 1.0 × 10−3 at the three smallest to
+2.0 × 10−4 at 1.4B. Equal step therefore means equal token
+count, and the step-indexed comparisons below are tokenindexed comparisons as well. They are not matched loss,
+matched compute, or matched training progress, and they
+carry no further normalization.
+The measurement protocol is identical at every size and is
+the one given in Appendix A.3: 123 anchors at steps 7000 to
+129000, npast = 5, reference ∆wa−1 , Gavish–Donoho rank
+selection on a 256-unit sample, raw and column-normalized
+FRR in parallel, a per-anchor membership-resample null,
+and the calibrated readout at α = 0.05 reported as excess.
+Table 11 collects the per-size readings.
+
+Why Pythia-1B is excluded. The suite contains a seventh
+model in this range, and it is left out of every cross-scale
+statement below for three reasons that are separate facts and
+should not be conflated. First, it is the only model of the suite
+trained in bfloat16 upstream, following a half-precision loss
+spike late in its run; the released checkpoints are stored in
+fp16 like every other size, so the difference is in the training
+arithmetic and not in the container we read, and the size
+of any residual effect on the probes is not measured here.
+Second, its depth is not monotone in size: at 16 layers of
+width 2048 it is shallower than both the 24 × 1024 model
+below it and the 24 × 2048 model above it in parameter
+count, and the depth and width reading of Appendix F.4 is
+precisely a statement about depth and width. Third, one of
+its released revisions carries the upstream defect described in
+Appendix A.3, which forces masked windows across the very
+region that Appendix F.5 discusses. The first reason alone
+would keep it out of a scale-ordered comparison; the three
+together make the exclusion unambiguous. One cost of the
+exclusion is recorded where it falls due, in Appendix F.4.
+Reading discipline. The calibrated readout detects withingroup coherent motion against a membership-redrawn null
+whose threshold adapts to the local geometry. Horizontal comparisons of it between segments are therefore downgraded,
+and only three comparison types are used: time shape at fixed
+grouping, cross-size comparison under one grouping convention, and between-layer comparison inside one segment.
+Sampled-preview instrumentation exists for the larger sizes
+and no number here is taken from it; where a full readout
+does not exist the cell is left empty rather than filled.
+
+F.2
+
+The Auxiliary–Bulk Partition Holds at Every
+Size
+
+Figure 17 reads the partition of Appendix C.3 at all six sizes
+under three probes, one from each family. The separation is
+not a tendency that survives aggregation: the median auxiliary
+series exceeds the median bulk series at every one of the 123
+anchors, at all six sizes, under all three probes. The smallest
+median gaps anywhere in the panel occur at 1.4B late in
+training, at 0.036 for ESA, 0.351 for 1 − FRR, and 0.115 for
+the DMD direction cosine.
+The interquartile bands are disjoint at every anchor for the
+subspace-residual and predictor-based readouts at all six sizes,
+and for ESA at every size except 1.4B, where they overlap on
+30% of anchors in the late window. The frozen-coordinate
+fraction is identically zero here, at every segment and every
+anchor, so none of this contrast is carried by coordinates that
+do not move.
+Two conventions travel with the figure. Bulk is the strict
+matrix set, qkv together with the attention output projection
+and the MLP, with both embedding segments dropped. Under
+the looser alternative that keeps everything not in the vector
+segment, the bulk means move by at most 1.2 × 10−4 for ESA
+and 1 − FRR but by up to 6.3 × 10−3 for the DMD cosine,
+which is why the strict rule is fixed throughout this appendix.
+And the calibrated readout does not enter this figure at all;
+where it appears later it is reported as excess over its null
+level.
+
+(a) Sizes, coverage, and external landmarks
+Parameters
+Model
+
+S2
+
+Train-loss minimum
+
+non-embed. L × dmodel anchors in [7k, 129k]
+
+total
+
+Pythia-14M
+Pythia-31M
+Pythia-70M
+
+14,067,712
+30,494,720
+70,426,624
+
+1,189,888
+4,739,072
+18,915,328
+
+6 × 128
+6 × 256
+6 × 512
+
+123
+123
+123
+
+no public telemetry
+no public telemetry
+step 50,345 (2.828)
+
+Pythia-160M
+
+162,322,944
+
+85,056,000
+
+12 × 768
+
+123
+
+step 76,409 (2.465)
+
+Pythia-410M
+
+405,334,016
+
+302,311,424
+
+24 × 1024
+
+123
+
+none in windowa
+
+1,414,647,808 1,208,602,624
+
+24 × 2048
+
+123
+
+no verified telemetryb
+
+Pythia-1.4B
+
+Bulk ESA landmark
+(τ =5, group p50 )
+—
+—
+min 0.426 @ 98k; local rise
+peak 0.467 @ 77k
+min 0.424 @ 68k; sustained rise
+from 78k to 0.45–0.47
+late rise from ≈85k, peak
+≈0.49 @ 110–118k
+—
+
+Anchors are steps 7000 to 129000 at spacing 1000, identical for every size. Loss minima are recomputed from the public telemetry with a
+±1500-step rolling median. a The smoothed 410M loss is still descending at the right edge of the anchor domain (step 128,756, 2.175) and
+reaches 2.173 at step 143k, so no bottoming event occurs inside the window. b The local 1.4B telemetry file does not match the released
+143k-step cosine schedule, so no loss landmark is quoted. Empty cells mean not read out on the full protocol; they are deliberately not filled
+from the sampled-preview instrumentation.
+(b) Internal transition readings
+Model
+
+qkv LRGFcal
+collapse
+
+Null-line
+onset
+
+Row pocket
+onset
+
+Row pocket peak
+(frac. @ layer/step)
+
+Persistent qkv
+LRGFcal band
+
+Pythia-14M
+Pythia-31M
+Pythia-70M
+Pythia-160M
+Pythia-410M
+Pythia-1.4B
+
+43k (17k)c
+28k
+a19000 → a20000
+71k (12k)c
+25k
+none in windowd
+
+—
+—
+20k
+13k (+72k deep)
+92k
+not in window
+
+—
+—
+20k
+20k
+48k
+not in windowe
+
+—
+—
+42.1% @ L4/84k
+32.8% @ L8/92k
+43.2% @ L21/116k
+3.0% @ L15/128k
+
+none surviving in tail
+L5
+L4 (mid and tail)
+L8–L11 (mid); L6/L7 (tail)
+L19–L23 (tail); L21–L23 (mid)
+no collapse; band persists
+
+Onsets use persistence criteria rather than visual reading. Null-line onset: nullq05 < 0.90 for five consecutive anchors. Row pocket onset:
+peak-layer share of rows with FRR < 0.7 above 5% for three consecutive anchors, on D=512 qkv rows, with row-length invariance checked
+over D ∈ [128, 3072] on three sizes. Segment-level collapse onset: one anchor after the last anchor at which the pooled excess reaches half its
+early-phase mean, declared only when the tail-phase mean has returned to the null level. The 70M collapse is a single-anchor step: head-level
+layer-mean excess 0.304 → −0.029, a change of 0.333 that is 3.7× the next largest in the series, with layers above chance falling from 5 to 1;
+across it the real head groups are unchanged (FRRp50 = 0.994 ± 0.001) while the null moves (nullq05 from 0.994 to 0.67–0.85). c Where the
+series dips and recovers, the first crossing is given in parentheses. d 1.4B has a mid-layer extinction window at 95 to 118k, with the calibrated
+readout at L11/L15/L21/L23 falling to 0.02–0.27 near 96k and recovering from about 120k, but no global collapse. e The 1.4B row-level
+population reaches 3.0% at the last anchor and is still rising there. The two onset columns are different instruments and must not be
+merged. The null-line and row-pocket columns are read on the row-level lane and order with size; the segment-level collapse column is read on
+the calibrated pooled lane and does not (70M 20k, 410M 25k, 31M 28k, 14M 43k, 160M 71k). Any size-ordering statement names which
+instrument it uses.
+(c) Model excluded from every cross-scale reading
+Excluded model
+Pythia-1B
+
+total
+
+non-embed. L × dmodel Grounds for exclusion
+
+1,011,781,632 805,736,448
+
+16 × 2048
+
+(i) the only model of the suite trained in bfloat16 upstream,
+following an fp16 loss spike; (ii) depth not monotone in
+size, at 16 layers between two 24-layer models; (iii) an
+upstream defect in revision step116000, which forces
+masked windows at 116 to 121k.
+
+Pythia-1B contributes to no row, ordering, or trend in this appendix. Its released checkpoints are stored in fp16 like every other size, so the
+difference is in the training arithmetic and not in the container of the weights we read; the size of any residual effect on the probes is not
+measured here. Reasons (i) to (iii) are independent facts and none is evidence for the others.
+
+Table 11: Cross-scale readings. (a) sizes, coverage, and the external landmarks available per size. (b) the internal transition
+readings, all under persistence criteria rather than visual reading; the two onset instruments are different lanes and are not merged.
+(c) the one model excluded from every cross-scale reading, with its three independent grounds.
+
+Figure 16: Probe readings against two externally defined summaries of realized optimization, over the eight conditions and five
+anchors of the transfer family, on the bulk backbone scope at τ =5. (a) ESA against movement directedness, Eq. (5), the net
+displacement of the future window divided by the path length travelled inside it. (b) ESA against the loss-side gradient-coherence
+estimate, Eq. (6), which is built from the loss curve, the per-step learning rates, and the per-step gradient norms, and carries no
+parameter-direction information. Horizontal lines mark the random sign-agreement level of 0.5. Conditions differ in dataset,
+in whether the run is fine-tuned or trained from scratch, in learning rate, and in schedule. Both relations are retrospective
+correspondences between summaries of the same stored trajectories.
+
+F.3
+
+Segment Division of Labour
+
+Figure 18 puts the four segments of every size on one axis
+under two readouts, and the two readouts do not agree about
+how much structure there is to see.
+Under ESA the three matrix segments are nearly indistinguishable, and they become more so as the model grows: the
+median spread between them narrows monotonically from
+0.048 at 14M to 0.011 at 1.4B. The vector segment stays
+above all three by at least 0.034 at every anchor and every
+size. Read through coordinate signs alone, the bulk of a larger
+model looks more internally uniform, not less.
+Under the calibrated readout the same segments separate
+clearly, and qkv carries a distinct time shape: high early, then
+a sustained collapse to the null level. The collapse onsets are
+20k at 70M, 25k at 410M, 28k at 31M, 43k at 14M, and 71k at
+160M, with no sustained collapse at 1.4B inside the window.
+That ordering is not monotone in parameter count, under
+either of the two crossing conventions recorded in Table 11.
+This is where the two instruments must be kept apart. The
+collapse just described is read on the pooled calibrated lane.
+The null-line and row-level pocket onsets of Appendix D.2
+are read on the row-level lane, and those do order with size. A
+size-ordering statement about this system is only meaningful
+once it names which of the two it is about.
+The corresponding segment-resolved pocket populations,
+including the finding that the attention output projection
+carries the same wave as qkv at row granularity and that only
+the output half of the MLP carries signal, are reported in
+Appendix D.2 and are not repeated here.
+
+F.4
+
+Where the Calibrated Signal Survives
+
+Figure 19 resolves the qkv calibrated readout by layer and
+step at all six sizes on one colour scale, with white at the null
+level.
+Early in training the signal is broad, covering 5/6, 6/6, 6/6,
+10/12, 23/24, and 23/24 layers at the six sizes in ascending
+order. It then contracts onto a small persistent band whose
+absolute layer index moves deeper as the model deepens: in
+the middle phase the band is layer 5 at 14M and 31M, layer 4
+at 70M, layers 8 to 11 at 160M, and layers 21 to 23 at 410M.
+In the tail phase nothing survives at 14M, while the band sits
+at layer 5 (31M), layer 4 (70M), layers 6 to 7 (160M), and
+layers 19 to 23 (410M). In relative depth the band sits in the
+deepest quarter of every model that contracts at all.
+1.4B does not contract inside the window: 22 of its 24 layers
+are still above the null in the tail phase. It shows instead an
+extinction window near 96 to 118k in which the raw fraction
+drops to nearly zero in most layers, with only the deepest
+block holding 0.15 to 0.44, followed by a recovery from about
+120k to the highest values of the run.
+Depth and width. Parameter count alone does not order
+these transitions. Among the sizes retained, the one contrast
+that survives holds depth fixed: at 24 layers the narrower
+410M reaches its row-level pocket onset at 48k and its nullline onset at 92k, while the wider 1.4B has reached neither
+by 128k. Wider at equal depth is later. The complementary
+contrast, deeper at equal width, rested on the pair that the
+exclusion of 1B removes, so depth and width are confounded
+along the suite’s own scaling ladder among the sizes retained.
+The depth half of a two-factor reading is therefore registered
+
+(a)
+14M
+
+1.0
+
+ESA
+
+0.8
+
+31M
+
+70M
+
+160M
+
+410M
+
+1.4B
+
+aux
+bulk
+
+0.6
+0.4
+
+1 − FRR
+
+1.0
+
+(b)
+aux
+
+0.5
+bulk
+
+0.0
+
+DMD cosine
+
+1.0
+
+(c)
+aux
+bulk
+
+0.5
+
+0.0
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+3
+
+training step (×10 )
+
+Figure 17: Auxiliary and bulk coordinates stay separated at every size and every anchor. Rows: (a) ESA, (b) 1 − FRR, (c) DMD
+direction cosine; columns: the six sizes. The solid line is the group median over the pooled group set and the shaded band the
+interquartile range; orange is auxiliary, the vector segment, and blue is bulk. Grey dashed references mark 0.5 in (a) and 0 in (c).
+All panels use one readout protocol at τ =5 over the 123 shared anchors, and because the suite trains every size with the same
+2M-token batch, a matched step grid is also a matched token grid. Horizontal comparisons between sizes are therefore at matched
+steps and tokens, and not at matched loss, compute, or training progress. The median separation holds at every anchor at all six
+sizes under all three probes; the smallest median gaps are 0.036, 0.351, and 0.115 for the three rows, all at 1.4B late in training.
+Interquartile ranges are disjoint at every anchor for (b) and (c) at all sizes, and for (a) at every size except 1.4B, where they overlap
+on 30% of anchors. Bulk is the strict matrix set, with both embedding segments dropped; under the looser alternative the bulk
+means move by at most 1.2 × 10−4 for (a) and (b) but by up to 6.3 × 10−3 for (c), which is why the strict rule is used throughout.
+Pythia-1B is excluded here and in every other cross-scale panel, on the three independent grounds of Table 11(c).
+as unsupported here rather than asserted.
+
+F.5
+
+Co-location Registry for Late Events
+
+This subsection records where the internal readouts and the
+public loss telemetry land relative to each other on the step
+axis. Nothing here is a directional claim.
+At 70M the smoothed loss reaches its minimum at step
+50,345 and rises afterwards, bulk ESA has a local rise peaking
+at 0.467 near 77k before descending to its global minimum
+0.426 at 98k, and the row-level main wave peaks at 84k. At
+160M the loss minimum is at 76,409, bulk ESA reaches its
+global minimum 0.424 at 68k and rises persistently from 78k
+to a plateau of 0.45 to 0.47, and the pocket peak is at 92k.
+On both sizes the loss minimum, the ESA turn, and the main
+pocket wave fall in the same stretch of training.
+At 410M that coincidence does not hold, and this is the
+more informative case. The smoothed loss has no minimum
+
+inside the anchor domain: it is still descending at the right edge
+and remains flat or descending to the end of training. The ESA
+readout nevertheless shows the same late rise, recomputed
+on the full-protocol extended panel: bulk group-level ESA
+(τ =5, group p50 ) sits on a 0.436–0.441 plateau from 60k to
+85k, climbs steadily from about 85k, and peaks at 0.48–0.49
+over 111 to 117k. The late ESA rise therefore occurs without
+a loss-bottoming event, and the co-location seen at the two
+smaller sizes should not be carried to larger sizes as if it were
+a general pairing.
+One monotone ordering. Figure 20 reports the internal
+diagnostics of the predictor-based family on the bulk set. The
+fitted operator’s step amplitude falls progressively below the
+realized step, and the onset of that deficit is earlier the larger
+the model: 58k, 31k, 21k, 15k, 14k, and 11k across the six
+sizes in ascending order. This is the only cross-scale ordering
+in this appendix that is monotone in parameter count. By the
+
+qkv
+
+attn_out
+
+mlp
+
+vec (aux)
+
+(a)
+14M
+
+1.0
+
+31M
+
+70M
+
+160M
+
+410M
+
+1.4B
+
+ESA
+
+0.8
+0.6
+0.4
+
+(b)
+LRGFcal excess
+
+0.4
+0.3
+
+43k
+
+28k
+
+20k
+
+71k
+
+(17k)
+
+25k
+
+no collapse
+in window
+
+(12k)
+
+0.2
+0.1
+0.0
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+25
+
+75
+
+125
+
+3
+
+training step (×10 )
+
+Figure 18: Segment division of labour across sizes: ESA barely separates the matrix segments while the calibrated readout does.
+Columns are the six sizes. (a) ESA group median per segment. (b) pooled calibrated excess per segment, drawn as a five-anchor
+centred rolling median, with the onset markers computed on the unsmoothed series. The three matrix segments share a blue
+system (qkv solid, attention output dashed, MLP dotted) and the vector segment is orange; grey dashed references mark 0.5 in
+(a) and the null level 0 in (b), where the floor at −0.05 is the zero-fraction case. The dark dotted line is the sustained collapse
+onset of the qkv series, and where the series dips and recovers the first crossing is given in grey parentheses. Onsets are 20k
+(70M), 25k (410M), 28k (31M), 43k (14M), and 71k (160M), with no sustained collapse at 1.4B, so the ordering is not monotone
+in parameter count under either crossing. In (a) the three matrix segments stay within a median of 0.048, 0.038, 0.027, 0.021,
+0.014, and 0.011 of one another in ascending size order, so the spread between matrix segments shrinks monotonically with size,
+while the vector segment stays above all of them by at least 0.034 at every anchor and size.
+last anchor the bulk median amplitude ratio has fallen to 0.13
+to 0.38 at every size while the largest eigenvalue modulus
+settles into 0.59 to 0.68, with 14M the exception at 0.78: the
+fitted operator keeps a stable spectrum while the amplitude
+of the step it predicts falls well below the step actually taken.
+
+The late cluster above may be one event or several, and
+the exact-zero auxiliary amplitude ratio is as consistent with
+an instrument boundary as with a property of the trajectory.
+Distinguishing the two requires a readout that does not go
+through the same fit.
+
+The late cluster. Several unrelated readouts move inside a
+narrow late window. On 70M and 160M the auxiliary DMD
+amplitude ratio falls to exactly zero and stays there from
+anchors 118k and 117k respectively, while the bulk series
+over the same anchors is unaffected. On 70M a secondary
+row-level wave appears near 115k. On 410M the ESA peak,
+the pocket peak at 116k, and an MLP output-half patch in
+the middle layers all fall in 110 to 120k. Whether this is
+one phenomenon or several is open. Two constraints are
+worth recording: the learning-rate schedule has no breakpoint
+anywhere near it, since the decay is a single cosine with no
+constant tail, and the auxiliary series that goes to zero does
+so exactly, which is the signature of a degenerate fit rather
+than of a small value.
+
+1.4B sits at the edge of the observation window. Its rowlevel population reaches 3.0% at the last anchor and is still
+rising, and its calibrated band has not contracted. It is therefore
+a sample of a transition beginning at the window edge, not of
+a transition that did or did not happen, and it should not be
+read as a negative case.
+
+F.6
+
+Open Questions
+
+Four items are registered as open rather than resolved.
+
+The local 1.4B loss telemetry does not match the released
+143,000-step cosine schedule, so no loss landmark is quoted
+for it and no co-location statement is made at that size.
+Excluding 1B removes the only pair of sizes that share a
+width, so the depth leg of the depth and width reading has
+no support among the sizes retained. Recovering it would
+require either a fourth model at 24 layers and width 2048 or
+an assessment of how much the training-arithmetic difference
+actually moves these probes.
+
+(b) Pythia-31M, L = 6
+
+(c) Pythia-70M, L = 6
+
+5
+
+5
+
+5
+
+4
+
+4
+
+4
+
+3
+
+3
+
+3
+
+2
+
+2
+
+2
+
+1
+
+1
+
+1
+
+0
+
+0
+
+0
+
+25
+
+75
+
+125
+
+25
+
+(d) Pythia-160M, L = 12
+
+75
+
+125
+
+20
+
+8
+
+16
+
+16
+
+6
+
+12
+
+12
+
+4
+
+8
+
+8
+
+2
+
+4
+
+4
+
+layer
+
+20
+
+75
+
+125
+3
+
+training step (×10 )
+
+0
+
+25
+
+75
+
+125
+3
+
+training step (×10 )
+
+0.4
+75
+
+125
+0.3
+
+(f) Pythia-1.4B, L = 24
+
+10
+
+25
+
+0.5
+
+25
+
+(e) Pythia-410M, L = 24
+
+0
+
+0.6
+
+0
+
+0.2
+
+0.1
+
+LRGFcal excess (0 = null level)
+
+layer
+
+(a) Pythia-14M, L = 6
+
+0.0
+25
+
+75
+
+125
+
+training step (×103)
+
+Figure 19: Where the qkv calibrated signal survives: layer against step at six sizes on one colour scale. Each panel is one model,
+rows are transformer blocks with layer 0 at the bottom, and columns are the 123 shared anchors. The probe is reported as excess
+over its α=0.05 null level, so 0 is exactly the null and the raw pocket fraction is the excess plus 0.05; the colour ramp is anchored
+with white at 0, every cell at or below the null renders white, and the ramp is clipped at 0.60, which affects 0.21% of cells. Ticks
+on the right edge mark the layers whose tail-phase mean stays above the null. Early in training the signal covers 5/6, 6/6, 6/6,
+10/12, 23/24, and 23/24 layers in ascending size order, and then contracts onto a persistent band whose absolute layer index
+moves deeper as the model deepens. 1.4B does not contract inside the window: 22 of 24 layers are still above the null in the
+tail phase, and it shows instead an extinction window near 96 to 118k followed by a recovery from about 120k. The calibrated
+readout is identical under both bulk rules, since the vector segment does not enter it.
+
+G
+
+Architecture- and Recipe-Conditioned
+Results
+
+Section 4.4 uses optimizer-family variation as its compact example and defers the rest to this appendix: the size-controlled
+architecture comparison, the controlled weight-decay and
+momentum dose studies, the wider optimizer panel, and the
+comparison between predictability and optimizer quality.
+
+G.1
+
+Size-Controlled Architecture Comparison
+
+Figure 21 compares three architectures trained on the same
+dataset with SAM under a cosine schedule. ViT-mid and
+the ResNet have nearly matched parameter counts, and ViTmid retains higher bulk ESA at every measured anchor. The
+separation is present from early training: at epoch 5 the two
+ViT scales read about 0.72 and 0.71 against 0.65 for the
+ResNet, and around epoch 40 the three read about 0.60, 0.60,
+and 0.52. The smaller ViT follows the same higher-ESA
+profile while holding roughly one fifth as many parameters as
+ViT-mid, so parameter count alone does not order the three.
+Because each model uses its own standard learning rate,
+this comparison does not isolate architecture from every
+hyperparameter difference. What it establishes under the
+
+stated conditions is a stable architecture-associated contrast:
+ViT-class models retain more bulk directional persistence than
+the size-matched ResNet throughout the measured trajectory.
+
+G.2
+
+Optimizer Families along Training Loss
+
+Optimizer families traverse the loss trajectory at different
+rates, so comparing them at matched epochs mixes the effect of the update rule with the effect of elapsed training.
+Figure 6 therefore aligns them on training loss and restricts
+the comparison to the loss range that all displayed families
+share. Matched loss does not equate optimizer state, and the
+alignment removes an elapsed-training confound rather than
+all confounds.
+Over the shared range the families occupy distinct profiles.
+SAM sits in the highest regime, at roughly 0.58 to 0.73 bulk
+ESA over the displayed interval. Muon stays near the 0.5
+sign-agreement reference. Adam lies about 0.08 below plain
+SGD over most of their overlap. SGD and AdaGrad approach
+a similar low-loss level near 0.545 despite following different
+profiles earlier. Optimization position therefore organizes how
+predictability evolves, while the update rule conditions its
+level and its local directional structure.
+The ordering is architecture-conditioned rather than uni-
+
+1.0
+
+0.6
+14M
+
+0.4
+
+1.4B
+410M
+160M
+31M
+70M
+
+0.2
+0.0
+
+(c)
+70
+60
+
+0.9
+
+0.8
+
+25
+
+75
+
+125
+3
+
+training step (×10 )
+
+DMD max |λ|
+
+DMD amplitude ratio
+
+1.0
+
+(b)
+
+0.8
+
+14M
+
+0.7
+
+410M
+1.4B
+160M
+31M
+70M
+
+0.6
+
+0.5
+
+25
+
+75
+
+125
+3
+
+training step (×10 )
+
+onset step (×103)
+
+(a)
+
+14M
+
+50
+40
+31M
+
+30
+70M
+
+20
+
+160M 410M
+
+1.4B
+
+10
+0
+
+106
+
+107
+
+108
+
+109
+
+non-embedding parameters
+
+Figure 20: Internal predictor-family diagnostics on the bulk set across six sizes. (a) median predicted-over-realized step amplitude
+of the fit; (b) median largest eigenvalue modulus of the fitted operator; (c) the onset step of the amplitude deficit against
+non-embedding parameter count on a log axis. Line shade encodes size on a single ramp and every curve is additionally labelled
+at its right end, so colour is never the only encoding. Onset is the first anchor opening five consecutive anchors whose median
+amplitude ratio is below 0.5, marked by the grey dashed reference in (a). The deficit sets in earlier the larger the model, at 58k,
+31k, 21k, 15k, 14k, and 11k in ascending size order, which is the only cross-scale ordering in this appendix that is monotone in
+parameter count. By the last anchor the bulk median amplitude ratio has fallen to 0.13 to 0.38 at every size while the eigenvalue
+modulus settles into 0.59 to 0.68, with 14M the exception at 0.78.
+why the families are retained jointly, since one intervention can
+register differently through coordinate signs, vector direction,
+and containment in the recent-history span.
+
+Figure 21: Size-controlled architecture comparison under
+SAM. Curves report canonical bulk ESA across ten anchors
+for ViT-tiny, ViT-mid, and the parameter-matched ResNet;
+ViT-mid and the ResNet have nearly equal parameter counts.
+The dashed line marks the random sign-agreement level of
+0.5. Each model uses its own standard learning rate, so the
+comparison controls scale but not every hyperparameter.
+
+versal. The weight-decay and momentum ladders below are
+the more controlled comparison, because each of their arms
+changes exactly one named hyperparameter relative to plain
+SGD.
+
+G.3
+
+Weight-Decay and Momentum Dose Ladders
+
+Figure 22 reports the two dose ladders for ViT-mid under
+the canonical vision grouping, read through all three probe
+families against reversed training loss. The ladders also show
+
+Weight decay. The weight-decay ladder shows a consistent
+dose ordering on all three readouts. ESA increases with the
+decay coefficient at shared loss positions and approaches 0.90
+at the largest dose. VCS rises towards a similar level, so the
+full displacement direction becomes more persistent, and
+FRR falls to about 0.28, so the future displacement is more
+strongly contained in the span of recent updates.
+The readouts differ in sensitivity at the low end. At λ =
+10−4 , ESA and VCS remain near the plain-SGD profile while
+FRR has already separated from it, at about 0.66 against 0.79.
+The subspace-residual probe therefore resolves a low-dose
+change that the displacement-direction probes do not. The
+mechanism is visible in the update rule: SGD with weight
+decay adds a component proportional to −λw, which is a
+slow and coherent drift, and the monotone response of all
+three readouts shows that this component is picked up at the
+sign, vector, and subspace levels alike. These are raw probe
+profiles over the realized trajectory, not a decomposition of
+the weight-decay mechanism.
+Momentum. The momentum ladder runs the other way.
+At shared loss positions, a larger momentum coefficient
+depresses both displacement-direction readouts and lifts FRR
+by a smaller amount. The response is clearest at the vector
+level: VCS falls further than ESA, whose change is only about
+−0.02 to −0.03.
+Under this protocol higher momentum therefore reduces the
+forms of bulk short-horizon redundancy these probes capture.
+The statement is about the realized parameter trajectory and
+not about the smoothness of the underlying gradient estimate;
+
+Figure 22: Controlled weight-decay and momentum dose ladders for ViT-mid. Panels report (a) bulk ESA, (b) bulk VCS, and
+(c) bulk FRR against reversed training loss under the canonical K=16 vision grouping. Each arm changes only the indicated
+weight-decay or momentum value relative to plain SGD, and curves are compared over their overlapping loss ranges. The two
+ladders order the three readouts in opposite directions, and the subspace-residual readout separates from plain SGD at a dose
+where the two displacement-direction readouts do not.
+smoothing the gradient and making the resulting parameter displacement predictable at short horizons are distinct
+properties. Two common interventions can thus reorganize
+the realized trajectory in opposite directions across the same
+probe panel.
+Both ladders exclude the two collapsed momentum runs
+recorded in Appendix A.2.
+
+G.4
+
+Scope. These comparisons are representative rather than
+exhaustive. The architecture and optimizer panels use the
+standard configuration of each model, and the dose ladders
+cover one ViT-mid setting. What they establish is not a ranking
+of architectures or of update rules, but that the three probe
+families resolve, and resolve differently, the changes that
+model structure and training recipe impose on the realized
+trajectory.
+
+Predictability Is Not an Optimizer Ranking
+
+Section 4.4 cautions that higher predictability should not be
+read as better optimization. Two measurements support that
+caution.
+First, the two orderings are not aligned. Within each architecture, the rank correlation between anchor-averaged bulk
+ESA and final test accuracy across the measured optimizer
+cells is negative at every architecture, with a median of −0.71
+over the five architectures and a range from −0.89 to −0.20.
+The cell counts behind those five correlations are 6, 6, 7, 7,
+and 4, so the weakest of them rests on four points and should
+not be read on its own. Reading a higher probe value as a better optimizer would therefore invert the accuracy ordering in
+these cells rather than reproduce it. This is a correspondence
+between two summaries of the same runs and is confounded
+in the obvious way, since different families reach different loss
+positions in 50 epochs; it is registered as a caution against the
+ranking reading and not as a claim that predictability predicts
+accuracy with either sign.
+Second, the weight-decay ladder provides the same conclusion inside a single controlled arm. Predictability increases
+monotonically along that ladder, yet the 2 × 10−3 arm terminates at a higher loss and reaches about 0.707 final accuracy
+against about 0.755 for the 10−3 arm. Temporal redundancy
+and training quality move in opposite directions along a ladder
+in which only one hyperparameter changes.
+
+H
+
+Online Selective Prediction
+
+Section 4 is retrospective throughout: every probe reads a
+stored trajectory after the fact. The conclusion of the main
+paper points to one narrow online check of whether the
+measured spatial organization is useful as a prior over where
+to attempt prediction during training. This appendix gives
+that check in full.
+
+H.1
+
+Protocol and Selection Rule
+
+The online method writes a forecast back into a coordinate
+only when that forecast passes a coordinate-wise acceptance
+test on scale control and dynamic consistency; coordinates that
+fail continue to follow the baseline optimizer. That acceptance
+mask is the immediate safeguard and is unchanged in every
+arm below.
+The variable under test is not the mask but the eligibility set
+it is applied to. Two settings are compared against ordinary
+training. The full-scope arm makes every trainable parameter
+eligible. The restricted arm keeps the identical predictor
+and identical acceptance mask but makes only auxiliary
+parameters eligible, in the exact sense of Appendix C.1.
+The restriction is deliberately coarse: it uses the role-level
+separation that the retrospective measurements report, and
+it makes no attempt to detect the localized, time-varying
+pockets inside bulk tensors online. Nothing in the eligibility
+rule reads the future, and nothing reads test labels.
+
+Architecture
+
+Arm
+
+Test accuracy
+
+Gain (pp)
+
+Accepted
+
+ViT-tiny
+
+baseline
+full scope
+auxiliary only
+
+0.7422 ± 0.0057
+0.7484 ± 0.0018
+0.7516 ± 0.0058
+
+—
++0.62 ± 0.43
++0.94 ± 0.09
+
+—
+23.9%
+0.80%
+
+ViT-mid
+
+baseline
+full scope
+auxiliary only
+
+0.7425 ± 0.0032
+0.7498 ± 0.0032
+0.7511 ± 0.0029
+
+—
++0.73 ± 0.18
++0.87 ± 0.09
+
+—
+23.2%
+0.32%
+
+Table 12: Online comparison on CIFAR-10 over three seeds under pure SGD, with momentum and weight decay both zero. All
+three arms share the same predictor and the same coordinate-wise acceptance mask; the arms differ only in which parameters are
+eligible for write-back. “Accepted” is the fraction of parameters that actually received a written-back forecast. Values are means
+over seeds with one standard deviation, and each arm is read at the epoch chosen on a held-out split within its own run.
+
+Figure 23: Multi-seed online comparison under pure SGD
+for ViT-tiny and ViT-mid. Curves show seed means with
+±1 standard-deviation bands for ordinary training, full-scope
+eligibility, and auxiliary-only eligibility.
+The comparison uses ViT-tiny and ViT-mid under pure
+SGD, with momentum and weight decay both set to zero,
+over three seeds. Each arm reports the test accuracy at the
+epoch chosen on a held-out split of the training data, and the
+gain is taken against the baseline of the same seed.
+
+H.2
+
+Multi-Seed Results
+
+Table 12 and Figure 23 give the comparison. On both architectures the restricted arm produces the larger mean gain
+while accepting write-back for less than 1% of parameters,
+0.80% on ViT-tiny and 0.32% on ViT-mid. The full-scope
+arm accepts about 24% of parameters and yields smaller mean
+gains, +0.62 percentage points on ViT-tiny and +0.73 on
+ViT-mid. The restricted arm also shows the lower across-seed
+variability: its standard deviation is 0.09 percentage points at
+both scales, against 0.18 to 0.43 for the full-scope arm.
+The improvement is therefore not obtained by predicting
+more. Within these two cells, narrowing eligibility to the
+region that the retrospective measurements identify as higherconfidence gives a larger and more stable gain than making
+everything eligible, despite an accepted fraction roughly 30and 70-fold smaller.
+
+H.3
+
+What This Does and Does Not Show
+
+The result is consistent with the auxiliary–bulk separation
+reported in Section 4.2, and that is the extent of the claim.
+Four limits travel with it.
+It does not isolate the role restriction as the causal source
+of the improvement, since the two arms differ in accepted
+
+fraction as well as in eligibility. It does not show that auxiliary
+parameters are uniformly predictable, only that the region is
+higher-confidence on average. It is not a wall-clock acceleration result, because no accounting of predictor overhead is
+attempted here. And it covers two model–training cells at one
+optimizer setting, so it is an initial indication rather than a
+demonstration that the measurement framework transfers to
+online use.
+The coordinate-wise acceptance mask, not the role restriction, remains the operative safeguard in every arm. The static
+role-level eligibility rule implements neither the retrospective
+probe panel nor any detection of the localized pockets inside
+bulk tensors that Appendix D describes.
+
+

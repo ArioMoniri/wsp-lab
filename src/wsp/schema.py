@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -95,6 +96,12 @@ def aggregate(records: list[EvalRecord]) -> dict[str, float]:
         out.setdefault(r.benchmark, []).append(r.correct)
         loops.setdefault(r.benchmark, []).append(float(r.hit_max_tokens))
     agg = {b: sum(v) / len(v) for b, v in out.items()}
+    ppl = [r for r in records if r.benchmark == "wikitext_ppl"]
+    if ppl:
+        total = sum(r.n_tokens for r in ppl)
+        if total <= 0 or any(r.correct <= 0 for r in ppl):
+            raise ValueError("perplexity needs positive scores and token counts")
+        agg["wikitext_ppl"] = math.exp(sum(math.log(r.correct) * r.n_tokens for r in ppl) / total)
     gen = [x for b, v in loops.items() for x in v if b in ("gsm8k", "math500", "ifeval")]
     if gen:
         agg["loop_rate"] = sum(gen) / len(gen)
