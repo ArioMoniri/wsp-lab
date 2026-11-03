@@ -55,3 +55,5 @@
 | 2026-11-03 | perf REVISE: mamba-ssm c++20 build + dispatch | codex/gpt-6.1-terra high | running |
 | 2026-11-03 | heretic+lora REVISE | codex/gpt-6.1-sol high | done c6d48ee |
 | 2026-11-03 | Board A re-review feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | running |
+| 2026-11-03 | scribe intro+related | copilot/auto | done a74ed08 |
+| 2026-11-03 | humanizer intro+related | claude_aio_gmail_api/claude-haiku-5-5 | running |
