@@ -91,3 +91,69 @@ def test_presence_penalty_ignores_prompt_and_counts_repeats_once():
     scores = torch.zeros(1, 5)
     result = PresencePenalty(2, 1.5)(torch.tensor([[0, 1, 2, 2, 3]]), scores)
     assert result.tolist() == [[0, 0, -1.5, -1.5, 0]]
+
+
+def test_choice_likelihood_only_scores_continuation_and_normalizes_characters():
+    from types import SimpleNamespace
+
+    from wsp.eval.run import HFRunner
+
+    class Tokenizer:
+        def encode(self, text, **kwargs):
+            return [0, 1] if text == "context" else [2]
+
+    class Model:
+        device = "cpu"
+
+        def __call__(self, ids):
+            return SimpleNamespace(logits=torch.zeros(1, ids.shape[1], 3))
+
+    runner = HFRunner.__new__(HFRunner)
+    runner.tokenizer, runner.model = Tokenizer(), Model()
+    scores = runner.choice_scores("context", ["a", "bbbb"])
+    assert scores[0] == pytest.approx(-1.0986123)
+    normalized = runner.choice_scores("context", ["a", "bbbb"], True)
+    assert normalized[1] == pytest.approx(scores[1] / 4)
+
+
+def test_judge_only_exports_prompts(tmp_path):
+    import json
+
+    from wsp.eval.refusal import export_judge
+
+    out = tmp_path / "judge.jsonl"
+    export_judge(
+        [
+            {
+                "benchmark": "over_refusal",
+                "item_id": "0",
+                "extra": {"prompt": "hello", "output": "sorry"},
+            }
+        ],
+        out,
+    )
+    row = json.loads(out.read_text())
+    assert row["item_id"] == "0"
+    assert "sorry" in row["judge_prompt"]
+
+
+def test_report_reads_only_complete_runs_and_calculates_blog_gap(tmp_path):
+    import json
+
+    from wsp.eval.report import report
+
+    records = [
+        EvalRecord("base", "gsm8k", "0", 1, 4, True),
+        EvalRecord("base", "gsm8k", "1", 0, 3, False),
+    ]
+    write_results(
+        tmp_path / "run", records, {"max_new_tokens": 4096}, {"status": "complete", "seed": 0}
+    )
+    out = tmp_path / "RESULTS.md"
+    report([tmp_path / "run"], out, "job.log")
+    text = out.read_text()
+    assert "50.00" in text and "+36.20" in text
+    assert "Wilson" in text and "job.log" in text
+    (tmp_path / "run" / "manifest.json").write_text(json.dumps({"status": "running"}))
+    with pytest.raises(ValueError):
+        report([tmp_path / "run"], out, "job.log")
