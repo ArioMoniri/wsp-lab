@@ -10,8 +10,12 @@
 | 2026-11-03 | perf SSM (2nd) | codex/gpt-6.1-terra medium | done (2808e52), REVISE expected |
 | 2026-11-03 | heretic+lora (2nd) | antigravity/gemini-3.8-flash | running |
 | 2026-11-03 | Board A perf/ssm-kernels | opencode/glm-5.3 | running |
-| 2026-11-03 | Board A feat/p2-eval | opencode/deepseek-v4-pro | running |
+| 2026-11-03 | Board A feat/p2-eval | opencode/deepseek-v4-pro | APPROVE, merged |
 | 2026-11-03 | Board C model candidates (1st) | antigravity/gemini-3.8-flash | failed: quota exhausted (resets ~10 Nov) |
 | 2026-11-03 | Board C model candidates (2nd) | opencode/glm-5.3 | running |
 | 2026-11-03 | Board B docs/refs-venue | codex/gpt-6.1-terra medium | running |
 | 2026-11-03 | heretic+lora (2nd) | antigravity/gemini-3.8-flash | aborted mid-run (quota); WIP committed 3rd run on kimi |
+| 2026-11-03 | ref ledger repair (1st) | opencode/kimi-k2.7-code | failed: OpenCode Go 5h cap |
+| 2026-11-03 | ref ledger repair (2nd) | grok/grok-4.7 | running |
+| 2026-11-03 | heretic+lora finisher (3rd) | opencode/kimi-k2.7-code | failed: OpenCode Go 5h cap |
+| 2026-11-03 | heretic+lora finisher (4th) | codex/gpt-6.1-sol high | running |
