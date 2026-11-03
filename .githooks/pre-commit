@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-exec scripts/precommit.sh
+scripts/secret_scan.sh && exec scripts/precommit.sh

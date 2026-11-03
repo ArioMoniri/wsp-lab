@@ -1,5 +1,5 @@
 # P2 cheap eval battery; fixed subsets live in configs/eval_subsets/*.txt (item ids)
-generation: {max_new_tokens: 4096, temperature: 0.0, thinking: true, batch_size: 64, seed: 0}
+generation: {max_new_tokens: 4096, temperature: 0.6, top_p: 0.95, top_k: 20, presence_penalty: 1.5, thinking: true, batch_size: 64, seed: 0}
 benchmarks:
   gsm8k:      {n: 200, metric: exact_match}
   math500:    {n: 100, metric: exact_match}
