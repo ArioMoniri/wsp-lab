@@ -15,3 +15,5 @@
 | 2026-11-03 | Board C model candidates (2nd) | opencode/glm-5.3 | running |
 | 2026-11-03 | Board B docs/refs-venue | codex/gpt-6.1-terra medium | running |
 | 2026-11-03 | heretic+lora (2nd) | antigravity/gemini-3.8-flash | aborted mid-run (quota); WIP committed 3rd run on kimi |
+| 2026-11-03 | ref ledger repair (1st) | opencode/kimi-k2.7-code | failed: OpenCode Go 5h cap |
+| 2026-11-03 | ref ledger repair (2nd) | grok/grok-4.7 | running |
