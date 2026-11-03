@@ -35,3 +35,5 @@
 | 2026-11-03 | ref ledger repair (4th) | codex/gpt-6.1-sol high | running |
 | 2026-11-03 | heretic+lora finisher (4th) | codex/gpt-6.1-sol high | done ac85fc6 |
 | 2026-11-03 | Board A feat/p1-heretic-lora | claude_info/claude-haiku-5-5 high | running |
+| 2026-11-03 | zoo builder abliteration (3rd) | codex/gpt-6.1-terra high | done 0b4d345 |
+| 2026-11-03 | Board A feat/p1-zoo-build | codex/gpt-6.1-sol medium | running |
