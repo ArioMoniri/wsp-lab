@@ -58,3 +58,5 @@
 | 2026-11-03 | scribe intro+related | copilot/auto | done a74ed08 |
 | 2026-11-03 | humanizer intro+related | claude_aio_gmail_api/claude-haiku-5-5 | running |
 | 2026-11-03 | perf REVISE dispatch+bench | codex/gpt-6.1-terra high | done 3ee16ab; C++20 mamba build still compiling |
+| 2026-11-03 | humanizer intro+related | claude_aio_gmail_api/claude-haiku-5-5 | done 0f9df52 (12 paragraphs) |
+| 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | running |
