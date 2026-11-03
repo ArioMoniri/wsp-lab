@@ -19,3 +19,7 @@
 | 2026-11-03 | ref ledger repair (2nd) | grok/grok-4.7 | running |
 | 2026-11-03 | heretic+lora finisher (3rd) | opencode/kimi-k2.7-code | failed: OpenCode Go 5h cap |
 | 2026-11-03 | heretic+lora finisher (4th) | codex/gpt-6.1-sol high | running |
+| 2026-11-03 | zoo builder (1st) | opencode/kimi-k2.7-code | failed: OpenCode cap; WIP committed |
+| 2026-11-03 | zoo builder (2nd) | codex/gpt-6.1-terra high | running |
+| 2026-11-03 | plots+lottie (1st) | opencode/glm-5.3 | failed: OpenCode cap; WIP committed |
+| 2026-11-03 | plots+lottie (2nd) | copilot/auto | running |
