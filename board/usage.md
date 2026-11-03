@@ -39,3 +39,5 @@
 | 2026-11-03 | Board A feat/p1-zoo-build | codex/gpt-6.1-sol medium | running |
 | 2026-11-03 | ref ledger repair (4th) | codex/gpt-6.1-sol high | done 3bcea5f, verify exit 0 |
 | 2026-11-03 | Board B re-review docs/refs-venue | codex/gpt-6.1-terra medium | running |
+| 2026-11-03 | Board A feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (5 blocking) |
+| 2026-11-03 | zoo builder REVISE round | codex/gpt-6.1-terra high | running |
