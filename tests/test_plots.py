@@ -270,21 +270,3 @@ def test_small_multiples_accept_run_matrices_and_reject_empty():
 # ----------------------------------------------------------------- demo ----
 
 
-def test_demo_figures_script_writes_one_example_per_panel(tmp_path, monkeypatch):
-    monkeypatch.setattr("sys.argv", ["demo_figures.py", "--out", str(tmp_path), "--seed", "0"])
-    with pytest.raises(SystemExit) as exc:
-        runpy.run_path(str(SCRIPTS / "demo_figures.py"), run_name="__main__")
-    assert exc.value.code == 0
-    names = [
-        "demo_latent_scatter",
-        "demo_sweep_with_ci",
-        "demo_pred_vs_measured",
-        "demo_method_bars",
-        "demo_small_multiples",
-    ]
-    for name in names:
-        png = tmp_path / f"{name}.png"
-        pdf = tmp_path / f"{name}.pdf"
-        assert png.is_file() and png.stat().st_size > 0, name
-        assert pdf.is_file() and pdf.stat().st_size > 0, name
-        assert png.stat().st_size < 300 * 1024, f"{name} exceeds 300 kB"

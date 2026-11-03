@@ -13,3 +13,6 @@
   board posts, docs, or sessions. `scripts/secret_scan.sh` runs on commit and push; `board.sh` redacts tokens.
 - Lambda instances must be terminated right after a job (`scripts/lambda.sh terminate <id>`); only touch
   instances whose name starts with `wsp-lab`.
+- NO demo, mock, placeholder, or synthetic values anywhere in `paper/`, `docs/`, figures, tables, or analyses.
+  Figures are produced only from real run artefacts under `data/` with a run id in the caption. Unit tests may
+  feed synthetic tensors to functions but must never write artefacts into `paper/`, `docs/`, or `assets/`.
