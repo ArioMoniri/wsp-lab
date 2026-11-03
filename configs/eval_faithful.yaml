@@ -1,0 +1,22 @@
+# Faithful token-budget comparison; same seeded items and sampling as cheap.
+generation:
+  max_new_tokens: 32768
+  temperature: 0.6
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  thinking: true
+  batch_size: 32
+  seed: 0
+benchmarks:
+  gsm8k:
+    n: 200
+    metric: exact_match
+  math500:
+    n: 100
+    metric: exact_match
+loop_rate:
+  from:
+  - gsm8k
+  - math500
+  - ifeval
