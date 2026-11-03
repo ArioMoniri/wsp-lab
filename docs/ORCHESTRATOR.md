@@ -19,7 +19,7 @@ Two layers, both configured in this repo:
 | `.claude/agents/features-mathematician.md` | symmetry/linear-algebra nerd | Claude `claude-opus-5-5` | `src/wsp/features`, W2T canonicalisation, invariance tests |
 | `.claude/agents/ssm-researcher.md` | Mamba/JEPA researcher | Claude `claude-fable-5-1` | `src/wsp/predictor`, training loops, ablations |
 | `.claude/agents/weight-reader.md` | the blog's "Astra" character | Codex `gpt-6-astra` (xhigh) | H4: reads weight summaries, predicts Δy, explains |
-| `.claude/agents/reviewer.md` | adversarial reviewer | OpenCode `deepseek-v4-pro` | reviews every worktree against `docs/DOD.md` |
+| `.claude/agents/reviewer-ml.md`, `reviewer-journal.md`, `reviewer-arch.md` | Boards A, B, C (correctness, claims, architecture alternatives) | OpenCode `deepseek-v4-pro` | reviews every worktree against `docs/DOD.md` |
 | `.claude/agents/infra-ops.md` | tmux/Lambda operator | Claude `claude-sonnet-5-5` | `scripts/`, Lambda bursts, rsync back |
 | `.claude/agents/scribe.md` | documentation | OpenCode `claude-haiku-5-5` | `sessions/`, `docs/RESULTS.md` |
 
