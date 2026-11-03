@@ -50,3 +50,4 @@
 | 2026-11-03 | Board A feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | REVISE (4 blocking) |
 | 2026-11-03 | heretic+lora REVISE round | codex/gpt-6.1-sol high | running |
 | 2026-11-03 | scribe: intro + related (paper) | copilot/auto | running |
+| 2026-11-03 | Board A feat/plots-design | claude_aio_gmail_api/claude-haiku-5-5 | REVISE → fixed by orchestrator, merged |
