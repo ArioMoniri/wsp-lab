@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -28,7 +29,12 @@ def resolve_state_key(key: str, available: Iterable[str]) -> str | None:
             return c
     suffix = "." + key.split("layers.", 1)[-1] if "layers." in key else None
     if suffix:
-        hits = [a for a in available if a.endswith(suffix) and "visual" not in a]
+        hits = [
+            a
+            for a in available
+            if a.endswith(suffix)
+            and a.startswith(("model.layers.", "model.language_model.layers."))
+        ]
         if len(hits) == 1:
             return hits[0]
     return None
@@ -46,7 +52,23 @@ def lora_dense_delta(
     cfg = json.loads((lora_dir / "adapter_config.json").read_text())
     if cfg.get("use_dora"):
         raise NotImplementedError("DoRA adapters are not supported")
+    if (
+        cfg.get("fan_in_fan_out")
+        or cfg.get("bias", "none") != "none"
+        or cfg.get("modules_to_save")
+        or cfg.get("lora_bias")
+    ):
+        raise NotImplementedError("unsupported LoRA orientation, bias or modules_to_save")
     tensors = load_file(lora_dir / "adapter_model.safetensors")
+    for name in tensors:
+        if ".lora_A." in name:
+            partner = name.replace(".lora_A.", ".lora_B.")
+        elif ".lora_B." in name:
+            partner = name.replace(".lora_B.", ".lora_A.")
+        else:
+            raise NotImplementedError(f"unsupported adapter tensor: {name}")
+        if partner not in tensors:
+            raise ValueError(f"unpaired adapter tensor: {name}")
     state_keys = list(state_keys) if state_keys is not None else None
     alpha_pattern = cfg.get("alpha_pattern") or {}
     out: dict[str, torch.Tensor] = {}
@@ -77,6 +99,13 @@ def load_entry_delta(
 ) -> dict[str, torch.Tensor]:
     """Delta tensors of a zoo entry: dense ``delta.safetensors`` or LoRA ``lora/`` adapter."""
     d = Path(entry_dir)
-    if (d / "delta.safetensors").exists():
+    descriptor = d / "edit.json"
+    fmt = json.loads(descriptor.read_text()).get("delta_format") if descriptor.exists() else None
+    if fmt is None:
+        warnings.warn("missing delta_format; inferring from files", UserWarning, stacklevel=2)
+        fmt = "dense" if (d / "delta.safetensors").exists() else "lora"
+    if fmt == "dense":
         return load_file(d / "delta.safetensors")
-    return lora_dense_delta(d / "lora", state_keys)
+    if fmt == "lora":
+        return lora_dense_delta(d / "lora", state_keys)
+    raise ValueError(f"unsupported delta_format: {fmt}")
