@@ -163,3 +163,4 @@
 | 2026-11-04 | Board A feat/multi-model-zoo | codex/gpt-6.1-terra medium | REVISE (1) → fixed by orchestrator, merged |
 | 2026-11-04 | Board A feat/multi-model-zoo | codex/gpt-6.1-terra medium | REVISE (1) → fixed by orchestrator, merged |
 | 2026-11-04 | Board A perf/eval-throughput | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | Board A perf/eval-throughput | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (docs/hygiene); branch NOT merged — no engine gain; docs corrected on main |

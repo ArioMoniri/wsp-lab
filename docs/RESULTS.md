@@ -64,5 +64,7 @@ Projection: D3 subset (300 entries) ≈ 62 h on this GPU with the HF path; full 
 benchmark (HF static cache vs vLLM) runs next and decides the engine; Lambda A100 is the fallback once the ARA family ends.
 
 ## P2 — Engine throughput (docs/BENCH_EVAL.md, branch perf/eval-throughput 73f1419)
-Same entry, idle GPU: HF batch 32 6.18 min/entry; HF best variant 6.15; vLLM 6.10. The earlier 12.4 min figure was measured
-while CPU feature extraction competed for the host. D3 subset started 4 Nov (tmux p2-d3-batch), projected ≈ 31 h.
+Same entry: HF batch 32 6.18 min/entry; vLLM 6.10 (single runs; four CPU extraction workers busy during both). The "HF best"
+6.15 figure in the branch doc is the same configuration as HF batch 32 (noise). Static cache and torch.compile were not usable.
+vLLM changed scores at stochastic settings (gsm8k 0.14→0.06, ifeval 0.44→0.36), so the HF path stays canonical. The earlier
+12.4 min figure was measured while extraction also competed for the host. D3 subset started 4 Nov (tmux p2-d3-batch), projected ≈ 31 h.
