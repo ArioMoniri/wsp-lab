@@ -181,4 +181,5 @@
 | 2026-11-04 | eval fixes round 3: backfill matched-reference metadata | codex/gpt-6.1-sol medium | done 29c744b (420 tests); 53/278 matched — remote runtime fields missing → round 4 |
 | 2026-11-04 | Board A re-review feat/h5-editor | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | eval fixes round 4: Lambda runtime transcription + missing-target report | codex/gpt-6.1-sol medium | done 58f7ee6 (422 tests); 221/279 targets matched, 167 rely on inferred remote runtime — re-review pending |
-| 2026-11-04 | Board A re-review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | Board A re-review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | REVISE (3: local runtime provenance label, compare_pairs strictness/bootstrap structure, 19 source_hash misses) d06627a |
+| 2026-11-04 | eval fixes round 5 (re-review blocking 1–3; run1 base registered as reference) | codex/gpt-6.1-sol high | running |
