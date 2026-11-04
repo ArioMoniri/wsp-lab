@@ -143,3 +143,24 @@ Final CPU suite: 420 passed / 8 deselected (24.42 s); repository-wide ruff clean
   the original base (git 846ff842); no score-neutral mapping or substituted base.
 - Empty-fold WARNING captured and skipped_folds persisted to metrics.json.
 - All runs finished under two minutes; no long job or tmux run required.
+
+## Board A D3 suite review (2026-11-04)
+
+- Delivered `docs/reviews/P4/board-a-d3-suite-2026-11-04.md` on main as explicitly
+  requested. Review only; no predictor code, gates, or parent runs changed.
+- Verdict REVISE: H1 qualification unresolved and observed M2 criteria unmet;
+  H2 has one length>=4 delta-labeled row; H3 has no completed M3 transfer test.
+- Reconstructed deterministic StatNN from exact saved fitting IDs. Negative family
+  OOF ranks chiefly reflect reversed family/fold offsets, including constant
+  HellaSwag fitting labels in the LoRA fold. Confirmed neural unseen-support
+  normalization and large calibration errors; no global delta sign inversion.
+- Local audit run `data/runs/p4/board-a-d3-audit-20261104/` retains executable audit
+  scripts, output, manifest and hashes of 178 parent files; no data committed.
+- Verified all 22 completed bundles and their fold parquets, three incomplete M3
+  snapshot directories, reference subtraction on 2,080 cells in each of three
+  runs, four-parameter M1-matched/M5 capacity difference, and missing P4 delta-norm.
+- Tests: focused predictor suite 36 passed (7.58 s); full CPU suite 482 passed,
+  1 skipped, 8 deselected (51.74 s). Dependency deprecations and pre-existing
+  missing-delta-format inference warning only. No GPU training/evaluation needed.
+- Audit jobs each finished below two minutes. No tmux job, cloud spend, push or
+  external board post; user requested a local committed review.
