@@ -40,11 +40,12 @@ from wsp.features.pool import pool_features
 from wsp.features.stats import DELTA_STAT_NAMES, delta_stats
 from wsp.features.svd import canonical_lora_tokens, truncated_delta_tokens
 from wsp.zoo.apply import entry_has_artifacts, load_entry_delta, lora_factors
+from wsp.zoo.arch import remote_code_kwargs
 
 log = logging.getLogger("wsp.features.extract")
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "feature_version": 3,  # 2: out_proj pools with o_proj; 3: per-type pools for hybrid/norm/embed
+    "feature_version": 4,  # 2: out_proj pools with o_proj; 3: hybrid/norm/embed pools; 4: attn_gate, aux, LFM3/Gemma names
     "rank": 8,
     "proj_dim": 64,
     "stats_k": 8,
@@ -297,6 +298,7 @@ def load_base_state(base_model: str, revision: str) -> tuple[dict[str, torch.Ten
         dtype=torch.bfloat16,
         device_map="cpu",
         local_files_only=True,
+        **remote_code_kwargs(base_model),
     )
     state = {k: v.detach().cpu() for k, v in model.state_dict().items()}
     del model

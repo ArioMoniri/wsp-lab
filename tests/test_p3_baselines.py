@@ -6,6 +6,7 @@ import pytest
 from p3_toy import build_toy_zoo, toy_base_state
 
 from wsp.features.extract import run_extract
+from wsp.features.pool import pooled_dims
 from wsp.predictor.baselines import (
     fit_eval,
     load_targets,
@@ -14,6 +15,8 @@ from wsp.predictor.baselines import (
     run_baselines,
 )
 from wsp.predictor.splits import make_splits
+
+STATS, SPECTRUM = pooled_dims()
 
 
 @pytest.fixture(scope="module")
@@ -122,7 +125,7 @@ def test_run_baselines_on_toy_zoo_all_splits(toy, tmp_path, split):
     md = (tmp_path / split / "results.md").read_text()
     assert "| model |" in md and "delta_norm_ridge" in md and "acc" in md
     stored = json.loads((tmp_path / split / "metrics.json").read_text())
-    assert stored["feature_dims"] == {"delta_norm": 2, "statnn": 1098, "mlp_svd": 120}
+    assert stored["feature_dims"] == {"delta_norm": 2, "statnn": STATS, "mlp_svd": SPECTRUM}
     assert (tmp_path / split / "manifest.json").exists()
 
 

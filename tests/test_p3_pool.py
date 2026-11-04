@@ -18,8 +18,8 @@ def test_pool_is_fixed_size_and_averages_type_bucket():
         },
     ]
     stats, svd = pool_features(records, n_layers=8, buckets=4)
-    assert stats.shape == (18 * 61,)
-    assert svd.shape == (8 * 15,)
+    assert stats.shape == (18 * (1 + len(TYPES) * 4),)
+    assert svd.shape == (8 * len(TYPES),)
     assert torch.all(stats[:18] == 2)
     assert torch.all(svd[:8] == 2)
 

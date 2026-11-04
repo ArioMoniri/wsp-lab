@@ -36,6 +36,8 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
+from wsp.zoo.arch import remote_code_kwargs
+
 GOOD = "mlabonne/harmless_alpaca"
 BAD = "mlabonne/harmful_behaviors"
 SPLIT = "train[:400]"
@@ -265,6 +267,7 @@ def _compute(
         revision=key["model_commit"],
         torch_dtype=getattr(_torch, key["dtype"]),
         device_map="cuda" if _torch.cuda.is_available() else "cpu",
+        **remote_code_kwargs(config["base_model"], config),
     ).eval()
     batch = int(config.get("refusal_batch_size", 1))
     good = residual_mean(model, tokenizer, prompts["good"], batch)
@@ -286,7 +289,11 @@ def get_refusal_directions(
         "good": resolver(GOOD, "dataset", "main"),
         "bad": resolver(BAD, "dataset", "main"),
     }
-    tokenizer = AutoTokenizer.from_pretrained(config["base_model"], revision=commits["model"])
+    tokenizer = AutoTokenizer.from_pretrained(
+        config["base_model"],
+        revision=commits["model"],
+        **remote_code_kwargs(config["base_model"], config),
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
