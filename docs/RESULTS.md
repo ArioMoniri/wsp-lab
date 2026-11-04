@@ -30,11 +30,11 @@ samples per item; our 32k pass crashed (CUDA OOM under GPU contention) and will 
 
 | Benchmark (n) | Ours @4k (%) | Blog @32k (%) |
 |---|---|---|
-| gsm8k | 15.5 | 13.8 
-| math500 | 6.0 | 7.9 
-| ifeval | 42.0 | 21.0 
-| mmlu_pro | 20.3 | — 
-| hellaswag | 51.3 | — 
+| gsm8k | 15.5 | 13.8 |
+| math500 | 6.0 | 7.9 |
+| ifeval | 42.0 | 21.0 |
+| mmlu_pro | 20.3 | — |
+| hellaswag | 51.3 | — |
 | loop rate (gsm8k+math500+ifeval) | 90.2 | 93.0 (MATH-500 only) |
 | refusal rate (keyword, 100 harmful) | 99.0 | — |
 | KL to base (self-check) | 0.000 | — |
