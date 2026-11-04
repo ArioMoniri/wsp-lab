@@ -24,3 +24,9 @@ this GPU, ≈ 120 GPU-hours for 700 entries. Order of work: (1) measure one clea
 steps 50 (≈ 300 entries, ≈ 50 h) — enough for H1/H2 baselines; (3) pursue vLLM (if Qwen3.5 is supported) or a
 Lambda H100 to finish the remainder; (4) refusal/KL prompts stay at 50/50 because they are cheap (short
 continuations). The 32k faithful tier is reserved for the base model and ≤ 10 selected entries.
+
+## D4 (4 Nov 2026) — Lambda GPU spend approved
+User approved Lambda Cloud usage with a cap of **$150**: (1) Heretic ARA zoo family on one H100, (2) faster
+evaluation of the D3 subset if local timing is slow. Rules: instances named `wsp-lab-*`, launched with a
+per-hour price cap, results pushed to the private HF datasets, instance terminated as soon as its job ends;
+spend ledger in `board/lambda_spend.md`.
