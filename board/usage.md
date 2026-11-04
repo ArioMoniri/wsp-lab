@@ -73,3 +73,5 @@
 | 2026-11-04 | zoo integration | claude_aio_gmail_api/claude-sonnet-5-5 high | done 03384a9 (127 tests) |
 | 2026-11-04 | Board A re-review feat/p1-zoo-build | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | fix eval LoRA loading (fix/eval-lora) | codex/gpt-6.1-terra high | running |
+| 2026-11-04 | Board A re-review feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (3 blocking) |
+| 2026-11-04 | zoo REVISE round 3 | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
