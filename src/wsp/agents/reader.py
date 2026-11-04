@@ -33,8 +33,10 @@ import os
 import re
 import subprocess
 import time
+import urllib.parse
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +50,10 @@ from wsp.features.stats import DELTA_STAT_NAMES
 from wsp.schema import BENCHMARKS, write_manifest
 
 log = logging.getLogger("wsp.agents.reader")
+# httpx logs every request URL at INFO (userinfo and query included) and httpcore logs request
+# details at DEBUG: keep both quiet so a credential in the base URL can never reach a log.
+for _noisy in ("httpx", "httpcore"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 
 HERE = Path(__file__).parent
 PROMPT_PATH = HERE / "reader_prompt.md"
@@ -59,6 +65,8 @@ DEFAULT_ENV_FILE = Path.home() / ".config" / "wsp" / "env"
 CHARS_PER_TOKEN = 2.5
 DEFAULT_MAX_PROMPT_TOKENS = 20_000
 _SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+# Header values that are not credentials (kept readable in error text).
+_PLAIN_HEADERS = {"content-type", "anthropic-version", "accept"}
 _RETRY_STATUS = {408, 429, 500, 502, 503, 504, 529}
 
 
@@ -315,6 +323,24 @@ def parse_response(text: str) -> dict[str, Any]:
 # ------------------------------------------------------------------ providers
 
 
+def safe_endpoint(url: str) -> str:
+    """``scheme://host[:port]/path`` only: no userinfo, query or fragment."""
+    try:
+        p = urllib.parse.urlsplit(url)
+        host = p.hostname or ""
+        if p.port:
+            host += f":{p.port}"
+        return f"{p.scheme}://{host}{p.path}" if host else "<invalid-url>"
+    except ValueError:
+        return "<invalid-url>"
+
+
+def _join_url(root: str, suffix: str) -> str:
+    """Append ``suffix`` to the path of ``root``, keeping userinfo and any query after the path."""
+    p = urllib.parse.urlsplit(root)
+    return urllib.parse.urlunsplit(p._replace(path=p.path.rstrip("/") + suffix))
+
+
 def read_env_file(path: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     if not path.exists():
@@ -359,12 +385,36 @@ class _HTTPProvider:
         self.last_usage: dict[str, int] | None = None
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(model={self.model!r}, url={self._url!r})"
+        return f"{type(self).__name__}(model={self.model!r}, endpoint={self.endpoint!r})"
+
+    @property
+    def endpoint(self) -> str:
+        """The request URL without userinfo, query or fragment (those may carry credentials)."""
+        return safe_endpoint(self._url)
+
+    def describe(self) -> dict[str, Any]:
+        """Generation settings that make a stored reply reusable only by an identical setup."""
+        return {
+            "endpoint": self.endpoint,
+            "max_output_tokens": self.max_output_tokens,
+            "max_tokens_field": getattr(self, "max_tokens_field", None),
+        }
+
+    def _secrets(self) -> list[str]:
+        vals = [self._key]
+        vals += [v for k, v in self._headers.items() if k.lower() not in _PLAIN_HEADERS]
+        parts = urllib.parse.urlsplit(self._url)
+        vals += [parts.password or "", parts.username or ""]
+        vals += [v for _, v in urllib.parse.parse_qsl(parts.query)]
+        forms: list[str] = []
+        for v in vals:
+            if v:
+                forms += [v, urllib.parse.quote(v, safe=""), json.dumps(v)[1:-1]]
+        return sorted(set(forms), key=len, reverse=True)  # longest first
 
     def _scrub(self, text: str) -> str:
-        for secret in [self._key, *self._headers.values()]:
-            if secret and len(secret) >= 6:
-                text = text.replace(secret, "<redacted>")
+        for secret in self._secrets():
+            text = text.replace(secret, "<redacted>")
         return text[:300]
 
     def _post(self, body: dict[str, Any]) -> dict[str, Any]:
@@ -372,14 +422,14 @@ class _HTTPProvider:
         for attempt in range(self._retries):
             try:
                 resp = self._client.post(self._url, headers=self._headers, json=body)
-            except httpx.HTTPError as e:
+            except Exception as e:  # noqa: BLE001 - nothing from the request may leak via a chain
                 last = f"transport error {type(e).__name__}"
             else:
                 if resp.status_code == 200:
                     try:
                         return resp.json()
-                    except ValueError as e:
-                        raise ProviderError("provider returned a non-JSON body") from e
+                    except Exception:  # noqa: BLE001
+                        raise ProviderError("provider returned a non-JSON body") from None
                 last = f"HTTP {resp.status_code}: {self._scrub(resp.text)}"
                 if resp.status_code not in _RETRY_STATUS:
                     raise ProviderError(last)
@@ -453,6 +503,9 @@ class DryProvider:
     def __init__(self, model: str = "dry"):
         self.model = model
 
+    def describe(self) -> dict[str, Any]:
+        return {}
+
     def ask(self, prompt: str) -> str:
         raise DryRun
 
@@ -501,25 +554,32 @@ def make_provider(
         "max_output_tokens": max_output_tokens,
     }
     if name == "anthropic":
-        root = (base_url or merged.get("ANTHROPIC_BASE_URL") or "https://api.anthropic.com").rstrip(
-            "/"
-        )
+        root = base_url or merged.get("ANTHROPIC_BASE_URL") or "https://api.anthropic.com"
         headers = {
             "x-api-key": key,
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
             **_parse_custom_headers(merged.get("ANTHROPIC_CUSTOM_HEADERS", "")),
         }
-        return AnthropicProvider(model, key, f"{root}/v1/messages", headers, **common)
-    root = (base_url or merged.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
+        return AnthropicProvider(model, key, _join_url(root, "/v1/messages"), headers, **common)
+    root = base_url or merged.get("OPENAI_BASE_URL") or "https://api.openai.com/v1"
     headers = {"authorization": f"Bearer {key}", "content-type": "application/json"}
-    provider = OpenAIProvider(model, key, f"{root}/chat/completions", headers, **common)
+    provider = OpenAIProvider(model, key, _join_url(root, "/chat/completions"), headers, **common)
     if max_tokens_field:
         provider.max_tokens_field = max_tokens_field
     return provider
 
 
 # ------------------------------------------------------------------ run
+
+
+UNKNOWN_PROVENANCE = {
+    "git_sha": "unknown",
+    "model": "unknown",
+    "provider": "unknown",
+    "prompt_sha256": None,
+    "timestamp": None,
+}
 
 
 def _git_sha() -> str:
@@ -573,12 +633,14 @@ def run_reader(
         "reveal_family": reveal_family,
         "max_prompt_tokens": max_prompt_tokens,
         "chars_per_token": CHARS_PER_TOKEN,
+        **(provider.describe() if hasattr(provider, "describe") else {}),
     }
     previous = _read_json(out / "manifest.json")
     if previous and {k: previous.get(k) for k in config} != config:
         raise ValueError(f"{out} holds a run with a different configuration; use a new --out")
     out.mkdir(parents=True, exist_ok=True)
     entries: dict[str, dict[str, Any]] = {}
+    invocation_sha = _git_sha()
     for entry_id in ids:
         entry = load_entry(features_dir, entry_id)
         prompt = build_prompt(
@@ -599,11 +661,13 @@ def run_reader(
             and (d / "prompt.md").exists()
             and _sha256_file(d / "prompt.md") == prompt.sha256
         ):
-            entries[entry_id] = info | {"status": "ok"}
+            # Earlier prediction: keep the provenance recorded when it was made, never the current run's.
+            prov = _read_json(d / "provenance.json") or dict(UNKNOWN_PROVENANCE)
+            entries[entry_id] = info | {"status": "ok", "provenance": prov}
             log.info("%s: already done, skipping", entry_id)
             continue
         (d / "prompt.md").write_text(prompt.text)
-        for stale in ("response.json", "parsed.json"):
+        for stale in ("response.json", "parsed.json", "provenance.json"):
             (d / stale).unlink(missing_ok=True)
         try:
             started = time.monotonic()
@@ -618,6 +682,14 @@ def run_reader(
             entries[entry_id] = info | {"status": "failed"}
             log.warning("%s: provider failed", entry_id)
             continue
+        prov = {
+            "git_sha": invocation_sha,
+            "model": model,
+            "provider": provider_name,
+            "prompt_sha256": prompt.sha256,
+            "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
+        }
+        _write_json(d / "provenance.json", prov)
         _write_json(
             d / "response.json",
             {
@@ -632,11 +704,11 @@ def run_reader(
             parsed = parse_response(text)
         except ParseError as e:
             _write_json(d / "parsed.json", {"status": "failed", "stage": "parse", "error": str(e)})
-            entries[entry_id] = info | {"status": "failed"}
+            entries[entry_id] = info | {"status": "failed", "provenance": prov}
             log.warning("%s: reply rejected: %s", entry_id, e)
             continue
         _write_json(d / "parsed.json", {"status": "ok", "parsed": parsed})
-        entries[entry_id] = info | {"status": "ok"}
+        entries[entry_id] = info | {"status": "ok", "provenance": prov}
 
     usage_in = usage_out = 0
     have_usage = False
@@ -655,7 +727,9 @@ def run_reader(
         "config_hash": hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest(),
         "features": str(features_dir),
         "ids": list(ids),
-        "git_sha": _git_sha(),
+        # HEAD of this invocation only; each entry's own provenance is in entries[id]["provenance"]
+        # (and <out>/<id>/provenance.json) and is never overwritten by a resume.
+        "invocation_git_sha": invocation_sha,
         "prompt_template_sha256": _sha256_file(PROMPT_PATH),
         "schema_sha256": _sha256_file(SCHEMA_PATH),
         "token_estimate": "characters / chars_per_token (no provider tokenizer offline)",
@@ -680,7 +754,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     ap.add_argument("--features", required=True, type=Path)
     ap.add_argument("--ids", required=True, help="comma-separated entry ids")
     ap.add_argument("--provider", required=True, choices=["dry", "anthropic", "openai"])
-    ap.add_argument("--model", required=True)
+    ap.add_argument("--model", default=None, help="model id (required unless --provider dry)")
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument(
         "--reveal-family", action="store_true", help="include the family label + params"
@@ -693,6 +767,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     ap.add_argument("--price-out-per-mtok", type=float, default=None)
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    if args.model is None:
+        if args.provider != "dry":
+            ap.error(f"--model is required for provider {args.provider}")
+        args.model = "dry"
 
     ids = [i.strip() for i in args.ids.split(",") if i.strip()]
     if not ids or len(set(ids)) != len(ids):

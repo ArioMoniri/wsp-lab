@@ -10,7 +10,8 @@ Targets are ``<evals>/<id>/eval.json`` converted to the reader's units with ``<e
   kl_to_base                      y                              (already relative to base)
 
 Per benchmark: MAE, RMSE, Spearman ρ with seeded 95 % percentile-bootstrap CIs over edits (the same
-code as the P3 baselines, ``wsp.predictor.baselines.metrics_with_ci``). Only entries with an ``ok`` parse
+code as the P3 baselines, ``wsp.predictor.baselines.metrics_with_ci``). Only entries listed in the run manifest (and in ``<evals>/index.jsonl`` when present) are considered;
+other entry directories are reported under ``excluded_ids``. Only entries with an ``ok`` parse
 and a target are scored; failed replies are counted and reported, never imputed. The command refuses
 when no scored entry has a target (or the base eval is missing) and writes ``score.json`` otherwise.
 """
@@ -64,13 +65,46 @@ def _clean(x: Any) -> Any:
     return x
 
 
+def _evals_index(evals: Path) -> set[str] | None:
+    """Edit ids listed in ``<evals>/index.jsonl`` (``None`` when the evals dir has no index)."""
+    f = evals / "index.jsonl"
+    if not f.exists():
+        return None
+    ids = {"base"}
+    for line in f.read_text().splitlines():
+        if line.strip():
+            row = json.loads(line)
+            ids.add(str(row.get("edit_id") or row.get("id")))
+    return ids
+
+
 def score_run(run: str | Path, evals: str | Path, *, n_boot: int = 1000, seed: int = 0) -> dict:
     run, evals = Path(run), Path(evals)
-    parsed: dict[str, dict] = {}
+    manifest = run / "manifest.json"
+    if not manifest.exists():
+        raise NoTargets(f"{run} has no manifest.json; scoring is restricted to the manifest's ids")
+    m = json.loads(manifest.read_text())
+    current = list(m.get("ids") or [])
+    on_disk: dict[str, dict] = {}
     for f in sorted(run.glob("*/parsed.json")):
-        parsed[f.parent.name] = json.loads(f.read_text())
+        on_disk[f.parent.name] = json.loads(f.read_text())
+    # Only predictions for ids of the current manifest AND listed in the evals index (when the evals
+    # directory has one) are scored; leftovers from earlier runs in the same directory are excluded.
+    indexed = _evals_index(evals)
+    excluded: dict[str, list[str]] = {"not_in_manifest": [], "not_in_evals_index": []}
+    parsed: dict[str, dict] = {}
+    for i, p in on_disk.items():
+        if i not in current:
+            excluded["not_in_manifest"].append(i)
+        elif indexed is not None and i not in indexed:
+            excluded["not_in_evals_index"].append(i)
+        else:
+            parsed[i] = p
+    for reason, ids_ in excluded.items():
+        if ids_:
+            log.warning("excluded from scoring (%s): %s", reason, ids_)
     if not parsed:
-        raise NoTargets(f"{run} has no parsed.json (run the reader with a real provider first)")
+        raise NoTargets(f"{run} has no parsed.json for the manifest ids (run the reader first)")
     ok = {i: p["parsed"]["predictions"] for i, p in parsed.items() if p.get("status") == "ok"}
     n_failed = sum(1 for p in parsed.values() if p.get("status") != "ok")
     raw, _ = load_targets(evals, sorted(ok))
@@ -89,6 +123,8 @@ def score_run(run: str | Path, evals: str | Path, *, n_boot: int = 1000, seed: i
         "n_boot": n_boot,
         "seed": seed,
         "n_entries": len(parsed),
+        "manifest_ids": sorted(current),
+        "excluded_ids": excluded,
         "n_failed": n_failed,
         "n_scored": len([i for i in targets if targets[i]]),
         "n_no_target": len(ok) - len(raw),
@@ -96,11 +132,8 @@ def score_run(run: str | Path, evals: str | Path, *, n_boot: int = 1000, seed: i
         "targets": {},
         "skipped": {},
     }
-    manifest = run / "manifest.json"
-    if manifest.exists():
-        m = json.loads(manifest.read_text())
-        result["model"] = m.get("model")
-        result["reveal_family"] = m.get("reveal_family")
+    result["model"] = m.get("model")
+    result["reveal_family"] = m.get("reveal_family")
     for b in BENCHMARKS:
         ids = sorted(i for i in targets if b in targets[i])
         if len(ids) < 2:
