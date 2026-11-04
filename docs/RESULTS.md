@@ -11,7 +11,7 @@
 
 ## P2 reproduction status
 
-Implementation is on `feat/p2-eval`. CPU tests and the eight-item, two-run GPU
+Implementation was merged to `main` on 3 Nov 2026 (merge commit `2b6904a`, Board A APPROVE). CPU tests and the eight-item, two-run GPU
 determinism smoke test pass. Full benchmark numbers and blog gaps remain pending;
 no measurements are inferred from the smoke test. The provisional `p2-base` job
 was superseded before any benchmark completed, so it supplies no quoted scores.

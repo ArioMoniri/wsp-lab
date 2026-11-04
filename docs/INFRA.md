@@ -3,7 +3,7 @@
 ## This server
 - AWS `eu-central-1`, instance `<instance-id>` (g7.2xlarge), host `<aws-host>`
 - GPU: NVIDIA RTX PRO 4500 Blackwell Server Edition, 32,623 MiB, compute capability 12.0, driver 595.112, CUDA 13.2
-- 8 vCPU, 30 GiB RAM, 922 GB free disk
+- 8 vCPU, 30 GiB RAM, 675 GB free disk (`df -h /` on 4 Nov 2026 06:27 UTC: 991G size, 317G used, 675G available)
 - Nightly DR tarballs + AMIs exist (see `~/DR-RESTORE.md`), so project data under `~/projects` is backed up.
 
 ## Conventions
@@ -18,9 +18,16 @@
 - API: `https://cloud.lambda.ai/api/v1`, `Authorization: Bearer $LAMBDA_API_KEY`. 1 req/s, launch 1 per 12 s.
 - Prices (on-demand, Nov 2026): 1× H100 SXM $4.29/h, 1× H100 PCIe $3.29/h, 1× B200 $6.99/h, 1× GH200 $2.29/h,
   1× A6000 48 GB $1.09/h.
-- `scripts/lambda.sh types|launch <type> <region>|ls|ssh <id>|terminate <id>`; launch requires `MAX_USD_PER_H`.
-- Remote bootstrap: `scripts/lambda_bootstrap.sh` clones this repo, makes the venv, pulls models, and
-  `rsync`s `data/evals` and `data/features` back here (the server is the single source of truth).
+- `scripts/lambda.sh types|ls|launch <type> <region> <ssh-key-name>|terminate <id>`; launch requires `MAX_USD_PER_H`;
+  terminate refuses any instance whose name does not start with `wsp-lab`.
+- Remote bootstrap: `scripts/lambda_bootstrap.sh <git-url>`, run on the instance, installs git, rsync, tmux and uv,
+  clones this repo to `~/projects/wsp-lab`, and creates `.venv` with `.[dev,serve]`. It pulls no models and copies
+  nothing back here. It prints the next steps: put `HF_TOKEN` and `LAMBDA_API_KEY` into `~/.config/wsp/env`, then
+  `scripts/hf_sync.sh pull zoo`.
+- Job script: `scripts/lambda_job_ara.sh <n> <trials>` (defaults 30 30), run on the instance. It pulls the repo,
+  reinstalls torch from the CUDA wheel index that matches the host driver (12.6/12.7 → cu126, 12.8/12.9 → cu128,
+  13.x → cu132, otherwise cu128) only if torch cannot see CUDA, pulls the zoo from HF, builds the `heretic_ara` family, pushes the zoo back to HF, and
+  terminates the `wsp-lab*` instance. Results return through HF, not through rsync.
 - Needed from the user: `LAMBDA_API_KEY` (asked when P5 starts) and an SSH key registered in Lambda.
 
 ## mamba-ssm
