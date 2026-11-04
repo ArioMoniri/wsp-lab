@@ -87,6 +87,11 @@ def test_batch_loads_once_restores_and_resumes(tmp_path, monkeypatch):
         weights.append(runner.model.weight.item())
         return [EvalRecord(runner.edit_id, "gsm8k", "0", 1.0)], {}
 
+    from wsp.eval.repeats import REFERENCE_KEYS
+
+    monkeypatch.setattr(
+        batch, "runtime_metadata", lambda runner: {k: "known" for k in REFERENCE_KEYS[:8]}
+    )
     monkeypatch.setattr(batch, "HFRunner", Runner)
     monkeypatch.setattr(batch, "load_entry_delta", lambda *args: {"weight": torch.ones(1, 1)})
     monkeypatch.setattr(batch, "apply_zoo_entry", apply)
@@ -101,10 +106,10 @@ def test_batch_loads_once_restores_and_resumes(tmp_path, monkeypatch):
     config = production_config
     batch.run_batch(zoo, config)
     monkeypatch.setattr(
-        batch, "provenance", lambda: {"git_sha": "new", "dirty": True, "source_hash": "new"}
+        batch, "provenance", lambda: {"git_sha": "new", "dirty": True, "source_hash": "source"}
     )
     batch.run_batch(zoo, config)
-    assert loads == ["toy"]
+    assert loads == ["toy", "toy"]
     assert weights == [0, 1, 1]
     assert batches == [("base", 4), ("a", 4), ("a", 2), ("b", 4)]
     index = tmp_path / "data/evals/zoo/index.jsonl"
@@ -113,7 +118,7 @@ def test_batch_loads_once_restores_and_resumes(tmp_path, monkeypatch):
     batch.run_batch(zoo, config)
     assert len(index.read_text().splitlines()) == 3
     canonical = (zoo / "a/eval.json").read_bytes()
-    batch.run_batch(zoo, config, limit=1, max_new_tokens=2)
+    batch.run_batch(zoo, config, limit=1)
     assert (zoo / "a/eval.json").read_bytes() == canonical
     outputs = list((tmp_path / "data/runs/p2-batch").glob("*/a/eval.json"))
     payload = json.loads(outputs[0].read_text())
@@ -126,10 +131,31 @@ def test_batch_loads_once_restores_and_resumes(tmp_path, monkeypatch):
         "source_hash",
     } <= payload.keys()
     assert payload["config_hash"] != json.loads(canonical)["config_hash"]
+    batch.run_batch(zoo, config, repeat="r1")
+    repeated = json.loads((zoo / "a/repeats/r1/eval.json").read_text())
+    assert repeated["batch_size_nominal"] == 4
+    assert (zoo / "a/eval.json").read_bytes() == canonical
+    import pytest
+
+    with pytest.raises(FileExistsError):
+        batch.run_batch(zoo, config, repeat="r1")
     before = len(loads)
     batch.run_batch(zoo, config, force=True)
     assert len(loads) == before + 1
     assert len(index.read_text().splitlines()) == 3
+    base_file = tmp_path / "data/evals/zoo/base/eval.json"
+    legacy = json.loads(base_file.read_text())
+    legacy.pop("item_id_hash")
+    legacy["eval_device_id"] = "other"
+    base_file.write_text(json.dumps(legacy))
+    old_bytes = base_file.read_bytes()
+    batch.run_batch(zoo, config, force=True, no_base=True)
+    assert base_file.read_bytes() == old_bytes
+    assert json.loads((zoo / "b/eval.json").read_text())["matched_base_missing"]
+    batch.run_batch(zoo, config, force=True)
+    assert base_file.read_bytes() == old_bytes
+    assert list(base_file.parent.glob("devices/known/*/eval.json"))
+    assert not json.loads((zoo / "b/eval.json").read_text())["matched_base_missing"]
 
 
 def test_resume_does_not_treat_tiny_smoke_as_full_eval(tmp_path):

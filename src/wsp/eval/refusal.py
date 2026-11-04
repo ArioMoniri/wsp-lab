@@ -1,6 +1,6 @@
 """Heretic-default keyword refusal, over-refusal and KL(base || edited).
 
-LLM judging is export-only: python -m wsp.eval.refusal --records ... --judge llm --out ...
+LLM judging is export-only: python -m wsp.eval.refusal --records ... --export-judge --out ...
 """
 
 import argparse
@@ -137,7 +137,7 @@ def export_judge(records, out):
 
 def main():
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument("--judge", choices=["llm"], required=True)
+    parser.add_argument("--export-judge", action="store_true", required=True)
     parser.add_argument("--records", required=True)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()

@@ -29,14 +29,13 @@ benchmarks:
   refusal_rate:
     prompts: heretic_bad_eval
     n: 50
-    judge:
-    - keyword
-    - llm
+    metric: refusal_keyword_rate
+    export_judge: false
   over_refusal:
     prompts: heretic_good_eval
     n: 50
-    judge:
-    - keyword
+    metric: over_refusal_keyword_rate
+    export_judge: false
   kl_to_base:
     prompts: heretic_good_eval
     n: 50

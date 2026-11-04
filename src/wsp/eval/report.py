@@ -56,6 +56,21 @@ def report(runs, out, log):
                 ]
             else:
                 values = [r.correct for r in records if r.benchmark == name]
+            if name.startswith("loop_rate_"):
+                values = [
+                    float(r.hit_max_tokens)
+                    for r in records
+                    if r.benchmark == name.removeprefix("loop_rate_")
+                ]
+            elif name.startswith("invalid_final_answer_rate_"):
+                values = [
+                    float(r.extra.get("invalid_final_answer", False))
+                    for r in records
+                    if r.benchmark == name.removeprefix("invalid_final_answer_rate_")
+                ]
+            elif name in ("refusal_keyword_rate", "over_refusal_keyword_rate"):
+                alias = "refusal_rate" if name == "refusal_keyword_rate" else "over_refusal"
+                values = [r.correct for r in records if r.benchmark == alias]
             binary = name not in ("wikitext_ppl", "kl_to_base")
             shown = f"{100 * score:.2f}%" if binary else f"{score:.6g}"
             ci = ("[{:.2f}, {:.2f}]%".format(*wilson(sum(values), len(values)))) if binary else "—"

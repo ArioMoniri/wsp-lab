@@ -59,8 +59,8 @@
   arXiv 2609.09793. Defences: *Decoy Direction Optimization* 2609.16204, *Refusal Aliases* 2608.18093.
 - *Steering Language Models with Weight Arithmetic*, arXiv 2511.05408 — contrastive weight steering; another
   edit family we can add cheaply.
-- Critique (pk-sharma, Sep 2026): the 97→3 headline counts refusal-phrase matches, not harm. We report both
-  keyword refusal rate and an LLM-judged rate.
+- Critique (pk-sharma, Sep 2026): the 97→3 headline counts refusal-phrase matches, not harm. We report the
+  keyword refusal rate; an independent LLM-judged rate is not executed by this metric.
 
 ## Hugging Face, trending 3 Nov 2026 (relevant)
 LFM3-1.7B (#1), DeepSeek-V4.1-Flash-1017, Qwen3.8-27B (8.0M downloads), Nanbeige4.3-33B, and a dense

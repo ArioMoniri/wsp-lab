@@ -7,7 +7,7 @@ benchmarks:
   mmlu_pro:   {n: 300, metric: acc, max_new_tokens: 1024}
   hellaswag:  {n: 300, metric: acc_norm_loglik}
   wikitext_ppl: {n_windows: 64, window: 1024}
-  refusal_rate: {prompts: heretic_bad_eval, n: 100, judge: [keyword, llm]}
-  over_refusal: {prompts: heretic_good_eval, n: 100, judge: [keyword]}
+  refusal_rate: {prompts: heretic_bad_eval, n: 100, metric: refusal_keyword_rate, export_judge: false}
+  over_refusal: {prompts: heretic_good_eval, n: 100, metric: over_refusal_keyword_rate, export_judge: false}
   kl_to_base:  {prompts: heretic_good_eval, n: 100}
 loop_rate: {from: [gsm8k, math500, ifeval]}

@@ -16,6 +16,7 @@ import torch
 import yaml
 
 import wsp
+from wsp.eval.metadata import item_hashes, runtime_metadata
 from wsp.eval.run import HFRunner, apply_zoo_entry, evaluate, write_results
 from wsp.eval.zoo_compat import load_entry_delta
 
@@ -42,6 +43,17 @@ def provenance():
 def effective_config_hash(cfg):
     # Match HFRunner's default, including configs that omit batch_size.
     cfg = cfg | {"generation": {"batch_size": 8} | cfg["generation"]}
+    # Reporting-only rename preserves the historical production resume identity.
+    cfg["benchmarks"] = {k: dict(v) for k, v in cfg["benchmarks"].items()}
+    for name, metric, judges in (
+        ("refusal_rate", "refusal_keyword_rate", ["keyword", "llm"]),
+        ("over_refusal", "over_refusal_keyword_rate", ["keyword"]),
+    ):
+        spec = cfg["benchmarks"].get(name, {})
+        if spec.get("metric") == metric and spec.get("export_judge") is False:
+            spec.pop("metric")
+            spec.pop("export_judge")
+            spec["judge"] = judges
     return hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()
 
 
@@ -211,6 +223,31 @@ def atomic_json(path, value):
     tmp.replace(path)
 
 
+def base_destination(out, expected, run_id, no_base=False, force=False):
+    """Reuse only known compatible bases; preserve every prior base artifact."""
+    from wsp.eval.repeats import REFERENCE_KEYS, known
+
+    root = Path(out) / "base"
+    candidates = [root / "eval.json", *sorted(root.glob("devices/*/*/eval.json"))]
+    for file in reversed(candidates):
+        if not file.exists():
+            continue
+        payload = json.loads(file.read_text())
+        if (
+            not force
+            and all(known(payload.get(k)) for k in REFERENCE_KEYS)
+            and all(payload.get(k) == v for k, v in expected.items())
+            and payload.get("eval_status") == "complete"
+        ):
+            return file.parent, payload
+    if no_base:
+        print("missing matched reference: --no-base; unmatched targets remain missing", flush=True)
+        return None, None
+    if (root / "eval.json").exists():
+        return root / "devices" / expected["eval_device_id"] / run_id, None
+    return root, None
+
+
 def run_batch(
     zoo,
     config,
@@ -222,12 +259,14 @@ def run_batch(
     limit=None,
     subset=None,
     force=False,
+    repeat=None,
+    no_base=False,
 ):
     zoo, config = Path(zoo), Path(config)
     cfg = yaml.safe_load(config.read_bytes())
     generation = {"batch_size": 8} | cfg["generation"]
     if max_new_tokens is not None:
-        generation["max_new_tokens"] = max_new_tokens
+        raise ValueError("stopping settings must come from the config")
     if batch_size is not None:
         generation["batch_size"] = batch_size
     if min(generation["batch_size"], generation["max_new_tokens"]) < 1:
@@ -264,6 +303,17 @@ def run_batch(
     print(
         f"excluded legacy rows without eligibility: {sum('id' in r and 'eligibility' not in r for r in rows)}"
     )
+    if repeat is not None:
+        if (
+            not repeat
+            or repeat in (".", "..")
+            or any(
+                c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+                for c in repeat
+            )
+        ):
+            raise ValueError("repeat label must be a simple directory name")
+        force = True
     selected = list(
         select_entries(
             rows,
@@ -273,25 +323,38 @@ def run_batch(
             eligibility,
             signature,
             cfg["benchmarks"],
-            out / "index.jsonl",
+            None if repeat else out / "index.jsonl",
             force=force,
         )
     )
-    base_out = out / "base"
-    base_done = False
-    if (base_out / "eval.json").exists():
-        previous = json.loads((base_out / "eval.json").read_text())
-        upsert_index(out / "index.jsonl", previous | {"path": str(base_out)})
-        base_done = not force and complete(previous, signature, cfg["benchmarks"])
+    runner = HFRunner(header["base_model"], generation.copy(), revision=revision)
+    expected = runtime_metadata(runner) | {
+        "config_hash": config_hash,
+        "model_revision": revision,
+        "source_hash": origin["source_hash"],
+        "generation": generation,
+        "batch_size": generation["batch_size"],
+    }
+    base_out, reference = base_destination(out, expected, run_id, no_base, force)
+    if reference is not None and repeat is None:
+        upsert_index(out / "index.jsonl", reference | {"path": str(base_out)})
+    base_done = reference is not None or no_base
+    if repeat is not None and not no_base:
+        base_out = out / "base" / "repeats" / repeat
+        base_done = False
     if not selected and base_done:
         return
-    runner = HFRunner(header["base_model"], generation.copy(), revision=revision)
     restore = WeightRestore(runner.model)
     runner.base_context = restore.base_context
     out.mkdir(parents=True, exist_ok=True)
     jobs = ([] if base_done else [(None, base_out)]) + [
         (r, zoo / r["id"] if production else out / r["id"]) for r in selected
     ]
+    if repeat is not None:
+        jobs = [(row, dest / "repeats" / repeat if row else dest) for row, dest in jobs]
+        # Reserve every destination before execution; an existing label is immutable.
+        for _, dest in jobs:
+            dest.mkdir(parents=True, exist_ok=False)
     for row, dest in jobs:
         restore.restore()
         runner.edit_id = row["id"] if row else "base"
@@ -340,6 +403,9 @@ def run_batch(
             "rounding_stats": runner.rounding_stats,
             "generation": dict(runner.generation),
             "batch_size": used_batch,
+            "batch_size_nominal": generation["batch_size"],
+            "repeat_id": repeat,
+            **runtime_metadata(runner),
             "limit": limit,
             "config": str(config),
             "minutes": (time.monotonic() - started) / 60,
@@ -359,8 +425,29 @@ def run_batch(
         if result is not None and not complete(summary | manifest, key, cfg["benchmarks"]):
             manifest["eval_status"] = "incomplete"
         payload = summary | manifest
+        if result is not None:
+            payload.update(item_hashes(records))
+        from wsp.eval.repeats import matched_reference
+
+        if row is None and result is not None:
+            reference = payload.copy()
+        matched = matched_reference(payload, [reference] if reference else [])
+        payload["base_run_id"] = matched.get("run_id") if matched else None
+        payload["matched_base_missing"] = matched is None
+        payload["entry_hashes"] = {
+            str(p.relative_to(source)): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in (
+                [source / "delta.safetensors"]
+                if source and (source / "delta.safetensors").exists()
+                else sorted((source / "lora").glob("*"))
+                if source
+                else []
+            )
+            if p.is_file()
+        }
         atomic_json(dest / "eval.json", payload)
-        upsert_index(out / "index.jsonl", payload | {"path": str(dest)})
+        index_path = out / "repeats" / repeat / "index.jsonl" if repeat else out / "index.jsonl"
+        upsert_index(index_path, payload | {"path": str(dest)})
         torch.cuda.empty_cache()
         print(json.dumps(manifest), flush=True)
     restore.restore()
@@ -368,6 +455,8 @@ def run_batch(
 
 def main():
     parser = argparse.ArgumentParser(__doc__)
+    parser.add_argument("--no-base", action="store_true", help="leave unmatched targets missing")
+    parser.add_argument("--repeat", help="immutable independent repeat label")
     parser.add_argument("--zoo", required=True)
     parser.add_argument("--config", default="configs/eval_fast.yaml")
     parser.add_argument("--subset", choices=["d3"])
