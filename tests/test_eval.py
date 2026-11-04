@@ -99,17 +99,19 @@ def test_choice_likelihood_only_scores_continuation_and_normalizes_characters():
     from wsp.eval.run import HFRunner
 
     class Tokenizer:
+        pad_token_id = 0
         def encode(self, text, **kwargs):
             return [0, 1] if text == "context" else [2]
 
     class Model:
         device = "cpu"
 
-        def __call__(self, ids):
+        def __call__(self, ids, attention_mask=None):
             return SimpleNamespace(logits=torch.zeros(1, ids.shape[1], 3))
 
     runner = HFRunner.__new__(HFRunner)
     runner.tokenizer, runner.model = Tokenizer(), Model()
+    runner.generation = {}
     scores = runner.choice_scores("context", ["a", "bbbb"])
     assert scores[0] == pytest.approx(-1.0986123)
     normalized = runner.choice_scores("context", ["a", "bbbb"], True)

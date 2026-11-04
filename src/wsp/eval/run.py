@@ -168,6 +168,11 @@ class HFRunner:
             device_map="auto",
             attn_implementation="sdpa",
         ).eval()
+        if generation.get("compile"):
+            self.model.forward = torch.compile(
+                self.model.forward, mode="reduce-overhead", fullgraph=False
+            )
+        self.generation_stats = {"tokens": 0, "seconds": 0.0}
         self.revision = revision
         self.edit_id = "base"
         self.rounding_stats = {}
@@ -212,6 +217,9 @@ class HFRunner:
         batch = cfg.get("batch_size", 32)
         if batch < 1:
             raise ValueError("batch_size must be positive")
+        if self.model.device.type == "cuda":
+            torch.cuda.synchronize()
+        started = time.monotonic()
         for start in range(0, len(prompts), batch):
             tokens = self.tokenizer(
                 [self.chat(p) for p in prompts[start : start + batch]],
@@ -242,19 +250,47 @@ class HFRunner:
                     )
                 )
             print(f"generated {min(start + batch, len(prompts))}/{len(prompts)}", flush=True)
+        if self.model.device.type == "cuda":
+            torch.cuda.synchronize()
+        stats = getattr(self, "generation_stats", {"tokens": 0, "seconds": 0.0})
+        stats["tokens"] += sum(r[1] for r in results)
+        stats["seconds"] += time.monotonic() - started
+        self.generation_stats = stats
         return results
 
     def choice_scores(self, context, choices, normalize_length=False):
-        scores = []
-        # Use a common token boundary; retokenizing context+choice can merge boundary tokens.
+        if not choices:
+            return []
+        # Preserve the common context/choice token boundary and character normalization.
         prefix = self.tokenizer.encode(context, add_special_tokens=False)
-        for choice in choices:
-            suffix = self.tokenizer.encode(" " + choice, add_special_tokens=False)
-            ids = torch.tensor([prefix + suffix], device=self.model.device)
+        suffixes = [self.tokenizer.encode(" " + c, add_special_tokens=False) for c in choices]
+        scores = []
+        batch = min(
+            self.generation.get("choice_batch_size", 1), self.generation.get("batch_size", 32)
+        )
+        if batch < 1:
+            raise ValueError("batch_size must be positive")
+        for start in range(0, len(choices), batch):
+            suffix_batch = suffixes[start : start + batch]
+            width = len(prefix) + max(map(len, suffix_batch))
+            ids = torch.full(
+                (len(suffix_batch), width),
+                self.tokenizer.pad_token_id,
+                device=self.model.device,
+                dtype=torch.long,
+            )
+            mask = torch.zeros_like(ids)
+            for i, suffix in enumerate(suffix_batch):
+                row = prefix + suffix
+                ids[i, -len(row) :] = torch.tensor(row, device=ids.device)
+                mask[i, -len(row) :] = 1
             with torch.inference_mode():
-                logits = self.model(ids).logits[0, len(prefix) - 1 : -1].float().log_softmax(-1)
-                score = logits.gather(1, ids[0, len(prefix) :, None]).sum().item()
-            scores.append(score / len(choice) if normalize_length else score)
+                logits = self.model(ids, attention_mask=mask).logits
+                for i, suffix in enumerate(suffix_batch):
+                    logp = logits[i, width - len(suffix) - 1 : -1].float().log_softmax(-1)
+                    score = logp.gather(1, ids[i, -len(suffix) :, None]).sum().item()
+                    choice = choices[start + i]
+                    scores.append(score / len(choice) if normalize_length else score)
         return scores
 
 

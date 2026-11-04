@@ -1,0 +1,4 @@
+# Python 3.12; install only into .venv-vllm. vLLM selects its pinned torch.
+vllm==0.33.0
+datasets
+pyyaml

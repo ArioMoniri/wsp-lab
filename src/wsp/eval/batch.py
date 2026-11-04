@@ -164,6 +164,9 @@ def run_batch(
     batch_size=None,
     limit=None,
     subset=None,
+    out=None,
+    skip_base=False,
+    backend="hf",
 ):
     zoo, config = Path(zoo), Path(config)
     cfg = yaml.safe_load(config.read_bytes())
@@ -186,13 +189,22 @@ def run_batch(
     signature = hashlib.sha256((config_hash + origin["source_hash"]).encode()).hexdigest()
     run_id = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:8]
     production = (
-        limit is None
+        out is None
+        and backend == "hf"
+        and limit is None
         and max_new_tokens is None
         and batch_size is None
         and eligibility == "production"
         and config.resolve() == (REPO / "configs/eval_fast.yaml").resolve()
     )
-    out = REPO / "data/evals" / zoo.name if production else REPO / "data/runs/p2-batch" / run_id
+    out = (
+        Path(out)
+        if out
+        else (
+            REPO / "data/evals" / zoo.name if production else REPO / "data/runs/p2-batch" / run_id
+        )
+    )
+    signature = hashlib.sha256((signature + backend).encode()).hexdigest()
     if subset:
         spec = yaml.safe_load((REPO / "configs/eval_subset_d3.yaml").read_text())
         chosen = subset_ids(rows, spec)
@@ -221,11 +233,18 @@ def run_batch(
         base_done = complete(previous, signature, cfg["benchmarks"])
     if not selected and base_done:
         return
-    runner = HFRunner(header["base_model"], generation.copy(), revision=header["base_revision"])
+    runner_class = HFRunner
+    if backend == "vllm":
+        from wsp.eval.vllm_adapter import VLLMRunner
+
+        runner_class = VLLMRunner
+    runner = runner_class(header["base_model"], generation.copy(), revision=header["base_revision"])
     restore = WeightRestore(runner.model)
     runner.base_context = restore.base_context
+    if hasattr(runner, "wrap_base_context"):
+        runner.wrap_base_context()
     out.mkdir(parents=True, exist_ok=True)
-    jobs = ([] if base_done else [(None, base_out)]) + [
+    jobs = ([] if base_done or skip_base else [(None, base_out)]) + [
         (r, zoo / r["id"] if production else out / r["id"]) for r in selected
     ]
     for row, dest in jobs:
@@ -246,6 +265,7 @@ def run_batch(
             f"gpu_reserved={torch.cuda.memory_reserved()}",
             flush=True,
         )
+        runner.generation_stats = {"tokens": 0, "seconds": 0.0}
         started = time.monotonic()
 
         def execute(batch):
@@ -254,6 +274,8 @@ def run_batch(
 
         result, used_batch = retry_oom(execute, generation["batch_size"])
         manifest = {
+            "backend": backend,
+            "generation_stats": getattr(runner, "generation_stats", {}),
             "signature": signature,
             "seed": generation["seed"],
             "config_hash": config_hash,
@@ -292,6 +314,8 @@ def run_batch(
         payload = summary | manifest
         atomic_json(dest / "eval.json", payload)
         upsert_index(out / "index.jsonl", payload | {"path": str(dest)})
+        if hasattr(runner, "close"):
+            runner.close()
         torch.cuda.empty_cache()
         print(json.dumps(manifest), flush=True)
     restore.restore()
@@ -302,6 +326,11 @@ def main():
     parser.add_argument("--zoo", required=True)
     parser.add_argument("--config", default="configs/eval_fast.yaml")
     parser.add_argument("--subset", choices=["d3"])
+    parser.add_argument(
+        "--out", help="isolated output directory; never writes canonical zoo results"
+    )
+    parser.add_argument("--skip-base", action="store_true", help="time selected entries only")
+    parser.add_argument("--backend", choices=["hf", "vllm"], default="hf")
     parser.add_argument("--ids", nargs="+")
     parser.add_argument("--families", nargs="+")
     parser.add_argument("--eligibility", default="production", choices=["production", "smoke"])
