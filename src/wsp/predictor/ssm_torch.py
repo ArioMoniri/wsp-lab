@@ -96,9 +96,7 @@ class TrajectoryPredictor(nn.Module):
             raise ImportError("mamba_ssm is unavailable")
         self.inp = nn.Linear(d_in, d_model)
         if self.backend == "mamba_ssm" and _Mamba2 is not None:
-            self.blocks = nn.ModuleList(
-                [MambaBlock(d_model, d_state) for _ in range(n_layers)]
-            )
+            self.blocks = nn.ModuleList([MambaBlock(d_model, d_state) for _ in range(n_layers)])
         else:
             self.blocks = nn.ModuleList(
                 [SelectiveSSMBlock(d_model, d_state, backend=self.backend) for _ in range(n_layers)]

@@ -20,7 +20,9 @@ BIB_KEY_RE = re.compile(r"(?m)^\s*@\w+\s*\{\s*([^,\s]+)\s*,")
 
 def main() -> int:
     if not SECTIONS.is_dir() or not VERIFIED.is_file() or not BIB.is_file():
-        print("citation check failed: expected sections, verified.yaml, and refs.bib", file=sys.stderr)
+        print(
+            "citation check failed: expected sections, verified.yaml, and refs.bib", file=sys.stderr
+        )
         return 2
 
     verified_text = VERIFIED.read_text(encoding="utf-8")
@@ -41,14 +43,18 @@ def main() -> int:
                 if key not in bibliography:
                     problems.append(f"{path.relative_to(ROOT)}: {key} is missing from refs.bib")
                 if key not in verified:
-                    problems.append(f"{path.relative_to(ROOT)}: {key} is not verified in verified.yaml")
+                    problems.append(
+                        f"{path.relative_to(ROOT)}: {key} is not verified in verified.yaml"
+                    )
 
     if problems:
         print("citation check failed:", file=sys.stderr)
         print("\n".join(f"- {problem}" for problem in problems), file=sys.stderr)
         return 1
 
-    print(f"citation check passed: {len(verified)} verified keys available; scanned {len(list(SECTIONS.glob('*.tex')))} section files")
+    print(
+        f"citation check passed: {len(verified)} verified keys available; scanned {len(list(SECTIONS.glob('*.tex')))} section files"
+    )
     return 0
 
 

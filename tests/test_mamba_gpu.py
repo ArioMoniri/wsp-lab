@@ -5,7 +5,9 @@ from wsp.predictor.ssm_torch import TrajectoryPredictor, _Mamba2
 
 
 @pytest.mark.gpu
-@pytest.mark.skipif(not torch.cuda.is_available() or _Mamba2 is None, reason="CUDA Mamba unavailable")
+@pytest.mark.skipif(
+    not torch.cuda.is_available() or _Mamba2 is None, reason="CUDA Mamba unavailable"
+)
 def test_mamba_predictor_causal_and_deterministic():
     torch.manual_seed(42)
     model = TrajectoryPredictor(8, 3, d_model=32, n_layers=1, backend="mamba_ssm").cuda().eval()

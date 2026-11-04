@@ -168,18 +168,21 @@ class TaskAuction:
     def conduct_auction(self, task):
         # Broadcast task to all peers
         bids = self.broadcast_task_request(task)
-        
+
         # Evaluate bids based on:
         evaluated_bids = []
         for bid in bids:
-            score = self.evaluate_bid(bid, criteria={
-                'capability_match': 0.4,
-                'current_load': 0.3, 
-                'past_performance': 0.2,
-                'resource_availability': 0.1
-            })
+            score = self.evaluate_bid(
+                bid,
+                criteria={
+                    "capability_match": 0.4,
+                    "current_load": 0.3,
+                    "past_performance": 0.2,
+                    "resource_availability": 0.1,
+                },
+            )
             evaluated_bids.append((bid, score))
-        
+
         # Award to highest scorer
         winner = max(evaluated_bids, key=lambda x: x[1])
         return self.award_task(task, winner[0])
@@ -906,16 +909,14 @@ class LoadBalancer:
 class CapabilityRouter:
     def route_by_capability(self, task):
         required_caps = task.required_capabilities
-        
+
         # Find peers with matching capabilities
         capable_peers = []
         for peer in self.peers:
-            capability_match = self.calculate_match_score(
-                peer.capabilities, required_caps
-            )
+            capability_match = self.calculate_match_score(peer.capabilities, required_caps)
             if capability_match > 0.7:  # 70% match threshold
                 capable_peers.append((peer, capability_match))
-        
+
         # Route to best match with available capacity
         return self.select_optimal_peer(capable_peers)
 ```
