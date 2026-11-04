@@ -25,9 +25,9 @@ test-cpu:
   artifacts: {reports: {junit: report.xml}}
 test-gpu:
   stage: gpu
-  variables: {HF_HOME: /hf-cache, HF_HUB_OFFLINE: "1", CC: gcc, CXX: g++}
+  variables: {HF_HOME: /hf-cache, HF_DATASETS_CACHE: /tmp/hf-datasets, HF_HUB_CACHE: /hf-cache/hub, CC: gcc, CXX: g++}
   script:
-    - apt-get install -y -qq build-essential >/dev/null
+    - apt-get install -y -qq build-essential python3.12-dev >/dev/null
     - nvidia-smi
     - pytest -q -m "gpu and not slow and not net" --junitxml=report-gpu.xml
   artifacts: {reports: {junit: report-gpu.xml}}

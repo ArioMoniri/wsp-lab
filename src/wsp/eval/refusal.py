@@ -65,8 +65,20 @@ def evaluate_refusal(runner, kind, n=100):
     # Evaluate full sequence on a deterministic base-generated continuation (up to 128 tokens).
     # All KL terms are over the vocabulary; neither model samples its own conditioning text.
     cfg = runner.generation | {"max_new_tokens": 128}
-    base = HFRunner(runner.model_id, cfg, revision=runner.revision)
-    outputs = base.generate(texts)
+    from contextlib import nullcontext
+
+    if hasattr(runner, "base_context"):
+        base, context = runner, runner.base_context
+    else:
+        base = HFRunner(runner.model_id, cfg, revision=runner.revision)
+        context = nullcontext
+    previous = base.generation
+    base.generation = cfg
+    try:
+        with context():
+            outputs = base.generate(texts)
+    finally:
+        base.generation = previous
     records = []
     for i, (prompt, (output, _, _)) in enumerate(zip(texts, outputs)):
         prefix = runner.tokenizer.encode(runner.chat(prompt), add_special_tokens=False)
@@ -74,11 +86,13 @@ def evaluate_refusal(runner, kind, n=100):
         ids = torch.tensor([prefix + continuation], device=runner.model.device)
         with torch.inference_mode():
             # Only continuation positions; last prompt token predicts first continuation token.
-            b = base.model(ids).logits[0, len(prefix) - 1 : -1].float()
+            with context():
+                b = base.model(ids).logits[0, len(prefix) - 1 : -1].float().clone()
             e = runner.model(ids).logits[0, len(prefix) - 1 : -1].float()
         if b.shape[0] == 0:
             with torch.inference_mode():
-                b = base.model(ids).logits[0, -1:].float()
+                with context():
+                    b = base.model(ids).logits[0, -1:].float().clone()
                 e = runner.model(ids).logits[0, -1:].float()
         first, full = kl_means(b, e)
         records.append(

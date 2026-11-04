@@ -93,3 +93,18 @@
 | 2026-11-04 | Board A final feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (1) → fixed by orchestrator, merged 393fc18 |
 | 2026-11-04 | P3 features extractor + baselines | codex/gpt-6.1-terra high | running |
 | 2026-11-04 | P2 batch eval over zoo (resumable) | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | P3 features (1st) | codex/gpt-6.1-terra high | partial 20fc391 (splits, pooling) |
+| 2026-11-04 | P3 features (2nd: extractor+baselines) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | P2 batch runner | codex/gpt-6.1-sol medium | done 9143644 |
+| 2026-11-04 | Board A feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | perf: eval throughput (vLLM/static cache) | codex/gpt-6.1-terra high | running |
+| 2026-11-04 | perf eval throughput (1st) | codex/gpt-6.1-terra high | partial b2c7a22 (CPU side); GPU measurements wait for p1-zoo-full |
+| 2026-11-04 | Board A feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (5 blocking); throughput ≈120 GPU-h/700 |
+| 2026-11-04 | p2-batch REVISE round | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | p2-batch REVISE | codex/gpt-6.1-sol medium | done a63fdaf (164 tests) |
+| 2026-11-04 | Board A re-review feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | Board A re-review feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (residues) → fixed by orchestrator, merged |
+| 2026-11-04 | P3 features (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | done fbf60e5 (184 tests) |
+| 2026-11-04 | Board A feat/p3-features | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | Board A feat/p3-features | codex/gpt-6.1-sol medium | REVISE (4 blocking) |
+| 2026-11-04 | P3 REVISE round | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
