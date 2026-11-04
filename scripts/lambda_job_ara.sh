@@ -18,7 +18,7 @@ case "$drv" in 12.8*|12.9*) idx=cu128;; 12.6*|12.7*) idx=cu126;; 13.*) idx=cu132
 .venv/bin/python -c "import torch;print('torch',torch.__version__,'cuda',torch.cuda.is_available())"
 . scripts/env.sh   # reads ~/.config/wsp/env (HF_TOKEN, LAMBDA_API_KEY) written by the launcher
 hf auth login --token "$HF_TOKEN" >/dev/null 2>&1 || true
-mkdir -p data/zoo && scripts/hf_sync.sh pull zoo 2>&1 | tail -1 || true
+mkdir -p data/zoo && hf download Aralario/wsp-lab-zoo --repo-type dataset --include "zoo/qwen3.5-0.8b/manifest.jsonl" "zoo/qwen3.5-0.8b/*/*.json" --local-dir data/.hf-pull-zoo >/dev/null 2>&1 && rsync -a data/.hf-pull-zoo/zoo/ data/zoo/ || true   # metadata only: deltas are public on HF now and not needed for a build
 hf download Qwen/Qwen3.5-0.8B >/dev/null 2>&1
 python - <<PY
 import yaml
