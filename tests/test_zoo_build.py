@@ -248,8 +248,15 @@ def test_dry_run_never_pollutes_production_manifest(tmp_path, fake_base):
     assert (tmp_path / "zoo" / "manifest.jsonl").read_text() == prod
 
 
-def test_heretic_ara_params_are_labelled_dense_and_lora_sft_lora():
-    from wsp.zoo.build import _with_lora_extras
+def test_stored_format_follows_generator_output_not_planning_label():
+    from wsp.schema import EditDescriptor
+    from wsp.zoo.build import _stored_format
 
-    assert _with_lora_extras("heretic_ara", {}, {})["delta_format"] == "dense"
-    assert _with_lora_extras("lora_sft", {}, {})["delta_format"] == "lora"
+    d = EditDescriptor(
+        family="heretic_ara", params={"delta_format": "lora"}, seed=0, base_model="m"
+    )
+    d.provenance = {"delta_format": "dense"}
+    assert _stored_format(d) == "dense"
+    d2 = EditDescriptor(family="lora_sft", params={"delta_format": "lora"}, seed=0, base_model="m")
+    d2.provenance = {"delta_format": "lora"}
+    assert _stored_format(d2) == "lora"

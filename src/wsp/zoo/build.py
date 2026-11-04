@@ -302,7 +302,8 @@ def _descriptor(
 def _stored_format(desc: EditDescriptor) -> str:
     if desc.family == "chain":
         return "dense_cumulative"  # a cumulative snapshot relative to base, not a per-step delta
-    return "lora" if desc.params.get("delta_format") == "lora" else "dense"
+    fmt = desc.provenance.get("delta_format") or desc.params.get("delta_format")
+    return "lora" if fmt == "lora" else "dense"
 
 
 def _step_identity(desc: EditDescriptor, config: dict[str, Any]) -> dict[str, Any]:
@@ -511,8 +512,7 @@ def _with_lora_extras(family: str, params: dict[str, Any], family_cfg: dict[str,
     for key in GENERATE_PASSTHROUGH[family]:
         if key in family_cfg:
             params[key] = family_cfg[key]
-    # part of the id, so dry-run ids equal real ids; heretic_ara exports a dense evaluated delta
-    params["delta_format"] = "dense" if family == "heretic_ara" else "lora"
+    params["delta_format"] = "lora"  # part of the id, so dry-run ids equal real ids
     return params
 
 
@@ -556,9 +556,11 @@ def _lora_descriptor(
         generated.touched_tensors,
         generated.delta_fro_norm,
     )
+    # the stored format is what the generator actually wrote (heretic_ara exports a dense
+    # evaluated delta; lora_sft writes a PEFT adapter), never the planning label
     desc.provenance.update(
         {
-            "delta_format": params.get("delta_format", "lora"),
+            "delta_format": generated.params.get("delta_format") or "lora",
             "generator_edit_id": generated.id,
             "resolved_base_revision": generated.base_revision,
             "generator_git_dirty": generated.params.get("git_dirty"),
@@ -1015,8 +1017,8 @@ def build_zoo(
                 }
                 if "reuse_key" in desc.provenance:
                     line["reuse_key"] = desc.provenance["reuse_key"]
-                if desc.params.get("delta_format") == "lora":
-                    line["delta_format"] = "lora"
+                if desc.params.get("delta_format") == "lora" or "delta_format" in desc.provenance:
+                    line["delta_format"] = desc.provenance.get("delta_format") or "lora"
                 for key in ("step_semantics", "chain_step_semantics"):
                     if key in desc.provenance:
                         line[key] = desc.provenance[key]
