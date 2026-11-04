@@ -378,3 +378,15 @@ def test_real_build_header_rows_are_not_malformed_entries(tmp_path, zoo, base):
         f.write(json.dumps(header) + "\n")
     r = run_extract(z, tmp_path / "o", base_state=base, limit=2, n_layers=4)
     assert r["done"] == 2 and r["failed"] == {}
+
+
+def test_malformed_resolved_base_revision_is_recorded_not_fatal(tmp_path, zoo, base):
+    z, ids = zoo
+    e = json.loads((z / ids[0] / "edit.json").read_text())
+    e.setdefault("provenance", {})["resolved_base_revision"] = {"not": "a string"}
+    (z / ids[0] / "edit.json").write_text(json.dumps(e))
+    r = run_extract(z, tmp_path / "o", base_state=base, ids=ids[:3], n_layers=4)
+    assert r["done"] == 2 and list(r["failed"]) == [ids[0]]
+    recorded = _manifest_failed(tmp_path / "o")
+    assert "resolved_base_revision" in recorded[ids[0]]
+    assert (tmp_path / "o" / ids[1] / "features.json").exists()

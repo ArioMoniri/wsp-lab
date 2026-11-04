@@ -474,7 +474,13 @@ def run_extract(
     edits: dict[str, dict[str, Any]] = {}
     for i in ready:
         try:
-            edits[i] = read_edit(zoo / i)
+            edit = read_edit(zoo / i)
+            rev = (edit.get("provenance") or {}).get("resolved_base_revision")
+            if rev is not None and not isinstance(rev, str):
+                raise MetadataError(
+                    f"provenance.resolved_base_revision must be a string or null, got {type(rev).__name__}"
+                )
+            edits[i] = edit
         except MetadataError as e:
             failed[i] = f"MetadataError: {e}"
             log.error("entry %s has malformed metadata: %s", i, e)
