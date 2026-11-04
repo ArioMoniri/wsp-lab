@@ -63,3 +63,4 @@
 | 2026-11-03 | Board A re-review feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | APPROVE, merged |
 | 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | REVISE (4 blocking) |
 | 2026-11-03 | scribe fix round (paper) | copilot/auto | running |
+| 2026-11-04 | Board C: LLM-in-the-loop optimiser/editor assessment | codex/gpt-6-luna medium | running |
