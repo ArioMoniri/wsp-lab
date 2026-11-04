@@ -104,3 +104,5 @@
 | 2026-11-04 | p2-batch REVISE | codex/gpt-6.1-sol medium | done a63fdaf (164 tests) |
 | 2026-11-04 | Board A re-review feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | Board A re-review feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (residues) → fixed by orchestrator, merged |
+| 2026-11-04 | P3 features (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | done fbf60e5 (184 tests) |
+| 2026-11-04 | Board A feat/p3-features | codex/gpt-6.1-sol medium | running |
