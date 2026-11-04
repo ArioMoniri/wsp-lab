@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Selective sync of zoo artefacts to the private HF dataset (D7).
+"""Selective sync of zoo artefacts to the HF dataset (D7; public since 4 Nov 2026, D7 addendum 2).
 
 python scripts/hf_sync.py metadata   # manifest + every *.json / *.jsonl under data/zoo (small)
 python scripts/hf_sync.py deltas     # delta.safetensors / lora/ for non-chain production families
