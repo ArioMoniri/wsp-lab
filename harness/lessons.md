@@ -11,3 +11,4 @@
 | 2026-11-04 | P1 | worktrees feat/p1-zoo-build and feat/p2-eval have REAL data/ dirs (symlink replaced by agents); artefacts must be consolidated into canonical data/ after their jobs finish and wt.sh must guard the symlink | wt.sh, INFRA | ls -la .worktrees/*/data |
 | 2026-11-04 | P1 | mamba-ssm 2.3.2 + causal-conv1d 1.7 build on Blackwell cc12.0/CUDA 13.2/torch 2.15 by patching -std=c++17→c++20 in both setup.py (scripts/build_mamba.sh on perf/ssm-kernels) | INFRA, build script | ~/agent-logs/wsp-mamba3b-*.log |
 | 2026-11-04 | P1 | git add -A after consolidating data/ swept 600 MB of build artefacts into a commit; data/ is now ignored wholesale and pushes to GitHub rejected it | .gitignore | GH001 rejection |
+| 2026-11-04 | P1 | heretic_ara at production budget ≈ 8 min/trial on the shared 32 GB GPU → run that family on Lambda H100; local build covers the other five families | configs/zoo_qwen3.5-0.8b_local.yaml | round-3 chain.log |

@@ -90,3 +90,4 @@
 | 2026-11-04 | fix/eval-lora round 3 | codex/gpt-6.1-terra medium | done cffbcd5; GPU real-adapter test passed; merged |
 | 2026-11-04 | zoo REVISE round 3 | claude_aio_gmail_api/claude-sonnet-5-5 high | done d4da029 (144 tests) |
 | 2026-11-04 | Board A final review feat/p1-zoo-build | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | Board A final feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (1) → fixed by orchestrator, merged 393fc18 |

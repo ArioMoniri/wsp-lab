@@ -20,6 +20,7 @@ Edit families (each parameterised, seeded, logged as JSON "edit descriptors"):
 6. `llm_edit`: editor-LLM proposed edits (Astra / Claude / cheap controls) with a bounded forward-pass budget, stored like any other delta (H5)
 7. Trajectories: chains of 2–8 edits sampled from the above, since H2 needs sequences
 Target zoo size: ≥ 600 single edits + ≥ 150 trajectories.
+- [x] Builder merged 4 Nov 2026 (6 families, Heretic-parity kernels, identity/eligibility provenance); local full build started (tmux p1-zoo-full); heretic_ara family deferred to Lambda H100
 - Gate: zoo manifest validates, every entry has `delta.safetensors` (or LoRA) + `edit.json` + `eval.json`
 
 ## P2 — Cheap eval battery (runs for every zoo entry)
