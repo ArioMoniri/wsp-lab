@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# reject AI attribution trailers (user rule)
+if grep -qiE "^(Co-Authored-By|Signed-off-by):.*(claude|anthropic|openai|codex|gpt|copilot|gemini)" "$1"; then echo "commit-msg: AI attribution trailer rejected"; exit 1; fi
