@@ -47,22 +47,39 @@ def resolve_state_key(key: str, available: Iterable[str]) -> str | None:
     return None
 
 
-def lora_dense_delta(
+def lora_factors(
     lora_dir: str | Path, state_keys: Iterable[str] | None = None
-) -> dict[str, torch.Tensor]:
-    """Dense per-tensor delta (B @ A * scaling, float32) of a PEFT LoRA adapter directory.
+) -> dict[str, tuple[torch.Tensor, torch.Tensor, float]]:
+    """Per-tensor ``(B, A, scaling)`` factors (B, A float32) of a PEFT LoRA adapter directory.
 
     Keys are state-dict weight names; if ``state_keys`` is given, adapter modules are mapped onto
     them with :func:`resolve_state_key` and unmappable modules raise (never silently dropped).
+    The dense delta of a tensor is ``(B @ A) * scaling``.
     """
     lora_dir = Path(lora_dir)
     cfg = json.loads((lora_dir / "adapter_config.json").read_text())
     if cfg.get("use_dora"):
         raise NotImplementedError("DoRA adapters are not supported")
+    if (
+        cfg.get("fan_in_fan_out")
+        or cfg.get("bias", "none") != "none"
+        or cfg.get("modules_to_save")
+        or cfg.get("lora_bias")
+    ):
+        raise NotImplementedError("unsupported LoRA orientation, bias or modules_to_save")
     tensors = load_file(lora_dir / "adapter_model.safetensors")
+    for name in tensors:  # same validation as eval.zoo_compat: only paired lora_A / lora_B tensors
+        if ".lora_A." in name:
+            partner = name.replace(".lora_A.", ".lora_B.")
+        elif ".lora_B." in name:
+            partner = name.replace(".lora_B.", ".lora_A.")
+        else:
+            raise NotImplementedError(f"unsupported adapter tensor: {name}")
+        if partner not in tensors:
+            raise ValueError(f"unpaired adapter tensor: {name}")
     state_keys = list(state_keys) if state_keys is not None else None
     alpha_pattern = cfg.get("alpha_pattern") or {}
-    out: dict[str, torch.Tensor] = {}
+    out: dict[str, tuple[torch.Tensor, torch.Tensor, float]] = {}
     for name, A in tensors.items():
         if ".lora_A." not in name:
             continue
@@ -79,10 +96,17 @@ def lora_dense_delta(
             if resolved is None:
                 raise KeyError(f"LoRA module {key} has no matching tensor in the base state")
             key = resolved
-        out[key] = (B.float() @ A.float()) * scaling
+        out[key] = (B.float(), A.float(), scaling)
     if not out:
         raise ValueError(f"no LoRA weights found in {lora_dir}")
     return out
+
+
+def lora_dense_delta(
+    lora_dir: str | Path, state_keys: Iterable[str] | None = None
+) -> dict[str, torch.Tensor]:
+    """Dense per-tensor delta (B @ A * scaling, float32) of a PEFT LoRA adapter directory."""
+    return {k: (B @ A) * s for k, (B, A, s) in lora_factors(lora_dir, state_keys).items()}
 
 
 def load_entry_delta(

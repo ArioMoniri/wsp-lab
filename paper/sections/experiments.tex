@@ -1,1 +1,22 @@
-% experiments — filled per phase after Board A+B approval (docs/REVIEW_PROTOCOL.md)
+\section{Experiments}
+The subject is Qwen3.5-0.8B with thinking enabled. Fixed subsets cover GSM8K, MATH-500, IFEval, MMLU-Pro and HellaSwag. We also measure WikiText perplexity, refusal on harmful prompts, over-refusal on harmless prompts, and KL to the base. Loop rate is the fraction of responses pooled across GSM8K, MATH-500 and IFEval that reach the token limit without EOS. Refusal keyword matching is a surface measure. It does not establish harmfulness.
+
+The proposed fast screening tier uses 50 GSM8K, 25 MATH-500, 25 IFEval, 100 MMLU-Pro and 100 HellaSwag items, plus 50 prompts each for refusal, over-refusal and KL. Generation is capped at 1024 tokens. The cheap tier runs the larger fixed battery with a 4096-token limit, except for MMLU-Pro, which has a 1024-token limit. A faithful 32768-token tier is reserved for the base and at most 10 selected entries. Fast scores are the proposed predictor targets, and cheap scores will calibrate a subset. We plan to start with a clean timing measurement and a stratified production subset, and to extend coverage after that. D3 samples production entries without replacement using seed 0 and sorted IDs, with quotas of 60 random direction, 100 abliteration, 60 LoRA SFT, 30 task vector and 50 chain steps; it takes all available entries if a family falls short. On the manifest snapshot in Table~\ref{tab:zoo-counts}, these quotas resolve to 300 entries. Sampling settings and fixed item IDs are recorded in the evaluation configuration.
+
+Table~\ref{tab:base-repro} gives the completed base run alongside the blog comparison recorded in \texttt{docs/RESULTS.md}. The budgets and loop denominators differ, so these figures are not matched estimates. The 32k rerun was interrupted when the GPU ran out of memory, and the IFEval differences still need checker reconciliation. Local work runs on an RTX PRO 4500 with 32 GB. The Heretic ARA family runs on Lambda GPU compute: one NVIDIA A100-SXM4 40 GB instance at \$1.99/h.
+\begin{table}[t]
+\centering
+\begin{tabular}{lrr}\toprule
+Metric & Ours, 4k (\%) & Blog, 32k (\%) \\\midrule
+GSM8K & 15.5 & 13.8 \\
+MATH-500 & 6.0 & 7.9 \\
+IFEval & 42.0 & 21.0 \\
+MMLU-Pro & 20.3 & --- \\
+HellaSwag & 51.3 & --- \\
+Loop rate & 90.2 & 93.0 \\
+Refusal rate & 99.0 & --- \\
+KL to base & 0.000 & --- \\\bottomrule
+\end{tabular}
+\caption{Base reproduction, run \texttt{p2/base-final-4096}, and blog values recorded in \texttt{docs/RESULTS.md}. Our loop rate pools GSM8K, MATH-500 and IFEval; the blog value is MATH-500 only. KL is a self-check, not a percentage.}
+\label{tab:base-repro}
+\end{table}

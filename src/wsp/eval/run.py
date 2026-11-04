@@ -148,6 +148,13 @@ class HFRunner:
             descriptor = json.loads((Path(zoo_entry) / "edit.json").read_text())
             if revision == "main":
                 revision = descriptor.get("base_revision", revision)
+        from wsp.zoo.common import resolve_base_revision
+
+        revision = (
+            "local-" + hashlib.sha256((Path(model_id) / "config.json").read_bytes()).hexdigest()
+            if Path(model_id).is_dir()
+            else resolve_base_revision(model_id, revision)
+        )
         self.model_id = model_id
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_id, revision=revision, padding_side="left"
@@ -161,7 +168,7 @@ class HFRunner:
             device_map="auto",
             attn_implementation="sdpa",
         ).eval()
-        self.revision = getattr(self.model.config, "_commit_hash", None) or revision
+        self.revision = revision
         self.edit_id = "base"
         self.rounding_stats = {}
         self.delta_format = None

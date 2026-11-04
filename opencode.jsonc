@@ -10,6 +10,14 @@
     "ssm-researcher": { "mode": "subagent", "model": "opencode-go/deepseek-v4-pro", "prompt": "{file:.claude/agents/ssm-researcher.md}" },
     "weight-reader": { "mode": "subagent", "model": "opencode-go/gpt-6-luna", "permission": { "edit": "deny" }, "prompt": "{file:.claude/agents/weight-reader.md}" },
     "reviewer": { "mode": "subagent", "model": "opencode-go/deepseek-v4-pro", "permission": { "edit": "deny" }, "prompt": "{file:.claude/agents/reviewer.md}" },
+    "reviewer-ml": { "mode": "subagent", "model": "opencode-go/deepseek-v4-pro", "permission": { "edit": "deny" }, "prompt": "{file:.claude/agents/reviewer-ml.md}" },
+    "reviewer-journal": { "mode": "subagent", "model": "opencode-go/deepseek-v4-pro", "permission": { "edit": "deny" }, "prompt": "{file:.claude/agents/reviewer-journal.md}" },
+    "reviewer-arch": { "mode": "subagent", "model": "opencode-go/deepseek-v4-pro", "permission": { "edit": "deny" }, "prompt": "{file:.claude/agents/reviewer-arch.md}" },
+    "infra-ops": { "mode": "subagent", "model": "opencode-go/kimi-k2.7-code", "prompt": "{file:.claude/agents/infra-ops.md}" },
+    "perf-challenger": { "mode": "subagent", "model": "opencode-go/glm-5.3", "prompt": "{file:.claude/agents/perf-challenger.md}" },
+    "ref-checker": { "mode": "subagent", "model": "opencode-go/glm-5.3-flash", "prompt": "{file:.claude/agents/ref-checker.md}" },
+    "humanizer": { "mode": "subagent", "model": "opencode-go/glm-5.3-flash", "prompt": "{file:.claude/agents/humanizer.md}" },
+    "router": { "mode": "subagent", "model": "opencode-go/glm-5.3-flash", "permission": { "edit": "deny" }, "prompt": "{file:.claude/agents/router.md}" },
     "scribe": { "mode": "subagent", "model": "opencode-go/claude-haiku-5-5", "prompt": "{file:.claude/agents/scribe.md}" }
   }
 }

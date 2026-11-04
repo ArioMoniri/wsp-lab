@@ -98,3 +98,59 @@
 | 2026-11-04 | P2 batch runner | codex/gpt-6.1-sol medium | done 9143644 |
 | 2026-11-04 | Board A feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | perf: eval throughput (vLLM/static cache) | codex/gpt-6.1-terra high | running |
+| 2026-11-04 | perf eval throughput (1st) | codex/gpt-6.1-terra high | partial b2c7a22 (CPU side); GPU measurements wait for p1-zoo-full |
+| 2026-11-04 | Board A feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (5 blocking); throughput ≈120 GPU-h/700 |
+| 2026-11-04 | p2-batch REVISE round | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | p2-batch REVISE | codex/gpt-6.1-sol medium | done a63fdaf (164 tests) |
+| 2026-11-04 | Board A re-review feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | Board A re-review feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (residues) → fixed by orchestrator, merged |
+| 2026-11-04 | P3 features (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | done fbf60e5 (184 tests) |
+| 2026-11-04 | Board A feat/p3-features | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | Board A feat/p3-features | codex/gpt-6.1-sol medium | REVISE (4 blocking) |
+| 2026-11-04 | P3 REVISE round | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | P3 REVISE | claude_aio_gmail_api/claude-sonnet-5-5 high | done 59db218 (227 tests) |
+| 2026-11-04 | Board A re-review feat/p3-features | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | Board A re-review feat/p3-features | codex/gpt-6.1-sol medium | REVISE (1) → fixed by orchestrator, merged |
+| 2026-11-04 | design: hero SVG + Lottie redo | codex/gpt-6.1-sol high | running |
+| 2026-11-04 | writer: README + PROGRESS + live status script | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | scribe: paper method/zoo/experiments | codex/gpt-6.1-terra high | running |
+| 2026-11-04 | checker: docs accuracy + commands + tests | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | scribe method/zoo/experiments | codex/gpt-6.1-terra high | done e73b576 (6-page PDF) |
+| 2026-11-04 | humanizer method/zoo/experiments | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | humanizer method/zoo/experiments | claude_aio_gmail_api/claude-haiku-5-5 | done d1d0d6c |
+| 2026-11-04 | Board B paper/method-zoo | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | writer README v2 | claude_aio_gmail_api/claude-sonnet-5-5 high | done 43a5c08 |
+| 2026-11-04 | Board B review docs/readme-v2 | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | Board B paper/method-zoo | codex/gpt-6.1-terra medium | REVISE (4 blocking, text-vs-code) |
+| 2026-11-04 | scribe fix round method/zoo/experiments | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | scribe fix round method/zoo | codex/gpt-6.1-terra medium | done 76eb3c7 |
+| 2026-11-04 | Board B re-review paper/method-zoo | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | design hero v2 | codex/gpt-6.1-sol high | done fb71805, merged |
+| 2026-11-04 | Board B re-review paper/method-zoo | codex/gpt-6.1-sol medium | APPROVE, merged |
+| 2026-11-04 | docs fix round (accuracy-check issues 18–25) | claude_aio_gmail_api/claude-haiku-5-5 medium | running |
+| 2026-11-04 | Board B docs/readme-v2 | codex/gpt-6.1-sol medium | REVISE (4 wrong claims, prose) |
+| 2026-11-04 | README v2 fix round | claude_aio_gmail_api/claude-sonnet-5-5 medium | running |
+| 2026-11-04 | README v2 fix round | claude_aio_gmail_api/claude-sonnet-5-5 medium | done 2e64254 |
+| 2026-11-04 | Board B re-review docs/readme-v2 | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | Board B re-review docs/readme-v2 | codex/gpt-6.1-sol medium | APPROVE, merged |
+| 2026-11-04 | docs fix round 18–25 | claude_aio_gmail_api/claude-haiku-5-5 medium | done 6293d84, merged |
+| 2026-11-04 | P4 predictors M1/M2/M3/M5/M6 training code | codex/gpt-6.1-sol high | running |
+| 2026-11-04 | H4 LLM-reader harness (1st) | codex/gpt-6.1-terra medium | no work done |
+| 2026-11-04 | H4 LLM-reader harness (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | H4 harness (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | done c46cc4f (43 tests) |
+| 2026-11-04 | Board A feat/h4-reader | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | Board A feat/h4-reader | codex/gpt-6.1-terra medium | REVISE (3 blocking) |
+| 2026-11-04 | h4-reader REVISE round | claude_aio_gmail_api/claude-sonnet-5-5 medium | running |
+| 2026-11-04 | P4 predictors code | codex/gpt-6.1-sol high | done 8559479 (242 tests) |
+| 2026-11-04 | Board A feat/p4-predictors | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | h4-reader REVISE | claude_aio_gmail_api/claude-sonnet-5-5 medium | done 89f2459 (297 tests) |
+| 2026-11-04 | Board A re-review feat/h4-reader | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | Board A re-review feat/h4-reader | codex/gpt-6.1-terra medium | REVISE (1) → fixed by orchestrator, merged |
+| 2026-11-04 | Board A feat/p4-predictors | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (3 blocking: family-holdout ancestry, task_vector relation, Δy target) |
+| 2026-11-04 | p4-predictors REVISE round | codex/gpt-6.1-sol high | running |
+| 2026-11-04 | p4-predictors REVISE | codex/gpt-6.1-sol high | done 6674f10 (319 tests) |
+| 2026-11-04 | Board A re-review feat/p4-predictors | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | Board A re-review feat/p4-predictors | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (1: explicit --holdout for the M6/H3 gate) |
+| 2026-11-04 | p4-predictors round 3 | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | p4-predictors round 3 | codex/gpt-6.1-sol medium | done 9ae970f (325 tests), merged |
+| 2026-11-04 | perf eval throughput (2nd, GPU after post-zoo) | codex/gpt-6.1-sol high | running |

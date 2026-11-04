@@ -7,7 +7,7 @@ Two layers, both configured in this repo:
    Claude (`claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`, `claude-haiku-5-5`),
    OpenCode (`opencode-go/kimi-k2.7-code`, `glm-5.3`, `deepseek-v4-pro`, `gemini-4-argon`),
    Grok (`grok-4.7`), Antigravity (`gemini-3.8-flash`, `gpt-oss-120b`).
-2. **Ruflo v3.66** (`ruflo init` done in repo; hierarchical swarm, hybrid memory in `data/memory`) for
+2. **Ruflo v3.66** (`ruflo init` done in repo; hierarchical swarm, hybrid memory in `/home/ubuntu/data/memory/`, file `agentdb-memory.db`; the `persistPath` `./data/memory` in `/home/ubuntu/claude-flow.config.json` resolves from the home directory, not this repo) for
    background workers and shared vector memory across sessions.
 
 ## Roles ("characters") and default assignment
@@ -23,8 +23,9 @@ Two layers, both configured in this repo:
 | `.claude/agents/infra-ops.md` | tmux/Lambda operator | Claude `claude-sonnet-5-5` | `scripts/`, Lambda bursts, rsync back |
 | `.claude/agents/scribe.md` | documentation | OpenCode `claude-haiku-5-5` | `sessions/`, `docs/RESULTS.md` |
 
-The same roles are mirrored in `opencode.jsonc` (for `opencode` CLI users) and in `.claude/agents/` (for
-Claude Code). Briefs are the only context a child gets: always include the role file path, the phase,
+Every role file in `.claude/agents/` has an entry in `opencode.jsonc` (for `opencode` CLI users). The
+opencode entries use opencode-go models, so for some roles their model differs from the table above.
+Claude Code reads `.claude/agents/` directly. Briefs are the only context a child gets: always include the role file path, the phase,
 the files to touch, the tests to make green, and the DoD.
 
 ## Delegation recipe
@@ -48,3 +49,15 @@ Reviews are always a new `delegate_task` with `role="review"`.
 - Fallback order when a provider hits a quota (user rule, 3 Nov 2026): switch immediately to another provider,
   including the API-billed instances (`claude_aio_gmail_api` "Claude API" for Claude models) rather than waiting;
   record the switch in `board/usage.md`. Report exact needs to the user in the BLUF line.
+
+## Skills to invoke by role (available on this server, 4 Nov 2026)
+| Role | Skills (Claude-based agents call them via the Skill tool; others follow the same checklists in docs/) |
+|---|---|
+| scribe / writer | `anthropic-skills:docs`, `anthropic-skills:doc-coauthoring`, `anthropic-skills:content-research-writer`, `engineering:documentation`, `design:ux-copy` |
+| humanizer | `design:ux-copy` + docs/WRITING_GUIDE.md |
+| reviewer-ml (Board A) | `code-review`, `engineering:code-review`, `security-review`, `simplify` |
+| tester / checker | `engineering:testing-strategy`, `engineering:debug`, `run` |
+| figures | `dataviz` (palette validator) + docs/FIGURE_STYLE.md |
+| reviewer-arch (Board C) | `anthropic-skills:deep-research`, `engineering:architecture`, `engineering:system-design` |
+| infra-ops | `engineering:deploy-checklist`, `engineering:incident-response` |
+Reviewers, testers and checkers run in parallel on every branch wave; writers iterate with them until Board B approves.

@@ -23,6 +23,8 @@ dependencies = [
   "pyarrow",
   "tqdm",
   "pyyaml",
+  "httpx",
+  "jsonschema",
   "typer",
   "rich",
   "lm-eval>=0.4.13",
