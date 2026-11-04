@@ -40,6 +40,7 @@ timeout = 600
 markers = ["gpu: needs CUDA", "slow: long-running", "net: needs network/HF"]
 [tool.ruff]
 line-length = 100
+extend-exclude = ["data", ".worktrees", ".venv", "paper/template"]
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
