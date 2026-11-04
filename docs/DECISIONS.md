@@ -17,6 +17,31 @@ comparisons with the blog): 32,768 tokens, few entries. Throughput work (vLLM or
 perf-challenger task; the predictor targets are the fast-tier scores, with cheap-tier scores used to
 calibrate on a subset.
 
+### D2 addendum — labelled metadata backfill (4 Nov 2026)
+
+Backfilled metadata is labelled; new runs record it natively. Run
+`python scripts/backfill_eval_metadata.py` to inspect changes and add `--apply`
+to write them. The private device map supplies opaque IDs; historical host labels
+are removed from updated payloads. Original base records are retained, with
+copies under `base/devices/<device>/<run>/`. Evaluated zoo directories are linked
+into the eval directory so directory readers see all completed entries.
+
+Item identity and order are reconstructed only from the corresponding item records;
+control copies without their own records (or a matching main run ID) retain null
+hashes. Local runtime fields describe the current environment and the runner's
+bf16/SDPA settings, not a contemporaneous measurement. Remote runtime fields use
+available evidence only: torch 2.11.0+cu128 is known from job logs; other fields
+remain null unless supplied with `--runtime-json` as an opaque-device keyed JSON
+object transcribed from logs. Partial records list missing fields explicitly.
+The script preserves scores, actual batch sizes and original provenance hashes.
+Strict reference matching continues to reject unknown runtime fields.
+
+Compatibility check `backfill-compat-final` reads 278 evaluated edits: 53 matched
+and 225 missing references after backfill (before: 0 matched, 109 missing in the
+then-current index). The requested M1 family run stops because ancestry filtering
+leaves an empty training fold. This backfill does not qualify the measurement
+panels or establish historical runtime equivalence for partial records.
+
 ## D3 (4 Nov 2026) — evaluation budget and order
 Board A's calibrated estimate (reviews/P2/feat-p2-batch-boardA-2026-11-04.md): ~9–12 min per entry under D2 on
 this GPU, ≈ 120 GPU-hours for 700 entries. Order of work: (1) measure one clean D2 entry when the GPU is free;

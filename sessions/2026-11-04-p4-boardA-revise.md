@@ -99,3 +99,15 @@ matched_reference_targets=0, missing_matched_reference=108 (observed edit rows).
 No training output or hypothesis result is claimed: real legacy artifacts lack
 required matched-reference metadata. New measured matched runs are needed; metadata
 was not inferred or backfilled. No GPU runs, repeat panels or qualification claims.
+
+Metadata backfill implementation: scripts/backfill_eval_metadata.py is dry-run by
+ default, labels full/partial records, reconstructs item hashes, updates index
+metadata, preserves scores and links device bases and evaluated zoo directories.
+Applied to shared real artefacts; rerun reports zero changed records. Private
+mapping created outside git. Lambda runtime evidence remains incomplete; only
+torch is known. Control copies lacking corresponding item records stay partial.
+Before CPU suite: 417 passed / 8 deselected. M1 before: 0 matched / 109 missing.
+After dataset: 53 matched / 225 missing; family training exits on empty fold after
+ancestry purge. No runtime values were guessed to increase matching. Existing
+script executable bit corrected for repository-wide ruff EXE001.
+Final CPU suite: 420 passed / 8 deselected (24.42 s); repository-wide ruff clean.
