@@ -110,3 +110,4 @@
 | 2026-11-04 | P3 REVISE round | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
 | 2026-11-04 | P3 REVISE | claude_aio_gmail_api/claude-sonnet-5-5 high | done 59db218 (227 tests) |
 | 2026-11-04 | Board A re-review feat/p3-features | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | Board A re-review feat/p3-features | codex/gpt-6.1-sol medium | REVISE (1) → fixed by orchestrator, merged |
