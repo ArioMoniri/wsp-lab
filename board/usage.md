@@ -99,3 +99,5 @@
 | 2026-11-04 | Board A feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | perf: eval throughput (vLLM/static cache) | codex/gpt-6.1-terra high | running |
 | 2026-11-04 | perf eval throughput (1st) | codex/gpt-6.1-terra high | partial b2c7a22 (CPU side); GPU measurements wait for p1-zoo-full |
+| 2026-11-04 | Board A feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (5 blocking); throughput ≈120 GPU-h/700 |
+| 2026-11-04 | p2-batch REVISE round | codex/gpt-6.1-sol medium | running |

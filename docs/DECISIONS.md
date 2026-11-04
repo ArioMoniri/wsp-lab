@@ -16,3 +16,11 @@ measured as hit-1024; **cheap** (base and selected entries): the P2 battery at 4
 comparisons with the blog): 32,768 tokens, few entries. Throughput work (vLLM or HF static-cache batching) is a
 perf-challenger task; the predictor targets are the fast-tier scores, with cheap-tier scores used to
 calibrate on a subset.
+
+## D3 (4 Nov 2026) — evaluation budget and order
+Board A's calibrated estimate (reviews/P2/feat-p2-batch-boardA-2026-11-04.md): ~9–12 min per entry under D2 on
+this GPU, ≈ 120 GPU-hours for 700 entries. Order of work: (1) measure one clean D2 entry when the GPU is free;
+(2) evaluate a stratified subset first — random_dir 60, abliteration 100, lora_sft 60, task_vector 30, chain
+steps 50 (≈ 300 entries, ≈ 50 h) — enough for H1/H2 baselines; (3) pursue vLLM (if Qwen3.5 is supported) or a
+Lambda H100 to finish the remainder; (4) refusal/KL prompts stay at 50/50 because they are cheap (short
+continuations). The 32k faithful tier is reserved for the base model and ≤ 10 selected entries.
