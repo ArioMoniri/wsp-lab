@@ -246,3 +246,10 @@ def test_dry_run_never_pollutes_production_manifest(tmp_path, fake_base):
     prod = (tmp_path / "zoo" / "manifest.jsonl").read_text()
     build_zoo(cfg, dry_run=True)
     assert (tmp_path / "zoo" / "manifest.jsonl").read_text() == prod
+
+
+def test_heretic_ara_params_are_labelled_dense_and_lora_sft_lora():
+    from wsp.zoo.build import _with_lora_extras
+
+    assert _with_lora_extras("heretic_ara", {}, {})["delta_format"] == "dense"
+    assert _with_lora_extras("lora_sft", {}, {})["delta_format"] == "lora"

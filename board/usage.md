@@ -61,7 +61,6 @@
 | 2026-11-03 | humanizer intro+related | claude_aio_gmail_api/claude-haiku-5-5 | done 0f9df52 (12 paragraphs) |
 | 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | REVISE (4 blocking) |
 | 2026-11-03 | Board A re-review feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | APPROVE, merged |
-| 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | REVISE (4 blocking) |
 | 2026-11-03 | scribe fix round (paper) | copilot/auto | running |
 | 2026-11-04 | Board C: LLM-in-the-loop optimiser/editor assessment | codex/gpt-6-luna medium | running |
 | 2026-11-04 | scribe fix round (paper) | copilot/auto | done b4433da |
@@ -161,7 +160,6 @@
 | 2026-11-04 | Board A feat/multi-model-zoo | codex/gpt-6.1-terra medium | running |
 | 2026-11-04 | perf eval throughput (2nd) | codex/gpt-6.1-sol high | code 66687d4; gated tmux perf-benchmark will measure after post-zoo |
 | 2026-11-04 | Board A feat/multi-model-zoo | codex/gpt-6.1-terra medium | REVISE (1) → fixed by orchestrator, merged |
-| 2026-11-04 | Board A feat/multi-model-zoo | codex/gpt-6.1-terra medium | REVISE (1) → fixed by orchestrator, merged |
 | 2026-11-04 | Board A perf/eval-throughput | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | Board A perf/eval-throughput | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (docs/hygiene); branch NOT merged — no engine gain; docs corrected on main |
 | 2026-11-04 | eval: skip signature fix (issue) | codex/gpt-6.1-sol medium | running |
@@ -169,3 +167,4 @@
 | 2026-11-04 | heretic_ara export fix | codex/gpt-6.1-sol high | running |
 | 2026-11-04 | heretic_ara export fix | codex/gpt-6.1-sol high | done d2193cf (401 tests; KL gate identical) |
 | 2026-11-04 | Board A fix/heretic-ara-export | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | Board A fix/heretic-ara-export | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (2) → fixed by orchestrator, merged |

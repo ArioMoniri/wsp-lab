@@ -511,7 +511,8 @@ def _with_lora_extras(family: str, params: dict[str, Any], family_cfg: dict[str,
     for key in GENERATE_PASSTHROUGH[family]:
         if key in family_cfg:
             params[key] = family_cfg[key]
-    params["delta_format"] = "lora"  # part of the id, so dry-run ids equal real ids
+    # part of the id, so dry-run ids equal real ids; heretic_ara exports a dense evaluated delta
+    params["delta_format"] = "dense" if family == "heretic_ara" else "lora"
     return params
 
 
@@ -557,7 +558,7 @@ def _lora_descriptor(
     )
     desc.provenance.update(
         {
-            "delta_format": "lora",
+            "delta_format": params.get("delta_format", "lora"),
             "generator_edit_id": generated.id,
             "resolved_base_revision": generated.base_revision,
             "generator_git_dirty": generated.params.get("git_dirty"),
