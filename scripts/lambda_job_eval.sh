@@ -50,9 +50,12 @@ for attempt in 1 2 3; do python - "$IDS" "$HOST" <<'PY' && break || sleep 60
 import os, sys
 from pathlib import Path
 from huggingface_hub import HfApi
-ids = [l.strip() for l in open(sys.argv[1]) if l.strip()]
 host = sys.argv[2]
 api = HfApi(token=os.environ["HF_TOKEN"])
+# every entry this host evaluated (pulled eval.json files are deleted at download time), not only the current ids file:
+# a rerun with a trimmed ids file must still upload the earlier results
+ids = sorted(d.name for d in Path("data/zoo/qwen3.5-0.8b").iterdir() if (d / "eval.json").exists())
+print(f"uploading {len(ids)} evaluated entries")
 pats = [f"{i}/{f}" for i in ids for f in ("eval.json", "summary.json", "records.jsonl", "manifest.json")]
 api.upload_folder(repo_id="Aralario/wsp-lab-zoo", repo_type="dataset", folder_path="data/zoo/qwen3.5-0.8b",
                   path_in_repo="zoo/qwen3.5-0.8b", allow_patterns=pats, commit_message=f"eval shard {host}")

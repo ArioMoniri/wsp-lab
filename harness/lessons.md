@@ -28,3 +28,8 @@ Two Lambda eval instances failed within minutes and self-terminated before uploa
 ($1.20). Rule: a remote job may terminate its instance only on success; on failure it uploads its log and stays up
 for inspection. Also: when several instances run under the same name prefix, self-termination must match the
 instance's own public IP, never "the first instance with that name".
+
+## 2026-11-04 — upload everything the host produced, not what the last invocation was asked for
+The A10 eval job was rerun with a trimmed ids file; its upload step built patterns from that file, so 41 earlier
+results never reached the hub before the instance self-terminated (35 had to be re-evaluated, ≈ $4 and 2 h). Rule:
+the upload step enumerates artefacts on disk; the ids file only says what to compute.
