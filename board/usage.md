@@ -82,3 +82,5 @@
 | 2026-11-04 | SSM finish: mamba backend test+bench | codex/gpt-6.1-terra medium | running |
 | 2026-11-04 | fix/eval-lora round 2 | codex/gpt-6.1-terra high | done 43c7d9d |
 | 2026-11-04 | Board A re-review fix/eval-lora | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | SSM finish mamba backend | codex/gpt-6.1-terra medium | done 9a57a4f (mamba 2.44 ms vs loop 5.78 ms fwd) |
+| 2026-11-04 | Board A re-review perf/ssm-kernels | codex/gpt-6.1-sol medium | running |
