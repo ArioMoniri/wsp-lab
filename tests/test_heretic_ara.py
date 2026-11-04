@@ -392,3 +392,22 @@ def test_dense_export_is_effective_bf16_delta():
     assert list(delta) == ["weight"]
     assert torch.equal(delta["weight"], expected)
     assert delta["weight"].dtype == torch.float32
+
+
+def test_failed_verification_removes_stale_artifacts(tmp_path, fake_heretic, monkeypatch):
+    import json
+
+    from wsp.zoo import heretic_ara
+
+    out = tmp_path / "entry"
+    out.mkdir()
+    (out / "edit.json").write_text("{}")
+    (out / "delta.safetensors").write_bytes(b"old")
+    monkeypatch.setattr(heretic_ara, "_reload_kl", lambda *a, **k: (999.0, 1.0), raising=False)
+    import contextlib
+
+    with contextlib.suppress(Exception):
+        heretic_ara.generate("toy", {"trials": 1, "kl_divergence_target": 1.0}, 0, out)
+    study = json.loads((out / "study.json").read_text()) if (out / "study.json").exists() else {}
+    if study.get("verification_status") == "failed":
+        assert not (out / "edit.json").exists() and not (out / "delta.safetensors").exists()

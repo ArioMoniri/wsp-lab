@@ -267,6 +267,9 @@ def generate(
             except Exception as exc:
                 study_data.update(verification_status="failed", verification_error=str(exc))
                 study_file.write_text(json.dumps(study_data, indent=2))
+                # never leave a previous passing artefact beside a failed study
+                for stale in ("edit.json", "delta.safetensors", "manifest.json"):
+                    (out_dir / stale).unlink(missing_ok=True)
                 raise
             study_data["verification_status"] = "passed"
             study_file.write_text(json.dumps(study_data, indent=2))
