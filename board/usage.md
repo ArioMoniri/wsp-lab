@@ -175,4 +175,5 @@
 | 2026-11-04 | H5 editor harness implementation (src/wsp/editor, CPU tests) | codex/gpt-6.1-sol medium | done af22aee (416 tests) — Board A review pending |
 | 2026-11-04 | eval: Board A B2/B3/B5 fixes | codex/gpt-6.1-sol medium | done 54e0f4f (408 CPU + 4 GPU tests) — Board A review pending |
 | 2026-11-04 | Board A review feat/h5-editor | claude_aio_gmail_api/claude-haiku-5-5 high | running |
-| 2026-11-04 | Board A review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | Board A review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | REVISE (4 blocking: matched references in targets, reliability stats, base re-eval on resume, wording) cc0e77c |
+| 2026-11-04 | eval fixes round 2 (Board A blocking 1–4) | codex/gpt-6.1-sol high | running |
