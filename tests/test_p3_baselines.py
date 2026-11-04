@@ -122,7 +122,7 @@ def test_run_baselines_on_toy_zoo_all_splits(toy, tmp_path, split):
     md = (tmp_path / split / "results.md").read_text()
     assert "| model |" in md and "delta_norm_ridge" in md and "acc" in md
     stored = json.loads((tmp_path / split / "metrics.json").read_text())
-    assert stored["feature_dims"] == {"delta_norm": 2, "statnn": 522, "mlp_svd": 56}
+    assert stored["feature_dims"] == {"delta_norm": 2, "statnn": 1098, "mlp_svd": 120}
     assert (tmp_path / split / "manifest.json").exists()
 
 
@@ -142,3 +142,77 @@ def test_cli_writes_outputs_and_reports_no_targets(toy, tmp_path, capsys):
                 "--split", "seed", "--out", str(tmp_path / "r2"),
             ]
         )  # fmt: skip
+
+
+def test_trajectory_folds_keep_chain_together_when_middle_entry_has_no_target(toy, tmp_path):
+    root, ids, rows = toy
+    chain = [r["id"] for r in rows if r["family"] == "chain"]
+    assert len(chain) == 3
+    middle = root / "evals" / chain[1] / "eval.json"
+    hidden = middle.with_name("hidden.json")
+    middle.rename(hidden)
+    try:
+        res = run_baselines(
+            root / "features",
+            root / "evals",
+            "trajectory",
+            tmp_path / "t",
+            n_splits=3,
+            n_boot=20,
+            models=["delta_norm_ridge"],
+        )
+    finally:
+        hidden.rename(middle)
+    assert res["n_edits"] == len(ids) - 1
+    flat = [i for fold in res["folds"] for i in fold]
+    assert chain[1] not in flat and sorted(flat) == sorted(set(ids) - {chain[1]})
+    holders = [k for k, fold in enumerate(res["folds"]) if chain[0] in fold or chain[2] in fold]
+    assert len(holders) == 1 and {chain[0], chain[2]} <= set(res["folds"][holders[0]])
+
+
+def test_trajectory_split_needs_the_zoo_manifest(toy, tmp_path):
+    root, _ids, _rows = toy
+    import shutil
+
+    feats = tmp_path / "features"
+    shutil.copytree(root / "features", feats)
+    manifest = json.loads((feats / "manifest.json").read_text())
+    manifest["zoo"] = str(tmp_path / "gone")
+    (feats / "manifest.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="zoo manifest"):
+        run_baselines(feats, root / "evals", "trajectory", tmp_path / "o", n_boot=10)
+    res = run_baselines(
+        feats,
+        root / "evals",
+        "trajectory",
+        tmp_path / "o2",
+        n_splits=3,
+        n_boot=10,
+        zoo=root / "zoo",
+        models=["delta_norm_ridge"],
+    )
+    assert res["split"] == "trajectory"
+
+
+def test_delta_from_base_rejects_targets_missing_from_base(toy, tmp_path):
+    root, _ids, _rows = toy
+    evals = tmp_path / "evals"
+    import shutil
+
+    shutil.copytree(root / "evals", evals)
+    (evals / "base").mkdir()
+    (evals / "base" / "eval.json").write_text(json.dumps({"metrics": {"acc": 0.9}}))
+    with pytest.raises(ValueError, match="ppl"):
+        run_baselines(root / "features", evals, "seed", tmp_path / "o", delta_from_base=True)
+    (evals / "base" / "eval.json").write_text(json.dumps({"metrics": {"acc": 0.9, "ppl": 10.0}}))
+    res = run_baselines(
+        root / "features",
+        evals,
+        "seed",
+        tmp_path / "o2",
+        n_splits=3,
+        n_boot=10,
+        delta_from_base=True,
+        models=["delta_norm_ridge"],
+    )
+    assert res["delta_from_base"] and res["target_names"] == ["acc", "ppl"]

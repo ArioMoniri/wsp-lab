@@ -60,7 +60,23 @@ def lora_factors(
     cfg = json.loads((lora_dir / "adapter_config.json").read_text())
     if cfg.get("use_dora"):
         raise NotImplementedError("DoRA adapters are not supported")
+    if (
+        cfg.get("fan_in_fan_out")
+        or cfg.get("bias", "none") != "none"
+        or cfg.get("modules_to_save")
+        or cfg.get("lora_bias")
+    ):
+        raise NotImplementedError("unsupported LoRA orientation, bias or modules_to_save")
     tensors = load_file(lora_dir / "adapter_model.safetensors")
+    for name in tensors:  # same validation as eval.zoo_compat: only paired lora_A / lora_B tensors
+        if ".lora_A." in name:
+            partner = name.replace(".lora_A.", ".lora_B.")
+        elif ".lora_B." in name:
+            partner = name.replace(".lora_B.", ".lora_A.")
+        else:
+            raise NotImplementedError(f"unsupported adapter tensor: {name}")
+        if partner not in tensors:
+            raise ValueError(f"unpaired adapter tensor: {name}")
     state_keys = list(state_keys) if state_keys is not None else None
     alpha_pattern = cfg.get("alpha_pattern") or {}
     out: dict[str, tuple[torch.Tensor, torch.Tensor, float]] = {}

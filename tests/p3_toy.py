@@ -108,3 +108,27 @@ def build_toy_zoo(zoo: Path, base) -> list[str]:
         )
     (zoo / "manifest.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     return ids
+
+
+def tiny_qwen35_shapes():
+    """Every parameter of a tiny Qwen3.5 hybrid (GatedDeltaNet + full attention) model."""
+    import transformers
+    from transformers import AutoModelForCausalLM, Qwen3_5TextConfig
+
+    cfg = Qwen3_5TextConfig(
+        vocab_size=64,
+        hidden_size=32,
+        intermediate_size=64,
+        num_hidden_layers=4,
+        num_attention_heads=4,
+        num_key_value_heads=2,
+        head_dim=8,
+        linear_num_key_heads=2,
+        linear_num_value_heads=4,
+        linear_key_head_dim=8,
+        linear_value_head_dim=8,
+    )
+    with torch.device("meta"):
+        model = AutoModelForCausalLM.from_config(cfg)
+    assert transformers.__version__
+    return {k: tuple(v.shape) for k, v in model.state_dict().items()}

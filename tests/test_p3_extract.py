@@ -58,7 +58,7 @@ def test_extract_dense_entry_writes_features_pooled_and_metadata(tmp_path, zoo, 
     t0 = meta["tensors"][0]
     assert feats["stats"][0, 0].item() == pytest.approx(t0["fro_effective"], rel=1e-4)
     pooled = load_file(out / "pooled.safetensors")
-    assert pooled["stats"].shape == (522,) and pooled["svd"].shape == (56,)
+    assert pooled["stats"].shape == (1098,) and pooled["svd"].shape == (120,)
     assert pooled["stats"][0].item() > 0  # global group fro mean
 
 
@@ -185,3 +185,196 @@ def test_output_bytes_do_not_depend_on_worker_count(tmp_path, zoo, base):
     for i in ids[:4]:
         for f in ("features.safetensors", "pooled.safetensors", "features.json"):
             assert (tmp_path / "a" / i / f).read_bytes() == (tmp_path / "b" / i / f).read_bytes()
+
+
+def test_hybrid_entry_edit_on_every_qwen35_tensor_type_reaches_per_type_pools(tmp_path):
+    from p3_toy import _descriptor, tiny_qwen35_shapes
+    from safetensors.torch import save_file
+
+    from wsp.features.pool import TYPES, classify
+
+    shapes = tiny_qwen35_shapes()
+    g = torch.Generator().manual_seed(0)
+    base = {k: torch.randn(*s, generator=g).bfloat16() for k, s in shapes.items()}
+    delta = {k: (torch.randn(*s, generator=g) * 0.1).bfloat16() for k, s in shapes.items()}
+    desc = _descriptor("random_dir", 1)
+    d = tmp_path / "zoo" / desc.id
+    d.mkdir(parents=True)
+    (d / "edit.json").write_text(desc.to_json())
+    save_file(delta, d / "delta.safetensors")
+    info = extract_entry(d, base, tmp_path / "o")
+    assert {t["name"] for t in info["tensors"]} == set(shapes)
+    pooled = load_file(tmp_path / "o" / "pooled.safetensors")
+    spectrum = pooled["svd"].reshape(len(TYPES), 8)
+    used = {classify(n)[0] for n in shapes}
+    assert "other" not in used and used == {t for t in TYPES if t != "other"}
+    assert all(spectrum[TYPES.index(t)].sum() > 0 for t in used)
+
+
+def _manifest_failed(out):
+    return json.loads((out / "manifest.json").read_text())["failed"]
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "{",  # invalid JSON
+        "[]",  # not an object
+        json.dumps({"base_model": "toy/model"}),  # family missing
+        json.dumps({"family": "x", "base_model": "toy/model", "seed": "zero"}),
+        json.dumps({"family": "x", "base_model": "toy/model", "params": [1]}),
+        json.dumps({"family": 5, "base_model": "toy/model"}),
+    ],
+)
+def test_malformed_edit_json_is_recorded_and_healthy_entries_continue(tmp_path, zoo, base, bad):
+    z, ids = zoo
+    (z / ids[0] / "edit.json").write_text(bad)
+    r = run_extract(z, tmp_path / "o", base_state=base, ids=ids[:3], n_layers=4)
+    assert r["done"] == 2 and list(r["failed"]) == [ids[0]]
+    recorded = _manifest_failed(tmp_path / "o")
+    assert set(recorded) == {ids[0]} and "MetadataError" in recorded[ids[0]]
+    assert (tmp_path / "o" / ids[1] / "features.json").exists()
+    assert not (tmp_path / "o" / ids[0] / "features.json").exists()
+    # still recorded (and still non-fatal) when the base has to be discovered from the entries
+    r = run_extract(z, tmp_path / "o", base_state=base, ids=ids[:3], n_layers=4)
+    assert r["done"] == 0 and r["skipped"] == 2 and list(r["failed"]) == [ids[0]]
+
+
+def test_malformed_edit_json_does_not_break_base_discovery(tmp_path, zoo, base, monkeypatch):
+    import wsp.features.extract as ex
+
+    z, ids = zoo
+    (z / ids[0] / "edit.json").write_text("{")
+    monkeypatch.setattr(ex, "resolve_base_commit", lambda model, revision: "c" * 40)
+    monkeypatch.setattr(ex, "load_base_state", lambda model, revision: (base, "c" * 40))
+    r = run_extract(z, tmp_path / "o", ids=ids[:3], n_layers=4)
+    assert r["done"] == 2 and list(r["failed"]) == [ids[0]]
+    assert json.loads((tmp_path / "o" / "manifest.json").read_text())["base_commit"] == "c" * 40
+
+
+def test_malformed_manifest_rows_are_recorded_not_fatal(tmp_path, zoo, base):
+    z, ids = zoo
+    with (z / "manifest.jsonl").open("a") as f:
+        f.write("not json\n")
+        f.write(json.dumps({"id": "../escape", "family": "x"}) + "\n")
+        f.write(json.dumps({"id": "abcd", "seed": 1}) + "\n")  # family missing
+        f.write(json.dumps({"family": "x", "parent_id": None}) + "\n")  # id missing
+        f.write(json.dumps({"id": "ef01", "family": "x", "parent_id": 7}) + "\n")
+        f.write(json.dumps([1]) + "\n")
+    r = run_extract(z, tmp_path / "o", base_state=base, n_layers=4)
+    assert r["done"] == len(ids)
+    failed = _manifest_failed(tmp_path / "o")
+    assert len(failed) == 6 and all(k.startswith("manifest.jsonl:") for k in failed)
+    assert all("MetadataError" in v for v in failed.values())
+    assert "invalid id" in failed[f"manifest.jsonl:{len(ids) + 2}"]
+
+
+def test_cli_exits_nonzero_on_metadata_failure(tmp_path, zoo, base):
+    from safetensors.torch import save_file
+
+    z, ids = zoo
+    (z / ids[0] / "edit.json").write_text("{")
+    save_file(base, tmp_path / "base.safetensors")
+    with pytest.raises(SystemExit, match="failed"):
+        main(
+            ["--zoo", str(z), "--out", str(tmp_path / "o"), "--limit", "2"]
+            + ["--base-file", str(tmp_path / "base.safetensors")]
+        )
+    assert (tmp_path / "o" / ids[1] / "features.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("change", "field"),
+    [
+        ({"threads": 2}, "threads"),
+        ({"rank": 4}, "config.rank"),
+        ({"proj_dim": 32}, "config.proj_dim"),
+        ({"seed": 7}, "config.seed"),
+        ({"feature_version": 99}, "config.feature_version"),
+        ({"base_commit": "other"}, "base"),
+    ],
+)
+def test_resume_refused_when_numerical_identity_changes(tmp_path, zoo, base, change, field):
+    z, ids = zoo
+    kw = {"base_state": base, "ids": ids[:2], "n_layers": 4, "base_commit": "abc"}
+    run_extract(z, tmp_path / "o", **kw)
+    with pytest.raises(ValueError, match="refusing to resume") as e:
+        run_extract(z, tmp_path / "o", **{**kw, **change})
+    assert field in str(e.value) and "new --out" in str(e.value)
+    assert not (tmp_path / "o" / ids[2] / "features.json").exists()
+    run_extract(z, tmp_path / "o", **kw, workers=2)  # same identity, other worker count: fine
+
+
+@pytest.mark.parametrize("package", ["torch", "numpy"])
+def test_resume_refused_when_library_version_changes(tmp_path, zoo, base, monkeypatch, package):
+    import numpy
+
+    z, ids = zoo
+    kw = {"base_state": base, "ids": ids[:2], "n_layers": 4}
+    run_extract(z, tmp_path / "o", **kw)
+    monkeypatch.setattr({"torch": torch, "numpy": numpy}[package], "__version__", "0.0.1")
+    with pytest.raises(ValueError, match=f"refusing to resume.*{package}"):
+        run_extract(z, tmp_path / "o", **kw)
+
+
+def test_resume_refused_for_a_different_base_without_commit(tmp_path, zoo, base):
+    z, ids = zoo
+    kw = {"ids": ids[:2], "n_layers": 4}
+    run_extract(z, tmp_path / "o", base_state=base, **kw)
+    other = {k: v.clone() for k, v in base.items()}
+    key = next(iter(other))
+    other[key][0, 0] = other[key][0, 0] + 1
+    with pytest.raises(ValueError, match="refusing to resume.*base"):
+        run_extract(z, tmp_path / "o", base_state=other, **kw)
+    run_extract(z, tmp_path / "o", base_state=dict(base), **kw)  # identical content resumes
+
+
+def test_entries_from_another_identity_are_recomputed_when_manifest_is_missing(tmp_path, zoo, base):
+    z, ids = zoo
+    kw = {"base_state": base, "ids": ids[:2], "n_layers": 4}
+    run_extract(z, tmp_path / "o", **kw)  # threads=1
+    (tmp_path / "o" / "manifest.json").unlink()  # e.g. a crash before the manifest was written
+    r = run_extract(z, tmp_path / "o", threads=2, **kw)
+    assert r["done"] == 2 and r["skipped"] == 0
+    meta = json.loads((tmp_path / "o" / ids[0] / "features.json").read_text())
+    assert meta["identity_hash"]
+
+
+def test_out_manifest_records_identity(tmp_path, zoo, base):
+    z, ids = zoo
+    run_extract(z, tmp_path / "o", base_state=base, ids=ids[:1], n_layers=4, threads=1)
+    m = json.loads((tmp_path / "o" / "manifest.json").read_text())
+    ident = m["resume_identity"]
+    assert ident["threads"] == 1 and ident["torch"] == torch.__version__
+    assert ident["config"]["feature_version"] == 3 and ident["base"].startswith("state:")
+    assert m["complete_run"] is True
+
+
+@pytest.mark.parametrize(
+    "cfg_patch", [{"fan_in_fan_out": True}, {"bias": "all"}, {"modules_to_save": ["lm_head"]}]
+)
+def test_feature_path_rejects_the_lora_configs_the_eval_path_rejects(
+    tmp_path, zoo, base, cfg_patch
+):
+    z, ids = zoo
+    lora_id = ids[6]
+    cfg_path = z / lora_id / "lora" / "adapter_config.json"
+    cfg_path.write_text(json.dumps({**json.loads(cfg_path.read_text()), **cfg_patch}))
+    r = run_extract(z, tmp_path / "o", base_state=base, ids=[lora_id], n_layers=4)
+    assert "NotImplementedError" in r["failed"][lora_id]
+
+
+def test_real_build_header_rows_are_not_malformed_entries(tmp_path, zoo, base):
+    z, _ids = zoo
+    header = {
+        "base_model": "Qwen/Qwen3.5-0.8B",
+        "config_hash": "x",
+        "dry_run": False,
+        "families_requested": ["random_dir"],
+        "family": "ignored",
+        "seed": 0,
+    }
+    with (z / "manifest.jsonl").open("a") as f:
+        f.write(json.dumps(header) + "\n")
+    r = run_extract(z, tmp_path / "o", base_state=base, limit=2, n_layers=4)
+    assert r["done"] == 2 and r["failed"] == {}

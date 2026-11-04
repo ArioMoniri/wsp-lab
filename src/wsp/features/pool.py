@@ -1,8 +1,20 @@
-"""Mean pooling into 522 stats and 56 singular-spectrum values by default.
+"""Mean pooling of per-tensor features into fixed-width vectors (``feature_version`` 3).
 
-Stats order is global, then q/k/v/o/gate/up/down, each in layer-bucket order.
-Spectrum order is q/k/v/o/gate/up/down. Empty groups are zero.
-Linear-attention ``out_proj`` (Qwen3.5 GatedDeltaNet layers) pools with ``o_proj``.
+Every changed tensor lands in exactly one per-type pool; nothing is global-only except the global
+stats group itself. Types (``TYPES``), in pool order:
+
+  q k v o gate up down   full-attention and MLP projections. ``linear_attn.out_proj`` pools as ``o``.
+  lin_qkv                GatedDeltaNet fused ``linear_attn.in_proj_qkv``
+  lin_z                  ``linear_attn.in_proj_z`` (output gate)
+  lin_b, lin_a           ``linear_attn.in_proj_b`` / ``in_proj_a`` (delta-rule beta / decay inputs)
+  lin_state              gated-delta parameters: ``A_log``, ``dt_bias``, ``conv1d``, ``linear_attn.norm``
+  norm                   layer norms, ``q_norm`` / ``k_norm`` and the final ``model.norm``
+  embed                  ``embed_tokens`` and ``lm_head``
+  other                  any tensor name no rule recognises (catch-all, so no change is lost)
+
+Stats layout: the global mean, then each type in ``TYPES`` order as ``buckets`` layer-depth buckets
+(18 values each). Spectrum layout: the mean top-8 singular values per type in ``TYPES`` order. Tensors
+outside ``.layers.<i>.`` use bucket 0. Empty groups are zero.
 """
 
 import re
@@ -11,7 +23,57 @@ from typing import Any
 
 import torch
 
-TYPES = ("q", "k", "v", "o", "gate", "up", "down")
+TYPES = (
+    "q",
+    "k",
+    "v",
+    "o",
+    "gate",
+    "up",
+    "down",
+    "lin_qkv",
+    "lin_z",
+    "lin_b",
+    "lin_a",
+    "lin_state",
+    "norm",
+    "embed",
+    "other",
+)
+N_STATS, N_SPECTRUM = 18, 8
+
+# (pattern, type); first match wins. Patterns are searched against the full tensor name.
+_RULES: tuple[tuple[re.Pattern[str], str], ...] = tuple(
+    (re.compile(p), t)
+    for p, t in (
+        (r"\.linear_attn\.in_proj_qkv\.", "lin_qkv"),
+        (r"\.linear_attn\.in_proj_z\.", "lin_z"),
+        (r"\.linear_attn\.in_proj_b\.", "lin_b"),
+        (r"\.linear_attn\.in_proj_a\.", "lin_a"),
+        (r"\.linear_attn\.out_proj\.", "o"),
+        (r"\.linear_attn\.(A_log|dt_bias|conv1d\.|norm\.)", "lin_state"),
+        (r"\.(q|k|v|o|gate|up|down)_proj\.", ""),  # type taken from the captured letter below
+        (r"(^|\.)(embed_tokens|lm_head)\.", "embed"),
+        (r"(^|\.)\w*norm\.", "norm"),
+    )
+)
+_PROJ = re.compile(r"\.(q|k|v|o|gate|up|down)_proj\.")
+
+
+def classify(name: str) -> tuple[str, int | None]:
+    """``(type, layer index or None)`` of a tensor name; ``other`` when no rule matches."""
+    layer = re.search(r"\.layers\.(\d+)\.", name)
+    kind = "other"
+    for pattern, t in _RULES:
+        if pattern.search(name):
+            kind = t or _PROJ.search(name).group(1)  # type: ignore[union-attr]
+            break
+    return kind, int(layer.group(1)) if layer else None
+
+
+def pooled_dims(buckets: int = 4) -> tuple[int, int]:
+    """Widths of the pooled stats and spectrum vectors."""
+    return N_STATS * (1 + len(TYPES) * buckets), N_SPECTRUM * len(TYPES)
 
 
 def pool_features(
@@ -23,22 +85,17 @@ def pool_features(
     stats = [[] for _ in range(1 + len(TYPES) * buckets)]
     spectra = [[] for _ in TYPES]
     for record in records:
-        name = record["name"]
         stat = record["stats"].float()
         stats[0].append(stat)
-        match = re.search(r"\.layers\.(\d+)\.", name)
-        kind = re.search(r"\.(q|k|v|o|gate|up|down|out)_proj\.", name)
-        if not match or not kind:
-            continue
-        layer = int(match.group(1))
-        if layer >= n_layers:
+        kind, layer = classify(record["name"])
+        if layer is not None and layer >= n_layers:
             raise ValueError(f"layer {layer} outside model with {n_layers} layers")
-        index = TYPES.index("o" if kind.group(1) == "out" else kind.group(1))
-        bucket = min(layer * buckets // n_layers, buckets - 1)
+        index = TYPES.index(kind)
+        bucket = 0 if layer is None else min(layer * buckets // n_layers, buckets - 1)
         stats[1 + index * buckets + bucket].append(stat)
         spectra[index].append(record["svd"][:, 0].float())
 
     def means(groups: list[list[torch.Tensor]], size: int) -> torch.Tensor:
         return torch.cat([torch.stack(g).mean(0) if g else torch.zeros(size) for g in groups])
 
-    return means(stats, 18), means(spectra, 8)
+    return means(stats, N_STATS), means(spectra, N_SPECTRUM)

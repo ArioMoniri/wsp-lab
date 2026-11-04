@@ -1,17 +1,19 @@
 """P3 baselines on pooled features, evaluated with group-held-out folds.
 
     python -m wsp.predictor.baselines --features data/features/<zoo> --evals data/evals/<zoo> \
-        --split family|seed|trajectory --out data/runs/p3/<name>
+        --split family|seed|trajectory --out data/runs/p3/<name> [--zoo data/zoo/<zoo>]
 
 Baselines (one model per target, out-of-fold predictions pooled over folds):
   delta_norm_ridge  ridge on [‖Δ_eff‖_F, ‖Δ_eff‖_F / ‖W_changed‖_F]          (2 features)
-  statnn            LightGBM on the pooled φ_stats vector                      (522 features)
-  mlp_svd           MLP on the pooled φ_svd singular spectrum                  (56 features)
+  statnn            LightGBM on the pooled φ_stats vector                      (pooled stats, 1098 features)
+  mlp_svd           MLP on the pooled φ_svd singular spectrum                  (pooled spectrum, 120 features)
 
 Metrics per target: MAE, RMSE, Spearman ρ, each with a seeded 95 % percentile-bootstrap CI over edits.
 Targets come from ``<evals>/<id>/eval.json`` (flat ``{name: value}`` or under ``"metrics"``); entries
 without one are skipped and counted. ``--delta-from-base`` turns absolute scores into Δy using
-``<evals>/base/eval.json``.
+``<evals>/base/eval.json`` and fails if a target has no base value.
+Trajectory splits group by the full ancestry chain read from the zoo's ``manifest.jsonl`` (``--zoo``,
+default the zoo recorded in the features manifest), not only from edits that have targets.
 """
 
 from __future__ import annotations
@@ -201,6 +203,31 @@ def load_targets(
     return targets, sorted({k for t in targets.values() for k in t})
 
 
+def load_zoo_ancestry(zoo: str | Path) -> dict[str, str | None]:
+    """``{id: parent_id}`` for every entry of the zoo manifest, whether or not it is evaluated."""
+    path = Path(zoo) / "manifest.jsonl"
+    if not path.exists():
+        raise ValueError(f"trajectory split needs the zoo manifest ({path} not found); pass --zoo")
+    parents: dict[str, str | None] = {}
+    for n, line in enumerate(path.read_text().splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            log.warning("%s:%d is not valid JSON; ignored for ancestry", path, n)
+            continue
+        if not isinstance(row, dict) or "id" not in row:
+            continue  # header rows
+        parent = row.get("parent_id")
+        if parent is not None and not isinstance(parent, str):
+            raise ValueError(f"{path}:{n} has invalid parent_id {parent!r}")
+        if parents.get(row["id"], parent) != parent:
+            raise ValueError(f"{path}:{n}: conflicting parent_id for {row['id']}")
+        parents[row["id"]] = parent
+    return parents
+
+
 def load_feature_table(features_dir: str | Path) -> list[dict[str, Any]]:
     """One row per extracted entry: metadata plus the three baseline feature blocks."""
     features_dir = Path(features_dir)
@@ -263,11 +290,20 @@ def run_baselines(
     seed: int = 0,
     delta_from_base: bool = False,
     models: Sequence[str] | None = None,
+    zoo: str | Path | None = None,
 ) -> dict[str, Any]:
     features_dir, evals_dir, out = Path(features_dir), Path(evals_dir), Path(out)
     table = load_feature_table(features_dir)
     if not table:
         raise ValueError(f"no extracted entries (features.json) under {features_dir}")
+    fm = features_dir / "manifest.json"
+    feat_manifest = json.loads(fm.read_text()) if fm.exists() else {}
+    ancestry = None
+    if split == "trajectory":
+        zoo = zoo or feat_manifest.get("zoo")
+        if not zoo:
+            raise ValueError("trajectory split needs the zoo manifest; pass --zoo")
+        ancestry = load_zoo_ancestry(zoo)  # full chains, independent of which entries have evals
     targets, names = load_targets(evals_dir, [r["id"] for r in table])
     if not targets:
         raise ValueError(f"no eval.json found under {evals_dir} for any extracted entry")
@@ -276,9 +312,10 @@ def run_baselines(
         if not base_file.exists():
             raise ValueError(f"--delta-from-base needs {base_file}")
         base = _read_metrics(base_file)
-        targets = {
-            i: {k: v - base[k] for k, v in t.items() if k in base} for i, t in targets.items()
-        }
+        missing = sorted({k for t in targets.values() for k in t} - set(base))
+        if missing:
+            raise ValueError(f"--delta-from-base: {base_file} has no value for targets {missing}")
+        targets = {i: {k: v - base[k] for k, v in t.items()} for i, t in targets.items()}
     rows = [r for r in table if r["id"] in targets]
     Y = np.array([[targets[r["id"]].get(n, np.nan) for n in names] for r in rows])
     if split != "trajectory" and any(r[split] is None for r in rows):
@@ -286,7 +323,7 @@ def run_baselines(
     folds_n = n_splits
     while True:  # fewer groups than folds (e.g. 5 families, 6 splits) -> shrink and say so
         try:
-            folds = make_splits(rows, split, n_splits=folds_n)
+            folds = make_splits(rows, split, n_splits=folds_n, ancestry=ancestry)
             break
         except ValueError as e:
             if "number of groups" not in str(e) or folds_n <= 2:
@@ -305,8 +342,6 @@ def run_baselines(
         dims[block] = int(X.shape[1])
         results[key] = fit_eval(X, Y, folds, model, target_names=names, seed=seed, n_boot=n_boot)
         log.info("%s done", key)
-    fm = features_dir / "manifest.json"
-    feat_manifest = json.loads(fm.read_text()) if fm.exists() else {}
     res = {
         "split": split,
         "n_edits": len(rows),
@@ -318,6 +353,7 @@ def run_baselines(
         "target_names": names,
         "feature_dims": dims,
         "families": sorted({r["family"] for r in rows}),
+        "folds": [sorted(rows[int(i)]["id"] for i in test) for _train, test in folds],
         "models": results,
     }
     out.mkdir(parents=True, exist_ok=True)
@@ -353,6 +389,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     p.add_argument("--n-boot", type=int, default=1000)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--delta-from-base", action="store_true")
+    p.add_argument("--zoo", help="zoo dir whose manifest.jsonl gives ancestry (trajectory split)")
     p.add_argument("--models", help=f"comma-separated subset of {sorted(BASELINES)}")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -367,6 +404,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             seed=args.seed,
             delta_from_base=args.delta_from_base,
             models=args.models.split(",") if args.models else None,
+            zoo=args.zoo,
         )
     except ValueError as e:
         raise SystemExit(str(e)) from e
