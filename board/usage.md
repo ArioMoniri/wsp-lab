@@ -178,5 +178,6 @@
 | 2026-11-04 | Board A review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | REVISE (4 blocking: matched references in targets, reliability stats, base re-eval on resume, wording) cc0e77c |
 | 2026-11-04 | eval fixes round 2 (Board A blocking 1–4) | codex/gpt-6.1-sol high | done 3f7c21b (417 tests); strict matching leaves 0 matched targets on legacy artefacts → backfill round |
 | 2026-11-04 | editor harness round 2 (B1–B6, N2/N3/N4/N11) | codex/gpt-6.1-sol high | done 266af77 (440 tests) — re-review pending |
-| 2026-11-04 | eval fixes round 3: backfill matched-reference metadata | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | eval fixes round 3: backfill matched-reference metadata | codex/gpt-6.1-sol medium | done 29c744b (420 tests); 53/278 matched — remote runtime fields missing → round 4 |
 | 2026-11-04 | Board A re-review feat/h5-editor | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | eval fixes round 4: Lambda runtime transcription + missing-target report | codex/gpt-6.1-sol medium | running |
