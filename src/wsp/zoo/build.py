@@ -614,10 +614,19 @@ def parent_exclusion_reason(
         return "legacy_unprovenanced"
     if row.get("base_revision") != config.get("base_revision"):
         return "incompatible_base"
-    if row["eligibility"] == "production":
+    eligibility = row["eligibility"]
+    if eligibility == "production":
+        # Re-classify against the *current* thresholds: a row stored as production under looser
+        # thresholds must not enter default sampling once the config tightens (Board A final review).
+        recomputed, _ = classify_eligibility(
+            row.get("family", ""), row.get("params") or {}, {**config, "_overrides": None}
+        )
+        if recomputed == "smoke":
+            eligibility = "smoke"
+    if eligibility == "production":
         return None
-    if row["eligibility"] == "smoke":
-        return None if include_smoke else "smoke"
+    if eligibility == "smoke":
+        return None if include_smoke else "smoke_under_current_thresholds"
     return "unclassified"
 
 

@@ -386,3 +386,25 @@ def test_chain_with_smoke_step_is_smoke_from_that_step_on(tmp_path, fake_generat
             assert r["eligibility"] == edit["eligibility"] == want
             saw_smoke |= smoke_yet
     assert saw_smoke
+
+
+def test_production_row_is_recomputed_against_current_thresholds():
+    from wsp.zoo.build import parent_exclusion_reason
+
+    config = {
+        "base_revision": "abc",
+        "eligibility": {"min_params": {"heretic_ara": {"trials": 20}}},
+    }
+    row = {
+        "family": "heretic_ara",
+        "params": {"trials": 10},
+        "eligibility": "production",  # stored under looser thresholds
+        "reuse_key": "k",
+        "base_revision": "abc",
+    }
+    assert parent_exclusion_reason(row, config, include_smoke=False, dry_run=False) == (
+        "smoke_under_current_thresholds"
+    )
+    assert parent_exclusion_reason(row, config, include_smoke=True, dry_run=False) is None
+    row_ok = {**row, "params": {"trials": 40}}
+    assert parent_exclusion_reason(row_ok, config, include_smoke=False, dry_run=False) is None
