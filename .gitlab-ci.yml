@@ -25,7 +25,7 @@ test-cpu:
   artifacts: {reports: {junit: report.xml}}
 test-gpu:
   stage: gpu
-  variables: {HF_HOME: /hf-cache, HF_HUB_OFFLINE: "1", CC: gcc, CXX: g++}
+  variables: {HF_HOME: /hf-cache, HF_DATASETS_CACHE: /tmp/hf-datasets, HF_HUB_CACHE: /hf-cache/hub, CC: gcc, CXX: g++}
   script:
     - apt-get install -y -qq build-essential >/dev/null
     - nvidia-smi
