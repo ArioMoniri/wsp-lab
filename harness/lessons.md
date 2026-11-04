@@ -19,3 +19,4 @@
 | 2026-11-04 | P5 | Heretic ARA trial cost is CPU/launch-bound (LBFGS per module); plan budgets per trial, not per GPU | D6 | py-spy dump on Lambda |
 | 2026-11-04 | P5 | over ssh, `pkill -f <pattern>` kills the remote shell running the command when the pattern appears in it; kill by PID or tmux session instead | ops | Lambda restart 08:40Z |
 | 2026-11-04 | P4 | a delegated agent added a "Co-Authored-By: Claude …" trailer; history rewritten with filter-branch and force-pushed; .githooks/commit-msg now rejects AI trailers | hooks | git log 0f9df52 |
+| 2026-11-04 | P4 | local `pkill -f <pattern>` also matches the orchestrator shell running the command (killed my own merge chain); use the PID or tmux session | ops | 08:03Z |
