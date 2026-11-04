@@ -1,142 +1,100 @@
-"""Assets: the Lottie pipeline animation, its GIF fallback, and where they are wired in."""
+"""Contracts for the portable hero and matching Pages animation."""
 
 import json
+import runpy
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
-import pytest
-from PIL import Image
-
 ROOT = Path(__file__).resolve().parents[1]
-LOTTIE = ROOT / "assets" / "lottie" / "pipeline.json"
-GIF = ROOT / "assets" / "pipeline.gif"
-SCRIPTS = ROOT / "scripts"
-
-OKABE_RGB = {
-    "black": (0.0, 0.0, 0.0),
-    "orange": (0.902, 0.624, 0.0),
-    "sky_blue": (0.337, 0.706, 0.914),
-    "bluish_green": (0.0, 0.620, 0.451),
-    "yellow": (0.941, 0.894, 0.259),
-    "blue": (0.0, 0.447, 0.698),
-    "vermillion": (0.835, 0.369, 0.0),
-    "reddish_purple": (0.8, 0.475, 0.655),
-}
+LOTTIE = ROOT / "assets/lottie/pipeline.json"
 
 
-def _layer_names_and_texts(anim):
-    names = [layer.get("nm", "") for layer in anim["layers"]]
+def test_svg_is_self_contained_readable_and_animated():
+    root = ET.parse(ROOT / "assets/hero.svg").getroot()
+    assert root.attrib["viewBox"] == "0 0 1200 320"
+    ns = {"s": "http://www.w3.org/2000/svg"}
+    labels = " ".join(root.itertext())
+    for label in (
+        "Qwen3.5-0.8B",
+        "abliterate",
+        "LoRA",
+        "merge",
+        "canonical SVD",
+        "State-space",
+        "MATH",
+        "GSM8K",
+        "IFEval",
+        "refusal",
+        "Schematic",
+    ):
+        assert label in labels
+    assert root.find("s:title", ns) is not None
+    assert root.find("s:desc", ns) is not None
+    assert len(root.findall(".//s:animate", ns)) >= 3
+    assert all(el.attrib.get("dur") == "4s" for el in root.findall(".//s:animate", ns))
+    for el in root.iter():
+        assert el.tag.split("}")[-1] not in ("image", "script", "foreignObject")
+        assert not any("href" in k for k in el.attrib)
+
+
+def test_lottie_is_portable_four_second_bodymovin():
+    anim = json.loads(LOTTIE.read_text())
+    assert LOTTIE.stat().st_size <= 150_000
+    assert (anim["w"], anim["h"], anim["fr"], anim["ip"], anim["op"]) == (1200, 320, 30, 0, 120)
+    assert anim["assets"] and all("layers" in a and "p" not in a for a in anim["assets"])
+    assets = {a["id"] for a in anim["assets"]}
+    assert len(assets) == len(anim["assets"])
+    for composition in anim["assets"]:
+        for child in composition["layers"]:
+            if child["ty"] == 0:
+                assert child["refId"] in assets
+                assert child["w"] > 0 and child["h"] > 0
+                assert "r" in child["ks"]  # required by the Pages WASM renderer
+    assert "fonts" not in anim  # labels are vector outlines for the canvas/WASM renderer
+    names = {layer["nm"] for layer in anim["layers"]}
+    for name in (
+        "base-model",
+        "delta-token-bars",
+        "ssm-block",
+        "forecast-curve",
+        "forecast-band",
+        "ssm-state-flow",
+        "label-Qwen3.5-0.8B",
+        "label-MATH · GSM8K",
+        "label-IFEval · refusal",
+    ):
+        assert name in names
+    assert sum(name.startswith("edit-arrow-") and not name.endswith("-head") for name in names) == 3
     for layer in anim["layers"]:
-        if layer.get("ty") == 5:  # text layer
-            doc = layer["t"]["d"]["k"][0]["s"]
-            names.append(doc["t"])
-    return names
+        assert layer["ty"] in (0, 4)
+        assert layer["ip"] == 0 and layer["op"] == 120
+        assert layer["ks"]["o"] == {"a": 0, "k": 100}  # labels never disappear
+        if layer["ty"] == 4:
+            assert all(group["it"][-1]["ty"] == "tr" for group in layer["shapes"])
+        else:
+            assert layer["refId"] in assets
+    state = next(l for l in anim["layers"] if l["nm"] == "ssm-state-flow")
+    assert state["ks"]["p"]["a"] == 1
+    curve = next(l for l in anim["layers"] if l["nm"] == "forecast-curve")
+    assert any(s["ty"] == "tm" and s["e"]["a"] == 1 for g in curve["shapes"] for s in g["it"])
 
 
-def _animation_colors(anim):
-    """All fill/stroke colours as (r, g, b) rounded to 3 dp."""
-    out = set()
-
-    def walk(node):
-        if isinstance(node, dict):
-            if node.get("ty") in ("fl", "st") and isinstance(node.get("c"), dict):
-                k = node["c"].get("k")
-                if isinstance(k, list) and len(k) >= 3 and not isinstance(k[0], dict):
-                    out.add(tuple(round(v, 3) for v in k[:3]))
-            for v in node.values():
-                walk(v)
-        elif isinstance(node, list):
-            for v in node:
-                walk(v)
-
-    walk(anim)
-    return out
-
-
-def test_lottie_is_valid_bodymovin_json_under_150kb():
-    assert LOTTIE.is_file()
-    assert LOTTIE.stat().st_size <= 150 * 1024
-    anim = json.loads(LOTTIE.read_text())
-    for key in ("v", "fr", "ip", "op", "w", "h", "layers"):
-        assert key in anim
-    assert anim["fr"] == 30
-    assert 90 <= anim["op"] - anim["ip"] <= 120  # 3–4 s loop at 30 fps
-    assert anim["w"] > 0 and anim["h"] > 0
-    assert isinstance(anim["layers"], list) and anim["layers"]
-
-
-def test_lottie_layers_are_well_formed_and_in_range():
-    anim = json.loads(LOTTIE.read_text())
-    for layer in anim["layers"]:
-        assert layer["ip"] >= anim["ip"] and layer["op"] <= anim["op"]
-        assert "ks" in layer and all(k in layer["ks"] for k in ("o", "p", "a", "s"))
-        if layer.get("ty") == 4:
-            assert layer.get("shapes"), f"shape layer {layer.get('nm')} has no shapes"
-            for group in layer["shapes"]:
-                assert group["ty"] == "gr"
-                assert group["it"][-1]["ty"] == "tr"
-        if layer.get("ty") == 5:
-            assert "t" in layer and "d" in layer["t"]
-
-
-def test_lottie_animates_three_edits_tokens_state_and_forecast():
-    anim = json.loads(LOTTIE.read_text())
-    names = [layer.get("nm", "") for layer in anim["layers"]]
-    edit_arrows = [name for name in names if name.startswith("edit-arrow-")]
-    assert len(edit_arrows) == 3
-    assert {"delta-token-bars", "ssm-block", "forecast-curve"} <= set(names)
-    state_layers = [layer for layer in anim["layers"] if "ssm-state-flow" in layer.get("nm", "")]
-    assert len(state_layers) >= 3
-    assert all(layer["ks"]["p"]["a"] == 1 for layer in state_layers)
-    forecast = next(layer for layer in anim["layers"] if layer["nm"] == "forecast-curve")
-    assert forecast["ks"]["o"]["a"] == 1
-
-
-def test_lottie_covers_the_pipeline_stages_in_okabe_ito():
-    anim = json.loads(LOTTIE.read_text())
-    blob = " ".join(_layer_names_and_texts(anim)).lower()
-    for stage in ("base", "abliterate", "lora", "merge", "token", "ssm", "forecast"):
-        assert stage in blob, f"stage {stage!r} missing from the animation"
-    colors = _animation_colors(anim)
-    assert len(colors) >= 5
-    for name in ("black", "vermillion", "blue", "bluish_green", "reddish_purple", "sky_blue"):
-        assert OKABE_RGB[name] in colors, f"Okabe–Ito {name} not used in the animation"
-    for rgb in colors:
-        assert all(0.0 <= c <= 1.0 for c in rgb)
-
-
-def test_lottie_generator_reproduces_committed_json(tmp_path, monkeypatch):
-    monkeypatch.setattr("sys.argv", ["make_lottie.py", "--out", str(tmp_path)])
-    import runpy
+def test_generator_reproduces_both_assets(tmp_path):
+    import pytest
 
     with pytest.raises(SystemExit) as exc:
-        runpy.run_path(str(SCRIPTS / "make_lottie.py"), run_name="__main__")
+        import sys
+        from unittest.mock import patch
+
+        with patch.object(sys, "argv", ["make_lottie.py", "--out", str(tmp_path)]):
+            runpy.run_path(str(ROOT / "scripts/make_lottie.py"), run_name="__main__")
     assert exc.value.code == 0
-    regen = json.loads((tmp_path / "pipeline.json").read_text())
-    assert regen == json.loads(LOTTIE.read_text())
+    assert (tmp_path / "pipeline.json").read_bytes() == LOTTIE.read_bytes()
+    assert (tmp_path / "hero.svg").read_bytes() == (ROOT / "assets/hero.svg").read_bytes()
 
 
-def test_gif_fallback_is_an_animated_3_to_4_second_loop():
-    assert GIF.is_file()
-    assert GIF.stat().st_size < 1_000_000
-    with Image.open(GIF) as img:
-        assert getattr(img, "is_animated", False)
-        n = img.n_frames
-        assert 90 <= n <= 120
-        durations = []
-        for frame in range(n):
-            img.seek(frame)
-            durations.append(img.info.get("duration", 0))
-        total_ms = sum(durations)
-        assert set(durations) <= {30, 40}  # GIF stores delays in 10 ms ticks.
-        assert 2.7 <= total_ms / 1000 <= 4.4
-        assert 29 <= n / (total_ms / 1000) <= 31
-        assert 4.0 <= img.size[0] / img.size[1] <= 6.5  # hero banner aspect
-
-
-def test_readme_embeds_gif_directly_under_hero_and_site_loads_lottie():
-    readme = (ROOT / "README.md").read_text().splitlines()
-    hero = next(i for i, line in enumerate(readme) if "assets/hero.svg" in line)
-    gif = next(i for i, line in enumerate(readme) if "assets/pipeline.gif" in line)
-    assert hero < gif <= hero + 4
-    html = (ROOT / "site" / "index.html").read_text()
-    assert "assets/lottie/pipeline.json" in html
+def test_readme_uses_only_svg_and_site_keeps_lottie():
+    assert not (ROOT / "assets/pipeline.gif").exists()
+    readme = (ROOT / "README.md").read_text()
+    assert "assets/hero.svg" in readme and "assets/pipeline.gif" not in readme
+    assert "assets/lottie/pipeline.json" in (ROOT / "site/index.html").read_text()

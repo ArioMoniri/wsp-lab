@@ -7,10 +7,9 @@ hand when something happens; the README status block (`scripts/update_readme_sta
 
 ## 2026-11-03 (evening)
 
-**P0, setup (23:00–23:10).** Server up (RTX PRO 4500 Blackwell, 32 GB, CUDA 13.2). Repo, uv venv, tmux job
-convention, worktrees. Read the Takehi et al. blog and wrote H1–H4 plus the alignment sub-study
-(`docs/HYPOTHESIS.md`) and a P0–P6 roadmap before touching data. Scope grew during the first hour: two-board
-reviews, a per-phase paper draft, a reference checker, a GitLab runner for CI, a message board. Six branches were
+**P0, setup (23:00–23:10).** The server came up (RTX PRO 4500 Blackwell, 32 GB, CUDA 13.2). I created the repo and a uv venv, set the rule that long jobs run under tmux, and moved each branch into its own worktree. Read the Takehi et al. blog and wrote H1–H4 plus the alignment sub-study
+(`docs/HYPOTHESIS.md`) and a P0–P6 roadmap before touching data. Scope grew during the first hour to include two-board
+reviews, a paper draft per phase, a reference checker, a GitLab runner for CI and a message board. Six branches were
 delegated at once, each in its own worktree.
 
 **P2, eval battery (23:10–23:25).** First CPU tests failed on a missing module, as intended. 9 CPU tests, then 31,
@@ -48,9 +47,9 @@ user then ruled that no demo, mock or placeholder values may appear anywhere in 
 chunked path with no device dispatch (about 5× slower on CPU, and no GPU gain in the reviewer's rerun), and the
 benchmark was a single shot taken on a busy GPU. Rewritten with a loop path, a chunked path and warmups plus medians.
 
-**P1, paper intro and related work (23:50–00:09).** Drafted by a cheaper model, humanizer pass, Board B REVISE
-(a reversed task-vector claim, a submission that was not anonymised, hypothesis criteria stated loosely), fixed, then
-APPROVE. Board B also noted that source verification and the study sections are required before submission.
+**P1, paper intro and related work (23:50–00:09).** A cheaper model drafted both sections and a humanizer pass edited them. Board B
+returned REVISE (a reversed task-vector claim, a submission that was not anonymised, hypothesis criteria stated
+loosely); after the fixes it approved. Board B also noted that source verification and the study sections are required before submission.
 
 **Board C (00:10).** An assessment of LLM-in-the-loop designs (`docs/MODEL_CANDIDATES.md`) ranked a critic-only
 shadow mode first, editor plus critic second, LLM-as-optimiser last, and required a zoo of at least 600 edits and 150
@@ -82,7 +81,7 @@ rejected the push, so `data/` is now ignored wholesale.
 **P2, batch evaluator (03:18–04:05).** Board A rejected the first version for five reasons: smoke and limit runs
 overwrote canonical zoo entry directories, git SHA provenance was wrong, `eval.json` lacked eligibility and index
 appends were not idempotent, `eval_fast.yaml` did not match the decided tier, and the roadmap's 5,617 GPU-hour figure
-was wrong. The corrected estimate is 9 to 12 minutes per entry, about 120 GPU-hours for 700. The first smoke
+was wrong. The corrected estimate is 9 to 12 minutes per entry, about 120 GPU-hours for the 700 entries that existed then. The first smoke
 (`20261104-032002-1c2cc588`, two entries, n=4, 32 tokens) took 0.30 minutes per entry; that timing is engineering
 only and says nothing about the real tier. Merged after re-review (9146c5f). D2 (three tiers) and D3 (a stratified
 subset first) were written down at about 03:50.
@@ -96,7 +95,8 @@ One more blocker remained at 04:00 (a malformed `resolved_base_revision` still a
 merged afterwards as bf99575. Full extraction then ran on four CPU workers (`p3-extract`).
 
 **CI (04:30).** GitLab pipeline fully green on the self-hosted GPU runner. An earlier red run came from bypassing the
-pre-commit hook during merges, which let formatter drift through; `ruff format --check` now runs before every push.
+pre-commit hook during merges, which let formatter drift through; The formatting check lives in `scripts/precommit.sh` (ruff check, ruff format --check, tests), which the pre-commit hook runs;
+the pre-push hook only runs `scripts/secret_scan.sh --history`.
 
 **Zoo growth (05:00–06:00).** Zoo went from 588 entries at 04:05 to 697 at 05:05 as chains finished.
 Heretic ARA at production budget costs about eight minutes per trial on the shared GPU, so the local config
@@ -112,7 +112,9 @@ README claimed that do not exist yet: a predictor training script, a predictor c
 
 ## Open as of the last entry
 
-No zoo entry has an eval score. Base 32k rerun, second reproduction run, clean timing of one entry, the D3 subset,
-Heretic ARA on Lambda, and every predictor are open. Board A's non-blocking items from the Heretic and P3 reviews
+No zoo entry has completed a fast- or cheap-tier evaluation. The only per-entry results are the engineering smoke run
+`20261104-032002-1c2cc588` (base plus two production edits, n=4, 32 tokens), which measured pipeline timing and not
+benchmark performance. Still open are the base 32k rerun, the second reproduction run, a clean timing of one entry, the D3 subset,
+Heretic ARA on Lambda, and all of the predictors. Board A's non-blocking items from the Heretic and P3 reviews
 (selection prompts disjoint from benchmark prompts, unpinned dataset revisions, GatedDeltaNet coverage in the LoRA
 smoke tests) are still on the list.

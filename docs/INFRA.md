@@ -42,4 +42,7 @@ index rows (`data/evals/*/index.jsonl`), the base-model summary (`data/runs/p2/b
 rows of `board/lambda_spend.md` (no end time), and the latest `main` pipeline from GitLab when `glab` is installed and
 logged in (omitted otherwise). A missing source is printed as missing. `--no-ci` skips the GitLab call, `--print`
 echoes the block, `--root` points at another checkout. Running it twice changes only the timestamp. `scripts/precommit.sh`
-runs it as a last, non-blocking step, so a commit can leave `README.md` modified; the test is `tests/test_readme_status.py`.
+runs it as a last, non-blocking step and stages `README.md` when the refresh succeeds (not after a failure); the test is `tests/test_readme_status.py`.
+
+- Lambda note (4 Nov 2026): on-demand A100 hosts run driver 570 (CUDA 12.8). Install torch from the `cu128`
+  index there (the job script does this automatically); mamba-ssm is not needed for zoo/eval jobs.

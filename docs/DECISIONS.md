@@ -26,7 +26,7 @@ Lambda H100 to finish the remainder; (4) refusal/KL prompts stay at 50/50 becaus
 continuations). The 32k faithful tier is reserved for the base model and ≤ 10 selected entries.
 
 ## D4 (4 Nov 2026) — Lambda GPU spend approved
-User approved Lambda Cloud usage with a cap of **$150**: (1) Heretic ARA zoo family on one H100, (2) faster
+User approved Lambda Cloud usage with a cap of **$150**: (1) Heretic ARA zoo family on one GPU (launched 4 Nov 2026 as a 1×A100-SXM4 40 GB instance at $1.99/h, the only type with capacity), (2) faster
 evaluation of the D3 subset if local timing is slow. Rules: instances named `wsp-lab-*`, launched with a
 per-hour price cap, results pushed to the private HF datasets, instance terminated as soon as its job ends;
 spend ledger in `board/lambda_spend.md`.

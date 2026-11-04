@@ -115,3 +115,18 @@
 | 2026-11-04 | writer: README + PROGRESS + live status script | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
 | 2026-11-04 | scribe: paper method/zoo/experiments | codex/gpt-6.1-terra high | running |
 | 2026-11-04 | checker: docs accuracy + commands + tests | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | scribe method/zoo/experiments | codex/gpt-6.1-terra high | done e73b576 (6-page PDF) |
+| 2026-11-04 | humanizer method/zoo/experiments | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | humanizer method/zoo/experiments | claude_aio_gmail_api/claude-haiku-5-5 | done d1d0d6c |
+| 2026-11-04 | Board B paper/method-zoo | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | writer README v2 | claude_aio_gmail_api/claude-sonnet-5-5 high | done 43a5c08 |
+| 2026-11-04 | Board B review docs/readme-v2 | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | Board B paper/method-zoo | codex/gpt-6.1-terra medium | REVISE (4 blocking, text-vs-code) |
+| 2026-11-04 | scribe fix round method/zoo/experiments | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | scribe fix round method/zoo | codex/gpt-6.1-terra medium | done 76eb3c7 |
+| 2026-11-04 | Board B re-review paper/method-zoo | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | design hero v2 | codex/gpt-6.1-sol high | done fb71805, merged |
+| 2026-11-04 | Board B re-review paper/method-zoo | codex/gpt-6.1-sol medium | APPROVE, merged |
+| 2026-11-04 | docs fix round (accuracy-check issues 18–25) | claude_aio_gmail_api/claude-haiku-5-5 medium | running |
+| 2026-11-04 | Board B docs/readme-v2 | codex/gpt-6.1-sol medium | REVISE (4 wrong claims, prose) |
+| 2026-11-04 | README v2 fix round | claude_aio_gmail_api/claude-sonnet-5-5 medium | running |

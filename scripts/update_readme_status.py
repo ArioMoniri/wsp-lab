@@ -171,8 +171,9 @@ def render(s: dict, now: str) -> str:
             lines.append(f"| {f} | " + " | ".join(row) + f" | {sum(fams[f].values())} |")
         lines.append("")
         lines.append(
-            "`production` entries are the ones the eval and feature steps use; `smoke` entries come from "
-            "short test builds, and `unlabelled` rows predate the eligibility field and are excluded."
+            "`smoke` entries come from short test builds and `unlabelled` rows predate the eligibility field. "
+            "The batch evaluator takes only `production` entries by default; feature extraction reads every "
+            "valid manifest id, whatever its eligibility, and skips entries whose files are not built yet."
         )
     lines.append("")
 
