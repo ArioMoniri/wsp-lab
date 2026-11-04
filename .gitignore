@@ -41,3 +41,12 @@ data/papers/*.txt
 
 # never track anything under data/ (artefacts, caches, builds)
 data/
+paper/*.pdf
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.bbl
+paper/*.blg
+paper/*.synctex.gz
