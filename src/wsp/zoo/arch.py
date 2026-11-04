@@ -183,7 +183,13 @@ def arch_info_from_dict(
 
 def remote_code_kwargs(base_model: str, config: Mapping[str, Any] | None = None) -> dict[str, bool]:
     """``from_pretrained`` kwargs for models with custom modelling code (explicit opt-in only)."""
-    if base_model in REMOTE_CODE_ALLOWLIST or (config or {}).get("trust_remote_code"):
+    requested = bool((config or {}).get("trust_remote_code"))
+    if requested and base_model not in REMOTE_CODE_ALLOWLIST:
+        raise ValueError(
+            f"trust_remote_code requested for {base_model!r}, which is not in the allow-list "
+            f"{sorted(REMOTE_CODE_ALLOWLIST)}; add it to REMOTE_CODE_ALLOWLIST after review"
+        )
+    if base_model in REMOTE_CODE_ALLOWLIST:
         return {"trust_remote_code": True}
     return {}
 
