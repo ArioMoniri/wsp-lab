@@ -123,3 +123,5 @@
 | 2026-11-04 | Board B review docs/readme-v2 | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | Board B paper/method-zoo | codex/gpt-6.1-terra medium | REVISE (4 blocking, text-vs-code) |
 | 2026-11-04 | scribe fix round method/zoo/experiments | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | scribe fix round method/zoo | codex/gpt-6.1-terra medium | done 76eb3c7 |
+| 2026-11-04 | Board B re-review paper/method-zoo | codex/gpt-6.1-sol medium | running |
