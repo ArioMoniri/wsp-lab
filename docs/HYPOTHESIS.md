@@ -50,3 +50,13 @@ H5: with the predictor as critic, LLM-proposed edits/steps reach a given benchma
 evaluations than (a) the same editor without the critic and (b) Adam/Muon with equal forward-pass budget.
 Falsified if the critic does not reduce evaluations by ≥ 30 % at equal final score. Board C assesses the
 design before any run (docs/MODEL_CANDIDATES.md §LLM-in-the-loop).
+
+## P4 measurement qualification
+
+P3 currently supplies cumulative-from-base delta features. H2 therefore measures
+history beyond the latest cumulative snapshot, on successor trajectories only;
+M1 already sees accumulated drift in that snapshot. For H3, M3's transition target
+is the latent of these cumulative-from-base features, not absolute θ_t features.
+Family holdouts exclude all descendants/sources with a held-out-family step in
+full manifest ancestry, including unlabeled steps and chain `inner_family` values.
+H1 uses measured predecessor-relative Δy; absolute levels are a separate baseline.
