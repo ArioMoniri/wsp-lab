@@ -78,7 +78,15 @@ def apply_delta(model, delta):
             raise ValueError(f"unknown or mismatched delta tensor: {name}")
     with torch.no_grad():
         for name, value in delta.items():
-            state[name].add_(value.to(device=state[name].device, dtype=state[name].dtype))
+            target = state[name]
+            delta = value.to(target.device)
+            target.copy_((target.to(delta.dtype) + delta).to(target.dtype))
+
+
+def apply_zoo_entry(model, entry):
+    from wsp.eval.zoo_compat import load_entry_delta
+
+    apply_delta(model, load_entry_delta(entry, model.state_dict().keys()))
 
 
 def seed_all(seed):
@@ -135,14 +143,7 @@ class HFRunner:
             if edit.get("base_model", model_id) != model_id:
                 raise ValueError("zoo entry base_model differs from --model")
             self.edit_id = edit.get("id", entry.name)
-            if edit.get("delta_format") == "lora":
-                from peft import PeftModel
-
-                self.model = PeftModel.from_pretrained(self.model, entry / "lora").eval()
-            else:
-                from safetensors.torch import load_file
-
-                apply_delta(self.model, load_file(entry / "delta.safetensors"))
+            apply_zoo_entry(self.model, entry)
 
     def chat(self, prompt):
         return self.tokenizer.apply_chat_template(
