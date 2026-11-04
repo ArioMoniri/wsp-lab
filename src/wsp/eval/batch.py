@@ -39,22 +39,66 @@ def provenance():
     }
 
 
+def effective_config_hash(cfg):
+    # Match HFRunner's default, including configs that omit batch_size.
+    cfg = cfg | {"generation": {"batch_size": 8} | cfg["generation"]}
+    return hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()
+
+
+def resume_key(edit_id, config_hash, model_revision, reuse_key=None):
+    return {
+        "edit_id": edit_id,
+        "config_hash": config_hash,
+        "model_revision": model_revision,
+        "reuse_key": reuse_key,
+    }
+
+
+def payload_key(payload):
+    if "skip_key" in payload:
+        return payload["skip_key"]
+    return resume_key(
+        payload.get("edit_id"),
+        effective_config_hash(payload["effective_config"])
+        if "effective_config" in payload
+        else payload.get("config_hash"),
+        payload.get("model_revision"),
+        payload.get("reuse_key"),
+    )
+
+
 def upsert_index(path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.with_suffix(".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         rows = [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
-        keyed = {(r["edit_id"], r["config_hash"]): r for r in rows}
-        keyed[payload["edit_id"], payload["config_hash"]] = payload
+        keyed = {json.dumps(payload_key(r), sort_keys=True): r for r in rows}
+        # Replace the pre-migration row when repairing an index from eval.json.
+        rows_key = json.dumps(payload_key(payload), sort_keys=True)
+        for key, row in list(keyed.items()):
+            if "skip_key" not in row and payload_key(row) | {
+                "reuse_key": payload_key(payload)["reuse_key"]
+            } == payload_key(payload):
+                del keyed[key]
+        keyed[rows_key] = payload
         tmp = path.with_suffix(".tmp")
         tmp.write_text("".join(json.dumps(r) + "\n" for r in keyed.values()))
         tmp.replace(path)
 
 
 def complete(payload, signature, benchmarks):
+    if isinstance(signature, dict):
+        actual = payload_key(payload)
+        # Old batch results predate reuse_key recording. Bind them to the current
+        # zoo entry on migration; subsequent results require an exact key match.
+        if "skip_key" not in payload and "signature" in payload and "reuse_key" not in payload:
+            actual["reuse_key"] = signature["reuse_key"]
+        matches = actual == signature
+    else:
+        matches = payload.get("signature") == signature
     return (
         payload.get("eval_status") == "complete"
-        and payload.get("signature") == signature
+        and matches
         and all(
             payload.get("counts", {}).get(k) == v.get("n", v.get("n_windows"))
             for k, v in benchmarks.items()
@@ -114,6 +158,7 @@ def select_entries(
     signature=None,
     benchmarks=None,
     index=None,
+    force=False,
 ):
     for row in rows:
         if "id" not in row or row.get("eligibility") != eligibility:
@@ -125,14 +170,26 @@ def select_entries(
         result = zoo / row["id"] / "eval.json"
         if result.exists():
             previous = json.loads(result.read_text())
+            key = (
+                resume_key(
+                    row["id"],
+                    signature["config_hash"],
+                    signature["model_revision"],
+                    row.get("reuse_key"),
+                )
+                if isinstance(signature, dict)
+                else signature
+            )
+            done = (
+                complete(previous, key, benchmarks or {})
+                if key is not None
+                else previous.get("eval_status") == "complete"
+            )
+            if done and isinstance(key, dict):
+                previous = previous | {"skip_key": key}
             if index is not None:
                 upsert_index(index, previous | {"path": str(result.parent)})
-            if benchmarks is not None and not complete(previous, signature, benchmarks):
-                yield row
-                continue
-            if previous.get("eval_status") == "complete" and (
-                signature is None or previous.get("signature") == signature
-            ):
+            if done and not force:
                 continue
         yield row
 
@@ -164,10 +221,11 @@ def run_batch(
     batch_size=None,
     limit=None,
     subset=None,
+    force=False,
 ):
     zoo, config = Path(zoo), Path(config)
     cfg = yaml.safe_load(config.read_bytes())
-    generation = cfg["generation"].copy()
+    generation = {"batch_size": 8} | cfg["generation"]
     if max_new_tokens is not None:
         generation["max_new_tokens"] = max_new_tokens
     if batch_size is not None:
@@ -181,9 +239,15 @@ def run_batch(
             spec["n"] = spec["n_windows"] = limit
     rows = [json.loads(line) for line in (zoo / "manifest.jsonl").read_text().splitlines()]
     cfg["generation"] = generation.copy()
-    config_hash = hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()
+    config_hash = effective_config_hash(cfg)
     origin = provenance()
-    signature = hashlib.sha256((config_hash + origin["source_hash"]).encode()).hexdigest()
+    header = next(r for r in reversed(rows) if r.get("type") == "header")
+    revision = header["base_revision"]
+    if len(revision) != 40:
+        from wsp.zoo.common import resolve_base_revision
+
+        revision = resolve_base_revision(header["base_model"], revision)
+    signature = resume_key("base", config_hash, revision)
     run_id = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:8]
     production = (
         limit is None
@@ -210,18 +274,18 @@ def run_batch(
             signature,
             cfg["benchmarks"],
             out / "index.jsonl",
+            force=force,
         )
     )
-    header = next(r for r in reversed(rows) if r.get("type") == "header")
     base_out = out / "base"
     base_done = False
     if (base_out / "eval.json").exists():
         previous = json.loads((base_out / "eval.json").read_text())
         upsert_index(out / "index.jsonl", previous | {"path": str(base_out)})
-        base_done = complete(previous, signature, cfg["benchmarks"])
+        base_done = not force and complete(previous, signature, cfg["benchmarks"])
     if not selected and base_done:
         return
-    runner = HFRunner(header["base_model"], generation.copy(), revision=header["base_revision"])
+    runner = HFRunner(header["base_model"], generation.copy(), revision=revision)
     restore = WeightRestore(runner.model)
     runner.base_context = restore.base_context
     out.mkdir(parents=True, exist_ok=True)
@@ -253,8 +317,13 @@ def run_batch(
             return evaluate(runner, list(cfg["benchmarks"]), cfg["benchmarks"])
 
         result, used_batch = retry_oom(execute, generation["batch_size"])
+        key = resume_key(
+            runner.edit_id, config_hash, runner.revision, row.get("reuse_key") if row else None
+        )
         manifest = {
-            "signature": signature,
+            "skip_key": key,
+            "signature": hashlib.sha256(json.dumps(key, sort_keys=True).encode()).hexdigest(),
+            "reuse_key": key["reuse_key"],
             "seed": generation["seed"],
             "config_hash": config_hash,
             **origin,
@@ -287,7 +356,7 @@ def run_batch(
             from wsp.schema import write_manifest
 
             write_manifest(dest / "manifest.json", **manifest)
-        if result is not None and not complete(summary | manifest, signature, cfg["benchmarks"]):
+        if result is not None and not complete(summary | manifest, key, cfg["benchmarks"]):
             manifest["eval_status"] = "incomplete"
         payload = summary | manifest
         atomic_json(dest / "eval.json", payload)
@@ -311,6 +380,7 @@ def main():
     parser.add_argument(
         "--resume", action="store_true", help="completed entries are always skipped"
     )
+    parser.add_argument("--force", action="store_true", help="re-evaluate completed entries")
     args = vars(parser.parse_args())
     args.pop("resume")
     for key in ("ids", "families"):
