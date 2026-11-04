@@ -50,3 +50,16 @@
 | 2026-11-03 | Board A feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | REVISE (4 blocking) |
 | 2026-11-03 | heretic+lora REVISE round | codex/gpt-6.1-sol high | running |
 | 2026-11-03 | scribe: intro + related (paper) | copilot/auto | running |
+| 2026-11-03 | Board A feat/plots-design | claude_aio_gmail_api/claude-haiku-5-5 | REVISE → fixed by orchestrator, merged |
+| 2026-11-03 | Board A perf/ssm-kernels (2nd) | claude_info/claude-haiku-5-5 | REVISE (chunked scan slower, no dispatch) |
+| 2026-11-03 | perf REVISE: mamba-ssm c++20 build + dispatch | codex/gpt-6.1-terra high | running |
+| 2026-11-03 | heretic+lora REVISE | codex/gpt-6.1-sol high | done c6d48ee |
+| 2026-11-03 | Board A re-review feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | running |
+| 2026-11-03 | scribe intro+related | copilot/auto | done a74ed08 |
+| 2026-11-03 | humanizer intro+related | claude_aio_gmail_api/claude-haiku-5-5 | running |
+| 2026-11-03 | perf REVISE dispatch+bench | codex/gpt-6.1-terra high | done 3ee16ab; C++20 mamba build still compiling |
+| 2026-11-03 | humanizer intro+related | claude_aio_gmail_api/claude-haiku-5-5 | done 0f9df52 (12 paragraphs) |
+| 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | running |
+| 2026-11-03 | Board A re-review feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | APPROVE, merged |
+| 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | REVISE (4 blocking) |
+| 2026-11-03 | scribe fix round (paper) | copilot/auto | running |
