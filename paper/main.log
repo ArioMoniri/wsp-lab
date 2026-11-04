@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.11.3)  4 NOV 2026 00:09
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.11.3)  4 NOV 2026 06:16
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -481,47 +481,50 @@ enc/dvips/lm/lm-ec.enc}
 
 {/usr/share/texmf/fonts/enc/dvips/lm/lm-rm.enc}{/usr/share/texmf/fonts/enc/dvip
 s/lm/lm-mathit.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathsy.enc}])
-(./sections/related.tex [2]) (./sections/method.tex) (./sections/zoo.tex)
-(./sections/experiments.tex) (./sections/results.tex)
-(./sections/discussion.tex) (./main.bbl [3]
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 8
-5.
+(./sections/related.tex [2]) (./sections/method.tex) (./sections/zoo.tex
+Underfull \vbox (badness 2744) has occurred while \output is active []
+
+ [3]
+LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 2
+0.
 
 (/usr/share/texmf/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-)
+)) (./sections/experiments.tex [4])
+(./sections/results.tex) (./sections/discussion.tex) (./main.bbl [5]
 Underfull \hbox (badness 2334) in paragraph at lines 81--87
 []\T1/lmr/m/n/10 Parminder Ku-mar Sharma.  Heretic au-to-mates strip-ping re-fu
 sals from open-weight mod-els. Its
  []
 
-) (./sections/appendix.tex) [4] (./main.aux)
+) (./sections/appendix.tex) [6] (./main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: DF272F0F32FD9A2C3C06861121C933B4;209.
+(rerunfilecheck)             Checksum: 58DDA802A23238E9F6F2C0EFB367A0FB;466.
  ) 
 Here is how much of TeX's memory you used:
- 11314 strings out of 476182
- 170268 string characters out of 5795595
+ 11331 strings out of 476182
+ 170509 string characters out of 5795595
  1938975 words of memory out of 5000000
- 33088 multiletter control sequences out of 15000+600000
+ 33098 multiletter control sequences out of 15000+600000
  599200 words of font info for 63 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,11n,79p,1400b,566s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,11n,79p,1400b,572s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf/fonts/type1/public/lm/lmbx10.pfb></usr/share/texmf/fonts/ty
 pe1/public/lm/lmmi10.pfb></usr/share/texmf/fonts/type1/public/lm/lmmi7.pfb></us
 r/share/texmf/fonts/type1/public/lm/lmr10.pfb></usr/share/texmf/fonts/type1/pub
 lic/lm/lmr7.pfb></usr/share/texmf/fonts/type1/public/lm/lmri10.pfb></usr/share/
 texmf/fonts/type1/public/lm/lmssbx10.pfb></usr/share/texmf/fonts/type1/public/l
 m/lmsy10.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy7.pfb></usr/share/texm
-f/fonts/type1/public/lm/lmtt10.pfb>
-Output written on main.pdf (4 pages, 185648 bytes).
+f/fonts/type1/public/lm/lmtt10.pfb></usr/share/texlive/texmf-dist/fonts/type1/p
+ublic/amsfonts/symbols/msbm10.pfb>
+Output written on main.pdf (6 pages, 207663 bytes).
 PDF statistics:
- 160 PDF objects out of 1000 (max. 8388607)
- 131 compressed objects within 2 object streams
- 28 named destinations out of 1000 (max. 500000)
- 17 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 192 PDF objects out of 1000 (max. 8388607)
+ 159 compressed objects within 2 object streams
+ 35 named destinations out of 1000 (max. 500000)
+ 41 words of extra memory for PDF output out of 10000 (max. 10000000)
 
