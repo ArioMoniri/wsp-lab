@@ -79,3 +79,5 @@ Checks after editing:
 - `python scripts/verify_refs.py`: exit 0.
 - Token comparison against e73b576 (numbers, \cite/\ref keys, $…$ math, \texttt): identical except the added "1.99" and "40" (the correction) and one added `$\theta_t$` reference in method paragraph 1 that replaces the implicit referent of "its".
 - `latexmk -pdf -interaction=nonstopmode main.tex`: exit 0, no undefined references on the final pass. Output is 6 pages; the PDF committed at e73b576 predates these sections and has 4 pages.
+
+- 2026-11-04: Addressed Board B method, zoo and experiments review: specified refusal extraction, effective and factor SVD features, evaluation tiers and loop definition, and a timestamped zoo and D3 snapshot. Smoothed the manifest and predictor prose.
