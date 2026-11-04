@@ -52,3 +52,8 @@ The Qwen3.5-0.8B zoo is 250 GB on disk: chain steps store dense cumulative delta
 full upload failed. Decision: HF receives all metadata (manifest, edit.json, provenance, eval.json, features,
 runs) plus the deltas of the non-chain families (≈ 40 GB); chain deltas stay on this server (and are
 reproducible from their recorded step parameters and seeds). `scripts/hf_sync.py` implements the selection.
+
+## D3 addendum (4 Nov 2026) — measured timing
+Clean measurement: 12.4 min per entry (fast tier, HF path, batch 32). D3 subset ≈ 62 h locally. Decision pending the
+throughput benchmark: if vLLM gives ≥ 3×, run D3 locally; otherwise split D3 across the local GPU and the Lambda A100
+after the ARA family finishes (A100 ≈ 2× this GPU at ~$2/h, i.e. ≈ 30 h ≈ $60, within the D4 cap).

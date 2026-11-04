@@ -54,3 +54,11 @@ Batch 4, generation budget 32 (KL continuation budget 128). Entry times
 0.2997 / 0.3022 minutes; descriptive mean 0.301, no confidence interval with n=2.
 These are engineering smoke timings, not benchmark reproduction measurements.
 See ROADMAP P2 for explicitly qualified workload projections.
+
+## P2 — Clean fast-tier timing (D2) on one production abliteration entry
+Run under tmux `post-zoo` (log `~/agent-logs/post-zoo-20261104-053857.log`), entry `4463696a4c62e8f3`, GPU otherwise idle:
+**745 s = 12.4 min per entry** for the fast tier (gsm8k 50 / math500 25 / ifeval 25 / mmlu_pro 100 / hellaswag 100 /
+refusal 50 / kl 50, max_new_tokens 1024, batch 32, HF generate). First edited-entry scores (percent): GSM8K 14.0,
+MATH-500 8.0, IFEval 44.0, MMLU-Pro 28.0, HellaSwag 39.0, refusal 100, KL-to-base 0.001, loop rate 100.
+Projection: D3 subset (300 entries) ≈ 62 h on this GPU with the HF path; full zoo ≈ 255 h. The throughput
+benchmark (HF static cache vs vLLM) runs next and decides the engine; Lambda A100 is the fallback once the ARA family ends.
