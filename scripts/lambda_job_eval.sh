@@ -22,15 +22,17 @@ hf auth login --token "$HF_TOKEN" >/dev/null 2>&1 || true
 hf download Qwen/Qwen3.5-0.8B >/dev/null 2>&1
 # shard inputs: manifest + the shard entries (edit.json, delta / lora) from the public zoo store
 mkdir -p data/zoo
-inc=(--include "zoo/qwen3.5-0.8b/manifest.jsonl")
-while read -r i; do [ -n "$i" ] && inc+=("zoo/qwen3.5-0.8b/$i/*"); done < "$IDS"
-hf download Aralario/wsp-lab-zoo --repo-type dataset "${inc[@]}" --local-dir data/.hf-pull-zoo >/dev/null 2>&1
+hf download Aralario/wsp-lab-zoo --repo-type dataset --include "zoo/qwen3.5-0.8b/manifest.jsonl" --local-dir data/.hf-pull-zoo >/dev/null 2>&1
+inc=()
+while read -r i || [ -n "$i" ]; do [ -n "$i" ] && inc+=("zoo/qwen3.5-0.8b/$i/*"); done < "$IDS"   # last line may lack a newline
+hf download Aralario/wsp-lab-zoo --repo-type dataset --include "${inc[@]}" --local-dir data/.hf-pull-zoo >/dev/null 2>&1
+[ -f data/.hf-pull-zoo/zoo/qwen3.5-0.8b/manifest.jsonl ] || { echo "manifest missing after download"; exit 1; }
 rsync -a data/.hf-pull-zoo/zoo/ data/zoo/
 rm -f data/zoo/qwen3.5-0.8b/*/eval.json   # every shard entry is evaluated here, never inherited from another host
 HOST="lambda-$(hostname)"
 echo "EVAL start $(date -u +%FT%TZ) host=$HOST ids=$(wc -l < "$IDS")"
 set +e
-python -m wsp.eval.batch --zoo data/zoo/qwen3.5-0.8b --ids "$(paste -sd, "$IDS")" --config configs/eval_fast.yaml --resume 2>&1 | grep -E '^\{|entry=|Traceback|Error|error'
+python -m wsp.eval.batch --zoo data/zoo/qwen3.5-0.8b --ids "$(grep -v "^$" "$IDS" | paste -sd,)" --config configs/eval_fast.yaml --resume 2>&1 | grep -E '^\{|entry=|Traceback|Error|error'
 rc=${PIPESTATUS[0]}
 set -e
 echo "EVAL end $(date -u +%FT%TZ) rc=$rc done=$(ls data/zoo/qwen3.5-0.8b/*/eval.json 2>/dev/null | wc -l)"
@@ -52,7 +54,7 @@ if base.exists():
 print("UPLOAD_DONE")
 PY
 done
-cp ~/eval.log "data/runs/eval-$HOST.log" 2>/dev/null || true
+mkdir -p data/runs; cp ~/eval.log "data/runs/eval-$HOST.log" 2>/dev/null || true
 python - "$HOST" <<'PY' || true
 import os, sys
 from huggingface_hub import HfApi
