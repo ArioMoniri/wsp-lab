@@ -46,6 +46,7 @@ def main(kind: str) -> None:
         folder_path=str(ZOO),
         allow_patterns=patterns,
         print_report=False,
+        num_workers=2,
     ) if kind == "deltas" else api.upload_folder(
         repo_id=REPO,
         repo_type="dataset",
