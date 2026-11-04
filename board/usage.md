@@ -87,3 +87,4 @@
 | 2026-11-04 | Board A re-review perf/ssm-kernels | codex/gpt-6.1-sol medium | REVISE→fixed (ruff exclude), merged |
 | 2026-11-04 | Board A re-review fix/eval-lora | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (3 test-side blockers) |
 | 2026-11-04 | fix/eval-lora round 3 | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | fix/eval-lora round 3 | codex/gpt-6.1-terra medium | done cffbcd5; GPU real-adapter test passed; merged |
