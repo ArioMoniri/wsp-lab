@@ -127,3 +127,4 @@
 | 2026-11-04 | Board B re-review paper/method-zoo | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | design hero v2 | codex/gpt-6.1-sol high | done fb71805, merged |
 | 2026-11-04 | Board B re-review paper/method-zoo | codex/gpt-6.1-sol medium | APPROVE, merged |
+| 2026-11-04 | docs fix round (accuracy-check issues 18–25) | claude_aio_gmail_api/claude-haiku-5-5 medium | running |
