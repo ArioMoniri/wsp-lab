@@ -819,3 +819,23 @@ def test_manifest_has_no_credentials_for_success_run(tmp_path):
     assert m["n_ok"] == 1 and m["endpoint"] == "https://example.test/v1/chat/completions"
     for f in out.rglob("*.json"):
         assert SECRET not in f.read_text()
+
+
+def test_endpoint_fingerprint_tracks_query_params_but_never_credentials():
+    from wsp.agents.reader import endpoint_fingerprint
+
+    a = endpoint_fingerprint(
+        "https://x.example/v1/chat?api-version=2026-01&deployment=d1&api_key=SECRETKEY123"
+    )
+    b = endpoint_fingerprint(
+        "https://x.example/v1/chat?api-version=2026-02&deployment=d1&api_key=SECRETKEY123"
+    )
+    c = endpoint_fingerprint(
+        "https://x.example/v1/chat?api-version=2026-01&deployment=d1&api_key=OTHERKEY456"
+    )
+    d = endpoint_fingerprint(
+        "https://u:SECRETKEY123@x.example/v1/chat?api-version=2026-01&deployment=d1"
+    )
+    assert a != b  # a different deployment setting must not resume
+    assert a == c  # the credential value is not part of the identity
+    assert "SECRETKEY123" not in a + b + c + d and len(a) == 16

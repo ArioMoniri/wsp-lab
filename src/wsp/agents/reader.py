@@ -335,6 +335,30 @@ def safe_endpoint(url: str) -> str:
         return "<invalid-url>"
 
 
+_CREDENTIAL_PARAM = re.compile(r"(key|token|secret|password|signature|sig|auth)", re.IGNORECASE)
+
+
+def endpoint_fingerprint(url: str) -> str:
+    """Credential-safe identity of a deployment: scheme, host, path and the *non-credential* query
+    parameters (names and values, sorted). Credential-looking parameter values are replaced by a
+    marker before hashing, so the fingerprint changes with ``api-version`` or ``deployment`` but
+    never encodes a key."""
+    try:
+        p = urllib.parse.urlsplit(url)
+    except ValueError:
+        return "invalid"
+    host = p.hostname or ""
+    if p.port:
+        host += f":{p.port}"
+    params = []
+    for k, v in sorted(urllib.parse.parse_qsl(p.query, keep_blank_values=True)):
+        params.append((k, "<redacted>" if _CREDENTIAL_PARAM.search(k) else v))
+    payload = json.dumps(
+        {"scheme": p.scheme, "host": host, "path": p.path, "query": params}, sort_keys=True
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
+
+
 def _join_url(root: str, suffix: str) -> str:
     """Append ``suffix`` to the path of ``root``, keeping userinfo and any query after the path."""
     p = urllib.parse.urlsplit(root)
@@ -396,6 +420,7 @@ class _HTTPProvider:
         """Generation settings that make a stored reply reusable only by an identical setup."""
         return {
             "endpoint": self.endpoint,
+            "endpoint_fingerprint": endpoint_fingerprint(self._url),
             "max_output_tokens": self.max_output_tokens,
             "max_tokens_field": getattr(self, "max_tokens_field", None),
         }
