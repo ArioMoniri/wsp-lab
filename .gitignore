@@ -38,3 +38,6 @@ paper/*.synctex.gz
 .venv
 data/hf
 data/papers/*.txt
+
+# never track anything under data/ (artefacts, caches, builds)
+data/

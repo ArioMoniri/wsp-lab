@@ -36,4 +36,4 @@ python -m wsp.predictor.train --config configs/predictor_ssm.yaml
 CI runs on a self-hosted GitLab runner with GPU passthrough (`.gitlab-ci.yml`); GitHub Actions is not used.
 
 ## Status
-P0 infrastructure complete; P1 edit zoo in progress. See `docs/ROADMAP.md` and `docs/RESULTS.md`.
+P0 infrastructure complete (CI on self-hosted GPU runner, Mamba-2 kernels built for Blackwell); P2 eval battery merged; P1 edit zoo in final review. See `docs/ROADMAP.md` and `docs/RESULTS.md`.
