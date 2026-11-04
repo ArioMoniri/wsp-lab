@@ -597,8 +597,9 @@
   - Taotao Cai
   year: 2026
   venue: arXiv:2608.09490
-  claim_we_make: 'Task-vector interference depends on training-format serialization: the trained wrapper masks interference,
-    while an untrained chat template does not.'
+  claim_we_make: 'Interference expression is gated by training-format serialization: it collapses twenty-fold under
+    the training-format wrapper on identical prompts, but does not collapse under an untrained chat template (+12.5
+    points); pass@1 inherits this blindness, so training-format evaluations cannot certify a merge interference-free.'
   supporting_excerpt: 'Interference expression is gated by training-format serialization, not public provenance
     or chat formatting per se: a twenty-fold collapse on identical prompts under the training-format wrapper, no
     collapse under an untrained chat template (+12.5 points), and pass@1 inherits the blindness—so training-format

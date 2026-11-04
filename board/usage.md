@@ -53,3 +53,30 @@
 | 2026-11-03 | Board A feat/plots-design | claude_aio_gmail_api/claude-haiku-5-5 | REVISE → fixed by orchestrator, merged |
 | 2026-11-03 | Board A perf/ssm-kernels (2nd) | claude_info/claude-haiku-5-5 | REVISE (chunked scan slower, no dispatch) |
 | 2026-11-03 | perf REVISE: mamba-ssm c++20 build + dispatch | codex/gpt-6.1-terra high | running |
+| 2026-11-03 | heretic+lora REVISE | codex/gpt-6.1-sol high | done c6d48ee |
+| 2026-11-03 | Board A re-review feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | running |
+| 2026-11-03 | scribe intro+related | copilot/auto | done a74ed08 |
+| 2026-11-03 | humanizer intro+related | claude_aio_gmail_api/claude-haiku-5-5 | running |
+| 2026-11-03 | perf REVISE dispatch+bench | codex/gpt-6.1-terra high | done 3ee16ab; C++20 mamba build still compiling |
+| 2026-11-03 | humanizer intro+related | claude_aio_gmail_api/claude-haiku-5-5 | done 0f9df52 (12 paragraphs) |
+| 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | REVISE (4 blocking) |
+| 2026-11-03 | Board A re-review feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | APPROVE, merged |
+| 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | REVISE (4 blocking) |
+| 2026-11-03 | scribe fix round (paper) | copilot/auto | running |
+| 2026-11-04 | Board C: LLM-in-the-loop optimiser/editor assessment | codex/gpt-6-luna medium | running |
+| 2026-11-04 | scribe fix round (paper) | copilot/auto | done b4433da |
+| 2026-11-04 | Board B re-review paper/intro-related | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | Board B re-review paper/intro-related | codex/gpt-6.1-terra medium | APPROVE, merged |
+| 2026-11-04 | Board C LLM-in-the-loop | codex/gpt-6-luna medium | done 584b016, merged |
+| 2026-11-04 | zoo REVISE round (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | done 1913f61 (5/5 fixed) |
+| 2026-11-04 | zoo integration (heretic_ara/lora_sft into build.py) | claude_aio_gmail_api/claude-sonnet-5-5 high | running (Board A re-review after) |
+| 2026-11-04 | zoo integration | claude_aio_gmail_api/claude-sonnet-5-5 high | done 03384a9 (127 tests) |
+| 2026-11-04 | Board A re-review feat/p1-zoo-build | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | fix eval LoRA loading (fix/eval-lora) | codex/gpt-6.1-terra high | running |
+| 2026-11-04 | Board A re-review feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (3 blocking) |
+| 2026-11-04 | zoo REVISE round 3 | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | fix eval LoRA loading | codex/gpt-6.1-terra high | done 28c80a9 |
+| 2026-11-04 | Board A fix/eval-lora | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | Board A fix/eval-lora | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (F1 blocking; F2 decision D1) |
+| 2026-11-04 | fix/eval-lora round 2 | codex/gpt-6.1-terra high | running |
+| 2026-11-04 | SSM finish: mamba backend test+bench | codex/gpt-6.1-terra medium | running |
