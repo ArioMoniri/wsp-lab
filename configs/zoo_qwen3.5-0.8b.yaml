@@ -13,7 +13,7 @@ families:
     n_directions: {choices: [1, 2, 4]}
   abliteration:                                 # Heretic classic modifier, sampled kernels (not optimised)
     n: 200
-    direction_index: {min: -1, max: 24}
+    direction_index: {min: -1, max: 23}      # residual rows 0..24 (embedding + 24 layers)
     max_weight: {min: 0.3, max: 1.3}
     max_weight_position: {min: 0, max: 24}
     min_weight: {min: 0.0, max: 0.6}
@@ -37,3 +37,7 @@ families:
     length: {min: 2, max: 8}
 eval:
   config: configs/eval_cheap.yaml
+eligibility:                                    # below these budgets (or with --override) = smoke
+  min_params:                                   # smoke entries are not task_vector parents by default
+    heretic_ara: {trials: 20}
+    lora_sft: {steps: 50}
