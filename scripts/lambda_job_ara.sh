@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Runs ON a Lambda instance. Usage: lambda_job_ara.sh <n_entries> <trials>
+# Builds the heretic_ara zoo family for Qwen3.5-0.8B, pushes entries to the private HF zoo dataset, terminates itself.
+set -euo pipefail
+N="${1:-30}"; TRIALS="${2:-30}"
+export PATH=$HOME/.local/bin:$PATH
+sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq git rsync tmux python3.12-venv python3.12-dev build-essential >/dev/null || true
+command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null
+mkdir -p ~/projects && cd ~/projects
+[ -d wsp-lab ] || git clone -q https://github.com/ArioMoniri/wsp-lab.git
+cd wsp-lab && git pull -q
+[ -d .venv ] || uv venv --python 3.12 .venv -q
+uv pip install --python .venv/bin/python -e ".[dev]" -q
+. scripts/env.sh   # reads ~/.config/wsp/env (HF_TOKEN, LAMBDA_API_KEY) written by the launcher
+hf auth login --token "$HF_TOKEN" >/dev/null 2>&1 || true
+mkdir -p data/zoo && scripts/hf_sync.sh pull zoo 2>&1 | tail -1 || true
+hf download Qwen/Qwen3.5-0.8B >/dev/null 2>&1
+python - <<PY
+import yaml
+c=yaml.safe_load(open('configs/zoo_qwen3.5-0.8b.yaml'))
+c['families']={'heretic_ara': {**c['families']['heretic_ara'], 'n': int("$N"), 'trials': int("$TRIALS")}}
+c['out_dir']='data/zoo/qwen3.5-0.8b'
+yaml.safe_dump(c, open('configs/zoo_qwen3.5-0.8b_ara_lambda.yaml','w'), sort_keys=False)
+PY
+echo "ARA build start $(date -u +%FT%TZ) n=$N trials=$TRIALS"
+python -m wsp.zoo.build --config configs/zoo_qwen3.5-0.8b_ara_lambda.yaml --family heretic_ara --allow-missing-families 2>&1 | tail -40
+echo "ARA build end $(date -u +%FT%TZ)"
+scripts/hf_sync.sh push zoo 2>&1 | tail -1
+echo JOB_DONE
+# self-terminate (instance id from metadata-free lookup by name)
+ID=$(curl -s -H "Authorization: Bearer $LAMBDA_API_KEY" https://cloud.lambda.ai/api/v1/instances | python3 -c "import sys,json;[print(i['id']) for i in json.load(sys.stdin)['data'] if i['name'].startswith('wsp-lab')]" | head -1)
+[ -n "$ID" ] && curl -s -H "Authorization: Bearer $LAMBDA_API_KEY" -H "Content-Type: application/json" -X POST https://cloud.lambda.ai/api/v1/instance-operations/terminate -d "{\"instance_ids\":[\"$ID\"]}" >/dev/null && echo "terminated $ID"
