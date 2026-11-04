@@ -188,4 +188,4 @@
 | 2026-11-04 | Board A final re-review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | APPROVE d783aab — merged |
 | 2026-11-04 | editor harness round 3 | codex/gpt-6.1-sol high | done cebe504 (482 tests; real-model GPU smoke 0.55 s forward) — final review pending |
 | 2026-11-04 | Board A final re-review feat/h5-editor | claude_aio_gmail_api/claude-haiku-5-5 high | APPROVE (merge with production disabled; pilot blocked on principal decision, pool statement, kernel policy) 6460816 — merged |
-| 2026-11-04 | Board A: P4 D3 suite verdict (H1/H2/H3) + negative-baseline anomaly | codex/gpt-6.1-sol high | running |
+| 2026-11-04 | Board A: P4 D3 suite verdict | codex/gpt-6.1-sol high | REVISE: H1 undetermined/not demonstrated (M2 ρ .54/.49 vs StatNN .61/.67 trajectory split); family-split negatives = family offsets 0efebfe |

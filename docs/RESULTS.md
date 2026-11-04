@@ -121,3 +121,19 @@ refusal within 0.02). Reading, pending Board A's formal qualification (their rul
 KL and the keyword refusal rate transfer across devices; the sampled-generation benchmarks (gsm8k, math500,
 ifeval, over-refusal) do not, and their Δy must be taken against the same-device base. Scripts: ad-hoc, to be replaced
 by `wsp.eval.repeats.compare_pairs` once fix/eval-board-a-h5 merges.
+
+## P4 — first complete predictor suite on the D3 subset (4 Nov 2026, 23:13–23:33 UTC; runs data/runs/p4/d3-*)
+Board A verdict (docs/reviews/P4/board-a-d3-suite-2026-11-04.md): **REVISE — H1 undetermined and not demonstrated;
+H2/H3 insufficient evidence.** Supportable statements, in Board A's wording:
+> On the D3 fast-tier subset, 260 of 300 evaluated edits had matched-reference delta targets; all retained labels used
+> inferred runtime metadata. In exploratory trajectory-grouped evaluation, M2 achieved Spearman .54 [.42,.63] on
+> MMLU-Pro and .49 [.38,.60] on HellaSwag, compared with StatNN .61 and .67. Intervals resample edits conditional on
+> the fitted models and do not correct chain dependence.
+> The pre-registered H1 criterion was not demonstrated. Ranking qualification of the fast targets remains incomplete,
+> and the P4 delta-norm comparator is pending. Pooled family-holdout correlations were sensitive to between-family
+> calibration offsets and do not establish within-family transfer.
+Cause of the negative family-split baselines: between-family calibration offsets in pooled correlations plus
+extrapolation instability of the neural heads; the pooled family-holdout ρ is not a transfer measure. Full table:
+docs/reviews/P4/d3-summary-2026-11-04.md. Next (ranked by Board A): finish the 89 chain-predecessor evaluations
+(running), seed-1 repeat panel, nested model selection with fold-mean and delta-norm baselines and per-edit baseline
+predictions, feature audit with descriptor-only and device-only controls, ancestry-cluster bootstrap, multiple seeds.
