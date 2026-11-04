@@ -92,7 +92,11 @@ restart repairs the index and resumes completed production entries.
 - Build zoos for LFM3-1.7B (hybrid, downloaded), Qwen3.5-4B, Gemma-3-270M-it (gated; token available) with the
   same families and configs; feature pooling must map each architecture's tensor types (audit per model).
 - Train on two models, test on the third (leave-one-model-out), plus the ≤ 20-edit calibration arm.
-- Board C to assess which representation is most transferable (pooled spectra vs per-type stats vs JEPA latent).
+- Board C (4 Nov 2026, docs/MODEL_CANDIDATES.md §H6): screening run = Qwen3.5-0.8B, LFM3-1.7B, Gemma-3-270M-it,
+  leave-one-model-out with n = 100 labelled edits per model (300 total), all transforms fit on training folds only;
+  two competing representation runs: (A) dimensionless spectral / change-set descriptors with broad role pools,
+  relative depth and occupancy flags; (B) the second representation named in that section; current pooled stats
+  as the ablation; report ρ/MAE and the ≤ 20-edit calibration gain.
 
 ## P6 — Closing the loop (promoted from optional, 4 Nov 2026)
 Forecast-then-verify: the predictor scores every proposed edit before evaluation; it then gates/ranks
