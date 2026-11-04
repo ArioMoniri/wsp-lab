@@ -143,3 +143,5 @@
 | 2026-11-04 | h4-reader REVISE round | claude_aio_gmail_api/claude-sonnet-5-5 medium | running |
 | 2026-11-04 | P4 predictors code | codex/gpt-6.1-sol high | done 8559479 (242 tests) |
 | 2026-11-04 | Board A feat/p4-predictors | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | h4-reader REVISE | claude_aio_gmail_api/claude-sonnet-5-5 medium | done 89f2459 (297 tests) |
+| 2026-11-04 | Board A re-review feat/h4-reader | codex/gpt-6.1-terra medium | running |
