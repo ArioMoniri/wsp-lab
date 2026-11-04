@@ -67,6 +67,7 @@ restart repairs the index and resumes completed production entries.
   pooled φ_svd(Δθ_t) ⊕ edit descriptor embedding; output = y_t for all K benchmarks
 - M3 JEPA: encoder E_θ on φ_svd(θ_t), predictor P(E_θ(θ_{t−1}), e_t) ≈ sg(E_θ(θ_t)), VICReg variance term;
   linear head on latent → y_t; trained in two stages like JEPAWG
+- [x] Trainers for M1, M2, M3, M5, M6 (+ parameter-matched M1 control, --holdout gate, --selftest) merged 4 Nov 2026; waiting for eval.json targets
 - M5 (Board C pick, competes with M2 on H2): trajectory Transformer, per-tensor W2T tokens + causally-masked
   attention over edits, ≤ 2 layers d=256; acceptance ≥ 15 % rel. MAE reduction vs M1 on T ≥ 4 and ≥ M2 on all splits
 - M6 (Board C pick, competes with M3 on H1/H3): Tabular-JEPA pretraining on φ_stats with ResidualPred, dz=32,
