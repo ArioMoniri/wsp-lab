@@ -31,7 +31,11 @@ class ScriptedEditor:
 REGISTRY = {"scripted": ScriptedEditor}
 
 
-def provider(name, **kwargs):
+def provider(name, *, config=None, **kwargs):
+    if name != "scripted":
+        from wsp.editor.driver import validate_production
+
+        validate_production(config or {})
     if name not in REGISTRY:
         raise ValueError(f"provider unavailable: {name}")
     return REGISTRY[name](**kwargs)

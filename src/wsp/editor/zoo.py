@@ -22,7 +22,7 @@ def register(api, config, provenance, zoo_dir):
     delta, rounding = {}, {}
     for name, value in list(api.deltas.items()):
         api.set(name, value, api.rationales[name])
-        delta[name], rounding[name] = effective_delta(api.read(name).to(torch.bfloat16), value)
+        delta[name], rounding[name] = effective_delta(api.read(name), value)
     proposal_digest = digest({k: v.tolist() for k, v in sorted(api.deltas.items())})
     desc = EditDescriptor(
         "llm_edit",
@@ -41,7 +41,7 @@ def register(api, config, provenance, zoo_dir):
         provenance=dict(
             provenance,
             rounding_stats=rounding,
-            merge_rule="bf16(W+delta)-W",
+            merge_rule="checkpoint_dtype(W+delta)-W",
             config_hash=digest(config),
         ),
     )
@@ -73,7 +73,9 @@ def build(config, family_cfg, seed, base_state, *, dry_run=False):
         base_model=config["base_model"],
         base_revision=config["base_revision"],
     )
-    adapter = provider(family_cfg["provider"], **family_cfg.get("provider_options", {}))
+    adapter = provider(
+        family_cfg["provider"], config=editor_config, **family_cfg.get("provider_options", {})
+    )
     with tempfile.TemporaryDirectory(prefix="wsp-editor-") as scratch:
         root = Path(scratch)
         ids = run_episode(

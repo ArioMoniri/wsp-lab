@@ -7,12 +7,14 @@ from safetensors.torch import load_file
 
 from wsp.editor.api import EditorAPI
 from wsp.editor.driver import run_episode
-from wsp.editor.episode import Episode
+from wsp.editor.episode import Episode, digest
 from wsp.editor.providers import ScriptedEditor, provider
 from wsp.editor.sandbox import run
 
 
 class TinyCausal(torch.nn.Module):
+    config = SimpleNamespace(vocab_size=4, hidden_size=4)
+
     def forward(self, input_ids, attention_mask=None, output_hidden_states=False):
         h = torch.nn.functional.one_hot(input_ids % 4, 4).float()
         return SimpleNamespace(logits=h, hidden_states=(h,))
@@ -55,7 +57,14 @@ def test_loop_replay_manifest_d1_and_failures(tmp_path):
     from wsp.schema import EditDescriptor
 
     code = "call('delta.set', name='weight', tensor=[[0.02,0],[0,0.03]], rationale='test')"
-    config = {"base_model": "tiny", "base_revision": "a" * 40, "budget": 10, "seed": 0}
+    config = {
+        "base_model": "tiny",
+        "base_revision": "a" * 40,
+        "budget": 10,
+        "seed": 0,
+        "editable_tensors": ["weight"],
+        "development_pool_hash": digest([]),
+    }
     ids = []
     for episode_id in ["one", "two"]:
         episode = Episode(tmp_path / "runs", episode_id)
@@ -110,6 +119,9 @@ def test_distinct_proposals_and_sealed_absent(tmp_path):
         "budget": 10,
         "sealed_reference": "sealed-marker-do-not-disclose",
         "editable_tensors": ["w"],
+        "development_pool_hash": digest(
+            [{"id": "train-1", "source": "gsm8k", "split": "train", "prompt": "1+1?"}]
+        ),
     }
     ids = run_episode(
         ScriptedEditor(codes),
@@ -127,9 +139,7 @@ def test_distinct_proposals_and_sealed_absent(tmp_path):
 
 def test_partial_ipc_and_resource_exits():
     api = EditorAPI({"w": torch.ones(1)}, TinyCausal(), 10)
-    result = run(
-        "import os; os.write(1, b'partial'); exec('while True: pass')", api, wall_seconds=0.2
-    )
+    result = run("exec('while True: pass')", api, wall_seconds=0.2)
     assert not result.valid and "TimeoutError" in result.error
     assert not run("x = bytearray(1024**3)", api).valid
     assert not run("call('weights.read', name='sealed')", api).valid
@@ -144,7 +154,11 @@ def test_build_registry_replays_scripted_candidate(tmp_path):
         "provider_options": {
             "cells": ["call('delta.set', name='w', tensor=[[0.1]], rationale='test')"]
         },
-        "editor_config": {"budget": 10},
+        "editor_config": {
+            "budget": 10,
+            "editable_tensors": ["w"],
+            "development_pool_hash": digest([]),
+        },
         "episode_root": str(tmp_path / "episodes"),
     }
     result = _build_single_family(

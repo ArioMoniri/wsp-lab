@@ -5,14 +5,18 @@ from wsp.editor.api import EditorAPI
 
 
 def test_batch_prefill_decode_hidden_and_over_budget():
-    calls = []
-    api = EditorAPI({"w": torch.ones(2, 2)}, lambda **kw: calls.append(kw) or {"logits": []}, 10)
+    api = EditorAPI(
+        {"w": torch.ones(2, 2)},
+        lambda **kw: {"logits": torch.ones(len(kw["input_ids"]), 1, 4)},
+        10,
+        max_vocab=4,
+    )
     for batch in (4, 3, 2, 1):
         api.forward([[1]] * batch)
     assert api.used == 10
     with pytest.raises(ValueError):
         api.forward([[1]])
-    assert len(calls) == 4
+    assert len(api.calls) == 4
 
 
 def test_failed_prelaunch_free_launched_failure_charged():

@@ -85,3 +85,62 @@ DoD before any production episode:
 ## Biggest risk and preregistration handoff
 
 The largest risk is **proposal-selection leakage and hidden evaluation access**: iterative editors can overfit visible development items, while a leaked sealed set invalidates the claimed generalization. Board A must preregister the exact development/sealed item IDs or immutable split hashes, item access boundary, prompt and stopping rule, proposal count and selection rule, score threshold for a qualifying fix, 10/25/50 treatment assignment, random seeds, matched best-of-N evaluation budget, Gemma negative-control decision rule, and final sealed-evaluation timing before the first episode.
+
+## Implemented isolation and qualification boundary (Board A revision, 4 Nov 2026)
+
+The current backend is Linux seccomp plus rlimits, not a container, chroot or mount
+namespace. After Python/JSON initialization the editor cannot open files (including
+scratch files), inspect path metadata (`stat`, `lstat`, `newfstatat`, `statx`), create
+processes, execute programs or create sockets. Existing and missing host paths both
+fail with EPERM. `fstat` can inspect inherited descriptors only. The only permitted
+write descriptor is a dedicated IPC pipe; stdout/stderr cannot submit requests or
+write logs. The supervisor validates every IPC operation against its allowlist.
+No evaluator storage, credentials, model objects or mutable parent tensors are sent
+to the editor. Transcript numeric arrays are hash/shape summaries; completion code
+is retained privately so deterministic proposals can be replayed.
+
+By default the editor still runs as the supervisor's OS user. This is **not isolation
+from a hostile process belonging to that same user**, host administrators, kernel
+exploits, shared-resource/timing side channels or a compromised supervisor/model.
+No network namespace or filesystem namespace is claimed. With
+`require_separate_principal: true`, a root supervisor must configure a positive,
+different `sandbox.uid`; the worker clears supplementary groups and permanently
+sets its gid/uid before seccomp and before executing editor code. Otherwise launch
+and production qualification refuse. Templates require this flag. Deployments must
+choose a dedicated unprivileged account, not an account shared with other jobs.
+The root-only UID assertion is skipped in unprivileged CPU CI.
+
+Probes now execute in a disposable, killable **CPU fork worker**, independently of
+the editor. The minimum of per-call, proposal and episode deadlines kills a hung
+probe; launched failures count, pre-launch failures do not. This backend rejects a
+model with non-CPU tensors: GPU production needs a separately initialized
+model-serving process and its own qualification, rather than unsafe CUDA fork.
+CPU fork can also encounter library thread-lock contention; the deadline bounds it.
+The model worker is trusted and inherits supervisor memory; it is not a security
+boundary for sealed evaluation storage. Keep sealed evaluation in a separate service
+or principal. Production eligibility remains `smoke` in the zoo writer.
+
+`load_config(path, weights, pool)` validates the exact nonempty tensor allowlist,
+resolved checkpoint revision, chosen scalar budget, and `development_pool_hash`
+(SHA-256 of sorted-key JSON of the exact ordered approved records, via
+`wsp.editor.episode.digest`) before provider use. Templates deliberately have no
+resolved revision, selected budget or pool hash and cannot be loaded for an episode.
+Pool hashes pin content, not the scientific suitability of the split: approving
+training-only sources and proving disjointness from sealed items remain protocol
+qualification responsibilities. Every non-scripted registry construction and episode
+requires `production_enabled: true`, the pinned pool hash and checkpoint revision.
+No network provider adapter is supplied and no production run is authorized by this
+implementation.
+
+The `probe.v1` result contains logits only at requested positions (default: final
+position), or top-k token IDs/log probabilities with k <= 64. Requested hidden
+layers return only per-position norm, mean and up to 16 selected coordinate
+projections. No full activation tensors cross IPC. Position/layer, batch, sequence,
+model-dimension and conservative JSON byte bounds are checked before launch; actual
+output dimensions and serialized bytes are also checked in the worker. Weight reads
+share the response byte cap. Episode limits cover calls, sequences, tokens and
+elapsed wall clock across proposals, in addition to each proposal's forward budget.
+Measured elapsed wall time is logged but is not expected to be identical on replay;
+deterministic call/sequence/token totals and effective-delta file hashes must match.
+Delta preview and registration use the same effective_delta helper in the checkpoint's
+original dtype, including bf16 checkpoints, rather than forcing all bases to bf16.
