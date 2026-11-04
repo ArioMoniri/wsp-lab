@@ -1,11 +1,11 @@
 generation:
-  max_new_tokens: 4096
+  max_new_tokens: 1024
   temperature: 0.6
   top_p: 0.95
   top_k: 20
   presence_penalty: 1.5
   thinking: true
-  batch_size: 4
+  batch_size: 32
   seed: 0
 benchmarks:
   gsm8k:
@@ -20,7 +20,6 @@ benchmarks:
   mmlu_pro:
     n: 100
     metric: acc
-    max_new_tokens: 1024
   hellaswag:
     n: 100
     metric: acc_norm_loglik
@@ -41,8 +40,3 @@ benchmarks:
   kl_to_base:
     prompts: heretic_good_eval
     n: 50
-loop_rate:
-  from:
-  - gsm8k
-  - math500
-  - ifeval

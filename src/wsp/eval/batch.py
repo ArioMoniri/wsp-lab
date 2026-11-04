@@ -1,9 +1,12 @@
 """One-load, resumable zoo evaluation: python -m wsp.eval.batch."""
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
+import random
+import subprocess
 import time
 import uuid
 from contextlib import contextmanager
@@ -12,9 +15,62 @@ from pathlib import Path
 import torch
 import yaml
 
+import wsp
 from wsp.eval.run import HFRunner, apply_zoo_entry, evaluate, write_results
 from wsp.eval.zoo_compat import load_entry_delta
-from wsp.zoo.common import get_git_sha
+
+REPO = Path(wsp.__file__).resolve().parents[2]
+
+
+def provenance():
+    def git(*args):
+        return subprocess.check_output(["git", "-C", str(REPO), *args], text=True).strip()
+
+    digest = hashlib.sha256()
+    for path in sorted((REPO / "src/wsp").rglob("*.py")):
+        digest.update(str(path.relative_to(REPO)).encode())
+        digest.update(path.read_bytes())
+    return {
+        "git_sha": git("rev-parse", "HEAD"),
+        "dirty": bool(git("status", "--porcelain")),
+        "source_hash": digest.hexdigest(),
+    }
+
+
+def upsert_index(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.with_suffix(".lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        rows = [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+        keyed = {(r["edit_id"], r["config_hash"]): r for r in rows}
+        keyed[payload["edit_id"], payload["config_hash"]] = payload
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text("".join(json.dumps(r) + "\n" for r in keyed.values()))
+        tmp.replace(path)
+
+
+def complete(payload, signature, benchmarks):
+    return (
+        payload.get("eval_status") == "complete"
+        and payload.get("signature") == signature
+        and all(
+            payload.get("counts", {}).get(k) == v.get("n", v.get("n_windows"))
+            for k, v in benchmarks.items()
+        )
+    )
+
+
+def subset_ids(rows, spec):
+    rng = random.Random(spec["seed"])
+    selected = []
+    for family, n in spec["families"].items():
+        pool = sorted(
+            r["id"]
+            for r in rows
+            if r.get("family") == family and r.get("eligibility") == "production"
+        )
+        selected.extend(rng.sample(pool, min(n, len(pool))))
+    return selected
 
 
 class WeightRestore:
@@ -47,17 +103,31 @@ class WeightRestore:
                     state[key].copy_(value)
 
 
-def select_entries(rows, zoo, ids=None, families=None, eligibility="production", signature=None):
+def select_entries(
+    rows,
+    zoo,
+    ids=None,
+    families=None,
+    eligibility="production",
+    signature=None,
+    benchmarks=None,
+    index=None,
+):
     for row in rows:
         if "id" not in row or row.get("eligibility") != eligibility:
             continue
-        if ids and row["id"] not in ids:
+        if ids is not None and row["id"] not in ids:
             continue
         if families and row["family"] not in families:
             continue
         result = zoo / row["id"] / "eval.json"
         if result.exists():
             previous = json.loads(result.read_text())
+            if index is not None:
+                upsert_index(index, previous | {"path": str(result.parent)})
+            if benchmarks is not None and not complete(previous, signature, benchmarks):
+                yield row
+                continue
             if previous.get("eval_status") == "complete" and (
                 signature is None or previous.get("signature") == signature
             ):
@@ -91,6 +161,7 @@ def run_batch(
     max_new_tokens=None,
     batch_size=None,
     limit=None,
+    subset=None,
 ):
     zoo, config = Path(zoo), Path(config)
     cfg = yaml.safe_load(config.read_bytes())
@@ -101,43 +172,73 @@ def run_batch(
         generation["batch_size"] = batch_size
     if min(generation["batch_size"], generation["max_new_tokens"]) < 1:
         raise ValueError("batch size and token budget must be positive")
+    if limit is not None and limit < 1:
+        raise ValueError("limit must be positive")
     if limit:
         for spec in cfg["benchmarks"].values():
             spec["n"] = spec["n_windows"] = limit
     rows = [json.loads(line) for line in (zoo / "manifest.jsonl").read_text().splitlines()]
-    signature = hashlib.sha256(
-        json.dumps([cfg, generation, limit], sort_keys=True).encode()
-    ).hexdigest()
-    selected = list(select_entries(rows, zoo, ids, families, eligibility, signature))
-    header = next(r for r in reversed(rows) if r.get("type") == "header")
-    out = Path("data/evals") / zoo.name
-    base_out = out / "base"
-    base_done = (base_out / "eval.json").exists() and json.loads(
-        (base_out / "eval.json").read_text()
-    ).get("eval_status") == "complete"
-    base_done = (
-        base_done and json.loads((base_out / "eval.json").read_text()).get("signature") == signature
+    cfg["generation"] = generation.copy()
+    config_hash = hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()
+    origin = provenance()
+    signature = hashlib.sha256((config_hash + origin["source_hash"]).encode()).hexdigest()
+    run_id = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:8]
+    production = (
+        limit is None
+        and max_new_tokens is None
+        and batch_size is None
+        and eligibility == "production"
+        and config.resolve() == (REPO / "configs/eval_fast.yaml").resolve()
     )
+    out = REPO / "data/evals" / zoo.name if production else REPO / "data/runs/p2-batch" / run_id
+    if subset:
+        spec = yaml.safe_load((REPO / "configs/eval_subset_d3.yaml").read_text())
+        chosen = subset_ids(rows, spec)
+        ids = [i for i in chosen if not ids or i in ids]
+    print(
+        f"excluded legacy rows without eligibility: {sum('id' in r and 'eligibility' not in r for r in rows)}"
+    )
+    selected = list(
+        select_entries(
+            rows,
+            zoo if production else out,
+            ids,
+            families,
+            eligibility,
+            signature,
+            cfg["benchmarks"],
+            out / "index.jsonl",
+        )
+    )
+    header = next(r for r in reversed(rows) if r.get("type") == "header")
+    base_out = out / "base"
+    base_done = False
+    if (base_out / "eval.json").exists():
+        previous = json.loads((base_out / "eval.json").read_text())
+        upsert_index(out / "index.jsonl", previous | {"path": str(base_out)})
+        base_done = complete(previous, signature, cfg["benchmarks"])
     if not selected and base_done:
         return
-    runner = HFRunner(header["base_model"], generation, revision=header["base_revision"])
+    runner = HFRunner(header["base_model"], generation.copy(), revision=header["base_revision"])
     restore = WeightRestore(runner.model)
     runner.base_context = restore.base_context
-    run_id = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:8]
     out.mkdir(parents=True, exist_ok=True)
-    jobs = ([] if base_done else [(None, base_out)]) + [(r, zoo / r["id"]) for r in selected]
+    jobs = ([] if base_done else [(None, base_out)]) + [
+        (r, zoo / r["id"] if production else out / r["id"]) for r in selected
+    ]
     for row, dest in jobs:
         restore.restore()
         runner.edit_id = row["id"] if row else "base"
         runner.rounding_stats = {}
+        source = zoo / row["id"] if row else None
         if row:
-            edit = json.loads((dest / "edit.json").read_text())
+            edit = json.loads((source / "edit.json").read_text())
             if edit["base_revision"] != runner.revision:
                 raise ValueError("entry base revision differs from loaded snapshot")
-            delta = load_entry_delta(dest, runner.model.state_dict().keys())
+            delta = load_entry_delta(source, runner.model.state_dict().keys())
             restore.capture(delta)
             del delta
-            runner.rounding_stats = apply_zoo_entry(runner.model, dest)
+            runner.rounding_stats = apply_zoo_entry(runner.model, source)
         print(
             f"entry={runner.edit_id} gpu_allocated={torch.cuda.memory_allocated()} "
             f"gpu_reserved={torch.cuda.memory_reserved()}",
@@ -153,8 +254,13 @@ def run_batch(
         manifest = {
             "signature": signature,
             "seed": generation["seed"],
-            "config_hash": hashlib.sha256(config.read_bytes()).hexdigest(),
-            "git_sha": get_git_sha(),
+            "config_hash": config_hash,
+            **origin,
+            "eligibility": row.get("eligibility") if row else eligibility,
+            "family": row.get("family") if row else "base",
+            "parent_id": row.get("parent_id") if row else None,
+            "step_semantics": row.get("step_semantics") if row else None,
+            "effective_config": cfg,
             "model": runner.model_id,
             "model_revision": runner.revision,
             "run_id": run_id,
@@ -179,10 +285,12 @@ def run_batch(
             from wsp.schema import write_manifest
 
             write_manifest(dest / "manifest.json", **manifest)
+        if result is not None and not complete(summary | manifest, signature, cfg["benchmarks"]):
+            manifest["eval_status"] = "incomplete"
         payload = summary | manifest
         atomic_json(dest / "eval.json", payload)
-        with (out / "index.jsonl").open("a") as stream:
-            stream.write(json.dumps(payload | {"path": str(dest)}) + "\n")
+        upsert_index(out / "index.jsonl", payload | {"path": str(dest)})
+        torch.cuda.empty_cache()
         print(json.dumps(manifest), flush=True)
     restore.restore()
 
@@ -191,6 +299,7 @@ def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument("--zoo", required=True)
     parser.add_argument("--config", default="configs/eval_fast.yaml")
+    parser.add_argument("--subset", choices=["d3"])
     parser.add_argument("--ids", nargs="+")
     parser.add_argument("--families", nargs="+")
     parser.add_argument("--eligibility", default="production", choices=["production", "smoke"])

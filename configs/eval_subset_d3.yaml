@@ -1,0 +1,9 @@
+# D3: seeded sampling without replacement, production manifest rows only.
+# Sort IDs within each family before sampling; take all if fewer than quota.
+seed: 0
+families:
+  random_dir: 60
+  abliteration: 100
+  lora_sft: 60
+  task_vector: 30
+  chain: 50
