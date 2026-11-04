@@ -100,6 +100,9 @@ def test_batch_loads_once_restores_and_resumes(tmp_path, monkeypatch):
     production_config.write_bytes(config.read_bytes())
     config = production_config
     batch.run_batch(zoo, config)
+    monkeypatch.setattr(
+        batch, "provenance", lambda: {"git_sha": "new", "dirty": True, "source_hash": "new"}
+    )
     batch.run_batch(zoo, config)
     assert loads == ["toy"]
     assert weights == [0, 1, 1]
@@ -123,6 +126,10 @@ def test_batch_loads_once_restores_and_resumes(tmp_path, monkeypatch):
         "source_hash",
     } <= payload.keys()
     assert payload["config_hash"] != json.loads(canonical)["config_hash"]
+    before = len(loads)
+    batch.run_batch(zoo, config, force=True)
+    assert len(loads) == before + 1
+    assert len(index.read_text().splitlines()) == 3
 
 
 def test_resume_does_not_treat_tiny_smoke_as_full_eval(tmp_path):
@@ -220,3 +227,81 @@ def test_d2_config():
     cfg = yaml.safe_load((REPO / "configs/eval_fast.yaml").read_text())
     assert cfg["generation"]["max_new_tokens"] == 1024
     assert cfg["generation"]["batch_size"] == 32
+
+
+def test_legacy_real_result_migrates_without_code_provenance(tmp_path):
+    from pathlib import Path
+
+    from wsp.eval.batch import complete, effective_config_hash, resume_key
+
+    payload = json.loads((Path(__file__).parent / "fixtures/eval_batch_legacy.json").read_text())
+    key = resume_key(
+        payload["edit_id"],
+        effective_config_hash(payload["effective_config"]),
+        payload["model_revision"],
+        "current-zoo-reuse-key",
+    )
+    assert complete(payload, key, payload["effective_config"]["benchmarks"])
+    payload.update(signature="different", source_hash="different", git_sha="different", dirty=True)
+    assert complete(payload, key, payload["effective_config"]["benchmarks"])
+    for field in ("edit_id", "config_hash", "model_revision"):
+        assert not complete(
+            payload, key | {field: "different"}, payload["effective_config"]["benchmarks"]
+        )
+    payload["skip_key"] = key
+    assert not complete(
+        payload, key | {"reuse_key": "changed"}, payload["effective_config"]["benchmarks"]
+    )
+
+
+def test_effective_batch_default_is_hashed():
+    from wsp.eval.batch import effective_config_hash
+
+    cfg = {"generation": {"seed": 0}, "benchmarks": {}}
+    assert effective_config_hash(cfg) == effective_config_hash(
+        cfg | {"generation": {"seed": 0, "batch_size": 8}}
+    )
+    assert effective_config_hash(cfg) != effective_config_hash(
+        cfg | {"generation": {"seed": 0, "batch_size": 32}}
+    )
+
+
+def test_legacy_selection_repairs_index_and_force_selects(tmp_path):
+    from pathlib import Path
+
+    from wsp.eval.batch import effective_config_hash, resume_key, upsert_index
+
+    fixture = Path(__file__).parent / "fixtures/eval_batch_legacy.json"
+    payload = json.loads(fixture.read_text())
+    entry = tmp_path / payload["edit_id"]
+    entry.mkdir()
+    (entry / "eval.json").write_bytes(fixture.read_bytes())
+    rows = [
+        {
+            "id": payload["edit_id"],
+            "family": payload["family"],
+            "eligibility": "production",
+            "reuse_key": "zoo-key",
+        }
+    ]
+    key = resume_key(
+        "base", effective_config_hash(payload["effective_config"]), payload["model_revision"]
+    )
+    index = tmp_path / "index.jsonl"
+    upsert_index(index, payload)
+    args = {
+        "signature": key,
+        "benchmarks": payload["effective_config"]["benchmarks"],
+        "index": index,
+    }
+    assert list(select_entries(rows, tmp_path, **args)) == []
+    repaired = [json.loads(line) for line in index.read_text().splitlines()]
+    assert len(repaired) == 1
+    assert repaired[0]["skip_key"]["reuse_key"] == "zoo-key"
+    assert repaired[0]["source_hash"] == payload["source_hash"]
+    assert (entry / "eval.json").read_bytes() == fixture.read_bytes()
+    assert list(select_entries(rows, tmp_path, force=True, **args)) == rows
+    upsert_index(
+        index, repaired[0] | {"skip_key": repaired[0]["skip_key"] | {"model_revision": "other"}}
+    )
+    assert len(index.read_text().splitlines()) == 2

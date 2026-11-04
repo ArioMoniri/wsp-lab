@@ -1,0 +1,192 @@
+{
+  "gsm8k": 0.14,
+  "math500": 0.08,
+  "ifeval": 0.44,
+  "mmlu_pro": 0.28,
+  "hellaswag": 0.39,
+  "wikitext_ppl": 22.86330441735476,
+  "refusal_rate": 1.0,
+  "over_refusal": 0.18,
+  "kl_to_base": 0.0013904854422435164,
+  "loop_rate": 1.0,
+  "kl_first_token_mean": 0.003193441243820416,
+  "kl_full_sequence_mean": 0.0013904854422435164,
+  "generation": {
+    "max_new_tokens": 1024,
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "top_k": 20,
+    "presence_penalty": 1.5,
+    "thinking": true,
+    "batch_size": 32,
+    "seed": 0
+  },
+  "counts": {
+    "gsm8k": 50,
+    "math500": 25,
+    "ifeval": 25,
+    "mmlu_pro": 100,
+    "hellaswag": 100,
+    "wikitext_ppl": 8,
+    "refusal_rate": 50,
+    "over_refusal": 50,
+    "kl_to_base": 50
+  },
+  "signature": "9bbcd2f1c58614a766ce3b2281429a967557f0ba4bfdadef987ecac0a86bc0e6",
+  "seed": 0,
+  "config_hash": "519e18781b214281b6e6cb99387637d230405935658638e57ae9cc0a09e0bf69",
+  "git_sha": "49c83214bd08cb76783cd9539ea88868c5bd074c",
+  "dirty": false,
+  "source_hash": "560abb41c7b1f2ce3b690532666d36c8389a28e85577f78274bee7437bdc595a",
+  "eligibility": "production",
+  "family": "abliteration",
+  "parent_id": null,
+  "step_semantics": null,
+  "effective_config": {
+    "generation": {
+      "max_new_tokens": 1024,
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 20,
+      "presence_penalty": 1.5,
+      "thinking": true,
+      "batch_size": 32,
+      "seed": 0
+    },
+    "benchmarks": {
+      "gsm8k": {
+        "n": 50,
+        "metric": "exact_match"
+      },
+      "math500": {
+        "n": 25,
+        "metric": "exact_match"
+      },
+      "ifeval": {
+        "n": 25,
+        "metric": "prompt_strict"
+      },
+      "mmlu_pro": {
+        "n": 100,
+        "metric": "acc"
+      },
+      "hellaswag": {
+        "n": 100,
+        "metric": "acc_norm_loglik"
+      },
+      "wikitext_ppl": {
+        "n_windows": 8,
+        "window": 1024
+      },
+      "refusal_rate": {
+        "prompts": "heretic_bad_eval",
+        "n": 50,
+        "judge": [
+          "keyword",
+          "llm"
+        ]
+      },
+      "over_refusal": {
+        "prompts": "heretic_good_eval",
+        "n": 50,
+        "judge": [
+          "keyword"
+        ]
+      },
+      "kl_to_base": {
+        "prompts": "heretic_good_eval",
+        "n": 50
+      }
+    }
+  },
+  "model": "Qwen/Qwen3.5-0.8B",
+  "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+  "run_id": "20261104-080338-4d5632a1",
+  "edit_id": "4463696a4c62e8f3",
+  "max_new_tokens": 1024,
+  "rounding_stats": {
+    "model.layers.10.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.5234965682029724,
+      "effective_delta_norm": 0.5234966278076172,
+      "max_abs_lost": 7.62939453125e-06
+    },
+    "model.layers.11.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.46912211179733276,
+      "effective_delta_norm": 0.4691220223903656,
+      "max_abs_lost": 7.62939453125e-06
+    },
+    "model.layers.12.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.39832934737205505,
+      "effective_delta_norm": 0.3983295261859894,
+      "max_abs_lost": 7.62939453125e-06
+    },
+    "model.layers.13.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.3411203622817993,
+      "effective_delta_norm": 0.34112027287483215,
+      "max_abs_lost": 7.62939453125e-06
+    },
+    "model.layers.14.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.2590978741645813,
+      "effective_delta_norm": 0.2590978145599365,
+      "max_abs_lost": 3.814697265625e-06
+    },
+    "model.layers.15.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.20113033056259155,
+      "effective_delta_norm": 0.20113039016723633,
+      "max_abs_lost": 3.814697265625e-06
+    },
+    "model.layers.16.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.13529300689697266,
+      "effective_delta_norm": 0.13529305160045624,
+      "max_abs_lost": 1.9073486328125e-06
+    },
+    "model.layers.4.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.11718205362558365,
+      "effective_delta_norm": 0.11718200892210007,
+      "max_abs_lost": 1.9073486328125e-06
+    },
+    "model.layers.5.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.18587960302829742,
+      "effective_delta_norm": 0.1858796328306198,
+      "max_abs_lost": 3.814697265625e-06
+    },
+    "model.layers.6.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.25838908553123474,
+      "effective_delta_norm": 0.25838911533355713,
+      "max_abs_lost": 7.62939453125e-06
+    },
+    "model.layers.7.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.33500388264656067,
+      "effective_delta_norm": 0.3350040316581726,
+      "max_abs_lost": 7.62939453125e-06
+    },
+    "model.layers.8.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.39027148485183716,
+      "effective_delta_norm": 0.3902715742588043,
+      "max_abs_lost": 7.62939453125e-06
+    },
+    "model.layers.9.mlp.down_proj.weight": {
+      "fraction_nonzero_lost": 0.0,
+      "delta_norm": 0.470047265291214,
+      "effective_delta_norm": 0.4700475037097931,
+      "max_abs_lost": 7.62939453125e-06
+    }
+  },
+  "batch_size": 32,
+  "limit": null,
+  "config": "configs/eval_fast.yaml",
+  "minutes": 6.093681351466633,
+  "eval_status": "complete"
+}
