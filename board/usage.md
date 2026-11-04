@@ -186,4 +186,5 @@
 | 2026-11-04 | Board C: ESM contact-map weight-editing idea (user) | codex/gpt-6-luna medium | DO LATER (bounded H6 sub-study; head-only refit is the confound; pilot <1 GPU-h) — merged |
 | 2026-11-04 | Board A: ESM idea — measurement and claims | claude_aio_gmail_api/claude-haiku-5-5 high | REVISE (sidecar only; head-only refit + distillation controls mandatory) — merged d3d7a14 |
 | 2026-11-04 | Board A final re-review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | APPROVE d783aab — merged |
-| 2026-11-04 | editor harness round 3 (R1–R3, R4–R7, N3, config values, real-model path) | codex/gpt-6.1-sol high | running |
+| 2026-11-04 | editor harness round 3 | codex/gpt-6.1-sol high | done cebe504 (482 tests; real-model GPU smoke 0.55 s forward) — final review pending |
+| 2026-11-04 | Board A final re-review feat/h5-editor | claude_aio_gmail_api/claude-haiku-5-5 high | running |
