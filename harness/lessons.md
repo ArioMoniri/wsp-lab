@@ -8,3 +8,4 @@
 | 2026-11-03 | P1 | user rule: no demo/mock/placeholder values anywhere in paper/docs/figures; removed demo figures | AGENTS.md, DOD | user instruction |
 | 2026-11-03 | P0 | CI: image-specific before_script per job; bookkeeping commits must not trigger pipelines (concurrent=1 runner) | .gitlab-ci.yml | pipeline 3024878601 |
 | 2026-11-04 | P1 | paper sections merge only after Board B APPROVE + check_cites + verify_refs exit 0 (done for abstract/intro/related) | paper gate | reviews/P1/paper-intro-related-boardB-rereview |
+| 2026-11-04 | P1 | worktrees feat/p1-zoo-build and feat/p2-eval have REAL data/ dirs (symlink replaced by agents); artefacts must be consolidated into canonical data/ after their jobs finish and wt.sh must guard the symlink | wt.sh, INFRA | ls -la .worktrees/*/data |
