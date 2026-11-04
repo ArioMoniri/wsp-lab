@@ -12,6 +12,7 @@ controls are stored next to it as eval.<host>.json so the two hosts can be compa
 from __future__ import annotations
 
 import json
+import re
 import os
 import shutil
 import sys
@@ -69,7 +70,7 @@ def main(id_files: list[str]) -> None:
 def _host_from_commit(api: HfApi, path: str) -> str:
     for c in api.list_repo_commits(REPO, repo_type="dataset"):
         if c.title.startswith("eval shard "):
-            return c.title.split("eval shard ", 1)[1].strip()
+            return re.sub(r" \(part \d+\)$", "", c.title.split("eval shard ", 1)[1].strip())
     return "lambda-unknown"
 
 

@@ -88,13 +88,36 @@ every family, including random directions, by 0.06–0.09, which is within the c
 
 **Cross-host controls (local RTX PRO 4500 vs Lambda A10, same seed, batch 32, temperature 0.6).** Base model:
 gsm8k 0.16 vs 0.06 (n=50), math500 0.16 vs 0.28 (n=25), ifeval 0.40 vs 0.44 (n=25), mmlu_pro 0.28 = 0.28 (n=100),
-hellaswag 0.39 = 0.39 (n=100), wikitext ppl 22.90 vs 22.91. On the four shared edited entries the per-benchmark
-gaps reach 0.16 (math500). Item counts alone give a binomial SE of 0.05–0.08 on the 25–50-item benchmarks, so the
-fast tier cannot resolve single-edit effects of that size on gsm8k/math500/ifeval; mmlu_pro, hellaswag and the
-refusal/KL probes are the usable targets at this tier. Same-host test-retest (10 controls + base, tmux p2-retest)
+hellaswag 0.39 = 0.39 (n=100), wikitext ppl 22.90 vs 22.91. The largest base-only gap is 0.12 (math500); on the four shared edited entries the per-benchmark
+gaps reach 0.16 (math500). Item counts alone give a binomial SE of 0.03–0.10 on the 25–100-item benchmarks (IFEval near 0.10; Board B
+correction), so the fast tier cannot resolve single-edit effects of that size on gsm8k/math500/ifeval. Board A's
+qualification rule (docs/reviews/H5/board-a-prereg-2026-11-04.md) provisionally admits mmlu_pro and hellaswag for
+large-effect screening and refusal/KL as narrow probes; none is qualified until the repeat panels are analysed. Same-host test-retest (10 controls + base, tmux p2-retest)
 and the H100's 10 controls are running; Δy will be computed against the same-host base (D3 addendum 3).
 
 **P4 data-path check** (`data/runs/p4/smoke-m1-realdata`, M1, family split, 35 labeled edits): Spearman within
 [−0.3, 0.55] with intervals crossing zero on every target except mmlu_pro (0.54 [0.23, 0.81]) and loop rate; at n=35
 and the noise level above this is uninformative either way and is recorded only to show the pipeline runs on real
 features and targets.
+
+**Same-host test-retest (4 Nov, tmux p2-retest; run id p2-retest-20261104-202946).** The base model and the 10
+control entries were re-evaluated on the same GPU with the same seed, config and actual batch size (32). All 11 pairs
+are bit-identical on every metric (gsm8k, math500, ifeval, mmlu_pro, hellaswag, refusal, over-refusal, KL,
+wikitext ppl, loop rate): mean and max absolute difference 0.000. Within a device the fast tier is therefore
+deterministic; the cross-host gaps above are systematic hardware/kernel effects on the sampled generations, not
+run-to-run noise. What this does *not* measure is sampling noise under a different seed (a different draw at
+T = 0.6 from the same items); that requires a seed-1 repeat panel, scheduled once the `--repeat` runner
+(branch fix/eval-board-a-h5) is merged. Item-count SE from Board B/Board A still applies to any single draw.
+
+**Cross-host control panel, three devices (4 Nov, 22:00 UTC; same seed, config and batch 32; H100 PCIe shard
+`lambda0`, A10 shard `lambda1`, local RTX PRO 4500).** 11 entries evaluated on both local and H100, 4 on local and
+A10 (the A10's other control copies were lost, see board/lambda_spend.md). Mean / max absolute difference and Spearman
+over entries, local vs H100 (n = 11): gsm8k 0.053 / 0.12 / ρ 0.30; math500 0.040 / 0.12 / 0.09; ifeval 0.022 / 0.08 /
+0.29; over-refusal 0.049 / 0.14 / 0.39; mmlu_pro 0.008 / 0.02 / 0.75; hellaswag 0.003 / 0.01 / 0.76; KL 0.000 / 0.001
+/ 1.00; loop rate 0.006 / 0.04 / 0.72. Base: gsm8k 0.16 vs 0.06, math500 0.16 vs 0.08, over-refusal 0.10 vs 0.20,
+others within 0.01. Local vs A10 (n = 4): same pattern (math500 max 0.16, ifeval max 0.12; mmlu_pro, hellaswag, KL,
+refusal within 0.02). Reading, pending Board A's formal qualification (their rule needs ρ ≥ 0.8 with lower bound
+≥ 0.6, and this panel has little between-entry variance): the likelihood-scored benchmarks (mmlu_pro, hellaswag),
+KL and the keyword refusal rate transfer across devices; the sampled-generation benchmarks (gsm8k, math500,
+ifeval, over-refusal) do not, and their Δy must be taken against the same-device base. Scripts: ad-hoc, to be replaced
+by `wsp.eval.repeats.compare_pairs` once fix/eval-board-a-h5 merges.
