@@ -329,7 +329,7 @@ def test_episode_deadline_kills_probe_and_launch_failure_free(monkeypatch):
     def fail_start(self):
         raise OSError("cannot launch")
 
-    monkeypatch.setattr(multiprocessing.context.ForkProcess, "start", fail_start)
+    monkeypatch.setattr(multiprocessing.context.ForkServerProcess, "start", fail_start)
     with pytest.raises(OSError):
         api.forward([[1]])
     assert api.used == api.meter.calls == api.meter.tokens == 0

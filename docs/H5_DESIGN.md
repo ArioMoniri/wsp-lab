@@ -110,27 +110,56 @@ and production qualification refuse. Templates require this flag. Deployments mu
 choose a dedicated unprivileged account, not an account shared with other jobs.
 The root-only UID assertion is skipped in unprivileged CPU CI.
 
-Probes now execute in a disposable, killable **CPU fork worker**, independently of
-the editor. The minimum of per-call, proposal and episode deadlines kills a hung
-probe; launched failures count, pre-launch failures do not. This backend rejects a
-model with non-CPU tensors: GPU production needs a separately initialized
-model-serving process and its own qualification, rather than unsafe CUDA fork.
-CPU fork can also encounter library thread-lock contention; the deadline bounds it.
-The model worker is trusted and inherits supervisor memory; it is not a security
-boundary for sealed evaluation storage. Keep sealed evaluation in a separate service
-or principal. Production eligibility remains `smoke` in the zoo writer.
+Probes execute in disposable **forkserver workers** for CPU fixtures and **spawn
+workers** for checkpoint-backed models. Children explicitly use one intra-op and
+one inter-op torch thread. This avoids inheriting the supervisor's parallel torch
+locks and bounds CPU oversubscription; it is an isolation/reliability setting, not
+a throughput claim. The sandbox itself remains a fresh exec (`python -I -S`),
+with a new process group and an independent timer that kills that group even when
+the supervisor is blocked writing IPC. Probe call/proposal/episode deadlines still
+apply and launched failures count. Checkpoint workers reload the frozen base for
+every call via `eval.run.HFRunner`; startup/loading time is charged and recorded.
+`probe.device` selects `cpu` or `cuda`; `probe.kernels` selects `auto` or `reference`.
+Reference Qwen kernels unwrap transformers' original torch functions, even with
+causal-conv1d and FLA installed. Each worker owns its kernel policy; CUDA state is
+never inherited from the supervisor. The trusted model worker is not a security
+boundary for sealed storage. Production still requires a separate evaluator principal.
+
+Denied syscalls use seccomp user notification. A supervisor thread returns EPERM
+and counts denials by syscall number; every sandbox result includes enabled/error
+status and counts. Unsupported notification or auditing errors fail closed. The
+unprivileged host regression verifies open/stat/listdir/socket EPERM and counters.
+This is supervisor-owned auditing, not an auditd deployment claim. Same-uid host
+processes can still tamper with logs. Rationales are capped at 4096 characters;
+completion code at 65536. Oversized strings get bounded prefixes, length and hashes
+in the private log; rejected completion code is not executed. Valid completion code
+is retained exactly for replay. Any bytes after the completion sentinel invalidate
+that proposal, including a second sentinel.
 
 `load_config(path, weights, pool)` validates the exact nonempty tensor allowlist,
 resolved checkpoint revision, chosen scalar budget, and `development_pool_hash`
 (SHA-256 of sorted-key JSON of the exact ordered approved records, via
-`wsp.editor.episode.digest`) before provider use. Templates deliberately have no
-resolved revision, selected budget or pool hash and cannot be loaded for an episode.
-Pool hashes pin content, not the scientific suitability of the split: approving
-training-only sources and proving disjointness from sealed items remain protocol
-qualification responsibilities. Every non-scripted registry construction and episode
-requires `production_enabled: true`, the pinned pool hash and checkpoint revision.
-No network provider adapter is supplied and no production run is authorized by this
-implementation.
+`wsp.editor.episode.digest`) before provider use. Qwen's engineering pool is the
+first 400 GSM8K training records at the pinned dataset revision. The held-out pool
+is the current fixed evaluation subset records for all five configured benchmarks.
+`python scripts/editor_integration.py --prepare-pools` reproduces both private JSON
+files under `data/editor/pools` from the pinned dataset revisions and subset lists.
+The Qwen YAML pins both hashes; any new sealed split requires qualification again.
+These engineering choices do not replace scientific pre-registration or approval.
+`run_episode(..., sealed_pool=...)` requires the pinned sealed records for trusted
+preflight, rejects overlap by item ID or NFKC/casefold/whitespace-normalized prompt,
+and records only the two hashes and disjointness statement in the episode manifest.
+No sealed record is passed to the editor. The manifest also records seed, config
+hash, git SHA, model revision, principal decision and torch/transformers versions.
+Tests with no sealed pin are fixture-only; production requires a sealed pin.
+
+Production remains disabled. The templates require a separate principal and cannot
+launch unprivileged as shipped. A pilot still needs the §6 principal decision and
+independent re-review. No network provider adapter is supplied. Real-model integration
+is an explicit script, outside pytest: `python scripts/editor_integration.py
+--smoke-real-model`. It checks GPU processes and lists tmux jobs first, then runs one
+four-sequence GPU probe and prints load/forward/total timing. Do not launch it while
+GPU evaluation jobs are active. This is a plumbing smoke, not an H5 outcome.
 
 The `probe.v1` result contains logits only at requested positions (default: final
 position), or top-k token IDs/log probabilities with k <= 64. Requested hidden

@@ -1,10 +1,7 @@
 base_model: google/gemma-3-270m-it
 base_revision: main
 require_resolved_revision: true
-budgets:
-- 10
-- 25
-- 50
+budget: 10
 seed: 0
 editable_tensors:
 - model.layers.15.mlp.down_proj.weight

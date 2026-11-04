@@ -1,10 +1,6 @@
 base_model: Qwen/Qwen3.5-0.8B
-base_revision: main
+base_revision: 2fc06364715b967f1860aea9cf38778875588b17
 require_resolved_revision: true
-budgets:
-- 10
-- 25
-- 50
 seed: 0
 editable_tensors:
 - model.language_model.layers.15.mlp.down_proj.weight
@@ -16,13 +12,13 @@ development_pool:
   - math
   split: train
   version_required: true
+  path: data/editor/pools/development.json
 sandbox:
   cpu_seconds: 2
-  wall_seconds: 5
+  wall_seconds: 600
   ram_bytes: 268435456
 production_enabled: false
-# Replace with digest(pool) of the exact approved development records before loading.
-development_pool_hash: null
+development_pool_hash: 9024bfdc318a945208b2028daba752dd053df4ac601fc75ca605d84fc944bf92
 require_separate_principal: true
 probe:
   max_positions: 8
@@ -30,9 +26,15 @@ probe:
   max_bytes: 8388608
   max_sequence: 512
   max_batch: 64
-  call_seconds: 5
+  call_seconds: 60
+  max_vocab: 248320
+  device: cpu
+  kernels: reference
 episode_limits:
   calls: 50
   sequences: 50
   tokens: 32768
-  wall_seconds: 60
+  wall_seconds: 600
+budget: 10
+sealed_pool_hash: f151e05d051f4c2863f8cbb8ca390a9a476426bfb7783854c45c7b1c37c2ad2b
+sealed_pool_path: data/editor/pools/sealed.json

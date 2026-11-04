@@ -2,12 +2,14 @@
 
 import os
 import re
+import subprocess
 import time
+import unicodedata
 from dataclasses import asdict
 
-from wsp.editor.api import EditorAPI, EpisodeMeter
+from wsp.editor.api import EditorAPI, EpisodeMeter, ModelSpec
 from wsp.editor.episode import digest
-from wsp.editor.sandbox import run
+from wsp.editor.sandbox import audit, run
 from wsp.editor.zoo import register
 
 GOAL = (
@@ -28,6 +30,35 @@ def validate_pool(pool):
         ):
             raise ValueError("only unique configured GSM8K/MATH training prompts allowed")
         seen.add(item["id"])
+
+
+def qualify_pools(development, sealed, episode=None):
+    """Trusted preflight only: never pass sealed records to the editor transport."""
+
+    def normalise(text):
+        return " ".join(unicodedata.normalize("NFKC", text).casefold().split())
+
+    if {x["id"] for x in development} & {x["id"] for x in sealed} or {
+        normalise(x["prompt"]) for x in development
+    } & {normalise(x["prompt"]) for x in sealed}:
+        raise ValueError("development/sealed pool overlap")
+    hashes = {
+        "development_pool_hash": digest(development),
+        "sealed_pool_hash": digest(sealed),
+        "normalisation": "NFKC-casefold-whitespace-v1",
+        "disjoint": True,
+    }
+    if episode is not None:
+        import json
+
+        manifest = {
+            "pools": hashes,
+            "git_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+        }
+        path = episode.path.parent / "manifest.json"
+        path.write_text(json.dumps(manifest, sort_keys=True))
+        path.chmod(0o600)
+    return hashes
 
 
 def validate_production(config):
@@ -63,6 +94,8 @@ def validate_config(config, weights, pool):
     ):
         raise ValueError("pinned development pool hash required and must match")
     if config.get("production_enabled"):
+        if not config.get("sealed_pool_hash"):
+            raise ValueError("production requires sealed pool pin")
         validate_production(config)
 
 
@@ -76,8 +109,34 @@ def load_config(path, weights, pool):
     return config
 
 
-def run_episode(provider, config, weights, model, pool, episode, zoo_dir, *, proposals=1):
+def run_episode(
+    provider, config, weights, model, pool, episode, zoo_dir, *, proposals=1, sealed_pool=None
+):
     validate_config(config, weights, pool)
+    if config.get("sealed_pool_hash") and sealed_pool is None:
+        raise ValueError("sealed pool required for disjointness preflight")
+    if sealed_pool is not None:
+        hashes = qualify_pools(pool, sealed_pool, episode)
+        if config.get("sealed_pool_hash", hashes["sealed_pool_hash"]) != hashes["sealed_pool_hash"]:
+            raise ValueError("sealed pool hash mismatch")
+    import json
+
+    import torch
+    import transformers
+
+    manifest_path = episode.path.parent / "manifest.json"
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    manifest.update(
+        git_sha=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+        seed=config.get("seed"),
+        config_hash=digest(config),
+        model_revision=config["base_revision"],
+        require_separate_principal=config.get("require_separate_principal", False),
+        torch_version=torch.__version__,
+        transformers_version=transformers.__version__,
+    )
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True))
+    manifest_path.chmod(0o600)
     from wsp.editor.providers import ScriptedEditor
 
     if type(provider) is not ScriptedEditor:
@@ -91,7 +150,14 @@ def run_episode(provider, config, weights, model, pool, episode, zoo_dir, *, pro
         allowed = config["editable_tensors"]
         api = EditorAPI(
             {k: weights[k] for k in allowed},
-            model,
+            model
+            if model is not None
+            else ModelSpec(
+                config["base_model"],
+                config["base_revision"],
+                config.get("probe", {}).get("device", "cpu"),
+                config.get("probe", {}).get("kernels", "auto"),
+            ),
             config["budget"],
             hidden_layers=config.get("hidden_layers", ()),
             max_element=config.get("max_element", 1.0),
@@ -107,9 +173,16 @@ def run_episode(provider, config, weights, model, pool, episode, zoo_dir, *, pro
             episode.append(
                 "completion",
                 proposal=index,
-                **asdict(completion),
+                **{
+                    **asdict(completion),
+                    "code": completion.code
+                    if len(completion.code) <= 65536
+                    else audit(completion.code),
+                },
                 wall_seconds=time.monotonic() - start,
             )
+            if len(completion.code) > 65536:
+                raise ValueError("completion code length cap")
             sandbox = dict(config.get("sandbox", {}))
             sandbox["require_separate_principal"] = config.get("require_separate_principal", False)
             result = run(completion.code, api, **sandbox)

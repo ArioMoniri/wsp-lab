@@ -86,6 +86,7 @@ def build(config, family_cfg, seed, base_state, *, dry_run=False):
             family_cfg.get("development_pool", []),
             Episode(Path(family_cfg["episode_root"]), f"build-{seed}"),
             root,
+            sealed_pool=family_cfg.get("sealed_pool"),
         )
         if not ids[0]:
             raise ValueError("invalid editor proposal; see episode trajectory")

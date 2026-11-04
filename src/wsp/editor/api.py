@@ -1,10 +1,12 @@
 """Supervisor-owned v1 API. No model or weight aliases cross the transport."""
 
+import builtins
 import json
 import multiprocessing
 import time
 from dataclasses import asdict, dataclass
 
+import cloudpickle
 import torch
 
 VERSION = "editor_api.v1"
@@ -57,12 +59,33 @@ def _probe_worker(
     conn, model, ids, mask, positions, layers, top_k, projections, max_bytes, max_vocab, max_hidden
 ):
     try:
+        loading_started = time.monotonic()
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+        if isinstance(model, bytes):
+            model = cloudpickle.loads(model)
+        if isinstance(model, ModelSpec):
+            model = model.load()
+        device = (
+            next(model.parameters(), torch.empty(0)).device
+            if isinstance(model, torch.nn.Module)
+            else torch.device("cpu")
+        )
+        ids = ids.to(device)
+        mask = None if mask is None else mask.to(device)
+        load_seconds = time.monotonic() - loading_started
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        forward_started = time.monotonic()
         with torch.inference_mode():
             output = model(
                 input_ids=ids,
                 attention_mask=mask,
                 **({"output_hidden_states": True} if layers else {}),
             )
+            if device.type == "cuda":
+                torch.cuda.synchronize(device)
+            forward_seconds = time.monotonic() - forward_started
             get = lambda key: output[key] if isinstance(output, dict) else getattr(output, key)
             raw = get("logits")
             if raw.ndim != 3 or raw.shape[:2] != ids.shape or raw.shape[-1] > max_vocab:
@@ -87,11 +110,28 @@ def _probe_worker(
             payload = json.dumps(asdict(result), allow_nan=False).encode()
             if len(payload) > max_bytes:
                 raise ValueError("probe response bytes exceeded")
-            conn.send(("ok", payload))
+            conn.send(
+                ("ok", payload, {"load_seconds": load_seconds, "forward_seconds": forward_seconds})
+            )
     except Exception as exc:  # noqa: BLE001
-        conn.send(("error", str(exc)))
+        conn.send(("error", str(exc), {}))
     finally:
         conn.close()
+
+
+@dataclass
+class ModelSpec:
+    model_id: str
+    revision: str
+    device: str = "cpu"
+    kernels: str = "reference"
+
+    def load(self):
+        from wsp.eval.run import HFRunner
+
+        return HFRunner(
+            self.model_id, {}, revision=self.revision, device=self.device, kernels=self.kernels
+        ).model
 
 
 class EditorAPI:
@@ -113,10 +153,14 @@ class EditorAPI:
         max_hidden=16384,
         call_seconds=5,
         meter=None,
+        device="cpu",
+        kernels="auto",
     ):
         if limit not in (10, 25, 50):
             raise ValueError("budget must be 10/25/50")
         self._weights = {k: v.detach().cpu().clone() for k, v in weights.items()}
+        if device not in ("cpu", "cuda") or kernels not in ("auto", "reference"):
+            raise ValueError("invalid probe device/kernels")
         self._model = model
         self._limit, self._used = limit, 0
         self.max_element, self.max_norm = max_element, max_norm
@@ -151,7 +195,21 @@ class EditorAPI:
         if name not in self._weights:
             raise ValueError("unknown tensor")
         value = self._weights[name]
-        return (value if slice is None else value[slice]).detach().cpu().clone()
+        # Basic slices/narrow are views; advanced row indexing must be sized first.
+        if isinstance(slice, list):
+            if value.ndim == 0 or any(type(i) is not int for i in slice):
+                raise ValueError("integer row indices required")
+            elements = len(slice) * (value[0].numel() if value.shape[0] else 0)
+        else:
+            if slice is not None and type(slice) not in (int, builtins.slice):
+                raise ValueError("basic slice or integer row list required")
+            view = value if slice is None else value[slice]
+            elements = view.numel()
+        if elements * 32 + 1024 > self.max_bytes:
+            raise ValueError("weight response byte cap")
+        if isinstance(slice, list):
+            return value[slice].detach()  # advanced indexing already owns storage
+        return view.detach().clone()
 
     def forward(
         self,
@@ -206,7 +264,7 @@ class EditorAPI:
         mask = None if attention_mask is None else torch.as_tensor(attention_mask)
         if mask is not None and mask.shape != ids.shape:
             raise ValueError("mask shape")
-        if not callable(self._model):
+        if not callable(self._model) and not isinstance(self._model, ModelSpec):
             raise ValueError("no probe configured; not launched")  # noqa: TRY004 - API validation error
         if batch > self.remaining:
             raise ValueError("over budget")
@@ -218,12 +276,17 @@ class EditorAPI:
             timeout = min(timeout, self.deadline - time.monotonic())
         if timeout <= 0:
             raise TimeoutError("probe deadline")
-        parent, child = multiprocessing.get_context("fork").Pipe(duplex=False)
-        proc = multiprocessing.get_context("fork").Process(
+        multiprocessing.set_forkserver_preload(["torch"])
+        parent, child = multiprocessing.get_context(
+            "spawn" if isinstance(self._model, ModelSpec) else "forkserver"
+        ).Pipe(duplex=False)
+        proc = multiprocessing.get_context(
+            "spawn" if isinstance(self._model, ModelSpec) else "forkserver"
+        ).Process(
             target=_probe_worker,
             args=(
                 child,
-                self._model,
+                cloudpickle.dumps(self._model),
                 ids,
                 mask,
                 positions,
@@ -236,6 +299,7 @@ class EditorAPI:
             ),
         )
         start = time.monotonic()
+        completed, timing = False, {}
         try:
             proc.start()  # Only a successfully launched process is charged.
             child.close()
@@ -245,12 +309,15 @@ class EditorAPI:
             self.meter.tokens += ids.numel()
             if not parent.poll(timeout):
                 raise TimeoutError("probe hard timeout")
-            status, payload = parent.recv()
+            status, payload, timing = parent.recv()
+            completed = True
             if status != "ok":
                 raise RuntimeError(payload)
             return json.loads(payload)
         finally:
             if proc.pid is not None:
+                if completed:
+                    proc.join(timeout=max(0, min(1, timeout - (time.monotonic() - start))))
                 if proc.is_alive():
                     proc.kill()
                 proc.join()
@@ -263,6 +330,7 @@ class EditorAPI:
                         "tokens": ids.numel(),
                         "used": self.used,
                         "wall_seconds": elapsed,
+                        **timing,
                     }
                 )
             parent.close()
@@ -272,7 +340,7 @@ class EditorAPI:
         value = torch.as_tensor(tensor, dtype=torch.float32).detach().cpu().clone()
         if name not in self._weights or value.shape != self._weights[name].shape:
             raise ValueError("exact allowlisted name and shape required")
-        if not isinstance(rationale, str) or not rationale.strip():
+        if not isinstance(rationale, str) or not rationale.strip() or len(rationale) > 4096:
             raise ValueError("rationale required")
         if (
             not torch.isfinite(value).all()
@@ -315,9 +383,5 @@ class EditorAPI:
             "delta.preview": self.preview,
             "budget": lambda: {"used": self.used, "limit": self.limit, "remaining": self.remaining},
         }
-        if op == "weights.read":
-            value = self.read(**args)
-            if value.numel() * 32 + 1024 > self.max_bytes:
-                raise ValueError("weight response byte cap")
         result = methods[op](**args)
         return result.tolist() if isinstance(result, torch.Tensor) else result

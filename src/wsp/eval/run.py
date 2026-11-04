@@ -128,9 +128,34 @@ class PresencePenalty:
 
 
 class HFRunner:
-    def __init__(self, model_id, generation, zoo_entry=None, revision="main"):
+    def __init__(
+        self, model_id, generation, zoo_entry=None, revision="main", *, device=None, kernels="auto"
+    ):
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
+        if device not in (None, "cpu", "cuda") or kernels not in ("auto", "reference"):
+            raise ValueError("invalid device/kernels")
+        if kernels == "reference":
+            # Qwen's decorated functions retain the original torch implementation.
+            # Model workers are fresh processes, so this policy cannot affect another worker.
+            import inspect
+
+            from transformers.models.qwen3_5 import modeling_qwen3_5 as qwen
+
+            for name in (
+                "causal_conv1d_fn",
+                "causal_conv1d_update",
+                "torch_chunk_gated_delta_rule",
+                "torch_recurrent_gated_delta_rule",
+            ):
+                function = getattr(qwen, name)
+                if isinstance(function, torch.nn.Module):
+                    # kernels.layer wraps the fallback in a Func module, without
+                    # __wrapped__. Refuse an unknown wrapper instead of using CUDA.
+                    function = inspect.getclosurevars(function.forward).nonlocals.get("func")
+                    if function is None:
+                        raise ValueError("unknown reference kernel wrapper")
+                setattr(qwen, name, inspect.unwrap(function))
         self.generation = generation
         if zoo_entry:
             descriptor = json.loads((Path(zoo_entry) / "edit.json").read_text())
@@ -154,7 +179,7 @@ class HFRunner:
             model_id,
             revision=revision,
             dtype=torch.bfloat16,
-            device_map="auto",
+            device_map=device or "auto",
             attn_implementation="sdpa",
             **remote,
         ).eval()

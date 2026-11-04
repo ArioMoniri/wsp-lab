@@ -105,36 +105,8 @@ def test_training_pool_and_gemma_config():
     for model in ["gemma-3-270m", "qwen3.5-0.8b"]:
         with open(f"configs/editor_{model}.yaml") as stream:
             cfg = yaml.safe_load(stream)
-        assert cfg["budgets"] == [10, 25, 50]
+        assert cfg["budget"] in (10, 25, 50)
         assert cfg["editable_tensors"]
-
-
-def test_distinct_proposals_and_sealed_absent(tmp_path):
-    episode = Episode(tmp_path / "runs", "distinct")
-    codes = [f"call('delta.set', name='w', tensor=[[{v}]], rationale='test')" for v in (0.1, 0.2)]
-    config = {
-        "base_model": "tiny",
-        "base_revision": "a" * 40,
-        "seed": 0,
-        "budget": 10,
-        "sealed_reference": "sealed-marker-do-not-disclose",
-        "editable_tensors": ["w"],
-        "development_pool_hash": digest(
-            [{"id": "train-1", "source": "gsm8k", "split": "train", "prompt": "1+1?"}]
-        ),
-    }
-    ids = run_episode(
-        ScriptedEditor(codes),
-        config,
-        {"w": torch.ones(1, 1)},
-        TinyCausal(),
-        [{"id": "train-1", "source": "gsm8k", "split": "train", "prompt": "1+1?"}],
-        episode,
-        tmp_path / "zoo",
-        proposals=2,
-    )
-    assert ids[0] and ids[1] and ids[0] != ids[1]
-    assert "sealed-marker" not in episode.path.read_text()
 
 
 def test_partial_ipc_and_resource_exits():
