@@ -61,3 +61,5 @@
 | 2026-11-03 | humanizer intro+related | claude_aio_gmail_api/claude-haiku-5-5 | done 0f9df52 (12 paragraphs) |
 | 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | running |
 | 2026-11-03 | Board A re-review feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | APPROVE, merged |
+| 2026-11-03 | Board B paper/intro-related | codex/gpt-6.1-terra medium | REVISE (4 blocking) |
+| 2026-11-03 | scribe fix round (paper) | copilot/auto | running |
