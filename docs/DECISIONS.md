@@ -45,3 +45,10 @@ line search, so a trial is launch-bound (~10 min, GPU mostly idle) regardless of
 would be ≈ 150 GPU-hours, over the D4 cap. Decision: heretic_ara n = 12 entries at 10 trials (≈ 20 h, ≈ $40);
 production eligibility threshold for this family lowered to trials ≥ 10 (each trial is a full optimisation, unlike
 the cheap classic-abliteration trials). Recorded in configs/zoo_qwen3.5-0.8b.yaml.
+
+## D7 (4 Nov 2026) — what goes to the Hugging Face store
+The Qwen3.5-0.8B zoo is 250 GB on disk: chain steps store dense cumulative deltas (337 MB/entry, 227 GB for
+675 steps); random-direction 38 MB, abliteration 85 MB, task-vector 191 MB, LoRA 17 MB per entry. The first
+full upload failed. Decision: HF receives all metadata (manifest, edit.json, provenance, eval.json, features,
+runs) plus the deltas of the non-chain families (≈ 40 GB); chain deltas stay on this server (and are
+reproducible from their recorded step parameters and seeds). `scripts/hf_sync.py` implements the selection.
