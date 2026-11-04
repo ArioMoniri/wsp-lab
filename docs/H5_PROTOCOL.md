@@ -38,8 +38,10 @@ barely moved the limit share. Gemma-3-270M-it: no fix (MATH-500 6.8 → 7.0–7.
 
 ## Staged plan and cost (measured timings: fast tier 7.5 min/entry on this GPU, 3.1 min effective on an H100 with
 three workers; 4096-token and 32k tiers to be measured on the frozen sealed set before Stage 1)
-- **Stage 0 — qualification (now, no new spend):** repeat panels → docs/RESULTS.md reliability section; eval fixes
-  merged; harness merged with CPU tests; sealed/visible splits frozen and hashed; prompts sealed by hash.
+- **Stage 0 — qualification (no new spend). Status 4 Nov 23:00 UTC:** same-host retest bit-identical and three-device
+  control panel recorded (docs/RESULTS.md); eval fixes merged (Board A APPROVE); editor harness merged with production
+  disabled (Board A APPROVE, 482 tests); remaining before a pilot: GitHub issue "H5 pilot preconditions" (separate
+  principal, 200+200 visible pool, kernel policy in manifest, validate_production check, N8/N13, provider adapters).
 - **Stage 1 — pilot, budget 50 passes only:** 3 goal formulations × seeds 0–2 = 9 episodes for the primary editor,
   9 for the cheap editor, 9 matched-random, 9 best-of-N, 1 sham; sealed scoring at **4096 tokens** on the frozen
   set (MATH-500 all 500 ×1 sample, GSM8K 200, IFEval 100); 32k scoring only for the base and the single best
