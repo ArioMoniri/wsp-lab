@@ -93,3 +93,5 @@
 | 2026-11-04 | Board A final feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (1) → fixed by orchestrator, merged 393fc18 |
 | 2026-11-04 | P3 features extractor + baselines | codex/gpt-6.1-terra high | running |
 | 2026-11-04 | P2 batch eval over zoo (resumable) | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | P3 features (1st) | codex/gpt-6.1-terra high | partial 20fc391 (splits, pooling) |
+| 2026-11-04 | P3 features (2nd: extractor+baselines) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
