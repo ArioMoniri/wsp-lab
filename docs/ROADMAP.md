@@ -57,6 +57,7 @@ restart repairs the index and resumes completed production entries.
 - φ_svd: W2T-style canonical tokens: for each adapted matrix, top-r (U_k, σ_k, V_k) with r = 8,
   projected to 64-d via a frozen random projection per shape class
 - Baselines: delta-norm linear, StatNN (LightGBM on φ_stats), MLP on φ_svd
+- [x] Extractor, hybrid-aware pooling (feature_version 3: 1098 stats + 120 spectrum dims), ancestry-grouped splits and baselines merged 4 Nov 2026 (bf99575); full-zoo extraction running (tmux p3-extract)
 - Gate: baselines evaluated with 5-fold split *by edit family* and *by seed*; numbers in `data/runs/p3/`
 
 ## P4 — Predictors (the deliverable)
