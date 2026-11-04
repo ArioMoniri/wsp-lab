@@ -1,0 +1,50 @@
+# Board A review: feat/p4-predictors 8559479
+
+Verdict: REVISE. Blocking: yes (3 items).
+
+Reviewer: reviewer-ml (Board A). Scope: diff `main...feat/p4-predictors` (7 files, +1015), read against docs/HYPOTHESIS.md (H1–H3), docs/ROADMAP.md §P4, docs/MODEL_CANDIDATES.md (M5/M6), docs/REVIEW_PROTOCOL.md, AGENTS.md. No code was edited.
+
+## Blocking findings
+
+1. **Blocking — family split admits held-out ancestors into training** (`src/wsp/predictor/data.py:175-190`, `src/wsp/predictor/train.py:148`, `:156`, `:186`). Chains are built from every `parent_id` in the zoo, including ancestors without targets. Family splits group only the labeled rows (`splits.py:63-64`), so a training row's chain can contain entries from the held-out family. Its features then enter training as inputs (M2/M5 history, M3 adjacency pairs) and the normalizer statistics (`train.py:36`, `:148`). Measured on the real zoo (`data/features/qwen3.5-0.8b`, 689 entries, same chain definition): holding out `lora_sft` leaves 28 training rows with a LoRA ancestor; holding out `abliteration` leaves 31; holding out `random_dir` leaves 21. H3 says "without seeing LoRA edits", so this breaks the family-holdout claim. Labels of held-out entries are not used, so this is input-side leakage, not target leakage, but the protocol treats it as blocking. Fix: in family and seed splits, drop training rows whose chain includes any test-fold id (or truncate chains at held-out entries), fit `Normalizer` and the M3 pretraining pairs on the filtered set, and add a test asserting that no test-fold id appears in any training chain.
+
+2. **Blocking — non-successor parent links are treated as edit history** (`data.py:127-131` ancestry from `features.json` `parent_id` for all families; `models/__init__.py:175-179` adjacency pairs; `data.py:190` chain inputs). The zoo builder makes a `task_vector` child `base + scale·Δparent` (`src/wsp/zoo/build.py:665-672`), so the child is a rescaled copy of its parent's delta, not a successor state. The real features confirm it: child `fro_effective` 0.6115 ≈ scale 0.2093 × parent 2.900. All 80 `task_vector` entries have a cross-family parent. In the real zoo, 80 of 181 adjacent pairs (44%) are these non-transitions. M2/M5 therefore receive a parent state as history, and M3 is trained to predict child latents from parent latent plus descriptor, which is not the transition it is named for. H2 and H3 measurements are contaminated. Fix: build sequence and adjacency edges only from chain-family transitions (101 real links, `step_semantics` sequential), treat other parents as external roots, and add a test that a `task_vector` child has chain length 1.
+
+3. **Blocking — the H1 target is not Δy_t** (`data.py:123`, `train.py:189`, `:211`, `:250-256`). HYPOTHESIS H1 requires predicting Δy_t = y_t − y_{t−1}, and ROADMAP M1 says "→ Δy". The heads are sigmoid predictors of absolute rates. `--delta-from-base` subtracts a per-benchmark constant (y_t − y_0). That shift is inert for fitting and metrics: loss `(p−base)−(y−base) = p−y`, validation MSE is unchanged, and MAE, RMSE and Spearman are invariant to a constant shift. So any H1 table from this trainer is a Spearman of absolute level, not of edit-induced change, and `--delta-from-base` does not do what its name suggests for the hypothesis. Fix: add a parent-relative target mode (`y_t − y_parent`, requiring a labeled parent, with an explicit check), report H1 on it, and keep absolute level as a separate baseline. The docstring and the generated results text (`train.py:295`) should state what the flag actually does.
+
+## Non-blocking findings
+
+4. **M5 deviates from spec and is capacity-confounded** (`models/__init__.py:72-90`, `:38-45`). Spec: "≤ 2 layers, d=256, dropout 0.2". Implementation: 2 tensor-encoder layers plus 2 edit-attention layers (4 attention blocks; 3.44M params vs M1 1.86M), with dropout hard-coded to 0 in `transformer()` (`:41`). Without a capacity-matched control (causal mask off, or M1 widened to about 3.4M), an M5-over-M1 gain cannot be attributed to the edit axis. Fix: ≤ 2 attention layers in total or document the deviation, expose dropout 0.2, and add a no-mask control.
+
+5. **M6 acceptance gates are not implemented** (`train.py:177-179`; `models/__init__.py:109-128`). ERank is logged per epoch, but there is no collapsed-seed gate and no standard-predictor (ResidualPred off) switch, so "ERank ≥ 2× standard-predictor ablation" cannot be produced. The ResidualPred attention is parameter-free (Q = K = z over latent coordinates, `:124-128`); the spec does not pin this form down. Confirm against 2610.02344 before the paper describes it.
+
+6. **H2 is tested in a different sense than written** (`data.py:80`, `extract.py:15`). All 689 entries are stored relative to base (`delta_relative_to: base`), and chain entries are cumulative snapshots. The stateless M1 therefore already sees the accumulated drift. The M1-vs-M2/M5 comparison tests "history beyond the latest cumulative snapshot", not H2 as HYPOTHESIS.md states it. The write-up must say so.
+
+7. **M3 cumulative-delta proxy: acceptable as a documented deviation.** The data offers only base-relative features, so absolute φ(θ_t) is unavailable. The choice is documented in `results.md:296`, in the manifest (`state_semantics`), and in the session note, but not in docs/MODEL_CANDIDATES.md or HYPOTHESIS.md. Add it there as a design deviation, and phrase H3 as "latent of cumulative-from-base features". Acceptable only after finding 2 is fixed.
+
+8. **Descriptor includes fields the docstring excludes** (`data.py:80-89`, field set at `:83`). Chain params contribute `length` (the total chain length, known only at the end of the chain) and `inner_seed`. This does not leak targets (the loss uses only the last step), but it contradicts "excluding identity/seed" and should be removed before any sequence-level claim.
+
+9. **CUDA and Mamba paths are unexercised.** No GPU test exists, the `mamba_ssm` branch (`ssm_torch.py:98-99`, `:73`) never runs, and `selective_scan` (`scan.py:6-31`) is unreachable from any builder and untested against `loop_scan`. The requested CUDA smoke was skipped: the CLI has no synthetic self-test and the GPU is busy. A synthetic CUDA smoke is needed before any GPU run.
+
+10. **Reproducibility fields are weak.** `git rev-parse HEAD` (`train.py:300`) runs in the current directory, not the package's repository. `model_revisions` records only torch, not mamba_ssm, CUDA or driver, although the backend differs across devices. The manifest does record backend, seeds, config hash, feature-metadata hash and target hash, which is good.
+
+11. **Test gaps.** Nothing checks that the stop-gradient target is detached in either M3 or M6 stage 1. Nothing tests the family-split ancestor exclusion (finding 1), mixed-configuration refusal in `read_targets` (`data.py:59-62`), delta-from-base refusal without a base row (`data.py:120-121`), `selective_scan` equivalence, or the bootstrap and StatNN paths. Scope note: PPL and KL are excluded by design (`data.py:1-4`), so the alignment sub-study's KL target is not predicted by P4.
+
+## Verified (no issue found)
+
+- `source scripts/env.sh && pytest -q`: 242 passed, 8 deselected, 25.8 s. Matches the session note.
+- Parameter counts, recounted with the real dimensions (stats 1098, pooled 1218, token 1032 = 8×129, K = 8, layer embedding 25 because `ds.n_layers = max+1` at `data.py:137` and the real manifest has `n_layers` 24): M1 1,856,776; M2 2,009,484 (torch backend); M3 1,867,304; M5 3,438,344; M6 148,457. All match the counts given in the request and the session note. Arithmetic checks out (M5 = M1 + a 2-layer edit encoder + 8 positions).
+- Real-data refusal: `python -m wsp.predictor.train --model m1 --features data/features/qwen3.5-0.8b --evals data/evals/qwen3.5-0.8b --split family --out <tmp>` exits with "zero entries have targets …", and no output directory is created. The real eval index is empty (0 rows), so no real targets exist yet.
+- Targets: missing targets stay NaN and are masked in loss, validation and metrics (`train.py:73-75`, `:197`, `:250`). No target is fabricated. Bounds are checked before subtraction (`data.py:116`), so PPL and KL cannot enter silently.
+- Early stopping uses only the inner validation split of training edits (`train.py:116-118`, `:144`, `:196-206`). The test fold is predicted once after the best state is restored (`:211`). Pretraining uses training edits only.
+- Causality: the M2 loop scan is causal (`scan.py:34-41`), and M5 uses an upper-triangular causal mask (`models/__init__.py:88-89`). `test_future_edits_cannot_change_past_predictions` perturbs step 2 and checks that steps 0–1 are unchanged. Padding is isolated by `test_seeds_padding_and_stateless_contract`.
+- Overfit is real: the toy test requires a ≥20% loss drop (`tests/test_p4_predictors.py:71`), and the frozen encoder is checked for unchanged weights (`:73`).
+- Stage 2 freezes the encoder and predictor (`models/__init__.py:183-187`), and the head is the only trained module.
+- Bootstrap: `metrics_with_ci` resamples edits with a seeded RNG and reports a percentile CI with `n` (`baselines.py:95-122`). The manifest and results state that chains are not corrected (`train.py:281`, `:274`).
+- Manifest and artefacts: `metrics.json`, `results.md`, per-fold predictions parquet, checkpoints, and `manifest.json` (git SHA, config hash, seeds, backend, feature hash, target hash, parameter counts) are all written. The output directory must be empty (`train.py:139-140`).
+- Secrets and data: the diff contains no keys, tokens or IP addresses. Matches are variable names such as `token`. No weights or data are committed; the `data` symlink in the worktree points to the canonical checkout.
+- Overall sigmoid bounding: outputs are checked to lie in [0, 1] (`tests/test_p4_predictors.py:65`).
+
+## Required before re-review
+
+Fix findings 1–3, add the tests named in 1, 2 and 11, and state the M5 and M3 deviations (4, 7) in MODEL_CANDIDATES. Re-run `pytest -q` and the real-data refusal. Re-review as a new Board A pass, not as an edit to this one.

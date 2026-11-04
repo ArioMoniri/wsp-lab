@@ -72,6 +72,7 @@ restart repairs the index and resumes completed production entries.
 - M6 (Board C pick, competes with M3 on H1/H3): Tabular-JEPA pretraining on φ_stats with ResidualPred, dz=32,
   frozen encoder + MLP head; acceptance H3 transfer ρ ≥ 0.5 on ≥ 6 of K benchmarks, no collapsed seeds
   (details: docs/MODEL_CANDIDATES.md)
+- [x] M4 harness merged 4 Nov 2026 (c6655ec): src/wsp/agents/reader.py + score.py; waits for eval.json targets
 - M4 LLM-reader: GPT-6 Astra / Claude Fable 5.1 given the same φ_stats + top SVD components as text,
   asked for Δy; prompt in `src/wsp/agents/reader_prompt.md`
 - Gate: H1–H4 tables filled in `docs/RESULTS.md` with CIs (bootstrap over edits)
