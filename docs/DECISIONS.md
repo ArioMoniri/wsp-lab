@@ -66,3 +66,8 @@ neither is used). vLLM also changed scores (gsm8k 0.14→0.06, ifeval 0.44→0.3
 drop-in replacement without a batch-1 HF control. No engine advantage; the floor is ~6.1 min (decode-step bound).
 Decision: run the D3 subset (300 entries, ≈ 31 h) locally with the HF path now; use the Lambda A100 for the second
 half once the ARA family finishes if the local run is still behind.
+
+## D7 addendum (4 Nov 2026) — private storage limit
+The batched delta upload stopped with "Private storage limit reached for user Aralario". HF keeps the metadata,
+features, runs and evals (small); zoo deltas stay on this server (nightly DR backup) unless the account is
+upgraded. Chain deltas were never going to HF (D7). Public release of deltas is not planned (abliteration deltas).
