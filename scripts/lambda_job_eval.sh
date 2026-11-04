@@ -52,6 +52,14 @@ if base.exists():
 print("UPLOAD_DONE")
 PY
 done
+cp ~/eval.log "data/runs/eval-$HOST.log" 2>/dev/null || true
+python - "$HOST" <<'PY' || true
+import os, sys
+from huggingface_hub import HfApi
+HfApi(token=os.environ["HF_TOKEN"]).upload_file(path_or_fileobj=f"data/runs/eval-{sys.argv[1]}.log", path_in_repo=f"logs/eval-{sys.argv[1]}.log",
+    repo_id="Aralario/wsp-lab-zoo", repo_type="dataset", commit_message=f"eval log {sys.argv[1]}")
+PY
+if [ "$rc" != "0" ]; then echo "JOB_FAILED rc=$rc — instance kept for inspection (terminate manually)"; exit "$rc"; fi
 echo JOB_DONE
 # self-terminate: only the instance whose public IP is ours (several wsp-lab instances may run at once)
 MYIP=$(curl -s --max-time 10 https://checkip.amazonaws.com || true)
