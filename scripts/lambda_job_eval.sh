@@ -27,8 +27,9 @@ inc=()
 while read -r i || [ -n "$i" ]; do [ -n "$i" ] && inc+=("zoo/qwen3.5-0.8b/$i/*"); done < "$IDS"   # last line may lack a newline
 hf download Aralario/wsp-lab-zoo --repo-type dataset --include "${inc[@]}" --local-dir data/.hf-pull-zoo >/dev/null 2>&1
 [ -f data/.hf-pull-zoo/zoo/qwen3.5-0.8b/manifest.jsonl ] || { echo "manifest missing after download"; exit 1; }
+rm -f data/.hf-pull-zoo/zoo/qwen3.5-0.8b/*/eval.json   # never inherit another host's evaluation; keep this host's own on reruns
 rsync -a data/.hf-pull-zoo/zoo/ data/zoo/
-rm -f data/zoo/qwen3.5-0.8b/*/eval.json   # every shard entry is evaluated here, never inherited from another host
+while read -r i || [ -n "$i" ]; do [ -n "$i" ] && [ ! -f "data/zoo/qwen3.5-0.8b/$i/edit.json" ] && { echo "entry $i missing after download"; exit 1; }; done < "$IDS"
 HOST="lambda-$(hostname)"
 echo "EVAL start $(date -u +%FT%TZ) host=$HOST ids=$(wc -l < "$IDS")"
 # Generation at batch 32 is launch-bound (GPU ~50% busy on an H100), so WORKERS processes share the GPU on disjoint
