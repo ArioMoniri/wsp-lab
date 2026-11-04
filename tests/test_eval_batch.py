@@ -113,7 +113,7 @@ def test_batch_loads_once_restores_and_resumes(tmp_path, monkeypatch):
     batch.run_batch(zoo, config)
     assert len(index.read_text().splitlines()) == 3
     canonical = (zoo / "a/eval.json").read_bytes()
-    batch.run_batch(zoo, config, limit=1, max_new_tokens=2)
+    batch.run_batch(zoo, config, limit=1)
     assert (zoo / "a/eval.json").read_bytes() == canonical
     outputs = list((tmp_path / "data/runs/p2-batch").glob("*/a/eval.json"))
     payload = json.loads(outputs[0].read_text())
@@ -126,6 +126,14 @@ def test_batch_loads_once_restores_and_resumes(tmp_path, monkeypatch):
         "source_hash",
     } <= payload.keys()
     assert payload["config_hash"] != json.loads(canonical)["config_hash"]
+    batch.run_batch(zoo, config, repeat="r1")
+    repeated = json.loads((zoo / "a/repeats/r1/eval.json").read_text())
+    assert repeated["batch_size_nominal"] == 4
+    assert (zoo / "a/eval.json").read_bytes() == canonical
+    import pytest
+
+    with pytest.raises(FileExistsError):
+        batch.run_batch(zoo, config, repeat="r1")
     before = len(loads)
     batch.run_batch(zoo, config, force=True)
     assert len(loads) == before + 1

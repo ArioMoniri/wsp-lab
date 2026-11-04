@@ -53,3 +53,10 @@ runs it as a last, non-blocking step and stages `README.md` when the refresh suc
 
 - Lambda note (4 Nov 2026): on-demand A100 hosts run driver 570 (CUDA 12.8). Install torch from the `cu128`
   index there (the job script does this automatically); mamba-ssm is not needed for zoo/eval jobs.
+
+### Opaque evaluation device identity
+
+Set `~/.config/wsp/device_id` outside the repository to an opaque `H<number>` identifier.
+Absent files default to `H0`; allocate distinct IDs privately before cross-device runs.
+Only the opaque ID and GPU class enter evaluation artifacts. Keep the mapping to actual
+infrastructure private; do not put hostnames or instance IDs in this file or artifacts.

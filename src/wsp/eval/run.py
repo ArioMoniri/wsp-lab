@@ -258,9 +258,32 @@ def write_results(out, records, generation, manifest):
     if kl:
         summary["kl_first_token_mean"] = sum(r.extra["first_token_kl"] for r in kl) / len(kl)
         summary["kl_full_sequence_mean"] = sum(r.extra["full_sequence_kl"] for r in kl) / len(kl)
+    from wsp.eval.metadata import item_hashes
+
+    summary.update(item_hashes(records))
+    summary.update(
+        {
+            k: manifest[k]
+            for k in (
+                "batch_size",
+                "batch_size_nominal",
+                "eval_device_id",
+                "gpu_class",
+                "engine",
+                "torch_version",
+                "cuda_version",
+                "transformers_version",
+                "dtype",
+                "attention_implementation",
+                "repeat_id",
+            )
+            if k in manifest
+        }
+    )
     summary["generation"] = generation
     summary["counts"] = {
-        b: sum(r.benchmark == b for r in records) for b in aggregate(records) if b != "loop_rate"
+        b: sum(r.benchmark == b for r in records)
+        for b in dict.fromkeys(r.benchmark for r in records)
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2))
     write_manifest(out / "manifest.json", **manifest)
@@ -306,7 +329,13 @@ def evaluate(runner, benchmarks, counts=None):
                         float(correct),
                         nt,
                         hit,
-                        {"prompt": prompt, "output": output},
+                        {
+                            "prompt": prompt,
+                            "output": output,
+                            "invalid_final_answer": not bool(answer(output).strip())
+                            if name != "ifeval"
+                            else not bool(final_text(output)),
+                        },
                     )
                 )
         else:
@@ -378,8 +407,8 @@ def main():
     config_bytes = Path(args.config).read_bytes()
     cfg = yaml.safe_load(config_bytes)
     generation = cfg["generation"].copy()
-    if args.max_new_tokens:
-        generation["max_new_tokens"] = args.max_new_tokens
+    if args.max_new_tokens is not None:
+        raise ValueError("stopping settings must come from the config")
     seed_all(generation["seed"])
     names = args.benchmarks.split(",") if args.benchmarks else list(cfg["benchmarks"])
     if args.limit:

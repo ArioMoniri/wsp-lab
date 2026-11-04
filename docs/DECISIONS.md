@@ -89,3 +89,37 @@ Lambda host also evaluates the base model (stored as evals/qwen3.5-0.8b/base-<ho
 host-to-host score spread from these controls before pooling; pulled eval.json files carry `eval_host`
 (`scripts/d3_pull_shards.py`). If the spread is not small relative to edit effects, Δy is computed against the
 same-host base instead of pooling.
+
+## D2 addendum (Board A B2/B3/B5)
+
+Stopping budgets come from the YAML config; caller token-cap overrides are rejected.
+`--repeat LABEL` forces independent execution in immutable `repeats/LABEL` directories;
+reuse a new label after a failed run. Primary resume identity is unchanged, including the
+reporting-only keyword configuration rename. Repeat indexes are separate from primary indexes.
+
+Eval.json field list (all additions optional when reading legacy results):
+- Existing benchmark fields retain their score semantics and counts.
+- `loop_rate` remains pooled GSM8K/MATH/IFEval truncation, fast denominator 50/25/25.
+  EOS-at-cap is not a hit. `loop_rate_math500` uses only MATH (the blog denominator);
+  `loop_rate_gsm8k` and `loop_rate_ifeval` expose the other components.
+- `invalid_final_answer_rate_<benchmark>` measures empty extracted final answers; no
+  new mathematical validity checker is claimed. Accuracy remains `<benchmark>`.
+- `refusal_keyword_rate` and `over_refusal_keyword_rate` explicitly name keyword metrics;
+  `refusal_rate` / `over_refusal` are deprecated aliases for one release. Judge prompt
+  export is separate (`wsp.eval.refusal --export-judge`), off by default, and executes no judge.
+- `batch_size` is actual after OOM retry; `batch_size_nominal` records the requested size.
+  `item_order_hash` hashes benchmark/item pairs in execution order, `item_id_hash` their sorted list.
+- `repeat_id`, `eval_device_id`, `gpu_class`, `engine`, `torch_version`, `cuda_version`,
+  `transformers_version`, `dtype`, `attention_implementation` describe execution conditions.
+
+`wsp.eval.repeats.compare_pairs(primary, repeat, bootstrap=10000, seed=0)` accepts aligned
+payloads or eval.json paths, returning per-benchmark MAD, signed paired bootstrap CI,
+Spearman, ICC(2,1), binomial SE and mixed-actual-batch flags. Constant panels have undefined
+rank/ICC; negative ICC is retained. Analyse base separately; mixed-batch pairs cannot qualify
+repeatability. Match reference device/runtime/config/batch/items/order/seed before deriving
+single-step labels; missing matched references remain missing, never silently substituted.
+
+`wsp.eval.repeats.matched_reference(observation, candidates)` returns an exact metadata
+match or `None`, including for legacy unknowns. Batch results expose `base_run_id`,
+`matched_base_missing` and `entry_hashes`; an OOM batch mismatch leaves the base missing.
+Successor callers must supply predecessor candidates rather than base candidates.
