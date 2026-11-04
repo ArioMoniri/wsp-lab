@@ -36,3 +36,13 @@ Validation: 319 passed, 8 deselected in 21.10 seconds; 21 P4 tests (8 added).
 Ruff lint and format clean. Real-data CLI refusal: zero entries have targets with
 required predecessor targets; missing_predecessor_targets=0; no output dir created.
 No real H1/H2/H3 scores or GPU/Mamba validation claimed.
+
+## Board A re-review implementation (2026-11-04)
+
+Merged main into the feature branch, preserving both board-log entries. B1: explicit named-family holdout uses all labeled rows of that family as its sole test fold, with ancestry purge before inner validation. H3 is evaluated only for explicit lora_sft holdout; neither pooled k-fold results nor other named families report an H3 gate. Regression tests force all six benchmark correlations above threshold to check this distinction.
+
+N1: purge/chain-free variants are recorded in config and manifest; chain-free excludes chain steps and descendants (including task-vector children). N2: H2 metrics and report rows split explicit sequential/lora_vs_base semantics; legacy unflagged chain rows stay unknown. N3: corrected M5 linear-head spec; recursively flatten inner_params numeric fields for structural hashing; scope outer/inner split audits; read manifest bytes once before splitting, persist the snapshot and record SHA256 plus nonblank JSONL row count. Added a synthetic selftest banner to results.md.
+
+CPU selftests m2 (loop), m5 (torch_attention), m6 (torch_jepa) all passed, three folds each. No real hypothesis scores or GPU claims.
+
+Final validation: CPU pytest 325 passed, 8 deselected in 25.26 s (< 60 s local and < 90 s task limits); Ruff clean after import ordering fix; real-data named-holdout run refuses zero target entries before creating output. Toy-zoo tests cover k-fold, named LoRA/other-family holdouts, both sensitivity variants, six-benchmark gate isolation, structural descriptor ordering, snapshot digest/count and audit scopes.

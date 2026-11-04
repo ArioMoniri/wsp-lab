@@ -107,6 +107,8 @@ def run_training(
     synthetic=False,
     targets=None,
     zoo=None,
+    holdout=None,
+    holdout_variant="purge",
 ):
     if min(epochs, patience, batch_size, n_boot) < 1 or pretrain_epochs < 1:
         raise ValueError(
@@ -114,11 +116,16 @@ def run_training(
         )
     seed_all(seed)
     ds = FeatureDataset(features, evals, target=target, targets=targets, zoo=zoo)
-    folds = ds.folds(split, n_splits)
+    folds = ds.holdout(holdout, holdout_variant) if holdout else ds.folds(split, n_splits)
     # Plan all validation sets before writing anything. A two-group dataset cannot
     # honestly support both a held-out group and an inner group for early stopping.
-    plans = [(ds.folds(split, min(3, n_splits), train)[0], test) for train, test in folds]
+    plans = [
+        (ds.folds(split, min(3, n_splits), train, scope=f"inner:{i}")[0], test)
+        for i, (train, test) in enumerate(folds)
+    ]
     config = {
+        "holdout": holdout,
+        "holdout_variant": holdout_variant,
         "model": model,
         "features": str(features),
         "evals": str(evals),
@@ -142,6 +149,7 @@ def run_training(
     if out.exists() and any(out.iterdir()):
         raise ValueError(f"output directory is not empty: {out}")
     out.mkdir(parents=True, exist_ok=True)
+    (out / "zoo-manifest.snapshot.jsonl").write_bytes(ds.manifest_snapshot)
     predictions = np.full(ds.targets.shape, np.nan)
     fold_records, backends, baseline_folds = [], [], []
     for fold, ((train, val), test) in enumerate(plans):
@@ -279,6 +287,7 @@ def run_training(
                 "train_ids": ids(train),
                 "validation_ids": ids(val),
                 "test_ids": ids(test),
+                "test_families": sorted({ds.rows[i]["family"] for i in test}),
                 "normalization_context_ids": normalizer.ids,
                 "pretraining": pretrain_history,
                 "collapse_check": collapse,
@@ -311,7 +320,7 @@ def run_training(
         n_boot=n_boot,
     )
     m6_gate = None
-    if model == "m6":
+    if model == "m6" and holdout == "lora_sft":
         transfer_pass = False
         for record, (_, test) in zip(fold_records, baseline_folds, strict=True):
             fold_scores = {}
@@ -328,16 +337,38 @@ def run_training(
             record["h3_benchmarks_passing"] = count
             transfer_pass |= count >= 6
         m6_gate = {
-            "family_split": split == "family",
+            "holdout_family": holdout,
             "h3_transfer_gate": transfer_pass,
             "collapse_gate": all(r["collapse_check"]["acceptance_gate"] for r in fold_records),
             "collapsed_fold_seeds": sum(r["collapse_check"]["collapsed"] for r in fold_records),
         }
-        m6_gate["accepted"] = split == "family" and transfer_pass and m6_gate["collapse_gate"]
+        m6_gate["accepted"] = transfer_pass and m6_gate["collapse_gate"]
+    stratified = {}
+    for semantics in ("sequential", "lora_vs_base", "unknown"):
+        mask = np.array(
+            [
+                ds.relations[r["id"]].get("step_semantics", None) == semantics
+                if semantics != "unknown"
+                else (r["family"] == "chain" and not ds.relations[r["id"]].get("step_semantics"))
+                for r in ds.rows
+            ]
+        )
+        stratified[semantics] = {}
+        for j, name in enumerate(ds.names):
+            ok = mask & np.isfinite(predictions[:, j]) & np.isfinite(ds.targets[:, j].numpy())
+            stratified[semantics][name] = (
+                metrics_with_ci(ds.targets[ok, j].numpy(), predictions[ok, j], seed, n_boot)
+                if ok.any()
+                else {"n": 0}
+            )
     results = {
         "config": config,
         "targets": scores,
-        "length_ge_4": {"n_edits": int(long_mask.sum()), "targets": long_scores},
+        "h2_by_step_semantics": stratified,
+        "length_ge_4": {
+            "n_edits": int((long_mask & np.isfinite(predictions).any(axis=1)).sum()),
+            "targets": long_scores,
+        },
         "statnn": baseline,
         "folds": fold_records,
         "m6_acceptance": m6_gate,
@@ -360,7 +391,13 @@ def run_training(
         "| model | target | n | MAE [95% CI] | RMSE [95% CI] | Spearman [95% CI] |",
         "|---|---|---:|---|---|---|",
     ]
-    for label, metrics in [(model, scores), ("statnn", baseline["targets"])]:
+    if synthetic:
+        lines.insert(1, "SYNTHETIC SELFTEST — no hypothesis evidence.")
+    for label, metrics in [
+        (model, scores),
+        ("statnn", baseline["targets"]),
+        *[(f"H2 {key}", value) for key, value in stratified.items()],
+    ]:
         for name, m in metrics.items():
             cells = [
                 f"{m[k]['value']:.5g} {m[k]['ci95']}" if k in m else "unavailable"
@@ -388,6 +425,7 @@ def run_training(
     for file in sorted(Path(__file__).parent.rglob("*.py")):
         source_hash.update(file.read_bytes())
     manifest = {
+        "zoo_manifest_snapshot": ds.snapshot_info,
         "git_sha": sha,
         "synthetic": synthetic,
         "split_audit": ds.split_audit,
@@ -452,6 +490,8 @@ def main(argv=None):
     p.add_argument("--selftest", action="store_true")
     p.add_argument("--targets", nargs="+")
     p.add_argument("--zoo")
+    p.add_argument("--holdout")
+    p.add_argument("--holdout-variant", choices=["purge", "chain-free"], default="purge")
     p.set_defaults(**json.loads(DEFAULT_CONFIG_PATH.read_text()))
     args = vars(p.parse_args(argv))
     selftest = args.pop("selftest")

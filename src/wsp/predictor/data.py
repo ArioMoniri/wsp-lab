@@ -76,7 +76,7 @@ def read_targets(evals):
     return result
 
 
-def read_relations(zoo):
+def read_relations(zoo, snapshot=None):
     """Manifest ancestry includes sources; only cumulative chain links are successors.
 
     lora_vs_base is a flagged successor: optimisation uses base, but the resulting
@@ -85,7 +85,7 @@ def read_relations(zoo):
     path = Path(zoo)
     path = path if path.is_file() else path / "manifest.jsonl"
     rows = {}
-    for line in path.read_text().splitlines():
+    for line in (snapshot if snapshot is not None else path.read_bytes()).decode().splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
@@ -139,7 +139,18 @@ def descriptor(meta, width=32):
     out = torch.zeros(width)
     fields = {"family": meta["family"], **(meta.get("params") or {})}
     fields = {k: v for k, v in fields.items() if k not in {"length", "inner_seed", "seed"}}
-    for key, value in sorted(fields.items()):
+
+    def flatten(values, prefix=""):
+        for key, value in sorted(values.items()):
+            if key in {"length", "inner_seed", "seed"}:
+                continue
+            key = prefix + key
+            if isinstance(value, dict):
+                yield from flatten(value, key + ".")
+            else:
+                yield key, value
+
+    for key, value in flatten(fields):
         text = key if isinstance(value, (int, float)) else f"{key}={value}"
         h = int.from_bytes(hashlib.sha256(text.encode()).digest()[:8], "little")
         val = np.sign(value) * np.log1p(abs(value)) if isinstance(value, (int, float)) else 1
@@ -154,7 +165,17 @@ class FeatureDataset(Dataset):
         manifest = self.root / "manifest.json"
         self.manifest = json.loads(manifest.read_text()) if manifest.exists() else {}
         zoo = zoo or self.manifest.get("zoo")
-        self.relations = read_relations(zoo) if zoo else {}
+        path = Path(zoo) if zoo else None
+        if path is not None and not path.is_file():
+            path = path / "manifest.jsonl"
+        self.manifest_snapshot = path.read_bytes() if path else b""
+        self.snapshot_info = {
+            "sha256": hashlib.sha256(self.manifest_snapshot).hexdigest(),
+            "row_count": len(
+                [line for line in self.manifest_snapshot.splitlines() if line.strip()]
+            ),
+        }
+        self.relations = read_relations(zoo, self.manifest_snapshot) if zoo else {}
         self.metadata = {}
         for file in sorted(self.root.glob("*/features.json")):
             meta = json.loads(file.read_text())
@@ -279,7 +300,46 @@ class FeatureDataset(Dataset):
         ids = self.chain(self.rows[index]["id"])
         return {"entries": [self.entry(i) for i in ids], "target": self.targets[index]}
 
-    def folds(self, mode, n_splits=5, indices=None):
+    def holdout(self, family, variant="purge"):
+        if variant not in {"purge", "chain-free"}:
+            raise ValueError("unknown holdout variant")
+        test = np.array([i for i, r in enumerate(self.rows) if r["family"] == family], dtype=int)
+        if not len(test):
+            raise ValueError(f"holdout family has no labeled rows: {family}")
+        candidates = [i for i, r in enumerate(self.rows) if r["family"] != family]
+        train, dropped = clean_training(
+            self.rows, candidates, test, self.relations, self.ancestry, "family"
+        )
+        before = len(train)
+        if variant == "chain-free":
+            train = np.array(
+                [
+                    i
+                    for i in train
+                    if not any(
+                        self.relations[a]["family"] == "chain"
+                        for a in ancestor_ids(self.rows[i]["id"], self.ancestry)
+                    )
+                ],
+                dtype=int,
+            )
+        self.split_audit.append(
+            {
+                "scope": "outer",
+                "mode": "holdout",
+                "family": family,
+                "variant": variant,
+                "test_ids": [self.rows[i]["id"] for i in test],
+                "dropped_ancestor_rows": dropped,
+                "dropped_chain_rows": before - len(train),
+            }
+        )
+        if not len(train):
+            raise ValueError("holdout purge leaves empty training fold")
+        return [(train, test)]
+
+    def folds(self, mode, n_splits=5, indices=None, *, scope="outer"):
+
         indices = np.arange(len(self)) if indices is None else np.asarray(indices)
         rows = [self.rows[i] for i in indices]
         groups = (
@@ -297,6 +357,7 @@ class FeatureDataset(Dataset):
             )
             self.split_audit.append(
                 {
+                    "scope": scope,
                     "mode": mode,
                     "test_ids": [rows[j]["id"] for j in b],
                     "dropped_ancestor_rows": dropped,

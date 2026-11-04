@@ -110,7 +110,7 @@ def test_training_fold_outputs_provenance_and_deltas(toy, tmp_path):
         assert not (set(fold["train_ids"]) & set(fold["validation_ids"]))
         assert not (set(fold["test_ids"]) & set(fold["validation_ids"]))
     assert (out / "results.md").exists()
-    assert r["m6_acceptance"]["accepted"] is False  # one synthetic benchmark cannot meet H3
+    assert r["m6_acceptance"] is None  # k-fold runs cannot claim H3
     for fold in r["folds"]:
         assert fold["collapse_check"]["frozen_predictor_erank"] >= 0
         assert isinstance(fold["collapse_check"]["acceptance_gate"], bool)
@@ -347,3 +347,94 @@ def test_chunked_scan_matches_loop_and_gradients():
     gb = torch.autograd.grad(b.sum(), inputs)
     for x, y in zip(ga, gb, strict=True):
         torch.testing.assert_close(x, y)
+
+
+@pytest.mark.parametrize("variant", ["purge", "chain-free"])
+def test_named_holdout_and_snapshot(toy, tmp_path, variant):
+    import hashlib
+
+    ds = FeatureDataset(toy / "features", toy / "evals")
+    train, test = ds.holdout("lora_sft", variant)[0]
+    assert set(test) == {i for i, r in enumerate(ds.rows) if r["family"] == "lora_sft"}
+    if variant == "chain-free":
+        assert all(ds.rows[i]["family"] != "chain" for i in train)
+    out = tmp_path / variant
+    r = run_training(
+        toy / "features",
+        toy / "evals",
+        "trajectory",
+        out,
+        holdout="lora_sft",
+        holdout_variant=variant,
+        model="m6",
+        epochs=1,
+        pretrain_epochs=1,
+        n_splits=3,
+        d_model=16,
+        n_boot=5,
+    )
+    assert len(r["folds"]) == 1
+    assert r["folds"][0]["test_families"] == ["lora_sft"]
+    assert r["m6_acceptance"]["accepted"] is False
+    assert r["m6_acceptance"]["holdout_family"] == "lora_sft"
+    assert r["config"]["holdout_variant"] == variant
+    assert {a["scope"] for a in r["split_audit"]} == {"outer", "inner:0"}
+    manifest = json.loads((out / "manifest.json").read_text())
+    snapshot = (out / "zoo-manifest.snapshot.jsonl").read_bytes()
+    assert manifest["zoo_manifest_snapshot"] == {
+        "sha256": hashlib.sha256(snapshot).hexdigest(),
+        "row_count": len(snapshot.splitlines()),
+    }
+    assert set(r["h2_by_step_semantics"]) == {"sequential", "lora_vs_base", "unknown"}
+    assert "H2 lora_vs_base" in (out / "results.md").read_text()
+
+
+def test_descriptor_inner_params_structural():
+    from wsp.predictor.data import descriptor
+
+    a = {"family": "chain", "params": {"inner_params": {"scale": 2, "rank": 8}}}
+    b = {"family": "chain", "params": {"inner_params": {"rank": 8, "scale": 2}}}
+    torch.testing.assert_close(descriptor(a), descriptor(b))
+    b["params"]["inner_params"]["scale"] = 3
+    assert not torch.equal(descriptor(a), descriptor(b))
+
+
+@pytest.mark.parametrize("holdout", [None, "random_dir", "lora_sft"])
+def test_h3_gate_only_named_lora_even_when_all_benchmarks_pass(toy, tmp_path, monkeypatch, holdout):
+    import shutil
+
+    from wsp.predictor import train
+
+    evals = tmp_path / "evals"
+    shutil.copytree(toy / "evals", evals)
+    names = ["gsm8k", "math500", "ifeval", "mmlu_pro", "hellaswag", "refusal_rate"]
+    for file in evals.glob("*/eval.json"):
+        value = json.loads(file.read_text())["metrics"]["acc"]
+        file.write_text(json.dumps({"metrics": dict.fromkeys(names, value)}))
+    original = train.metrics_with_ci
+
+    def passing(*args, **kwargs):
+        result = original(*args, **kwargs)
+        result["spearman"]["value"] = 0.9
+        return result
+
+    monkeypatch.setattr(train, "metrics_with_ci", passing)
+    result = run_training(
+        toy / "features",
+        evals,
+        "family",
+        tmp_path / "run",
+        model="m6",
+        holdout=holdout,
+        epochs=1,
+        pretrain_epochs=1,
+        n_splits=3,
+        d_model=16,
+        n_boot=5,
+    )
+    if holdout == "lora_sft":
+        assert result["m6_acceptance"]["h3_transfer_gate"] is True
+        assert result["folds"][0]["h3_benchmarks_passing"] == 6
+    else:
+        assert result["m6_acceptance"] is None
+        assert all("h3_benchmarks_passing" not in fold for fold in result["folds"])

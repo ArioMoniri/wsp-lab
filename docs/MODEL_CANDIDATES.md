@@ -408,8 +408,8 @@ a competing P4 run before the phase closes; M6 competes on the H1/H3 axis.
 ## Two picks to add as competing P4 runs
 
 **M5 (compete vs M2, hypothesis H2).** Per-tensor-token Transformer with a second, causally-masked
-attention axis over edits; input tokens = φ_svd(Δθ_t) ⊕ edit-descriptor embedding; output y_t ∈
-[0,1]^K at every step (sigmoid head, as in `TrajectoryPredictor`). ≤ 2 layers, d_model 256,
+attention axis over edits; input tokens = φ_svd(Δθ_t) ⊕ edit-descriptor embedding; output signed Δy_t ∈
+ℝ^K at every step (linear head). ≤ 2 layers, d_model 256,
 dropout 0.2, family-split early stopping. Acceptance: ≥ 15 % relative MAE reduction vs stateless
 M1 on held-out T ≥ 4, and ≥ M2 on all splits (bootstrap over edits, 5 seeds). Either M5 or M2
 winning is a publishable H2 result; a tie means the SSM state is sufficient at T ≤ 8.
@@ -418,7 +418,7 @@ winning is a publishable H2 result; a tie means the SSM state is sufficient at T
 φ_stats columns (mask ≈ 50 % of the ~40 × n_tensors features, predict the latent of the rest) with
 ResidualPred predictor (W_p = I + ΔW_p, diagonal attention bias β = 10 at init), VICReg variance
 term, dz = 32; monitor ERank. Stage 2 (frozen encoder): linear + 2-layer MLP head → Δy. Acceptance:
-H3 transfer ρ ≥ 0.5 on ≥ 6 of K benchmarks for one held-out family; ERank ≥ 2× the
+H3 transfer ρ ≥ 0.5 on ≥ 6 of K benchmarks only for the explicit `--holdout lora_sft` test family; ERank ≥ 2× the
 standard-predictor ablation with zero collapsed seeds. Same 5-fold family splits as M3.
 
 ## What would change this ranking
@@ -595,8 +595,8 @@ predictor (ResidualPred off), identical train rows, minibatches, complementary m
 optimizer and epoch budget. ERank is computed after pretraining on the unmasked
 training representations. Operational collapse threshold: ERank < 2. The collapse
 gate requires zero collapsed fold seeds and ERank(ResidualPred) ≥ 2× ablation in
-every fold; the separate overall acceptance metric also requires a family split
-and transfer ρ ≥ 0.5 on at least six benchmarks in a held-out fold. Runs of different
+every fold; the separate overall acceptance metric also requires explicit `--holdout lora_sft`
+and transfer ρ ≥ 0.5 on at least six benchmarks on that sole test fold. Runs of different
 outer seeds must all pass before claiming zero collapsed seeds across a five-seed
 experiment. The current parameter-free Q=K latent attention in ResidualPred is a
 project implementation, not a verified exact reproduction of 2610.02344.
@@ -606,3 +606,5 @@ four-step synthetic toy zoo and a two-epoch smoke run under `/tmp/wsp-p4-synthet
 Both feature and run manifests mark `synthetic: true`; these are never real results.
 CUDA M2 must report `mamba_ssm`; CPU reports `loop`. Run CUDA only after the
 `p1-zoo-full` agent-tmux job disappears. No synthetic run satisfies H1/H2/H3 gates.
+
+Named transfer evaluation uses `--holdout lora_sft`: all labeled LoRA rows form the sole test fold. Other rows are ancestry-purged before inner validation. `--holdout-variant chain-free` additionally excludes chain rows and their descendants from training. K-fold runs serve H1/H2 and do not evaluate H3. H2 metrics are stratified by explicit step semantics, with unflagged legacy chain rows reported as unknown. Runs freeze the zoo manifest bytes before splitting and record their SHA256 and line count.
