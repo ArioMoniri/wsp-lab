@@ -21,3 +21,15 @@ def test_pool_is_fixed_size_and_averages_type_bucket():
     assert svd.shape == (8 * 7,)
     assert torch.all(stats[:18] == 2)
     assert torch.all(svd[:8] == 2)
+
+
+def test_linear_attention_out_proj_pools_with_attention_output():
+    rec = {
+        "name": "model.layers.0.linear_attn.out_proj.weight",
+        "stats": torch.full((18,), 5.0),
+        "svd": torch.full((8, 129), 5.0),
+    }
+    stats, svd = pool_features([rec], n_layers=8, buckets=4)
+    o = 1 + 3 * 4  # global, then q, k, v, o groups of four buckets
+    assert torch.all(stats[18 * o : 18 * (o + 1)] == 5)
+    assert torch.all(svd[8 * 3 : 8 * 4] == 5)

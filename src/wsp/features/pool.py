@@ -2,6 +2,7 @@
 
 Stats order is global, then q/k/v/o/gate/up/down, each in layer-bucket order.
 Spectrum order is q/k/v/o/gate/up/down. Empty groups are zero.
+Linear-attention ``out_proj`` (Qwen3.5 GatedDeltaNet layers) pools with ``o_proj``.
 """
 
 import re
@@ -26,13 +27,13 @@ def pool_features(
         stat = record["stats"].float()
         stats[0].append(stat)
         match = re.search(r"\.layers\.(\d+)\.", name)
-        kind = re.search(r"\.(q|k|v|o|gate|up|down)_proj\.", name)
+        kind = re.search(r"\.(q|k|v|o|gate|up|down|out)_proj\.", name)
         if not match or not kind:
             continue
         layer = int(match.group(1))
         if layer >= n_layers:
             raise ValueError(f"layer {layer} outside model with {n_layers} layers")
-        index = TYPES.index(kind.group(1))
+        index = TYPES.index("o" if kind.group(1) == "out" else kind.group(1))
         bucket = min(layer * buckets // n_layers, buckets - 1)
         stats[1 + index * buckets + bucket].append(stat)
         spectra[index].append(record["svd"][:, 0].float())
