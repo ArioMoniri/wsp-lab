@@ -150,3 +150,5 @@
 | 2026-11-04 | p4-predictors REVISE round | codex/gpt-6.1-sol high | running |
 | 2026-11-04 | p4-predictors REVISE | codex/gpt-6.1-sol high | done 6674f10 (319 tests) |
 | 2026-11-04 | Board A re-review feat/p4-predictors | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | Board A re-review feat/p4-predictors | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (1: explicit --holdout for the M6/H3 gate) |
+| 2026-11-04 | p4-predictors round 3 | codex/gpt-6.1-sol medium | running |
