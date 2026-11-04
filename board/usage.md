@@ -119,3 +119,5 @@
 | 2026-11-04 | humanizer method/zoo/experiments | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | humanizer method/zoo/experiments | claude_aio_gmail_api/claude-haiku-5-5 | done d1d0d6c |
 | 2026-11-04 | Board B paper/method-zoo | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | writer README v2 | claude_aio_gmail_api/claude-sonnet-5-5 high | done 43a5c08 |
+| 2026-11-04 | Board B review docs/readme-v2 | codex/gpt-6.1-sol medium | running |
