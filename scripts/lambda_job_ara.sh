@@ -14,7 +14,7 @@ uv pip install --python .venv/bin/python -e ".[dev]" -q
 # torch must match the host driver: pick the CUDA wheel index from nvidia-smi's reported CUDA version
 drv=$(nvidia-smi | grep -oE "CUDA Version: [0-9]+\.[0-9]+" | grep -oE "[0-9]+\.[0-9]+")
 case "$drv" in 12.8*|12.9*) idx=cu128;; 12.6*|12.7*) idx=cu126;; 13.*) idx=cu132;; *) idx=cu128;; esac
-.venv/bin/python -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null || uv pip install --python .venv/bin/python --reinstall "torch==2.15.0" --index-url https://download.pytorch.org/whl/$idx -q
+.venv/bin/python -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null || uv pip install --python .venv/bin/python --reinstall torch --index-url https://download.pytorch.org/whl/$idx -q && uv pip uninstall --python .venv/bin/python torchvision torchaudio -q 2>/dev/null || true
 .venv/bin/python -c "import torch;print('torch',torch.__version__,'cuda',torch.cuda.is_available())"
 . scripts/env.sh   # reads ~/.config/wsp/env (HF_TOKEN, LAMBDA_API_KEY) written by the launcher
 hf auth login --token "$HF_TOKEN" >/dev/null 2>&1 || true
