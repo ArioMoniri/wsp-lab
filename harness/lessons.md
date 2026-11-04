@@ -33,3 +33,8 @@ instance's own public IP, never "the first instance with that name".
 The A10 eval job was rerun with a trimmed ids file; its upload step built patterns from that file, so 41 earlier
 results never reached the hub before the instance self-terminated (35 had to be re-evaluated, ≈ $4 and 2 h). Rule:
 the upload step enumerates artefacts on disk; the ids file only says what to compute.
+
+## 2026-11-04 — never remove a worktree branch in the same command as its merge
+`scripts/wt.sh merge` failed (dirty README.md in the main checkout) and the chained `wt.sh rm` deleted the branch
+anyway; the commit was recovered from its hash. Rule: merge, verify the merge commit exists, then remove; `wt.sh merge`
+should refuse to run with a dirty main checkout (TODO).
