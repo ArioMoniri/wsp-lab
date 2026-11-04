@@ -192,4 +192,5 @@
 | 2026-11-04 | P4 round 2 | codex/gpt-6.1-sol high | done 8ca2e25 (491 tests) — Board A review pending |
 | 2026-11-04 | Scribe: paper reliability subsection + experiments.tex corrections | claude_aio_gmail_api/claude-haiku-5-5 high | done 7b274af (9 pages, refs verified) — humanizer next |
 | 2026-11-04 | Humanizer: paper/reliability | claude_aio_gmail_api/claude-haiku-5-5 high | running |
-| 2026-11-04 | Board A review feat/p4-round2 | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | Board A review feat/p4-round2 | codex/gpt-6.1-terra medium | REVISE (ci_method relabelled; family centring across folds) 3f52db0 |
+| 2026-11-04 | P4 round 2b (ci_method labels, within-fold centring, compat script) | codex/gpt-6.1-sol medium | running |
