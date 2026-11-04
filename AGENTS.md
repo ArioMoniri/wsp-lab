@@ -18,3 +18,5 @@
   paper/refs/verified.yaml), and pre-registered thresholds from docs/HYPOTHESIS.md stated as planned criteria.
   Figures are produced only from real run artefacts under `data/` with a run id in the caption. Unit tests may
   feed synthetic tensors to functions but must never write artefacts into `paper/`, `docs/`, or `assets/`.
+- In a worktree, `data` and `.venv` are symlinks to the canonical checkout. Never replace them with real
+  directories; all artefacts must land in `/home/ubuntu/projects/wsp-lab/data`. `scripts/wt.sh check` audits this.
