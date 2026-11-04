@@ -173,5 +173,6 @@
 | 2026-11-04 | Board A: H5 pre-registration + fast-tier noise floor | codex/gpt-6.1-sol high | REVISE (6 blocking: repeat panels, MATH-only truncation metric, repeat dirs/batch record, critic gate, refusal judge labelling, costed 32k allocation) — merged a19c41a |
 | 2026-11-04 | Board B: H5 reproduction section requirements + noise reporting | claude_aio_gmail_api/claude-haiku-5-5 high | REVISE (sealed split + test-retest missing; 1 sentence in experiments.tex invalidated; RESULTS.md SE corrected) — merged 432fa4d |
 | 2026-11-04 | H5 editor harness implementation (src/wsp/editor, CPU tests) | codex/gpt-6.1-sol medium | done af22aee (416 tests) — Board A review pending |
-| 2026-11-04 | eval: Board A B2/B3/B5 fixes (per-benchmark truncation + validity, immutable repeat runs with actual batch, refusal-judge labelling) | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | eval: Board A B2/B3/B5 fixes | codex/gpt-6.1-sol medium | done 54e0f4f (408 CPU + 4 GPU tests) — Board A review pending |
 | 2026-11-04 | Board A review feat/h5-editor | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | Board A review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | running |
