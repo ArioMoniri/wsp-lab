@@ -5,7 +5,7 @@
 # Tensor selection: `tensors:` entries are writer components (attn_out, mlp_out), the legacy 0.8B names
 # (self_attn.o_proj, mlp.down_proj: role aliases) or regexes over the in-layer module path; the
 # `architecture:` block names the writers/post-norms of this model (see docs/ARCHITECTURES.md).
-# Gated repo: needs HF approval for the account in HF_TOKEN. hidden_size / num_layers are declared so
+# Gated repo: licence accepted for the account in HF_TOKEN (4 Nov 2026). hidden_size / num_layers are declared so
 # --dry-run works without file access (checked against the model config whenever it is readable).
 # Gemma-3 has a sandwich norm (gain 1 + weight): abliteration folds it (fold_post_norm).
 # refusal_response_prefix: the Gemma template has no CoT block, so Heretic's prefix detection would

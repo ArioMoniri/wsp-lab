@@ -89,7 +89,7 @@ restart repairs the index and resumes completed production entries.
 - Gate: `docs/RESULTS.md` §27B
 
 ## P4b — Multi-base-model zoos (H6, added 4 Nov 2026)
-- Build zoos for LFM3-1.7B (hybrid, downloaded), Qwen3.5-4B, Gemma-3-270M-it (gated; token available) with the
+- Build zoos for LFM3-1.7B (hybrid, downloaded), Qwen3.5-4B, Gemma-3-270M-it (gated; licence accepted 4 Nov, both -it and base downloaded) with the
   same families and configs; feature pooling must map each architecture's tensor types (audit per model).
 - Train on two models, test on the third (leave-one-model-out), plus the ≤ 20-edit calibration arm.
 - Board C (4 Nov 2026, docs/MODEL_CANDIDATES.md §H6): screening run = Qwen3.5-0.8B, LFM3-1.7B, Gemma-3-270M-it,
