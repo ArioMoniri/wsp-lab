@@ -17,3 +17,4 @@
 | 2026-11-04 | P5 | Qwen3.5 AutoProcessor needs torchvision (video processor); install torch AND torchvision from the same driver-matched index, never drop torchvision | scripts/lambda_job_ara.sh | ~/ara_attempt3.log on the instance |
 | 2026-11-04 | P4 | parent_id semantics differ by family (chain=successor, task_vector=source); H1 target is per-step Δy; family holdout must drop ancestry | docs/DECISIONS.md D5, predictor/data.py | Board A review of feat/p4-predictors |
 | 2026-11-04 | P5 | Heretic ARA trial cost is CPU/launch-bound (LBFGS per module); plan budgets per trial, not per GPU | D6 | py-spy dump on Lambda |
+| 2026-11-04 | P5 | over ssh, `pkill -f <pattern>` kills the remote shell running the command when the pattern appears in it; kill by PID or tmux session instead | ops | Lambda restart 08:40Z |
