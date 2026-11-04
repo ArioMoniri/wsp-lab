@@ -26,11 +26,12 @@ import torch
 import yaml
 from safetensors.torch import save_file
 
-from wsp.edits.kernels import KERNEL_VARIANT, heretic_abliteration_kernel
+from wsp.edits.kernels import FOLD_SUFFIX, KERNEL_VARIANT, heretic_abliteration_kernel
 from wsp.edits.refusal import get_refusal_directions
 from wsp.schema import EditDescriptor
+from wsp.zoo import arch as _arch
 from wsp.zoo.apply import entry_has_artifacts, load_entry_delta
-from wsp.zoo.common import resolve_base_revision
+from wsp.zoo.common import metadata_revision, resolve_base_revision
 from wsp.zoo.random_dir import ablate_direction, random_unit_direction
 
 
@@ -185,9 +186,25 @@ def _load_manifest(
     return rows, headers
 
 
-def _model_key(layer: int, tensor_name: str) -> str:
-    """Default transformers Llama/Qwen-style key format."""
-    return f"model.layers.{layer}.{tensor_name}.weight"
+def _is_access_error(e: Exception) -> bool:
+    """Gated / unauthorised Hub access (as opposed to a network or cache fault)."""
+    from huggingface_hub.errors import GatedRepoError, HfHubHTTPError
+
+    if isinstance(e, GatedRepoError):
+        return True
+    response = getattr(e, "response", None)
+    return isinstance(e, HfHubHTTPError) and getattr(response, "status_code", None) in (401, 403)
+
+
+def _architecture_record(info: _arch.ArchInfo | None) -> dict[str, Any] | None:
+    if info is None:
+        return None
+    return {
+        "family": info.arch.name,
+        "hidden_size": info.hidden_size,
+        "num_layers": info.num_layers,
+        "verified": info.verified,
+    }
 
 
 def _delta_fro_norm(delta: dict[str, torch.Tensor]) -> float:
@@ -368,15 +385,18 @@ def build_random_dir(
 
     new_state = dict(base_state)
     touched: list[str] = []
+    info = config.get("_arch")
+    arch = info.arch if info else _arch.ARCHS["qwen3_5"]  # no info: legacy Qwen3.5 naming
+    index = _arch.index_state_keys(base_state)
     for layer in params["layers"]:
-        for tensor_name in params["tensors"]:
-            key = _model_key(layer, tensor_name)
-            if key not in new_state and tensor_name == "self_attn.o_proj":
-                key = _model_key(layer, "linear_attn.out_proj")
-            if key not in new_state:
-                raise KeyError(f"tensor {key} not found in base model")
+        for key in _arch.select_keys(params["tensors"], layer, index, arch):
             W = new_state[key]
             d_model = W.shape[0]
+            if info is not None and d_model != info.hidden_size:
+                raise ValueError(
+                    f"{key} has {d_model} rows but the residual stream is {info.hidden_size}: "
+                    "random_dir only edits tensors that write into the residual stream"
+                )
             for di in range(params["n_directions"]):
                 d = random_unit_direction(d_model, seed=seed + layer * 1000 + di * 100)
                 W = ablate_direction(W, d, weight=params["weight"])
@@ -417,20 +437,33 @@ def build_abliteration(
 
     refusal = get_refusal_directions(config, zoo_dir, config.get("_config_hash"))
     refusal_dirs = refusal.directions
+    info = config.get("_arch")
+    if info is not None:
+        _arch.validate_directions(refusal_dirs, info)
+    arch = info.arch if info else _arch.ARCHS["qwen3_5"]  # no info: legacy Qwen3.5 naming
     layers = family_cfg.get("layers", list(range(len(refusal_dirs) - 1)))
     components = params["components"]
-    tensor_names: list[str] = []
+    specs: list[str] = []
     if components in ("attn", "both"):
-        tensor_names.append("self_attn.o_proj")
+        specs.append("attn_out")
     if components in ("mlp", "both"):
-        tensor_names.append("mlp.down_proj")
-    layer_tensors = {layer: [_model_key(layer, tn) for tn in tensor_names] for layer in layers}
+        specs.append("mlp_out")
+    index = _arch.index_state_keys(base_state)
+    layer_tensors = {layer: _arch.select_keys(specs, layer, index, arch) for layer in layers}
 
-    for layer, keys in layer_tensors.items():
-        layer_tensors[layer] = [
-            key if key in base_state else key.replace("self_attn.o_proj", "linear_attn.out_proj")
-            for key in keys
-        ]
+    gains = None
+    if family_cfg.get("fold_post_norm"):
+        if info is None or not info.post_norms:
+            raise ValueError(
+                "abliteration.fold_post_norm is set but this model has no post-writer norm "
+                "(sandwich norm); remove the flag or declare architecture.post_norms"
+            )
+        gains = {}
+        for keys in layer_tensors.values():
+            for key in keys:
+                component = _arch.component_of(key, arch)
+                norm_key = _arch.post_norm_key(key, info.post_norms[component])
+                gains[key] = _arch.effective_gain(base_state[norm_key], info.norm_gain)
 
     new_state, touched = heretic_abliteration_kernel(
         base_state,
@@ -441,11 +474,12 @@ def build_abliteration(
         max_weight_position=params["max_weight_position"],
         min_weight=params["min_weight"],
         min_weight_distance=params["min_weight_distance"],
+        gains=gains,
     )
     desc = _descriptor("abliteration", params, seed, config, None, "", touched, None)
     desc.provenance.update(
         {
-            "kernel_variant": KERNEL_VARIANT,
+            "kernel_variant": KERNEL_VARIANT + (FOLD_SUFFIX if gains else ""),
             "refusal_fingerprint": refusal.fingerprint,
             "refusal_manifest": refusal.manifest_path.name,
         }
@@ -819,6 +853,7 @@ def _load_base_state(config: dict[str, Any]) -> dict[str, torch.Tensor]:
         revision=config.get("base_revision", "main"),
         torch_dtype=dtype,
         device_map="cpu",
+        **_arch.remote_code_kwargs(config["base_model"], config),
     )
     state = {k: v.detach().cpu().to(dtype) for k, v in model.state_dict().items()}
     del model
@@ -862,7 +897,16 @@ def build_zoo(
     # Pin the base *before* any id is built: ids, refusal cache, generators and the CPU base copy
     # all use the resolved commit, so upstream drift can never alias an old entry.
     requested_revision = config.get("base_revision", "main")
-    config["base_revision"] = resolve_base_revision(config["base_model"], requested_revision)
+    revision_source = "snapshot"
+    try:
+        config["base_revision"] = resolve_base_revision(config["base_model"], requested_revision)
+    except Exception as e:
+        if not (dry_run and _is_access_error(e)):
+            raise
+        # Gated repo without approval: a dry run only plans ids, so the Hub's commit metadata (readable
+        # without file access) pins the revision; a real build still fails above.
+        config["base_revision"] = metadata_revision(config["base_model"], requested_revision)
+        revision_source = "hub metadata (repo files not accessible: gated)"
     config["_overrides"] = list(overrides or [])
     config["_include_smoke"] = bool(include_smoke)
     git_sha = git_sha or get_git_sha()
@@ -886,11 +930,17 @@ def build_zoo(
     if family and family in policy["skipped_families"]:
         raise MissingFamiliesError(f"requested family {family!r} is not buildable here")
     config["_config_hash"] = cfg_hash
+    info = _arch.load_arch_info(config)
+    if info is not None:
+        _arch.validate_family_config(config, info)
+    config["_arch"] = info
     provenance = {
         **policy,
         "allow_missing_families": bool(allow_missing_families),
         "requested_base_revision": requested_revision,
         "include_smoke": bool(include_smoke),
+        "base_revision_source": revision_source,
+        "architecture": _architecture_record(info),
     }
     if overrides:
         provenance["config_overrides"] = list(overrides)

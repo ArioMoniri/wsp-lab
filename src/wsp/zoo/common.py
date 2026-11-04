@@ -21,6 +21,13 @@ def resolve_base_revision(base_model: str, revision: str | None = None) -> str:
     return snapshot.name
 
 
+def metadata_revision(base_model: str, revision: str | None = None) -> str:
+    """Commit hash of a Hub ref from repo metadata alone (works for gated repos without file access)."""
+    from huggingface_hub import HfApi
+
+    return HfApi().model_info(base_model, revision=revision or "main").sha
+
+
 def get_git_sha() -> str:
     try:
         return subprocess.check_output(

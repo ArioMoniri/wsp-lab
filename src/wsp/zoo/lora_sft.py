@@ -17,22 +17,30 @@ from peft import LoraConfig, get_peft_model
 from transformers import AutoTokenizer
 
 from wsp.schema import EditDescriptor, write_manifest
+from wsp.zoo import arch
 from wsp.zoo.common import compute_adapter_stats, get_git_sha, git_provenance, resolve_base_revision
 
-TARGET_MAP = {
-    "q": "q_proj",
-    "k": "k_proj",
-    "v": "v_proj",
-    "o": "o_proj",
-    "up": "up_proj",
-    "down": "down_proj",
-    "gate": "gate_proj",
-}
+TARGET_MAP = arch.LEGACY_LORA_TARGETS  # shorthand -> module name (Qwen3.5 / Llama naming)
 
 
-def map_targets(targets: list[str]) -> list[str]:
-    """Map shorthand projection names (e.g. 'q', 'up') to model module names ('q_proj', 'up_proj')."""
-    return [TARGET_MAP.get(t, t) for t in targets]
+def lora_arch(base_model: str, revision: str | None) -> arch.Arch:
+    """Architecture whose shorthand-target meaning applies; legacy Qwen3.5 naming if unreadable."""
+    try:
+        text = arch.read_text_config(
+            {"base_model": base_model, "base_revision": revision or "main"}
+        )
+        return arch.arch_info_from_dict(text).arch
+    except Exception:  # noqa: BLE001  (offline / gated: keep the pre-P4b behaviour)
+        return arch.ARCHS["qwen3_5"]
+
+
+def map_targets(targets: list[str], arch_: arch.Arch | None = None) -> list[str]:
+    """Map shorthand projection names (e.g. 'q', 'up') to module names for the model's architecture.
+
+    The default (no architecture) is the legacy Qwen3.5 / Llama mapping. LFM3 maps ``gate/up/down``
+    to ``w1/w3/w2`` so that ``gate`` never hits the attention head gate ``self_attn.gate_proj``.
+    """
+    return arch.lora_target_modules(targets, arch_ or arch.ARCHS["qwen3_5"])
 
 
 def generate(
@@ -67,7 +75,6 @@ def generate(
     lr = float(params.get("lr", 1e-4))
     steps = int(params.get("steps", 100))
     raw_targets = params.get("targets", ["q", "k", "v", "o", "up", "down"])
-    targets = map_targets(raw_targets)
     batch_size = int(params.get("batch_size", 2))
     max_length = int(params.get("max_length", 256))
     dataset_name = params.get("dataset", "gsm8k_train")
@@ -79,7 +86,9 @@ def generate(
     if "texts" not in params and dataset_name not in {"gsm8k_train", "alpaca_cleaned_5k"}:
         raise ValueError(f"unknown SFT dataset: {dataset_name}")
     revision = resolve_base_revision(base_model, params.get("base_revision"))
-    tokenizer = AutoTokenizer.from_pretrained(base_model, revision=revision)
+    targets = map_targets(raw_targets, lora_arch(base_model, revision))
+    remote = arch.remote_code_kwargs(base_model, params)
+    tokenizer = AutoTokenizer.from_pretrained(base_model, revision=revision, **remote)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
@@ -91,6 +100,7 @@ def generate(
             revision=revision,
             dtype=torch.bfloat16,
             device_map="auto" if torch.cuda.is_available() else None,
+            **remote,
         )
 
         lora_config = LoraConfig(

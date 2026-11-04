@@ -178,3 +178,48 @@ def test_sft_seed_reproduces_saved_adapter_and_freezes_base(tmp_path, fake_sft, 
 def test_sft_invalid_parameters_fail_before_loading(params, tmp_path):
     with pytest.raises(ValueError, match="positive"):
         generate("unused", params, 0, tmp_path)
+
+
+def test_map_targets_is_architecture_aware_and_legacy_default_unchanged():
+    from wsp.zoo.arch import ARCHS
+
+    raw = ["q", "k", "v", "o", "gate", "up", "down"]
+    legacy = [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj",
+    ]
+    assert map_targets(raw) == legacy  # default: Qwen3.5 / Llama naming, as in the 0.8B zoo
+    assert map_targets(raw, ARCHS["gemma3"]) == legacy
+    # LFM3: the MLP is feed_forward.w1/w3/w2, and ``gate_proj`` is the attention head gate.
+    assert map_targets(raw, ARCHS["lfm3"]) == [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "w1",
+        "w3",
+        "w2",
+    ]
+
+
+def test_lora_arch_falls_back_to_legacy_when_the_config_is_unreadable(monkeypatch):
+    from wsp.zoo import arch as A
+    from wsp.zoo.lora_sft import lora_arch
+
+    monkeypatch.setattr(
+        A,
+        "read_text_config",
+        lambda cfg: {"model_type": "lfm3", "hidden_size": 8, "num_hidden_layers": 2},
+    )
+    assert lora_arch("LiquidAI/LFM3-1.7B", "r").name == "lfm3"
+
+    def boom(cfg):
+        raise OSError("offline")
+
+    monkeypatch.setattr(A, "read_text_config", boom)
+    assert lora_arch("LiquidAI/LFM3-1.7B", "r").name == "qwen3_5"

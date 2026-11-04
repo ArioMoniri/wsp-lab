@@ -7,7 +7,10 @@ from safetensors.torch import load_file
 
 from wsp.features import DELTA_STAT_NAMES
 from wsp.features.extract import effective_delta, extract_entry, main, run_extract
+from wsp.features.pool import pooled_dims
 from wsp.zoo.apply import lora_dense_delta
+
+STATS, SPECTRUM = pooled_dims()
 
 
 @pytest.fixture(scope="module")
@@ -58,7 +61,7 @@ def test_extract_dense_entry_writes_features_pooled_and_metadata(tmp_path, zoo, 
     t0 = meta["tensors"][0]
     assert feats["stats"][0, 0].item() == pytest.approx(t0["fro_effective"], rel=1e-4)
     pooled = load_file(out / "pooled.safetensors")
-    assert pooled["stats"].shape == (1098,) and pooled["svd"].shape == (120,)
+    assert pooled["stats"].shape == (STATS,) and pooled["svd"].shape == (SPECTRUM,)
     assert pooled["stats"][0].item() > 0  # global group fro mean
 
 
@@ -207,7 +210,8 @@ def test_hybrid_entry_edit_on_every_qwen35_tensor_type_reaches_per_type_pools(tm
     pooled = load_file(tmp_path / "o" / "pooled.safetensors")
     spectrum = pooled["svd"].reshape(len(TYPES), 8)
     used = {classify(n)[0] for n in shapes}
-    assert "other" not in used and used == {t for t in TYPES if t != "other"}
+    # attn_gate (LFM3) and aux (vision tower / MTP head) do not occur in the Qwen3.5 language stack.
+    assert "other" not in used and used == set(TYPES) - {"other", "attn_gate", "aux"}
     assert all(spectrum[TYPES.index(t)].sum() > 0 for t in used)
 
 
@@ -346,7 +350,7 @@ def test_out_manifest_records_identity(tmp_path, zoo, base):
     m = json.loads((tmp_path / "o" / "manifest.json").read_text())
     ident = m["resume_identity"]
     assert ident["threads"] == 1 and ident["torch"] == torch.__version__
-    assert ident["config"]["feature_version"] == 3 and ident["base"].startswith("state:")
+    assert ident["config"]["feature_version"] == 4 and ident["base"].startswith("state:")
     assert m["complete_run"] is True
 
 

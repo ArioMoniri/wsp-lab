@@ -9,9 +9,12 @@ import torch
 from p3_toy import build_toy_zoo, toy_base_state
 
 from wsp.features.extract import run_extract
+from wsp.features.pool import pooled_dims
 from wsp.predictor.data import FeatureDataset, collate_trajectories
 from wsp.predictor.models import build_model, effective_rank
 from wsp.predictor.train import main, run_training
+
+STATS, SPECTRUM = pooled_dims()
 
 
 @pytest.fixture(scope="module")
@@ -33,7 +36,7 @@ def toy(tmp_path_factory):
 
 def test_dataset_layout_chains_padding_and_no_targets(toy, tmp_path):
     ds = FeatureDataset(toy / "features", toy / "evals")
-    assert len(ds) == 12 and ds.stats_dim == 1098 and ds.pooled_dim == 2316
+    assert len(ds) == 12 and ds.stats_dim == STATS and ds.pooled_dim == 2 * STATS + SPECTRUM
     batch = collate_trajectories([ds[i] for i in range(len(ds))])
     assert batch["mask"].sum(1).max() == 3
     assert batch["tokens"].shape[-1] == 1032

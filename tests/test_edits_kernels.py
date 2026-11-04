@@ -149,3 +149,49 @@ def test_zero_weight_layers_are_skipped():
     state = {"a": torch.randn(4, 4), "b": torch.randn(4, 4)}
     _, touched = heretic_abliteration_kernel(state, dirs, {0: ["a"], 1: ["b"]}, 0.0, 1.0, 0, 0.0, 1)
     assert touched == ["a"]  # layer 1 sits at the radius with min_weight 0 -> weight 0 -> skipped
+
+
+def test_fold_post_norm_makes_the_written_vector_orthogonal_after_the_post_norm():
+    """Sandwich norm: the residual receives g * rmsnorm(W x), so ablating d in W's output space leaves
+    a component along d unless the per-channel gain g is folded into the direction (d' ~ g * d)."""
+    g_ = torch.Generator().manual_seed(11)
+    d_model, d_in = 8, 6
+    W = torch.randn(d_model, d_in, generator=g_)
+    x = torch.randn(d_in, 5, generator=g_)
+    gain = torch.rand(d_model, generator=g_) + 0.5
+    d = torch.nn.functional.normalize(torch.randn(d_model, generator=g_), dim=0)
+    dirs = torch.stack([d, d])
+
+    def written(W_):
+        y = W_ @ x
+        z = gain[:, None] * y / y.pow(2).mean(0, keepdim=True).sqrt()
+        return d @ z  # component of what is added to the residual along d
+
+    kw = {
+        "direction_index": 0.0,
+        "max_weight": 1.0,
+        "max_weight_position": 0,
+        "min_weight": 0.0,
+        "min_weight_distance": 1,
+    }
+    plain, _ = heretic_abliteration_kernel({"w": W}, dirs, {0: ["w"]}, **kw)
+    folded, touched = heretic_abliteration_kernel(
+        {"w": W}, dirs, {0: ["w"]}, gains={"w": gain}, **kw
+    )
+    assert touched == ["w"]
+    assert written(folded["w"]).abs().max() < 1e-5
+    assert (
+        written(plain["w"]).abs().max() > 1e-2
+    )  # without folding the gain leaks the direction back
+    assert written(W).abs().max() > 1e-2
+
+
+def test_fold_direction_is_unit_and_identity_for_unit_gain():
+    from wsp.edits.kernels import fold_direction
+
+    d = torch.nn.functional.normalize(torch.randn(8), dim=0)
+    assert torch.allclose(fold_direction(d, torch.ones(8)), d, atol=1e-6)
+    f = fold_direction(d, torch.rand(8) + 0.5)
+    assert f.norm().item() == pytest.approx(1.0, abs=1e-6)
+    with pytest.raises(ValueError, match="zero"):
+        fold_direction(d, torch.zeros(8))

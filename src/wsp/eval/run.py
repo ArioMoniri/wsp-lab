@@ -19,6 +19,7 @@ import yaml
 
 from wsp.eval.subsets import load_items
 from wsp.schema import EvalRecord, aggregate, write_manifest
+from wsp.zoo.arch import remote_code_kwargs
 
 
 def final_text(text):
@@ -143,8 +144,9 @@ class HFRunner:
             else resolve_base_revision(model_id, revision)
         )
         self.model_id = model_id
+        remote = remote_code_kwargs(model_id)
         self.tokenizer = AutoTokenizer.from_pretrained(
-            model_id, revision=revision, padding_side="left"
+            model_id, revision=revision, padding_side="left", **remote
         )
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -154,6 +156,7 @@ class HFRunner:
             dtype=torch.bfloat16,
             device_map="auto",
             attn_implementation="sdpa",
+            **remote,
         ).eval()
         self.revision = revision
         self.edit_id = "base"

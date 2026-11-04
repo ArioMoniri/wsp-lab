@@ -160,3 +160,4 @@
 | 2026-11-04 | multi-model zoo configs | claude_aio_gmail_api/claude-sonnet-5-5 high | done f1325ba (394 tests) — merge after post-zoo extraction (feature_version 4) |
 | 2026-11-04 | Board A feat/multi-model-zoo | codex/gpt-6.1-terra medium | running |
 | 2026-11-04 | perf eval throughput (2nd) | codex/gpt-6.1-sol high | code 66687d4; gated tmux perf-benchmark will measure after post-zoo |
+| 2026-11-04 | Board A feat/multi-model-zoo | codex/gpt-6.1-terra medium | REVISE (1) → fixed by orchestrator, merged |

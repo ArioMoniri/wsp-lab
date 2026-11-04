@@ -10,6 +10,7 @@ direction interpolation (``heretic/modifiers/abliteration.py::Abliteration.modif
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 
 import torch
 
@@ -17,6 +18,9 @@ from wsp.edits.refusal import interpolate_direction
 from wsp.zoo.random_dir import ablate_direction
 
 KERNEL_VARIANT = "heretic2-classic-projected-rownorm-none"
+FOLD_SUFFIX = (
+    "+postnorm-fold"  # appended to KERNEL_VARIANT when a post-writer norm gain is folded in
+)
 
 
 def layer_weight_profile(
@@ -51,6 +55,21 @@ def kernel_direction(
     return interpolate_direction(refusal_dirs, direction_index)
 
 
+def fold_direction(direction: torch.Tensor, gain: torch.Tensor) -> torch.Tensor:
+    """Pre-norm-space direction ``normalize(gain * d)`` for a writer followed by a post-norm.
+
+    The residual receives ``z = gain * rmsnorm(W x)``. ``dᵀ z = 0`` iff ``(gain * d)ᵀ (W x) = 0``, so
+    projecting ``gain * d`` (not ``d``) out of ``W``'s output makes the written vector exactly
+    orthogonal to ``d`` after the post-norm (LFM3 ``post_operator_norm`` / ``post_ffn_norm``, Gemma-3
+    ``post_attention_layernorm`` / ``post_feedforward_layernorm``).
+    """
+    folded = direction.float() * gain.float().to(direction.device)
+    norm = folded.norm()
+    if norm == 0:
+        raise ValueError("post-norm gain is zero along the whole direction; cannot fold")
+    return folded / norm
+
+
 @torch.no_grad()
 def heretic_abliteration_kernel(
     state_dict: dict[str, torch.Tensor],
@@ -61,6 +80,7 @@ def heretic_abliteration_kernel(
     max_weight_position: float,
     min_weight: float,
     min_weight_distance: float,
+    gains: Mapping[str, torch.Tensor] | None = None,
 ) -> tuple[dict[str, torch.Tensor], list[str]]:
     """Apply a Heretic-style per-layer abliteration kernel.
 
@@ -73,6 +93,9 @@ def heretic_abliteration_kernel(
         max_weight_position: layer at which the weight peaks.
         min_weight: floor weight at ``min_weight_distance``.
         min_weight_distance: support radius; layers beyond it are not edited.
+        gains: optional ``{state key: post-writer-norm channel gain}``; for those tensors the direction
+            is folded through the gain (``fold_direction``) so the edit is exact after the post-norm.
+            Tensors absent from the mapping use the plain Heretic direction.
 
     Returns:
         (new_state_dict, touched_tensor_names).
@@ -91,6 +114,7 @@ def heretic_abliteration_kernel(
         for key in layer_tensors[layer]:
             if key not in new_state:
                 raise KeyError(f"tensor {key} not found in state_dict")
-            new_state[key] = ablate_direction(new_state[key], d, weight=profile[layer])
+            d_key = fold_direction(d, gains[key]) if gains and key in gains else d
+            new_state[key] = ablate_direction(new_state[key], d_key, weight=profile[layer])
             touched.append(key)
     return new_state, touched
