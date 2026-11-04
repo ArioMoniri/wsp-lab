@@ -75,3 +75,5 @@
 | 2026-11-04 | fix eval LoRA loading (fix/eval-lora) | codex/gpt-6.1-terra high | running |
 | 2026-11-04 | Board A re-review feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (3 blocking) |
 | 2026-11-04 | zoo REVISE round 3 | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | fix eval LoRA loading | codex/gpt-6.1-terra high | done 28c80a9 |
+| 2026-11-04 | Board A fix/eval-lora | claude_aio_gmail_api/claude-haiku-5-5 high | running |
