@@ -158,7 +158,18 @@ def fake_base(monkeypatch):
     return calls
 
 
-def test_missing_families_fail_unless_allowed_and_nothing_is_loaded(tmp_path, fake_base):
+@pytest.fixture
+def families_missing(monkeypatch):
+    """Make the optional family modules unimportable (sys.modules[name] = None)."""
+    import sys
+
+    for fam in ("heretic_ara", "lora_sft"):
+        monkeypatch.setitem(sys.modules, f"wsp.zoo.{fam}", None)
+
+
+def test_missing_families_fail_unless_allowed_and_nothing_is_loaded(
+    tmp_path, fake_base, families_missing
+):
     from wsp.zoo.build import MissingFamiliesError
 
     cfg = _cfg(tmp_path, FAKE_FAMILIES)
@@ -170,7 +181,7 @@ def test_missing_families_fail_unless_allowed_and_nothing_is_loaded(tmp_path, fa
 
 
 def test_allowed_missing_families_are_recorded_in_header_and_every_chain_edit_json(
-    tmp_path, fake_base
+    tmp_path, fake_base, families_missing
 ):
     cfg = _cfg(tmp_path, FAKE_FAMILIES)
     build_zoo(cfg, allow_missing_families=True, git_sha="s")
@@ -194,7 +205,7 @@ def test_allowed_missing_families_are_recorded_in_header_and_every_chain_edit_js
         assert edit["params"]["inner_family"] == "random_dir"  # only available single family
 
 
-def test_dry_run_reports_same_policy_as_real_build(tmp_path, fake_base):
+def test_dry_run_reports_same_policy_as_real_build(tmp_path, fake_base, families_missing):
     cfg = _cfg(tmp_path, FAKE_FAMILIES)
     build_zoo(cfg, dry_run=True, allow_missing_families=True)
     header = json.loads((tmp_path / "zoo" / "manifest.dryrun.jsonl").read_text().splitlines()[0])

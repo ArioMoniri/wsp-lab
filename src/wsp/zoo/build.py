@@ -2,6 +2,10 @@
 
 CLI:
     python -m wsp.zoo.build --config configs/zoo_qwen3.5-0.8b.yaml [--family F] [--n N] [--dry-run]
+        [--override families.heretic_ara.trials=2 ...]
+
+``heretic_ara`` and ``lora_sft`` entries are produced by those modules' ``generate`` and stored
+as PEFT adapters (``lora/`` instead of ``delta.safetensors``; ``wsp.zoo.apply`` densifies them).
 """
 
 from __future__ import annotations
@@ -12,17 +16,20 @@ import importlib.util
 import json
 import math
 import random
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
 import torch
 import yaml
-from safetensors.torch import load_file, save_file
+from safetensors.torch import save_file
 
 from wsp.edits.kernels import KERNEL_VARIANT, heretic_abliteration_kernel
 from wsp.edits.refusal import get_refusal_directions
 from wsp.schema import EditDescriptor
+from wsp.zoo.apply import entry_has_artifacts, load_entry_delta
 from wsp.zoo.random_dir import ablate_direction, random_unit_direction
 
 
@@ -31,13 +38,39 @@ def load_config(path: Path) -> dict[str, Any]:
         return yaml.safe_load(f)
 
 
-def config_hash(path: Path) -> str:
-    """SHA-256 of the raw config file contents (stable across parses)."""
+def config_hash(path: Path, overrides: list[str] | None = None) -> str:
+    """SHA-256 of the raw config file contents plus any CLI overrides (stable across parses)."""
     h = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
+    if overrides:
+        h.update(json.dumps(list(overrides)).encode())
     return h.hexdigest()
+
+
+def apply_overrides(config: dict[str, Any], overrides: list[str] | None) -> dict[str, Any]:
+    """Apply ``key.path=value`` overrides in place (value parsed as YAML).
+
+    A leading family name is shorthand for ``families.<family>`` (``heretic_ara.trials=2``).
+    Intermediate keys must exist, so typos fail loudly; the leaf may be new.
+    """
+    for item in overrides or []:
+        key, sep, raw = item.partition("=")
+        if not sep or not key:
+            raise ValueError(f"override must look like key.path=value, got {item!r}")
+        path = key.split(".")
+        if path[0] in FAMILY_ORDER:
+            path = ["families", *path]
+        node = config
+        for part in path[:-1]:
+            if not isinstance(node, dict) or part not in node:
+                raise ValueError(f"override {item!r}: no config key {part!r}")
+            node = node[part]
+        if not isinstance(node, dict):
+            raise TypeError(f"override {item!r}: {'.'.join(path[:-1])} is not a mapping")
+        node[path[-1]] = yaml.safe_load(raw)
+    return config
 
 
 def get_git_sha() -> str:
@@ -58,9 +91,12 @@ def sample_param(rng: random.Random, spec: dict[str, Any]) -> Any:
         {min: x, max: y}       -> uniform float in [x, y]
         {choices: [a, b, c]}   -> uniform choice
         {log_min: x, log_max: y} -> uniform float in log space
+        [a, b, c] -> uniform choice;  a bare scalar -> that value
     """
     if isinstance(spec, list):
         return rng.choice(spec)
+    if not isinstance(spec, dict):  # fixed value (e.g. from a --override)
+        return spec
     if "choices" in spec:
         return rng.choice(spec["choices"])
     if "log_min" in spec and "log_max" in spec:
@@ -75,6 +111,13 @@ def sample_param(rng: random.Random, spec: dict[str, Any]) -> Any:
 FAMILY_ORDER = ["random_dir", "abliteration", "heretic_ara", "lora_sft", "task_vector", "chain"]
 SINGLE_FAMILIES = ["random_dir", "abliteration", "heretic_ara", "lora_sft"]
 OPTIONAL_MODULES = ("heretic_ara", "lora_sft")
+LORA_FAMILIES = ("heretic_ara", "lora_sft")  # generated via wsp.zoo.<family>.generate -> lora/
+# Optional family-config keys forwarded verbatim to ``generate`` when present.
+GENERATE_PASSTHROUGH = {
+    "heretic_ara": ("kl_divergence_target", "lora_rank", "batch_size", "max_response_length"),
+    "lora_sft": ("targets", "batch_size", "max_length"),
+}
+STAGING_DIR = ".staging"
 
 
 class MissingFamiliesError(ValueError):
@@ -101,8 +144,7 @@ def family_policy(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _has_artifacts(zoo_dir: Path, entry_id: str) -> bool:
-    d = zoo_dir / entry_id
-    return (d / "edit.json").exists() and (d / "delta.safetensors").exists()
+    return entry_has_artifacts(zoo_dir / entry_id)
 
 
 def _load_manifest(
@@ -294,50 +336,144 @@ def build_abliteration(
     return [(desc, new_state, touched)]
 
 
-def build_heretic_ara(
-    config: dict[str, Any],
-    family_cfg: dict[str, Any],
-    seed: int,
-    base_state: dict[str, torch.Tensor],
-    dry_run: bool = False,
-) -> list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]]:
-    rng = random.Random(seed)
+def sample_heretic_ara_params(rng: random.Random, family_cfg: dict[str, Any]) -> dict[str, Any]:
     params = {
         "preserve_good_behavior_weight": sample_param(
             rng, family_cfg["preserve_good_behavior_weight"]
         ),
-        "trials": int(family_cfg.get("trials", 40)),
+        "trials": int(sample_param(rng, family_cfg.get("trials", 40))),
     }
-    if dry_run:
-        return [(_descriptor("heretic_ara", params, seed, config, None, "", [], None), {}, [])]
-    try:
-        import wsp.zoo.heretic_ara as ha
-    except ImportError as e:
-        raise NotImplementedError("heretic_ara edit family is not yet implemented") from e
-    return ha.build_heretic_ara(config, family_cfg, seed, base_state)
+    return _with_lora_extras("heretic_ara", params, family_cfg)
 
 
-def build_lora_sft(
-    config: dict[str, Any],
-    family_cfg: dict[str, Any],
-    seed: int,
-    base_state: dict[str, torch.Tensor],
-    dry_run: bool = False,
-) -> list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]]:
-    rng = random.Random(seed)
+def sample_lora_sft_params(rng: random.Random, family_cfg: dict[str, Any]) -> dict[str, Any]:
     params = {
         "dataset": sample_param(rng, family_cfg["datasets"]),
         "rank": int(sample_param(rng, family_cfg["rank"])),
         "lr": float(sample_param(rng, family_cfg["lr"])),
         "steps": int(sample_param(rng, family_cfg["steps"])),
     }
-    if dry_run:
-        return [(_descriptor("lora_sft", params, seed, config, None, "", [], None), {}, [])]
+    return _with_lora_extras("lora_sft", params, family_cfg)
+
+
+def _with_lora_extras(family: str, params: dict[str, Any], family_cfg: dict[str, Any]):
+    for key in GENERATE_PASSTHROUGH[family]:
+        if key in family_cfg:
+            params[key] = family_cfg[key]
+    params["delta_format"] = "lora"  # part of the id, so dry-run ids equal real ids
+    return params
+
+
+_LORA_SAMPLERS = {"heretic_ara": sample_heretic_ara_params, "lora_sft": sample_lora_sft_params}
+
+
+def _run_generate(
+    family: str, config: dict[str, Any], params: dict[str, Any], seed: int, out_dir: Path
+) -> EditDescriptor:
+    """Call ``wsp.zoo.<family>.generate`` (imported lazily; it pulls in heretic/peft/datasets)."""
     try:
-        import wsp.zoo.lora_sft as lora
+        module = importlib.import_module(f"wsp.zoo.{family}")
     except ImportError as e:
-        raise NotImplementedError("lora_sft edit family is not yet implemented") from e
-    return lora.build_lora_sft(config, family_cfg, seed, base_state)
+        raise RuntimeError(f"edit family {family!r} cannot be imported: {e}") from e
+    gen_params = {k: v for k, v in params.items() if k != "delta_format"}
+    gen_params["base_revision"] = config.get("base_revision", "main")
+    return module.generate(config["base_model"], gen_params, seed, out_dir)
+
+
+def _lora_descriptor(
+    family: str,
+    config: dict[str, Any],
+    params: dict[str, Any],
+    seed: int,
+    generated: EditDescriptor,
+    parent_id: str | None = None,
+) -> EditDescriptor:
+    """Builder-level descriptor (id = planned id) carrying what ``generate`` measured."""
+    desc = _descriptor(
+        family,
+        params,
+        seed,
+        config,
+        parent_id,
+        generated.git_sha,
+        generated.touched_tensors,
+        generated.delta_fro_norm,
+    )
+    desc.provenance.update(
+        {
+            "delta_format": "lora",
+            "generator_edit_id": generated.id,
+            "resolved_base_revision": generated.base_revision,
+            "generator_git_dirty": generated.params.get("git_dirty"),
+            "generator_git_tree": generated.params.get("git_tree"),
+        }
+    )
+    return desc
+
+
+def build_lora_entry(
+    family: str,
+    config: dict[str, Any],
+    family_cfg: dict[str, Any],
+    seed: int,
+    zoo_dir: Path,
+    git_sha: str,
+    extra_provenance: dict[str, Any],
+) -> EditDescriptor:
+    """Generate one LoRA-format entry directly into ``zoo_dir/<id>/`` (edit.json + lora/ + logs).
+
+    Generation happens in a staging dir and is moved into place only on success; an entry that
+    already has artifacts is reused, since heretic_ara/lora_sft runs are expensive.
+    """
+    params = _LORA_SAMPLERS[family](random.Random(seed), family_cfg)
+    planned = _descriptor(family, params, seed, config, None, git_sha)
+    final_dir = zoo_dir / planned.id
+    if entry_has_artifacts(final_dir):
+        return EditDescriptor.from_json((final_dir / "edit.json").read_text())
+
+    stage = zoo_dir / STAGING_DIR / planned.id
+    shutil.rmtree(stage, ignore_errors=True)
+    stage.parent.mkdir(parents=True, exist_ok=True)
+    generated = _run_generate(family, config, params, seed, stage)
+    desc = _lora_descriptor(family, config, params, seed, generated)
+    desc.git_sha = git_sha
+    desc.provenance.update(extra_provenance)
+    if (stage / "edit.json").exists():
+        (stage / "edit.json").rename(stage / "generator_edit.json")
+    (stage / "edit.json").write_text(desc.to_json())
+    shutil.rmtree(final_dir, ignore_errors=True)
+    shutil.move(str(stage), str(final_dir))
+    return desc
+
+
+def _build_lora_in_memory(
+    family: str,
+    config: dict[str, Any],
+    family_cfg: dict[str, Any],
+    seed: int,
+    base_state: dict[str, torch.Tensor],
+    zoo_dir: Path,
+    dry_run: bool,
+) -> list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]]:
+    """Chain-step variant: generate, densify the adapter, add it onto ``base_state``.
+
+    ``generate`` always trains/optimises against the *base checkpoint*, so inside a chain the
+    step's edit is the base-relative delta added to the accumulated state (task-arithmetic style),
+    not an edit optimised against the accumulated model.
+    """
+    params = _LORA_SAMPLERS[family](random.Random(seed), family_cfg)
+    if dry_run:
+        return [(_descriptor(family, params, seed, config, None, "", [], None), {}, [])]
+    staging = zoo_dir / STAGING_DIR
+    staging.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=staging) as tmp:
+        generated = _run_generate(family, config, params, seed, Path(tmp))
+        delta = load_entry_delta(Path(tmp), base_state.keys())
+    new_state = dict(base_state)
+    for key, dv in delta.items():
+        new_state[key] = (new_state[key].float() + dv).to(new_state[key].dtype)
+    desc = _lora_descriptor(family, config, params, seed, generated)
+    return [(desc, new_state, sorted(delta))]
 
 
 def build_task_vector(
@@ -369,12 +505,13 @@ def build_task_vector(
         desc.provenance["parent_candidates_sha256"] = pool_digest
         return [(desc, {}, [])]
 
-    parent_delta = load_file(zoo_dir / parent_id / "delta.safetensors")
+    parent_delta = load_entry_delta(zoo_dir / parent_id, base_state.keys())
     new_state = dict(base_state)
     touched: list[str] = []
     for key, dv in parent_delta.items():
         if key in new_state:
-            new_state[key] = new_state[key] + params["scale"] * dv
+            cur = new_state[key]
+            new_state[key] = (cur.float() + params["scale"] * dv.float()).to(cur.dtype)
         else:
             new_state[key] = params["scale"] * dv
         touched.append(key)
@@ -397,10 +534,10 @@ def _build_single_family(
         return build_random_dir(config, family_cfg, seed, base_state, dry_run=dry_run)
     if family == "abliteration":
         return build_abliteration(config, family_cfg, seed, base_state, zoo_dir, dry_run=dry_run)
-    if family == "heretic_ara":
-        return build_heretic_ara(config, family_cfg, seed, base_state, dry_run=dry_run)
-    if family == "lora_sft":
-        return build_lora_sft(config, family_cfg, seed, base_state, dry_run=dry_run)
+    if family in LORA_FAMILIES:
+        return _build_lora_in_memory(
+            family, config, family_cfg, seed, base_state, zoo_dir, dry_run=dry_run
+        )
     if family == "task_vector":
         return build_task_vector(
             config, family_cfg, seed, base_state, zoo_dir, manifest, dry_run=dry_run
@@ -497,6 +634,7 @@ def build_zoo(
     dry_run: bool = False,
     git_sha: str | None = None,
     allow_missing_families: bool = False,
+    overrides: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Build (or dry-run) the edit zoo described by ``config_path``.
 
@@ -509,13 +647,15 @@ def build_zoo(
         git_sha: override the git SHA recorded in the manifest.
         allow_missing_families: record and skip configured families that are not implemented
             (default: fail).
+        overrides: ``key.path=value`` config overrides (e.g. ``heretic_ara.trials=2``); they are
+            folded into the config hash and recorded in the header and every edit's provenance.
 
     Returns:
         The manifest as a list of line dicts.
     """
     config_path = Path(config_path)
-    config = load_config(config_path)
-    cfg_hash = config_hash(config_path)
+    config = apply_overrides(load_config(config_path), overrides)
+    cfg_hash = config_hash(config_path, overrides)
     git_sha = git_sha or get_git_sha()
     zoo_dir = Path(config["out_dir"])
     zoo_dir.mkdir(parents=True, exist_ok=True)
@@ -538,9 +678,13 @@ def build_zoo(
         raise MissingFamiliesError(f"requested family {family!r} is not buildable here")
     config["_config_hash"] = cfg_hash
     provenance = {**policy, "allow_missing_families": bool(allow_missing_families)}
+    if overrides:
+        provenance["config_overrides"] = list(overrides)
+    families = [family] if family else policy["families_available"]
 
     base_state: dict[str, torch.Tensor] = {}
-    if not dry_run:
+    # LoRA families load their own model in generate(); skip the CPU copy if only they are built.
+    if not dry_run and any(f not in LORA_FAMILIES for f in families):
         base_state = _load_base_state(config)
 
     # Dry runs plan into a separate file and never touch the production manifest.
@@ -561,14 +705,16 @@ def build_zoo(
         _append_manifest(manifest_path, header)
 
     dtype = getattr(torch, config.get("dtype", "bfloat16"))
-    families = [family] if family else policy["families_available"]
 
     for fam in families:
         family_cfg = config["families"][fam]
         count = n if n is not None else int(family_cfg.get("n", 0))
         for i in range(count):
             seed = int(config["seed"]) + i
-            if fam == "chain":
+            if fam in LORA_FAMILIES and not dry_run:
+                desc = build_lora_entry(fam, config, family_cfg, seed, zoo_dir, git_sha, provenance)
+                entries = [(desc, None, [])]
+            elif fam == "chain":
                 entries = build_chain(
                     config, family_cfg, seed, base_state, zoo_dir, manifest, dry_run=dry_run
                 )
@@ -577,9 +723,10 @@ def build_zoo(
                     fam, config, family_cfg, seed, base_state, zoo_dir, manifest, dry_run=dry_run
                 )
             for desc, new_state, touched in entries:
-                desc.git_sha = git_sha
-                desc.provenance.update(provenance)
-                if not dry_run:
+                if new_state is not None:  # LoRA entries are finalised in build_lora_entry
+                    desc.git_sha = git_sha
+                    desc.provenance.update(provenance)
+                if not dry_run and new_state is not None:
                     delta = {
                         k: (new_state[k] - base_state[k]).to(dtype)
                         for k in touched
@@ -594,6 +741,8 @@ def build_zoo(
                     "config_hash": cfg_hash,
                     "git_sha": git_sha,
                 }
+                if desc.params.get("delta_format") == "lora":
+                    line["delta_format"] = "lora"
                 if "refusal_fingerprint" in desc.provenance:
                     line["refusal_fingerprint"] = desc.provenance["refusal_fingerprint"]
                 if not any(m["id"] == line["id"] for m in manifest):  # idempotent registration
@@ -609,6 +758,13 @@ def main() -> None:
     parser.add_argument("--n", type=int, default=None, help="override number of edits")
     parser.add_argument("--dry-run", action="store_true", help="plan into manifest.dryrun.jsonl")
     parser.add_argument(
+        "--override",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="override a config value, e.g. heretic_ara.trials=2 or lora_sft.steps=5 (repeatable)",
+    )
+    parser.add_argument(
         "--allow-missing-families",
         action="store_true",
         help="skip (and record) configured families that are not implemented instead of failing",
@@ -620,6 +776,7 @@ def main() -> None:
         n=args.n,
         dry_run=args.dry_run,
         allow_missing_families=args.allow_missing_families,
+        overrides=args.override,
     )
 
 
