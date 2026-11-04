@@ -6,4 +6,5 @@ curl -LsSf https://astral.sh/uv/install.sh | sh; export PATH=$HOME/.local/bin:$P
 mkdir -p ~/projects && cd ~/projects
 [ -d wsp-lab ] || git clone "$1" wsp-lab; cd wsp-lab
 uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -e ".[dev,serve]"
-echo "bootstrap done; run jobs under tmux and rsync data/evals data/features back to the AWS server"
+mkdir -p ~/.config/wsp && echo "put HF_TOKEN and LAMBDA_API_KEY into ~/.config/wsp/env (chmod 600) then: scripts/hf_sync.sh pull zoo"
+echo "bootstrap done; run jobs under tmux; push results with scripts/hf_sync.sh push evals|runs (the AWS server pulls from HF)"

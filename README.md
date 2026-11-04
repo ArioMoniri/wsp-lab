@@ -34,6 +34,7 @@ python -m wsp.eval.run  --config configs/eval_cheap.yaml --zoo data/zoo/qwen3.5-
 python -m wsp.predictor.train --config configs/predictor_ssm.yaml
 ```
 CI runs on a self-hosted GitLab runner with GPU passthrough (`.gitlab-ci.yml`); GitHub Actions is not used.
+Large artefacts (edit deltas, LoRA adapters, eval records) are stored in private Hugging Face datasets and synced with `scripts/hf_sync.sh`; nothing under `data/` is tracked in git.
 
 ## Status
 P0 infrastructure complete (CI on self-hosted GPU runner, Mamba-2 kernels built for Blackwell); P2 eval battery merged; P1 edit zoo in final review. See `docs/ROADMAP.md` and `docs/RESULTS.md`.
