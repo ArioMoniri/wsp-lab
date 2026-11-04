@@ -509,3 +509,12 @@ def test_empty_ancestry_fold_is_logged_and_skipped(toy, monkeypatch, caplog, tmp
     )
     assert len(result["folds"]) == 2
     assert result["split_audit"][0]["skipped_reason"]
+    assert result["skipped_folds"] == [result["split_audit"][0]]
+    import json
+    import logging
+
+    stored = json.loads((tmp_path / "run/metrics.json").read_text())
+    assert stored["skipped_folds"] == result["skipped_folds"]
+    assert any(
+        r.levelno == logging.WARNING and "empty training fold" in r.message for r in caplog.records
+    )

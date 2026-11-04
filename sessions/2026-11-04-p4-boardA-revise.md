@@ -111,3 +111,24 @@ After dataset: 53 matched / 225 missing; family training exits on empty fold aft
 ancestry purge. No runtime values were guessed to increase matching. Existing
 script executable bit corrected for repository-wide ruff EXE001.
 Final CPU suite: 420 passed / 8 deselected (24.42 s); repository-wide ruff clean.
+
+
+### Implementation follow-up: runtime honesty, clustered reliability, historical references
+
+- Read Board A re-review from canonical docs (not present in this branch at start).
+- Test-first: 11 new behavioral checks failed before implementation; historical
+  identity reconstruction also had a separate red test. Final CPU suite: 435 passed,
+  8 deselected, approximately 25 s; ruff checks/format pass. No GPU eval was run.
+- Current-environment provenance is inferred, H1 transformers label corrected;
+  archives preserve this revision's starting records. Independent score verifier:
+  337 records, zero differences. Backfill dry run is idempotent.
+- Strict pairs plus explicit actual-batch override; nested edit/item bootstrap,
+  contiguous WikiText blocks/log-ratio display; shared reference resampling.
+  Host-by-edit qualification remains explicitly blocked.
+- Registered original base and control copies; recovered old base item identities
+  from exact archived source/config/counts with inferred provenance, not retest data.
+  Snapshot: matched 240, missing 40, inferred-runtime targets 240 (see D2 table).
+- The remaining abliteration has a third exact source hash (git 49c83214), unlike
+  the original base (git 846ff842); no score-neutral mapping or substituted base.
+- Empty-fold WARNING captured and skipped_folds persisted to metrics.json.
+- All runs finished under two minutes; no long job or tmux run required.

@@ -8,6 +8,7 @@ Control copies require records.<copy-label>.jsonl, or the same run as eval.json.
 import argparse
 import json
 import re
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -39,7 +40,7 @@ def default_map():
     }
 
 
-def backfill(path, payload, devices, local, remote, now, host=None):
+def backfill(path, payload, devices, local, remote, now, host=None, historical_items=None):
     out = payload.copy()
     label = out.pop("eval_host", host or "local")
     device = (
@@ -47,6 +48,18 @@ def backfill(path, payload, devices, local, remote, now, host=None):
     )  # Unknown hosts must be mapped explicitly, never guessed.
     out["eval_device_id"] = device
     runtime = local if device == devices.get("local") else remote.get(device, {})
+    local_inferred = (
+        set(payload.get("metadata_backfill_inferred", []))
+        if device == devices.get("local")
+        else set()
+    )
+    if device == devices.get("local"):
+        local_inferred.update(
+            k
+            for k in RUNTIME_KEYS
+            if payload.get(k) is None
+            or ("metadata_backfill" in payload and payload.get("metadata_backfill_schema", 1) < 2)
+        )
     for key in RUNTIME_KEYS:
         if out.get(key) is None:
             out[key] = runtime.get(key)
@@ -64,7 +77,7 @@ def backfill(path, payload, devices, local, remote, now, host=None):
             other = json.loads(main.read_text())
             if payload.get("run_id") and payload["run_id"] == other.get("run_id"):
                 records = path.parent / "records.jsonl"
-    hashes = {"item_id_hash": None, "item_order_hash": None}
+    hashes = {key: payload.get(key) for key in ("item_id_hash", "item_order_hash")}
     if records.exists():
         rows = [
             SimpleNamespace(**json.loads(line))
@@ -73,6 +86,20 @@ def backfill(path, payload, devices, local, remote, now, host=None):
         ]
         if rows:
             hashes = item_hashes(rows)
+    evidence = (historical_items or {}).get(payload.get("run_id"))
+    reconstructed = False
+    if not records.exists() and evidence:
+        from collections import Counter
+
+        if evidence["source_hash"] != payload.get("source_hash"):
+            raise ValueError("historical item evidence source mismatch")
+        if dict(Counter(b for b, _ in evidence["items"])) != payload.get("counts"):
+            raise ValueError("historical item evidence count mismatch")
+        hashes = item_hashes(
+            [SimpleNamespace(benchmark=b, item_id=i) for b, i in evidence["items"]]
+        )
+        out["metadata_backfill_item_source"] = evidence["source"]
+        reconstructed = True
     out.update(hashes)
     provenance = dict(payload.get("metadata_backfill_provenance", {}))
     for key in REFERENCE_KEYS:
@@ -80,14 +107,28 @@ def backfill(path, payload, devices, local, remote, now, host=None):
             provenance[key] = runtime.get("provenance", {}).get(key, "transcribed")
         elif known(out.get(key)):
             provenance.setdefault(key, "transcribed")
+    if reconstructed:
+        for key in hashes:
+            provenance[key] = "inferred"
+    for key in local_inferred:
+        provenance[key] = "inferred"
+    if local_inferred:
+        out["metadata_backfill_source"] = "current environment, not contemporaneous"
     missing = [key for key in REFERENCE_KEYS if not known(out.get(key))]
     inferred = sorted(k for k in REFERENCE_KEYS if provenance.get(k) == "inferred")
+    out["metadata_backfill_schema"] = 2
     out["metadata_backfill_provenance"] = provenance
     out["metadata_backfill_inferred"] = inferred
-    out["metadata_backfill"] = "partial" if missing else "partial-inferred" if inferred else "full"
+    out["metadata_backfill"] = "partial-inferred" if inferred else "partial" if missing else "full"
     out["metadata_backfill_missing"] = missing
     out["metadata_backfill_utc"] = payload.get("metadata_backfill_utc", now)
     return out
+
+
+def archive(path):
+    original = path.with_name(path.name + ".orig")
+    if path.exists() and not original.exists():
+        shutil.copy2(path, original)
 
 
 def write(path, value):
@@ -103,6 +144,7 @@ def main():
     parser.add_argument("--zoo", type=Path, default=Path("data/zoo/qwen3.5-0.8b"))
     parser.add_argument("--device-map", type=Path, default=Path.home() / ".config/wsp/device_map")
     parser.add_argument("--runtime-json", type=Path)
+    parser.add_argument("--historical-items-json", type=Path)
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
     devices = json.loads(args.device_map.read_text()) if args.device_map.exists() else default_map()
@@ -122,6 +164,9 @@ def main():
         if args.runtime_json
         else {d: {"torch_version": "2.11.0+cu128"} for h, d in devices.items() if h != "local"}
     )
+    historical = (
+        json.loads(args.historical_items_json.read_text()) if args.historical_items_json else {}
+    )
     now = datetime.now(UTC).isoformat()
     files = sorted(set(args.evals.rglob("eval*.json")) | set(args.zoo.glob("*/eval*.json")))
     changed = partial = 0
@@ -131,19 +176,40 @@ def main():
         host = (
             path.parent.name.removeprefix("base-") if path.parent.name.startswith("base-") else None
         )
-        new = backfill(path, old, devices, local, remote, now, host)
+        new = backfill(path, old, devices, local, remote, now, host, historical)
         results[path.resolve()] = new
         partial += new.get("metadata_backfill") != "full"
+        if args.apply:
+            archive(path)
         if new != old:
             changed += 1
             if args.apply:
                 write(path, new)
-        if host:
-            destination = args.evals / "base/devices" / new["eval_device_id"] / new["run_id"]
+        if host or (path.name != "eval.json" and "devices" not in path.parts):
+            destination = (
+                args.evals
+                / ("base" if host else path.parent.name)
+                / "devices"
+                / new["eval_device_id"]
+                / new["run_id"]
+            )
             if args.apply:
-                write(destination / "eval.json", new)
+                target_eval = destination / "eval.json"
+                archive(target_eval)
+                if not target_eval.exists():
+                    write(target_eval.with_name("eval.json.orig"), old)
+                write(target_eval, new)
                 for name in ("records.jsonl", "manifest.json"):
                     source = path.parent / name
+                    if name == "records.jsonl" and path.name != "eval.json":
+                        source = path.with_name(
+                            path.name.replace("eval.", "records.").replace(".json", ".jsonl")
+                        )
+                        # Same run ID is the only safe fallback for item records.
+                        if not source.exists() and (path.parent / "eval.json").exists():
+                            main = json.loads((path.parent / "eval.json").read_text())
+                            if main.get("run_id") == new.get("run_id"):
+                                source = path.parent / name
                     target = destination / name
                     if source.exists() and not target.exists():
                         target.symlink_to(source.resolve())
@@ -176,6 +242,8 @@ def main():
                         "metadata_backfill_missing",
                         "metadata_backfill_inferred",
                         "metadata_backfill_provenance",
+                        "metadata_backfill_source",
+                        "metadata_backfill_schema",
                     }
                 }
                 row.pop("eval_host", None)

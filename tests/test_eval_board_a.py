@@ -19,18 +19,21 @@ def test_component_rates_and_keyword_aliases():
 
 
 def test_repeat_statistics_keep_negative_icc_and_constant_undefined():
-    from wsp.eval.repeats import compare_pairs
+    from wsp.eval.repeats import REFERENCE_KEYS, compare_pairs
 
     left = [{"math500": x, "counts": {"math500": 25}, "batch_size": 32} for x in (0.0, 0.5, 1.0)]
     right = [{"math500": x, "counts": {"math500": 25}, "batch_size": 16} for x in (1.0, 0.5, 0.0)]
     for panel in (left, right):
         for i, row in enumerate(panel):
+            row.update({k: "same" for k in REFERENCE_KEYS if k != "batch_size"})
             row.update(edit_id=str(i), item_id_hash="items", item_order_hash="order")
-    result = compare_pairs(left, right, bootstrap=100)
+    result = compare_pairs(left, right, bootstrap=100, allow_batch_mismatch=True)
     assert result["math500"]["spearman"] == -1
     assert result["math500"]["icc_2_1"] < 0
     assert result["math500"]["batch_size_mismatch"]
-    assert math.isnan(compare_pairs(left[:1], right[:1])["math500"]["spearman"])
+    assert math.isnan(
+        compare_pairs(left[:1], right[:1], allow_batch_mismatch=True)["math500"]["spearman"]
+    )
 
 
 def test_metadata_hashes_order_and_private_device(tmp_path, monkeypatch):
@@ -65,6 +68,7 @@ def test_reference_never_falls_back_across_device_or_missing_metadata():
             "item_id_hash",
             "generation",
             "model_revision",
+            "seed",
             "source_hash",
             "config_hash",
         ),

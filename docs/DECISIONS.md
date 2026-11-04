@@ -155,3 +155,64 @@ single-step labels; missing matched references remain missing, never silently su
 match or `None`, including for legacy unknowns. Batch results expose `base_run_id`,
 `matched_base_missing` and `entry_hashes`; an OOM batch mismatch leaves the base missing.
 Successor callers must supply predecessor candidates rather than base candidates.
+
+
+## D2 addendum (4 Nov 2026) — Board A runtime and reference corrections
+
+The orchestrator reports that the 20:30 UTC `--force` retest produced bit-identical
+scores on base plus ten controls across the old and new source trees (11 records).
+This is supporting evidence, **not** a reference matching rule. Source hashes remain
+unchanged and exact matching is required. The original base run
+`20261104-084939-f912077b` is registered under `base/devices/H0/<run>/`; control
+copies are registered under `<edit>/devices/<device>/<run>/` without replacing primary scores.
+
+The original base lacked item hashes and a preserved item sidecar. Its clean git
+revision `846ff8423b9c67a9d9a9bfa3c1a46ec8f3feb2e5` reproduces source hash
+`d7cece35fad962816421132974855a3d8b127f8aa596db485f334750a8a837b7` exactly.
+`reconstruct_historical_items.py` recovers the ordered 458 identities from that
+archived tree's subset files, positional-ID evaluator paths, effective config and
+complete counts. These hashes are explicitly inferred; no retest records or
+scores are used. Evidence is stored in `data/evals/qwen3.5-0.8b/historical-item-identities.json`.
+This resolves the 18 random-direction source mismatches. Contrary to the initial
+19-entry diagnosis, abliteration `4463696a4c62e8f3`, run `20261104-080338-4d5632a1`,
+uses a third source tree: `49c83214bd08cb76783cd9539ea88868c5bd074c`, independently
+hashed to `560abb41c7b1f2ce3b690532666d36c8389a28e85577f78274bee7437bdc595a`.
+No matching base exists for that tree; retain it as missing.
+
+Local fields reconstructed from today's runtime are inferred with source
+"current environment, not contemporaneous". H1 transformers is inferred too;
+there is no new contemporaneous evidence establishing its installed version.
+`partial-inferred` records list inferred keys and separately list missing keys.
+The post-correction feature dataset has 240 matched, 40 missing and 240
+`targets_with_inferred_runtime`. All matched targets currently depend on inference;
+excluding inferred pairs leaves no qualified target panel in this snapshot.
+
+| Family | Matched | Missing |
+| --- | ---: | ---: |
+| abliteration | 84 | 2 |
+| chain | 13 | 37 |
+| lora_sft | 59 | 1 |
+| random_dir | 54 | 0 |
+| task_vector | 30 | 0 |
+
+Missing: 37 unevaluated predecessors, two H2 actual-batch mismatches and the
+third-tree abliteration. Counts describe this live snapshot, not frozen cohort sizes.
+
+Reliability pairs now reject incompatible known runtime/config/source/seed and
+actual batch (the explicit `--allow-batch-mismatch` diagnostic override records the
+mismatch). Host IDs may differ; other compatibility fields remain strict. Item
+uncertainty resamples edit clusters then paired items; WikiText uses contiguous
+nonoverlapping length-two window blocks on log-ppl, with exponentiated ratio
+intervals for display. Matched-reference delta uncertainty resamples shared bases
+once per replicate, preserving their covariance across edits. The preregistered
+host-by-edit qualification analysis remains blocked, and no panel qualification
+is claimed.
+
+Before this revision's backfill each existing record was archived as `.orig` if
+absent. `verify_backfill_scores.py` checks every non-metadata key (including counts
+and nested scores), missing archives and missing current records. It found zero
+score differences across 337 unique archives. These archives establish preservation
+for this revision, not retroactively for backfills performed before archives existed.
+Empty ancestry folds emit WARNING on stderr through Python logging and appear in
+`skipped_folds` in metrics and manifest; the CPU test captures that warning and
+checks the persisted metrics.

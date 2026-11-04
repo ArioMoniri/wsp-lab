@@ -6,6 +6,7 @@ import pytest
 from wsp.eval.repeats import compare_pairs, matched_reference
 
 KEYS = [
+    "seed",
     "eval_device_id",
     "gpu_class",
     "engine",
@@ -132,3 +133,78 @@ def test_reliability_matched_delta_panel_and_base_separation():
     right[0]["item_order_hash"] = "different"
     with pytest.raises(ValueError, match="item_order_hash"):
         compare_pairs(left, right, bootstrap=20)
+
+
+@pytest.mark.parametrize(
+    "key", ["torch_version", "config_hash", "generation", "seed", "batch_size"]
+)
+def test_pair_rejects_incompatible_conditions(key):
+    a = known(edit_id="a", seed=0, math500=0.5, counts={"math500": 2})
+    with pytest.raises(ValueError, match=key):
+        compare_pairs([a], [a | {key: "different"}], bootstrap=10)
+    if key == "batch_size":
+        assert compare_pairs([a], [a | {key: 16}], bootstrap=10, allow_batch_mismatch=True)[
+            "math500"
+        ]["batch_size_mismatch"]
+
+
+def test_paired_bootstrap_resamples_edits_equally_not_pooled_items():
+    from wsp.eval.repeats import paired_draws
+
+    # Edit 1 has one +1 difference; edit 2 has three -1 differences.
+    # Two-edit resamples yield only -1, 0, +1 with equal edit weighting.
+    draws = paired_draws([np.array([1.0]), np.array([-1.0, -1.0, -1.0])], 1000, 0)
+    assert set(draws) == {-1.0, 0.0, 1.0}
+    assert np.mean(draws == 0) == pytest.approx(0.5, abs=0.05)
+
+
+def test_shared_reference_is_resampled_once_per_draw():
+    from wsp.eval.repeats import paired_draws
+
+    # Identical edit differences, shared uncertain reference: its variance must
+    # not shrink as the number of edits grows (or cancel from frozen bases).
+    base = np.array([-1.0, 1.0])
+    one = paired_draws([np.zeros(2)], 1000, 5, references=[base])
+    many = paired_draws([np.zeros(2)] * 20, 1000, 5, references=[base] * 20)
+    assert np.std(one) > 0.6
+    assert np.std(many) == pytest.approx(np.std(one), rel=0.1)
+
+
+def test_wikitext_bootstrap_uses_contiguous_blocks():
+    from wsp.eval.repeats import paired_draws
+
+    # Nonoverlapping contiguous length-2 blocks each have mean zero.
+    draws = paired_draws([np.array([-1.0, 1.0, -1.0, 1.0])], 30, 0, block_size=2)
+    assert np.all(draws == 0)
+
+
+def test_delta_item_uncertainty_uses_shared_base_and_ppl_display(tmp_path):
+    def record(name, values, edit_id):
+        dest = tmp_path / name
+        dest.mkdir()
+        (dest / "records.jsonl").write_text(
+            "".join(
+                json.dumps({"benchmark": "wikitext_ppl", "item_id": str(i), "correct": np.exp(v)})
+                + "\n"
+                for i, v in enumerate(values)
+            )
+        )
+        return known(
+            edit_id=edit_id,
+            path=str(dest),
+            run_id=name,
+            wikitext_ppl=np.exp(np.mean(values)),
+            counts={"wikitext_ppl": 4},
+        )
+
+    a = record("a", [1, 1, 1, 1], "x")
+    b = record("b", [1, 1, 1, 1], "x")
+    ra = record("ra", [1, 1, 1, 1], "base")
+    rb = record("rb", [0, 0, 2, 2], "base")
+    result = compare_pairs(
+        [a], [b], bootstrap=100, primary_references=[ra], repeat_references=[rb]
+    )["wikitext_ppl"]
+    item = result["matched_reference_deltas"]["item_uncertainty"]
+    assert item["shared_reference_resampled"]
+    assert item["paired_item_se"] > 0.5
+    assert item["ppl_ratio_ci95"] == pytest.approx(np.exp(item["paired_item_ci95"]))

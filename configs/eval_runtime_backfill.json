@@ -12,7 +12,7 @@
       "engine": "transcribed",
       "torch_version": "transcribed",
       "cuda_version": "transcribed",
-      "transformers_version": "transcribed",
+      "transformers_version": "inferred",
       "dtype": "transcribed",
       "attention_implementation": "inferred"
     }

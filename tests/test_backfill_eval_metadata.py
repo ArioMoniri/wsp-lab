@@ -91,3 +91,104 @@ def test_inferred_runtime_remains_labelled_and_requires_equal_values(tmp_path):
     assert matched_reference(result, [result]) == result
     assert matched_reference(result, [result | {"attention_implementation": "eager"}]) is None
     assert m.backfill(path, result, {}, {}, remote, "later") == result
+
+
+def test_current_environment_backfill_is_inferred_and_archived(tmp_path, monkeypatch):
+    import sys
+
+    p = tmp_path / "evals/base/eval.json"
+    p.parent.mkdir(parents=True)
+    p.write_text(json.dumps({"run_id": "r", "gsm8k": 0.5}))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "backfill",
+            "--evals",
+            str(p.parent.parent),
+            "--zoo",
+            str(tmp_path / "zoo"),
+            "--device-map",
+            str(tmp_path / "map"),
+            "--apply",
+        ],
+    )
+    m.main()
+    result = json.loads(p.read_text())
+    assert result["metadata_backfill_inferred"] == sorted(m.RUNTIME_KEYS)
+    assert result["metadata_backfill_source"] == "current environment, not contemporaneous"
+    assert json.loads(p.with_name("eval.json.orig").read_text()) == {"run_id": "r", "gsm8k": 0.5}
+
+
+def test_score_verifier_detects_added_removed_and_changed_scores(tmp_path):
+    from scripts.verify_backfill_scores import verify
+
+    p = tmp_path / "eval.json"
+    p.with_name("eval.json.orig").write_text(json.dumps({"gsm8k": 0.5, "counts": {"gsm8k": 2}}))
+    p.write_text(json.dumps({"gsm8k": 0.5, "counts": {"gsm8k": 2}, "engine": "hf"}))
+    assert verify(tmp_path) == []
+    for payload in ({"gsm8k": 0.6}, {"math500": 0.5}):
+        p.write_text(json.dumps(payload))
+        assert verify(tmp_path)
+
+
+def test_historical_control_registration_keeps_source_and_original(tmp_path, monkeypatch):
+    import sys
+
+    root = tmp_path / "evals"
+    base = root / "base"
+    base.mkdir(parents=True)
+    old = {"edit_id": "base", "run_id": "old", "source_hash": "old-tree", "gsm8k": 0.5}
+    (base / "eval.local-run1.json").write_text(json.dumps(old))
+    (base / "eval.json").write_text(json.dumps(old | {"run_id": "new", "source_hash": "new-tree"}))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "backfill",
+            "--evals",
+            str(root),
+            "--zoo",
+            str(tmp_path / "zoo"),
+            "--device-map",
+            str(tmp_path / "map"),
+            "--apply",
+        ],
+    )
+    m.main()
+    destination = base / "devices/H0/old/eval.json"
+    assert json.loads(destination.read_text())["source_hash"] == "old-tree"
+    assert json.loads(destination.with_name("eval.json.orig").read_text()) == old
+    assert not (destination.parent / "records.jsonl").exists()
+    before = destination.read_bytes()
+    m.main()
+    assert destination.read_bytes() == before
+
+
+def test_historical_identities_are_source_bound_and_inferred(tmp_path):
+    payload = {"run_id": "old", "source_hash": "tree", "counts": {"a": 2}}
+    evidence = {
+        "old": {
+            "source_hash": "tree",
+            "items": [["a", "0"], ["a", "1"]],
+            "source": "archived source and counts",
+        }
+    }
+    result = m.backfill(
+        tmp_path / "eval.json", payload, {"local": "H0"}, {}, {}, "now", historical_items=evidence
+    )
+    assert result["item_id_hash"]
+    assert "item_id_hash" in result["metadata_backfill_inferred"]
+    evidence["old"]["source_hash"] = "other"
+    import pytest
+
+    with pytest.raises(ValueError, match="source"):
+        m.backfill(
+            tmp_path / "eval.json",
+            payload,
+            {"local": "H0"},
+            {},
+            {},
+            "now",
+            historical_items=evidence,
+        )
