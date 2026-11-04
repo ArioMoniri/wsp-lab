@@ -35,19 +35,31 @@ def main(kind: str) -> None:
     if kind == "metadata":
         patterns = ["manifest.jsonl", "*/*.json", "*/lora/*.json", "*/**/*.jsonl"]
     elif kind == "deltas":
+        # One commit per batch (HF allows 128 commits/hour); each batch ≈ 40 entries ≤ 8 GB.
         ids = [i for i, f in families().items() if f != "chain"]
-        patterns = [f"{i}/delta.safetensors" for i in ids] + [f"{i}/lora/*" for i in ids]
         print(f"{len(ids)} non-chain entries")
+        done_file = ZOO / ".hf_deltas_done"
+        done = set(done_file.read_text().split()) if done_file.exists() else set()
+        todo = [i for i in ids if i not in done]
+        for k in range(0, len(todo), 40):
+            batch = todo[k : k + 40]
+            patterns = [f"{i}/delta.safetensors" for i in batch] + [f"{i}/lora/*" for i in batch]
+            api.upload_folder(
+                repo_id=REPO,
+                repo_type="dataset",
+                folder_path=str(ZOO),
+                path_in_repo="zoo/qwen3.5-0.8b",
+                allow_patterns=patterns,
+                commit_message=f"deltas batch {k // 40}",
+            )
+            done.update(batch)
+            done_file.write_text("\n".join(sorted(done)))
+            print(f"batch {k // 40}: {len(batch)} entries committed ({len(done)}/{len(ids)})")
+        print("done", kind)
+        return
     else:
         raise SystemExit("kind must be metadata|deltas")
-    api.upload_large_folder(
-        repo_id=REPO,
-        repo_type="dataset",
-        folder_path=str(ZOO),
-        allow_patterns=patterns,
-        print_report=False,
-        num_workers=2,
-    ) if kind == "deltas" else api.upload_folder(
+    api.upload_folder(
         repo_id=REPO,
         repo_type="dataset",
         folder_path=str(ZOO),
