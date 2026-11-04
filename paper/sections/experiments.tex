@@ -1,22 +1,35 @@
 \section{Experiments}
 The subject is Qwen3.5-0.8B with thinking enabled. Fixed subsets cover GSM8K, MATH-500, IFEval, MMLU-Pro and HellaSwag. We also measure WikiText perplexity, refusal on harmful prompts, over-refusal on harmless prompts, and KL to the base. Loop rate is the fraction of responses pooled across GSM8K, MATH-500 and IFEval that reach the token limit without EOS. Refusal keyword matching is a surface measure. It does not establish harmfulness.
 
-The proposed fast screening tier uses 50 GSM8K, 25 MATH-500, 25 IFEval, 100 MMLU-Pro and 100 HellaSwag items, plus 50 prompts each for refusal, over-refusal and KL. Generation is capped at 1024 tokens. The cheap tier runs the larger fixed battery with a 4096-token limit, except for MMLU-Pro, which has a 1024-token limit. A faithful 32768-token tier is reserved for the base and at most 10 selected entries. Fast scores are the proposed predictor targets, and cheap scores will calibrate a subset. We plan to start with a clean timing measurement and a stratified production subset, and to extend coverage after that. D3 samples production entries without replacement using seed 0 and sorted IDs, with quotas of 60 random direction, 100 abliteration, 60 LoRA SFT, 30 task vector and 50 chain steps; it takes all available entries if a family falls short. On the manifest snapshot in Table~\ref{tab:zoo-counts}, these quotas resolve to 300 entries. Sampling settings and fixed item IDs are recorded in the evaluation configuration.
+The fast tier uses 50 GSM8K, 25 MATH-500, 25 IFEval, 100 MMLU-Pro and 100 HellaSwag items, plus 50 prompts each for refusal, over-refusal and KL. Generation is capped at 1024 tokens. At these sizes a single binomial score has a standard error of 0.03 to 0.10 (Section~\ref{sec:reliability}), so GSM8K, MATH-500 and IFEval are reported as descriptive at this tier. MMLU-Pro, HellaSwag, WikiText perplexity and KL become predictor targets only after their measurement floors are established. Cheap scores will calibrate a subset of the fast-tier entries. The cheap tier runs the larger fixed battery with a 4096-token limit, except for MMLU-Pro, which has a 1024-token limit. A faithful 32768-token tier is reserved for the base and at most 10 selected entries. We plan to start with a clean timing measurement and a stratified production subset, and to extend coverage after that. D3 samples production entries without replacement using seed 0 and sorted IDs, with quotas of 60 random direction, 100 abliteration, 60 LoRA SFT, 30 task vector and 50 chain steps; it takes all available entries if a family falls short. On the manifest snapshot in Table~\ref{tab:zoo-counts}, these quotas resolve to 300 entries. Sampling settings and fixed item IDs are recorded in the evaluation configuration.
 
-Table~\ref{tab:base-repro} gives the completed base run alongside the blog comparison recorded in \texttt{docs/RESULTS.md}. The budgets and loop denominators differ, so these figures are not matched estimates. The 32k rerun was interrupted when the GPU ran out of memory, and the IFEval differences still need checker reconciliation. Local work runs on an RTX PRO 4500 with 32 GB. The Heretic ARA family runs on Lambda GPU compute: one NVIDIA A100-SXM4 40 GB instance at \$1.99/h.
+Table~\ref{tab:base-repro} gives the completed base run at the cheap tier, with item counts and 95\% Wilson intervals, beside the base values that the blog reports \citep{takehi2026wsp}. The blog's budgets, sample counts and loop definition differ, so these figures are not matched estimates. The 32k rerun was interrupted when the GPU ran out of memory, and the IFEval difference still needs checker reconciliation.
 \begin{table}[t]
 \centering
-\begin{tabular}{lrr}\toprule
-Metric & Ours, 4k (\%) & Blog, 32k (\%) \\\midrule
-GSM8K & 15.5 & 13.8 \\
-MATH-500 & 6.0 & 7.9 \\
-IFEval & 42.0 & 21.0 \\
-MMLU-Pro & 20.3 & --- \\
-HellaSwag & 51.3 & --- \\
-Loop rate & 90.2 & 93.0 \\
-Refusal rate & 99.0 & --- \\
-KL to base & 0.000 & --- \\\bottomrule
+\begin{tabular}{lrrrr}\toprule
+Metric & n & Ours, 4k (\%) & 95\% CI (\%) & Blog, 32k (\%) \\\midrule
+GSM8K & 200 & 15.5 & 11.1--21.2 & 13.8 \\
+MATH-500 & 100 & 6.0 & 2.8--12.5 & 7.9 \\
+IFEval & 100 & 42.0 & 32.8--51.8 & 21.0 \\
+MMLU-Pro & 300 & 20.3 & 16.2--25.2 & n/a \\
+HellaSwag & 300 & 51.3 & 45.7--56.9 & n/a \\
+Refusal rate & 100 & 99.0 & 94.6--99.8 & n/a \\
+Loop rate (pooled) & 400 responses & 90.2 & 86.9--92.8 & not comparable \\
+KL to base (self-check) & 100 & 0.000 & n/a & n/a \\\bottomrule
 \end{tabular}
-\caption{Base reproduction, run \texttt{p2/base-final-4096}, and blog values recorded in \texttt{docs/RESULTS.md}. Our loop rate pools GSM8K, MATH-500 and IFEval; the blog value is MATH-500 only. KL is a self-check, not a percentage.}
+\caption{Base reproduction at the cheap tier (4,096-token cap; temperature 0.6, top-p 0.95, top-k 20, presence penalty 1.5), run \texttt{p2/base-final-4096}, one sample per item. Ours is descriptive; no comparison is tested. The CI is a Wilson 95\% interval computed from the run's counts. The loop rate pools GSM8K (200), MATH-500 (100) and IFEval (100) responses. KL to base compares the model with itself, so it is zero by construction. The blog column is quoted from its Experiment 8 base row. The item counts behind the blog values are not stated in the passages we quote, and n/a marks a value the blog does not report. Its 93\% is the share of MATH-500 answers that reached a 32,768-token limit. That is a different quantity from our loop rate, so it is not placed in this column.}
 \label{tab:base-repro}
 \end{table}
+
+Measured runs used four hosts. The Heretic ARA family runs on Lambda GPU compute: one NVIDIA A100-SXM4 40 GB instance at \$1.99/h. The local RTX PRO 4500 has 32 GB. Cross-host controls and D3 shards also ran on a Lambda A10 and a Lambda H100 PCIe, and some D3 entries moved between hosts during the run.
+
+\input{sections/reliability}
+
+The first predictor suite ran on the D3 fast-tier subset. The two passages below state what this suite supports.
+\begin{quote}
+On the D3 fast-tier subset, 260 of 300 evaluated edits had matched-reference delta targets; all retained labels used inferred runtime metadata. In exploratory trajectory-grouped evaluation, M2 achieved Spearman .54 [.42,.63] on MMLU-Pro and .49 [.38,.60] on HellaSwag, compared with StatNN .61 and .67. Intervals resample edits conditional on the fitted models and do not correct chain dependence.
+\end{quote}
+\begin{quote}
+The pre-registered H1 criterion was not demonstrated. Ranking qualification of the fast targets remains incomplete, and the P4 delta-norm comparator is pending. Pooled family-holdout correlations were sensitive to between-family calibration offsets and do not establish within-family transfer.
+\end{quote}
+Run ids: \texttt{p4/board-a-d3-audit-20261104} for the target counts; \texttt{p4/d3-m2-trajectory} for the M2 and StatNN trajectory rows (n = 260 edits); and \texttt{p4/d3-m1-family} and \texttt{p4/d3-m2-family} for the pooled family-holdout rows (n = 260 edits each). StatNN is a LightGBM model on weight statistics. Neither passage qualifies a fast target.

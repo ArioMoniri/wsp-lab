@@ -16,6 +16,11 @@
   status: verified
   supporting_excerpt_2: With the same sampling settings, this weight correction raises MATH-500 from 7.9% to 48.1%
     and generalizes out of the box to instruction following, raising IFEval by 3x.
+  supporting_excerpt_3: With 50 forward passes, MATH-500 rose from 7.9% to 48.1% and GSM8K from 13.8% to 67.1%.
+  supporting_excerpt_4: IFEval, which measures instruction following, rose from 21.0% to 62.3%.
+  supporting_excerpt_5: the last column is the share of MATH-500 answers that hit the 32,768-token limit
+  supporting_excerpt_6: with 50 it fell from 93% to 33%.
+  location: Experiment 8 text (base values; loop share column)
   source_file: data/papers/takehi2026wsp.txt
 - key: elhage2021mathematical
   url: https://transformer-circuits.pub/2021/framework/index.html
@@ -840,3 +845,39 @@
       to transfer experience to future tasks.
     reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
       See round-3 review.
+- key: atil2024nondeterminism
+  arxiv_id: '2408.04667'
+  title: 'Non-Determinism of "Deterministic" LLM Settings'
+  authors:
+  - Berk Atil
+  - Sarp Aykent
+  - Alexa Chittams
+  - Lisheng Fu
+  - Rebecca J. Passonneau
+  - Evan Radcliffe
+  - Guru Rajan Rajagopal
+  - Adam Sloan
+  - Tomasz Tudrej
+  - Ferhan Ture
+  - Zhe Wu
+  - Lixinyu Xu
+  - Breck Baldwin
+  year: 2024
+  venue: arXiv:2408.04667
+  claim_we_make: Under settings configured to be deterministic, none of the LLMs tested consistently gave repeatable accuracy across all tasks, or identical output strings.
+  supporting_excerpt: none of the LLMs consistently delivers repeatable accuracy across all tasks, much less identical output strings.
+  location: Abstract
+  status: verified
+  source_file: data/papers/2408.04667.txt
+- key: miller2024error
+  arxiv_id: '2411.00640'
+  title: 'Adding Error Bars to Evals: A Statistical Approach to Language Model Evaluations'
+  authors:
+  - Evan Miller
+  year: 2024
+  venue: arXiv:2411.00640
+  claim_we_make: Treats evaluation questions as draws from a super-population and presents formulas for analyzing evaluation data and differences between two models.
+  supporting_excerpt: Conceptualizing evaluation questions as having been drawn from an unseen super-population, we present formulas for analyzing evaluation data, measuring differences between two models, and planning an evaluation experiment.
+  location: Abstract
+  status: verified
+  source_file: data/papers/2411.00640.txt
