@@ -15,6 +15,7 @@ from types import SimpleNamespace
 import torch
 
 from wsp.eval.metadata import item_hashes, runtime_metadata
+from wsp.eval.repeats import REFERENCE_KEYS, known
 
 RUNTIME_KEYS = (
     "gpu_class",
@@ -73,8 +74,17 @@ def backfill(path, payload, devices, local, remote, now, host=None):
         if rows:
             hashes = item_hashes(rows)
     out.update(hashes)
-    missing = [key for key in (*RUNTIME_KEYS, *hashes) if out.get(key) is None]
-    out["metadata_backfill"] = "partial" if missing else "full"
+    provenance = dict(payload.get("metadata_backfill_provenance", {}))
+    for key in REFERENCE_KEYS:
+        if key in runtime and (payload.get(key) is None or key in runtime.get("provenance", {})):
+            provenance[key] = runtime.get("provenance", {}).get(key, "transcribed")
+        elif known(out.get(key)):
+            provenance.setdefault(key, "transcribed")
+    missing = [key for key in REFERENCE_KEYS if not known(out.get(key))]
+    inferred = sorted(k for k in REFERENCE_KEYS if provenance.get(k) == "inferred")
+    out["metadata_backfill_provenance"] = provenance
+    out["metadata_backfill_inferred"] = inferred
+    out["metadata_backfill"] = "partial" if missing else "partial-inferred" if inferred else "full"
     out["metadata_backfill_missing"] = missing
     out["metadata_backfill_utc"] = payload.get("metadata_backfill_utc", now)
     return out
@@ -123,7 +133,7 @@ def main():
         )
         new = backfill(path, old, devices, local, remote, now, host)
         results[path.resolve()] = new
-        partial += new.get("metadata_backfill") == "partial"
+        partial += new.get("metadata_backfill") != "full"
         if new != old:
             changed += 1
             if args.apply:
@@ -164,6 +174,8 @@ def main():
                         "metadata_backfill",
                         "metadata_backfill_utc",
                         "metadata_backfill_missing",
+                        "metadata_backfill_inferred",
+                        "metadata_backfill_provenance",
                     }
                 }
                 row.pop("eval_host", None)

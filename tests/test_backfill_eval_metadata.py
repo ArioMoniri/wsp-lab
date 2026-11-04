@@ -11,7 +11,12 @@ def test_backfill_preserves_scores_and_is_idempotent(tmp_path):
     p = tmp_path / "eval.json"
     rows = [{"benchmark": "a", "item_id": "2"}, {"benchmark": "a", "item_id": "1"}]
     (tmp_path / "records.jsonl").write_text("\n".join(map(json.dumps, rows)))
-    original = {"gsm8k": 0.25, "generation": {"batch_size": 32}, "batch_size": 16}
+    original = {
+        **dict.fromkeys(m.REFERENCE_KEYS, "known"),
+        "gsm8k": 0.25,
+        "generation": {"batch_size": 32},
+        "batch_size": 16,
+    }
     runtime = dict.fromkeys(m.RUNTIME_KEYS, "known")
     result = m.backfill(p, original, {"local": "H0"}, runtime, {}, "now")
     assert result["gsm8k"] == original["gsm8k"]
@@ -63,3 +68,26 @@ def test_cli_dry_run_and_apply_preserve_scores_and_link_zoo(tmp_path, monkeypatc
     m.main()
     assert p.read_bytes() == before
     assert json.loads(mapping.read_text()) == m.default_map()
+
+
+def test_inferred_runtime_remains_labelled_and_requires_equal_values(tmp_path):
+    from wsp.eval.repeats import matched_reference
+
+    path = tmp_path / "eval.json"
+    (tmp_path / "records.jsonl").write_text('{"benchmark":"a","item_id":"1"}')
+    payload = dict.fromkeys(m.REFERENCE_KEYS, "known")
+    payload["generation"] = {"batch_size": 32}
+    payload["eval_device_id"] = "H1"
+    payload["attention_implementation"] = None
+    remote = {
+        "H1": {
+            "attention_implementation": "sdpa",
+            "provenance": {"attention_implementation": "inferred"},
+        }
+    }
+    result = m.backfill(path, payload, {}, {}, remote, "now")
+    assert result["metadata_backfill"] == "partial-inferred"
+    assert result["metadata_backfill_inferred"] == ["attention_implementation"]
+    assert matched_reference(result, [result]) == result
+    assert matched_reference(result, [result | {"attention_implementation": "eager"}]) is None
+    assert m.backfill(path, result, {}, {}, remote, "later") == result

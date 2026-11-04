@@ -30,7 +30,12 @@ def known(value):
 
 
 def matched_reference(observation, candidates):
-    """Require known, equal device/runtime/config/items/actual batch, including seed."""
+    """Require known, equal device/runtime/config/items/actual batch, including seed.
+
+    Partial-inferred backfills are eligible only with identical inferred values:
+    every inferred runtime field is a REFERENCE_KEY and is compared exactly below.
+    Callers producing predictor manifests must disclose inferred target counts.
+    """
     if any(not known(observation.get(k)) for k in REFERENCE_KEYS):
         return None
     return next(

@@ -119,10 +119,15 @@ def run_training(
     folds = ds.holdout(holdout, holdout_variant) if holdout else ds.folds(split, n_splits)
     # Plan all validation sets before writing anything. A two-group dataset cannot
     # honestly support both a held-out group and an inner group for early stopping.
-    plans = [
-        (ds.folds(split, min(3, n_splits), train, scope=f"inner:{i}")[0], test)
-        for i, (train, test) in enumerate(folds)
-    ]
+    plans = []
+    for i, (train, test) in enumerate(folds):
+        inner = ds.folds(split, min(3, n_splits), train, scope=f"inner:{i}")
+        if not inner:
+            log.warning("Skipping outer fold %d: no inner folds survive ancestry filtering", i)
+            continue
+        plans.append((inner[0], test))
+    if not plans:
+        raise ValueError("no folds survive ancestry filtering")
     config = {
         "holdout": holdout,
         "holdout_variant": holdout_variant,
@@ -376,6 +381,7 @@ def run_training(
         "missing_predecessor_targets": ds.missing_predecessor_targets,
         "missing_matched_reference": ds.missing_matched_reference,
         "matched_reference_targets": ds.matched_reference_targets,
+        "targets_with_inferred_runtime": ds.targets_with_inferred_runtime,
         "m6_collapse_gate": (
             all(r["collapse_check"]["acceptance_gate"] for r in fold_records)
             if model == "m6"
@@ -434,6 +440,7 @@ def run_training(
         "missing_predecessor_targets": ds.missing_predecessor_targets,
         "missing_matched_reference": ds.missing_matched_reference,
         "matched_reference_targets": ds.matched_reference_targets,
+        "targets_with_inferred_runtime": ds.targets_with_inferred_runtime,
         "relations": {
             i: {k: m.get(k) for k in ("parent_id", "relation", "step_semantics")}
             for i, m in ds.relations.items()

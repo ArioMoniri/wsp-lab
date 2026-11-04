@@ -29,18 +29,25 @@ into the eval directory so directory readers see all completed entries.
 Item identity and order are reconstructed only from the corresponding item records;
 control copies without their own records (or a matching main run ID) retain null
 hashes. Local runtime fields describe the current environment and the runner's
-bf16/SDPA settings, not a contemporaneous measurement. Remote runtime fields use
-available evidence only: torch 2.11.0+cu128 is known from job logs; other fields
-remain null unless supplied with `--runtime-json` as an opaque-device keyed JSON
-object transcribed from logs. Partial records list missing fields explicitly.
-The script preserves scores, actual batch sizes and original provenance hashes.
-Strict reference matching continues to reject unknown runtime fields.
+bf16/SDPA settings, not a contemporaneous measurement. Remote runtime evidence is recorded in
+`configs/eval_runtime_backfill.json`, with per-field transcribed/inferred provenance.
+H1 SDPA is inferred from the identical model load path. H2 engine, transformers
+and SDPA are inferred from the identical bootstrap/lock; other supplied fields are
+transcribed from the orchestrator's device evidence. This is not a new measurement.
+`metadata_backfill=full` requires every reference key to be known and transcribed;
+`partial-inferred` lists inferred keys, and incomplete records list missing keys.
+Strict matching compares every reference key, including inferred runtime values.
+Predictor manifests disclose `targets_with_inferred_runtime` (edit targets, not
+individual benchmark cells). Local backfills retain the existing current-runtime
+convention described above; they are not contemporaneous historical measurements.
 
-Compatibility check `backfill-compat-final` reads 278 evaluated edits: 53 matched
-and 225 missing references after backfill (before: 0 matched, 109 missing in the
-then-current index). The requested M1 family run stops because ancestry filtering
-leaves an empty training fold. This backfill does not qualify the measurement
-panels or establish historical runtime equivalence for partial records.
+Run `python -m wsp.predictor.data --report` for coverage by family/device/reason.
+The supplied remote evidence increases coverage from 53 matched / 226 missing to
+221 matched / 58 missing, with 167 targets depending on inferred remote runtime.
+The M1 compatibility run completes five family folds. Empty ancestry-purged folds
+are logged and skipped; if no validation plans survive, training reports an error.
+Scores and actual batch sizes are preserved. These inferred matches do not qualify
+measurement repeatability panels as independently verified runtime equivalence.
 
 ## D3 (4 Nov 2026) — evaluation budget and order
 Board A's calibrated estimate (reviews/P2/feat-p2-batch-boardA-2026-11-04.md): ~9–12 min per entry under D2 on

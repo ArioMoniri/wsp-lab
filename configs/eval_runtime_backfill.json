@@ -1,0 +1,38 @@
+{
+  "H1": {
+    "gpu_class": "NVIDIA H100 PCIe",
+    "engine": "hf",
+    "torch_version": "2.11.0+cu128",
+    "cuda_version": "12.8",
+    "transformers_version": "5.22.1",
+    "dtype": "torch.bfloat16",
+    "attention_implementation": "sdpa",
+    "provenance": {
+      "gpu_class": "transcribed",
+      "engine": "transcribed",
+      "torch_version": "transcribed",
+      "cuda_version": "transcribed",
+      "transformers_version": "transcribed",
+      "dtype": "transcribed",
+      "attention_implementation": "inferred"
+    }
+  },
+  "H2": {
+    "gpu_class": "NVIDIA A10",
+    "engine": "hf",
+    "torch_version": "2.11.0+cu128",
+    "cuda_version": "12.8",
+    "transformers_version": "5.22.1",
+    "dtype": "torch.bfloat16",
+    "attention_implementation": "sdpa",
+    "provenance": {
+      "gpu_class": "transcribed",
+      "engine": "inferred",
+      "torch_version": "transcribed",
+      "cuda_version": "transcribed",
+      "transformers_version": "inferred",
+      "dtype": "transcribed",
+      "attention_implementation": "inferred"
+    }
+  }
+}

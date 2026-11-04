@@ -475,3 +475,37 @@ def test_dataset_requires_device_matched_base_and_successor(toy, tmp_path):
     assert matched.targets[j, 0] == pytest.approx(
         observation["metrics"]["acc"] - json.loads(parent.read_text())["metrics"]["acc"]
     )
+
+
+def test_empty_ancestry_fold_is_logged_and_skipped(toy, monkeypatch, caplog, tmp_path):
+    from wsp.predictor import data
+
+    ds = FeatureDataset(toy / "features", toy / "evals")
+    original = data.clean_training
+    calls = 0
+
+    def purge(*args):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return np.array([], dtype=int), len(args[1])
+        return original(*args)
+
+    monkeypatch.setattr(data, "clean_training", purge)
+    folds = ds.folds("trajectory", 3)
+    assert len(folds) == 2
+    assert "ancestry purge leaves empty training fold" in caplog.text
+    assert ds.split_audit[0]["skipped_reason"]
+    calls = 0
+    result = run_training(
+        toy / "features",
+        toy / "evals",
+        "trajectory",
+        tmp_path / "run",
+        epochs=1,
+        n_splits=3,
+        n_boot=2,
+        d_model=16,
+    )
+    assert len(result["folds"]) == 2
+    assert result["split_audit"][0]["skipped_reason"]
