@@ -111,3 +111,7 @@
 | 2026-11-04 | P3 REVISE | claude_aio_gmail_api/claude-sonnet-5-5 high | done 59db218 (227 tests) |
 | 2026-11-04 | Board A re-review feat/p3-features | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | Board A re-review feat/p3-features | codex/gpt-6.1-sol medium | REVISE (1) → fixed by orchestrator, merged |
+| 2026-11-04 | design: hero SVG + Lottie redo | codex/gpt-6.1-sol high | running |
+| 2026-11-04 | writer: README + PROGRESS + live status script | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | scribe: paper method/zoo/experiments | codex/gpt-6.1-terra high | running |
+| 2026-11-04 | checker: docs accuracy + commands + tests | claude_aio_gmail_api/claude-haiku-5-5 high | running |
