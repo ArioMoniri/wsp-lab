@@ -5,6 +5,31 @@ import torch
 torch.set_num_threads(min(2, torch.get_num_threads()))
 
 
+@pytest.fixture(autouse=True)
+def pinned_base_revision(monkeypatch):
+    """Zoo builds pin the base to a resolved commit; never hit the Hub in CPU tests.
+
+    The fake resolver is deterministic in (model, ref); ``resolver.override[ref] = sha`` moves a ref.
+    """
+    import hashlib
+
+    from wsp.zoo import build
+
+    class Resolver:
+        def __init__(self):
+            self.override: dict[str, str] = {}
+
+        def __call__(self, model, revision=None):
+            ref = revision or "main"
+            if ref in self.override:
+                return self.override[ref]
+            return hashlib.sha256(f"{model}@{ref}".encode()).hexdigest()[:40]
+
+    resolver = Resolver()
+    monkeypatch.setattr(build, "resolve_base_revision", resolver, raising=False)
+    return resolver
+
+
 @pytest.fixture(scope="session")
 def toy_weights():
     """Toy 2-layer 'transformer' weights: dict name -> tensor (~50k params), deterministic."""

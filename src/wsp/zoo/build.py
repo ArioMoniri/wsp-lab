@@ -30,6 +30,7 @@ from wsp.edits.kernels import KERNEL_VARIANT, heretic_abliteration_kernel
 from wsp.edits.refusal import get_refusal_directions
 from wsp.schema import EditDescriptor
 from wsp.zoo.apply import entry_has_artifacts, load_entry_delta
+from wsp.zoo.common import resolve_base_revision
 from wsp.zoo.random_dir import ablate_direction, random_unit_direction
 
 
@@ -118,10 +119,22 @@ GENERATE_PASSTHROUGH = {
     "lora_sft": ("targets", "batch_size", "max_length"),
 }
 STAGING_DIR = ".staging"
+# Entries below these sampled-parameter budgets are wiring smokes, not research treatments.
+# Overridable per family under ``eligibility.min_params`` in the zoo config.
+DEFAULT_MIN_PARAMS: dict[str, dict[str, float]] = {
+    "heretic_ara": {"trials": 20},
+    "lora_sft": {"steps": 50},
+}
+LORA_VS_BASE = "lora_vs_base"  # LoRA optimised against the base checkpoint, added onto the chain
+SEQUENTIAL = "sequential"  # edit computed on / applied to the accumulated state
 
 
 class MissingFamiliesError(ValueError):
     """Configured edit families cannot be built in this environment."""
+
+
+class EntryIdentityMismatch(RuntimeError):
+    """An existing entry/manifest row has the planned id but a different ``reuse_key``."""
 
 
 def _family_implemented(family: str) -> bool:
@@ -204,6 +217,45 @@ def _append_manifest(manifest_path: Path, line: dict[str, Any]) -> None:
         f.write(json.dumps(line, sort_keys=True) + "\n")
 
 
+def _override_scope(item: str) -> tuple[str | None, str]:
+    """(family or None for a global key, leaf key) of a ``key.path=value`` override."""
+    path = item.partition("=")[0].split(".")
+    if path[0] in FAMILY_ORDER:
+        path = ["families", *path]
+    if path[0] == "families" and len(path) >= 3:
+        return path[1], path[-1]
+    return None, path[-1]
+
+
+def applicable_overrides(families: set[str], overrides: list[str] | None) -> list[str]:
+    """Overrides that can change an entry of ``families``: global ones and family-scoped ones.
+
+    ``<family>.n`` is excluded: the count of entries does not change any single entry.
+    """
+    out = []
+    for item in overrides or []:
+        fam, leaf = _override_scope(item)
+        if fam is None or (fam in families and leaf != "n"):
+            out.append(item)
+    return sorted(out)
+
+
+def classify_eligibility(
+    family: str, params: dict[str, Any], config: dict[str, Any]
+) -> tuple[str, list[str]]:
+    """``("production"|"smoke", reasons)``: smoke = reduced budget or any applicable override."""
+    reasons: list[str] = []
+    configured = (config.get("eligibility") or {}).get("min_params", {})
+    mins = {**DEFAULT_MIN_PARAMS.get(family, {}), **configured.get(family, {})}
+    for key, lo in sorted(mins.items()):
+        if key in params and params[key] < lo:
+            reasons.append(f"{key}={params[key]} below production minimum {lo}")
+    applied = applicable_overrides({family}, config.get("_overrides"))
+    if applied:
+        reasons.append(f"built with config overrides {applied}")
+    return ("smoke" if reasons else "production"), reasons
+
+
 def _descriptor(
     family: str,
     params: dict[str, Any],
@@ -214,6 +266,7 @@ def _descriptor(
     touched_tensors: list[str] | None = None,
     delta_fro_norm: float | None = None,
 ) -> EditDescriptor:
+    eligibility, reasons = classify_eligibility(family, params, config)
     return EditDescriptor(
         family=family,
         params=params,
@@ -224,7 +277,71 @@ def _descriptor(
         git_sha=git_sha,
         touched_tensors=touched_tensors or [],
         delta_fro_norm=delta_fro_norm,
+        eligibility=eligibility,
+        eligibility_reasons=reasons,
     )
+
+
+def _stored_format(desc: EditDescriptor) -> str:
+    if desc.family == "chain":
+        return "dense_cumulative"  # a cumulative snapshot relative to base, not a per-step delta
+    return "lora" if desc.params.get("delta_format") == "lora" else "dense"
+
+
+def _step_identity(desc: EditDescriptor, config: dict[str, Any]) -> dict[str, Any]:
+    """Everything outside the id that changes what this family's artefact contains."""
+    prov = desc.provenance
+    return {
+        "family": desc.family,
+        "base_model": desc.base_model,
+        "base_revision": desc.base_revision,
+        "dtype": config.get("dtype", "bfloat16"),
+        "stored_format": _stored_format(desc),
+        "overrides": applicable_overrides({desc.family}, config.get("_overrides")),
+        "kernel_variant": prov.get("kernel_variant"),
+        "refusal_fingerprint": prov.get("refusal_fingerprint"),
+        "step_semantics": prov.get("step_semantics"),
+        "parent_reuse_key": prov.get("parent_reuse_key"),
+    }
+
+
+def finalize_identity(desc: EditDescriptor, config: dict[str, Any]) -> str:
+    """Record ``reuse_identity``/``reuse_key`` in the descriptor's provenance; return the key."""
+    steps = desc.provenance.get("step_identities")
+    identity = _step_identity(desc, config)
+    if steps:  # chain: the whole prefix of steps, each with its own extraction/generation identity
+        identity["chain"] = steps
+    desc.provenance["reuse_identity"] = identity
+    key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    desc.provenance["reuse_key"] = key
+    return key
+
+
+def check_reusable(zoo_dir: Path, manifest: list[dict[str, Any]], desc: EditDescriptor) -> bool:
+    """True if an identical entry exists; raise if one exists with the same id but another key.
+
+    An entry id (family, sampled params, seed, pinned base, parent) does not cover refusal
+    extraction, dtype, kernel variant or config overrides; ``reuse_key`` does. A mismatch is never
+    resolved silently (neither reused nor overwritten): move the old entry directory aside and
+    rebuild (artefact-less manifest rows are dropped automatically).
+    """
+    want = desc.provenance["reuse_key"]
+    for row in manifest:
+        if row["id"] == desc.id and row.get("reuse_key") != want:
+            raise EntryIdentityMismatch(
+                f"manifest row {desc.id} has reuse_key {row.get('reuse_key')!r}, planned {want!r}; "
+                "same sampled id built with different extraction/generation settings"
+            )
+    entry = zoo_dir / desc.id
+    if not entry_has_artifacts(entry):
+        return False
+    have = json.loads((entry / "edit.json").read_text()).get("provenance", {}).get("reuse_key")
+    if have != want:
+        raise EntryIdentityMismatch(
+            f"existing entry {desc.id} has reuse_key {have!r} (none = legacy/unprovenanced), "
+            f"planned {want!r}: refusing to reuse or overwrite it; move {entry} aside to rebuild"
+        )
+    return True
 
 
 def sample_random_dir_params(rng: random.Random, family_cfg: dict[str, Any]) -> dict[str, Any]:
@@ -389,6 +506,11 @@ def _lora_descriptor(
     parent_id: str | None = None,
 ) -> EditDescriptor:
     """Builder-level descriptor (id = planned id) carrying what ``generate`` measured."""
+    if generated.base_revision != config["base_revision"]:
+        raise EntryIdentityMismatch(
+            f"{family} generate() resolved base {generated.base_revision!r} but the build pinned "
+            f"{config['base_revision']!r}"
+        )
     desc = _descriptor(
         family,
         params,
@@ -419,6 +541,7 @@ def build_lora_entry(
     zoo_dir: Path,
     git_sha: str,
     extra_provenance: dict[str, Any],
+    manifest: list[dict[str, Any]],
 ) -> EditDescriptor:
     """Generate one LoRA-format entry directly into ``zoo_dir/<id>/`` (edit.json + lora/ + logs).
 
@@ -427,8 +550,10 @@ def build_lora_entry(
     """
     params = _LORA_SAMPLERS[family](random.Random(seed), family_cfg)
     planned = _descriptor(family, params, seed, config, None, git_sha)
+    planned.provenance.update(extra_provenance)
+    finalize_identity(planned, config)
     final_dir = zoo_dir / planned.id
-    if entry_has_artifacts(final_dir):
+    if check_reusable(zoo_dir, manifest, planned):
         return EditDescriptor.from_json((final_dir / "edit.json").read_text())
 
     stage = zoo_dir / STAGING_DIR / planned.id
@@ -438,6 +563,7 @@ def build_lora_entry(
     desc = _lora_descriptor(family, config, params, seed, generated)
     desc.git_sha = git_sha
     desc.provenance.update(extra_provenance)
+    finalize_identity(desc, config)
     if (stage / "edit.json").exists():
         (stage / "edit.json").rename(stage / "generator_edit.json")
     (stage / "edit.json").write_text(desc.to_json())
@@ -476,6 +602,25 @@ def _build_lora_in_memory(
     return [(desc, new_state, sorted(delta))]
 
 
+def parent_exclusion_reason(
+    row: dict[str, Any], config: dict[str, Any], include_smoke: bool, dry_run: bool
+) -> str | None:
+    """Why a manifest row may not be a task-vector parent (None = eligible).
+
+    Legacy rows (no eligibility/reuse_key, i.e. built before the policy) and rows from another
+    resolved base commit are never eligible; smoke rows only with ``--include-smoke``.
+    """
+    if "eligibility" not in row or (not dry_run and "reuse_key" not in row):
+        return "legacy_unprovenanced"
+    if row.get("base_revision") != config.get("base_revision"):
+        return "incompatible_base"
+    if row["eligibility"] == "production":
+        return None
+    if row["eligibility"] == "smoke":
+        return None if include_smoke else "smoke"
+    return "unclassified"
+
+
 def build_task_vector(
     config: dict[str, Any],
     family_cfg: dict[str, Any],
@@ -487,36 +632,49 @@ def build_task_vector(
 ) -> list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]]:
     rng = random.Random(seed)
     params = {"scale": float(sample_param(rng, family_cfg["scale"]))}
-    candidates = sorted(
-        (
-            m
-            for m in manifest
-            if m.get("family") in SINGLE_FAMILIES and (dry_run or _has_artifacts(zoo_dir, m["id"]))
-        ),
-        key=lambda m: m["id"],
-    )
+    include_smoke = bool(config.get("_include_smoke"))
+    candidates, excluded = [], {}
+    for m in sorted(manifest, key=lambda m: m["id"]):
+        if m.get("family") not in SINGLE_FAMILIES:
+            continue
+        if not dry_run and not _has_artifacts(zoo_dir, m["id"]):
+            continue
+        reason = parent_exclusion_reason(m, config, include_smoke, dry_run)
+        if reason:
+            excluded[reason] = excluded.get(reason, 0) + 1
+        else:
+            candidates.append(m)
     if not candidates:
         return []
     parent = rng.choice(candidates)
     parent_id = parent["id"]
     pool_digest = hashlib.sha256(",".join(m["id"] for m in candidates).encode()).hexdigest()
-    if dry_run:
-        desc = _descriptor("task_vector", params, seed, config, parent_id, "", [], None)
-        desc.provenance["parent_candidates_sha256"] = pool_digest
-        return [(desc, {}, [])]
 
-    parent_delta = load_entry_delta(zoo_dir / parent_id, base_state.keys())
-    new_state = dict(base_state)
     touched: list[str] = []
-    for key, dv in parent_delta.items():
-        if key in new_state:
-            cur = new_state[key]
-            new_state[key] = (cur.float() + params["scale"] * dv.float()).to(cur.dtype)
-        else:
-            new_state[key] = params["scale"] * dv
-        touched.append(key)
+    new_state: dict[str, torch.Tensor] = {}
+    if not dry_run:
+        parent_delta = load_entry_delta(zoo_dir / parent_id, base_state.keys())
+        new_state = dict(base_state)
+        for key, dv in parent_delta.items():
+            if key in new_state:
+                cur = new_state[key]
+                new_state[key] = (cur.float() + params["scale"] * dv.float()).to(cur.dtype)
+            else:
+                new_state[key] = params["scale"] * dv
+            touched.append(key)
     desc = _descriptor("task_vector", params, seed, config, parent_id, "", touched, None)
-    desc.provenance["parent_candidates_sha256"] = pool_digest
+    desc.provenance.update(
+        {
+            "parent_candidates_sha256": pool_digest,
+            "parent_pool_excluded": excluded,
+            "include_smoke": include_smoke,
+            "parent_reuse_key": parent.get("reuse_key"),
+            "parent_eligibility": parent["eligibility"],
+        }
+    )
+    if parent["eligibility"] != "production":
+        desc.eligibility = "smoke"
+        desc.eligibility_reasons.append(f"parent {parent_id} is {parent['eligibility']}")
     return [(desc, new_state, touched)]
 
 
@@ -545,6 +703,18 @@ def _build_single_family(
     raise ValueError(f"unknown single-edit family: {family}")
 
 
+def chain_step_semantics(family: str) -> str:
+    """How a chain step's edit relates to the accumulated state.
+
+    ``generate()`` of the LoRA families always optimises against the *base checkpoint*, so inside a
+    chain the step is a base-relative delta added to the accumulated state (task arithmetic),
+    ``lora_vs_base``. random_dir/abliteration edit the accumulated weights directly: ``sequential``.
+    The sequential LoRA variant (optimising against the accumulated state) needs generate() to
+    start from a given state dict and is not implemented; see docs/ZOO_IDENTITY.md.
+    """
+    return LORA_VS_BASE if family in LORA_FAMILIES else SEQUENTIAL
+
+
 def build_chain(
     config: dict[str, Any],
     family_cfg: dict[str, Any],
@@ -554,57 +724,76 @@ def build_chain(
     manifest: list[dict[str, Any]],
     dry_run: bool = False,
 ) -> list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]]:
+    """Chain entries are cumulative snapshots: entry k stores (state after step k) - base.
+
+    H2 consumers must take consecutive differences of snapshots for the per-step delta, never
+    apply a snapshot onto its parent. Each entry records the step's ``step_semantics`` (in params,
+    hence in the id), the semantics of every step so far, and stored vs source delta format.
+    """
     rng = random.Random(seed)
     length = int(sample_param(rng, family_cfg["length"]))
     available = [f for f in SINGLE_FAMILIES if f in family_policy(config)["families_available"]]
     if not available:
         raise ValueError("no single-edit families configured; chain cannot be built")
 
-    if dry_run:
-        entries: list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]] = []
-        parent_id: str | None = None
-        for step in range(length):
-            family = rng.choice(available)
-            inner_cfg = config["families"][family]
-            step_seed = seed + step + 1
-            inner_entries = _build_single_family(
-                family, config, inner_cfg, step_seed, {}, zoo_dir, manifest, dry_run=True
-            )
-            inner_desc = inner_entries[0][0]
-            params = {
-                "length": length,
-                "step": step,
-                "inner_family": family,
-                "inner_params": inner_desc.params,
-                "inner_seed": step_seed,
-            }
-            desc = _descriptor("chain", params, seed, config, parent_id, "", [], None)
-            entries.append((desc, {}, []))
-            parent_id = desc.id
-        return entries
-
-    cumulative = dict(base_state)
-    entries = []
+    cumulative = {} if dry_run else dict(base_state)
+    entries: list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]] = []
     all_touched: set[str] = set()
-    parent_id = None
+    parent_id: str | None = None
+    semantics: list[str] = []
+    identities: list[dict[str, Any]] = []
+    smoke_reasons: list[str] = []
     for step in range(length):
         family = rng.choice(available)
-        inner_cfg = config["families"][family]
         step_seed = seed + step + 1
         inner_entries = _build_single_family(
-            family, config, inner_cfg, step_seed, cumulative, zoo_dir, manifest, dry_run=False
+            family,
+            config,
+            config["families"][family],
+            step_seed,
+            cumulative,
+            zoo_dir,
+            manifest,
+            dry_run=dry_run,
         )
         inner_desc, cumulative, step_touched = inner_entries[0]
         all_touched.update(step_touched)
+        step_sem = chain_step_semantics(family)
+        semantics.append(step_sem)
         params = {
             "length": length,
             "step": step,
             "inner_family": family,
             "inner_params": inner_desc.params,
             "inner_seed": step_seed,
+            "step_semantics": step_sem,
         }
         desc = _descriptor("chain", params, seed, config, parent_id, "", [], None)
-        desc.provenance.update(inner_desc.provenance)
+        source_format = "lora" if inner_desc.params.get("delta_format") == "lora" else "dense"
+        inherited = {
+            k: v
+            for k, v in inner_desc.provenance.items()
+            if k not in ("delta_format", "reuse_identity", "reuse_key")
+        }
+        desc.provenance.update(inherited)
+        desc.provenance.update(
+            {
+                "step_semantics": step_sem,
+                "chain_step_semantics": list(semantics),
+                "source_delta_format": source_format,
+                "stored_delta_format": "dense_cumulative",
+                "cumulative_snapshot": True,
+            }
+        )
+        identities.append(_step_identity(inner_desc, config))
+        desc.provenance["step_identities"] = list(identities)
+        if inner_desc.eligibility != "production":
+            smoke_reasons.append(
+                f"step {step} ({family}): {'; '.join(inner_desc.eligibility_reasons)}"
+            )
+        if smoke_reasons:
+            desc.eligibility = "smoke"
+            desc.eligibility_reasons = [*desc.eligibility_reasons, *smoke_reasons]
         entries.append((desc, cumulative, sorted(all_touched)))
         parent_id = desc.id
     return entries
@@ -635,6 +824,7 @@ def build_zoo(
     git_sha: str | None = None,
     allow_missing_families: bool = False,
     overrides: list[str] | None = None,
+    include_smoke: bool = False,
 ) -> list[dict[str, Any]]:
     """Build (or dry-run) the edit zoo described by ``config_path``.
 
@@ -649,6 +839,10 @@ def build_zoo(
             (default: fail).
         overrides: ``key.path=value`` config overrides (e.g. ``heretic_ara.trials=2``); they are
             folded into the config hash and recorded in the header and every edit's provenance.
+            Entries built with an applicable override are ``eligibility: smoke``.
+        include_smoke: let ``eligibility: smoke`` entries (reduced budget / overrides) be sampled
+            as task-vector parents (legacy and other-base entries are never eligible); the children
+            are then smoke too.
 
     Returns:
         The manifest as a list of line dicts.
@@ -656,6 +850,12 @@ def build_zoo(
     config_path = Path(config_path)
     config = apply_overrides(load_config(config_path), overrides)
     cfg_hash = config_hash(config_path, overrides)
+    # Pin the base *before* any id is built: ids, refusal cache, generators and the CPU base copy
+    # all use the resolved commit, so upstream drift can never alias an old entry.
+    requested_revision = config.get("base_revision", "main")
+    config["base_revision"] = resolve_base_revision(config["base_model"], requested_revision)
+    config["_overrides"] = list(overrides or [])
+    config["_include_smoke"] = bool(include_smoke)
     git_sha = git_sha or get_git_sha()
     zoo_dir = Path(config["out_dir"])
     zoo_dir.mkdir(parents=True, exist_ok=True)
@@ -677,7 +877,12 @@ def build_zoo(
     if family and family in policy["skipped_families"]:
         raise MissingFamiliesError(f"requested family {family!r} is not buildable here")
     config["_config_hash"] = cfg_hash
-    provenance = {**policy, "allow_missing_families": bool(allow_missing_families)}
+    provenance = {
+        **policy,
+        "allow_missing_families": bool(allow_missing_families),
+        "requested_base_revision": requested_revision,
+        "include_smoke": bool(include_smoke),
+    }
     if overrides:
         provenance["config_overrides"] = list(overrides)
     families = [family] if family else policy["families_available"]
@@ -696,7 +901,7 @@ def build_zoo(
         "config_hash": cfg_hash,
         "git_sha": git_sha,
         "base_model": config["base_model"],
-        "base_revision": config.get("base_revision", "main"),
+        "base_revision": config["base_revision"],
         "seed": int(config["seed"]),
         "families_selected": [family] if family else policy["families_available"],
         **provenance,
@@ -712,7 +917,9 @@ def build_zoo(
         for i in range(count):
             seed = int(config["seed"]) + i
             if fam in LORA_FAMILIES and not dry_run:
-                desc = build_lora_entry(fam, config, family_cfg, seed, zoo_dir, git_sha, provenance)
+                desc = build_lora_entry(
+                    fam, config, family_cfg, seed, zoo_dir, git_sha, provenance, manifest
+                )
                 entries = [(desc, None, [])]
             elif fam == "chain":
                 entries = build_chain(
@@ -727,6 +934,8 @@ def build_zoo(
                     desc.git_sha = git_sha
                     desc.provenance.update(provenance)
                 if not dry_run and new_state is not None:
+                    finalize_identity(desc, config)
+                    check_reusable(zoo_dir, manifest, desc)  # raises on a same-id/other-key entry
                     delta = {
                         k: (new_state[k] - base_state[k]).to(dtype)
                         for k in touched
@@ -740,9 +949,17 @@ def build_zoo(
                     "seed": desc.seed,
                     "config_hash": cfg_hash,
                     "git_sha": git_sha,
+                    "base_revision": desc.base_revision,
+                    "eligibility": desc.eligibility,
+                    "stored_delta_format": _stored_format(desc),
                 }
+                if "reuse_key" in desc.provenance:
+                    line["reuse_key"] = desc.provenance["reuse_key"]
                 if desc.params.get("delta_format") == "lora":
                     line["delta_format"] = "lora"
+                for key in ("step_semantics", "chain_step_semantics"):
+                    if key in desc.provenance:
+                        line[key] = desc.provenance[key]
                 if "refusal_fingerprint" in desc.provenance:
                     line["refusal_fingerprint"] = desc.provenance["refusal_fingerprint"]
                 if not any(m["id"] == line["id"] for m in manifest):  # idempotent registration
@@ -765,6 +982,11 @@ def main() -> None:
         help="override a config value, e.g. heretic_ara.trials=2 or lora_sft.steps=5 (repeatable)",
     )
     parser.add_argument(
+        "--include-smoke",
+        action="store_true",
+        help="allow smoke-eligibility entries (reduced budget / overrides) as task-vector parents",
+    )
+    parser.add_argument(
         "--allow-missing-families",
         action="store_true",
         help="skip (and record) configured families that are not implemented instead of failing",
@@ -777,6 +999,7 @@ def main() -> None:
         dry_run=args.dry_run,
         allow_missing_families=args.allow_missing_families,
         overrides=args.override,
+        include_smoke=args.include_smoke,
     )
 
 

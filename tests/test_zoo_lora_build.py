@@ -109,7 +109,7 @@ def _fake_family_module(family: str) -> types.ModuleType:
             params={**params, "delta_format": "lora", "git_dirty": False, "git_tree": "t"},
             seed=seed,
             base_model=base_model,
-            base_revision="a" * 40,
+            base_revision=params["base_revision"],
             git_sha="gen",
             touched_tensors=["model.language_model.layers.0.mlp.down_proj.weight"],
             delta_fro_norm=1.5,
@@ -212,7 +212,7 @@ def test_lora_family_entries_are_generated_with_sampled_params(tmp_path, fake_ge
     for c in by_family["heretic_ara"]:
         assert c["params"]["trials"] == 2  # override, not the 40 in the file
         assert c["params"]["preserve_good_behavior_weight"] in (0.5, 1, 2, 4)
-        assert c["base_model"] == "Qwen/Qwen3.5-0.8B" and c["params"]["base_revision"] == "main"
+        assert c["base_model"] == "Qwen/Qwen3.5-0.8B" and len(c["params"]["base_revision"]) == 40
     for c in by_family["lora_sft"]:
         p = c["params"]
         assert p["dataset"] in ("gsm8k_train", "alpaca_cleaned_5k")
@@ -226,7 +226,7 @@ def test_lora_family_entries_are_generated_with_sampled_params(tmp_path, fake_ge
         assert (d / "generator_edit.json").exists() and not (d / "delta.safetensors").exists()
         assert edit["params"]["delta_format"] == "lora"
         assert edit["provenance"]["config_overrides"] == ["heretic_ara.trials=2"]
-        assert edit["provenance"]["resolved_base_revision"] == "a" * 40
+        assert edit["provenance"]["resolved_base_revision"] == edit["base_revision"]
         assert edit["delta_fro_norm"] == 1.5 and edit["touched_tensors"]
     assert not list((zoo / ".staging").iterdir())
 

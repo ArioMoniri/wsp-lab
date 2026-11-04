@@ -43,8 +43,12 @@ class EditDescriptor:
     git_sha: str = "unknown"
     touched_tensors: list[str] = field(default_factory=list)
     delta_fro_norm: float | None = None
-    # Observational (excluded from `id`): family policy, refusal-cache fingerprint, kernel variant.
+    # Observational (excluded from `id`): family policy, refusal-cache fingerprint, kernel variant,
+    # reuse_key/reuse_identity (checked before an existing entry is reused; see docs/ZOO_IDENTITY.md).
     provenance: dict[str, Any] = field(default_factory=dict)
+    # "production" | "smoke" | "unclassified" (entries written before the policy existed).
+    eligibility: str = "unclassified"
+    eligibility_reasons: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.family not in EDIT_FAMILIES:

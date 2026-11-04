@@ -37,3 +37,7 @@ families:
     length: {min: 2, max: 8}
 eval:
   config: configs/eval_cheap.yaml
+eligibility:                                    # below these budgets (or with --override) = smoke
+  min_params:                                   # smoke entries are not task_vector parents by default
+    heretic_ara: {trials: 20}
+    lora_sft: {steps: 50}
