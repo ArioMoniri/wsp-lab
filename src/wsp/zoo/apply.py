@@ -150,8 +150,8 @@ def load_edited_model(base: Any, zoo_entry_dir: str | Path) -> dict[str, torch.T
     for key, d in delta.items():
         if key in state:
             target = state[key]
-            d_on_device = d.to(target.device)
-            state[key] = (target.to(d_on_device.dtype) + d_on_device).to(target.dtype)
+            d_on_device = d.to(device=target.device, dtype=torch.float32)
+            state[key] = (target.float() + d_on_device).to(target.dtype)
         else:
             state[key] = d
     return state

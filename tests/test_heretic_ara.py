@@ -52,7 +52,7 @@ def test_generate_heretic_ara_toy(tmp_path: Path, fake_heretic):
     assert desc.family == "heretic_ara"
     assert desc.seed == 42
     assert desc.base_model == "toy"
-    assert desc.params["delta_format"] == "lora"
+    assert desc.params["delta_format"] == "dense"
     assert desc.params["preserve_good_behavior_weight"] == 1.0
     assert len(desc.touched_tensors) > 0
     assert desc.delta_fro_norm is not None and desc.delta_fro_norm >= 0
@@ -63,7 +63,7 @@ def test_generate_heretic_ara_toy(tmp_path: Path, fake_heretic):
     roundtrip = EditDescriptor.from_json(edit_file.read_text())
     assert roundtrip.id == desc.id
     assert roundtrip.family == "heretic_ara"
-    assert roundtrip.params["delta_format"] == "lora"
+    assert roundtrip.params["delta_format"] == "dense"
 
     study_file = out_dir / "study.json"
     assert study_file.exists()
@@ -76,10 +76,17 @@ def test_generate_heretic_ara_toy(tmp_path: Path, fake_heretic):
         assert "parameters" in t
     assert "best_trial" in study
 
-    lora_dir = out_dir / "lora"
-    assert lora_dir.is_dir()
-    assert (lora_dir / "adapter_config.json").exists()
-    assert (lora_dir / "adapter_model.safetensors").exists()
+    from safetensors.torch import load_file
+
+    delta = load_file(out_dir / "delta.safetensors")
+    assert sorted(delta) == desc.touched_tensors
+    assert desc.delta_fro_norm == pytest.approx(
+        sum(t.float().square().sum().item() for t in delta.values()) ** 0.5
+    )
+    assert study["verification_status"] == "passed"
+    assert abs(study["verified_kl"] - study["reloaded_kl"]) <= 0.01
+    assert study["verified_refusals"] == study["reloaded_refusals"]
+    assert not (out_dir / "lora").exists()
 
 
 @pytest.mark.gpu
@@ -118,12 +125,19 @@ def test_generate_heretic_ara_smoke_gpu(tmp_path: Path, cuda):
     assert desc.touched_tensors and math.isfinite(desc.delta_fro_norm) and desc.delta_fro_norm > 0
     assert json.loads((out_dir / "manifest.json").read_text())["git_sha"] == get_git_sha()
     assert desc.family == "heretic_ara"
-    assert desc.params["delta_format"] == "lora"
+    assert desc.params["delta_format"] == "dense"
     assert (out_dir / "edit.json").exists()
     assert (out_dir / "study.json").exists()
     study = json.loads((out_dir / "study.json").read_text())
     assert len(study["trials"]) == 2
-    assert (out_dir / "lora" / "adapter_config.json").exists()
+    assert (out_dir / "delta.safetensors").exists()
+    assert abs(study["verified_kl"] - study["reloaded_kl"]) <= 0.01
+    print(
+        {
+            k: study[k]
+            for k in ("verified_kl", "reloaded_kl", "verified_refusals", "reloaded_refusals")
+        }
+    )
 
 
 @pytest.fixture
@@ -139,7 +153,8 @@ def fake_heretic(monkeypatch, toy_model):
 
     class Model:
         def __init__(self, settings):
-            self.model = copy.deepcopy(toy_model)
+            self.model = copy.deepcopy(toy_model).bfloat16()
+            self.base = {k: v.clone() for k, v in self.model.state_dict().items()}
 
         def get_layers(self):
             return self.model.layers
@@ -153,7 +168,7 @@ def fake_heretic(monkeypatch, toy_model):
             return [
                 {
                     key: [
-                        (x := torch.randn(4, m.in_features, generator=g), m(x).detach())
+                        (x := torch.randn(4, m.in_features, generator=g).bfloat16(), m(x).detach())
                         for m in modules
                     ]
                     for key, modules in self.get_layer_modules(i).items()
@@ -166,6 +181,10 @@ def fake_heretic(monkeypatch, toy_model):
                 self.model,
                 LoraConfig(r=rank, lora_alpha=rank, target_modules=["o_proj", "down_proj"]),
             )
+
+        def get_merged_model(self):
+            self.model = self.model.merge_and_unload()
+            return self.model
 
         def reset_model(self):
             with torch.no_grad():
@@ -188,7 +207,18 @@ def fake_heretic(monkeypatch, toy_model):
             ]
 
         def get_scores(self):
-            _, norm = heretic_ara.compute_adapter_stats(self.model.model)
+            if hasattr(self.model.model, "peft_config"):
+                from wsp.zoo.common import compute_adapter_stats
+
+                _, norm = compute_adapter_stats(self.model.model)
+            else:
+                norm = (
+                    sum(
+                        (v.float() - self.model.base[k].float()).square().sum().item()
+                        for k, v in self.model.model.state_dict().items()
+                    )
+                    ** 0.5
+                )
             return [
                 ("Refusals", Score(1 / (1 + norm), "", "")),
                 ("KL divergence", Score(norm, "", "")),
@@ -223,8 +253,8 @@ def test_ara_seed_reproduces_saved_adapter(tmp_path, fake_heretic):
     b = generate("toy", params, 7, tmp_path / "b")
     assert a.id == b.id
     assert a.delta_fro_norm > 0
-    wa = load_file(tmp_path / "a/lora/adapter_model.safetensors")
-    wb = load_file(tmp_path / "b/lora/adapter_model.safetensors")
+    wa = load_file(tmp_path / "a/delta.safetensors")
+    wb = load_file(tmp_path / "b/delta.safetensors")
     assert all(torch.equal(wa[k], wb[k]) for k in wa)
     study = json.loads((tmp_path / "a/study.json").read_text())
     assert all(t["parameters"]["preserve_good_behavior_weight"] == 2 for t in study["trials"])
@@ -273,7 +303,7 @@ def test_fake_study_filters_violating_trial(tmp_path, fake_heretic, monkeypatch)
 
     from wsp.zoo import heretic_ara
 
-    outputs = iter([(0.1, 0.9), (0.6, 0.1)])
+    outputs = iter([(0.1, 0.9), (0.6, 0.1), (0.6, 0.1), (0.6, 0.1)])
 
     def scores(self):
         refusal, kl = next(outputs)
@@ -294,3 +324,71 @@ def test_fake_study_filters_violating_trial(tmp_path, fake_heretic, monkeypatch)
     study = json.loads((tmp_path / "study.json").read_text())
     assert study["best_trial"]["trial"] == 2
     assert study["kl_constraint_met"] is True
+
+
+def test_reload_mismatch_records_failure_without_entry(tmp_path, fake_heretic, monkeypatch):
+    from wsp.zoo import heretic_ara
+
+    original = heretic_ara.Evaluator.get_scores
+    calls = []
+
+    def scores(self):
+        calls.append(1)
+        result = original(self)
+        if len(calls) == 4:
+            result[1][1].value += 0.02
+        return result
+
+    monkeypatch.setattr(heretic_ara.Evaluator, "get_scores", scores)
+    with pytest.raises(ValueError, match="verification"):
+        generate(
+            "toy",
+            {
+                "trials": 2,
+                "lora_rank": 2,
+                "ara_settings": {"n_optimization_steps": 1, "max_iter": 2},
+            },
+            7,
+            tmp_path,
+        )
+    study = json.loads((tmp_path / "study.json").read_text())
+    assert study["verification_status"] == "failed"
+    assert abs(study["reloaded_kl"] - study["verified_kl"]) > 0.01
+    assert not (tmp_path / "edit.json").exists()
+    assert not (tmp_path / "manifest.json").exists()
+
+
+def test_selected_parameters_applied_once_after_search(tmp_path, fake_heretic, monkeypatch):
+    from wsp.zoo import heretic_ara
+
+    calls = []
+    original = heretic_ara.ara.ARA.modify_model
+
+    def modify(self, ctx, parameters):
+        calls.append(parameters.to_dict())
+        return original(self, ctx, parameters)
+
+    monkeypatch.setattr(heretic_ara.ara.ARA, "modify_model", modify)
+    generate(
+        "toy",
+        {"trials": 2, "lora_rank": 2, "ara_settings": {"n_optimization_steps": 1, "max_iter": 2}},
+        7,
+        tmp_path,
+    )
+    study = json.loads((tmp_path / "study.json").read_text())
+    assert len(calls) == 3
+    assert calls[-1] == study["best_trial"]["parameters"]
+
+
+def test_dense_export_is_effective_bf16_delta():
+    import torch
+
+    from wsp.zoo.heretic_ara import merged_delta
+
+    base = {"weight": torch.tensor([1.0, 2.0], dtype=torch.bfloat16), "unchanged": torch.ones(2)}
+    merged = {"weight": torch.tensor([1.0001, 2.02]), "unchanged": torch.ones(2)}
+    delta = merged_delta(base, merged)
+    expected = merged["weight"].bfloat16().float() - base["weight"].float()
+    assert list(delta) == ["weight"]
+    assert torch.equal(delta["weight"], expected)
+    assert delta["weight"].dtype == torch.float32

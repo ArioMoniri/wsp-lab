@@ -6,6 +6,7 @@ import gc
 import json
 import math
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 import optuna
@@ -17,9 +18,11 @@ from heretic.modifiers import ara
 from heretic.plugin import Context
 from heretic.system import empty_cache
 from optuna.samplers import TPESampler
+from safetensors.torch import save_file
 
 from wsp.schema import EditDescriptor, write_manifest
-from wsp.zoo.common import compute_adapter_stats, get_git_sha, git_provenance, resolve_base_revision
+from wsp.zoo.apply import load_edited_model
+from wsp.zoo.common import get_git_sha, git_provenance, resolve_base_revision
 
 
 def select_best_trial(
@@ -84,19 +87,41 @@ def extract_trial_metrics(evaluator, scores):
     return tuple(metrics)
 
 
+def merged_delta(base, merged):
+    """Effective deployed delta: subtract in fp32 after rounding merged weights to bf16.
+
+    Keep fp32 differences so applying them in fp32 recovers each bf16 weight exactly.
+    Unchanged tensors (including buffers) are omitted.
+    """
+    if base.keys() != merged.keys():
+        raise ValueError("Merged/base state keys differ")
+    delta = {}
+    for key, weight in merged.items():
+        original = base[key].cpu()
+        deployed = weight.detach().cpu()
+        if deployed.is_floating_point():
+            deployed = deployed.to(torch.bfloat16)
+        diff = deployed.float() - original.float()
+        if not torch.isfinite(diff).all():
+            raise ValueError(f"Nonfinite merged delta: {key}")
+        if torch.count_nonzero(diff):
+            delta[key] = diff.contiguous()
+    return delta
+
+
 def generate(
     base_model: str,
     params: dict[str, Any],
     seed: int,
     out_dir: Path,
 ) -> EditDescriptor:
-    """Run Heretic ARA modifier programmatically and save the PEFT LoRA adapter.
+    """Run ARA, evaluate merged weights, and gate dense export on reloaded KL.
 
     Args:
         base_model: Hugging Face model ID or local model path.
         params: Hyperparameters (preserve_good_behavior_weight, trials, kl_divergence_target, etc.).
         seed: Random seed.
-        out_dir: Directory where edit.json, lora/, and study.json will be written.
+        out_dir: Directory where edit.json, delta.safetensors, and study.json will be written.
 
     Returns:
         EditDescriptor describing the generated edit.
@@ -130,6 +155,8 @@ def generate(
     ctx = modifier = evaluator = model = None
     try:
         model = Model(settings)
+        # Snapshot before PEFT wraps/mutates the base, on CPU to spare shared VRAM.
+        base_state = {k: v.detach().cpu().clone() for k, v in model.model.state_dict().items()}
         evaluator = Evaluator(settings, model)
 
         ara_settings = ara.Settings(**{"lora_rank": lora_rank, **params.get("ara_settings", {})})
@@ -180,24 +207,31 @@ def generate(
         modifier.reset_model(ctx)
         modifier.modify_model(ctx, best_params)
 
-        lora_dir = out_dir / "lora"
-        lora_dir.mkdir(parents=True, exist_ok=True)
-        model.model.save_pretrained(str(lora_dir))
+        # Reapply selected parameters once through Heretic, never rerun the objective.
+        # Score the deployed merged weights themselves, not stale search-trial metrics.
+        model.model = model.get_merged_model()
+        model.model.to(dtype=torch.bfloat16)
+        verified_refusals, verified_kl = extract_trial_metrics(evaluator, evaluator.get_scores())
+        delta = merged_delta(base_state, model.model.state_dict())
+        touched_tensors = sorted(delta)
+        delta_fro_norm = math.sqrt(sum(t.square().sum().item() for t in delta.values()))
 
         study_file = out_dir / "study.json"
         study_data = {
             "trials": trial_records,
             "best_trial": best_trial,
-            "kl_constraint_met": kl_target is None or best_trial["kl_divergence"] <= kl_target,
+            "verified_refusals": verified_refusals,
+            "verified_kl": verified_kl,
+            "kl_constraint_met": kl_target is None or verified_kl <= kl_target,
+            "verification_tolerance": 0.01,
+            "verification_status": "pending",
             "seed": seed,
             "params": params,
         }
         study_file.write_text(json.dumps(study_data, indent=2))
 
-        touched_tensors, delta_fro_norm = compute_adapter_stats(model.model)
-
         desc_params = dict(params)
-        desc_params["delta_format"] = "lora"
+        desc_params["delta_format"] = "dense"
         desc_params.update(git_provenance())
         desc = EditDescriptor(
             family="heretic_ara",
@@ -209,7 +243,35 @@ def generate(
             touched_tensors=touched_tensors,
             delta_fro_norm=delta_fro_norm,
         )
-        (out_dir / "edit.json").write_text(desc.to_json())
+        # Stage the descriptor required by the public loader; publish only after verification.
+        with TemporaryDirectory(prefix=".verify-", dir=out_dir) as staging:
+            stage = Path(staging)
+            save_file(delta, stage / "delta.safetensors")
+            (stage / "edit.json").write_text(desc.to_json())
+            try:
+                reloaded_state = load_edited_model(base_state, stage)
+                model.model.load_state_dict(reloaded_state, strict=True)
+                del reloaded_state
+                reloaded_refusals, reloaded_kl = extract_trial_metrics(
+                    evaluator, evaluator.get_scores()
+                )
+                study_data.update(
+                    reloaded_kl=reloaded_kl,
+                    reloaded_refusals=reloaded_refusals,
+                    kl_reload_difference=abs(reloaded_kl - verified_kl),
+                )
+                if abs(reloaded_kl - verified_kl) > 0.01:
+                    raise ValueError("Saved ARA verification failed: KL difference exceeds 0.01")
+                if not study_data["kl_constraint_met"]:
+                    raise ValueError("Saved ARA verification failed: verified KL exceeds target")
+            except Exception as exc:
+                study_data.update(verification_status="failed", verification_error=str(exc))
+                study_file.write_text(json.dumps(study_data, indent=2))
+                raise
+            study_data["verification_status"] = "passed"
+            study_file.write_text(json.dumps(study_data, indent=2))
+            (stage / "delta.safetensors").replace(out_dir / "delta.safetensors")
+            (stage / "edit.json").replace(out_dir / "edit.json")
 
         write_manifest(
             out_dir / "manifest.json",
