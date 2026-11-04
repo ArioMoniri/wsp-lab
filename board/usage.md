@@ -137,3 +137,5 @@
 | 2026-11-04 | P4 predictors M1/M2/M3/M5/M6 training code | codex/gpt-6.1-sol high | running |
 | 2026-11-04 | H4 LLM-reader harness (1st) | codex/gpt-6.1-terra medium | no work done |
 | 2026-11-04 | H4 LLM-reader harness (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | H4 harness (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | done c46cc4f (43 tests) |
+| 2026-11-04 | Board A feat/h4-reader | codex/gpt-6.1-terra medium | running |
