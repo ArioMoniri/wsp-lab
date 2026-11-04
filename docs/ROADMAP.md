@@ -32,6 +32,25 @@ Benchmarks chosen for speed (each ≤ 2 min on 0.8B with vLLM/HF generate, batch
 All with fixed seeds, temperature 0 unless the task card forbids. Store per-item results, not just means.
 - Gate: base model numbers reproduce within ±1.5 pt across two runs.
 
+
+### Batch evaluation throughput (4 Nov 2026)
+`python -m wsp.eval.batch --zoo data/zoo/qwen3.5-0.8b` defaults to
+`configs/eval_fast.yaml`; `--ids`, `--families`, `--eligibility`, token and batch overrides
+are supported. Completed results with the same effective configuration are skipped;
+`--resume` makes that intent explicit. OOM retries use B, floor(B/2), floor(B/4).
+
+Run `20261104-032002-1c2cc588`: two production random-direction entries,
+`bccb9ab10b5661e0` and `adf416337f5a2277`, batch 4, fast config restricted to
+4 items per benchmark and 32 generated tokens while `p1-zoo-full` shares the GPU.
+Measured entry times: 0.2997 and 0.3022 minutes; mean 0.301 minutes/entry.
+Board A's D2 calibration estimates ≈ 9–12 min/entry, ≈ 120 GPU-h for
+700 entries, and ≈ 50 h for the D3 stratified subset. These estimates are pending
+clean measurement of one full D2 entry after the GPU is released.
+Follow-ups before a full run: measure KL context-transfer cost and allocator growth;
+run the batch base reproduction gate twice; decide WikiText 8 vs 64 windows explicitly.
+Missing-eligibility legacy rows remain excluded. Entry load/apply errors abort the run;
+restart repairs the index and resumes completed production entries.
+
 ## P3 — Features + baselines
 - φ_stats: per-tensor (||Δ||_F, ||Δ||_F/||θ||_F, top-8 singular values of Δ, spectral entropy, sign stats,
   per-block cosine(θ_{t−1}, θ_t)) → ~40 floats × n_tensors
