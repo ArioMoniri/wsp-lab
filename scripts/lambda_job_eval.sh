@@ -31,9 +31,17 @@ rsync -a data/.hf-pull-zoo/zoo/ data/zoo/
 rm -f data/zoo/qwen3.5-0.8b/*/eval.json   # every shard entry is evaluated here, never inherited from another host
 HOST="lambda-$(hostname)"
 echo "EVAL start $(date -u +%FT%TZ) host=$HOST ids=$(wc -l < "$IDS")"
+# Generation at batch 32 is launch-bound (GPU ~50% busy on an H100), so WORKERS processes share the GPU on disjoint
+# id sub-lists. Worker 0 runs alone until the base evaluation exists, so the base is computed once per host.
+WORKERS="${WORKERS:-3}"
+rm -f /tmp/shard.*; i=0
+while read -r id || [ -n "$id" ]; do [ -n "$id" ] && echo "$id" >> "/tmp/shard.$((i % WORKERS))" && i=$((i+1)); done < "$IDS"
 set +e
-python -m wsp.eval.batch --zoo data/zoo/qwen3.5-0.8b --ids "$(grep -v "^$" "$IDS" | paste -sd,)" --config configs/eval_fast.yaml --resume 2>&1 | grep -E '^\{|entry=|Traceback|Error|error'
-rc=${PIPESTATUS[0]}
+run_worker() { python -m wsp.eval.batch --zoo data/zoo/qwen3.5-0.8b --ids "$(paste -sd, "$1")" --config configs/eval_fast.yaml --resume 2>&1 | grep -E '^\{|entry=|Traceback|Error|error' | sed "s/^/[w$2] /"; return "${PIPESTATUS[0]}"; }
+run_worker /tmp/shard.0 0 & pids=($!)
+for t in $(seq 1 120); do [ -f data/evals/qwen3.5-0.8b/base/eval.json ] && break; sleep 10; done
+for w in $(seq 1 $((WORKERS-1))); do [ -f "/tmp/shard.$w" ] && { run_worker "/tmp/shard.$w" "$w" & pids+=($!); }; done
+rc=0; for p in "${pids[@]}"; do wait "$p" || rc=1; done
 set -e
 echo "EVAL end $(date -u +%FT%TZ) rc=$rc done=$(ls data/zoo/qwen3.5-0.8b/*/eval.json 2>/dev/null | wc -l)"
 # upload what exists (also on failure): per-entry eval artefacts + this host's base evaluation
