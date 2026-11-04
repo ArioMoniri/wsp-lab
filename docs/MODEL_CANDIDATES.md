@@ -433,3 +433,118 @@ standard-predictor ablation with zero collapsed seeds. Same 5-fold family splits
   this roadmap.
 - 27B transfer (P5) becomes the headline → Transferable-GMN-style width invariance (2610.00420)
   moves to #1.
+
+## LLM-in-the-loop editing and optimisation
+
+This assessment answers H5 before any P6 run. The three proposed roles are distinct: **A** an LLM
+直接 proposes a weight delta; **B** an LLM proposes optimizer updates or learning-rate-like controls during
+short fine-tuning; **C** the existing predictor forecasts outcomes and ranks or rejects proposals before
+the expensive benchmark evaluation. C is a selection layer, not an edit generator. The relevant
+question is whether C saves *real model evaluations at equal final score*, not whether its predictions
+are numerically attractive.
+
+### Relevant work (2024–2026, plus optimizer foundations)
+
+- **LLMs as optimizers.** OPRO (2309.03409) has an LLM propose candidates from a prompt containing
+earlier candidates and their measured scores. Promptbreeder (2309.16797) extends evolutionary prompt
+search with self-referential prompt mutation. Both establish a useful outer-loop pattern, but their
+search variables are short text strings; generating a valid, useful delta with 10⁹ parameters is a much
+harder representation and credit-assignment problem. SkillOpt (2605.23904) is a more controlled text-
+space successor: bounded artifact edits are accepted against held-out validation. This supports bounded
+proposals and validation, not assuming an LLM has learned a stable gradient substitute.
+- **Learned and discovered optimizers.** VeLO (2211.09760) is a learned optimizer trained across many
+tasks, with meta-training reported at roughly 4,000 TPU-months; it is evidence for learned update rules
+but not a recipe to meta-train on this project's small zoo. Lion (2302.06675) is a compact symbolic
+optimizer discovered by program search. Muon's LLM-scale feasibility is studied in *Muon is Scalable
+for LLM Training* (2502.16982). These are essential equal-budget controls: replacement is not an
+advance unless it beats standard update rules under the same data, optimizer steps, and model-forward
+budget.
+- **LLM control of training and hyperparameters.** *Offline Training of Language Model Agents with
+Functions as Learnable Weights* (2402.11359) lets an LLM optimize agent functions without modifying
+the underlying model. ATTUNE (2610.17528) uses an agent to tune training throughput, with correctness
+and convergence gates outside the agent. These are closer to B than OPRO: the LLM reasons over run-
+level feedback and bounded controls, while an external gate protects the objective. For our short
+fine-tunes, per-step free-form parameter deltas are much less constrained than changing a scalar
+learning rate, clipping threshold, or update scale; start with the latter if B is attempted.
+- **LLM-assisted model editing.** *Model Surgery* (2407.08770) demonstrates behavior changes through
+targeted parameter edits, while task arithmetic (2212.04089) gives a non-LLM basis for controlled
+weight-space edits. The Takehi et al. *Sparks of Weight-Space Programming* blog cited in
+`docs/RESEARCH_NOTES.md` is the direct motivation for A: Experiment 8 edits Qwen3.5-0.8B weights in a
+Python kernel with GPT-6 Astra, compares 10/25/50 forward-pass budgets, and uses no gradients. Treat
+that as a promising report, not evidence that arbitrary editors are repeatable or generalize beyond a
+localized loop-related defect.
+- **Surrogate/critic-gated search.** Bayesian optimization uses a surrogate plus an acquisition rule to
+allocate expensive evaluations; TuRBO (1910.01739) is a trust-region BO method for difficult
+high-dimensional objectives. Model-based RL provides a related warning: learned dynamics support
+planning, but model error compounds when the planner exploits the learned model. A here is an expensive
+black-box proposal problem; C resembles surrogate-assisted BO and model-based planning. The transferable
+lesson is uncertainty-aware ranking, short horizons, and frequent real checks. A predictor trained on
+observational zoo edits is not automatically a calibrated acquisition model for adversarially chosen
+edits.
+
+All arXiv identifiers in this section were checked against their abstract-page titles using the
+project's required command form (`curl -s https://arxiv.org/abs/<id> | grep -o '<title>[^<]*'`).
+Verified IDs/titles: 2309.03409 *Large Language Models as Optimizers*; 2309.16797 *Promptbreeder:
+Self-Referential Self-Improvement Via Prompt Evolution*; 2211.09760 *VeLO: Training Versatile Learned
+Optimizers by Scaling Up*; 2302.06675 *Symbolic Discovery of Optimization Algorithms*; 2502.16982
+*Muon is Scalable for LLM Training*; 2402.11359 *Offline Training of Language Model Agents with
+Functions as Learnable Weights*; 2610.17528 *ATTUNE: Agentic Throughput Tuning for LLM Training*;
+2407.08770 *Model Surgery: Modulating LLM's Behavior Via Simple Parameter Editing*; 2212.04089
+*Editing Models with Task Arithmetic*; 2605.23904 *SkillOpt: Executive Strategy for Self-Evolving
+Agent Skills*; and 1910.01739 *Scalable Global Optimization via Local Bayesian Optimization*. The
+Takehi et al. blog is not an arXiv paper. Muon and Lion are optimizer baselines, not LLM agents; the
+distinction matters when interpreting B.
+
+### A–C assessment and practical costs
+
+| Design | Expected gain | Episode cost on Qwen3.5-0.8B / one 32 GB card | Main risks |
+|---|---|---|---|
+| **A. LLM writes a delta** | Potentially high for sparse, interpretable defects with a clear diagnostic signal; low and unknown for diffuse benchmark gains. The blog gives a useful target. | 10/25/50 model forward passes per editor attempt, plus editor tokens and Python-kernel orchestration. At the P2 ceiling of ≤2 min for the full eval battery, 10–50 diagnostic forwards should generally be seconds to a few minutes; budget **~1–5 GPU-min per proposal**, then ≤2 min for full verification. A 50-forward episode can approach 7 GPU-min before retries. Track actual GPU time and input/output tokens; hosted-model spend depends on provider pricing. | Editor variance and prompt sensitivity; malformed deltas; exploiting benchmark artifacts; sparse success does not establish broad gain; repeated attempts inflate compute and selection bias. |
+| **B. LLM steers/replaces optimizer** | Moderate for choosing among a small set of hyperparameters or diagnosing loss curves; low prior for raw parameter-update generation beating Adam/Muon on ordinary differentiable fine-tuning. | Each proposed training step incurs editor latency/tokens in addition to training and usually gradient forward/backward. Use 10–50 optimizer decisions per short run; expect **minutes to tens of minutes** even if the fine-tune itself is short. A local Qwen editor shares the GPU and competes for memory/throughput; a hosted editor adds API latency/cost. | Confounded by unequal gradient/data budgets; unstable update scales; delayed feedback; high variance; training loss may improve while held-out benchmarks degrade. |
+| **C. Predictor critic/ranker** | Potentially the most direct route to H5: save full battery evaluations by rejecting weak proposals, while uncertainty-based exploration limits missed winners. | Predictor inference on cached φ features is negligible (seconds or less); feature extraction is one-time per delta. The costs are proposal generation and predictor training, plus real evaluations that pass the gate. | Reward hacking / distribution shift when editors adapt to the critic; miscalibrated uncertainty; selection bias; contamination if tuning sees final test items. |
+
+These are planning ranges, not measured timings. P2's ≤2 min refers to the full battery and must be
+profiled separately from diagnostic forward passes. Log editor prompt/completion tokens, GPU-seconds,
+peak memory, diagnostic forwards, full evaluations, and rejected proposals. Use a cheap editor model as
+the first A/B control; reserve Astra/Claude for a small matched comparison, not every episode.
+
+### Controls and smallest decisive experiment
+
+Use the same fixed goal set, base checkpoint, random seeds, and stopping rule across arms. Keep a sealed
+per-item test set: expose only development items to the editor and critic; score the final selected
+checkpoint once on the sealed set. Include (1) cheap LLM editor + C, (2) the same editor without C,
+(3) random edits matched for layer, sparsity, norm, and diagnostic-forward budget, (4) Adam and Muon
+short fine-tunes with the same real forward-pass budget as B, and (5) predictor ranking against random
+ranking. Report paired outcomes and bootstrap confidence intervals by goal, not benchmark item. Use
+replicated episodes per goal/seed so one lucky prompt cannot dominate.
+
+**Smallest decisive run:** after the prerequisites below, run 30 held-out goal-seed episodes per arm
+(at least 10 distinct goals × 3 fixed seeds), with one editor proposal batch capped at 10, 25, or 50
+diagnostic forwards according to a pre-registered budget. Define each goal's target gain before
+running. The metric is the number of *full P2-equivalent real evaluations* required to reach it, with
+final sealed-set score non-inferior within 1 percentage point of the no-critic editor's mean gain. H5
+passes only if C uses **≥30% fewer** full real evaluations than both the same editor without C and
+equal-forward-budget Adam/Muon, at that equal final-score criterion; report paired bootstrap 95%
+intervals and require the upper interval for the evaluation ratio to be <0.70 for a decisive pass.
+Thirty episodes is a screening experiment; if the interval overlaps 0.70, expand to 100 episodes before
+claiming or falsifying the threshold. Compare at equal actual GPU-seconds as a sensitivity analysis,
+since forward-pass counts omit editor latency and optimizer backward cost.
+
+### Recommendation and prerequisites
+
+Try **C → A → B**. First validate C in shadow mode: predict and rank a held-out set of already logged P1
+edits without letting the predictor alter proposal generation. Then run A with C as an evaluation gate,
+because this is closest to the blog and does not entangle the critic with a changing optimizer. Attempt
+B only after A shows repeatable wins; start B by letting an LLM choose a small discrete set of learning
+rates/update scales around Adam/Muon, not emit raw per-parameter updates. Apply C to B only after its
+proposal distribution has been checked for critic exploitation.
+
+Do not start the decisive run until P1 has at least the roadmap target of **600 single edits and 150
+trajectories**, with an explicit `llm_edit` stratum and per-item eval results. Require H1 first: predictor
+must reach **ρ ≥ 0.6 per benchmark** on held-out edits and beat StatNN and delta-norm baselines, with
+calibration checked on the relevant edit family. If H1 is weak, C has no credible basis for pruning
+proposals; collect edits and improve the predictor instead. H1 accuracy alone is insufficient for
+critic use: add a held-out calibration/coverage check and an uncertainty-triggered real-evaluation
+fallback. Freeze the predictor during each episode, cap proposals, randomize editor arm order, log all
+prompts and deltas, and prohibit access to sealed evaluation examples. The top Board C run is C's
+shadow-ranker on existing P1 proposals; schedule A+C only after that gate passes.
