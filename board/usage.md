@@ -168,7 +168,9 @@
 | 2026-11-04 | heretic_ara export fix | codex/gpt-6.1-sol high | done d2193cf (401 tests; KL gate identical) |
 | 2026-11-04 | Board A fix/heretic-ara-export | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | Board A fix/heretic-ara-export | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (2) → fixed by orchestrator, merged 9f265d6 (+ follow-up test fix on main) |
-| 2026-11-04 | H5 researcher: blog Experiment 8 protocol + LLM weight-editing refs | codex/gpt-6.1-terra medium | running |
-| 2026-11-04 | Board C: H5 editor-harness design | codex/gpt-6-luna medium | running |
-| 2026-11-04 | Board A: H5 pre-registration + fast-tier noise floor | codex/gpt-6.1-sol high | running |
+| 2026-11-04 | H5 researcher: blog Experiment 8 protocol + LLM weight-editing refs | codex/gpt-6.1-terra medium | done c028513, merged (1 verified ref; protocol extracted) |
+| 2026-11-04 | Board C: H5 editor-harness design | codex/gpt-6-luna medium | done 4bc82aa, merged (subprocess REPL + metered probe API) |
+| 2026-11-04 | Board A: H5 pre-registration + fast-tier noise floor | codex/gpt-6.1-sol high | REVISE (6 blocking: repeat panels, MATH-only truncation metric, repeat dirs/batch record, critic gate, refusal judge labelling, costed 32k allocation) — merged a19c41a |
 | 2026-11-04 | Board B: H5 reproduction section requirements + noise reporting | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | H5 editor harness implementation (src/wsp/editor, CPU tests) | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | eval: Board A B2/B3/B5 fixes (per-benchmark truncation + validity, immutable repeat runs with actual batch, refusal-judge labelling) | codex/gpt-6.1-sol medium | running |
