@@ -115,3 +115,7 @@
 | 2026-11-04 | writer: README + PROGRESS + live status script | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
 | 2026-11-04 | scribe: paper method/zoo/experiments | codex/gpt-6.1-terra high | running |
 | 2026-11-04 | checker: docs accuracy + commands + tests | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | scribe method/zoo/experiments | codex/gpt-6.1-terra high | done e73b576 (6-page PDF) |
+| 2026-11-04 | humanizer method/zoo/experiments | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | humanizer method/zoo/experiments | claude_aio_gmail_api/claude-haiku-5-5 | done d1d0d6c |
+| 2026-11-04 | Board B paper/method-zoo | codex/gpt-6.1-terra medium | running |
