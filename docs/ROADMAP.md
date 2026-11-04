@@ -88,6 +88,12 @@ restart repairs the index and resumes completed production entries.
 - Deliverable: does the predictor trained on 0.8B/4B/9B zoos transfer to 27B deltas (zero-shot ρ)?
 - Gate: `docs/RESULTS.md` §27B
 
+## P4b — Multi-base-model zoos (H6, added 4 Nov 2026)
+- Build zoos for LFM3-1.7B (hybrid, downloaded), Qwen3.5-4B, Gemma-3-270M-it (gated; token available) with the
+  same families and configs; feature pooling must map each architecture's tensor types (audit per model).
+- Train on two models, test on the third (leave-one-model-out), plus the ≤ 20-edit calibration arm.
+- Board C to assess which representation is most transferable (pooled spectra vs per-type stats vs JEPA latent).
+
 ## P6 — Closing the loop (promoted from optional, 4 Nov 2026)
 Forecast-then-verify: the predictor scores every proposed edit before evaluation; it then gates/ranks
 candidate edits (weight-space Bayesian optimisation) and acts as critic for `llm_optimizer` runs where the

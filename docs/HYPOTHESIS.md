@@ -60,3 +60,12 @@ is the latent of these cumulative-from-base features, not absolute θ_t features
 Family holdouts exclude all descendants/sources with a held-out-family step in
 full manifest ancestry, including unlabeled steps and chain `inner_family` values.
 H1 uses measured predecessor-relative Δy; absolute levels are a separate baseline.
+
+## H6 — Cross-base-model generalisation (added 4 Nov 2026, user request)
+A predictor trained on edits of one base model should carry over to edits of a *different* base model when
+its inputs are shape-agnostic (pooled per-tensor-type statistics, singular spectra, rounding statistics) and
+edit descriptors are family-level only. H6: with the zoo extended to at least three base models of different
+families and sizes (Qwen3.5-0.8B, LFM3-1.7B, Qwen3.5-4B; Gemma-3-270M as a small control), a predictor
+trained on two of them reaches Spearman ρ ≥ 0.4 on the held-out model's edits for ≥ 6 of K benchmarks
+without any target from that model. Falsified if ρ < 0.2 on all benchmarks. This is expected to be the hardest
+hypothesis; a per-model calibration arm (≤ 20 labelled edits from the new model) is reported alongside.
