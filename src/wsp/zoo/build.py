@@ -110,7 +110,15 @@ def sample_param(rng: random.Random, spec: dict[str, Any]) -> Any:
     raise ValueError(f"unsupported parameter spec: {spec}")
 
 
-FAMILY_ORDER = ["random_dir", "abliteration", "heretic_ara", "lora_sft", "task_vector", "chain"]
+FAMILY_ORDER = [
+    "llm_edit",
+    "random_dir",
+    "abliteration",
+    "heretic_ara",
+    "lora_sft",
+    "task_vector",
+    "chain",
+]
 SINGLE_FAMILIES = ["random_dir", "abliteration", "heretic_ara", "lora_sft"]
 OPTIONAL_MODULES = ("heretic_ara", "lora_sft")
 LORA_FAMILIES = ("heretic_ara", "lora_sft")  # generated via wsp.zoo.<family>.generate -> lora/
@@ -734,6 +742,10 @@ def _build_single_family(
     manifest: list[dict[str, Any]],
     dry_run: bool,
 ) -> list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]]:
+    if family == "llm_edit":
+        from wsp.editor.zoo import build
+
+        return build(config, family_cfg, seed, base_state, dry_run=dry_run)
     if family == "random_dir":
         return build_random_dir(config, family_cfg, seed, base_state, dry_run=dry_run)
     if family == "abliteration":

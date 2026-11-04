@@ -30,11 +30,16 @@ def main(id_files: list[str]) -> None:
     token = os.environ.get("HF_TOKEN")
     api = HfApi(token=token)
     hosts = sorted(
-        {s.rfilename.split("/")[2] for s in api.repo_info(REPO, repo_type="dataset").siblings
-         if s.rfilename.startswith("evals/qwen3.5-0.8b/base-lambda")}
+        {
+            s.rfilename.split("/")[2]
+            for s in api.repo_info(REPO, repo_type="dataset").siblings
+            if s.rfilename.startswith("evals/qwen3.5-0.8b/base-lambda")
+        }
     )
     local = snapshot_download(
-        REPO, repo_type="dataset", token=token,
+        REPO,
+        repo_type="dataset",
+        token=token,
         allow_patterns=[f"zoo/qwen3.5-0.8b/{i}/eval.json" for i in ids]
         + [f"zoo/qwen3.5-0.8b/{i}/summary.json" for i in ids]
         + [f"zoo/qwen3.5-0.8b/{i}/records.jsonl" for i in ids]
@@ -64,7 +69,9 @@ def main(id_files: list[str]) -> None:
                     shutil.copy2(src / f, dst / f)
             (dst / "eval.json").write_text(json.dumps(payload, indent=1))
             placed += 1
-    print(f"placed={placed} kept_local(control copies)={kept} not_yet_on_hub={missing} hosts={hosts}")
+    print(
+        f"placed={placed} kept_local(control copies)={kept} not_yet_on_hub={missing} hosts={hosts}"
+    )
 
 
 def _host_from_commit(api: HfApi, path: str) -> str:

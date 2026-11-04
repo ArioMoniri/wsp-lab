@@ -1,0 +1,34 @@
+base_model: google/gemma-3-270m-it
+base_revision: main
+require_resolved_revision: true
+budget: 10
+seed: 0
+editable_tensors:
+- model.layers.15.mlp.down_proj.weight
+hidden_layers: []
+development_pool:
+  sources:
+  - gsm8k
+  - math
+  split: train
+  version_required: true
+sandbox:
+  cpu_seconds: 2
+  wall_seconds: 5
+  ram_bytes: 268435456
+production_enabled: false
+# Replace with digest(pool) of the exact approved development records before loading.
+development_pool_hash: null
+require_separate_principal: true
+probe:
+  max_positions: 8
+  max_layers: 4
+  max_bytes: 8388608
+  max_sequence: 512
+  max_batch: 64
+  call_seconds: 5
+episode_limits:
+  calls: 50
+  sequences: 50
+  tokens: 32768
+  wall_seconds: 60

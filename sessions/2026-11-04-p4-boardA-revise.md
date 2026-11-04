@@ -62,6 +62,17 @@ Final validation: CPU pytest 325 passed, 8 deselected in 25.26 s (< 60 s local a
 - 09:59 fix/heretic-ara-export validation: full CPU pytest 401 passed / 8 deselected in 30.29s (commit hook 28.45s); ruff check src tests and ruff format --check src tests clean. agent-tmux ara-fix-smoke log /home/ubuntu/agent-logs/ara-fix-smoke-20261104-095732.log: GPU/slow Qwen3.5-0.8B trials=2 smoke passed in 40.70s, batch=1, rank=4, n_optimization_steps=1/max_iter=2, 4 train prompts per class and 2 evaluation prompts per scorer, configs/p1_generator_smoke.yaml. Artifact data/runs/p1-generator-smoke/heretic_ara; verified KL=0.001249964232556522, reloaded KL=0.001249964232556522 (difference 0), verified/reloaded refusals=1.0 (2/2). This is plumbing validation, not production ARA quality evidence; upstream row-normalization semantics remain unchanged. No weights committed; no merge.
 - 10:11 Merged fix/heretic-ara-export (evaluated dense export + reload KL gate); fixed a self-inflicted 3-test regression (format label). Relaunching the ARA family on Lambda with the fixed exporter (D6 budget).
 - 21:42 Board A H5 review: wrote prospective noise qualification and Experiment 8/H5 arm A protocol in docs/reviews/H5/board-a-prereg-2026-11-04.md; REVISE B1-B6, no GPU runs or merge. Reviewed current controls; independent retest provenance and 32k power remain open.
+
+## H5 implementation handoff
+
+Continued feat/h5-editor in its own worktree, merged main (main README retained),
+and addressed Board A editor review with test-first regressions. Details and isolation
+limits are recorded in sessions/2026-11-04-h5-editor.md and docs/H5_DESIGN.md.
+The full-repository lint check also required formatting/import sorting and the
+executable bit for main's scripts/d3_pull_shards.py; no behavior changed there.
+H5 CPU verification after fixes: 439 passed, 1 root-only test skipped, 8 GPU tests
+deselected in 27.92s; a subsequent episode-deadline/start-failure test passed too.
+Whole-repo ruff check and format check pass. Final pre-commit repeats CPU tests.
 - 21:48 Implemented Board A B2/B3/B5 eval metadata, immutable repeats, keyword names, matched-reference helper; CPU/GPU validation in agent-tmux board-a-checks.
 - 21:49 Regression tests red first (2 failed); targeted suite now 17 passed, additional provenance/hash tests 5 passed. First corrected CPU suite 406 passed; final CPU/GPU CI validation pending.
 - 21:50 Final validation: CPU 407 passed; CI GPU subset 4 passed; additional hash/reference tests 5 passed; ruff check and format clean. No benchmark/reliability panels or predictor training launched.

@@ -85,3 +85,91 @@ DoD before any production episode:
 ## Biggest risk and preregistration handoff
 
 The largest risk is **proposal-selection leakage and hidden evaluation access**: iterative editors can overfit visible development items, while a leaked sealed set invalidates the claimed generalization. Board A must preregister the exact development/sealed item IDs or immutable split hashes, item access boundary, prompt and stopping rule, proposal count and selection rule, score threshold for a qualifying fix, 10/25/50 treatment assignment, random seeds, matched best-of-N evaluation budget, Gemma negative-control decision rule, and final sealed-evaluation timing before the first episode.
+
+## Implemented isolation and qualification boundary (Board A revision, 4 Nov 2026)
+
+The current backend is Linux seccomp plus rlimits, not a container, chroot or mount
+namespace. After Python/JSON initialization the editor cannot open files (including
+scratch files), inspect path metadata (`stat`, `lstat`, `newfstatat`, `statx`), create
+processes, execute programs or create sockets. Existing and missing host paths both
+fail with EPERM. `fstat` can inspect inherited descriptors only. The only permitted
+write descriptor is a dedicated IPC pipe; stdout/stderr cannot submit requests or
+write logs. The supervisor validates every IPC operation against its allowlist.
+No evaluator storage, credentials, model objects or mutable parent tensors are sent
+to the editor. Transcript numeric arrays are hash/shape summaries; completion code
+is retained privately so deterministic proposals can be replayed.
+
+By default the editor still runs as the supervisor's OS user. This is **not isolation
+from a hostile process belonging to that same user**, host administrators, kernel
+exploits, shared-resource/timing side channels or a compromised supervisor/model.
+No network namespace or filesystem namespace is claimed. With
+`require_separate_principal: true`, a root supervisor must configure a positive,
+different `sandbox.uid`; the worker clears supplementary groups and permanently
+sets its gid/uid before seccomp and before executing editor code. Otherwise launch
+and production qualification refuse. Templates require this flag. Deployments must
+choose a dedicated unprivileged account, not an account shared with other jobs.
+The root-only UID assertion is skipped in unprivileged CPU CI.
+
+Probes execute in disposable **forkserver workers** for CPU fixtures and **spawn
+workers** for checkpoint-backed models. Children explicitly use one intra-op and
+one inter-op torch thread. This avoids inheriting the supervisor's parallel torch
+locks and bounds CPU oversubscription; it is an isolation/reliability setting, not
+a throughput claim. The sandbox itself remains a fresh exec (`python -I -S`),
+with a new process group and an independent timer that kills that group even when
+the supervisor is blocked writing IPC. Probe call/proposal/episode deadlines still
+apply and launched failures count. Checkpoint workers reload the frozen base for
+every call via `eval.run.HFRunner`; startup/loading time is charged and recorded.
+`probe.device` selects `cpu` or `cuda`; `probe.kernels` selects `auto` or `reference`.
+Reference Qwen kernels unwrap transformers' original torch functions, even with
+causal-conv1d and FLA installed. Each worker owns its kernel policy; CUDA state is
+never inherited from the supervisor. The trusted model worker is not a security
+boundary for sealed storage. Production still requires a separate evaluator principal.
+
+Denied syscalls use seccomp user notification. A supervisor thread returns EPERM
+and counts denials by syscall number; every sandbox result includes enabled/error
+status and counts. Unsupported notification or auditing errors fail closed. The
+unprivileged host regression verifies open/stat/listdir/socket EPERM and counters.
+This is supervisor-owned auditing, not an auditd deployment claim. Same-uid host
+processes can still tamper with logs. Rationales are capped at 4096 characters;
+completion code at 65536. Oversized strings get bounded prefixes, length and hashes
+in the private log; rejected completion code is not executed. Valid completion code
+is retained exactly for replay. Any bytes after the completion sentinel invalidate
+that proposal, including a second sentinel.
+
+`load_config(path, weights, pool)` validates the exact nonempty tensor allowlist,
+resolved checkpoint revision, chosen scalar budget, and `development_pool_hash`
+(SHA-256 of sorted-key JSON of the exact ordered approved records, via
+`wsp.editor.episode.digest`) before provider use. Qwen's engineering pool is the
+first 400 GSM8K training records at the pinned dataset revision. The held-out pool
+is the current fixed evaluation subset records for all five configured benchmarks.
+`python scripts/editor_integration.py --prepare-pools` reproduces both private JSON
+files under `data/editor/pools` from the pinned dataset revisions and subset lists.
+The Qwen YAML pins both hashes; any new sealed split requires qualification again.
+These engineering choices do not replace scientific pre-registration or approval.
+`run_episode(..., sealed_pool=...)` requires the pinned sealed records for trusted
+preflight, rejects overlap by item ID or NFKC/casefold/whitespace-normalized prompt,
+and records only the two hashes and disjointness statement in the episode manifest.
+No sealed record is passed to the editor. The manifest also records seed, config
+hash, git SHA, model revision, principal decision and torch/transformers versions.
+Tests with no sealed pin are fixture-only; production requires a sealed pin.
+
+Production remains disabled. The templates require a separate principal and cannot
+launch unprivileged as shipped. A pilot still needs the §6 principal decision and
+independent re-review. No network provider adapter is supplied. Real-model integration
+is an explicit script, outside pytest: `python scripts/editor_integration.py
+--smoke-real-model`. It checks GPU processes and lists tmux jobs first, then runs one
+four-sequence GPU probe and prints load/forward/total timing. Do not launch it while
+GPU evaluation jobs are active. This is a plumbing smoke, not an H5 outcome.
+
+The `probe.v1` result contains logits only at requested positions (default: final
+position), or top-k token IDs/log probabilities with k <= 64. Requested hidden
+layers return only per-position norm, mean and up to 16 selected coordinate
+projections. No full activation tensors cross IPC. Position/layer, batch, sequence,
+model-dimension and conservative JSON byte bounds are checked before launch; actual
+output dimensions and serialized bytes are also checked in the worker. Weight reads
+share the response byte cap. Episode limits cover calls, sequences, tokens and
+elapsed wall clock across proposals, in addition to each proposal's forward budget.
+Measured elapsed wall time is logged but is not expected to be identical on replay;
+deterministic call/sequence/token totals and effective-delta file hashes must match.
+Delta preview and registration use the same effective_delta helper in the checkpoint's
+original dtype, including bf16 checkpoints, rather than forcing all bases to bf16.

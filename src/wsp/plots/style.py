@@ -44,6 +44,7 @@ OKABE_ITO: dict[str, str] = {
 # keeps the yellow slot; it composes other families, so it rarely colours a
 # panel, and plot helpers give it a dark edge when it does.
 EDIT_FAMILY_COLORS: dict[str, str] = {
+    "llm_edit": OKABE_ITO["sky_blue"],
     "base": OKABE_ITO["black"],
     "abliteration": OKABE_ITO["vermillion"],
     "heretic_ara": OKABE_ITO["reddish_purple"],
@@ -56,6 +57,7 @@ EDIT_FAMILY_COLORS: dict[str, str] = {
 
 # Marker shape per edit family (latent plots: shape = family, colour = score).
 EDIT_FAMILY_MARKERS: dict[str, str] = {
+    "llm_edit": "*",
     "base": "o",
     "abliteration": "^",
     "heretic_ara": "v",
