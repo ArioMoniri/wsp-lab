@@ -68,3 +68,33 @@ Same entry: HF batch 32 6.18 min/entry; vLLM 6.10 (single runs; four CPU extract
 6.15 figure in the branch doc is the same configuration as HF batch 32 (noise). Static cache and torch.compile were not usable.
 vLLM changed scores at stochastic settings (gsm8k 0.14→0.06, ifeval 0.44→0.36), so the HF path stays canonical. The earlier
 12.4 min figure was measured while extraction also competed for the host. D3 subset started 4 Nov (tmux p2-d3-batch), projected ≈ 31 h.
+
+## Interim D3 readout (4 Nov 2026, 20:40 UTC; 112 of 300 subset entries evaluated, fast tier, run p2-d3-*)
+Not a result table: the subset is 37 % evaluated, family counts are unbalanced, and cross-host noise (below) is not
+yet separated from edit effects. Family means over evaluated entries (base in the first row):
+
+| family | n | gsm8k | math500 | ifeval | mmlu_pro | hellaswag | refusal | over-refusal | KL to base |
+|---|---:|---|---|---|---|---|---|---|---|
+| base | 1 | 0.160 | 0.160 | 0.400 | 0.280 | 0.390 | 1.000 | 0.100 | 0.000 |
+| abliteration | 22 | 0.084 | 0.067 | 0.405 | 0.286 | 0.392 | 0.995 | 0.177 | 0.002 |
+| chain | 50 | 0.143 | 0.083 | 0.398 | 0.227 | 0.415 | 0.906 | 0.124 | 0.083 |
+| lora_sft | 8 | 0.138 | 0.075 | 0.390 | 0.236 | 0.434 | 0.982 | 0.118 | 0.043 |
+| random_dir | 21 | 0.094 | 0.074 | 0.404 | 0.284 | 0.390 | 0.999 | 0.181 | 0.001 |
+| task_vector | 11 | 0.087 | 0.065 | 0.404 | 0.258 | 0.395 | 0.996 | 0.175 | 0.008 |
+
+Observations to be tested, not claims: single-step abliteration entries barely move refusal (0.995 vs 1.000) and
+KL (0.002) at the fast tier, while chains do (refusal down to 0.38, KL up to 0.73); gsm8k and math500 fall under
+every family, including random directions, by 0.06–0.09, which is within the cross-host spread below.
+
+**Cross-host controls (local RTX PRO 4500 vs Lambda A10, same seed, batch 32, temperature 0.6).** Base model:
+gsm8k 0.16 vs 0.06 (n=50), math500 0.16 vs 0.28 (n=25), ifeval 0.40 vs 0.44 (n=25), mmlu_pro 0.28 = 0.28 (n=100),
+hellaswag 0.39 = 0.39 (n=100), wikitext ppl 22.90 vs 22.91. On the four shared edited entries the per-benchmark
+gaps reach 0.16 (math500). Item counts alone give a binomial SE of 0.05–0.08 on the 25–50-item benchmarks, so the
+fast tier cannot resolve single-edit effects of that size on gsm8k/math500/ifeval; mmlu_pro, hellaswag and the
+refusal/KL probes are the usable targets at this tier. Same-host test-retest (10 controls + base, tmux p2-retest)
+and the H100's 10 controls are running; Δy will be computed against the same-host base (D3 addendum 3).
+
+**P4 data-path check** (`data/runs/p4/smoke-m1-realdata`, M1, family split, 35 labeled edits): Spearman within
+[−0.3, 0.55] with intervals crossing zero on every target except mmlu_pro (0.54 [0.23, 0.81]) and loop rate; at n=35
+and the noise level above this is uninformative either way and is recorded only to show the pipeline runs on real
+features and targets.
