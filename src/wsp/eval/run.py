@@ -76,9 +76,30 @@ def apply_delta(model, delta):
     for name, value in delta.items():
         if name not in state or value.shape != state[name].shape:
             raise ValueError(f"unknown or mismatched delta tensor: {name}")
+    stats = {}
     with torch.no_grad():
         for name, value in delta.items():
-            state[name].add_(value.to(device=state[name].device, dtype=state[name].dtype))
+            target = state[name]
+            d = value.to(device=target.device, dtype=torch.float32)
+            base = target.float()
+            merged = (base + d).to(target.dtype)
+            effective = merged.float() - base
+            nonzero = d != 0
+            lost = nonzero & (effective == 0)
+            stats[name] = {
+                "fraction_nonzero_lost": lost.sum().item() / max(nonzero.sum().item(), 1),
+                "delta_norm": torch.linalg.vector_norm(d).item(),
+                "effective_delta_norm": torch.linalg.vector_norm(effective).item(),
+                "max_abs_lost": (d - effective).abs().max().item() if d.numel() else 0.0,
+            }
+            target.copy_(merged)
+    return stats
+
+
+def apply_zoo_entry(model, entry):
+    from wsp.eval.zoo_compat import load_entry_delta
+
+    return apply_delta(model, load_entry_delta(entry, model.state_dict().keys()))
 
 
 def seed_all(seed):
@@ -129,20 +150,30 @@ class HFRunner:
         ).eval()
         self.revision = getattr(self.model.config, "_commit_hash", None) or revision
         self.edit_id = "base"
+        self.rounding_stats = {}
+        self.delta_format = None
+        self.entry_hashes = {}
         if zoo_entry:
             entry = Path(zoo_entry)
             edit = json.loads((entry / "edit.json").read_text())
             if edit.get("base_model", model_id) != model_id:
                 raise ValueError("zoo entry base_model differs from --model")
             self.edit_id = edit.get("id", entry.name)
-            if edit.get("delta_format") == "lora":
-                from peft import PeftModel
-
-                self.model = PeftModel.from_pretrained(self.model, entry / "lora").eval()
-            else:
-                from safetensors.torch import load_file
-
-                apply_delta(self.model, load_file(entry / "delta.safetensors"))
+            self.rounding_stats = apply_zoo_entry(self.model, entry)
+            self.delta_format = edit.get("delta_format") or (
+                "dense" if (entry / "delta.safetensors").exists() else "lora"
+            )
+            files = (
+                [entry / "delta.safetensors"]
+                if self.delta_format == "dense"
+                else [
+                    entry / "lora" / "adapter_model.safetensors",
+                    entry / "lora" / "adapter_config.json",
+                ]
+            )
+            self.entry_hashes = {
+                str(p.relative_to(entry)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files
+            }
 
     def chat(self, prompt):
         return self.tokenizer.apply_chat_template(
@@ -358,6 +389,10 @@ def main():
         "benchmarks": names,
         "limit": args.limit,
         "zoo_entry": args.zoo_entry,
+        "edit_id": runner.edit_id,
+        "delta_format": runner.delta_format,
+        "entry_hashes": runner.entry_hashes,
+        "rounding_stats": runner.rounding_stats,
         "run_id": out.name,
     }
     out.mkdir(parents=True, exist_ok=True)
