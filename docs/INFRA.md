@@ -33,3 +33,5 @@ caches and eval records live in private HF dataset repos (user decision 4 Nov 20
 `Aralario/wsp-lab-zoo`, `Aralario/wsp-lab-evals`, `Aralario/wsp-lab-runs`. Sync with `scripts/hf_sync.sh push|pull <kind>`
 after each zoo/eval batch. They stay private because abliteration deltas are, in effect, uncensoring edits
 (see docs/VENUE.md broader-impact note); only statistics are published. Lambda instances pull from HF, not from this server.
+- Lambda note (4 Nov 2026): on-demand A100 hosts run driver 570 (CUDA 12.8). Install torch from the `cu128`
+  index there (the job script does this automatically); mamba-ssm is not needed for zoo/eval jobs.

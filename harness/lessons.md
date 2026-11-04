@@ -13,3 +13,4 @@
 | 2026-11-04 | P1 | git add -A after consolidating data/ swept 600 MB of build artefacts into a commit; data/ is now ignored wholesale and pushes to GitHub rejected it | .gitignore | GH001 rejection |
 | 2026-11-04 | P1 | heretic_ara at production budget ≈ 8 min/trial on the shared 32 GB GPU → run that family on Lambda H100; local build covers the other five families | configs/zoo_qwen3.5-0.8b_local.yaml | round-3 chain.log |
 | 2026-11-04 | P0 | pre-commit hook was bypassed with core.hooksPath=/dev/null during merges, so ruff format drift reached CI; run `ruff format --check .` before every push | precommit | CI lint job 9e4a938 |
+| 2026-11-04 | P5 | Lambda A100 hosts ship driver 570 / CUDA 12.8: torch cu132 wheels cannot init CUDA ("driver too old"); job script now picks the wheel index from nvidia-smi (cu128) | scripts/lambda_job_ara.sh | ~/ara_attempt1.log on the instance |
