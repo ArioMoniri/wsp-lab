@@ -32,7 +32,9 @@ def provenance():
         digest.update(path.read_bytes())
     return {
         "git_sha": git("rev-parse", "HEAD"),
-        "dirty": bool(git("status", "--porcelain")),
+        "dirty": bool(
+            git("status", "--porcelain", "--", "src", "configs", "tests", "pyproject.toml")
+        ),
         "source_hash": digest.hexdigest(),
     }
 
