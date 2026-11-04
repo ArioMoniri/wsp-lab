@@ -118,3 +118,13 @@ benchmark performance. Still open are the base 32k rerun, the second reproductio
 Heretic ARA on Lambda, and all of the predictors. Board A's non-blocking items from the Heretic and P3 reviews
 (selection prompts disjoint from benchmark prompts, unpinned dataset revisions, GatedDeltaNet coverage in the LoRA
 smoke tests) are still on the list.
+
+**P3 v4 features complete; D3 evaluation parallelised (4 Nov, 10:20–14:15 UTC).** Feature extraction v4 finished over the
+full zoo (1,235 entries, 0 failed, mean 66 s/entry, `data/features/qwen3.5-0.8b/manifest.json`). The HF zoo store went
+public at the user's request (D7 addendum 2) and all non-chain deltas are on the hub. The D3 subset is evaluated on
+three hosts (D3 addendum 3): this server (chain entries + 10 controls), an H100 PCIe with three evaluator processes
+(generation at the canonical batch 32 is launch-bound, so processes share the GPU) and an A10 with two; every host also
+evaluates the base model. First Lambda attempt lost its log by self-terminating on failure (lesson in
+harness/lessons.md); the job now keeps failed instances and uploads the log. The P4 training path was exercised on real
+v4 features with the 48 targets available so far (`data/runs/p4/smoke-m1-realdata`, M1, family split, 5 folds): a
+data-path check only, no claims from it. Gemma 3 270M (both variants) downloaded with the official licence.
