@@ -33,3 +33,13 @@ caches and eval records live in private HF dataset repos (user decision 4 Nov 20
 `Aralario/wsp-lab-zoo`, `Aralario/wsp-lab-evals`, `Aralario/wsp-lab-runs`. Sync with `scripts/hf_sync.sh push|pull <kind>`
 after each zoo/eval batch. They stay private because abliteration deltas are, in effect, uncensoring edits
 (see docs/VENUE.md broader-impact note); only statistics are published. Lambda instances pull from HF, not from this server.
+
+## README status block
+`python scripts/update_readme_status.py` rewrites the text between `<!-- status:start -->` and `<!-- status:end -->` in
+`README.md` from artefacts: zoo entries by family and eligibility (`data/zoo/qwen3.5-0.8b/manifest.jsonl`, duplicate
+ids collapsed, header rows ignored), feature-extraction entries (`data/features/qwen3.5-0.8b/*/features.json`), eval
+index rows (`data/evals/*/index.jsonl`), the base-model summary (`data/runs/p2/base-final-4096/summary.json`), open
+rows of `board/lambda_spend.md` (no end time), and the latest `main` pipeline from GitLab when `glab` is installed and
+logged in (omitted otherwise). A missing source is printed as missing. `--no-ci` skips the GitLab call, `--print`
+echoes the block, `--root` points at another checkout. Running it twice changes only the timestamp. `scripts/precommit.sh`
+runs it as a last, non-blocking step, so a commit can leave `README.md` modified; the test is `tests/test_readme_status.py`.
