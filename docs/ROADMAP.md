@@ -5,7 +5,7 @@ Gates are pass/fail. A phase is done when its DoD (`docs/DOD.md`) is met and its
 ## P0 — Infra (today)
 - [x] Server awake, GPU RTX PRO 4500 Blackwell 32 GB, CUDA 13.2, Python 3.12
 - [x] Repo `~/projects/wsp-lab`, uv venv, pyproject, tmux job convention, worktrees under `.worktrees/`
-- [x] `pytest -q` green (CPU), `pytest -m gpu` green (incl. Mamba-2 CUDA backend, 4 Nov 2026)
+- [x] `pytest -q` green (CPU), `pytest -m gpu` green (incl. Mamba-2 CUDA backend); GitLab CI fully green on the self-hosted GPU runner (pipeline 3025374435, 4 Nov 2026)
 - [x] HF token set (`hf auth login`) — needed for gated repos only
 - Gate: `scripts/gate_p0.sh`
 

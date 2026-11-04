@@ -2,6 +2,7 @@
 <p align="center"><img src="assets/pipeline.gif" alt="Animated weight-edit prediction pipeline" width="820"></p>
 
 <h1 align="center">wsp-lab</h1>
+<p align="center"><a href="https://gitlab.com/ArioMoniri/wsp-lab/-/pipelines"><img src="https://gitlab.com/ArioMoniri/wsp-lab/badges/main/pipeline.svg" alt="pipeline status"></a></p>
 <p align="center"><b>Can a small state-space model predict how an LLM's benchmark scores will change from the weight change alone?</b></p>
 <p align="center"><a href="docs/HYPOTHESIS.md">Hypotheses</a> · <a href="docs/ROADMAP.md">Roadmap</a> · <a href="docs/MODELS.md">Models</a> · <a href="docs/RESULTS.md">Results</a> · <a href="paper/">Paper</a> · <a href="https://ariomoniri.github.io/wsp-lab/">Animated overview</a></p>
 
