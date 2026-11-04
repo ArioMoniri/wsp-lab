@@ -79,3 +79,13 @@ trial before saving), and the saved factors are enormous (delta norm 1.9e9 for a
 entries are quarantined under data/runs/lambda-ara-quarantine/ and the instance was terminated ($7.29 total). Fix:
 export the exact evaluated model (merged delta computed in-process from Heretic's merged model) and verify by a
 forward-pass KL on the saved artefact before the family is rebuilt.
+
+## D3 addendum 3 (4 Nov 2026) — parallel evaluation shards
+User asked for faster turnaround. The D3 subset (282 entries remaining at 10:45 UTC) is split by host: 60 entries on
+this server (all 50 chain entries, whose deltas are local only, plus 10 controls) and 121 on each of two Lambda
+A100-SXM4-40GB instances (`scripts/lambda_job_eval.sh`, family-balanced round-robin split, self-terminating; a third
+instance had no capacity). Cross-host control: the same 10 non-chain entries are evaluated on every host, and every
+Lambda host also evaluates the base model (stored as evals/qwen3.5-0.8b/base-<host>). The paper reports the
+host-to-host score spread from these controls before pooling; pulled eval.json files carry `eval_host`
+(`scripts/d3_pull_shards.py`). If the spread is not small relative to edit effects, Δy is computed against the
+same-host base instead of pooling.

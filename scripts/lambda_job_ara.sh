@@ -32,6 +32,7 @@ python -m wsp.zoo.build --config configs/zoo_qwen3.5-0.8b_ara_lambda.yaml --fami
 echo "ARA build end $(date -u +%FT%TZ)"
 scripts/hf_sync.sh push zoo 2>&1 | tail -1
 echo JOB_DONE
-# self-terminate (instance id from metadata-free lookup by name)
-ID=$(curl -s -H "Authorization: Bearer $LAMBDA_API_KEY" https://cloud.lambda.ai/api/v1/instances | python3 -c "import sys,json;[print(i['id']) for i in json.load(sys.stdin)['data'] if i['name'].startswith('wsp-lab')]" | head -1)
+# self-terminate: only the instance whose public IP is ours (several wsp-lab instances may run at once)
+MYIP=$(curl -s --max-time 10 https://checkip.amazonaws.com || true)
+ID=$(curl -s -H "Authorization: Bearer $LAMBDA_API_KEY" https://cloud.lambda.ai/api/v1/instances | python3 -c "import sys,json;[print(i['id']) for i in json.load(sys.stdin)['data'] if i.get('ip')=='$MYIP' and i['name'].startswith('wsp-lab')]" | head -1)
 [ -n "$ID" ] && curl -s -H "Authorization: Bearer $LAMBDA_API_KEY" -H "Content-Type: application/json" -X POST https://cloud.lambda.ai/api/v1/instance-operations/terminate -d "{\"instance_ids\":[\"$ID\"]}" >/dev/null && echo "terminated $ID"
