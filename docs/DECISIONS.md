@@ -38,3 +38,10 @@ the *source* of a scaled delta applied to the base (`source` edge), not a predec
 history (M2, M5) and JEPA transitions (M3) use `successor` edges only. H1's target is the per-step change
 Δy_t = y_t − y_{t−1} (predecessor = base for single-step edits); absolute level is an explicit secondary target.
 A family holdout drops every entry whose ancestry contains the held-out family.
+
+## D6 (4 Nov 2026) — Heretic ARA budget
+Profiling on the Lambda A100 (py-spy): each ARA trial runs an LBFGS fit per layer and module with strong-Wolfe
+line search, so a trial is launch-bound (~10 min, GPU mostly idle) regardless of GPU class; 30 trials × 30 entries
+would be ≈ 150 GPU-hours, over the D4 cap. Decision: heretic_ara n = 12 entries at 10 trials (≈ 20 h, ≈ $40);
+production eligibility threshold for this family lowered to trials ≥ 10 (each trial is a full optimisation, unlike
+the cheap classic-abliteration trials). Recorded in configs/zoo_qwen3.5-0.8b.yaml.
