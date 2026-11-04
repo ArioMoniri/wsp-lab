@@ -79,3 +79,4 @@
 | 2026-11-04 | Board A fix/eval-lora | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | Board A fix/eval-lora | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (F1 blocking; F2 decision D1) |
 | 2026-11-04 | fix/eval-lora round 2 | codex/gpt-6.1-terra high | running |
+| 2026-11-04 | SSM finish: mamba backend test+bench | codex/gpt-6.1-terra medium | running |
