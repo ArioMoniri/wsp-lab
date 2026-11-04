@@ -302,6 +302,7 @@ def test_missing_response_prefix_is_an_error_not_a_guess(monkeypatch, cache_env)
 
 
 @pytest.mark.gpu
+@pytest.mark.slow
 def test_extraction_and_abliteration_roundtrip(cuda, tmp_path):
     from pathlib import Path
 

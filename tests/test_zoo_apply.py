@@ -39,6 +39,7 @@ def test_load_edited_model_from_state_dict_cpu(tmp_path, toy_weights):
 
 
 @pytest.mark.gpu
+@pytest.mark.slow
 def test_load_edited_model_bf16_roundtrip_exact_on_cuda(cuda, tmp_path):
     """Applying a bf16 delta to a bf16 base state must be bit-exact."""
     base = {
