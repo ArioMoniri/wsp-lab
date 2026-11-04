@@ -62,3 +62,7 @@ refusal 50 / kl 50, max_new_tokens 1024, batch 32, HF generate). First edited-en
 MATH-500 8.0, IFEval 44.0, MMLU-Pro 28.0, HellaSwag 39.0, refusal 100, KL-to-base 0.001, loop rate 100.
 Projection: D3 subset (300 entries) ≈ 62 h on this GPU with the HF path; full zoo ≈ 255 h. The throughput
 benchmark (HF static cache vs vLLM) runs next and decides the engine; Lambda A100 is the fallback once the ARA family ends.
+
+## P2 — Engine throughput (docs/BENCH_EVAL.md, branch perf/eval-throughput 73f1419)
+Same entry, idle GPU: HF batch 32 6.18 min/entry; HF best variant 6.15; vLLM 6.10. The earlier 12.4 min figure was measured
+while CPU feature extraction competed for the host. D3 subset started 4 Nov (tmux p2-d3-batch), projected ≈ 31 h.

@@ -57,3 +57,9 @@ reproducible from their recorded step parameters and seeds). `scripts/hf_sync.py
 Clean measurement: 12.4 min per entry (fast tier, HF path, batch 32). D3 subset ≈ 62 h locally. Decision pending the
 throughput benchmark: if vLLM gives ≥ 3×, run D3 locally; otherwise split D3 across the local GPU and the Lambda A100
 after the ARA family finishes (A100 ≈ 2× this GPU at ~$2/h, i.e. ≈ 30 h ≈ $60, within the D4 cap).
+
+## D3 addendum 2 (4 Nov 2026) — engine decision
+Throughput benchmark on the same entry (perf/eval-throughput 73f1419, docs/BENCH_EVAL.md): HF batch 32 = 6.18 min,
+HF best = 6.15 min, vLLM = 6.10 min per fast-tier entry. No engine advantage; the floor is ~6.1 min (decode-step bound).
+Decision: run the D3 subset (300 entries, ≈ 31 h) locally with the HF path now; use the Lambda A100 for the second
+half once the ARA family finishes if the local run is still behind.
