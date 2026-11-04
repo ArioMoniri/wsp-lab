@@ -22,6 +22,7 @@ BENCHMARKS = [
     "loop_rate",
 ]
 EDIT_FAMILIES = [
+    "llm_edit",
     "random_dir",
     "abliteration",
     "heretic_ara",

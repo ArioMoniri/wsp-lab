@@ -1,0 +1,22 @@
+base_model: google/gemma-3-270m-it
+base_revision: main
+require_resolved_revision: true
+budgets:
+- 10
+- 25
+- 50
+seed: 0
+editable_tensors:
+- model.layers.15.mlp.down_proj.weight
+hidden_layers: []
+development_pool:
+  sources:
+  - gsm8k
+  - math
+  split: train
+  version_required: true
+sandbox:
+  cpu_seconds: 2
+  wall_seconds: 5
+  ram_bytes: 268435456
+production_enabled: false
