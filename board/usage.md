@@ -135,4 +135,5 @@
 | 2026-11-04 | Board B re-review docs/readme-v2 | codex/gpt-6.1-sol medium | APPROVE, merged |
 | 2026-11-04 | docs fix round 18–25 | claude_aio_gmail_api/claude-haiku-5-5 medium | done 6293d84, merged |
 | 2026-11-04 | P4 predictors M1/M2/M3/M5/M6 training code | codex/gpt-6.1-sol high | running |
-| 2026-11-04 | H4 LLM-reader harness | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | H4 LLM-reader harness (1st) | codex/gpt-6.1-terra medium | no work done |
+| 2026-11-04 | H4 LLM-reader harness (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
