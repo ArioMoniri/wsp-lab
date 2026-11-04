@@ -46,3 +46,12 @@ All 12 text paragraphs were revised. Each line gives the first words before → 
 
 - Section headers (`\section`, `\paragraph`) and the `\citep` keys.
 - The opening sentences of the abstract ("Can a model's weight changes predict…") and the introduction ("Can a model's weight changes tell us…") are kept word for word. Later sentences in those paragraphs were edited as described above.
+
+## Board B revision (2026-11-04)
+
+- Corrected the task-vector claim to match the verified excerpt's direction: interference collapses under the training-format wrapper, not under the untrained chat template. Updated `claim_we_make` to reflect the excerpt.
+- Made the default TMLR build anonymous and documented the switch for an identified arXiv preprint. Revised the title to identify the work as a proposed study.
+- Added the H1-H4 predictions, thresholds, and falsification criteria specified in `docs/HYPOTHESIS.md`, plus H4's two directional comparisons.
+- Rewrote the three mechanically phrased sentences, used proposed or future language for planned work, split bundled claims, and shortened the abstract's research questions.
+- Re-audited each citation in the abstract, introduction, and related work against its `claim_we_make` entry. `python scripts/check_cites.py` passed (33 verified keys; nine section files).
+- Rebuilt the four-page PDF. Page one identifies the submission as anonymous, and the PDF Author metadata is empty.
