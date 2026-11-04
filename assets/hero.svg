@@ -1,12 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 150" font-family="system-ui,sans-serif" font-size="13">
-<style>.n{fill:#fff;stroke:#333;stroke-width:1.2}.t{fill:#222}.a{stroke:#777;stroke-width:1.4;fill:none;marker-end:url(#m)}
-.d{stroke-dasharray:6 6;animation:f 1.6s linear infinite}@keyframes f{to{stroke-dashoffset:-24}}</style>
-<defs><marker id="m" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#777"/></marker></defs>
-<g><rect class="n" x="10" y="40" width="150" height="70" rx="8"/><text class="t" x="85" y="70" text-anchor="middle">base model θ₀</text><text class="t" x="85" y="90" text-anchor="middle" fill="#666">Qwen3.5 · Qwen3.8-27B</text></g>
-<path class="a d" d="M160,75 L210,75"/>
-<g><rect class="n" x="210" y="40" width="150" height="70" rx="8"/><text class="t" x="285" y="63" text-anchor="middle">edits e₁…e_T</text><text class="t" x="285" y="83" text-anchor="middle" fill="#666">heretic · abliterate</text><text class="t" x="285" y="100" text-anchor="middle" fill="#666">LoRA · task vector</text></g>
-<path class="a d" d="M360,75 L410,75"/>
-<g><rect class="n" x="410" y="40" width="150" height="70" rx="8"/><text class="t" x="485" y="63" text-anchor="middle">Δθ_t tokens</text><text class="t" x="485" y="83" text-anchor="middle" fill="#666">canonical SVD (W2T)</text><text class="t" x="485" y="100" text-anchor="middle" fill="#666">+ spectral stats</text></g>
-<path class="a d" d="M560,75 L610,75"/>
-<g><rect class="n" x="610" y="40" width="200" height="70" rx="8"/><text class="t" x="710" y="63" text-anchor="middle">SSM / JEPA predictor</text><text class="t" x="710" y="83" text-anchor="middle" fill="#666">ŷ_t = MATH, GSM8K, IFEval,</text><text class="t" x="710" y="100" text-anchor="middle" fill="#666">refusal, KL, loop rate</text></g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc" font-family="Inter, system-ui, sans-serif" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+<title id="title">From weight edits to benchmark forecasts</title>
+<desc id="desc">Qwen3.5-0.8B fans into abliterate, LoRA and merge edits. Canonical SVD delta tokens feed a state-space predictor and a schematic forecast with an illustrative confidence band for MATH, GSM8K, IFEval and refusal.</desc>
+<rect x="0" y="0" width="1200" height="320" rx="0" fill="#FFFFFF" stroke="none"/>
+<text x="24" y="40" font-size="14" fill="#0072B2">01</text>
+<text x="54" y="40" font-size="18" fill="#25313B">Edit weights</text>
+<text x="440" y="40" font-size="14" fill="#0072B2">02</text>
+<text x="470" y="40" font-size="18" fill="#25313B">Encode deltas</text>
+<text x="656" y="40" font-size="14" fill="#0072B2">03</text>
+<text x="686" y="40" font-size="18" fill="#25313B">Carry state</text>
+<text x="920" y="40" font-size="14" fill="#0072B2">04</text>
+<text x="950" y="40" font-size="18" fill="#25313B">Forecast</text>
+<path d="M24,62 C24,62 1176,62 1176,62" fill="none" stroke="#C8D0D6"></path>
+<rect x="24" y="130" width="168" height="86" rx="8" fill="#FFFFFF" stroke="#C8D0D6"/>
+<text x="40" y="157" font-size="16" fill="#64717C">Base model</text>
+<text x="40" y="187" font-size="17" fill="#25313B">Qwen3.5-0.8B</text>
+<path d="M192,173 C192,173 220,173 220,173 C220,173 220,112 220,112 C220,112 248,112 248,112" fill="none" stroke="#D55E00" stroke-dasharray="4 7"><animate attributeName="stroke-dashoffset" from="0" to="-44" dur="4s" repeatCount="indefinite"/></path>
+<path d="M243,109 C243,109 248,112 248,112 C248,112 243,115 243,115" fill="none" stroke="#D55E00"></path>
+<rect x="248" y="92" width="134" height="40" rx="8" fill="#FFFFFF" stroke="#D55E00"/>
+<text x="264" y="118" font-size="17" fill="#25313B">abliterate</text>
+<path d="M382,112 C382,112 408,112 408,112 C408,112 408,173 408,173 C408,173 428,173 428,173" fill="none" stroke="#D55E00" stroke-dasharray="4 7"><animate attributeName="stroke-dashoffset" from="0" to="-44" dur="4s" repeatCount="indefinite"/></path>
+<path d="M192,173 C192,173 220,173 220,173 C220,173 220,174 220,174 C220,174 248,174 248,174" fill="none" stroke="#0072B2" stroke-dasharray="4 7"><animate attributeName="stroke-dashoffset" from="0" to="-44" dur="4s" repeatCount="indefinite"/></path>
+<path d="M243,171 C243,171 248,174 248,174 C248,174 243,177 243,177" fill="none" stroke="#0072B2"></path>
+<rect x="248" y="154" width="134" height="40" rx="8" fill="#FFFFFF" stroke="#0072B2"/>
+<text x="264" y="180" font-size="17" fill="#25313B">LoRA</text>
+<path d="M382,174 C382,174 408,174 408,174 C408,174 408,173 408,173 C408,173 428,173 428,173" fill="none" stroke="#0072B2" stroke-dasharray="4 7"><animate attributeName="stroke-dashoffset" from="0" to="-44" dur="4s" repeatCount="indefinite"/></path>
+<path d="M192,173 C192,173 220,173 220,173 C220,173 220,236 220,236 C220,236 248,236 248,236" fill="none" stroke="#009E73" stroke-dasharray="4 7"><animate attributeName="stroke-dashoffset" from="0" to="-44" dur="4s" repeatCount="indefinite"/></path>
+<path d="M243,233 C243,233 248,236 248,236 C248,236 243,239 243,239" fill="none" stroke="#009E73"></path>
+<rect x="248" y="216" width="134" height="40" rx="8" fill="#FFFFFF" stroke="#009E73"/>
+<text x="264" y="242" font-size="17" fill="#25313B">merge</text>
+<path d="M382,236 C382,236 408,236 408,236 C408,236 408,173 408,173 C408,173 428,173 428,173" fill="none" stroke="#009E73" stroke-dasharray="4 7"><animate attributeName="stroke-dashoffset" from="0" to="-44" dur="4s" repeatCount="indefinite"/></path>
+<rect x="440" y="92" width="158" height="164" rx="8" fill="#FFFFFF" stroke="#C8D0D6"/>
+<text x="456" y="120" font-size="18" fill="#25313B">Delta tokens</text>
+<text x="456" y="144" font-size="15" fill="#64717C">canonical SVD</text>
+<rect x="458" y="206" width="9" height="20" rx="2" fill="#D55E00" stroke="none"/>
+<rect x="479" y="186" width="9" height="40" rx="2" fill="#0072B2" stroke="none"/>
+<rect x="500" y="168" width="9" height="58" rx="2" fill="#009E73" stroke="none"/>
+<rect x="521" y="180" width="9" height="46" rx="2" fill="#D55E00" stroke="none"/>
+<rect x="542" y="194" width="9" height="32" rx="2" fill="#0072B2" stroke="none"/>
+<rect x="563" y="210" width="9" height="16" rx="2" fill="#009E73" stroke="none"/>
+<path d="M598,173 C598,173 644,173 644,173" fill="none" stroke="#64717C" stroke-dasharray="4 7"><animate attributeName="stroke-dashoffset" from="0" to="-44" dur="4s" repeatCount="indefinite"/></path>
+<path d="M639,170 C639,170 644,173 644,173 C644,173 639,176 639,176" fill="none" stroke="#64717C"></path>
+<rect x="656" y="92" width="208" height="164" rx="8" fill="#FFFFFF" stroke="#0072B2"/>
+<text x="672" y="122" font-size="18" fill="#25313B">State-space</text>
+<text x="672" y="146" font-size="18" fill="#25313B">predictor</text>
+<text x="672" y="173" font-size="14" fill="#64717C">edit sequence → state</text>
+<path d="M680,214 C680,214 840,214 840,214" fill="none" stroke="#0072B2"></path>
+<rect x="681" y="207" width="14" height="14" rx="4" fill="#FFFFFF" stroke="#0072B2"/>
+<rect x="753" y="207" width="14" height="14" rx="4" fill="#FFFFFF" stroke="#0072B2"/>
+<rect x="825" y="207" width="14" height="14" rx="4" fill="#FFFFFF" stroke="#0072B2"/>
+<circle cx="688" cy="214" r="4" fill="#0072B2"><animate attributeName="cx" values="688;832;688" dur="4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".4;1;.4" dur="4s" repeatCount="indefinite"/></circle>
+<path d="M864,173 C864,173 908,173 908,173" fill="none" stroke="#64717C" stroke-dasharray="4 7"><animate attributeName="stroke-dashoffset" from="0" to="-44" dur="4s" repeatCount="indefinite"/></path>
+<path d="M903,170 C903,170 908,173 908,173 C908,173 903,176 903,176" fill="none" stroke="#64717C"></path>
+<rect x="920" y="92" width="256" height="164" rx="8" fill="#FFFFFF" stroke="#C8D0D6"/>
+<text x="936" y="120" font-size="18" fill="#25313B">Benchmark change</text>
+<path d="M942,142 C942,142 942,205 942,205 C942,205 1154,205 1154,205" fill="none" stroke="#C8D0D6"></path>
+<path d="M950,190 C950,190 1006,162 1006,162 C1006,162 1070,151 1070,151 C1070,151 1152,130 1152,130 C1152,130 1152,154 1152,154 C1152,154 1070,175 1070,175 C1070,175 1006,184 1006,184 C1006,184 950,202 950,202 Z" fill="#D9EAF3" stroke="none"></path>
+<path d="M950,196 C972,194 986,177 1006,173 C1030,169 1046,163 1070,163 C1098,161 1124,142 1152,142" fill="none" stroke="#0072B2" stroke-dasharray="240"><animate attributeName="stroke-dashoffset" values="240;0;0;240" keyTimes="0;.4;.85;1" dur="4s" repeatCount="indefinite"/></path>
+<text x="936" y="226" font-size="15" fill="#25313B">MATH · GSM8K</text>
+<text x="936" y="247" font-size="15" fill="#25313B">IFEval · refusal</text>
+<text x="920" y="292" font-size="14" fill="#64717C">Schematic · illustrative forecast band</text>
 </svg>

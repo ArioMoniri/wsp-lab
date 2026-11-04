@@ -1,8 +1,34 @@
-<!doctype html><html><head><meta charset="utf-8"><title>wsp-lab</title>
-<script src="https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web@0.42.0/dist/index.umd.js"></script>
-<style>body{font-family:system-ui;margin:2rem auto;max-width:900px;color:#222}canvas{width:100%;height:320px}</style></head>
-<body><h1>Predicting performance change from weight change</h1>
-<canvas id="hero"></canvas>
-<p>Edit trajectory → weight-delta tokens → state-space predictor → performance forecast. Source: <a href="https://github.com/ArioMoniri/wsp-lab">GitHub</a>.</p>
-<script>new DotLottie({canvas:document.getElementById('hero'),src:'../assets/lottie/pipeline.json',autoplay:true,loop:true});</script>
-</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wsp-lab</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:2rem auto;padding:0 1rem;max-width:1000px;color:#25313b}
+h1{font-size:clamp(1.3rem,3vw,2rem);font-weight:600;letter-spacing:-.025em}
+canvas{display:block;width:100%;aspect-ratio:1200/320}
+p{color:#64717c;line-height:1.6}a{color:#0072b2}
+</style>
+</head>
+<body>
+<h1>Predicting performance change from weight change</h1>
+<canvas id="hero" width="1200" height="320" role="img" aria-label="Qwen3.5-0.8B weight edits become canonical SVD tokens, then a state-space predictor forecasts MATH, GSM8K, IFEval and refusal changes."></canvas>
+<p>Edit weights → encode deltas → carry state → forecast benchmark changes.
+Source: <a href="https://github.com/ArioMoniri/wsp-lab">GitHub</a>.</p>
+<script type="module">
+import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web@0.42.0/dist/index.js';
+const player = new DotLottie({
+  canvas: document.getElementById('hero'),
+  src: '../assets/lottie/pipeline.json',
+  autoplay: !matchMedia('(prefers-reduced-motion: reduce)').matches,
+  loop: true,
+  renderConfig: { devicePixelRatio: Math.max(2, window.devicePixelRatio), autoResize: true },
+});
+// A reduced-motion visitor gets the fully drawn forecast.
+player.addEventListener('load', () => {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) player.setFrame(60);
+});
+</script>
+</body>
+</html>
