@@ -62,6 +62,7 @@ Final validation: CPU pytest 325 passed, 8 deselected in 25.26 s (< 60 s local a
 - 09:59 fix/heretic-ara-export validation: full CPU pytest 401 passed / 8 deselected in 30.29s (commit hook 28.45s); ruff check src tests and ruff format --check src tests clean. agent-tmux ara-fix-smoke log /home/ubuntu/agent-logs/ara-fix-smoke-20261104-095732.log: GPU/slow Qwen3.5-0.8B trials=2 smoke passed in 40.70s, batch=1, rank=4, n_optimization_steps=1/max_iter=2, 4 train prompts per class and 2 evaluation prompts per scorer, configs/p1_generator_smoke.yaml. Artifact data/runs/p1-generator-smoke/heretic_ara; verified KL=0.001249964232556522, reloaded KL=0.001249964232556522 (difference 0), verified/reloaded refusals=1.0 (2/2). This is plumbing validation, not production ARA quality evidence; upstream row-normalization semantics remain unchanged. No weights committed; no merge.
 - 10:11 Merged fix/heretic-ara-export (evaluated dense export + reload KL gate); fixed a self-inflicted 3-test regression (format label). Relaunching the ARA family on Lambda with the fixed exporter (D6 budget).
 - 21:42 Board A H5 review: wrote prospective noise qualification and Experiment 8/H5 arm A protocol in docs/reviews/H5/board-a-prereg-2026-11-04.md; REVISE B1-B6, no GPU runs or merge. Reviewed current controls; independent retest provenance and 32k power remain open.
+<<<<<<< HEAD
 
 ## H5 implementation handoff
 
@@ -73,3 +74,75 @@ executable bit for main's scripts/d3_pull_shards.py; no behavior changed there.
 H5 CPU verification after fixes: 439 passed, 1 root-only test skipped, 8 GPU tests
 deselected in 27.92s; a subsequent episode-deadline/start-failure test passed too.
 Whole-repo ruff check and format check pass. Final pre-commit repeats CPU tests.
+=======
+- 21:48 Implemented Board A B2/B3/B5 eval metadata, immutable repeats, keyword names, matched-reference helper; CPU/GPU validation in agent-tmux board-a-checks.
+- 21:49 Regression tests red first (2 failed); targeted suite now 17 passed, additional provenance/hash tests 5 passed. First corrected CPU suite 406 passed; final CPU/GPU CI validation pending.
+- 21:50 Final validation: CPU 407 passed; CI GPU subset 4 passed; additional hash/reference tests 5 passed; ruff check and format clean. No benchmark/reliability panels or predictor training launched.
+
+## Board A eval fixes re-review (2026-11-04)
+
+Implemented the four blocking findings from board-a-eval-fixes-2026-11-04.md
+(read from the canonical checkout because that historical review is absent here).
+Tests first: seven new regressions failed before implementation. Added subsequent
+end-to-end checks for successor matching, delta reliability and both resume paths.
+
+Predictor labels now require known, equal device/runtime/config/source/model,
+actual batch, generation/seed and item/order hashes; legacy unknowns and explicit
+missing-base flags cannot produce base deltas. All base snapshots and device/run
+base directories remain reference candidates, avoiding conflicting-base errors.
+Metrics and training manifests report missing_matched_reference and matched counts
+in edit-row units. Toy fixtures/selftest now supply explicit synthetic identity.
+
+Reliability requires known aligned edit/item/order identity, retains negative ICC
+and undefined constant ranks, separates base, adds difference summaries and
+Bland–Altman limits, edit-cluster bootstrap rank/ICC intervals, matched-reference
+level deltas, centered-effect tail diagnostics, available-item discordance and
+paired intervals. KL remains continuous; WikiText uses log-ppl/window diagnostics;
+boundary binomial uncertainty uses labelled Wilson half-width divided by 1.96.
+
+Resume rejects legacy/foreign bases and preserves them, writing new evaluations
+under base/devices/<opaque-device-id>/<run-id>/eval.json. --no-base prints the
+missing-reference condition and leaves unmatched effects missing. Corrected only
+the live RESEARCH_NOTES keyword-metric claim; historical reviews/ORCHESTRATOR untouched.
+
+Validation: 417 CPU tests passed, 8 deselected, 24.30 seconds; Ruff lint and format
+check passed. Exact requested real-data m1/family/CPU/one-epoch/n-boot-20 command
+reads all artifacts without conflicting-base errors, then exits 1 explicitly:
+matched_reference_targets=0, missing_matched_reference=108 (observed edit rows).
+No training output or hypothesis result is claimed: real legacy artifacts lack
+required matched-reference metadata. New measured matched runs are needed; metadata
+was not inferred or backfilled. No GPU runs, repeat panels or qualification claims.
+
+Metadata backfill implementation: scripts/backfill_eval_metadata.py is dry-run by
+ default, labels full/partial records, reconstructs item hashes, updates index
+metadata, preserves scores and links device bases and evaluated zoo directories.
+Applied to shared real artefacts; rerun reports zero changed records. Private
+mapping created outside git. Lambda runtime evidence remains incomplete; only
+torch is known. Control copies lacking corresponding item records stay partial.
+Before CPU suite: 417 passed / 8 deselected. M1 before: 0 matched / 109 missing.
+After dataset: 53 matched / 225 missing; family training exits on empty fold after
+ancestry purge. No runtime values were guessed to increase matching. Existing
+script executable bit corrected for repository-wide ruff EXE001.
+Final CPU suite: 420 passed / 8 deselected (24.42 s); repository-wide ruff clean.
+
+
+### Implementation follow-up: runtime honesty, clustered reliability, historical references
+
+- Read Board A re-review from canonical docs (not present in this branch at start).
+- Test-first: 11 new behavioral checks failed before implementation; historical
+  identity reconstruction also had a separate red test. Final CPU suite: 435 passed,
+  8 deselected, approximately 25 s; ruff checks/format pass. No GPU eval was run.
+- Current-environment provenance is inferred, H1 transformers label corrected;
+  archives preserve this revision's starting records. Independent score verifier:
+  337 records, zero differences. Backfill dry run is idempotent.
+- Strict pairs plus explicit actual-batch override; nested edit/item bootstrap,
+  contiguous WikiText blocks/log-ratio display; shared reference resampling.
+  Host-by-edit qualification remains explicitly blocked.
+- Registered original base and control copies; recovered old base item identities
+  from exact archived source/config/counts with inferred provenance, not retest data.
+  Snapshot: matched 240, missing 40, inferred-runtime targets 240 (see D2 table).
+- The remaining abliteration has a third exact source hash (git 49c83214), unlike
+  the original base (git 846ff842); no score-neutral mapping or substituted base.
+- Empty-fold WARNING captured and skipped_folds persisted to metrics.json.
+- All runs finished under two minutes; no long job or tmux run required.
+>>>>>>> main

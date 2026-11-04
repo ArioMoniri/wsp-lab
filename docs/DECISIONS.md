@@ -17,6 +17,38 @@ comparisons with the blog): 32,768 tokens, few entries. Throughput work (vLLM or
 perf-challenger task; the predictor targets are the fast-tier scores, with cheap-tier scores used to
 calibrate on a subset.
 
+### D2 addendum — labelled metadata backfill (4 Nov 2026)
+
+Backfilled metadata is labelled; new runs record it natively. Run
+`python scripts/backfill_eval_metadata.py` to inspect changes and add `--apply`
+to write them. The private device map supplies opaque IDs; historical host labels
+are removed from updated payloads. Original base records are retained, with
+copies under `base/devices/<device>/<run>/`. Evaluated zoo directories are linked
+into the eval directory so directory readers see all completed entries.
+
+Item identity and order are reconstructed only from the corresponding item records;
+control copies without their own records (or a matching main run ID) retain null
+hashes. Local runtime fields describe the current environment and the runner's
+bf16/SDPA settings, not a contemporaneous measurement. Remote runtime evidence is recorded in
+`configs/eval_runtime_backfill.json`, with per-field transcribed/inferred provenance.
+H1 SDPA is inferred from the identical model load path. H2 engine, transformers
+and SDPA are inferred from the identical bootstrap/lock; other supplied fields are
+transcribed from the orchestrator's device evidence. This is not a new measurement.
+`metadata_backfill=full` requires every reference key to be known and transcribed;
+`partial-inferred` lists inferred keys, and incomplete records list missing keys.
+Strict matching compares every reference key, including inferred runtime values.
+Predictor manifests disclose `targets_with_inferred_runtime` (edit targets, not
+individual benchmark cells). Local backfills retain the existing current-runtime
+convention described above; they are not contemporaneous historical measurements.
+
+Run `python -m wsp.predictor.data --report` for coverage by family/device/reason.
+The supplied remote evidence increases coverage from 53 matched / 226 missing to
+221 matched / 58 missing, with 167 targets depending on inferred remote runtime.
+The M1 compatibility run completes five family folds. Empty ancestry-purged folds
+are logged and skipped; if no validation plans survive, training reports an error.
+Scores and actual batch sizes are preserved. These inferred matches do not qualify
+measurement repeatability panels as independently verified runtime equivalence.
+
 ## D3 (4 Nov 2026) — evaluation budget and order
 Board A's calibrated estimate (reviews/P2/feat-p2-batch-boardA-2026-11-04.md): ~9–12 min per entry under D2 on
 this GPU, ≈ 120 GPU-hours for 700 entries. Order of work: (1) measure one clean D2 entry when the GPU is free;
@@ -89,3 +121,98 @@ Lambda host also evaluates the base model (stored as evals/qwen3.5-0.8b/base-<ho
 host-to-host score spread from these controls before pooling; pulled eval.json files carry `eval_host`
 (`scripts/d3_pull_shards.py`). If the spread is not small relative to edit effects, Δy is computed against the
 same-host base instead of pooling.
+
+## D2 addendum (Board A B2/B3/B5)
+
+Stopping budgets come from the YAML config; caller token-cap overrides are rejected.
+`--repeat LABEL` forces independent execution in immutable `repeats/LABEL` directories;
+reuse a new label after a failed run. Primary resume identity is unchanged, including the
+reporting-only keyword configuration rename. Repeat indexes are separate from primary indexes.
+
+Eval.json field list (all additions optional when reading legacy results):
+- Existing benchmark fields retain their score semantics and counts.
+- `loop_rate` remains pooled GSM8K/MATH/IFEval truncation, fast denominator 50/25/25.
+  EOS-at-cap is not a hit. `loop_rate_math500` uses only MATH (the blog denominator);
+  `loop_rate_gsm8k` and `loop_rate_ifeval` expose the other components.
+- `invalid_final_answer_rate_<benchmark>` measures empty extracted final answers; no
+  new mathematical validity checker is claimed. Accuracy remains `<benchmark>`.
+- `refusal_keyword_rate` and `over_refusal_keyword_rate` explicitly name keyword metrics;
+  `refusal_rate` / `over_refusal` are deprecated aliases for one release. Judge prompt
+  export is separate (`wsp.eval.refusal --export-judge`), off by default, and executes no judge.
+- `batch_size` is actual after OOM retry; `batch_size_nominal` records the requested size.
+  `item_order_hash` hashes benchmark/item pairs in execution order, `item_id_hash` their sorted list.
+- `repeat_id`, `eval_device_id`, `gpu_class`, `engine`, `torch_version`, `cuda_version`,
+  `transformers_version`, `dtype`, `attention_implementation` describe execution conditions.
+
+`wsp.eval.repeats.compare_pairs(primary, repeat, bootstrap=10000, seed=0)` accepts aligned
+payloads or eval.json paths, returning per-benchmark MAD, signed paired bootstrap CI,
+Spearman, ICC(2,1), binomial SE and mixed-actual-batch flags. Constant panels have undefined
+rank/ICC; negative ICC is retained. Analyse base separately; mixed-batch pairs cannot qualify
+repeatability. Match reference device/runtime/config/batch/items/order/seed before deriving
+single-step labels; missing matched references remain missing, never silently substituted.
+
+`wsp.eval.repeats.matched_reference(observation, candidates)` returns an exact metadata
+match or `None`, including for legacy unknowns. Batch results expose `base_run_id`,
+`matched_base_missing` and `entry_hashes`; an OOM batch mismatch leaves the base missing.
+Successor callers must supply predecessor candidates rather than base candidates.
+
+
+## D2 addendum (4 Nov 2026) — Board A runtime and reference corrections
+
+The orchestrator reports that the 20:30 UTC `--force` retest produced bit-identical
+scores on base plus ten controls across the old and new source trees (11 records).
+This is supporting evidence, **not** a reference matching rule. Source hashes remain
+unchanged and exact matching is required. The original base run
+`20261104-084939-f912077b` is registered under `base/devices/H0/<run>/`; control
+copies are registered under `<edit>/devices/<device>/<run>/` without replacing primary scores.
+
+The original base lacked item hashes and a preserved item sidecar. Its clean git
+revision `846ff8423b9c67a9d9a9bfa3c1a46ec8f3feb2e5` reproduces source hash
+`d7cece35fad962816421132974855a3d8b127f8aa596db485f334750a8a837b7` exactly.
+`reconstruct_historical_items.py` recovers the ordered 458 identities from that
+archived tree's subset files, positional-ID evaluator paths, effective config and
+complete counts. These hashes are explicitly inferred; no retest records or
+scores are used. Evidence is stored in `data/evals/qwen3.5-0.8b/historical-item-identities.json`.
+This resolves the 18 random-direction source mismatches. Contrary to the initial
+19-entry diagnosis, abliteration `4463696a4c62e8f3`, run `20261104-080338-4d5632a1`,
+uses a third source tree: `49c83214bd08cb76783cd9539ea88868c5bd074c`, independently
+hashed to `560abb41c7b1f2ce3b690532666d36c8389a28e85577f78274bee7437bdc595a`.
+No matching base exists for that tree; retain it as missing.
+
+Local fields reconstructed from today's runtime are inferred with source
+"current environment, not contemporaneous". H1 transformers is inferred too;
+there is no new contemporaneous evidence establishing its installed version.
+`partial-inferred` records list inferred keys and separately list missing keys.
+The post-correction feature dataset has 240 matched, 40 missing and 240
+`targets_with_inferred_runtime`. All matched targets currently depend on inference;
+excluding inferred pairs leaves no qualified target panel in this snapshot.
+
+| Family | Matched | Missing |
+| --- | ---: | ---: |
+| abliteration | 84 | 2 |
+| chain | 13 | 37 |
+| lora_sft | 59 | 1 |
+| random_dir | 54 | 0 |
+| task_vector | 30 | 0 |
+
+Missing: 37 unevaluated predecessors, two H2 actual-batch mismatches and the
+third-tree abliteration. Counts describe this live snapshot, not frozen cohort sizes.
+
+Reliability pairs now reject incompatible known runtime/config/source/seed and
+actual batch (the explicit `--allow-batch-mismatch` diagnostic override records the
+mismatch). Host IDs may differ; other compatibility fields remain strict. Item
+uncertainty resamples edit clusters then paired items; WikiText uses contiguous
+nonoverlapping length-two window blocks on log-ppl, with exponentiated ratio
+intervals for display. Matched-reference delta uncertainty resamples shared bases
+once per replicate, preserving their covariance across edits. The preregistered
+host-by-edit qualification analysis remains blocked, and no panel qualification
+is claimed.
+
+Before this revision's backfill each existing record was archived as `.orig` if
+absent. `verify_backfill_scores.py` checks every non-metadata key (including counts
+and nested scores), missing archives and missing current records. It found zero
+score differences across 337 unique archives. These archives establish preservation
+for this revision, not retroactively for backfills performed before archives existed.
+Empty ancestry folds emit WARNING on stderr through Python logging and appear in
+`skipped_folds` in metrics and manifest; the CPU test captures that warning and
+checks the persisted metrics.

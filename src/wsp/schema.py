@@ -112,6 +112,20 @@ def aggregate(records: list[EvalRecord]) -> dict[str, float]:
     gen = [x for b, v in loops.items() for x in v if b in ("gsm8k", "math500", "ifeval")]
     if gen:
         agg["loop_rate"] = sum(gen) / len(gen)
+    for b in ("gsm8k", "math500", "ifeval"):
+        rows = [r for r in records if r.benchmark == b]
+        if rows:
+            agg[f"loop_rate_{b}"] = sum(r.hit_max_tokens for r in rows) / len(rows)
+            agg[f"invalid_final_answer_rate_{b}"] = sum(
+                r.extra.get("invalid_final_answer", False) for r in rows
+            ) / len(rows)
+    # Deprecated aliases refusal_rate / over_refusal remain for one release.
+    for old, new in (
+        ("refusal_rate", "refusal_keyword_rate"),
+        ("over_refusal", "over_refusal_keyword_rate"),
+    ):
+        if old in agg:
+            agg[new] = agg[old]
     return agg
 
 

@@ -8,12 +8,14 @@ import pytest
 import torch
 from p3_toy import build_toy_zoo, toy_base_state
 
+from wsp.eval.repeats import REFERENCE_KEYS
 from wsp.features.extract import run_extract
 from wsp.features.pool import pooled_dims
 from wsp.predictor.data import FeatureDataset, collate_trajectories
 from wsp.predictor.models import build_model, effective_rank
 from wsp.predictor.train import main, run_training
 
+IDENTITY = dict.fromkeys(REFERENCE_KEYS, "toy-known")
 STATS, SPECTRUM = pooled_dims()
 
 
@@ -28,9 +30,11 @@ def toy(tmp_path_factory):
         score = 0.2 + 0.6 / (1 + meta["norms"]["fro_effective"])
         dest = root / "evals" / i
         dest.mkdir(parents=True)
-        (dest / "eval.json").write_text(json.dumps({"metrics": {"acc": score}}))
+        (dest / "eval.json").write_text(json.dumps(IDENTITY | {"metrics": {"acc": score}}))
     (root / "evals" / "base").mkdir()
-    (root / "evals" / "base" / "eval.json").write_text('{"metrics":{"acc":0.9}}')
+    (root / "evals" / "base" / "eval.json").write_text(
+        json.dumps(IDENTITY | {"metrics": {"acc": 0.9}})
+    )
     return root
 
 
@@ -118,7 +122,9 @@ def test_training_fold_outputs_provenance_and_deltas(toy, tmp_path):
         assert fold["collapse_check"]["frozen_predictor_erank"] >= 0
         assert isinstance(fold["collapse_check"]["acceptance_gate"], bool)
     (toy / "evals" / "base").mkdir(exist_ok=True)
-    (toy / "evals" / "base" / "eval.json").write_text('{"metrics":{"acc":0.9}}')
+    (toy / "evals" / "base" / "eval.json").write_text(
+        json.dumps(IDENTITY | {"metrics": {"acc": 0.9}})
+    )
     ds = FeatureDataset(toy / "features", toy / "evals", target="delta")
     assert (ds.targets.numpy() < 0).any()
     np.testing.assert_allclose(ds.base_scores, [0.9])
@@ -413,7 +419,7 @@ def test_h3_gate_only_named_lora_even_when_all_benchmarks_pass(toy, tmp_path, mo
     names = ["gsm8k", "math500", "ifeval", "mmlu_pro", "hellaswag", "refusal_rate"]
     for file in evals.glob("*/eval.json"):
         value = json.loads(file.read_text())["metrics"]["acc"]
-        file.write_text(json.dumps({"metrics": dict.fromkeys(names, value)}))
+        file.write_text(json.dumps(IDENTITY | {"metrics": dict.fromkeys(names, value)}))
     original = train.metrics_with_ci
 
     def passing(*args, **kwargs):
@@ -441,3 +447,74 @@ def test_h3_gate_only_named_lora_even_when_all_benchmarks_pass(toy, tmp_path, mo
     else:
         assert result["m6_acceptance"] is None
         assert all("h3_benchmarks_passing" not in fold for fold in result["folds"])
+
+
+def test_dataset_requires_device_matched_base_and_successor(toy, tmp_path):
+    import shutil
+
+    evals = tmp_path / "evals"
+    shutil.copytree(toy / "evals", evals)
+    ds = FeatureDataset(toy / "features", evals)
+    child = next(r["id"] for r in ds.rows if ds.successors[r["id"]])
+    path = evals / child / "eval.json"
+    observation = json.loads(path.read_text()) | {"eval_device_id": "H1"}
+    path.write_text(json.dumps(observation))
+    # A foreign predecessor never provides a step target, even when a base matches.
+    other = evals / "base-other"
+    other.mkdir()
+    (other / "eval.json").write_text(
+        json.dumps(IDENTITY | {"eval_device_id": "H1", "edit_id": "base", "metrics": {"acc": 0.1}})
+    )
+    missing = FeatureDataset(toy / "features", evals)
+    assert child not in {r["id"] for r in missing.rows}
+    assert missing.missing_matched_reference >= 1
+    parent = evals / ds.successors[child] / "eval.json"
+    parent.write_text(json.dumps(json.loads(parent.read_text()) | {"eval_device_id": "H1"}))
+    matched = FeatureDataset(toy / "features", evals)
+    j = next(j for j, r in enumerate(matched.rows) if r["id"] == child)
+    assert matched.targets[j, 0] == pytest.approx(
+        observation["metrics"]["acc"] - json.loads(parent.read_text())["metrics"]["acc"]
+    )
+
+
+def test_empty_ancestry_fold_is_logged_and_skipped(toy, monkeypatch, caplog, tmp_path):
+    from wsp.predictor import data
+
+    ds = FeatureDataset(toy / "features", toy / "evals")
+    original = data.clean_training
+    calls = 0
+
+    def purge(*args):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return np.array([], dtype=int), len(args[1])
+        return original(*args)
+
+    monkeypatch.setattr(data, "clean_training", purge)
+    folds = ds.folds("trajectory", 3)
+    assert len(folds) == 2
+    assert "ancestry purge leaves empty training fold" in caplog.text
+    assert ds.split_audit[0]["skipped_reason"]
+    calls = 0
+    result = run_training(
+        toy / "features",
+        toy / "evals",
+        "trajectory",
+        tmp_path / "run",
+        epochs=1,
+        n_splits=3,
+        n_boot=2,
+        d_model=16,
+    )
+    assert len(result["folds"]) == 2
+    assert result["split_audit"][0]["skipped_reason"]
+    assert result["skipped_folds"] == [result["split_audit"][0]]
+    import json
+    import logging
+
+    stored = json.loads((tmp_path / "run/metrics.json").read_text())
+    assert stored["skipped_folds"] == result["skipped_folds"]
+    assert any(
+        r.levelno == logging.WARNING and "empty training fold" in r.message for r in caplog.records
+    )
