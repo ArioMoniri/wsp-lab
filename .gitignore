@@ -29,3 +29,4 @@ data/hf/
 
 .venv
 data/hf
+data/papers/*.txt
