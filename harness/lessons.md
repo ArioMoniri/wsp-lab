@@ -15,3 +15,4 @@
 | 2026-11-04 | P0 | pre-commit hook was bypassed with core.hooksPath=/dev/null during merges, so ruff format drift reached CI; run `ruff format --check .` before every push | precommit | CI lint job 9e4a938 |
 | 2026-11-04 | P5 | Lambda A100 hosts ship driver 570 / CUDA 12.8: torch cu132 wheels cannot init CUDA ("driver too old"); job script now picks the wheel index from nvidia-smi (cu128) | scripts/lambda_job_ara.sh | ~/ara_attempt1.log on the instance |
 | 2026-11-04 | P5 | Qwen3.5 AutoProcessor needs torchvision (video processor); install torch AND torchvision from the same driver-matched index, never drop torchvision | scripts/lambda_job_ara.sh | ~/ara_attempt3.log on the instance |
+| 2026-11-04 | P4 | parent_id semantics differ by family (chain=successor, task_vector=source); H1 target is per-step Δy; family holdout must drop ancestry | docs/DECISIONS.md D5, predictor/data.py | Board A review of feat/p4-predictors |

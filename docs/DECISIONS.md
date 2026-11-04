@@ -30,3 +30,11 @@ User approved Lambda Cloud usage with a cap of **$150**: (1) Heretic ARA zoo fam
 evaluation of the D3 subset if local timing is slow. Rules: instances named `wsp-lab-*`, launched with a
 per-hour price cap, results pushed to the private HF datasets, instance terminated as soon as its job ends;
 spend ledger in `board/lambda_spend.md`.
+
+## D5 (4 Nov 2026) — trajectory relations and per-step targets
+Board A (reviews/P4/feat-p4-predictors-boardA-2026-11-04.md) showed that `parent_id` means different things per
+family: for chain steps the parent is the predecessor state (`successor` edge); for task vectors the parent is
+the *source* of a scaled delta applied to the base (`source` edge), not a predecessor. Predictors that model
+history (M2, M5) and JEPA transitions (M3) use `successor` edges only. H1's target is the per-step change
+Δy_t = y_t − y_{t−1} (predecessor = base for single-step edits); absolute level is an explicit secondary target.
+A family holdout drops every entry whose ancestry contains the held-out family.
