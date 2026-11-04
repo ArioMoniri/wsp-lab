@@ -88,10 +88,11 @@ every family, including random directions, by 0.06–0.09, which is within the c
 
 **Cross-host controls (local RTX PRO 4500 vs Lambda A10, same seed, batch 32, temperature 0.6).** Base model:
 gsm8k 0.16 vs 0.06 (n=50), math500 0.16 vs 0.28 (n=25), ifeval 0.40 vs 0.44 (n=25), mmlu_pro 0.28 = 0.28 (n=100),
-hellaswag 0.39 = 0.39 (n=100), wikitext ppl 22.90 vs 22.91. On the four shared edited entries the per-benchmark
-gaps reach 0.16 (math500). Item counts alone give a binomial SE of 0.05–0.08 on the 25–50-item benchmarks, so the
-fast tier cannot resolve single-edit effects of that size on gsm8k/math500/ifeval; mmlu_pro, hellaswag and the
-refusal/KL probes are the usable targets at this tier. Same-host test-retest (10 controls + base, tmux p2-retest)
+hellaswag 0.39 = 0.39 (n=100), wikitext ppl 22.90 vs 22.91. The largest base-only gap is 0.12 (math500); on the four shared edited entries the per-benchmark
+gaps reach 0.16 (math500). Item counts alone give a binomial SE of 0.03–0.10 on the 25–100-item benchmarks (IFEval near 0.10; Board B
+correction), so the fast tier cannot resolve single-edit effects of that size on gsm8k/math500/ifeval. Board A's
+qualification rule (docs/reviews/H5/board-a-prereg-2026-11-04.md) provisionally admits mmlu_pro and hellaswag for
+large-effect screening and refusal/KL as narrow probes; none is qualified until the repeat panels are analysed. Same-host test-retest (10 controls + base, tmux p2-retest)
 and the H100's 10 controls are running; Δy will be computed against the same-host base (D3 addendum 3).
 
 **P4 data-path check** (`data/runs/p4/smoke-m1-realdata`, M1, family split, 35 labeled edits): Spearman within
