@@ -586,6 +586,20 @@ fallback. Freeze the predictor during each episode, cap proposals, randomize edi
 prompts and deltas, and prohibit access to sealed evaluation examples. The top Board C run is C's
 shadow-ranker on existing P1 proposals; schedule A+C only after that gate passes.
 
+### Note: Meta^n (Kim, Lee, Jwa, Kang, arXiv 2608.24735, Aug 2026) — assessed 4 Nov 2026
+Repository minnesotanlp/meta-n (MIT). It recurses one fixed meta-operation that reads execution traces and writes
+code injected into the layer below; search is an archive-based evolutionary loop over *prompt/code* layers, not
+weight edits. No code to reuse here: it has no weight-space, predictor, or model-editing component, and its
+benchmarks are agent tasks. Two things carry over to H5:
+1. Its authors state that any archive-based loop behaves as a ≥ best-of-N order statistic. The H5 editor
+   comparison therefore needs a **single-draw best-of-N control** (N random/LLM proposals, pick the best by real
+   evaluation) at the same real-evaluation budget, otherwise a critic-gated loop can look better simply because it
+   keeps an archive. Added to the H5 arm list.
+2. Their layers are *constructive* (they write code) rather than *evaluative* (accept/reject). Arm B's "LLM as
+   optimiser" is the constructive analogue; arm C (critic) is the evaluative one. Keep both and report them
+   separately.
+Citation candidate only; not in refs/verified.yaml until a paper section uses it.
+
 ## P4 implementation protocol (Board A revision, 4 November 2026)
 
 The default supervised target is Δy_t = y_t − y_predecessor, computed from measured
