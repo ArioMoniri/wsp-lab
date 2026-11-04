@@ -99,3 +99,12 @@ and the H100's 10 controls are running; Δy will be computed against the same-ho
 [−0.3, 0.55] with intervals crossing zero on every target except mmlu_pro (0.54 [0.23, 0.81]) and loop rate; at n=35
 and the noise level above this is uninformative either way and is recorded only to show the pipeline runs on real
 features and targets.
+
+**Same-host test-retest (4 Nov, tmux p2-retest; run id p2-retest-20261104-202946).** The base model and the 10
+control entries were re-evaluated on the same GPU with the same seed, config and actual batch size (32). All 11 pairs
+are bit-identical on every metric (gsm8k, math500, ifeval, mmlu_pro, hellaswag, refusal, over-refusal, KL,
+wikitext ppl, loop rate): mean and max absolute difference 0.000. Within a device the fast tier is therefore
+deterministic; the cross-host gaps above are systematic hardware/kernel effects on the sampled generations, not
+run-to-run noise. What this does *not* measure is sampling noise under a different seed (a different draw at
+T = 0.6 from the same items); that requires a seed-1 repeat panel, scheduled once the `--repeat` runner
+(branch fix/eval-board-a-h5) is merged. Item-count SE from Board B/Board A still applies to any single draw.
