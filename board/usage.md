@@ -190,4 +190,5 @@
 | 2026-11-04 | Board A final re-review feat/h5-editor | claude_aio_gmail_api/claude-haiku-5-5 high | APPROVE (merge with production disabled; pilot blocked on principal decision, pool statement, kernel policy) 6460816 — merged |
 | 2026-11-04 | Board A: P4 D3 suite verdict | codex/gpt-6.1-sol high | REVISE: H1 undetermined/not demonstrated (M2 ρ .54/.49 vs StatNN .61/.67 trajectory split); family-split negatives = family offsets 0efebfe |
 | 2026-11-04 | P4 round 2: nested selection, fold-mean/delta-norm baselines, per-family metrics, cluster bootstrap, seeds, feature-audit controls | codex/gpt-6.1-sol high | running |
-| 2026-11-04 | Scribe: paper reliability subsection + experiments.tex corrections | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | Scribe: paper reliability subsection + experiments.tex corrections | claude_aio_gmail_api/claude-haiku-5-5 high | done 7b274af (9 pages, refs verified) — humanizer next |
+| 2026-11-04 | Humanizer: paper/reliability | claude_aio_gmail_api/claude-haiku-5-5 high | running |
