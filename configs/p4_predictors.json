@@ -1,0 +1,12 @@
+{
+  "epochs": 100,
+  "pretrain_epochs": 30,
+  "patience": 10,
+  "batch_size": 16,
+  "lr": 0.001,
+  "seed": 0,
+  "n_splits": 5,
+  "n_boot": 1000,
+  "d_model": 256,
+  "device": "cpu"
+}
