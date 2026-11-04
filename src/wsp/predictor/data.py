@@ -17,7 +17,6 @@ from safetensors.torch import load_file
 from torch.utils.data import Dataset
 
 from wsp.features.pool import TYPES, classify
-from wsp.predictor.baselines import load_zoo_ancestry
 from wsp.predictor.splits import make_splits, trajectory_groups
 
 RATES = {
@@ -77,10 +76,69 @@ def read_targets(evals):
     return result
 
 
+def read_relations(zoo):
+    """Manifest ancestry includes sources; only cumulative chain links are successors.
+
+    lora_vs_base is a flagged successor: optimisation uses base, but the resulting
+    delta is added to the previous state and the stored snapshot is cumulative.
+    """
+    path = Path(zoo)
+    path = path if path.is_file() else path / "manifest.jsonl"
+    rows = {}
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if "id" not in row:
+            continue
+        params = row.get("params") or {}
+        edit = path.parent / row["id"] / "edit.json"
+        if edit.exists():
+            details = json.loads(edit.read_text())
+            params = details.get("params", params)
+        row = {**row, "params": params}
+        row["step_semantics"] = row.get("step_semantics", params.get("step_semantics"))
+        row["relation"] = (
+            "successor"
+            if row.get("parent_id") and row["family"] == "chain"
+            else "source"
+            if row.get("parent_id")
+            else "base"
+        )
+        rows[row["id"]] = row
+    return rows
+
+
+def ancestor_ids(entry_id, ancestry):
+    seen = set()
+    while entry_id is not None:
+        if entry_id in seen:
+            raise ValueError("cycle in parent chain")
+        seen.add(entry_id)
+        entry_id = ancestry.get(entry_id)
+    return seen
+
+
+def clean_training(rows, train, test, metadata, ancestry, mode):
+    """Purge all held-out steps, including unlabeled mixed-family ancestors/sources."""
+    if mode not in {"family", "seed"}:
+        return np.asarray(train, dtype=int), 0
+    held = {rows[i][mode] for i in test}
+    forbidden = set()
+    for i, m in metadata.items():
+        value = m.get(mode)
+        inner = (m.get("params") or {}).get("inner_family") if mode == "family" else None
+        if value in held or inner in held:
+            forbidden.add(i)
+    kept = [i for i in train if not (ancestor_ids(rows[i]["id"], ancestry) & forbidden)]
+    return np.asarray(kept, dtype=int), len(train) - len(kept)
+
+
 def descriptor(meta, width=32):
     """Stable hashed edit fields, excluding identity/seed/targets; no learned preprocessing."""
     out = torch.zeros(width)
     fields = {"family": meta["family"], **(meta.get("params") or {})}
+    fields = {k: v for k, v in fields.items() if k not in {"length", "inner_seed", "seed"}}
     for key, value in sorted(fields.items()):
         text = key if isinstance(value, (int, float)) else f"{key}={value}"
         h = int.from_bytes(hashlib.sha256(text.encode()).digest()[:8], "little")
@@ -90,46 +148,75 @@ def descriptor(meta, width=32):
 
 
 class FeatureDataset(Dataset):
-    def __init__(self, features, evals, *, delta_from_base=False, targets=None, zoo=None):
+    def __init__(self, features, evals, *, target="delta", targets=None, zoo=None):
         self._cache = OrderedDict()
         self.root = Path(features)
-        self.metadata = {}
-        for file in sorted(self.root.glob("*/features.json")):
-            meta = json.loads(file.read_text())
-            meta["path"] = file.parent
-            self.metadata[meta["edit_id"]] = meta
-        raw = read_targets(evals)
-        self.names = sorted(targets or (RATES & {k for v in raw.values() for k in v}))
-        self.rows = [
-            {"id": i, "family": m["family"], "seed": m["seed"], "parent_id": m["parent_id"]}
-            for i, m in self.metadata.items()
-            if any(n in raw.get(i, {}) for n in self.names)
-        ]
-        if not self.rows:
-            raise ValueError(
-                "zero entries have targets for bounded benchmarks; provide complete eval.json files"
-            )
-        y = torch.tensor(
-            [[raw[r["id"]].get(n, float("nan")) for n in self.names] for r in self.rows],
-            dtype=torch.float32,
-        )
-        if ((y[torch.isfinite(y)] < 0) | (y[torch.isfinite(y)] > 1)).any():
-            raise ValueError("sigmoid targets must be rates in [0,1]; PPL/KL need a separate head")
-        self.base = torch.zeros(len(self.names))
-        if delta_from_base:
-            if any(n not in raw.get("base", {}) for n in self.names):
-                raise ValueError("--delta-from-base requires all target values in base/eval.json")
-            self.base = torch.tensor([raw["base"][n] for n in self.names])
-        self.targets = y - self.base
         manifest = self.root / "manifest.json"
         self.manifest = json.loads(manifest.read_text()) if manifest.exists() else {}
         zoo = zoo or self.manifest.get("zoo")
-        self.ancestry = load_zoo_ancestry(zoo) if zoo else {}
+        self.relations = read_relations(zoo) if zoo else {}
+        self.metadata = {}
+        for file in sorted(self.root.glob("*/features.json")):
+            meta = json.loads(file.read_text())
+            row = self.relations.get(meta["edit_id"])
+            if row is None:
+                raise ValueError(f"manifest relation missing for {meta['edit_id']}")
+            if row.get("parent_id") != meta.get("parent_id"):
+                raise ValueError(f"conflicting parent for {meta['edit_id']}")
+            self.metadata[meta["edit_id"]] = {**meta, **row, "path": file.parent}
+        self.ancestry = {i: m.get("parent_id") for i, m in self.relations.items()}
+        self.successors = {
+            i: m.get("parent_id") if m["relation"] == "successor" else None
+            for i, m in self.relations.items()
+        }
+        for i in self.ancestry:
+            ancestor_ids(i, self.ancestry)
+        raw = read_targets(evals)
+        self.names = sorted(targets or (RATES & {k for v in raw.values() for k in v}))
+        self.target = target
+        if target not in {"delta", "level"}:
+            raise ValueError("target must be delta or level")
+        self.base_scores = [raw.get("base", {}).get(n) for n in self.names]
+        self.rows, values = [], []
+        self.missing_predecessor_targets = 0
         for i, m in self.metadata.items():
-            if i in self.ancestry and self.ancestry[i] != m["parent_id"]:
-                raise ValueError(f"conflicting parent for {i}")
-            self.ancestry[i] = m["parent_id"]
-        trajectory_groups(self.rows, self.ancestry)  # validate cycles before loading
+            if not any(n in raw.get(i, {}) for n in self.names):
+                continue
+            previous = self.successors[i] or "base"
+            y = []
+            missing = False
+            for n in self.names:
+                value = raw.get(i, {}).get(n, float("nan"))
+                predecessor = raw.get(previous, {}).get(n, float("nan"))
+                if np.isfinite(value) and not 0 <= value <= 1:
+                    raise ValueError("targets must be rates in [0,1]; PPL/KL need a separate head")
+                if target == "delta" and np.isfinite(value):
+                    if not np.isfinite(predecessor):
+                        missing = True
+                    elif not 0 <= predecessor <= 1:
+                        raise ValueError("predecessor targets must be rates in [0,1]")
+                    value -= predecessor
+                y.append(value)
+            if missing:
+                self.missing_predecessor_targets += 1
+                continue
+            self.rows.append(
+                {
+                    "id": i,
+                    "family": m["family"],
+                    "seed": m["seed"],
+                    "parent_id": m.get("parent_id"),
+                    "relation": m["relation"],
+                }
+            )
+            values.append(y)
+        if not self.rows:
+            raise ValueError(
+                "zero entries have targets with required predecessor targets; "
+                f"missing_predecessor_targets={self.missing_predecessor_targets}"
+            )
+        self.targets = torch.tensor(values, dtype=torch.float32)
+        self.split_audit = []
         first = self.entry(self.rows[0]["id"])
         self.stats_dim = first["stats"].numel()
         self.pooled_dim = first["pooled"].numel()
@@ -167,6 +254,9 @@ class FeatureDataset(Dataset):
             "descriptor": descriptor(m),
         }
 
+        source = m.get("parent_id") if m["relation"] == "source" else None
+        side = self.entry(source)["stats"] if source else torch.zeros_like(result["stats"])
+        result["pooled"] = torch.cat([result["pooled"], side])
         self._cache[entry_id] = result
         if len(self._cache) > 128:
             self._cache.popitem(last=False)
@@ -180,7 +270,7 @@ class FeatureDataset(Dataset):
                     f"missing ancestor features for {entry_id}; extract the full chain"
                 )
             chain.append(entry_id)
-            entry_id = self.ancestry.get(entry_id)
+            entry_id = self.successors.get(entry_id)
         if len(chain) > 8:
             raise ValueError("trajectory exceeds maximum length 8")
         return chain[::-1]
@@ -200,7 +290,22 @@ class FeatureDataset(Dataset):
         n = min(n_splits, len(set(groups)))
         if n < 2:
             raise ValueError(f"{mode} split needs at least two groups (including inner validation)")
-        return [(indices[a], indices[b]) for a, b in make_splits(rows, mode, n, self.ancestry)]
+        result = []
+        for a, b in make_splits(rows, mode, n, self.ancestry):
+            train, dropped = clean_training(
+                self.rows, indices[a], indices[b], self.relations, self.ancestry, mode
+            )
+            self.split_audit.append(
+                {
+                    "mode": mode,
+                    "test_ids": [rows[j]["id"] for j in b],
+                    "dropped_ancestor_rows": dropped,
+                }
+            )
+            if not len(train):
+                raise ValueError("ancestry purge leaves empty training fold")
+            result.append((train, indices[b]))
+        return result
 
 
 def collate_trajectories(items):

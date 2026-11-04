@@ -35,10 +35,15 @@ def variance_loss(z):
     return F.relu(1 - (z.var(0, unbiased=False) + 1e-4).sqrt()).mean()
 
 
-def transformer(d, layers=2):
+def transformer(d, layers=2, dropout=0, extra_ff=0):
     return nn.TransformerEncoder(
         nn.TransformerEncoderLayer(
-            d, 4, dim_feedforward=4 * d, dropout=0, batch_first=True, norm_first=True
+            d,
+            4,
+            dim_feedforward=4 * d + extra_ff,
+            dropout=dropout,
+            batch_first=True,
+            norm_first=True,
         ),
         layers,
         enable_nested_tensor=False,
@@ -46,12 +51,12 @@ def transformer(d, layers=2):
 
 
 class TensorEncoder(nn.Module):
-    def __init__(self, token_dim, n_layers, d):
+    def __init__(self, token_dim, n_layers, d, attention_layers=2, dropout=0):
         super().__init__()
         self.proj = nn.Linear(token_dim, d)
         self.types = nn.Embedding(len(TYPES), d)
         self.layers = nn.Embedding(n_layers, d)
-        self.attention = transformer(d)
+        self.attention = transformer(d, attention_layers, dropout)
         self.norm = nn.LayerNorm(d)
 
     def forward(self, b):
@@ -70,24 +75,42 @@ class TensorEncoder(nn.Module):
 
 
 class TokenTransformer(nn.Module):
-    def __init__(self, ds, k, d, trajectory=False):
+    def __init__(self, ds, k, d, trajectory=False, matched=False):
         super().__init__()
-        self.encoder = TensorEncoder(ds.token_dim, ds.n_layers, d)
+        self.encoder = TensorEncoder(
+            ds.token_dim,
+            ds.n_layers,
+            d,
+            1 if trajectory else 2,
+            0.2 if trajectory or matched else 0,
+        )
+        if matched:
+            # +4 feedforward units = 8d+4 parameters, vs M5 positions = 8d.
+            layer = self.encoder.attention.layers[-1]
+            layer.linear1 = nn.Linear(d, 4 * d + 4)
+            layer.linear2 = nn.Linear(4 * d + 4, d)
+        self.descriptor_proj = nn.Linear(32, d)
+        self.source_dim = ds.stats_dim
+        self.source_proj = nn.Linear(ds.stats_dim, d, bias=False)
         self.trajectory = trajectory
         if trajectory:
             self.positions = nn.Embedding(8, d)
-            self.edits = transformer(d)
+            self.edits = transformer(d, 1, 0.2)
         self.head = nn.Linear(d, k)
         self.backend = "torch_attention"
 
     def forward(self, b):
-        z = self.encoder(b)
+        z = (
+            self.encoder(b)
+            + self.descriptor_proj(b["descriptor"])
+            + self.source_proj(b["pooled"][..., -self.source_dim :])
+        )
         if self.trajectory:
             t = z.shape[1]
             z = z + self.positions(torch.arange(t, device=z.device))
             causal = torch.ones(t, t, device=z.device, dtype=torch.bool).triu(1)
             z = self.edits(z, mask=causal, src_key_padding_mask=~b["mask"])
-        return self.head(z).sigmoid()
+        return self.head(z)
 
 
 class MambaTrajectory(nn.Module):
@@ -98,12 +121,12 @@ class MambaTrajectory(nn.Module):
             ds.pooled_dim + 32,
             k,
             d_model=d,
-            backend=None if str(device).startswith("cuda") else "loop",
+            backend="mamba_ssm" if str(device).startswith("cuda") else "loop",
         )
         self.backend = self.model.backend
 
     def forward(self, b):
-        return self.model(torch.cat([b["pooled"], b["descriptor"]], -1))
+        return self.model(torch.cat([b["pooled"], b["descriptor"]], -1), bounded=False)
 
 
 class ResidualPred(nn.Module):
@@ -192,14 +215,16 @@ class JEPA(nn.Module):
                 z = self.encode(b)
         else:
             z = self.encode(b)
-        return self.head(z).sigmoid()
+        return self.head(z)
 
 
 def build_model(name, ds, *, seed=0, d_model=256, device="cpu"):
     seed_all(seed)
     k = len(ds.names)
-    if name in {"m1", "m5"}:
-        model = TokenTransformer(ds, k, d_model, trajectory=name == "m5")
+    if name in {"m1", "m1_matched", "m5"}:
+        model = TokenTransformer(
+            ds, k, d_model, trajectory=name == "m5", matched=name == "m1_matched"
+        )
     elif name == "m2":
         model = MambaTrajectory(ds, k, d_model, device)
     elif name in {"m3", "m6"}:

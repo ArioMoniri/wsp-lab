@@ -1,7 +1,7 @@
 """CPU/CUDA P4 training with nested group validation and genuine targets only.
 
-Sigmoid heads predict absolute rates; --delta-from-base subtracts the known base
-from predictions and labels for both training and reporting. PPL/KL are excluded.
+Default targets are per-step y_t - y_predecessor. --target level fits absolute rates.
+PPL/KL are excluded. --selftest writes explicitly synthetic artifacts outside results.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import importlib.metadata
 import json
 import logging
 import subprocess
@@ -65,9 +66,9 @@ def loader(ds, indices, batch_size, seed, shuffle=False):
     )
 
 
-def last_predictions(model, batch, base):
+def last_predictions(model, batch):
     p = model(batch)
-    return p[torch.arange(len(p), device=p.device), batch["mask"].sum(1) - 1] - base
+    return p[torch.arange(len(p), device=p.device), batch["mask"].sum(1) - 1]
 
 
 def masked_loss(pred, target):
@@ -81,7 +82,7 @@ def predict(model, ds, indices, normalizer, device, batch_size):
     with torch.no_grad():
         for batch in loader(ds, indices, batch_size, 0):
             b = normalizer(batch, device)
-            output.append(last_predictions(model, b, ds.base.to(device)).cpu())
+            output.append(last_predictions(model, b).cpu())
     return torch.cat(output).numpy()
 
 
@@ -102,7 +103,8 @@ def run_training(
     n_boot=1000,
     d_model=256,
     device="cpu",
-    delta_from_base=False,
+    target="delta",
+    synthetic=False,
     targets=None,
     zoo=None,
 ):
@@ -111,7 +113,7 @@ def run_training(
             "epochs, pretrain epochs, patience, batch size and bootstrap count must be positive"
         )
     seed_all(seed)
-    ds = FeatureDataset(features, evals, delta_from_base=delta_from_base, targets=targets, zoo=zoo)
+    ds = FeatureDataset(features, evals, target=target, targets=targets, zoo=zoo)
     folds = ds.folds(split, n_splits)
     # Plan all validation sets before writing anything. A two-group dataset cannot
     # honestly support both a held-out group and an inner group for early stopping.
@@ -131,7 +133,8 @@ def run_training(
         "n_boot": n_boot,
         "d_model": d_model,
         "device": device,
-        "delta_from_base": delta_from_base,
+        "target": target,
+        "synthetic": synthetic,
         "targets": ds.names,
         "zoo": str(zoo) if zoo else ds.manifest.get("zoo"),
     }
@@ -148,9 +151,22 @@ def run_training(
         normalizer = Normalizer(ds, train)
         backends.append(net.backend)
         pretrain_history = []
+        collapse = None
+        ablation = None
+        if model == "m6":
+            # Same initial encoder; frozen standard linear predictor ablation.
+            ablation = copy.deepcopy(net)
+            dz = ablation.predictor.delta.in_features
+            ablation.predictor = torch.nn.Linear(dz, dz).to(device)
+            ablation.predictor.requires_grad_(False)
+            ablation_opt = torch.optim.AdamW(
+                [p for p in ablation.parameters() if p.requires_grad], lr=lr
+            )
+
         if model in {"m3", "m6"}:
             opt = torch.optim.AdamW(net.parameters(), lr=lr)
             for epoch in range(pretrain_epochs):
+                seed_all(fold_seed + epoch)
                 net.train()
                 losses, latents = [], []
                 for batch in loader(ds, train, batch_size, fold_seed + epoch, True):
@@ -177,6 +193,34 @@ def run_training(
                         "erank": effective_rank(torch.cat(latents)),
                     }
                 )
+            if ablation is not None:
+                # Train the ablation with identical batches/epochs and RNG streams.
+                for epoch in range(pretrain_epochs):
+                    seed_all(fold_seed + epoch)
+                    for batch in loader(ds, train, batch_size, fold_seed + epoch, True):
+                        b = normalizer(batch, device)
+                        ablation_opt.zero_grad()
+                        loss, _ = ablation.pretrain_loss(b)
+                        loss.backward()
+                        torch.nn.utils.clip_grad_norm_(ablation.parameters(), 1)
+                        ablation_opt.step()
+
+                def rank_of(module, train=train, normalizer=normalizer):
+                    module.eval()
+                    with torch.no_grad():
+                        zs = []
+                        for batch in loader(ds, train, batch_size, 0):
+                            b = normalizer(batch, device)
+                            zs.append(module.encode(b)[b["mask"]])
+                    return effective_rank(torch.cat(zs))
+
+                rank, standard_rank = rank_of(net), rank_of(ablation)
+                collapse = {
+                    "erank": rank,
+                    "frozen_predictor_erank": standard_rank,
+                    "collapsed": rank < 2,
+                    "acceptance_gate": rank >= 2 and rank >= 2 * standard_rank,
+                }
             net.freeze_encoder()
         opt = torch.optim.AdamW([p for p in net.parameters() if p.requires_grad], lr=lr)
         best, stale, best_state, history = float("inf"), 0, None, []
@@ -186,7 +230,7 @@ def run_training(
             for batch in loader(ds, train, batch_size, fold_seed + epoch, True):
                 b = normalizer(batch, device)
                 opt.zero_grad()
-                loss = masked_loss(last_predictions(net, b, ds.base.to(device)), b["target"])
+                loss = masked_loss(last_predictions(net, b), b["target"])
                 if not torch.isfinite(loss):
                     raise ValueError("nonfinite supervised loss")
                 loss.backward()
@@ -237,6 +281,7 @@ def run_training(
                 "test_ids": ids(test),
                 "normalization_context_ids": normalizer.ids,
                 "pretraining": pretrain_history,
+                "collapse_check": collapse,
                 "history": history,
                 "parameter_count": sum(p.numel() for p in net.parameters()),
             }
@@ -265,12 +310,44 @@ def run_training(
         seed=seed,
         n_boot=n_boot,
     )
+    m6_gate = None
+    if model == "m6":
+        transfer_pass = False
+        for record, (_, test) in zip(fold_records, baseline_folds, strict=True):
+            fold_scores = {}
+            for j, name in enumerate(ds.names):
+                ok = np.isfinite(ds.targets[test, j].numpy()) & np.isfinite(predictions[test, j])
+                fold_scores[name] = metrics_with_ci(
+                    ds.targets[test, j].numpy()[ok], predictions[test, j][ok], seed, n_boot
+                )
+            record["transfer_metrics"] = fold_scores
+            count = sum(
+                m.get("spearman", {}).get("value", float("nan")) >= 0.5
+                for m in fold_scores.values()
+            )
+            record["h3_benchmarks_passing"] = count
+            transfer_pass |= count >= 6
+        m6_gate = {
+            "family_split": split == "family",
+            "h3_transfer_gate": transfer_pass,
+            "collapse_gate": all(r["collapse_check"]["acceptance_gate"] for r in fold_records),
+            "collapsed_fold_seeds": sum(r["collapse_check"]["collapsed"] for r in fold_records),
+        }
+        m6_gate["accepted"] = split == "family" and transfer_pass and m6_gate["collapse_gate"]
     results = {
         "config": config,
         "targets": scores,
         "length_ge_4": {"n_edits": int(long_mask.sum()), "targets": long_scores},
         "statnn": baseline,
         "folds": fold_records,
+        "m6_acceptance": m6_gate,
+        "split_audit": ds.split_audit,
+        "missing_predecessor_targets": ds.missing_predecessor_targets,
+        "m6_collapse_gate": (
+            all(r["collapse_check"]["acceptance_gate"] for r in fold_records)
+            if model == "m6"
+            else None
+        ),
         "ci_method": "seeded percentile bootstrap over edits (not independent trajectories)",
     }
     (out / "metrics.json").write_text(json.dumps(results, indent=2))
@@ -292,12 +369,17 @@ def run_training(
             lines.append(f"| {label} | {name} | {m['n']} | " + " | ".join(cells) + " |")
     lines += [
         "",
-        "Heads predict absolute bounded rates; delta mode subtracts measured base rates.",
+        f"Target: {target}; delta = measured entry rate minus measured predecessor rate.",
+        "H2 measures history beyond the latest cumulative-from-base snapshot.",
         "JEPA state inputs are cumulative effective-delta features, not absolute weight features.",
-        "M5 uses tensor attention followed by causal edit attention.",
+        "M5 uses one tensor-attention layer and one causal edit-attention layer; dropout 0.2.",
+        "m1_matched widens one M1 feedforward layer; capacity differs from M5 by four parameters.",
+        f"M6 acceptance: {m6_gate}.",
     ]
     (out / "results.md").write_text("\n".join(lines) + "\n")
-    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    sha = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], text=True, cwd=DEFAULT_CONFIG_PATH.parents[1]
+    ).strip()
     config_hash = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
     input_hash = hashlib.sha256()
     for file in sorted(Path(features).glob("*/features.json")):
@@ -307,6 +389,13 @@ def run_training(
         source_hash.update(file.read_bytes())
     manifest = {
         "git_sha": sha,
+        "synthetic": synthetic,
+        "split_audit": ds.split_audit,
+        "missing_predecessor_targets": ds.missing_predecessor_targets,
+        "relations": {
+            i: {k: m.get(k) for k in ("parent_id", "relation", "step_semantics")}
+            for i, m in ds.relations.items()
+        },
         "source_hash": source_hash.hexdigest(),
         "git_dirty": bool(
             subprocess.check_output(
@@ -315,7 +404,7 @@ def run_training(
         ),
         "default_config": str(DEFAULT_CONFIG_PATH.relative_to(DEFAULT_CONFIG_PATH.parents[1])),
         "default_config_hash": hashlib.sha256(DEFAULT_CONFIG_PATH.read_bytes()).hexdigest(),
-        "base_scores": ds.base.tolist(),
+        "base_scores": ds.base_scores,
         "normalization": "training-context-only signed-log1p, standardize, clamp [-20,20]",
         "config": config,
         "config_hash": config_hash,
@@ -325,7 +414,13 @@ def run_training(
         "feature_metadata_hash": input_hash.hexdigest(),
         "features_manifest": ds.manifest,
         "target_hash": hashlib.sha256(ds.targets.numpy().tobytes()).hexdigest(),
-        "model_revisions": {"torch": torch.__version__},
+        "model_revisions": {
+            "torch": torch.__version__,
+            "cuda": torch.version.cuda,
+            "mamba_ssm": importlib.metadata.version("mamba_ssm")
+            if "mamba_ssm" in backends
+            else None,
+        },
         "state_semantics": "cumulative_effective_delta_from_base",
         "parameter_counts": [r["parameter_count"] for r in fold_records],
     }
@@ -336,10 +431,10 @@ def run_training(
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--model", choices=["m1", "m2", "m3", "m5", "m6"], required=True)
+    p.add_argument("--model", choices=["m1", "m1_matched", "m2", "m3", "m5", "m6"], required=True)
     for name in ("features", "evals", "out"):
-        p.add_argument(f"--{name}", required=True)
-    p.add_argument("--split", choices=["family", "seed", "trajectory"], required=True)
+        p.add_argument(f"--{name}")
+    p.add_argument("--split", choices=["family", "seed", "trajectory"], default="trajectory")
     for name, default in [
         ("epochs", 100),
         ("pretrain-epochs", 30),
@@ -353,11 +448,33 @@ def main(argv=None):
         p.add_argument(f"--{name}", type=int, default=default)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--device", default="cpu")
-    p.add_argument("--delta-from-base", action="store_true")
+    p.add_argument("--target", choices=["delta", "level"], default="delta")
+    p.add_argument("--selftest", action="store_true")
     p.add_argument("--targets", nargs="+")
     p.add_argument("--zoo")
     p.set_defaults(**json.loads(DEFAULT_CONFIG_PATH.read_text()))
     args = vars(p.parse_args(argv))
+    selftest = args.pop("selftest")
+    if selftest:
+        from wsp.predictor.selftest import prepare_selftest
+
+        root = prepare_selftest()
+        args.update(
+            features=root / "features",
+            evals=root / "evals",
+            out=root / "run",
+            synthetic=True,
+            split="trajectory",
+            epochs=2,
+            pretrain_epochs=2,
+            n_splits=3,
+            n_boot=10,
+            d_model=32,
+            batch_size=4,
+        )
+        log.warning("SYNTHETIC SELFTEST: artifacts under %s", root)
+    elif not all(args.get(k) for k in ("features", "evals", "out")):
+        p.error("--features, --evals and --out are required unless --selftest")
     torch.set_num_threads(min(2, torch.get_num_threads()))
     logging.basicConfig(level=logging.INFO)
     try:

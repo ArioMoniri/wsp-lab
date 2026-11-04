@@ -548,3 +548,61 @@ critic use: add a held-out calibration/coverage check and an uncertainty-trigger
 fallback. Freeze the predictor during each episode, cap proposals, randomize editor arm order, log all
 prompts and deltas, and prohibit access to sealed evaluation examples. The top Board C run is C's
 shadow-ranker on existing P1 proposals; schedule A+C only after that gate passes.
+
+## P4 implementation protocol (Board A revision, 4 November 2026)
+
+The default supervised target is Δy_t = y_t − y_predecessor, computed from measured
+benchmark rates. Successor snapshots use the immediate predecessor evaluation;
+single-step edits (including task vectors) use base/eval.json. An entry with any
+observed benchmark lacking its predecessor rate is excluded and counted. `--target level`
+is the separate absolute-rate baseline. Heads use linear outputs in both modes;
+all losses, validation, baselines and reported metrics use the selected target.
+
+Edges are classified from the zoo manifest, supplemented with edit.json step metadata.
+Only `chain` parent links are `successor`; task-vector parents are `source`, never
+history or M3 transition pairs. Task vectors are base + scale·Δparent, with parent
+stats available as a separate side-information block in pooled features (consumed
+by M2 and by M1/M5's source projection). A chain `lora_vs_base` step is a flagged
+successor: although its increment is optimized against base, it is added to the
+accumulated state and its stored snapshot follows that state. This permits history
+and parent-relative targets without claiming sequential LoRA optimization. Legacy
+chain links without step metadata retain cumulative-successor semantics; their
+missing flag is visible in the run manifest.
+
+Family/seed training folds purge every descendant/source whose full manifest
+ancestry (including itself and unlabeled steps) contains a held-out family/seed.
+For family holdouts, `params.inner_family` also counts as that family. Purge counts
+and exact split ids are recorded before normalization, pretraining or fitting.
+Trajectory splits still group full source ancestry conservatively, even though
+source edges never become sequence positions. Chain `length` and `inner_seed` are
+excluded from descriptors.
+
+M5 factorizes attention into **one tensor layer plus one causal edit layer**, d=256,
+dropout=0.2. This bounds total attention depth at two. `--model m1_matched` uses two
+stateless tensor layers at the same dropout and widens the final feedforward layer
+by four units: its trainable parameter count differs from M5 by four parameters
+(8d+4 versus 8d extra parameters). Compare M2/M5 against this control as well as M1.
+The factorization remains a deviation from joint attention over all tensor/edit
+positions. H2 tests history **beyond the latest cumulative-from-base snapshot**;
+it does not isolate access to accumulated drift from no access to that drift.
+
+M3 predicts the latent of cumulative-from-base delta features, φ(θ_t−θ₀), rather
+than absolute weight features φ(θ_t), which P3 does not provide. This is an explicit
+H3 design deviation; no absolute-weight JEPA claim follows from these experiments.
+
+M6 trains a same-initial-encoder ablation with a frozen standard random linear
+predictor (ResidualPred off), identical train rows, minibatches, complementary masks,
+optimizer and epoch budget. ERank is computed after pretraining on the unmasked
+training representations. Operational collapse threshold: ERank < 2. The collapse
+gate requires zero collapsed fold seeds and ERank(ResidualPred) ≥ 2× ablation in
+every fold; the separate overall acceptance metric also requires a family split
+and transfer ρ ≥ 0.5 on at least six benchmarks in a held-out fold. Runs of different
+outer seeds must all pass before claiming zero collapsed seeds across a five-seed
+experiment. The current parameter-free Q=K latent attention in ResidualPred is a
+project implementation, not a verified exact reproduction of 2610.02344.
+
+`python -m wsp.predictor.train --model m2 --selftest --device cpu` (or m5) creates a
+four-step synthetic toy zoo and a two-epoch smoke run under `/tmp/wsp-p4-synthetic-*`.
+Both feature and run manifests mark `synthetic: true`; these are never real results.
+CUDA M2 must report `mamba_ssm`; CPU reports `loop`. Run CUDA only after the
+`p1-zoo-full` agent-tmux job disappears. No synthetic run satisfies H1/H2/H3 gates.

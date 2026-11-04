@@ -104,8 +104,10 @@ class TrajectoryPredictor(nn.Module):
         self.head = nn.Sequential(nn.LayerNorm(d_model), nn.Linear(d_model, n_targets))
         log.info("TrajectoryPredictor backend=%s", self.backend)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:  # (B,T,d_in) -> (B,T,K) in [0,1]
+    def forward(
+        self, x: torch.Tensor, bounded=True
+    ) -> torch.Tensor:  # (B,T,d_in) -> (B,T,K) in [0,1]
         h = self.inp(x)
         for b in self.blocks:
             h = b(h)
-        return torch.sigmoid(self.head(h))
+        return torch.sigmoid(self.head(h)) if bounded else self.head(h)
