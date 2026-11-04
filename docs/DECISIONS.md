@@ -71,3 +71,11 @@ half once the ARA family finishes if the local run is still behind.
 The batched delta upload stopped with "Private storage limit reached for user Aralario". HF keeps the metadata,
 features, runs and evals (small); zoo deltas stay on this server (nightly DR backup) unless the account is
 upgraded. Chain deltas were never going to HF (D7). Public release of deltas is not planned (abliteration deltas).
+
+## D6 addendum (4 Nov 2026) — ARA adapters invalid as exported
+Board A forensic check (reviews/P1/heretic-ara-densify-check-2026-11-04.md): the saved PEFT adapters do not equal the
+model Heretic evaluated (row normalisation lives in the objective, not the export; the generator re-runs the selected
+trial before saving), and the saved factors are enormous (delta norm 1.9e9 for a KL-0.028 trial). The two Lambda
+entries are quarantined under data/runs/lambda-ara-quarantine/ and the instance was terminated ($7.29 total). Fix:
+export the exact evaluated model (merged delta computed in-process from Heretic's merged model) and verify by a
+forward-pass KL on the saved artefact before the family is rebuilt.
