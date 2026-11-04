@@ -153,3 +153,4 @@
 | 2026-11-04 | Board A re-review feat/p4-predictors | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (1: explicit --holdout for the M6/H3 gate) |
 | 2026-11-04 | p4-predictors round 3 | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | p4-predictors round 3 | codex/gpt-6.1-sol medium | done 9ae970f (325 tests), merged |
+| 2026-11-04 | perf eval throughput (2nd, GPU after post-zoo) | codex/gpt-6.1-sol high | running |
