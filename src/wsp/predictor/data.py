@@ -34,12 +34,35 @@ RATES = {
 }
 
 
+class TargetRecords(dict):
+    """Metric view plus all immutable reference candidates, including old bases."""
+
+    def __init__(self):
+        super().__init__()
+        self.records = {}
+
+    def reference(self, entry, previous):
+        from wsp.eval.repeats import matched_reference
+
+        observation = self.records.get(entry, [])[-1:]
+        if not observation:
+            return {}
+        if previous == "base" and observation[0].get("matched_base_missing") is True:
+            return {}
+        candidates = self.records.get(previous, [])
+        run = observation[0].get("base_run_id") if previous == "base" else None
+        if run:
+            candidates = [c for c in candidates if c.get("run_id") == run]
+        match = matched_reference(observation[0], reversed(candidates))
+        return match.get("metrics", match.get("summary", match)) if match else {}
+
+
 def read_targets(evals):
     """Read direct files or complete batch index payloads; reject mixed eval tiers."""
     path = Path(evals)
     root = path.parent if path.is_file() else path
     index = path if path.is_file() else root / "index.jsonl"
-    result, signatures = {}, set()
+    result, signatures = TargetRecords(), set()
 
     def add(entry, payload):
         if not entry or payload.get("eval_status", "complete") != "complete":
@@ -59,8 +82,9 @@ def read_targets(evals):
             raise ValueError(
                 "mixed evaluation configurations in targets; select a single tier/config index"
             )
-        if entry in result and result[entry] != metrics:
+        if entry != "base" and entry in result and result[entry] != metrics and path.is_file():
             raise ValueError(f"conflicting target records for {entry}")
+        result.records.setdefault(entry, []).append(payload)
         result[entry] = metrics
 
     if index.exists():
@@ -70,7 +94,13 @@ def read_targets(evals):
                 add(row.get("edit_id", row.get("id")), row)
     # An explicitly selected index is authoritative, not supplemented with other tiers.
     if not path.is_file():
-        for file in sorted(root.glob("*/eval.json")):
+        files = sorted(root.glob("base*/eval*.json")) + sorted(
+            root.glob("base/devices/*/*/eval.json")
+        )
+        files += [
+            f for f in sorted(root.glob("*/eval.json")) if not f.parent.name.startswith("base")
+        ]
+        for file in files:
             payload = json.loads(file.read_text())
             add(payload.get("edit_id") or file.parent.name, payload)
     return result
@@ -200,27 +230,35 @@ class FeatureDataset(Dataset):
         self.base_scores = [raw.get("base", {}).get(n) for n in self.names]
         self.rows, values = [], []
         self.missing_predecessor_targets = 0
+        self.missing_matched_reference = 0
+        self.matched_reference_targets = 0
         for i, m in self.metadata.items():
             if not any(n in raw.get(i, {}) for n in self.names):
                 continue
             previous = self.successors[i] or "base"
+            reference = raw.reference(i, previous)
             y = []
             missing = False
             for n in self.names:
                 value = raw.get(i, {}).get(n, float("nan"))
-                predecessor = raw.get(previous, {}).get(n, float("nan"))
+                predecessor = reference.get(n, float("nan"))
                 if np.isfinite(value) and not 0 <= value <= 1:
                     raise ValueError("targets must be rates in [0,1]; PPL/KL need a separate head")
                 if target == "delta" and np.isfinite(value):
                     if not np.isfinite(predecessor):
                         missing = True
+                        value = float("nan")
                     elif not 0 <= predecessor <= 1:
                         raise ValueError("predecessor targets must be rates in [0,1]")
                     value -= predecessor
                 y.append(value)
             if missing:
                 self.missing_predecessor_targets += 1
-                continue
+                self.missing_matched_reference += 1
+                if not any(np.isfinite(v) for v in y):
+                    continue
+            elif target == "delta":
+                self.matched_reference_targets += 1
             self.rows.append(
                 {
                     "id": i,
@@ -234,7 +272,9 @@ class FeatureDataset(Dataset):
         if not self.rows:
             raise ValueError(
                 "zero entries have targets with required predecessor targets; "
-                f"missing_predecessor_targets={self.missing_predecessor_targets}"
+                f"missing_predecessor_targets={self.missing_predecessor_targets}; "
+                f"missing_matched_reference={self.missing_matched_reference}; "
+                f"matched_reference_targets={self.matched_reference_targets}"
             )
         self.targets = torch.tensor(values, dtype=torch.float32)
         self.split_audit = []

@@ -7,8 +7,11 @@ from pathlib import Path
 import torch
 from safetensors.torch import save_file
 
+from wsp.eval.repeats import REFERENCE_KEYS
+
 
 def prepare_selftest():
+    identity = dict.fromkeys(REFERENCE_KEYS, "synthetic-known")
     root = Path(tempfile.mkdtemp(prefix="wsp-p4-synthetic-"))
     generator = torch.Generator().manual_seed(42)
     rows = []
@@ -48,7 +51,8 @@ def prepare_selftest():
             dest.mkdir(parents=True)
             (dest / "eval.json").write_text(
                 json.dumps(
-                    {"synthetic": True, "metrics": {"acc": 0.5 + 0.02 * step + 0.01 * trajectory}}
+                    identity
+                    | {"synthetic": True, "metrics": {"acc": 0.5 + 0.02 * step + 0.01 * trajectory}}
                 )
             )
             parent = i
@@ -59,6 +63,6 @@ def prepare_selftest():
     )
     (root / "evals" / "base").mkdir()
     (root / "evals" / "base" / "eval.json").write_text(
-        '{"synthetic": true, "metrics": {"acc": 0.5}}'
+        json.dumps(identity | {"synthetic": True, "metrics": {"acc": 0.5}})
     )
     return root

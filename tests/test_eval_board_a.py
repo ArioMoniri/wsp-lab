@@ -23,6 +23,9 @@ def test_repeat_statistics_keep_negative_icc_and_constant_undefined():
 
     left = [{"math500": x, "counts": {"math500": 25}, "batch_size": 32} for x in (0.0, 0.5, 1.0)]
     right = [{"math500": x, "counts": {"math500": 25}, "batch_size": 16} for x in (1.0, 0.5, 0.0)]
+    for panel in (left, right):
+        for i, row in enumerate(panel):
+            row.update(edit_id=str(i), item_id_hash="items", item_order_hash="order")
     result = compare_pairs(left, right, bootstrap=100)
     assert result["math500"]["spearman"] == -1
     assert result["math500"]["icc_2_1"] < 0
@@ -63,6 +66,7 @@ def test_reference_never_falls_back_across_device_or_missing_metadata():
             "generation",
             "model_revision",
             "source_hash",
+            "config_hash",
         ),
         "same",
     )

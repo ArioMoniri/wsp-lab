@@ -65,3 +65,37 @@ Final validation: CPU pytest 325 passed, 8 deselected in 25.26 s (< 60 s local a
 - 21:48 Implemented Board A B2/B3/B5 eval metadata, immutable repeats, keyword names, matched-reference helper; CPU/GPU validation in agent-tmux board-a-checks.
 - 21:49 Regression tests red first (2 failed); targeted suite now 17 passed, additional provenance/hash tests 5 passed. First corrected CPU suite 406 passed; final CPU/GPU CI validation pending.
 - 21:50 Final validation: CPU 407 passed; CI GPU subset 4 passed; additional hash/reference tests 5 passed; ruff check and format clean. No benchmark/reliability panels or predictor training launched.
+
+## Board A eval fixes re-review (2026-11-04)
+
+Implemented the four blocking findings from board-a-eval-fixes-2026-11-04.md
+(read from the canonical checkout because that historical review is absent here).
+Tests first: seven new regressions failed before implementation. Added subsequent
+end-to-end checks for successor matching, delta reliability and both resume paths.
+
+Predictor labels now require known, equal device/runtime/config/source/model,
+actual batch, generation/seed and item/order hashes; legacy unknowns and explicit
+missing-base flags cannot produce base deltas. All base snapshots and device/run
+base directories remain reference candidates, avoiding conflicting-base errors.
+Metrics and training manifests report missing_matched_reference and matched counts
+in edit-row units. Toy fixtures/selftest now supply explicit synthetic identity.
+
+Reliability requires known aligned edit/item/order identity, retains negative ICC
+and undefined constant ranks, separates base, adds difference summaries and
+Bland–Altman limits, edit-cluster bootstrap rank/ICC intervals, matched-reference
+level deltas, centered-effect tail diagnostics, available-item discordance and
+paired intervals. KL remains continuous; WikiText uses log-ppl/window diagnostics;
+boundary binomial uncertainty uses labelled Wilson half-width divided by 1.96.
+
+Resume rejects legacy/foreign bases and preserves them, writing new evaluations
+under base/devices/<opaque-device-id>/<run-id>/eval.json. --no-base prints the
+missing-reference condition and leaves unmatched effects missing. Corrected only
+the live RESEARCH_NOTES keyword-metric claim; historical reviews/ORCHESTRATOR untouched.
+
+Validation: 417 CPU tests passed, 8 deselected, 24.30 seconds; Ruff lint and format
+check passed. Exact requested real-data m1/family/CPU/one-epoch/n-boot-20 command
+reads all artifacts without conflicting-base errors, then exits 1 explicitly:
+matched_reference_targets=0, missing_matched_reference=108 (observed edit rows).
+No training output or hypothesis result is claimed: real legacy artifacts lack
+required matched-reference metadata. New measured matched runs are needed; metadata
+was not inferred or backfilled. No GPU runs, repeat panels or qualification claims.

@@ -374,6 +374,8 @@ def run_training(
         "m6_acceptance": m6_gate,
         "split_audit": ds.split_audit,
         "missing_predecessor_targets": ds.missing_predecessor_targets,
+        "missing_matched_reference": ds.missing_matched_reference,
+        "matched_reference_targets": ds.matched_reference_targets,
         "m6_collapse_gate": (
             all(r["collapse_check"]["acceptance_gate"] for r in fold_records)
             if model == "m6"
@@ -430,6 +432,8 @@ def run_training(
         "synthetic": synthetic,
         "split_audit": ds.split_audit,
         "missing_predecessor_targets": ds.missing_predecessor_targets,
+        "missing_matched_reference": ds.missing_matched_reference,
+        "matched_reference_targets": ds.matched_reference_targets,
         "relations": {
             i: {k: m.get(k) for k in ("parent_id", "relation", "step_semantics")}
             for i, m in ds.relations.items()
