@@ -37,3 +37,16 @@ which method was used and how much capability was lost? This directly tests "aud
 ## Non-goals
 - No new abliteration technique; we only consume published edits and standard Heretic runs.
 - No claim about gradient-free optimisation; we predict, we do not optimise (Phase 5 optional).
+
+## H5 — Editor models and LLM-in-the-loop optimisation (added 4 Nov 2026, user request)
+Edits need not come from algorithms only. Two further edit sources enter the zoo and the predictor's
+forecast-then-verify protocol:
+- `llm_edit`: an editor LLM (GPT-6 Astra, Claude, cheaper controls) receives the weights in a Python sandbox
+  plus a natural-language goal and proposes a weight edit (blog Experiment 8 setting, bounded forward passes).
+- `llm_optimizer`: the editor LLM replaces or steers the optimiser step (proposes parameter updates or
+  per-step hyper-parameters instead of Adam/Muon) for a short fine-tuning run; the predictor acts as critic
+  before each proposed step is applied.
+H5: with the predictor as critic, LLM-proposed edits/steps reach a given benchmark gain with fewer real
+evaluations than (a) the same editor without the critic and (b) Adam/Muon with equal forward-pass budget.
+Falsified if the critic does not reduce evaluations by ≥ 30 % at equal final score. Board C assesses the
+design before any run (docs/MODEL_CANDIDATES.md §LLM-in-the-loop).

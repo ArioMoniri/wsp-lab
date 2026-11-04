@@ -17,7 +17,8 @@ Edit families (each parameterised, seeded, logged as JSON "edit descriptors"):
 3. Heretic ARA (default modifier in 2.0) at several `preserve_good_behavior_weight` settings
 4. LoRA SFT on GSM8K / Alpaca-style data at varied steps, LR, rank (W2T-style ARC-LoRA zoo)
 5. Task-vector scaling and merges between (1)–(4)
-6. Trajectories: chains of 2–8 edits sampled from the above, since H2 needs sequences
+6. `llm_edit`: editor-LLM proposed edits (Astra / Claude / cheap controls) with a bounded forward-pass budget, stored like any other delta (H5)
+7. Trajectories: chains of 2–8 edits sampled from the above, since H2 needs sequences
 Target zoo size: ≥ 600 single edits + ≥ 150 trajectories.
 - Gate: zoo manifest validates, every entry has `delta.safetensors` (or LoRA) + `edit.json` + `eval.json`
 
@@ -64,9 +65,13 @@ All with fixed seeds, temperature 0 unless the task card forbids. Store per-item
 - Deliverable: does the predictor trained on 0.8B/4B/9B zoos transfer to 27B deltas (zero-shot ρ)?
 - Gate: `docs/RESULTS.md` §27B
 
-## P6 (optional) — Closing the loop
-Use the predictor as a surrogate to *choose* edits (weight-space Bayesian optimisation), replicating the
-blog's "fix the loop" result without 50 forward passes.
+## P6 — Closing the loop (promoted from optional, 4 Nov 2026)
+Forecast-then-verify: the predictor scores every proposed edit before evaluation; it then gates/ranks
+candidate edits (weight-space Bayesian optimisation) and acts as critic for `llm_optimizer` runs where the
+editor LLM replaces Adam/Muon steps. Target: replicate the blog's loop fix with far fewer forward passes (H5).
+Board C order (4 Nov 2026, docs/MODEL_CANDIDATES.md §LLM-in-the-loop): C first in shadow mode (critic forecasts
+logged, not acting), then A+C (editor edits gated by critic), B (LLM as optimiser) last. Prerequisites: zoo ≥ 600 edits
+/ 150 trajectories and H1 ρ ≥ 0.6 before any critic-gated episode.
 
 ## Benchmarks: why these
 Blog uses MATH-500, GSM8K, IFEval, MMLU-Pro, loop rate on Qwen3.5-0.8B; we keep those for comparability

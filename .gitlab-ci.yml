@@ -1,6 +1,12 @@
 # CI on the on-prem GitLab runner (docker executor, GPU passthrough) registered from this server.
 # GitHub Actions is intentionally NOT used.
 stages: [lint, test, gpu]
+workflow:
+  rules:
+    - if: $CI_COMMIT_MESSAGE =~ /^(ledger|session note|lessons|board:)/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
 default:
   image: nvidia/cuda:13.2.0-runtime-ubuntu24.04
   tags: [t3, gpu]            # runner tags set at registration (adjust via scripts/ci-register)
@@ -25,6 +31,9 @@ paper:
   stage: test
   image: texlive/texlive:latest
   tags: [t3]
-  script: [cd paper && (latexmk -pdf -interaction=nonstopmode main.tex || true), ls -la paper/*.pdf || true]
+  before_script: []
+  script:
+    - cd paper && latexmk -pdf -interaction=nonstopmode main.tex
+    - ls -la main.pdf
   artifacts: {paths: [paper/main.pdf], expire_in: 2 weeks}
   allow_failure: true

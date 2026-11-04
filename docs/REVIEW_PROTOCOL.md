@@ -38,3 +38,6 @@ neural functionals and graph metanetworks (UNF, GMN), set/permutation-equivarian
 flow models over weights, and plain Transformers. Output: a ranked shortlist with expected gain, cost, and
 the smallest experiment that would decide it; kept current in `docs/MODEL_CANDIDATES.md`. The orchestrator
 must schedule at least the top-ranked untested candidate as a competing run before a phase is closed.
+
+The paper step requires `python scripts/verify_refs.py` to exit 0. A passing
+mechanical check does not replace review of whether each excerpt supports its claim.

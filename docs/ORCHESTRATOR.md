@@ -36,7 +36,7 @@ delegate_task(role="implementation", isolation="worktree", title="P1 zoo: hereti
 Reviews are always a new `delegate_task` with `role="review"`.
 
 ## Routing and budget policy (3 Nov 2026)
-- Provider health (23:45 UTC 3 Nov): OpenCode Go 5-hour cap reached (kimi/glm/deepseek unavailable until it resets or Extra Usage is enabled); Grok 4.7 and Copilot untested but available;
+- Provider health (23:45 UTC 3 Nov): OpenCode Go 5-hour cap reached (kimi/glm/deepseek unavailable until it resets or Extra Usage is enabled); Grok quota exhausted; Copilot OK; Claude API instance OK since 23:46 UTC (workspace header set in ~/.claude-api/settings.json);
   OK; Codex (`gpt-6.1-sol`, `gpt-6.1-terra`) OK; Antigravity: `gemini-3.8-flash` quota exhausted until ~10 Nov 2026, `gpt-oss-120b` route broken
   (malformed messages payload) — do not use; Claude providers reserved.
 - Concurrency cap: at most 5 delegated agents at once (one GPU, 8 CPUs; contention already slowed tests).

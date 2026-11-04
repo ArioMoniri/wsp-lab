@@ -1,4 +1,5 @@
 <p align="center"><img src="assets/hero.svg" alt="edit trajectory → weight-delta tokens → state-space predictor → performance forecast" width="820"></p>
+<p align="center"><img src="assets/pipeline.gif" alt="Animated weight-edit prediction pipeline" width="820"></p>
 
 <h1 align="center">wsp-lab</h1>
 <p align="center"><b>Can a small state-space model predict how an LLM's benchmark scores will change from the weight change alone?</b></p>

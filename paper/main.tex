@@ -1,7 +1,13 @@
 \documentclass[10pt]{article}
-\usepackage[preprint]{tmlr}   % obtain tmlr.sty from the official TMLR template; fallback: article
+\newif\ifarxivpreprint
+\arxivpreprintfalse % Set to \arxivpreprinttrue for an identified arXiv build.
+\ifarxivpreprint
+\usepackage[preprint]{tmlr}
+\else
+\usepackage{tmlr} % Default TMLR review mode is anonymous.
+\fi
 \usepackage{graphicx,booktabs,amsmath,amssymb,hyperref,natbib}
-\title{Predicting Performance Change from Weight Change: A State-Space Predictor over Edit Trajectories}
+\title{Can Weight Changes Predict Performance? A Proposed Study of Model-Edit Trajectories}
 \author{Ario Moniri}
 \begin{document}
 \maketitle

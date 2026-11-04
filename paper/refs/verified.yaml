@@ -1,11 +1,842 @@
-# Every citation used in paper/sections must have an entry here with status: verified (see ref-checker role).
 - key: takehi2026wsp
   url: https://rikiyat.github.io/blog/weight-space-programming/
-  title: "Sparks of Weight-Space Programming: LLMs can natively read & write neural network weights"
-  authors: Takehi, Teoh, Zhang, Khattab
+  title: 'Sparks of Weight-Space Programming: LLMs can natively read & write neural network weights'
+  authors:
+  - Rikiya Takehi
+  - Jayden Teoh
+  - Alex Zhang
+  - Omar Khattab
   year: 2026
-  venue: blog (MIT CSAIL), 2 Nov 2026
-  claim_we_make: "Editing 0.016% of Qwen3.5-0.8B weights raised MATH-500 from 7.9% to 48.1% without gradients."
-  supporting_excerpt: "Astra identifies an issue in its weights causing reasoning loops ... fixes this by natively editing 0.016% of the weights. With the same sampling settings, this weight correction raises MATH-500 from 7.9% to 48.1%"
+  venue: Blog (MIT CSAIL), 2 Nov 2026
+  claim_we_make: Editing 0.016% of Qwen3.5-0.8B weights raised MATH-500 from 7.9% to 48.1% without gradients.
+  supporting_excerpt: Likewise, asked to make Qwen3.5-0.8B better at math without gradients, Astra identifies an
+    issue in its weights causing reasoning loops that Qwen’s own model card warns about, and fixes this by natively
+    editing 0.016% of the weights.
   location: TL;DR
   status: verified
+  supporting_excerpt_2: With the same sampling settings, this weight correction raises MATH-500 from 7.9% to 48.1%
+    and generalizes out of the box to instruction following, raising IFEval by 3x.
+  source_file: data/papers/takehi2026wsp.txt
+- key: elhage2021mathematical
+  url: https://transformer-circuits.pub/2021/framework/index.html
+  title: A Mathematical Framework for Transformer Circuits
+  authors:
+  - Nelson Elhage
+  - Neel Nanda
+  - Catherine Olsson
+  - Tom Henighan
+  - Nicholas Joseph
+  - Ben Mann
+  - Amanda Askell
+  - Yuntao Bai
+  - Anna Chen
+  - Tom Conerly
+  - Nova DasSarma
+  - Dawn Drain
+  - Deep Ganguli
+  - Zac Hatfield-Dodds
+  - Danny Hernandez
+  - Andy Jones
+  - Jackson Kernion
+  - Liane Lovitt
+  - Kamal Ndousse
+  - Dario Amodei
+  - Tom Brown
+  - Jack Clark
+  - Jared Kaplan
+  - Sam McCandlish
+  - Chris Olah
+  year: 2021
+  venue: Transformer Circuits Thread
+  claim_we_make: In small attention-only transformers, induction heads explain in-context learning and develop only
+    with at least two attention layers.
+  supporting_excerpt: Of particular note, we find that specific attention heads that we term “induction heads” can
+    explain in-context learning in these small models, and that these heads only develop in models with at least
+    two attention layers.
+  location: Introduction, paragraph beginning “We find”
+  status: verified
+  correction:
+    previous_claim_we_make: Mechanistic circuit analysis reads transformer behaviors like induction heads via QK
+      and OV eigenvalue composition.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/elhage2021mathematical.txt
+- key: han2026survey
+  arxiv_id: '2603.10090'
+  title: 'A Survey of Weight Space Learning: Understanding, Representation, and Generation'
+  authors:
+  - Xiaolong Han
+  - Zehong Wang
+  - Bo Zhao
+  - Binchi Zhang
+  - Jundong Li
+  - Damian Borth
+  - Rose Yu
+  - Haggai Maron
+  - Yanfang Ye
+  - Lu Yin
+  - Ferrante Neri
+  year: 2026
+  venue: arXiv:2603.10090
+  claim_we_make: 'Categorizes weight-space learning into three primary axes: understanding weight geometries, learning
+    representations, and generating parameters.'
+  supporting_excerpt: 'We categorize existing methods into three core dimensions: Weight Space Understanding (WSU),
+    which studies the geometry and symmetries of weights; Weight Space Representation (WSR), which learns embeddings
+    over model weights; and Weight Space Generation (WSG), which synthesizes new weights through hypernetworks or
+    generative models.'
+  location: PDF pp. 1
+  status: verified
+  source_file: data/papers/2603.10090.txt
+- key: w2t2026
+  arxiv_id: '2603.15990'
+  title: 'W2T: LoRA Weights Already Know What They Can Do'
+  authors:
+  - Xiaolong Han
+  - Ferrante Neri
+  - Zijian Jiang
+  - Fang Wu
+  - Yanfang Ye
+  - Lu Yin
+  - Zehong Wang
+  year: 2026
+  venue: arXiv:2603.15990
+  claim_we_make: Canonical QR-SVD LoRA tokens feed rank-level and position-level Transformers; Table 2 reports ARC-LoRA
+    test MAE 0.32 and Spearman 95.35 (%).
+  supporting_excerpt: To this end, we propose W2T (Weight-to-Token), which maps each LoRA update to a provably canonical
+    form via QR decomposition followed by SVD, so that all equivalent factorizations share the same representation.
+    The resulting components are then tokenized and processed by a Transformer to produce a weight-space embedding.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: Canonical LoRA tokens via QR-SVD decomposition feed a 2-level transformer achieving
+      MAE 0.32 and Spearman 95.4 on ARC-Easy performance prediction.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2603.15990.txt
+  supporting_excerpt_2: 'These tokens are then processed by the W2T encoder, which operates in two hierarchical
+    stages: a
+
+    rank-level Transformer models interactions among
+
+    rank tokens within each position and aggregates'
+  supporting_excerpt_3: 'Position-level modeling. Position tokens are augmented with learnable embeddings for layer
+    depth
+
+    and module type (Figure 2(d)):
+
+    t̃p = tp + elayer (ℓ(p)) + emodule (m(p)),
+
+
+    (6)
+
+
+    then processed by a position-level Transformer fpos
+
+    that captures cross-position dependencies:'
+  supporting_excerpt_4: 'Valid 0.34
+
+    W2T (Ours) Test 0.32
+
+
+    0.72
+
+    0.67
+
+
+    99.37
+
+    98.98
+
+
+    95.26
+
+    95.35'
+  history:
+  - claim_we_make: W2T canonicalizes LoRA updates with QR decomposition followed by SVD, then tokenizes the components
+      for a Transformer weight-space embedding.
+    reason: Round 2 narrower claim; round 3 restores source-supported detail.
+- key: sarangi2026finite
+  arxiv_id: '2609.33901'
+  title: 'Finite Probes Suffice: Identifiability and Universality for Weight-Space Learning'
+  authors:
+  - Soutrik Sarangi
+  - Yonatan Sverdlov
+  - Adir Dayan
+  - Haggai Maron
+  - Nadav Dym
+  year: 2026
+  venue: arXiv:2609.33901
+  claim_we_make: Finite input queries/probes provide provable identifiability and universality guarantees for learning
+    neural functionals of network behavior.
+  supporting_excerpt: In this work, we study when finite probe-based representations are sufficient for learning
+    neural functionals. We establish general identification and universality results for probing, and show that
+    using intermediate hidden representations can provide significantly more informative representations than relying
+    only on final outputs.
+  location: PDF pp. 1
+  status: verified
+  source_file: data/papers/2609.33901.txt
+- key: wilson2026spectra
+  arxiv_id: '2610.13123'
+  title: Why Heavy-Tailed Weight Spectra Predict Model Quality
+  authors:
+  - Joseph Wilson
+  - Chris van der Heide
+  - Liam Hodgkinson
+  - Zhichao Wang
+  - Fred Roosta
+  - Michael W. Mahoney
+  year: 2026
+  venue: NeurIPS 2026 / arXiv:2610.13123
+  claim_we_make: Heavy-tailed spectral distribution statistics in DNN weight matrices correlate strongly with and
+    predict model quality.
+  supporting_excerpt: A practical and effective predictor of model quality involves analyzing DNN weight matrices,
+    as prior work has established that heavy-tailed spectral distributions in trained weight matrices can be strongly
+    predictive of model quality.
+  location: PDF pp. 1
+  status: verified
+  source_file: data/papers/2610.13123.txt
+- key: falk2025modelhubs
+  arxiv_id: '2510.02096'
+  title: Learning Model Representations Using Publicly Available Model Hubs
+  authors:
+  - Damian Falk
+  - Konstantin Schürholt
+  - Konstantinos Tzevelekakis
+  - Léo Meynent
+  - Damian Borth
+  year: 2025
+  venue: arXiv:2510.02096
+  claim_we_make: Weight-space representation learners can be trained on heterogeneous public model repositories
+    (like Hugging Face) rather than costly curated laboratory zoos.
+  supporting_excerpt: In this work, we drop this requirement by training a weight space learning backbone on arbitrary
+    models downloaded from large, unstructured model repositories such as Hugging Face.
+  location: PDF pp. 1
+  status: verified
+  source_file: data/papers/2510.02096.txt
+- key: falk2025zoosize
+  arxiv_id: '2504.10141'
+  title: The Impact of Model Zoo Size and Composition on Weight Space Learning
+  authors:
+  - Damian Falk
+  - Konstantin Schürholt
+  - Damian Borth
+  year: 2025
+  venue: arXiv:2504.10141
+  claim_we_make: Model zoo size and dataset diversity affect weight-space model generation and generalization; increasing
+    single-zoo training sample size significantly improves generation performance.
+  supporting_excerpt: Our extensive experimental evaluation shows that including models with varying underlying
+    image datasets has a high impact on performance and generalization, for both in- and out-of-distribution settings.
+  location: PDF pp. 1, 2
+  status: verified
+  correction:
+    previous_claim_we_make: Systematic evaluation shows that model zoo size and dataset diversity substantially
+      dictate representation quality in weight-space learning.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2504.10141.txt
+  supporting_excerpt_2: 'However, the single-zoo performance improves significantly over
+
+    the experiments with lower single-zoo sample size as well. This shows that the model zoo size used
+
+    for backbone training has a large impact on the model generation performance.'
+  history:
+  - claim_we_make: Including models trained on different image datasets substantially affects weight-space generation
+      performance and generalization in and out of distribution.
+    reason: Round 2 narrower claim; round 3 restores source-supported detail.
+- key: position2026weightspace
+  arxiv_id: '2605.18632'
+  title: 'Position: Weight Space Should Be a First-Class Generative AI Modality'
+  authors:
+  - Zhangyang Wang
+  - Peihao Wang
+  - Kai Wang
+  year: 2026
+  venue: arXiv:2605.18632
+  claim_we_make: The position paper argues for treating checkpoints as a first-class data modality and standardizing
+    generative modeling in weight space.
+  supporting_excerpt: This position paper argues that model checkpoints should be treated as a first-class data
+    modality, and that generative modeling in weight space should be standardized as a core machine learning primitive.
+  location: PDF pp. 1, 10
+  status: verified
+  source_file: data/papers/2605.18632.txt
+  correction:
+    previous_claim_we_make: Neural network weight space should be treated as a first-class data modality for generative
+      modeling and representation learning.
+    reason: Narrowed to what the located passage establishes.
+- key: blockstructure2026
+  arxiv_id: '2609.26147'
+  title: 'Block-Level Weight-Space Structure Persists Under Post-Training: An Empirical Study Across LLM Families'
+  authors:
+  - Zhaohui Wang
+  year: 2026
+  venue: arXiv:2609.26147
+  claim_we_make: Post-training modifies every tensor but preserves block-level cosine > 0.99 and relative Frobenius
+    < 0.13, while independent specializations drop to cosine ~ 0.64.
+  supporting_excerpt: 'We identify a granularity gap: post-training modifies every tensor (zero of 291–339 tensors
+    remain byte-identical, so hash-based deduplication achieves 0% savings), yet preserves block-level structure
+    (mean cosine similarity exceeds 0.99 and relative Frobenius distance stays below 0.13).'
+  location: PDF pp. 1
+  status: verified
+  supporting_excerpt_2: 'The property is not universal: independently trained specializations (e.g., Qwen2.5-Coder)
+    attain cosine similarity ∼0.64 with the general base, indicating a disconnected region of weight space.'
+  source_file: data/papers/2609.26147.txt
+- key: goel2025diffinterpretation
+  arxiv_id: '2510.05092'
+  title: Learning to Interpret Weight Differences in Language Models
+  authors:
+  - Avichal Goel
+  - Yoon Kim
+  - Nir Shavit
+  - Tony T. Wang
+  year: 2025
+  venue: ICLR 2026 / arXiv:2510.05092
+  claim_we_make: Diff Interpretation Tuning uses synthetic labeled weight diffs to train an adapter that makes compatible
+    fine-tuned models describe their modifications.
+  supporting_excerpt: Our approach uses synthetic, labeled weight diffs to train a D IT-adapter, which can be applied
+    to a compatible finetuned model to make it describe how it has changed.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: Diff Interpretation Tuning trains a LoRA adapter alongside weight deltas so the model
+      self-reports its fine-tuning differences in natural language.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2510.05092.txt
+- key: deltaactivations2025
+  arxiv_id: '2509.04442'
+  title: 'Delta Activations: A Representation for Finetuned Large Language Models'
+  authors:
+  - Zhiqiu Xu
+  - Amish Sethi
+  - Mayur Naik
+  - Ser-Nam Lim
+  year: 2025
+  venue: arXiv:2509.04442
+  claim_we_make: Delta Activations embeds fine-tuned models by measuring internal activation shifts relative to
+    a base model.
+  supporting_excerpt: We introduce Delta Activations, a method to represent finetuned models as vector embeddings
+    by measuring shifts in their internal activations relative to a base model.
+  location: PDF pp. 1, 3
+  status: verified
+  correction:
+    previous_claim_we_make: Delta activations embed fine-tuned models via shifts in internal activations relative
+      to base models, serving as an execution-based representation baseline.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2509.04442.txt
+- key: jepawg2026physics
+  arxiv_id: '2607.07127'
+  title: 'Weight-Space Physics: Interpretable Hypernetworks for Lattice Quantum Field Theories'
+  authors:
+  - Tobias Göbel
+  - Julian R. Ebelt
+  - Zier Mensch
+  - Mathis Gerdes
+  - Miranda C. N. Cheng
+  year: 2026
+  venue: arXiv:2607.07127
+  claim_we_make: The JEPAWG main-text configuration omits the VICReg covariance term (gamma = 0), allowing a lower-dimensional
+    latent representation.
+  supporting_excerpt: Throughout the main text we set γ = 0, omitting the covariance term so the latent space can
+    concentrate onto fewer dimensions when the data manifold admits a lower-dimensional structure (Section 4.1).
+  location: PDF pp. 11
+  status: verified
+  correction:
+    previous_claim_we_make: JEPAWG trains a VICReg joint-embedding architecture omitting the covariance term with
+      dz=16 and Adam lr 3e-4 to predict weight embeddings from parameters.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2607.07127.txt
+  supporting_excerpt_2: 'Throughout, we set dz = 16,
+
+    deliberately over-sizing the latent space relative to the twodimensional coupling manifold so that any concentration
+
+    onto fewer dimensions is a learned property rather than an
+
+    architectural constraint.'
+  supporting_excerpt_3: 'mapping couplings g = (m2 , λ) to coupling embeddings
+
+    zg = Eg (g), (iii) a predictor P : Rdz → Rdz mapping coupling embeddings into the weight embedding space, trained
+
+    so that P (zg ) ≈ zθ , and (iv) a decoder Dθ : Rdz → Rdθ
+
+    mapping predicted weight embeddings back to parameter
+
+    vectors.'
+  history:
+  - claim_we_make: The JEPAWG main-text configuration omits the VICReg covariance term (gamma = 0), allowing a lower-dimensional
+      latent representation.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
+- key: jepawg2026bifurcations
+  arxiv_id: '2610.30847'
+  title: 'Bifurcations from Weight Space: JEPAWG on Parametric Dynamical Systems'
+  authors:
+  - Tobias Göbel
+  - Miranda C. N. Cheng
+  year: 2026
+  venue: arXiv:2610.30847
+  claim_we_make: On parametric dynamical systems, derivatives of JEPAWG decoded weights locate Hopf bifurcations,
+    track period doubling, and detect a global bifurcation.
+  supporting_excerpt: Beyond forecasting, the norm of the parameter-derivative of the decoded weights locates Hopf
+    points and curves, tracks a period-doubling cascade closely enough to give a qualitative estimate of the Feigenbaum
+    constant, and detects a global bifurcation, which has no eigenvalue signature and is therefore invisible to
+    linearisation.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: JEPAWG trained on parametric dynamical system model zoos predicts forecaster weights
+      and localizes bifurcation boundaries directly from weight space derivatives.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2610.30847.txt
+- key: predictability2026dynamics
+  arxiv_id: '2608.15483'
+  title: 'Measuring Structured Predictability in Neural Training Dynamics: A Cross-Regime Study'
+  authors:
+  - Fanqi Wang
+  - Weisheng Tang
+  - Hairong Qi
+  year: 2026
+  venue: arXiv:2608.15483
+  claim_we_make: Across CIFAR training and Pythia checkpoints, bulk parameters have localized, time-varying pockets
+    of predictable short-horizon dynamics, unlike simpler auxiliary parameters.
+  supporting_excerpt: We combine three complementary probe families— displacement-direction, subspace-residual,
+    and predictor-based probes—with convention-aware, null-calibrated group-level readouts, and apply them to multi-pass
+    vision training on CIFAR and public Pythia pretraining checkpoints.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: Near-future parameter updates concentrate in localized, time-varying predictable pockets,
+      motivating trajectory-level sequence features.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  supporting_excerpt_2: Across both regimes, vector-like tensors such as normalization parameters and biases (auxiliary
+    parameters) exhibit simpler short-horizon dynamics than matrix-like feature-transforming weights (bulk parameters),
+    whose predictable behavior concentrates in localized, time-varying pockets.
+  source_file: data/papers/2608.15483.txt
+- key: leapverify2026
+  arxiv_id: '2602.19580'
+  title: 'Leap+Verify: Regime-Adaptive Speculative Weight Prediction for Accelerating Neural Network Training'
+  authors:
+  - Jeremy McEntire
+  year: 2026
+  venue: arXiv:2602.19580
+  claim_we_make: Leap+Verify proposes speculative future-weight prediction; predictions are accepted only after
+    validation against a held-out loss criterion.
+  supporting_excerpt: Within each regime, analytic weight predictors (momentum, linear, quadratic extrapolation)
+    attempt to forecast model parameters K training steps ahead; predictions are accepted only when validated against
+    a held-out loss criterion.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: Applies speculative weight prediction and verification during training trajectories
+      to accelerate neural network convergence.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2602.19580.txt
+  supporting_excerpt_2: 'Finite-difference predictors (linear, quadratic) succeed where momentum fails: at 124M,
+    they achieve 24% strict acceptance at
+
+    K=5 in stable regimes; at 1.5B, they achieve 37% strict acceptance in transition regimes.'
+  history:
+  - claim_we_make: Leap+Verify proposes speculative future-weight prediction; predictions are accepted only after
+      validation against a held-out loss criterion.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
+- key: jepahmm2026
+  arxiv_id: '2608.13621'
+  title: 'Your Probabilistic JEPA Is Secretly a Hidden Markov Model: A State-Space Interpretation of Joint-Embedding
+    Predictive Learning'
+  authors:
+  - Yongchao Huang
+  year: 2026
+  venue: arXiv:2608.13621
+  claim_we_make: The paper distinguishes four levels of JEPA/HMM correspondence and gives sufficient conditions
+    for exact sequence-level HMM equivalence.
+  supporting_excerpt: We distinguish 4 progressively stronger levels of correspondence and give sufficient conditions
+    for exact sequence-level HMM equivalence.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: Temporal joint-embedding predictive learning is mathematically equivalent to state estimation
+      in hidden Markov and state-space models.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2608.13621.txt
+  supporting_excerpt_2: Sequence-level HMM equivalence additionally requires Markov, emission, marginalconsistency,
+    and filtering-consistency conditions,
+  history:
+  - claim_we_make: The paper distinguishes four levels of JEPA/HMM correspondence and gives sufficient conditions
+      for exact sequence-level HMM equivalence.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
+- key: drivedecay2026
+  arxiv_id: '2610.02344'
+  title: 'Drive vs. Decay: On the Training Dynamics of Joint-Embedding Predictive Architectures'
+  authors:
+  - José Lucas De Melo Costa
+  - Seong Woo Ahn
+  - Fabrice Popineau
+  - Arpad Rimmel
+  - Bich-Liên Doan
+  year: 2026
+  venue: arXiv:2610.02344
+  claim_we_make: ResidualPred biases transformer predictor attention toward identity at initialization and improves
+    effective rank and downstream accuracy in the reported experiments.
+  supporting_excerpt: Guided by this analysis, we introduce ResidualPred, a transformer predictor whose attention
+    is biased toward the identity at initialisation; it improves both effective rank and downstream accuracy on
+    tabular benchmarks and in I-JEPA pretraining on CIFAR-10, CIFAR-100, STL-10, and ImageNet.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: ResidualPred uses an identity-biased transformer predictor with diagonal attention bias
+      to stabilize early JEPA training dynamics.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2610.02344.txt
+- key: mamba3
+  arxiv_id: '2603.15569'
+  title: 'Mamba-3: Improved Sequence Modeling using State Space Principles'
+  authors:
+  - Aakash Lahoti
+  - Kevin Y. Li
+  - Berlin Chen
+  - Caitlin Wang
+  - Aviv Bick
+  - J. Zico Kolter
+  - Tri Dao
+  - Albert Gu
+  year: 2026
+  venue: ICLR 2026 / arXiv:2603.15569
+  claim_we_make: Mamba-3 combines a more expressive SSM recurrence, complex-valued state updates, and a multi-input
+    multi-output formulation.
+  supporting_excerpt: 'We combine: (1) a more expressive recurrence derived from SSM discretization, (2) a complex-valued
+    state update rule that enables richer state tracking, and (3) a multi-input, multi-output (MIMO) formulation
+    for better model performance without increasing decode latency.'
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: State space modeling advances sequence prediction with exponential-trapezoidal discretization,
+      complex-valued state tracking, and MIMO formulations.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2603.15569.txt
+- key: fastprobing2026
+  arxiv_id: '2604.01025'
+  title: Fast and Accurate Probing of In-Training LLMs' Downstream Performances
+  authors:
+  - Zhichen Liu
+  - Tianle Lun
+  - Zhibin Wen
+  - Hao An
+  - Yulin Ou
+  - Jianhui Xu
+  - Hao Zhang
+  - Wenyi Fang
+  - Yang Zheng
+  - Yang Xu
+  year: 2026
+  venue: arXiv:2604.01025
+  claim_we_make: Probing intermediate hidden activations predicts downstream performance with AUROC > 0.75 while
+    cutting evaluation latency from 1 hr to 3 min.
+  supporting_excerpt: The probes take the internal representations of LLM checkpoints (during training) as input
+    and directly predict the checkpoint’s performance on downstream tasks measured by success probability (i.e.,
+    pass@1).
+  location: PDF pp. 1, 2
+  status: verified
+  supporting_excerpt_2: The results demonstrate that our method maintains high predictive fidelity (AUROC > 0.75)
+    while drastically reducing evaluation latency, slashing the time required from ∼1 hour to ∼3 minutes (on OLMo3-7B-base).
+  source_file: data/papers/2604.01025.txt
+- key: tuneahead2026
+  arxiv_id: '2606.17660'
+  title: 'TuneAhead: Predicting Fine-tuning Performance Before Full Training Begins'
+  authors:
+  - Yuxiang Luo
+  - Haonan Long
+  - Chen Wang
+  - Qiqi Duan
+  - Xiaotian Lin
+  - Yanwei Xu
+  - Yuyu Luo
+  - Weikai Yang
+  - Nan Tang
+  year: 2026
+  venue: arXiv:2606.17660
+  claim_we_make: TuneAhead combines dataset descriptors with short-probe features; on 370 held-out Qwen2.5-7B-Instruct
+    runs it reports 1.47 percentage-point RMSE.
+  supporting_excerpt: T UNE A HEAD encodes each candidate run as a meta-feature vector that combines static dataset
+    descriptors with dynamic probe features from a short standardized probe.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: TuneAhead predicts downstream fine-tuning outcomes from dataset features and short probes,
+      reaching an RMSE of 1.47 percentage points.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  supporting_excerpt_2: Across 1,300+ fine-tuning runs on Qwen2.5-7B-Instruct, T UNE A HEAD consistently outperforms
+    strong baselines such as Early-Stop Extrapolation and ProxyLM. On a held-out test set of 370 runs, T UNE A HEAD
+    achieves an RMSE of 1.47 percentage points and places 95.1% of predictions within ±3 percentage points of the
+    true score.
+  source_file: data/papers/2606.17660.txt
+- key: proxymetrics2026
+  arxiv_id: '2605.18607'
+  title: Forecasting Downstream Performance of LLMs With Proxy Metrics
+  authors:
+  - Arkil Patel
+  - Siva Reddy
+  - Marius Mosbach
+  - Dzmitry Bahdanau
+  year: 2026
+  venue: arXiv:2605.18607
+  claim_we_make: Proxy metrics aggregate token-level statistics from next-token distributions over expert-written
+    solutions to forecast model capabilities.
+  supporting_excerpt: Instead, we propose to construct proxy metrics by aggregating token-level statistics, such
+    as entropy, top-k accuracy, and expert token rank, from a candidate model’s next token distribution over expert-written
+    solutions.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: Token-level predictive statistics over expert trajectories serve as proxy metrics that
+      extrapolate downstream accuracy in a single forward pass.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2605.18607.txt
+- key: taskvectors2026interfere
+  arxiv_id: '2608.09490'
+  title: When Do Task Vectors Interfere? Mapping the Validity Boundaries of Weight-Space Composition
+  authors:
+  - Chencheng Zhu
+  - Xiaoyang Li
+  - Taotao Cai
+  year: 2026
+  venue: arXiv:2608.09490
+  claim_we_make: 'Interference expression is gated by training-format serialization: it collapses twenty-fold under
+    the training-format wrapper on identical prompts, but does not collapse under an untrained chat template (+12.5
+    points); pass@1 inherits this blindness, so training-format evaluations cannot certify a merge interference-free.'
+  supporting_excerpt: 'Interference expression is gated by training-format serialization, not public provenance
+    or chat formatting per se: a twenty-fold collapse on identical prompts under the training-format wrapper, no
+    collapse under an untrained chat template (+12.5 points), and pass@1 inherits the blindness—so training-format
+    evaluations cannot certify a merge interference-free.'
+  location: PDF pp. 2
+  status: verified
+  correction:
+    previous_claim_we_make: Interference and non-additivity in task arithmetic are strongly gated by prompt formatting
+      and chat template serialization.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2608.09490.txt
+- key: heretic2026
+  url: https://github.com/p-e-w/heretic
+  title: Heretic
+  authors:
+  - Philipp Emanuel Weidmann
+  year: 2026
+  venue: 'GitHub: p-e-w/heretic (README accessed 3 November 2026)'
+  claim_we_make: Heretic combines a configurable modifier with Optuna TPE optimization; Arbitrary-Rank Ablation
+    is the default modifier.
+  supporting_excerpt: with a TPE-based hyperparameter optimizer powered by Optuna. The optimizer finds a set of
+    parameters that, when passed to the modifier, minimize or maximize a set of configurable scores on the resulting
+    model (see above).
+  location: README, Implementation
+  status: verified
+  correction:
+    previous_claim_we_make: Heretic 2.0.0 makes Arbitrary-Rank Ablation (ARA) the default modifier while retaining
+      directional abliteration, optimized with Optuna TPE over KL divergence and refusal markers.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  supporting_excerpt_2: 'Heretic ships with two modifiers: Arbitrary-Rank Ablation (ARA)4: This is the default modifier,
+    and was specifically developed for use in Heretic.'
+  source_file: data/papers/heretic2026.txt
+- key: pksharma2026heretic
+  url: https://www.pk-sharma.com/briefing/heretic-open-weight-refusal-removal-controls-outside-the-model
+  title: Heretic automates stripping refusals from open-weight models. Its headline score counts 33 words, not harm
+  authors:
+  - Parminder Kumar Sharma
+  year: 2026
+  venue: P.K. Sharma briefing, 21 September 2026
+  claim_we_make: Sharma describes the default Heretic refusal score as case-insensitive matching of 33 strings in
+    the first 100 tokens, rather than a measure of harmfulness.
+  supporting_excerpt: In the tool's default settings, a response counts as a refusal if its first 100 tokens contain
+    any one of 33 strings, matched without regard to case.
+  location: Thirty-three strings decide what counts as a refusal; What that number does not establish
+  status: verified
+  correction:
+    previous_claim_we_make: Heretic's benchmark refusal score evaluates suppression of 33 fixed refusal keyword
+      markers rather than semantic harm or capability retention.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  supporting_excerpt_2: What that number does not establish It does not establish that the modified model gives
+    accurate, complete or dangerous answers.
+  source_file: data/papers/pksharma2026heretic.txt
+- key: abliteration2025comparative
+  arxiv_id: '2512.13655'
+  title: 'Comparative Analysis of LLM Abliteration Methods: A Cross-Architecture Evaluation'
+  authors:
+  - Richard J. Young
+  year: 2025
+  venue: arXiv:2512.13655
+  claim_we_make: Evaluates abliteration frameworks across 16 models showing mathematical reasoning (GSM8K) is most
+    sensitive to refusal ablation interventions.
+  supporting_excerpt: The principal finding indicates that mathematical reasoning capabilities exhibit the highest
+    sensitivity to abliteration interventions, with GSM8K change ranging from +1.51 pp to −18.81 pp (−26.5% relative)
+    depending on tool selection and model architecture.
+  location: PDF pp. 1
+  status: verified
+  source_file: data/papers/2512.13655.txt
+  supporting_excerpt_2: This study evaluates four abliteration tools (Heretic, DECCP, ErisForge, FailSpy) across
+    sixteen instruction-tuned models (7B–14B parameters)
+- key: surgicalrefusal2026
+  arxiv_id: '2601.08489'
+  title: 'Surgical Refusal Ablation: Disentangling Safety from Intelligence via Concept-Guided Spectral Cleaning'
+  authors:
+  - Tony Cristofano
+  year: 2026
+  venue: arXiv:2601.08489
+  claim_we_make: SRA orthogonalizes refusal against protected concept atoms; across five tested models it reports
+    0–2% refusal, mean perplexity change about +0.02 and mean first-token KL about 0.025, supporting limited measured
+    collateral disruption rather than universal capability preservation.
+  supporting_excerpt: SRA constructs a registry of independent Concept Atoms representing protected capabilities
+    and stylistic confounds, and uses ridge-regularized spectral residualization to orthogonalize the refusal vector
+    against these directions.
+  location: PDF pp. 1
+  status: verified
+  source_file: data/papers/2601.08489.txt
+  correction:
+    previous_claim_we_make: Disentangles refusal directions from capability subspaces using concept atoms and spectral
+      residualization to avoid collateral degradation.
+    reason: Narrowed to what the located passage establishes.
+  supporting_excerpt_2: 'Across five models (Qwen3-VL-2B/4B/8B, Ministral-3B/14B), SRA achieves deep refusal reduction
+    (0–2% on our harmful suite) with negligible perplexity impact on wikitext_2_raw
+
+    (mean ∆PPL ≈ +0.02) and minimal measured distribution drift (mean first-token KL ≈ 0.025).'
+  history:
+  - claim_we_make: SRA orthogonalizes a refusal vector against protected capability and stylistic concept atoms
+      using ridge-regularized spectral residualization.
+    reason: Round 2 narrower claim; round 3 restores source-supported detail.
+- key: refusalbeyond2026
+  arxiv_id: '2606.13720'
+  title: 'Refusal Beyond a Single Direction: A Preliminary Comparison of Diff-in-Means and INLP'
+  authors:
+  - Elisabetta Rocchetti
+  - Alfio Ferrara
+  year: 2026
+  venue: arXiv:2606.13720
+  claim_we_make: Compares Difference-in-Means with Iterative Nullspace Projection (INLP) for refusal representation
+    removal beyond single-direction assumptions.
+  supporting_excerpt: We compare DiM-based interventions (activation addition and directional ablation) with two
+    interventions derived from Iterative Nullspace Projection (INLP)—nullspace projection and counterfactual flipping—on
+    five open-weight chat models, asking whether INLP can match DiM at steering refusal and whether its richer parameterisation
+    yields more tweakable interventions.
+  location: PDF pp. 1, 8
+  status: verified
+  supporting_excerpt_2: INLP counterfactual flipping is competitive with DiM directional ablation on refusal suppression,
+    while nullspace projection is weaker on most models.
+  source_file: data/papers/2606.13720.txt
+- key: singleattack2026moe
+  arxiv_id: '2609.09793'
+  title: How Fragile Is Safety Alignment at Frontier Scale? A Single-Direction Attack on a 320B MoE
+  authors:
+  - Yi Shi
+  - Tanyu Chen
+  - Kai Shen
+  year: 2026
+  venue: arXiv:2609.09793
+  claim_we_make: Directional ablation is applied to GLM-5.3-Flash (320B), but measurable refusal survives every
+    tested edit, including subspaces of ranks 1–12.
+  supporting_excerpt: We apply it to GLM-5.3-Flash (320B parameters, 288 routed experts, a four-wide hyperconnection
+    residual, block-FP8).
+  location: PDF pp. 1, 10
+  status: verified
+  correction:
+    previous_claim_we_make: Demonstrates that a single directional ablation vector suffices to bypass safety alignment
+      even on massive 320B Mixture-of-Experts architectures.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  supporting_excerpt_2: 'A category-concentrated residue survives every edit we tried: subspaces fitted on violence,
+    sexual content and hate leave measurable refusal at every rank from 1 to 12.'
+  source_file: data/papers/2609.09793.txt
+  history:
+  - claim_we_make: Directional ablation is applied to GLM-5.3-Flash (320B), but measurable refusal survives every
+      tested edit, including subspaces of ranks 1–12.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
+- key: decoy2026direction
+  arxiv_id: '2609.16204'
+  title: 'Decoy Direction Optimization: A Post-Hoc Defense Against LLM Abliteration'
+  authors:
+  - Aashiq Muhamed
+  - Mona T. Diab
+  - Virginia Smith
+  year: 2026
+  venue: arXiv:2609.16204
+  claim_we_make: DDO is a post-hoc weight-editing defense requiring no base-model fine-tuning; it injects a nonlinear
+    decoy signal to corrupt refusal-direction estimators.
+  supporting_excerpt: We introduce Decoy Direction Optimization (DDO), a fast, post-hoc weight-editing defense that
+    requires no base-model finetuning.
+  location: PDF pp. 1, 2
+  status: verified
+  correction:
+    previous_claim_we_make: Proposes Decoy Direction Optimization as a training-free, post-hoc weight-editing defense
+      to deceive directional ablation estimators.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  supporting_excerpt_2: DDO actively injects a high-magnitude, nonlinear decoy signal into the network’s MLP neurons.
+    When an attacker attempts to locate the refusal direction, the decoy corrupts their estimator, tricking them
+    into ablating a harmless orthogonal feature while the actual safety mechanism remains intact.
+  source_file: data/papers/2609.16204.txt
+- key: refusalaliases2026
+  arxiv_id: '2608.18093'
+  title: Abliteration Mitigation via Refusal Aliases
+  authors:
+  - Nathan Truong
+  year: 2026
+  venue: arXiv:2608.18093
+  claim_we_make: Mitigates abliteration by applying low-rank weight updates that replace refusal-inducing activations
+    with randomized alias vectors.
+  supporting_excerpt: To hinder this process, we introduce a weight-editing method that obscures the refusal signal
+    by applying rank-k updates to residual stream writer matrices while replacing refusal-inducing activations with
+    random aliases and correcting downstream reader matrices to preserve the model’s original behavior.
+  location: PDF pp. 1
+  status: verified
+  source_file: data/papers/2608.18093.txt
+- key: weightarithmetic2025steering
+  arxiv_id: '2511.05408'
+  title: Steering Language Models with Weight Arithmetic
+  authors:
+  - Constanza Fierro
+  - Fabien Roger
+  year: 2025
+  venue: arXiv:2511.05408
+  claim_we_make: Contrastive weight steering subtracts deltas from two small fine-tunes with opposite behaviors,
+    then adds or removes the resulting direction.
+  supporting_excerpt: We isolate a behavior direction in weight-space by subtracting the weight deltas from two
+    small fine-tunes—one that induces the desired behavior and another that induces its opposite—and then add or
+    remove this direction to modify the model’s weights.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: Applies contrastive task arithmetic and weight arithmetic to steer model behavior without
+      standard gradient fine-tuning.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  source_file: data/papers/2511.05408.txt
+  history:
+  - claim_we_make: Contrastive weight steering subtracts deltas from two small fine-tunes with opposite behaviors,
+      then adds or removes the resulting direction.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
+- key: harness2026recursive
+  arxiv_id: '2610.14224'
+  title: 'Harness^2: Recursive Agent Harnessing for an Open World'
+  authors:
+  - Ruiyao Xu
+  - Yanfei Chen
+  - Zhongying CuiZhu
+  - Bhavana Dalvi Mishra
+  - Yifei Ming
+  - Han Yu
+  - Rujun Han
+  - Chen-Yu Lee
+  - Tomas Pfister
+  year: 2026
+  venue: arXiv:2610.14224
+  claim_we_make: Harness2 improves task harnesses with Propose–Probe–Compose and uses harnessing-level recursion
+    to transfer experience to future tasks.
+  supporting_excerpt: Tasklevel recursion refines the current task’s harness using a contrastive Propose–Probe–Compose
+    step that reliably guides edits without ground-truth verifiers, and can be scaled further via parallel or sequential
+    recursion.
+  location: PDF pp. 1
+  status: verified
+  correction:
+    previous_claim_we_make: Establishes recursive agent scaffolding and execution harnesses to reliably structure
+      autonomous multi-agent evaluations and workflows.
+    reason: Replaced with the narrower claim directly supported by the located source passages.
+  supporting_excerpt_2: Harnessing-level recursion then extracts experience from these edits to update a continual
+    improvement harness, enabling the agent to better adapt to future tasks.
+  source_file: data/papers/2610.14224.txt
+  history:
+  - claim_we_make: Harness2 improves task harnesses with Propose–Probe–Compose and uses harnessing-level recursion
+      to transfer experience to future tasks.
+    reason: Round 3 retains this narrower claim; the older stronger assertion is not established by the local source.
+      See round-3 review.
