@@ -43,6 +43,8 @@ class EditDescriptor:
     git_sha: str = "unknown"
     touched_tensors: list[str] = field(default_factory=list)
     delta_fro_norm: float | None = None
+    # Observational (excluded from `id`): family policy, refusal-cache fingerprint, kernel variant.
+    provenance: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.family not in EDIT_FAMILIES:

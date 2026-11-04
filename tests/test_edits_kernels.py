@@ -32,14 +32,12 @@ def test_heretic_kernel_contract_on_toy_weights(toy_weights):
         0: ["layers.0.attn.o_proj", "layers.0.mlp.down_proj"],
         1: ["layers.1.attn.o_proj", "layers.1.mlp.down_proj"],
     }
-    refusal_dirs = {
-        layer: torch.stack([random_unit_direction(32, seed=layer + 7)]) for layer in layers
-    }
+    refusal_dirs = torch.stack([random_unit_direction(32, seed=k + 7) for k in range(3)])
     state_new, touched = heretic_abliteration_kernel(
         state,
         refusal_dirs,
         layer_tensors,
-        direction_index=0,
+        direction_index=None,  # per-layer directions: row layer+1
         max_weight=0.8,
         max_weight_position=0,
         min_weight=0.0,
@@ -53,10 +51,101 @@ def test_heretic_kernel_contract_on_toy_weights(toy_weights):
     }
     profile = layer_weight_profile(layers, 0.8, 0, 0.0, 2)
     for layer in layers:
-        d = refusal_dirs[layer][0]
+        d = refusal_dirs[layer + 1]
         w = profile[layer]
         for name in layer_tensors[layer]:
             W_old = toy_weights[name]
             W_new = state_new[name]
             assert torch.allclose(d @ W_new, (1 - w) * (d @ W_old), atol=1e-5)
             assert not torch.equal(W_old, W_new)
+
+
+def _heretic_delta(directions, layers, weights, direction_index, dist_params, n_layers):
+    """Run Heretic 2.0's own Abliteration.modify_model on fake LoRA-wrapped modules."""
+    from types import SimpleNamespace
+
+    from heretic.modifiers.abliteration import (
+        Abliteration,
+        Parameters,
+        RowNormalization,
+        Settings,
+        WeightDistribution,
+    )
+
+    class FakeLinear:
+        def __init__(self, W):
+            self.weight = W
+            self.base_layer = SimpleNamespace(weight=W)
+            self.lora_A = {"default": SimpleNamespace(weight=torch.zeros(1, W.shape[1]))}
+            self.lora_B = {"default": SimpleNamespace(weight=torch.zeros(W.shape[0], 1))}
+
+    modules = {layer: FakeLinear(weights[layer]) for layer in range(n_layers)}
+
+    class FakeModel:
+        def get_layers(self):
+            return list(range(n_layers))
+
+        def get_layer_modules(self, i):
+            return {"mlp.down_proj": [modules[i]]}
+
+    mod = Abliteration.__new__(Abliteration)
+    mod.settings = Settings(row_normalization=RowNormalization.NONE, orthogonalize_direction=True)
+    mod.residual_directions = directions
+    params = Parameters(
+        direction_index=direction_index,
+        weight_distributions={"mlp.down_proj": WeightDistribution(**dist_params)},
+    )
+    mod.modify_model(SimpleNamespace(get_model=lambda: FakeModel()), params)
+    return {
+        layer: m.lora_B["default"].weight @ m.lora_A["default"].weight
+        for layer, m in modules.items()
+    }
+
+
+@pytest.mark.parametrize("direction_index", [-1.0, 0.0, 2.75, 5.5, None])
+def test_kernel_matches_installed_heretic_modify_model(direction_index):
+    """Parity with heretic.modifiers.abliteration.Abliteration.modify_model on a toy layer count.
+
+    Covers: finite support (layers beyond min_weight_distance untouched even with min_weight > 0),
+    the boundary layer at exactly min_weight_distance, fractional positions, embedding-offset
+    direction interpolation and the per-layer (None) direction mode.
+    """
+    n_layers, d_model, d_in = 8, 16, 12
+    g = torch.Generator().manual_seed(3)
+    directions = torch.nn.functional.normalize(
+        torch.randn(n_layers + 1, d_model, generator=g), dim=1
+    )
+    weights = {i: torch.randn(d_model, d_in, generator=g) for i in range(n_layers)}
+    dist = {
+        "max_weight": 0.9,
+        "max_weight_position": 4.5,
+        "min_weight": 0.2,
+        "min_weight_distance": 2.5,
+    }
+    expected = _heretic_delta(directions, None, weights, direction_index, dist, n_layers)
+
+    state = {f"l{i}.w": w.clone() for i, w in weights.items()}
+    layer_tensors = {i: [f"l{i}.w"] for i in range(n_layers)}
+    new_state, touched = heretic_abliteration_kernel(
+        state, directions, layer_tensors, direction_index, **dist
+    )
+    for i in range(n_layers):
+        ours = new_state[f"l{i}.w"] - weights[i]
+        assert torch.allclose(ours, expected[i], atol=1e-5), f"layer {i}"
+    # Layers 0, 1, 7 are outside radius 2.5 around 4.5; layers 2..7 distance <= 2.5 except 7(2.5 ok)
+    inside = {i for i in range(n_layers) if abs(i - 4.5) <= 2.5}
+    assert {int(k[1:].split(".")[0]) for k in touched} == inside
+    assert 0 not in inside and 1 not in inside
+
+
+def test_profile_boundary_is_inclusive_and_outside_is_absent():
+    profile = layer_weight_profile(list(range(10)), 1.0, 5, 0.3, 2)
+    assert set(profile) == {3, 4, 5, 6, 7}
+    assert profile[3] == pytest.approx(0.3) and profile[7] == pytest.approx(0.3)
+
+
+def test_zero_weight_layers_are_skipped():
+    dirs = torch.nn.functional.normalize(torch.randn(3, 4), dim=1)
+    state = {"a": torch.randn(4, 4), "b": torch.randn(4, 4)}
+    _, touched = heretic_abliteration_kernel(state, dirs, {0: ["a"], 1: ["b"]}, 0.0, 1.0, 0, 0.0, 1)
+    assert touched == ["a"]  # layer 1 sits at the radius with min_weight 0 -> weight 0 -> skipped

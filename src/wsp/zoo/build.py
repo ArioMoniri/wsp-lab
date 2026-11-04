@@ -20,8 +20,8 @@ import torch
 import yaml
 from safetensors.torch import load_file, save_file
 
-from wsp.edits.kernels import heretic_abliteration_kernel
-from wsp.edits.refusal import extract_directions
+from wsp.edits.kernels import KERNEL_VARIANT, heretic_abliteration_kernel
+from wsp.edits.refusal import get_refusal_directions
 from wsp.schema import EditDescriptor
 from wsp.zoo.random_dir import ablate_direction, random_unit_direction
 
@@ -70,6 +70,64 @@ def sample_param(rng: random.Random, spec: dict[str, Any]) -> Any:
     if "min" in spec and "max" in spec:
         return rng.uniform(spec["min"], spec["max"])
     raise ValueError(f"unsupported parameter spec: {spec}")
+
+
+FAMILY_ORDER = ["random_dir", "abliteration", "heretic_ara", "lora_sft", "task_vector", "chain"]
+SINGLE_FAMILIES = ["random_dir", "abliteration", "heretic_ara", "lora_sft"]
+OPTIONAL_MODULES = ("heretic_ara", "lora_sft")
+
+
+class MissingFamiliesError(ValueError):
+    """Configured edit families cannot be built in this environment."""
+
+
+def _family_implemented(family: str) -> bool:
+    return (
+        family not in OPTIONAL_MODULES or importlib.util.find_spec(f"wsp.zoo.{family}") is not None
+    )
+
+
+def family_policy(config: dict[str, Any]) -> dict[str, Any]:
+    """Which configured families can be built here; recorded in every manifest/edit.json."""
+    requested = [f for f in FAMILY_ORDER if f in config.get("families", {})]
+    available = [f for f in requested if _family_implemented(f)]
+    skipped = [f for f in requested if f not in available]
+    return {
+        "families_requested": requested,
+        "families_available": available,
+        "skipped_families": skipped,
+        "skipped_reasons": {f: f"module wsp.zoo.{f} is not implemented" for f in skipped},
+    }
+
+
+def _has_artifacts(zoo_dir: Path, entry_id: str) -> bool:
+    d = zoo_dir / entry_id
+    return (d / "edit.json").exists() and (d / "delta.safetensors").exists()
+
+
+def _load_manifest(
+    path: Path, zoo_dir: Path, require_artifacts: bool
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Return (entry rows, header rows): deduplicated by id, artifact-less rows dropped if asked.
+
+    Rewrites the file if cleaning changed it (older builds appended dry-run/duplicate rows).
+    """
+    if not path.exists():
+        return [], []
+    raw = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    headers = [r for r in raw if r.get("type") == "header"]
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for r in raw:
+        if r.get("type") == "header" or r["id"] in seen:
+            continue
+        if require_artifacts and not _has_artifacts(zoo_dir, r["id"]):
+            continue
+        seen.add(r["id"])
+        rows.append(r)
+    if len(rows) + len(headers) != len(raw):
+        path.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in [*headers, *rows]))
+    return rows, headers
 
 
 def _model_key(layer: int, tensor_name: str) -> str:
@@ -198,7 +256,8 @@ def build_abliteration(
     if dry_run:
         return [(_descriptor("abliteration", params, seed, config, None, "", [], None), {}, [])]
 
-    refusal_dirs = extract_directions(config, zoo_dir)
+    refusal = get_refusal_directions(config, zoo_dir, config.get("_config_hash"))
+    refusal_dirs = refusal.directions
     layers = family_cfg.get("layers", list(range(len(refusal_dirs) - 1)))
     components = params["components"]
     tensor_names: list[str] = []
@@ -224,13 +283,15 @@ def build_abliteration(
         min_weight=params["min_weight"],
         min_weight_distance=params["min_weight_distance"],
     )
-    return [
-        (
-            _descriptor("abliteration", params, seed, config, None, "", touched, None),
-            new_state,
-            touched,
-        )
-    ]
+    desc = _descriptor("abliteration", params, seed, config, None, "", touched, None)
+    desc.provenance.update(
+        {
+            "kernel_variant": KERNEL_VARIANT,
+            "refusal_fingerprint": refusal.fingerprint,
+            "refusal_manifest": refusal.manifest_path.name,
+        }
+    )
+    return [(desc, new_state, touched)]
 
 
 def build_heretic_ara(
@@ -290,13 +351,23 @@ def build_task_vector(
 ) -> list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]]:
     rng = random.Random(seed)
     params = {"scale": float(sample_param(rng, family_cfg["scale"]))}
-    candidates = [m for m in manifest if m.get("family") != "chain"]
+    candidates = sorted(
+        (
+            m
+            for m in manifest
+            if m.get("family") in SINGLE_FAMILIES and (dry_run or _has_artifacts(zoo_dir, m["id"]))
+        ),
+        key=lambda m: m["id"],
+    )
     if not candidates:
         return []
     parent = rng.choice(candidates)
     parent_id = parent["id"]
+    pool_digest = hashlib.sha256(",".join(m["id"] for m in candidates).encode()).hexdigest()
     if dry_run:
-        return [(_descriptor("task_vector", params, seed, config, parent_id, "", [], None), {}, [])]
+        desc = _descriptor("task_vector", params, seed, config, parent_id, "", [], None)
+        desc.provenance["parent_candidates_sha256"] = pool_digest
+        return [(desc, {}, [])]
 
     parent_delta = load_file(zoo_dir / parent_id / "delta.safetensors")
     new_state = dict(base_state)
@@ -307,13 +378,9 @@ def build_task_vector(
         else:
             new_state[key] = params["scale"] * dv
         touched.append(key)
-    return [
-        (
-            _descriptor("task_vector", params, seed, config, parent_id, "", touched, None),
-            new_state,
-            touched,
-        )
-    ]
+    desc = _descriptor("task_vector", params, seed, config, parent_id, "", touched, None)
+    desc.provenance["parent_candidates_sha256"] = pool_digest
+    return [(desc, new_state, touched)]
 
 
 def _build_single_family(
@@ -352,16 +419,7 @@ def build_chain(
 ) -> list[tuple[EditDescriptor, dict[str, torch.Tensor], list[str]]]:
     rng = random.Random(seed)
     length = int(sample_param(rng, family_cfg["length"]))
-    single_families = ["random_dir", "abliteration", "heretic_ara", "lora_sft"]
-    available = [
-        f
-        for f in single_families
-        if f in config.get("families", {})
-        and (
-            f not in ("heretic_ara", "lora_sft")
-            or importlib.util.find_spec(f"wsp.zoo.{f}") is not None
-        )
-    ]
+    available = [f for f in SINGLE_FAMILIES if f in family_policy(config)["families_available"]]
     if not available:
         raise ValueError("no single-edit families configured; chain cannot be built")
 
@@ -409,6 +467,7 @@ def build_chain(
             "inner_seed": step_seed,
         }
         desc = _descriptor("chain", params, seed, config, parent_id, "", [], None)
+        desc.provenance.update(inner_desc.provenance)
         entries.append((desc, cumulative, sorted(all_touched)))
         parent_id = desc.id
     return entries
@@ -437,6 +496,7 @@ def build_zoo(
     n: int | None = None,
     dry_run: bool = False,
     git_sha: str | None = None,
+    allow_missing_families: bool = False,
 ) -> list[dict[str, Any]]:
     """Build (or dry-run) the edit zoo described by ``config_path``.
 
@@ -447,6 +507,8 @@ def build_zoo(
         dry_run: if True, sample descriptors and write the manifest but do not load
             the model or write per-entry deltas.
         git_sha: override the git SHA recorded in the manifest.
+        allow_missing_families: record and skip configured families that are not implemented
+            (default: fail).
 
     Returns:
         The manifest as a list of line dicts.
@@ -458,36 +520,48 @@ def build_zoo(
     zoo_dir = Path(config["out_dir"])
     zoo_dir.mkdir(parents=True, exist_ok=True)
 
-    known_families = {
-        "random_dir",
-        "abliteration",
-        "heretic_ara",
-        "lora_sft",
-        "task_vector",
-        "chain",
-    }
     configured = set(config.get("families", {}))
-    unknown = configured - known_families
+    unknown = configured - set(FAMILY_ORDER)
     if unknown:
         raise ValueError(f"unknown edit family: {sorted(unknown)}")
-    if family and family not in known_families:
+    if family and family not in FAMILY_ORDER:
         raise ValueError(f"unknown edit family: {family}")
+
+    # Family policy: never silently drop configured families (H2 chain distribution depends on it).
+    policy = family_policy(config)
+    if policy["skipped_families"] and not allow_missing_families:
+        raise MissingFamiliesError(
+            f"configured families not buildable here: {policy['skipped_reasons']}; "
+            "implement them or pass --allow-missing-families to record and skip them"
+        )
+    if family and family in policy["skipped_families"]:
+        raise MissingFamiliesError(f"requested family {family!r} is not buildable here")
+    config["_config_hash"] = cfg_hash
+    provenance = {**policy, "allow_missing_families": bool(allow_missing_families)}
 
     base_state: dict[str, torch.Tensor] = {}
     if not dry_run:
         base_state = _load_base_state(config)
 
+    # Dry runs plan into a separate file and never touch the production manifest.
     manifest_path = zoo_dir / ("manifest.dryrun.jsonl" if dry_run else "manifest.jsonl")
-    manifest: list[dict[str, Any]] = []
-    if manifest_path.exists():
-        with manifest_path.open() as f:
-            manifest = [json.loads(line) for line in f if line.strip()]
+    manifest, headers = _load_manifest(manifest_path, zoo_dir, require_artifacts=not dry_run)
+    header = {
+        "type": "header",
+        "dry_run": dry_run,
+        "config_hash": cfg_hash,
+        "git_sha": git_sha,
+        "base_model": config["base_model"],
+        "base_revision": config.get("base_revision", "main"),
+        "seed": int(config["seed"]),
+        "families_selected": [family] if family else policy["families_available"],
+        **provenance,
+    }
+    if header not in headers:
+        _append_manifest(manifest_path, header)
 
-    dtype_str = config.get("dtype", "bfloat16")
-    dtype = getattr(torch, dtype_str)
-
-    family_order = ["random_dir", "abliteration", "heretic_ara", "lora_sft", "task_vector", "chain"]
-    families = [family] if family else [f for f in family_order if f in config.get("families", {})]
+    dtype = getattr(torch, config.get("dtype", "bfloat16"))
+    families = [family] if family else policy["families_available"]
 
     for fam in families:
         family_cfg = config["families"][fam]
@@ -504,36 +578,27 @@ def build_zoo(
                 )
             for desc, new_state, touched in entries:
                 desc.git_sha = git_sha
-                if dry_run:
-                    line = {
-                        "id": desc.id,
-                        "family": desc.family,
-                        "parent_id": desc.parent_id,
-                        "seed": desc.seed,
-                        "config_hash": cfg_hash,
-                        "git_sha": git_sha,
-                    }
-                    if not any(m.get("id") == line["id"] for m in manifest):
-                        manifest.append(line)
-                        _append_manifest(manifest_path, line)
-                else:
+                desc.provenance.update(provenance)
+                if not dry_run:
                     delta = {
                         k: (new_state[k] - base_state[k]).to(dtype)
                         for k in touched
                         if k in base_state and not torch.equal(new_state[k], base_state[k])
                     }
                     _write_entry(zoo_dir, desc, delta, dtype)
-                    line = {
-                        "id": desc.id,
-                        "family": desc.family,
-                        "parent_id": desc.parent_id,
-                        "seed": desc.seed,
-                        "config_hash": cfg_hash,
-                        "git_sha": git_sha,
-                    }
-                    if not any(m.get("id") == line["id"] for m in manifest):
-                        manifest.append(line)
-                        _append_manifest(manifest_path, line)
+                line = {
+                    "id": desc.id,
+                    "family": desc.family,
+                    "parent_id": desc.parent_id,
+                    "seed": desc.seed,
+                    "config_hash": cfg_hash,
+                    "git_sha": git_sha,
+                }
+                if "refusal_fingerprint" in desc.provenance:
+                    line["refusal_fingerprint"] = desc.provenance["refusal_fingerprint"]
+                if not any(m["id"] == line["id"] for m in manifest):  # idempotent registration
+                    manifest.append(line)
+                    _append_manifest(manifest_path, line)
     return manifest
 
 
@@ -542,9 +607,20 @@ def main() -> None:
     parser.add_argument("--config", required=True, type=Path, help="zoo YAML config")
     parser.add_argument("--family", default=None, help="build only this family")
     parser.add_argument("--n", type=int, default=None, help="override number of edits")
-    parser.add_argument("--dry-run", action="store_true", help="write manifest only, no GPU")
+    parser.add_argument("--dry-run", action="store_true", help="plan into manifest.dryrun.jsonl")
+    parser.add_argument(
+        "--allow-missing-families",
+        action="store_true",
+        help="skip (and record) configured families that are not implemented instead of failing",
+    )
     args = parser.parse_args()
-    build_zoo(args.config, family=args.family, n=args.n, dry_run=args.dry_run)
+    build_zoo(
+        args.config,
+        family=args.family,
+        n=args.n,
+        dry_run=args.dry_run,
+        allow_missing_families=args.allow_missing_families,
+    )
 
 
 if __name__ == "__main__":
