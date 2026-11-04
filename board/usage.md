@@ -91,3 +91,5 @@
 | 2026-11-04 | zoo REVISE round 3 | claude_aio_gmail_api/claude-sonnet-5-5 high | done d4da029 (144 tests) |
 | 2026-11-04 | Board A final review feat/p1-zoo-build | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | Board A final feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (1) → fixed by orchestrator, merged 393fc18 |
+| 2026-11-04 | P3 features extractor + baselines | codex/gpt-6.1-terra high | running |
+| 2026-11-04 | P2 batch eval over zoo (resumable) | codex/gpt-6.1-sol medium | running |
