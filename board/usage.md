@@ -67,3 +67,4 @@
 | 2026-11-04 | scribe fix round (paper) | copilot/auto | done b4433da |
 | 2026-11-04 | Board B re-review paper/intro-related | codex/gpt-6.1-terra medium | running |
 | 2026-11-04 | Board B re-review paper/intro-related | codex/gpt-6.1-terra medium | APPROVE, merged |
+| 2026-11-04 | Board C LLM-in-the-loop | codex/gpt-6-luna medium | done 584b016, merged |

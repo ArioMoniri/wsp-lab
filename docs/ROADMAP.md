@@ -69,6 +69,9 @@ All with fixed seeds, temperature 0 unless the task card forbids. Store per-item
 Forecast-then-verify: the predictor scores every proposed edit before evaluation; it then gates/ranks
 candidate edits (weight-space Bayesian optimisation) and acts as critic for `llm_optimizer` runs where the
 editor LLM replaces Adam/Muon steps. Target: replicate the blog's loop fix with far fewer forward passes (H5).
+Board C order (4 Nov 2026, docs/MODEL_CANDIDATES.md §LLM-in-the-loop): C first in shadow mode (critic forecasts
+logged, not acting), then A+C (editor edits gated by critic), B (LLM as optimiser) last. Prerequisites: zoo ≥ 600 edits
+/ 150 trajectories and H1 ρ ≥ 0.6 before any critic-gated episode.
 
 ## Benchmarks: why these
 Blog uses MATH-500, GSM8K, IFEval, MMLU-Pro, loop rate on Qwen3.5-0.8B; we keep those for comparability
