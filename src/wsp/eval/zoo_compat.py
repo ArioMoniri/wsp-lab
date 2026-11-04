@@ -107,5 +107,7 @@ def load_entry_delta(
     if fmt == "dense":
         return load_file(d / "delta.safetensors")
     if fmt == "lora":
+        if (d / "delta.safetensors").exists():
+            raise ValueError("LoRA entry contains stray delta.safetensors")
         return lora_dense_delta(d / "lora", state_keys)
     raise ValueError(f"unsupported delta_format: {fmt}")

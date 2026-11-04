@@ -1,8 +1,10 @@
 """Regression coverage for evaluating zoo LoRA entries."""
 
 import copy
+import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -61,11 +63,41 @@ def test_real_lora_smoke_changes_output(cuda):
         descriptor["base_model"], {}, revision=descriptor.get("base_revision", "main")
     )
     ids = runner.tokenizer("The answer is", return_tensors="pt").to(runner.model.device)
+    from wsp.eval.zoo_compat import resolve_state_key
+
+    tensors = load_file(entry / "lora/adapter_model.safetensors")
+    config = json.loads((entry / "lora/adapter_config.json").read_text())
+    state = runner.model.state_dict()
+    originals = {}
     with torch.inference_mode():
         base = runner.model(**ids).logits.float().cpu()
-        apply_zoo_entry(runner.model, entry)
+        for name, a in tensors.items():
+            if ".lora_A." not in name:
+                continue
+            module = name.split(".lora_A.")[0].removeprefix("base_model.model.")
+            key = resolve_state_key(module + ".weight", state.keys())
+            assert key is not None
+            b = tensors[name.replace(".lora_A.", ".lora_B.")]
+            alpha = next(
+                (v for k, v in (config.get("alpha_pattern") or {}).items() if module.endswith(k)),
+                config["lora_alpha"],
+            )
+            scale = alpha / (a.shape[0] ** 0.5 if config.get("use_rslora") else a.shape[0])
+            originals[key] = state[key].clone()
+            delta = (b.float() @ a.float()).to(state[key].device) * scale
+            state[key].copy_((state[key].float() + delta).to(state[key].dtype))
+        manual = runner.model(**ids).logits.float().cpu()
+        for key, value in originals.items():
+            state[key].copy_(value)
+        stats = apply_zoo_entry(runner.model, entry)
         edited = runner.model(**ids).logits.float().cpu()
+    assert len(originals) == sum(".lora_A." in name for name in tensors)
+    assert len(stats) == len(originals)
+    assert sum(not torch.equal(state[key], value) for key, value in originals.items()) == len(
+        originals
+    )
     assert not torch.equal(base, edited)
+    torch.testing.assert_close(edited, manual)
 
 
 def test_hfrunner_cpu_lora(tmp_path, monkeypatch):
@@ -114,7 +146,37 @@ def test_hfrunner_cpu_lora(tmp_path, monkeypatch):
     expected = (base.model.state_dict()[key].float() + 0.06).bfloat16()
     assert torch.equal(edited.model.state_dict()[key], expected)
     assert edited.edit_id == "tiny"
-    assert edited.entry_hashes and edited.rounding_stats
+    assert edited.entry_hashes == {
+        str(path.relative_to(entry)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in (config_path, tensors_path)
+    }
+    assert edited.rounding_stats[key]["delta_norm"] > 0
+    from wsp.eval import run
+
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("generation:\n  seed: 1\nbenchmarks: {}\n")
+    out = tmp_path / "out"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "eval",
+            "--config",
+            str(cfg),
+            "--model",
+            str(model_dir),
+            "--zoo-entry",
+            str(entry),
+            "--out",
+            str(out),
+        ],
+    )
+    run.main()
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert manifest["edit_id"] == "tiny"
+    assert manifest["delta_format"] == "lora"
+    assert manifest["entry_hashes"] == edited.entry_hashes
+    assert manifest["rounding_stats"] == edited.rounding_stats
 
 
 def test_rounding_stats_sub_ulp():
@@ -151,3 +213,37 @@ def test_adapter_validation_and_dispatch(tmp_path):
     with pytest.raises(FileNotFoundError):
         load_entry_delta(tmp_path)
     assert resolve_state_key("model.layers.0.foo.weight", ["other.layers.0.foo.weight"]) is None
+
+
+def test_asymmetric_lora_orientation(tmp_path):
+    from wsp.eval.zoo_compat import lora_dense_delta
+
+    (tmp_path / "adapter_config.json").write_text(json.dumps({"lora_alpha": 6}))
+    a = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    b = torch.tensor([[1.0, 3.0], [2.0, 4.0], [5.0, 7.0], [8.0, 9.0]])
+    save_file({"x.lora_A.weight": a, "x.lora_B.weight": b}, tmp_path / "adapter_model.safetensors")
+    torch.testing.assert_close(lora_dense_delta(tmp_path)["x.weight"], (b @ a) * 3)
+
+
+def test_rejected_adapter_contents(tmp_path):
+    from wsp.eval.zoo_compat import load_entry_delta, lora_dense_delta
+
+    lora = tmp_path / "lora"
+    lora.mkdir()
+    config = lora / "adapter_config.json"
+    config.write_text(json.dumps({"lora_alpha": 2, "modules_to_save": ["head"]}))
+    with pytest.raises(NotImplementedError, match="modules_to_save"):
+        lora_dense_delta(lora)
+    config.write_text(json.dumps({"lora_alpha": 2}))
+    for name in ("lora_embedding_A", "lora_embedding_B", "lora_magnitude_vector"):
+        save_file({f"x.{name}.weight": torch.ones(1)}, lora / "adapter_model.safetensors")
+        with pytest.raises(NotImplementedError, match=name):
+            lora_dense_delta(lora)
+    descriptor = tmp_path / "edit.json"
+    descriptor.write_text(json.dumps({"delta_format": "unknown"}))
+    with pytest.raises(ValueError, match="unsupported delta_format"):
+        load_entry_delta(tmp_path)
+    descriptor.write_text(json.dumps({"delta_format": "lora"}))
+    save_file({"weight": torch.ones(1)}, tmp_path / "delta.safetensors")
+    with pytest.raises(ValueError, match="stray delta.safetensors"):
+        load_entry_delta(tmp_path)
