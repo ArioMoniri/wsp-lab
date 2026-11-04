@@ -157,3 +157,5 @@
 | 2026-11-04 | Board C: H6 cross-model transfer assessment | codex/gpt-6-luna medium | running |
 | 2026-11-04 | zoo: multi-base-model configs (LFM3-1.7B, Qwen3.5-4B, Gemma-3-270M) + pooling audit | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
 | 2026-11-04 | Board C H6 | codex/gpt-6-luna medium | done 7d70888, merged |
+| 2026-11-04 | multi-model zoo configs | claude_aio_gmail_api/claude-sonnet-5-5 high | done f1325ba (394 tests) — merge after post-zoo extraction (feature_version 4) |
+| 2026-11-04 | Board A feat/multi-model-zoo | codex/gpt-6.1-terra medium | running |
