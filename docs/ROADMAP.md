@@ -109,3 +109,13 @@ logged, not acting), then A+C (editor edits gated by critic), B (LLM as optimise
 ## Benchmarks: why these
 Blog uses MATH-500, GSM8K, IFEval, MMLU-Pro, loop rate on Qwen3.5-0.8B; we keep those for comparability
 and add refusal/KL because of the alignment sub-study.
+
+## P4c — Protein-LM sidecar (ESM contact maps; user idea, 4 Nov 2026; council verdict: do later)
+Board C (docs/reviews/ESM/board-c-esm-2026-11-04.md): bounded H6 sub-study; deterministic contact precision removes
+the sampled-generation device noise, but ESM2's released contact predictor is a ~121-parameter logistic head over
+APC-corrected attention maps, so head-only refitting is the mandatory first control. Board A
+(docs/reviews/ESM/board-a-esm-2026-11-04.md): REVISE — admissible only as a pre-registered sidecar; controls: untouched
+8M and 650M, head-only tuning, equal-budget LoRA/distillation from 650M logits, matched random edits, single-draw
+best-of-N, a non-LLM search over the same weights, sham reload; identity-clustered protein splits with cluster
+bootstrap; editor replicates as a crossed random effect. Pilot: ESM2-8M, frozen clustered CASP-derived test set,
+20 proposals, target < 1 GPU-hour (estimate). Scheduled after the H5 Stage-1 pilot; not before.
