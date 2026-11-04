@@ -221,9 +221,8 @@ def test_lora_targets_hit_every_layer_mlp_and_never_the_lfm_attention_gate():
 def test_remote_code_is_opt_in_by_allowlist_or_config():
     assert A.remote_code_kwargs("LiquidAI/LFM3-1.7B") == {"trust_remote_code": True}
     assert A.remote_code_kwargs("Qwen/Qwen3.5-4B") == {}
-    assert A.remote_code_kwargs("someone/else", {"trust_remote_code": True}) == {
-        "trust_remote_code": True
-    }
+    with pytest.raises(ValueError, match="allow-list"):
+        A.remote_code_kwargs("someone/else", {"trust_remote_code": True})
     assert A.remote_code_kwargs("someone/else", {}) == {}
 
 
