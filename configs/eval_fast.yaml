@@ -1,0 +1,48 @@
+generation:
+  max_new_tokens: 4096
+  temperature: 0.6
+  top_p: 0.95
+  top_k: 20
+  presence_penalty: 1.5
+  thinking: true
+  batch_size: 4
+  seed: 0
+benchmarks:
+  gsm8k:
+    n: 50
+    metric: exact_match
+  math500:
+    n: 25
+    metric: exact_match
+  ifeval:
+    n: 25
+    metric: prompt_strict
+  mmlu_pro:
+    n: 100
+    metric: acc
+    max_new_tokens: 1024
+  hellaswag:
+    n: 100
+    metric: acc_norm_loglik
+  wikitext_ppl:
+    n_windows: 8
+    window: 1024
+  refusal_rate:
+    prompts: heretic_bad_eval
+    n: 50
+    judge:
+    - keyword
+    - llm
+  over_refusal:
+    prompts: heretic_good_eval
+    n: 50
+    judge:
+    - keyword
+  kl_to_base:
+    prompts: heretic_good_eval
+    n: 50
+loop_rate:
+  from:
+  - gsm8k
+  - math500
+  - ifeval

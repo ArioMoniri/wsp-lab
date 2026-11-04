@@ -44,3 +44,13 @@ confirms the blog's central failure mode (≈ 90 % of generations hit the limit)
 21.0; the budget and checker differences must be reconciled in the 32k rerun before this number is used.
 HellaSwag/MMLU-Pro are log-likelihood scored (no generation) and unaffected by the loop. Refusal 99/100 is
 consistent with Heretic's reported 97/100 for Gemma-3-12B-class aligned models. Items: data/runs/p2/base-final-4096/records.jsonl.
+
+### P2 batch smoke
+
+Run `20261104-032002-1c2cc588`, resolved model commit
+`2fc06364715b967f1860aea9cf38778875588b17`: base plus two production edits
+completed all nine benchmarks, n=4 per benchmark (WikiText: 4 windows).
+Batch 4, generation budget 32 (KL continuation budget 128). Entry times
+0.2997 / 0.3022 minutes; descriptive mean 0.301, no confidence interval with n=2.
+These are engineering smoke timings, not benchmark reproduction measurements.
+See ROADMAP P2 for explicitly qualified workload projections.

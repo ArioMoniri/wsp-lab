@@ -32,6 +32,26 @@ Benchmarks chosen for speed (each ≤ 2 min on 0.8B with vLLM/HF generate, batch
 All with fixed seeds, temperature 0 unless the task card forbids. Store per-item results, not just means.
 - Gate: base model numbers reproduce within ±1.5 pt across two runs.
 
+
+### Batch evaluation throughput (4 Nov 2026)
+`python -m wsp.eval.batch --zoo data/zoo/qwen3.5-0.8b` defaults to
+`configs/eval_fast.yaml`; `--ids`, `--families`, `--eligibility`, token and batch overrides
+are supported. Completed results with the same effective configuration are skipped;
+`--resume` makes that intent explicit. OOM retries use B, floor(B/2), floor(B/4).
+
+Run `20261104-032002-1c2cc588`: two production random-direction entries,
+`bccb9ab10b5661e0` and `adf416337f5a2277`, batch 4, fast config restricted to
+4 items per benchmark and 32 generated tokens while `p1-zoo-full` shares the GPU.
+Measured entry times: 0.2997 and 0.3022 minutes; mean 0.301 minutes/entry.
+At this smoke budget, 700 entries project to 210.7 minutes (3.51 hours), excluding
+loading and edit application. This is not full fast-tier throughput. A conservative
+workload-scaling planning estimate multiplies by (50/4)*(4096/32) = 1600,
+yielding approximately 482 minutes/entry or 5,617 GPU hours for 700 entries.
+That deliberately crude extrapolation applies the generation expansion to all work;
+it is not a measured bound or a scheduling commitment. Full-tier timing is still
+required when the zoo build releases the GPU; no full-tier run was authorized under
+the concurrent-build item limit.
+
 ## P3 — Features + baselines
 - φ_stats: per-tensor (||Δ||_F, ||Δ||_F/||θ||_F, top-8 singular values of Δ, spectral entropy, sign stats,
   per-block cosine(θ_{t−1}, θ_t)) → ~40 floats × n_tensors
