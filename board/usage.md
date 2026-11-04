@@ -182,6 +182,7 @@
 | 2026-11-04 | Board A re-review feat/h5-editor | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | eval fixes round 4: Lambda runtime transcription + missing-target report | codex/gpt-6.1-sol medium | done 58f7ee6 (422 tests); 221/279 targets matched, 167 rely on inferred remote runtime — re-review pending |
 | 2026-11-04 | Board A re-review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | REVISE (3: local runtime provenance label, compare_pairs strictness/bootstrap structure, 19 source_hash misses) d06627a |
-| 2026-11-04 | eval fixes round 5 (re-review blocking 1–3; run1 base registered as reference) | codex/gpt-6.1-sol high | running |
+| 2026-11-04 | eval fixes round 5 | codex/gpt-6.1-sol high | done 0593d88 (435 tests; 240/280 matched; 0 score diffs) — final review pending |
 | 2026-11-04 | Board C: ESM contact-map weight-editing idea (user) | codex/gpt-6-luna medium | DO LATER (bounded H6 sub-study; head-only refit is the confound; pilot <1 GPU-h) — merged |
 | 2026-11-04 | Board A: ESM idea — measurement and claims | claude_aio_gmail_api/claude-haiku-5-5 high | REVISE (sidecar only; head-only refit + distillation controls mandatory) — merged d3d7a14 |
+| 2026-11-04 | Board A final re-review fix/eval-board-a-h5 | codex/gpt-6.1-terra medium | running |
