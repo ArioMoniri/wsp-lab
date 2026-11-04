@@ -165,3 +165,4 @@
 | 2026-11-04 | Board A perf/eval-throughput | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | Board A perf/eval-throughput | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (docs/hygiene); branch NOT merged — no engine gain; docs corrected on main |
 | 2026-11-04 | eval: skip signature fix (issue) | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | eval skip-key fix | codex/gpt-6.1-sol medium | done c83651e (398 tests), merged |
