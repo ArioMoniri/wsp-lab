@@ -1,0 +1,9 @@
+# Board A: eval fixes final review
+
+Date: 2026-11-04. Reviewed commit 0593d88. Verdict: **APPROVE** for merge; this does not qualify the measurement panels.
+
+The earlier three blockers are addressed: local runtime metadata is marked inferred and propagated; pair comparison requires known matching identity and configuration, and the item analysis uses paired, clustered resampling, shared-reference draws and WikiText log-space blocks; the historical same-source base is registered with inferred reconstructed item identities. The third-tree abliteration remains unmatched. Host-by-edit qualification remains explicitly blocked, and all 240 matched targets depend on inferred runtime.
+
+The live report returned 240 matched and 40 missing: 37 unevaluated chain predecessors, two actual-batch mismatches, and one inferred-only abliteration. The documented third source hash explains the latter; I did not independently reconstruct each historical tree or audit all 40 individual records. The independent score verifier returned 337 archived records and zero differences. Its archives establish preservation since their creation, not for earlier backfills. The batch diff retains production selection's signature path and normalizes the reporting-only config rename in the effective hash; base reuse is deliberately stricter. This is not proof of every historical resume key.
+
+Targeted tests: 23 passed, including the empty-fold test that captures the warning and checks persisted skipped_folds. Two real-data M1 family CPU runs (one epoch, ten bootstrap samples, v4 and v3 features) completed five folds with empty skipped_folds; neither encountered an empty fold or emitted its warning. Thus the warning is verified by the targeted regression, not independently observed in real-data stderr. No GPU evaluation or full suite was rerun.
