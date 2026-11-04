@@ -25,25 +25,4 @@
 
 ## mamba-ssm
 
-On 2026-11-03, the latest 30 GitHub releases of state-spaces/mamba and
-Dao-AILab/causal-conv1d had no torch 2.15 / CUDA 13 wheel. A source build failed in `wsp-mamba2`, log `~/agent-logs/wsp-mamba2-20261103-231214.log`:
-
-```sh
-source .venv/bin/activate
-export TORCH_CUDA_ARCH_LIST=12.0 MAX_JOBS=4 CUDA_HOME=/usr/local/cuda
-uv pip install --no-build-isolation causal-conv1d mamba-ssm
-```
-
-The causal-conv1d build system generates many CUDA architectures despite
-`TORCH_CUDA_ARCH_LIST`. The mamba-ssm extension compilation uses C++17,
-while the installed PyTorch headers require C++20 (`#error C++20 or later
-compatible compiler is required`); `import mamba_ssm` still fails. The previous
-build also failed compiling extension objects; see `~/agent-logs/wsp-mamba-20261103-225608.log`.
-
-The reproducible C++20 patch build is `bash scripts/build_mamba.sh`. It fetches
-both pinned PyPI sdists into `data/build`, changes every `-std=c++17` in their
-setup scripts to `-std=c++20`, and installs each with uv using
-`--no-build-isolation --no-deps`, `TORCH_CUDA_ARCH_LIST=12.0` and `MAX_JOBS=4`.
-The first attempt found that the shared venv has no pip (log
-`~/agent-logs/wsp-mamba3-20261103-235340.log`); the revised uv build is in
-`~/agent-logs/wsp-mamba3b-20261103-235407.log`.
+On this CUDA 13 / PyTorch 2.15 host, run `bash scripts/build_mamba.sh` after installing PyTorch and build dependencies in the shared venv. The script downloads pinned causal-conv1d 1.7.0 and mamba-ssm 2.3.2.post1 source distributions, patches C++17 flags to C++20, and installs with `--no-build-isolation --no-deps`, `TORCH_CUDA_ARCH_LIST=12.0` and `MAX_JOBS=4`. The successful build took approximately 11 minutes; log: `~/agent-logs/wsp-mamba3b-20261103-235407.log`. Both import and a CUDA Mamba2 forward succeeded.

@@ -25,7 +25,7 @@ except Exception:  # noqa: BLE001
 
 
 def ssm_backend() -> str:
-    return _BACKEND
+    return "mamba_ssm" if _Mamba2 is not None and torch.cuda.is_available() else "loop"
 
 
 class SelectiveSSMBlock(nn.Module):
@@ -62,6 +62,20 @@ class SelectiveSSMBlock(nn.Module):
         return res + self.out_proj(y)
 
 
+class MambaBlock(nn.Module):
+    """Pre-norm residual Mamba2 block; choose the largest divisor up to 64 per head."""
+
+    def __init__(self, d_model: int, d_state: int, expand: int = 2):
+        super().__init__()
+        inner = d_model * expand
+        headdim = next(h for h in range(min(64, inner), 0, -1) if inner % h == 0)
+        self.norm = nn.LayerNorm(d_model)
+        self.mixer = _Mamba2(d_model=d_model, d_state=d_state, expand=expand, headdim=headdim)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x + self.mixer(self.norm(x))
+
+
 class TrajectoryPredictor(nn.Module):
     def __init__(
         self,
@@ -73,7 +87,7 @@ class TrajectoryPredictor(nn.Module):
         backend: str | None = None,
     ):
         super().__init__()
-        self.backend = backend or ("mamba_ssm" if _Mamba2 is not None else "loop")
+        self.backend = backend or ssm_backend()
         if self.backend == "torch":
             self.backend = "loop"
         if self.backend not in {"loop", "chunked", "mamba_ssm"}:
@@ -83,7 +97,7 @@ class TrajectoryPredictor(nn.Module):
         self.inp = nn.Linear(d_in, d_model)
         if self.backend == "mamba_ssm" and _Mamba2 is not None:
             self.blocks = nn.ModuleList(
-                [_Mamba2(d_model=d_model, d_state=d_state) for _ in range(n_layers)]
+                [MambaBlock(d_model, d_state) for _ in range(n_layers)]
             )
         else:
             self.blocks = nn.ModuleList(
@@ -95,5 +109,5 @@ class TrajectoryPredictor(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # (B,T,d_in) -> (B,T,K) in [0,1]
         h = self.inp(x)
         for b in self.blocks:
-            h = b(h) if self.backend != "mamba_ssm" else h + b(h)
+            h = b(h)
         return torch.sigmoid(self.head(h))

@@ -4,7 +4,7 @@ from wsp.predictor import TrajectoryPredictor, ssm_backend
 
 
 def test_backend_is_reported():
-    assert ssm_backend() in {"torch", "mamba_ssm"}
+    assert ssm_backend() in {"loop", "mamba_ssm"}
 
 
 def test_outputs_bounded_and_causal():
