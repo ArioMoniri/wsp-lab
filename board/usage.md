@@ -95,3 +95,6 @@
 | 2026-11-04 | P2 batch eval over zoo (resumable) | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | P3 features (1st) | codex/gpt-6.1-terra high | partial 20fc391 (splits, pooling) |
 | 2026-11-04 | P3 features (2nd: extractor+baselines) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | P2 batch runner | codex/gpt-6.1-sol medium | done 9143644 |
+| 2026-11-04 | Board A feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-04 | perf: eval throughput (vLLM/static cache) | codex/gpt-6.1-terra high | running |
