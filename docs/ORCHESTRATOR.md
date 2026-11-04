@@ -48,3 +48,15 @@ Reviews are always a new `delegate_task` with `role="review"`.
 - Fallback order when a provider hits a quota (user rule, 3 Nov 2026): switch immediately to another provider,
   including the API-billed instances (`claude_aio_gmail_api` "Claude API" for Claude models) rather than waiting;
   record the switch in `board/usage.md`. Report exact needs to the user in the BLUF line.
+
+## Skills to invoke by role (available on this server, 4 Nov 2026)
+| Role | Skills (Claude-based agents call them via the Skill tool; others follow the same checklists in docs/) |
+|---|---|
+| scribe / writer | `anthropic-skills:docs`, `anthropic-skills:doc-coauthoring`, `anthropic-skills:content-research-writer`, `engineering:documentation`, `design:ux-copy` |
+| humanizer | `design:ux-copy` + docs/WRITING_GUIDE.md |
+| reviewer-ml (Board A) | `code-review`, `engineering:code-review`, `security-review`, `simplify` |
+| tester / checker | `engineering:testing-strategy`, `engineering:debug`, `run` |
+| figures | `dataviz` (palette validator) + docs/FIGURE_STYLE.md |
+| reviewer-arch (Board C) | `anthropic-skills:deep-research`, `engineering:architecture`, `engineering:system-design` |
+| infra-ops | `engineering:deploy-checklist`, `engineering:incident-response` |
+Reviewers, testers and checkers run in parallel on every branch wave; writers iterate with them until Board B approves.
