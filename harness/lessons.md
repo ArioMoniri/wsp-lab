@@ -21,3 +21,4 @@
 | 2026-11-04 | P4 | a delegated agent added a "Co-Authored-By: Claude …" trailer; history rewritten with filter-branch and force-pushed; .githooks/commit-msg now rejects AI trailers | hooks | git log 0f9df52 |
 | 2026-11-04 | P4 | local `pkill -f <pattern>` also matches the orchestrator shell running the command (killed my own merge chain); use the PID or tmux session | ops | 08:03Z |
 | 2026-11-04 | P2 | tmux gates must test the process (pgrep by PID file) not the session name: agent-tmux leaves finished shells listed, which blocked post-zoo and perf-benchmark twice | post_zoo.sh, perf gate | 08:20Z |
+| 2026-11-04 | P1 | `pytest -q | tail -1` hides the exit status: a merge went through with 3 failing tests; always gate on PIPESTATUS[0] or run pytest without a pipe | merge chain | main @ 9f265d6→fix |

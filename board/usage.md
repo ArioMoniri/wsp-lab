@@ -167,4 +167,4 @@
 | 2026-11-04 | heretic_ara export fix | codex/gpt-6.1-sol high | running |
 | 2026-11-04 | heretic_ara export fix | codex/gpt-6.1-sol high | done d2193cf (401 tests; KL gate identical) |
 | 2026-11-04 | Board A fix/heretic-ara-export | claude_aio_gmail_api/claude-haiku-5-5 high | running |
-| 2026-11-04 | Board A fix/heretic-ara-export | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (2) → fixed by orchestrator, merged |
+| 2026-11-04 | Board A fix/heretic-ara-export | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (2) → fixed by orchestrator, merged 9f265d6 (+ follow-up test fix on main) |
