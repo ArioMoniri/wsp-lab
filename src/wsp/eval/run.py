@@ -126,6 +126,19 @@ class PresencePenalty:
         return scores - mask * self.penalty
 
 
+def generation_options(cfg):
+    """Build generation arguments without sampling-only options in greedy mode."""
+    temperature = cfg["temperature"]
+    if temperature < 0:
+        raise ValueError("temperature must be non-negative")
+    options = {"do_sample": temperature > 0}
+    if temperature > 0:
+        options.update(temperature=temperature, top_p=cfg["top_p"], top_k=cfg["top_k"])
+    if cfg.get("cache_implementation"):
+        options["cache_implementation"] = cfg["cache_implementation"]
+    return options
+
+
 class HFRunner:
     def __init__(self, model_id, generation, zoo_entry=None, revision="main"):
         from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -189,7 +202,9 @@ class HFRunner:
         cfg = self.generation
         seed_all(cfg["seed"])
         results = []
-        batch = cfg.get("batch_size", 8)
+        batch = cfg.get("batch_size", 32)
+        if batch < 1:
+            raise ValueError("batch_size must be positive")
         for start in range(0, len(prompts), batch):
             tokens = self.tokenizer(
                 [self.chat(p) for p in prompts[start : start + batch]],
@@ -201,10 +216,7 @@ class HFRunner:
                 generated = self.model.generate(
                     **tokens,
                     max_new_tokens=cfg["max_new_tokens"],
-                    do_sample=True,
-                    temperature=cfg["temperature"],
-                    top_p=cfg["top_p"],
-                    top_k=cfg["top_k"],
+                    **generation_options(cfg),
                     logits_processor=LogitsProcessorList(
                         [PresencePenalty(width, cfg["presence_penalty"])]
                     ),
