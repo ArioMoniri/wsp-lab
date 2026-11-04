@@ -19,10 +19,10 @@ def normalize(text):
     return re.sub(r'\s+', ' ', text).strip()
 
 def bib_fields(text, key):
-    match = re.search(r'@\w+\s*\{\s*' + re.escape(key) + r'\s*,(.*?)(?=\n\s*@\w+\s*\{|\Z)', text, re.S | re.I)
+    match = re.search(r'@\w+\s*\{\s*' + re.escape(key) + r'\s*,(.*?)(?=\n\s*@\w+\s*\{|\Z)', text, re.DOTALL | re.IGNORECASE)
     if not match: return None, None
-    author = re.search(r'\bauthor\s*=\s*\{([^{}]*)\}', match[1], re.I)
-    year = re.search(r'\byear\s*=\s*\{([^{}]*)\}', match[1], re.I)
+    author = re.search(r'\bauthor\s*=\s*\{([^{}]*)\}', match[1], re.IGNORECASE)
+    year = re.search(r'\byear\s*=\s*\{([^{}]*)\}', match[1], re.IGNORECASE)
     return ([x.strip() for x in author[1].split(' and ')] if author else None, year[1] if year else None)
 
 def main():
@@ -38,7 +38,7 @@ def main():
             ident = item.findtext('a:id', namespaces=ns).rsplit('/', 1)[-1]
             ident = re.sub(r'v\d+$', '', ident)
             api[ident] = ([x.findtext('a:name', namespaces=ns) for x in item.findall('a:author', ns)], item.findtext('a:published', namespaces=ns)[:4], normalize(item.findtext('a:title', namespaces=ns)))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print('arXiv API error:', exc, file=sys.stderr)
     failed = False
     print(f'{"key":38} result')
