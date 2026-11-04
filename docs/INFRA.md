@@ -26,3 +26,10 @@
 ## mamba-ssm
 
 On this CUDA 13 / PyTorch 2.15 host, run `bash scripts/build_mamba.sh` after installing PyTorch and build dependencies in the shared venv. The script downloads pinned causal-conv1d 1.7.0 and mamba-ssm 2.3.2.post1 source distributions, patches C++17 flags to C++20, and installs with `--no-build-isolation --no-deps`, `TORCH_CUDA_ARCH_LIST=12.0` and `MAX_JOBS=4`. The successful build took approximately 11 minutes; log: `~/agent-logs/wsp-mamba3b-20261103-235407.log`. Both import and a CUDA Mamba2 forward succeeded.
+
+## Artefact store: Hugging Face (private datasets)
+GitHub rejects files > 100 MB and the zoo will reach tens of GB, so edited-model deltas, LoRA adapters, refusal
+caches and eval records live in private HF dataset repos (user decision 4 Nov 2026):
+`Aralario/wsp-lab-zoo`, `Aralario/wsp-lab-evals`, `Aralario/wsp-lab-runs`. Sync with `scripts/hf_sync.sh push|pull <kind>`
+after each zoo/eval batch. They stay private because abliteration deltas are, in effect, uncensoring edits
+(see docs/VENUE.md broader-impact note); only statistics are published. Lambda instances pull from HF, not from this server.
