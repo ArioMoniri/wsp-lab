@@ -23,9 +23,8 @@ hf download Qwen/Qwen3.5-0.8B >/dev/null 2>&1
 # shard inputs: manifest + the shard entries (edit.json, delta / lora) from the public zoo store
 mkdir -p data/zoo
 hf download Aralario/wsp-lab-zoo --repo-type dataset --include "zoo/qwen3.5-0.8b/manifest.jsonl" --local-dir data/.hf-pull-zoo >/dev/null 2>&1
-inc=()
-while read -r i || [ -n "$i" ]; do [ -n "$i" ] && inc+=("zoo/qwen3.5-0.8b/$i/*"); done < "$IDS"   # last line may lack a newline
-hf download Aralario/wsp-lab-zoo --repo-type dataset --include "${inc[@]}" --local-dir data/.hf-pull-zoo >/dev/null 2>&1
+# one download call per entry: a single call with many --include patterns silently drops some of them
+while read -r i || [ -n "$i" ]; do [ -n "$i" ] && hf download Aralario/wsp-lab-zoo --repo-type dataset --include "zoo/qwen3.5-0.8b/$i/*" --local-dir data/.hf-pull-zoo >/dev/null 2>&1; done < "$IDS"
 [ -f data/.hf-pull-zoo/zoo/qwen3.5-0.8b/manifest.jsonl ] || { echo "manifest missing after download"; exit 1; }
 rm -f data/.hf-pull-zoo/zoo/qwen3.5-0.8b/*/eval.json   # never inherit another host's evaluation; keep this host's own on reruns
 rsync -a data/.hf-pull-zoo/zoo/ data/zoo/
