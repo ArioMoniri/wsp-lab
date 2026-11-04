@@ -68,3 +68,5 @@
 | 2026-11-04 | Board B re-review paper/intro-related | codex/gpt-6.1-terra medium | running |
 | 2026-11-04 | Board B re-review paper/intro-related | codex/gpt-6.1-terra medium | APPROVE, merged |
 | 2026-11-04 | Board C LLM-in-the-loop | codex/gpt-6-luna medium | done 584b016, merged |
+| 2026-11-04 | zoo REVISE round (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | done 1913f61 (5/5 fixed) |
+| 2026-11-04 | Board A re-review feat/p1-zoo-build | codex/gpt-6.1-sol medium | running |
