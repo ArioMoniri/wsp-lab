@@ -121,3 +121,5 @@
 | 2026-11-04 | Board B paper/method-zoo | codex/gpt-6.1-terra medium | running |
 | 2026-11-04 | writer README v2 | claude_aio_gmail_api/claude-sonnet-5-5 high | done 43a5c08 |
 | 2026-11-04 | Board B review docs/readme-v2 | codex/gpt-6.1-sol medium | running |
+| 2026-11-04 | Board B paper/method-zoo | codex/gpt-6.1-terra medium | REVISE (4 blocking, text-vs-code) |
+| 2026-11-04 | scribe fix round method/zoo/experiments | codex/gpt-6.1-terra medium | running |
