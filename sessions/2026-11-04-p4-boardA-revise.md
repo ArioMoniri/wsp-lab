@@ -46,3 +46,4 @@ N1: purge/chain-free variants are recorded in config and manifest; chain-free ex
 CPU selftests m2 (loop), m5 (torch_attention), m6 (torch_jepa) all passed, three folds each. No real hypothesis scores or GPU claims.
 
 Final validation: CPU pytest 325 passed, 8 deselected in 25.26 s (< 60 s local and < 90 s task limits); Ruff clean after import ordering fix; real-data named-holdout run refuses zero target entries before creating output. Toy-zoo tests cover k-fold, named LoRA/other-family holdouts, both sensitivity variants, six-benchmark gate isolation, structural descriptor ordering, snapshot digest/count and audit scopes.
+- 09:05 Merged feat/p4-predictors (9f1d3da, 325 tests). All P1–P4 code on main; critical path = evaluation targets (post-zoo D2 timing → eval throughput work → D3 subset batch). Lambda ARA 12×10 running.
