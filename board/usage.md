@@ -168,3 +168,7 @@
 | 2026-11-04 | heretic_ara export fix | codex/gpt-6.1-sol high | done d2193cf (401 tests; KL gate identical) |
 | 2026-11-04 | Board A fix/heretic-ara-export | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-04 | Board A fix/heretic-ara-export | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (2) → fixed by orchestrator, merged 9f265d6 (+ follow-up test fix on main) |
+| 2026-11-04 | H5 researcher: blog Experiment 8 protocol + LLM weight-editing refs | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | Board C: H5 editor-harness design | codex/gpt-6-luna medium | running |
+| 2026-11-04 | Board A: H5 pre-registration + fast-tier noise floor | codex/gpt-6.1-sol high | running |
+| 2026-11-04 | Board B: H5 reproduction section requirements + noise reporting | claude_aio_gmail_api/claude-haiku-5-5 high | running |
