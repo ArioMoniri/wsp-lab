@@ -55,7 +55,7 @@ Drawing rules shared by all diagrams:
   edit parameters; italic for the takeaway chips; no bold except the state label.
 - One legend per figure, inside the frame, white box with a thin outline. No titles inside the image for the paper;
   the README version may add the italic chip.
-- Build with `src/wsp/plots/diagrams.py` (matplotlib patches + `annotate`), export SVG for the README and PDF for the
+- Build with `src/wsp/plots/diagrams.py` (to be written in P5 next to `panels.py`: matplotlib patches + `annotate`), export SVG for the README and PDF for the
   paper from the same function; the Lottie hero is generated from the same layout constants
   (`assets/lottie/`), so the animation and the static figure never drift apart.
 - Every number in a diagram comes from a run id named in the caption (`docs/RESULTS.md`), per AGENTS.md: no demo values.
