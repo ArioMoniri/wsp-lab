@@ -20,7 +20,8 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Subset
 
-from wsp.predictor.baselines import fit_eval, metrics_with_ci
+from wsp.predictor.audit import audit_run, collapse_check, seed_summary
+from wsp.predictor.baselines import metrics_with_ci
 from wsp.predictor.data import FeatureDataset, collate_trajectories
 from wsp.predictor.models import build_model, effective_rank, seed_all
 
@@ -33,7 +34,8 @@ class Normalizer:
 
     keys = ("tokens", "pooled", "stats")
 
-    def __init__(self, ds, indices):
+    def __init__(self, ds, indices, scaling="standard"):
+        self.scaling = scaling
         ids = sorted({i for idx in indices for i in ds.chain(ds.rows[idx]["id"])})
         self.ids = ids
         self.state = {}
@@ -43,7 +45,14 @@ class Normalizer:
             x = self.log(x)
             if not torch.isfinite(x).all():
                 raise ValueError(f"nonfinite {key} features")
-            self.state[key] = (x.mean(0), x.std(0, unbiased=False).clamp_min(1e-4))
+            constant = x.amax(0) == x.amin(0)
+            center = x.median(0).values if scaling == "robust" else x.mean(0)
+            scale = (
+                torch.quantile(x, 0.75, dim=0) - torch.quantile(x, 0.25, dim=0)
+                if scaling == "robust"
+                else x.std(0, unbiased=False)
+            )
+            self.state[key] = (center, scale.clamp_min(1e-4), constant, x.amin(0), x.amax(0))
 
     @staticmethod
     def log(x):
@@ -51,8 +60,9 @@ class Normalizer:
 
     def __call__(self, batch, device):
         b = {k: v.to(device) for k, v in batch.items()}
-        for key, (mean, std) in self.state.items():
+        for key, (mean, std, constant, _, _) in self.state.items():
             b[key] = ((self.log(b[key]) - mean.to(device)) / std.to(device)).clamp(-20, 20)
+            b[key][..., constant.to(device)] = 0
         return b
 
 
@@ -109,13 +119,17 @@ def run_training(
     zoo=None,
     holdout=None,
     holdout_variant="purge",
+    features_variant="cumulative",
+    scaling="standard",
 ):
     if min(epochs, patience, batch_size, n_boot) < 1 or pretrain_epochs < 1:
         raise ValueError(
             "epochs, pretrain epochs, patience, batch size and bootstrap count must be positive"
         )
     seed_all(seed)
-    ds = FeatureDataset(features, evals, target=target, targets=targets, zoo=zoo)
+    ds = FeatureDataset(
+        features, evals, target=target, targets=targets, zoo=zoo, features_variant=features_variant
+    )
     folds = ds.holdout(holdout, holdout_variant) if holdout else ds.folds(split, n_splits)
     # Plan all validation sets before writing anything. A two-group dataset cannot
     # honestly support both a held-out group and an inner group for early stopping.
@@ -125,10 +139,13 @@ def run_training(
         if not inner:
             log.warning("Skipping outer fold %d: no inner folds survive ancestry filtering", i)
             continue
-        plans.append((inner[0], test))
+        plans.append((train, inner, test))
     if not plans:
         raise ValueError("no folds survive ancestry filtering")
     config = {
+        "features_variant": features_variant,
+        "scaling": scaling,
+        "selection_protocol": "all surviving inner folds; median best epoch (rounded up); fresh outer-train refit for fixed epoch budget",
         "holdout": holdout,
         "holdout_variant": holdout_variant,
         "model": model,
@@ -155,14 +172,44 @@ def run_training(
         raise ValueError(f"output directory is not empty: {out}")
     out.mkdir(parents=True, exist_ok=True)
     (out / "zoo-manifest.snapshot.jsonl").write_bytes(ds.manifest_snapshot)
+    (out / "config.json").write_text(json.dumps(config, indent=2))
+    planned = []
+    ids_for = lambda indices: [ds.rows[i]["id"] for i in indices]
+    for train, inner, test in plans:
+        planned.append(
+            {
+                "outer_train_ids": ids_for(train),
+                "outer_test_ids": ids_for(test),
+                "inner": [
+                    {
+                        "train_ids": ids_for(a),
+                        "validation_ids": ids_for(b),
+                        "train_target_variance": np.nanvar(ds.targets[a].numpy(), axis=0).tolist(),
+                        "validation_target_variance": np.nanvar(
+                            ds.targets[b].numpy(), axis=0
+                        ).tolist(),
+                    }
+                    for a, b in inner
+                ],
+            }
+        )
+    (out / "split-plan.json").write_text(
+        json.dumps(
+            {
+                "protocol": config["selection_protocol"],
+                "folds": planned,
+                "split_audit": ds.split_audit,
+            },
+            indent=2,
+        )
+    )
     predictions = np.full(ds.targets.shape, np.nan)
     fold_records, backends, baseline_folds = [], [], []
-    for fold, ((train, val), test) in enumerate(plans):
-        fold_seed = seed + fold
+
+    def fit_candidate(train, val, budget, fold_seed):
         seed_all(fold_seed)
         net = build_model(model, ds, seed=fold_seed, d_model=d_model, device=device)
-        normalizer = Normalizer(ds, train)
-        backends.append(net.backend)
+        normalizer = Normalizer(ds, train, scaling)
         pretrain_history = []
         collapse = None
         ablation = None
@@ -225,19 +272,14 @@ def run_training(
                         for batch in loader(ds, train, batch_size, 0):
                             b = normalizer(batch, device)
                             zs.append(module.encode(b)[b["mask"]])
-                    return effective_rank(torch.cat(zs))
+                    return torch.cat(zs)
 
-                rank, standard_rank = rank_of(net), rank_of(ablation)
-                collapse = {
-                    "erank": rank,
-                    "frozen_predictor_erank": standard_rank,
-                    "collapsed": rank < 2,
-                    "acceptance_gate": rank >= 2 and rank >= 2 * standard_rank,
-                }
+                collapse = collapse_check(rank_of(net), rank_of(ablation))
+                log.info("M6 collapse inputs: %s", collapse)
             net.freeze_encoder()
         opt = torch.optim.AdamW([p for p in net.parameters() if p.requires_grad], lr=lr)
         best, stale, best_state, history = float("inf"), 0, None, []
-        for epoch in range(epochs):
+        for epoch in range(budget):
             net.train()
             losses = []
             for batch in loader(ds, train, batch_size, fold_seed + epoch, True):
@@ -250,21 +292,67 @@ def run_training(
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 1)
                 opt.step()
                 losses.append(loss.item())
-            pred = predict(net, ds, val, normalizer, device, batch_size)
-            val_loss = float(np.nanmean((pred - ds.targets[val].numpy()) ** 2))
+            val_loss = (
+                float(
+                    np.nanmean(
+                        (
+                            predict(net, ds, val, normalizer, device, batch_size)
+                            - ds.targets[val].numpy()
+                        )
+                        ** 2
+                    )
+                )
+                if val is not None
+                else float(np.mean(losses))
+            )
             history.append(
-                {"epoch": epoch, "train_loss": float(np.mean(losses)), "validation_loss": val_loss}
+                {
+                    "epoch": epoch,
+                    "train_loss": float(np.mean(losses)),
+                    "validation_loss": val_loss if val is not None else None,
+                }
             )
             if val_loss < best:
                 best, stale = val_loss, 0
                 best_state = copy.deepcopy(net.state_dict())
             else:
                 stale += 1
-            if stale >= patience:
+            if val is not None and stale >= patience:
                 break
         if best_state is None:
             raise ValueError("validation fold has no finite targets")
-        net.load_state_dict(best_state)
+        if val is not None:
+            net.load_state_dict(best_state)
+
+        return net, normalizer, history, pretrain_history, collapse, best
+
+    for fold, (train, inner, test) in enumerate(plans):
+        selected = []
+        for inner_index, (inner_train, inner_val) in enumerate(inner):
+            _, inner_norm, h, _, _, _ = fit_candidate(
+                inner_train, inner_val, epochs, seed + fold * 100 + inner_index
+            )
+            best_epoch = min(h, key=lambda r: r["validation_loss"])["epoch"] + 1
+            selected.append(
+                {
+                    "train_ids": [ds.rows[i]["id"] for i in inner_train],
+                    "validation_ids": [ds.rows[i]["id"] for i in inner_val],
+                    "normalization_context_ids": inner_norm.ids,
+                    "best_epoch": best_epoch,
+                    "history": h,
+                    "target_variance": {
+                        "train": np.nanvar(ds.targets[inner_train].numpy(), axis=0).tolist(),
+                        "validation": np.nanvar(ds.targets[inner_val].numpy(), axis=0).tolist(),
+                    },
+                }
+            )
+        refit_epochs = int(np.ceil(np.median([r["best_epoch"] for r in selected])))
+        fold_seed = seed + fold
+        net, normalizer, history, pretrain_history, collapse, best = fit_candidate(
+            train, None, refit_epochs, fold_seed
+        )
+        val = []
+        backends.append(net.backend)
         predictions[test] = predict(net, ds, test, normalizer, device, batch_size)
         frame = []
         for i in test:
@@ -288,6 +376,10 @@ def run_training(
         fold_records.append(
             {
                 "fold": fold,
+                "inner_selection": selected,
+                "refit_ids": ids(train),
+                "refit_epochs": refit_epochs,
+                "target_variance": {"train": np.nanvar(ds.targets[train].numpy(), axis=0).tolist()},
                 "seed": fold_seed,
                 "train_ids": ids(train),
                 "validation_ids": ids(val),
@@ -301,7 +393,7 @@ def run_training(
             }
         )
         baseline_folds.append((train, test))
-        log.info("fold %d backend=%s validation MSE=%g", fold, net.backend, best)
+        log.info("fold %d backend=%s refit training MSE=%g", fold, net.backend, best)
     scores = {}
     long_scores = {}
     long_mask = np.array([len(ds.chain(r["id"])) >= 4 for r in ds.rows])
@@ -313,17 +405,8 @@ def run_training(
             long_scores[name] = metrics_with_ci(
                 ds.targets[long_ok, j].numpy(), predictions[long_ok, j], seed, n_boot
             )
-    # Same fitting rows and test groups as the neural head, including inner validation exclusion.
-    x_stats = np.stack([ds.entry(r["id"])["stats"].numpy() for r in ds.rows])
-    baseline = fit_eval(
-        x_stats,
-        ds.targets.numpy(),
-        baseline_folds,
-        model="statnn",
-        target_names=ds.names,
-        seed=seed,
-        n_boot=n_boot,
-    )
+    audit = audit_run(ds, predictions, baseline_folds, fold_records, out, seed, n_boot, scaling)
+    baseline = audit["baselines"]["statnn"]
     m6_gate = None
     if model == "m6" and holdout == "lora_sft":
         transfer_pass = False
@@ -367,6 +450,7 @@ def run_training(
                 else {"n": 0}
             )
     results = {
+        **audit,
         "config": config,
         "targets": scores,
         "h2_by_step_semantics": stratified,
@@ -388,14 +472,15 @@ def run_training(
             if model == "m6"
             else None
         ),
-        "ci_method": "seeded percentile bootstrap over edits (not independent trajectories)",
+        "marginal_ci_method": "seeded percentile bootstrap resampling edits, conditional on fitted models; descriptive marginal intervals only",
+        "ci_method": "paired percentile bootstrap resampling independent full-ancestry clusters with replacement, retaining all edits and paired predictions in each sampled cluster; conditional on fitted models",
     }
     (out / "metrics.json").write_text(json.dumps(results, indent=2))
     lines = [
         f"# P4 {model} — run `{out.name}`",
         "",
         f"Split: {split}; labeled edits: {len(ds)}.",
-        "95% percentile bootstrap over edits; chain correlations are not corrected.",
+        "Marginal target intervals resample edits; paired differences resample full-ancestry clusters.",
         "",
         "| model | target | n | MAE [95% CI] | RMSE [95% CI] | Spearman [95% CI] |",
         "|---|---|---:|---|---|---|",
@@ -422,6 +507,18 @@ def run_training(
         "m1_matched widens one M1 feedforward layer; capacity differs from M5 by four parameters.",
         f"M6 acceptance: {m6_gate}.",
     ]
+    lines += [
+        "",
+        "| fold | family | target | predictor | n | MAE | Spearman |",
+        "|---|---|---|---|---:|---:|---:|",
+    ]
+    for f, families in audit["per_family"].items():
+        for family, predictors in families.items():
+            for label, targets_ in predictors.items():
+                for name, m in targets_.items():
+                    lines.append(
+                        f"| {f} | {family} | {name} | {label} | {m['n']} | {m.get('mae', {}).get('value', float('nan')):.5g} | {m.get('spearman', {}).get('value', float('nan')):.5g} |"
+                    )
     (out / "results.md").write_text("\n".join(lines) + "\n")
     sha = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], text=True, cwd=DEFAULT_CONFIG_PATH.parents[1]
@@ -456,7 +553,7 @@ def run_training(
         "default_config": str(DEFAULT_CONFIG_PATH.relative_to(DEFAULT_CONFIG_PATH.parents[1])),
         "default_config_hash": hashlib.sha256(DEFAULT_CONFIG_PATH.read_bytes()).hexdigest(),
         "base_scores": ds.base_scores,
-        "normalization": "training-context-only signed-log1p, standardize, clamp [-20,20]",
+        "normalization": f"training-context-only signed-log1p, {scaling}, zero constant coordinates, clamp [-20,20]",
         "config": config,
         "config_hash": config_hash,
         "seed": seed,
@@ -482,7 +579,9 @@ def run_training(
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--model", choices=["m1", "m1_matched", "m2", "m3", "m5", "m6"], required=True)
+    p.add_argument(
+        "--model", choices=["m1", "m1_matched", "m2", "m2_matched", "m3", "m5", "m6"], required=True
+    )
     for name in ("features", "evals", "out"):
         p.add_argument(f"--{name}")
     p.add_argument("--split", choices=["family", "seed", "trajectory"], default="trajectory")
@@ -497,6 +596,11 @@ def main(argv=None):
         ("d-model", 256),
     ]:
         p.add_argument(f"--{name}", type=int, default=default)
+    p.add_argument("--seeds", help="comma-separated full experiment seeds, e.g. 0,1,2")
+    p.add_argument(
+        "--features-variant", choices=["cumulative", "incremental"], default="cumulative"
+    )
+    p.add_argument("--scaling", choices=["standard", "robust"], default="standard")
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--device", default="cpu")
     p.add_argument("--target", choices=["delta", "level"], default="delta")
@@ -508,6 +612,7 @@ def main(argv=None):
     p.set_defaults(**json.loads(DEFAULT_CONFIG_PATH.read_text()))
     args = vars(p.parse_args(argv))
     selftest = args.pop("selftest")
+    seeds = args.pop("seeds")
     if selftest:
         from wsp.predictor.selftest import prepare_selftest
 
@@ -531,7 +636,58 @@ def main(argv=None):
     torch.set_num_threads(min(2, torch.get_num_threads()))
     logging.basicConfig(level=logging.INFO)
     try:
-        run_training(**args)
+        if seeds:
+            seed_values = [int(v) for v in seeds.split(",")]
+            if len(set(seed_values)) != len(seed_values):
+                raise ValueError("seeds must be unique")
+            root = Path(args["out"])
+            if root.exists() and any(root.iterdir()):
+                raise ValueError(f"output directory is not empty: {root}")
+            results = []
+            for value in seed_values:
+                results.append(
+                    run_training(**(args | {"seed": value, "out": root / f"seed-{value}"}))
+                )
+            summary = seed_summary(results, seed_values)
+            (root / "metrics.json").write_text(json.dumps(summary, indent=2))
+            lines = [
+                "# Full-seed summary",
+                "",
+                "Mean and min/max range across complete experiment seeds (not confidence intervals).",
+                "",
+                "| target | metric | mean | range |",
+                "|---|---|---:|---|",
+            ]
+            for name, metrics in summary["seed_summary"].items():
+                for metric, values in metrics.items():
+                    lines.append(
+                        f"| {name} | {metric} | {values['mean']:.6g} | {values['range']} |"
+                    )
+            (root / "results.md").write_text("\n".join(lines) + "\n")
+            first_manifest = json.loads(
+                (root / f"seed-{seed_values[0]}" / "manifest.json").read_text()
+            )
+            (root / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "seed": seed_values,
+                        "seeds": seed_values,
+                        "config_hash": hashlib.sha256(
+                            json.dumps(
+                                args | {"out": str(root), "seeds": seed_values},
+                                sort_keys=True,
+                                default=str,
+                            ).encode()
+                        ).hexdigest(),
+                        "git_sha": first_manifest["git_sha"],
+                        "model_revisions": first_manifest["model_revisions"],
+                        "runs": [f"seed-{v}/manifest.json" for v in seed_values],
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            run_training(**args)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
 

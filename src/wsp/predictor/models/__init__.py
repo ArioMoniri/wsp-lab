@@ -114,7 +114,8 @@ class TokenTransformer(nn.Module):
 
 
 class MambaTrajectory(nn.Module):
-    def __init__(self, ds, k, d, device):
+    def __init__(self, ds, k, d, device, stateless=False):
+        self.stateless = stateless
         super().__init__()
         # Backend selection must follow the requested device, not mere GPU availability.
         self.model = TrajectoryPredictor(
@@ -126,7 +127,12 @@ class MambaTrajectory(nn.Module):
         self.backend = self.model.backend
 
     def forward(self, b):
-        return self.model(torch.cat([b["pooled"], b["descriptor"]], -1), bounded=False)
+        x = torch.cat([b["pooled"], b["descriptor"]], -1)
+        if self.stateless:
+            return self.model(x.reshape(-1, 1, x.shape[-1]), bounded=False).reshape(
+                *x.shape[:2], -1
+            )
+        return self.model(x, bounded=False)
 
 
 class ResidualPred(nn.Module):
@@ -225,8 +231,8 @@ def build_model(name, ds, *, seed=0, d_model=256, device="cpu"):
         model = TokenTransformer(
             ds, k, d_model, trajectory=name == "m5", matched=name == "m1_matched"
         )
-    elif name == "m2":
-        model = MambaTrajectory(ds, k, d_model, device)
+    elif name in {"m2", "m2_matched"}:
+        model = MambaTrajectory(ds, k, d_model, device, stateless=name == "m2_matched")
     elif name in {"m3", "m6"}:
         model = JEPA(ds, k, d_model, tabular=name == "m6")
     else:

@@ -137,3 +137,32 @@ extrapolation instability of the neural heads; the pooled family-holdout ρ is n
 docs/reviews/P4/d3-summary-2026-11-04.md. Next (ranked by Board A): finish the 89 chain-predecessor evaluations
 (running), seed-1 repeat panel, nested model selection with fold-mean and delta-norm baselines and per-edit baseline
 predictions, feature audit with descriptor-only and device-only controls, ancestry-cluster bootstrap, multiple seeds.
+
+## P4 revised-protocol CPU smoke (run `p4-round2-m1-family-cpu-final`)
+
+This is a two-supervised-epoch M1 engineering check on the D3 fast targets,
+not a full rerun or hypothesis qualification. Family holdouts cover 260 labeled
+edits; the revised nested selection refits the complete permitted outer training
+fold. MMLU-Pro pooled MAE is 0.12732 (descriptive edit-bootstrap percentile 95% CI
+[0.11306, 0.14054]); pooled Spearman is -0.28639 ([-0.40260, -0.12550]). These
+marginal intervals resample edits conditional on fitted predictions. The paired
+M1-minus-StatNN MAE difference is +0.09854 (95% CI [0.08707, 0.11224]), resampling
+246 full-ancestry clusters with replacement and retaining paired predictions for
+all edits in each sampled cluster. This smoke used only 20 bootstrap draws and
+seed 0; the intervals are coarse and do not cover benchmark-item/repeat noise or
+shared-base uncertainty. Existing label/runtime qualification limitations remain.
+
+The per-outer-test-family MMLU-Pro model report is:
+
+| fold | family | n | MAE | Spearman |
+|---|---|---:|---:|---:|
+| 0 | abliteration | 98 | 0.06142 | 0.02119 |
+| 1 | random_dir | 60 | 0.09976 | -0.01739 |
+| 2 | lora_sft | 59 | 0.24204 | -0.15744 |
+| 3 | task_vector | 30 | 0.17134 | 0.34120 |
+| 4 | chain | 13 | 0.12910 | 0.75192 |
+
+Each fold parquet also retains StatNN, fold-mean, delta-norm, descriptor-only and
+device-only predictions; metrics.json contains their per-family metrics, paired
+differences, centered diagnostic correlations and training-range support checks.
+All artifacts are under `data/runs/p4/p4-round2-m1-family-cpu-final/`.

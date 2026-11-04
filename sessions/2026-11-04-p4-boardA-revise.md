@@ -164,3 +164,36 @@ Final CPU suite: 420 passed / 8 deselected (24.42 s); repository-wide ruff clean
   missing-delta-format inference warning only. No GPU training/evaluation needed.
 - Audit jobs each finished below two minutes. No tmux job, cloud spend, push or
   external board post; user requested a local committed review.
+
+## Round-two implementation (feat/p4-round2)
+
+Implemented all-inner-fold epoch selection and fresh outer-training refits;
+froze split plans/config before fitting, with per-inner-fold target variance and
+context IDs. Added shared-ancestry-cluster purging to family/seed splits. Added
+train-only robust scaling option and zero constant coordinates. Added five
+controls, persisted their predictions in every fold parquet, per-family metrics,
+pooled family-centered diagnostics, support checks, paired cluster differences,
+full-seed runner/mean/ranges, and M2 stateless pooled-input capacity control. M6
+logs both gate ranks, sample count and thresholds; constant-latent test fails gate.
+Incremental feature selection fails explicitly when separately extracted
+incremental features are absent; nonlinear summaries are never subtracted.
+
+Red-first regression runs: four missing audit contracts failed before changes;
+M2 pooled control failed before implementation; shared-root purge failed before
+implementation. Existing predictor/baseline tests: 44 passed during initial run
+(the four newly appended red tests also ran). Focused final: 38 passed. Initial
+full suite after first implementation: 489 passed, 1 skipped, 8 deselected in
+68.39 s while competing with real CPU training; final suite recorded below.
+
+Real CPU engineering run: `p4-round2-m1-family-cpu-final`, M1, family split,
+2 supervised epochs, seed 0, 20 bootstrap draws. Log:
+`/home/ubuntu/agent-logs/p4-round2-m1-final-20261104-235004.log`.
+Prior completed smoke `p4-round2-m1-family-cpu` predates the additional shared-root
+purge; use only the `-final` run for this implementation. Its log:
+`/home/ubuntu/agent-logs/p4-round2-m1-20261104-234830.log`.
+No GPU jobs launched; full reruns, extraction of missing incremental deltas,
+label qualification and benchmark noise panels remain with the orchestrator.
+
+Final CPU suite: **491 passed, 1 skipped, 8 deselected**, 55.15 s, after all
+training/split/audit changes. Ruff check and format checks passed. The final
+multi-seed summary Markdown addition was subsequently covered by its CLI test.

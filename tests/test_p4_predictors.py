@@ -518,3 +518,158 @@ def test_empty_ancestry_fold_is_logged_and_skipped(toy, monkeypatch, caplog, tmp
     assert any(
         r.levelno == logging.WARNING and "empty training fold" in r.message for r in caplog.records
     )
+
+
+def test_collapsed_latents_trip_gate():
+    from wsp.predictor.audit import collapse_check
+
+    check = collapse_check(torch.ones(12, 32), torch.randn(12, 32))
+    assert check["collapsed"] and not check["acceptance_gate"]
+    assert check["n_representations"] == 12
+
+
+def test_cluster_bootstrap_preserves_paired_clusters():
+    from wsp.predictor.audit import paired_cluster_difference
+
+    y = np.array([0.0, 1.0, 2.0, 3.0])
+    result = paired_cluster_difference(y, y, y + 1, ["a", "a", "b", "b"], 0, 30)
+    assert result["n_clusters"] == 2
+    assert result["mae"]["ci95"] == [-1.0, -1.0]
+
+
+def test_nested_refit_baselines_and_feature_audit(toy, tmp_path):
+    out = tmp_path / "nested"
+    r = run_training(
+        toy / "features", toy / "evals", "seed", out, epochs=2, n_splits=3, d_model=16, n_boot=10
+    )
+    for f in r["folds"]:
+        assert len(f["inner_selection"]) >= 2
+        assert set(f["train_ids"]) == set(f["refit_ids"])
+        assert not f["validation_ids"]
+        assert f["target_variance"]["train"]
+    frame = pd.read_parquet(out / "fold-0.parquet")
+    assert {"statnn", "fold_mean", "delta_norm", "descriptor_only", "device_only", "family"} <= set(
+        frame
+    )
+    assert r["per_family"] and r["family_centered"] and r["out_of_support"]
+    assert "ancestry clusters" in r["ci_method"]
+
+
+def test_device_never_enters_model_inputs(toy, tmp_path):
+    import shutil
+
+    evals = tmp_path / "evals"
+    shutil.copytree(toy / "evals", evals)
+    before = FeatureDataset(toy / "features", evals)
+    for file in evals.glob("*/eval.json"):
+        file.write_text(json.dumps(json.loads(file.read_text()) | {"eval_device_id": "different"}))
+    after = FeatureDataset(toy / "features", evals)
+    for i in range(len(before)):
+        for key, value in before[i]["entries"][-1].items():
+            torch.testing.assert_close(value, after[i]["entries"][-1][key])
+    assert "device" not in collate_trajectories([after[0]])
+    with pytest.raises(ValueError, match="incremental"):
+        FeatureDataset(toy / "features", evals, features_variant="incremental")
+
+
+def test_m2_matched_uses_identical_pooled_inputs_without_history(toy):
+    ds = FeatureDataset(toy / "features", toy / "evals")
+    seq = build_model("m2", ds, d_model=16)
+    net = build_model("m2_matched", ds, d_model=16).eval()
+    assert sum(p.numel() for p in net.parameters()) == sum(p.numel() for p in seq.parameters())
+    b = collate_trajectories([ds[i] for i in range(len(ds))])
+    p = net(b).detach()
+    changed = {k: v.clone() for k, v in b.items()}
+    changed["pooled"][:, 0] += 20
+    changed["descriptor"][:, 0] += 20
+    torch.testing.assert_close(net(changed)[:, 1:], p[:, 1:])
+
+
+def test_preprocessing_ignores_test_and_zeroes_constants():
+    from wsp.predictor.train import Normalizer
+
+    class Dataset:
+        def __init__(self):
+            self.rows = [{"id": "train"}, {"id": "test"}]
+
+        def chain(self, i):
+            return [i]
+
+        def entry(self, i):
+            x = torch.tensor([1.0, 2.0]) if i == "train" else torch.tensor([100.0, -10.0])
+            return {"tokens": x[None], "pooled": x, "stats": x}
+
+    for scaling in ("standard", "robust"):
+        norm = Normalizer(Dataset(), [0], scaling)
+        assert norm.ids == ["train"]
+        output = norm(Dataset().entry("test"), "cpu")
+        assert all((value == 0).all() for value in output.values())
+
+
+def test_seed_summary_reports_full_seed_range():
+    from wsp.predictor.audit import seed_summary
+
+    results = [
+        {
+            "targets": {"acc": {key: {"value": v} for key in ("mae", "rmse", "spearman")}},
+            "m6_collapse_gate": None,
+        }
+        for v in (1.0, 3.0, 5.0)
+    ]
+    summary = seed_summary(results, [0, 1, 2])
+    assert summary["seed_summary"]["acc"]["mae"] == {"mean": 3.0, "range": [1.0, 5.0], "n_seeds": 3}
+
+
+def test_family_purge_keeps_ancestry_clusters_disjoint():
+    from wsp.predictor.data import clean_training
+
+    rows = [
+        {"id": "root", "family": "random_dir", "seed": 0},
+        {"id": "child", "family": "chain", "seed": 1},
+    ]
+    metadata = {r["id"]: r for r in rows}
+    train, dropped = clean_training(
+        rows, [0], [1], metadata, {"root": None, "child": "root"}, "family"
+    )
+    assert len(train) == 0 and dropped == 1
+
+
+def test_seeds_cli_runs_complete_experiments_and_writes_summary(tmp_path, monkeypatch):
+    from wsp.predictor import train
+
+    calls = []
+
+    def run(**kwargs):
+        calls.append(kwargs)
+        kwargs["out"].mkdir(parents=True)
+        (kwargs["out"] / "manifest.json").write_text(
+            json.dumps({"git_sha": "test", "model_revisions": {}})
+        )
+        return {
+            "targets": {
+                "acc": {
+                    key: {"value": float(kwargs["seed"])} for key in ("mae", "rmse", "spearman")
+                }
+            },
+            "m6_collapse_gate": None,
+        }
+
+    monkeypatch.setattr(train, "run_training", run)
+    main(
+        [
+            "--model",
+            "m1",
+            "--features",
+            "unused",
+            "--evals",
+            "unused",
+            "--out",
+            str(tmp_path / "multi"),
+            "--seeds",
+            "0,1,2",
+        ]
+    )
+    assert [c["seed"] for c in calls] == [0, 1, 2]
+    assert len({str(c["out"]) for c in calls}) == 3
+    summary = json.loads((tmp_path / "multi/metrics.json").read_text())
+    assert summary["seed_summary"]["acc"]["mae"]["range"] == [0.0, 2.0]

@@ -659,3 +659,49 @@ CUDA M2 must report `mamba_ssm`; CPU reports `loop`. Run CUDA only after the
 `p1-zoo-full` agent-tmux job disappears. No synthetic run satisfies H1/H2/H3 gates.
 
 Named transfer evaluation uses `--holdout lora_sft`: all labeled LoRA rows form the sole test fold. Other rows are ancestry-purged before inner validation. `--holdout-variant chain-free` additionally excludes chain rows and their descendants from training. K-fold runs serve H1/H2 and do not evaluate H3. H2 metrics are stratified by explicit step semantics, with unflagged legacy chain rows reported as unknown. Runs freeze the zoo manifest bytes before splitting and record their SHA256 and line count.
+
+### P4 round-two frozen selection and audit protocol
+
+Before fitting, `config.json` and `split-plan.json` freeze the complete outer and
+inner row IDs, ancestry purges, selection rule and fitting/validation target
+variances. Family and seed splits also exclude shared full-ancestry clusters.
+Every surviving inner fold selects its best supervised epoch by validation MSE;
+the outer budget is the median of those epoch counts, rounded up. A fresh model
+(including fresh JEPA pretraining) then fits **all** permitted outer training rows
+for that fixed budget, with no outer validation or test-label selection. Each
+inner fit and outer refit fits its own preprocessing on its training contexts.
+The default signed-log standardization remains; `--scaling robust` uses median
+and IQR. Both zero coordinates constant in training and clamp scaled inputs.
+
+All controls fit the exact outer training rows: StatNN, fold training-mean,
+training-selected monotone isotonic regression on effective Frobenius delta norm,
+fixed-alpha ridge on family/parameter descriptors, and categorical device means
+(unseen devices use the fold mean). Device identity is read only for the control,
+never added to neural features. All control predictions, families and ancestry
+cluster IDs are retained in fold parquet files. Reports include each outer
+fold/family/target/predictor's finite-label n, MAE, RMSE and Spearman; pooled
+family-centered correlations are diagnostic only because centering uses test
+labels. The existing pooled target metrics remain available.
+
+Paired model-minus-control differences resample full manifest ancestry clusters
+with replacement, carrying all paired edit predictions in each sampled cluster.
+These percentile intervals condition on fitted models, observed labels and fixed
+benchmark items; they do not estimate repeat/item noise or shared-base uncertainty.
+Legacy marginal intervals explicitly remain edit-bootstrap descriptive intervals.
+`--seeds 0,1,2` runs complete experiments in separate seed directories and reports
+means and min/max ranges; a range is not a confidence interval. Outer group
+partitions stay fixed across these runs, isolating training-seed variability.
+
+`--features-variant cumulative` remains default. `incremental` selects separately
+extracted features under `features/incremental/` with their own manifest and fails
+if unavailable: differences of nonlinear pooled/SVD summaries are not incremental
+weight features. Source-side information is retained in both variants. Support
+diagnostics record the fraction of test coordinates outside each outer training
+range and the count of constant training coordinates. `--model m2_matched` applies
+the same M2 model independently at each edit (sequence length one), consuming
+identical pooled/descriptive inputs with exactly the same parameter count.
+M5 versus M1-matched remains the token-feature history comparison. M6 records both
+unmasked representation effective ranks, sample count, threshold and required
+rank ratio before applying the collapse gate; unit tests require constant latent
+representations to fail it. Full training reruns and acceptance decisions remain
+with the orchestrator.
