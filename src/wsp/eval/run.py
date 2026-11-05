@@ -279,6 +279,17 @@ def write_results(out, records, generation, manifest):
     out.mkdir(parents=True, exist_ok=True)
     (out / "records.jsonl").write_text("".join(json.dumps(asdict(r)) + "\n" for r in records))
     summary = aggregate(records)
+    if generation.get("tier") == "tf_v1":
+        from wsp.eval.tf_v1 import summarize
+
+        summary["tf_v1"] = summarize(records)
+        for key in (
+            "refusal_rate",
+            "over_refusal",
+            "refusal_keyword_rate",
+            "over_refusal_keyword_rate",
+        ):
+            summary.pop(key, None)
     kl = [r for r in records if r.benchmark == "kl_to_base"]
     if kl:
         summary["kl_first_token_mean"] = sum(r.extra["first_token_kl"] for r in kl) / len(kl)
@@ -316,6 +327,10 @@ def write_results(out, records, generation, manifest):
 
 
 def evaluate(runner, benchmarks, counts=None):
+    if runner.generation.get("tier") == "tf_v1":
+        from wsp.eval.tf_v1 import evaluate as evaluate_tf
+
+        return evaluate_tf(runner, benchmarks, counts)
     records, datasets = [], {}
     for name in benchmarks:
         if name in ("refusal_rate", "over_refusal", "kl_to_base"):
@@ -394,7 +409,12 @@ def evaluate(runner, benchmarks, counts=None):
 def perplexity(runner, cfg):
     from datasets import load_dataset
 
-    ds = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="test")
+    ds = load_dataset(
+        "Salesforce/wikitext",
+        "wikitext-2-raw-v1",
+        split="test",
+        **({"revision": cfg["revision"]} if "revision" in cfg else {}),
+    )
     ids = runner.tokenizer.encode("\n\n".join(ds["text"]), add_special_tokens=False)
     window, n = cfg.get("window", 1024), cfg.get("n_windows", 64)
     records = []
@@ -411,7 +431,20 @@ def perplexity(runner, cfg):
                 str(i),
                 float(torch.exp(torch.tensor(loss))),
                 window - 1,
-                extra={"metric": "perplexity", "mean_nll": loss},
+                extra={
+                    "metric": "perplexity",
+                    "mean_nll": loss,
+                    **(
+                        {
+                            "dataset_fingerprint": ds._fingerprint,
+                            "token_ids_hash": hashlib.sha256(
+                                json.dumps(seq[0].tolist()).encode()
+                            ).hexdigest(),
+                        }
+                        if "revision" in cfg
+                        else {}
+                    ),
+                },
             )
         )
     return records

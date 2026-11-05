@@ -178,3 +178,64 @@ a hardware bias; at the fast tier the sampled benchmarks cannot rank small edits
 while the likelihood/teacher-forced metrics are exactly repeatable. Qualification per Board A's rule: mmlu_pro,
 hellaswag, KL and ppl pass the repeat criterion trivially (zero difference) but still need the between-entry
 variance check; gsm8k, math500, ifeval and over-refusal fail it at this tier and need more items or more samples.
+
+## TF-v1 timing pilot
+
+Measured run `20261105-131348-277686c3` on H0: base + the ten fixed IDs in `data/runs/d3_shards/controls.txt`; primary records (`repeat_id=null`), batch 1, no sampling. Native runtime/source/item metadata and same-device base matching are in each eval.json. Source may be dirty; source hashes identify the measured code.
+
+| Entry | Wall min | Load s (shared once) | Peak allocated/reserved GiB | TF acc (1000) | Fast acc (100) | Gold log-prob | Records MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| base | 11.499 | 6.57 | 3.913/5.791 | 0.201 | 0.280 | -2.442048 | 2.248 |
+| b6fe7f59016cdda2 | 4.666 | 6.57 | 3.913/5.859 | 0.209 | 0.280 | -2.451112 | 2.279 |
+| 3ddc3b4bf47ed994 | 4.544 | 6.57 | 3.913/5.807 | 0.192 | 0.260 | -2.467125 | 2.279 |
+| 0a841d4082532e8b | 4.122 | 6.57 | 3.913/5.809 | 0.175 | 0.230 | -2.569524 | 2.280 |
+| 3db97b535c996265 | 3.915 | 6.57 | 3.913/5.779 | 0.205 | 0.290 | -2.441007 | 2.280 |
+| 7b8247d8d7ab7db9 | 4.525 | 6.57 | 3.913/5.779 | 0.206 | 0.280 | -2.438299 | 2.280 |
+| 439dbfa62a14d55f | 4.403 | 6.57 | 3.913/5.793 | 0.207 | 0.280 | -2.460094 | 2.279 |
+| af6d608f8651fb46 | 11.907 | 6.57 | 3.913/5.809 | 0.221 | 0.260 | -2.440941 | 2.280 |
+| dd90d99e2ddc0e77 | 3.892 | 6.57 | 3.913/5.793 | 0.205 | 0.290 | -2.439536 | 2.280 |
+| db5c3a7bfc19178c | 4.652 | 6.57 | 3.913/5.809 | 0.203 | 0.290 | -2.449961 | 2.280 |
+| 1caef8eb4c640c3c | 4.571 | 6.57 | 3.913/5.793 | 0.209 | 0.300 | -2.449637 | 2.280 |
+
+Median warm entry storage (records + eval/summary/manifest): 2.322 MiB; shared base logits cache: 10.452 GiB (not duplicated per entry). The pilot also left an orphan byte-identical duplicate cache of 10.452 GiB (see caveat).
+
+Warm median wall time over 9 edits that reused a cache: **4.525 min/entry** (all ten edits: 4.534); entry `af6d608f8651fb46` hit a cache-key defect (git sha/dirty flag in the key; a WIP commit during the run changed them) that rebuilt a byte-identical base cache (KL stage ~10 min) and is excluded from the warm median; the following three edits reused that duplicate. Pilot code `source_hash` 07ebf7b04e8b; the key is fixed afterwards in a later commit.  Model load: **6.57 s** once per batch invocation (not charged eleven times). Base includes cold greedy-continuation cache construction. The council warm timing pass criterion is ≤2.0 minutes; >3.0 minutes calls for revision and re-pilot. This fixed-count pilot does not silently reduce the requested item counts. Per-stage times are in `data/evals/qwen3.5-0.8b/tf_v1/pilot_report.json`; wall includes weight restore/application but excludes shared model load and result serialization.
+
+Legacy bridge (11 paired records): median |accuracy(1000 new) − accuracy(100 legacy)| = **0.0740** (7.40 percentage points). Legacy run `20261104-202947-1dcb69a2`. This compares different item sets; it is not a same-item numerical-parity or qualification test.
+
+Gold log-prob versus TF accuracy across all 11 entries: Pearson r=0.8497, Spearman rho=0.4018; excluding base (10 edits): r=0.8694, rho=0.4329. Descriptive point estimates only: related controls are not independent components; no confirmatory CI or readability claim.
+
+TF-v1 stores normalized MMLU letter vectors, per-character HellaSwag scores, paired item IDs, KL continuation IDs/cache hashes, window NLL/token counts, and refusal/compliance token sets and margins. The lexical first-token sets are frozen in the config, exploratory and not calibrated on a separate prompt panel. Refusal uses the requested 50+50 prompts, rather than the council proposal’s 200+200. This control panel contains 3 random-direction, 3 abliteration, 2 LoRA and 2 task-vector edits, with no chains; it replaces the council proposal’s stratified panel at the user’s explicit request. No gold-solution NLL, independent repeat, cross-device execution, fresh component qualification or same-item legacy bridge was requested or performed. Endpoints remain unqualified under Board A’s prospective rule.
+
+TF-v1 pilot reading (measured; run `20261105-131348-277686c3`, H0, RTX PRO 4500, batch 1, host shared with other agent jobs): median warm stage times are MMLU-Pro ~33 s, HellaSwag ~71 s, KL ~120–167 s (200 cached 128-token continuations: 63 MB bf16 logit tensors loaded per prompt plus full-vocabulary KL), WikiText ~4 s, refusal margins ~2 s each. **The council timing gate fails:** warm median 4.5 min/entry is above both the 2.0 min pass line and the 3.0 min revision line, so the §4.6 rule (reduce items, then re-pilot) applies; no items were reduced here. KL is the largest stage and the obvious target (cache logits as top-k or per-token KL on device); this has not been tried. Cold base construction took 11.5 min (576 s KL cache). Base cache on disk is 10.45 GiB for 200 prompts, one-off per device/source hash; a byte-identical 10.45 GiB duplicate (key `bd82d791…`) remains from the cache-key defect and may be deleted. Entries ran on the pre-fix source (`source_hash` in each eval.json); the other §4.6 items (G1 repeats, G3 second device H1, same-item G2 bridge) were not run.
+
+## TF-v1 timing pilot (round 2)
+
+Run `20261105-144427-fb58ffe6` on H0 (RTX PRO 4500, batch 1, greedy, no sampling), committed source `02c2847` (`source_hash` 12ee875a68c9, tree clean). Base + the ten D3 control IDs in `data/runs/d3_shards/controls.txt`, one process; native metadata and same-run base matching in each eval.json. **Panel status: development/pilot** (items scored here are barred from the sealed panel). Config: MMLU-Pro 1,000, HellaSwag 250 (nested prefix of the 500-item ranking), KL 200 prompts x 64 greedy tokens (exact full vocabulary), WikiText 64, refusal 50 + 50 continuation-phrase margins. Round 1 (`20261105-131348-277686c3`, gate 1 failed at 4.525 min) is archived under `data/evals/qwen3.5-0.8b/tf_v1_round1_archive/`.
+
+| Entry | Wall min | MMLU s | HellaSwag s | KL s | WikiText s | Refusal s | Over-refusal s | Peak alloc/reserved GiB | Storage MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| base | 6.308 | 41.6 | 37.0 | 269.4 | 5.0 | 12.5 | 12.9 | 9.22/9.78 | 2.13 |
+| b6fe7f59016cdda2 | 1.809 | 35.0 | 36.8 | 7.7 | 4.3 | 11.9 | 12.2 | 9.22/10.13 | 2.36 |
+| 3ddc3b4bf47ed994 | 1.793 | 34.5 | 36.5 | 7.6 | 4.4 | 11.9 | 12.1 | 9.22/10.15 | 2.36 |
+| 0a841d4082532e8b | 1.833 | 34.6 | 36.6 | 7.7 | 4.3 | 12.1 | 12.3 | 9.22/10.24 | 2.38 |
+| 3db97b535c996265 | 1.798 | 34.9 | 36.5 | 7.7 | 4.3 | 12.1 | 12.3 | 9.22/10.12 | 2.36 |
+| 7b8247d8d7ab7db9 | 1.809 | 34.6 | 36.9 | 8.0 | 4.6 | 12.1 | 12.2 | 9.22/10.12 | 2.36 |
+| 439dbfa62a14d55f | 1.801 | 34.9 | 37.0 | 7.7 | 4.3 | 11.8 | 12.0 | 9.22/10.16 | 2.36 |
+| af6d608f8651fb46 | 1.831 | 34.4 | 36.7 | 7.6 | 4.3 | 12.1 | 12.3 | 9.22/10.24 | 2.37 |
+| dd90d99e2ddc0e77 | 1.814 | 35.0 | 37.1 | 7.7 | 4.3 | 12.1 | 12.3 | 9.22/10.16 | 2.37 |
+| db5c3a7bfc19178c | 1.781 | 34.5 | 36.4 | 7.5 | 4.3 | 11.8 | 12.1 | 9.22/10.17 | 2.36 |
+| 1caef8eb4c640c3c | 1.784 | 34.4 | 36.4 | 7.7 | 4.3 | 11.8 | 12.1 | 9.22/10.16 | 2.36 |
+
+**Warm median wall time over 10 edits (cache resident, loaded and verified once in the process): 1.805 min/entry** (range 1.781 to 1.833). Warm stage medians (s): MMLU 34.6, HellaSwag 36.7, KL 7.7, WikiText 4.3, refusal 12.0, over-refusal 12.2. **Gate 1 (2.0 min pass line, 3.0 min revision line): PASS.**
+
+Cold cost: base entry 6.31 min wall including cold greedy-continuation cache construction (261 s, mode `build`); model load 7.6 s once per process.
+New-process cache cost (separate process, entry `b6fe7f59016cdda2`, label `load-probe`): cache load plus content verification **47.1 s**, entry wall 2.60 min. Repeat vs primary: max |ΔKL| = 0.00e+00, max |Δgold log-prob| = 0.00e+00, records identical: True.
+
+Storage: median 2.36 MiB per entry (records 2.32 MiB, including per-position KL); shared base-logit cache 5.38 GiB on disk (manifest bytes 5.38 GiB, 3 prefix lengths recorded), content root `2ed18bda284b3a89…` recorded in every KL record, datasets and eval.json. Peak GPU allocated 9.22 GiB with the resident cache.
+
+Mean per-prompt KL(base‖edited) by continuation prefix length across the ten edits (descriptive; for choosing the token cap): 16 tokens: median entry value 0.00144, 32 tokens: median entry value 0.00153, 64 tokens: median entry value 0.00160.
+
+Not run: G1 bitwise repeat on two entries, same-item G2 bridge, G3 second device, the §6 ten-entry composition (these are the ten D3 controls: 3 random-direction, 3 abliteration, 2 LoRA, 2 task-vector), and the reliability procedure. Endpoints remain unqualified.
+
+Reading and caveats (round 2). Gate 1 passes on the 2.0 min line (warm median 1.805 min) but not with the margin Board A asked for (target ≤1.8 min): at 1.805 min, 552 runs cost about 16.6 h of the 19.0 h scoring cap, leaving about 2.4 h for cold bases, retries and qualification repeats, so the full programme must still be repriced before scaling. The warm time is dominated by MMLU-Pro (35 s), HellaSwag (37 s) and the two refusal stages (12 s each; 13 continuation phrases, 7 forwards per prompt); KL is now 7.7 s because the cache is resident. The cache costs 47 s to load and verify in each new process (not per entry) and about 4.4 min to build cold. Refusal margins are phrase-scored but still uncalibrated and descriptive. The repeat of one entry in a separate process reproduced all records exactly; this is one observation, not the two-entry G1 test. Round-1 caches `5a5159df…` and `bd82d791…` (content-identical) were deleted after this cache was built and verified; the alias is recorded in `tf_v1_round1_archive/cache_alias.json`.

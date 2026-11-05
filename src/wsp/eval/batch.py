@@ -296,6 +296,8 @@ def run_batch(
         and config.resolve() == (REPO / "configs/eval_fast.yaml").resolve()
     )
     out = REPO / "data/evals" / zoo.name if production else REPO / "data/runs/p2-batch" / run_id
+    if generation.get("tier") == "tf_v1":
+        out = REPO / "data/evals" / zoo.name / "tf_v1"
     if subset:
         spec = yaml.safe_load((REPO / "configs/eval_subset_d3.yaml").read_text())
         chosen = subset_ids(rows, spec)
@@ -327,7 +329,13 @@ def run_batch(
             force=force,
         )
     )
+    load_started = time.monotonic()
     runner = HFRunner(header["base_model"], generation.copy(), revision=revision)
+    load_seconds = time.monotonic() - load_started
+    if generation.get("tier") == "tf_v1":
+        runner.tf_config = cfg
+        runner.tf_cache_root = REPO / "data/evals" / zoo.name / "base/tf_cache"
+        runner.tf_stop_dir = out / "stops"
     expected = runtime_metadata(runner) | {
         "config_hash": config_hash,
         "model_revision": revision,
@@ -356,6 +364,9 @@ def run_batch(
         for _, dest in jobs:
             dest.mkdir(parents=True, exist_ok=False)
     for row, dest in jobs:
+        entry_started = time.monotonic()
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
         restore.restore()
         runner.edit_id = row["id"] if row else "base"
         runner.rounding_stats = {}
@@ -409,6 +420,21 @@ def run_batch(
             "limit": limit,
             "config": str(config),
             "minutes": (time.monotonic() - started) / 60,
+            "wall_seconds": time.monotonic() - entry_started,
+            "model_load_seconds": load_seconds,
+            "stage_seconds": getattr(runner, "tf_stage_seconds", {}),
+            **(
+                {
+                    "tier": "tf_v1",
+                    "panel": cfg["tf_v1"]["panel"],
+                    "tf_cache": getattr(runner, "tf_cache_info", None),
+                }
+                if generation.get("tier") == "tf_v1"
+                else {}
+            ),
+            "peak_gpu_allocated_bytes": torch.cuda.max_memory_allocated(),
+            "peak_gpu_reserved_bytes": torch.cuda.max_memory_reserved(),
+            "metadata_provenance": "native-measured",
             "eval_status": "complete" if result is not None else "oom",
         }
         dest.mkdir(parents=True, exist_ok=True)

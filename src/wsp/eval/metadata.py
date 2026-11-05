@@ -11,7 +11,10 @@ import transformers
 
 def runtime_metadata(runner):
     path = Path.home() / ".config/wsp/device_id"
-    device_id = path.read_text().strip() if path.exists() else "H0"
+    if not path.exists():
+        # No default: a second machine must never be mistaken for H0 (G3 device identity).
+        raise FileNotFoundError(f"{path} is required: it holds this machine's opaque H<number>")
+    device_id = path.read_text().strip()
     if not re.fullmatch(r"H\d+", device_id):
         raise ValueError("device_id must be an opaque H<number> identifier")
     model = runner.model

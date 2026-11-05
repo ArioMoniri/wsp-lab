@@ -2,6 +2,20 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _device_id_home(tmp_path_factory, monkeypatch):
+    """runtime_metadata requires ~/.config/wsp/device_id; give every test an isolated HOME with H0."""
+    home = tmp_path_factory.mktemp("home")
+    (home / ".config" / "wsp").mkdir(parents=True)
+    (home / ".config" / "wsp" / "device_id").write_text("H0\n")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    yield
+
+
 spec = importlib.util.spec_from_file_location("backfill", Path("scripts/backfill_eval_metadata.py"))
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
@@ -180,7 +194,6 @@ def test_historical_identities_are_source_bound_and_inferred(tmp_path):
     assert result["item_id_hash"]
     assert "item_id_hash" in result["metadata_backfill_inferred"]
     evidence["old"]["source_hash"] = "other"
-    import pytest
 
     with pytest.raises(ValueError, match="source"):
         m.backfill(
