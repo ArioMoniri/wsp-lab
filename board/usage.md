@@ -233,3 +233,4 @@
 | 2026-11-05 | Docs accuracy check: README after reframe | claude_aio_gmail_api/claude-haiku-5-5 medium | done aab3490 (114 claims, 18 fixed) — merged |
 | 2026-11-05 | eval: TF-v1 round 2 | claude_aio_gmail_api/claude-sonnet-5-5 high | done 9013d76 (pilot 1.805 min/entry warm; agent ended before its report step, orchestrator committed it) — Board A re-review pending |
 | 2026-11-05 | Board A re-review feat/tf-v1 | claude_aio_gmail_api/claude-sonnet-5-5 high | ACCEPT (tests-only fix by orchestrator 17fbffa); gate 1 PASS 1.805 min; G1+G2 required, G3 → single-device scope cff7284 — merged |
+| 2026-11-05 | Pre-panel: G1, G2, single-device scope, PREREG amendment, sealed panel manifest, qualification + power | claude_aio_gmail_api/claude-sonnet-5-5 high | running |

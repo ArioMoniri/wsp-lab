@@ -157,3 +157,12 @@ HYPOTHESIS/ROADMAP amended. User defaults adopted: TF-v1 programme yes; 30 local
 Lambda. Paper: protocol-v2 results, "What the baseline exploits", "Reframing", new scoped title; Board B APPROVE after
 three rounds with a scripted audit of 723 numbers (15 pages). Codex usage limit reached 13:35 UTC (until 6 Nov 21:10);
 TF-v1 tier build rerouted to the Claude API (Sonnet). ARA corrected rebuild at 6/12 on the A10.
+
+**TF-v1 tier accepted; gate 1 passed (5 Nov, 14:30–15:45 UTC).** Teacher-forced tier built (Codex handoff to Claude
+Sonnet after the Codex usage limit), two Board A rounds (letter-scoring stop, phrase-set refusal margins, hash-ranked
+nested panels, required device id, content-verified resident cache; KL 200 × 64, HellaSwag 250 nested, MMLU-Pro
+1,000, WikiText 64, refusal 50 + 50). Round-2 pilot on the committed source: warm median 1.805 min/entry (gate line
+2.0), cache 5.38 GiB, 2.36 MiB/entry; Board A ACCEPT, merged e4103ec (542 tests; CI green after fonts-liberation +
+pytest pythonpath fixes). Before the fresh non-null panel: G1 bitwise repeat, G2 same-item bridge, single-device
+scope, PREREG amendment, sealed-panel manifest, §6 qualification + §5 power (running). README rewritten for the
+reframed study and accuracy-checked (114 claims, 18 fixes). ARA corrected rebuild 7/12 on the A10.
