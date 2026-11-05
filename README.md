@@ -7,34 +7,94 @@
 
 If you change the weights of a language model, can you tell from the weight change alone how its benchmark scores moved, without running the edited model?
 
-The question comes from a blog post by Takehi et al. on weight-space programming (<https://rikiyat.github.io/blog/weight-space-programming/>), in which a frontier model read Qwen3.5-0.8B's weights and edited 0.016% of them, which raised MATH-500 from 7.9% to 48.1%. We are not trying to repeat that. We want to know whether a small model trained on many (weight delta, score change) pairs can do the forecasting step by itself, and whether it does better when it sees the whole sequence of edits instead of one edit at a time. The hypotheses, with the thresholds we committed to before running anything, are in [docs/HYPOTHESIS.md](docs/HYPOTHESIS.md).
+A blog post by Takehi et al. on [weight-space programming](https://rikiyat.github.io/blog/weight-space-programming/) prompted the question. In it, a frontier model read Qwen3.5-0.8B's weights, edited 0.016% of them without gradients, and raised MATH-500 from 7.9% to 48.1%. The post motivates the question. It does not show that effects can be predicted across edits or models, and that is the step we set out to test.
 
-## What exists today
+Can a small model trained on many (weight delta, score change) pairs make the forecast by itself? Does it do better when it sees the whole sequence of edits instead of one edit at a time? The hypotheses H1 to H6, with their thresholds and dated amendments, are in [docs/HYPOTHESIS.md](docs/HYPOTHESIS.md).
 
-The zoo builder, the evaluation battery and the feature extractor are written, tested and reviewed. The zoo is still growing, and apart from the base model and a two-entry pipeline smoke test none of it has been scored. No predictor has been trained yet.
+## What we built
 
-The zoo is a set of edits to Qwen3.5-0.8B, each stored as a weight delta plus a JSON descriptor with seed, config hash, git SHA and the pinned base revision. There are just over a thousand entries; the table in the status section below gives the current count per family. Entries come from six families:
+The zoo is a set of edits to Qwen3.5-0.8B. Each entry is a weight delta with a JSON descriptor that records the seed, config hash, git SHA and pinned base revision. The manifest lists 1,247 entries, and the status block at the end gives the count for each family. The six families are:
 
 | family | what the edit is |
 |---|---|
 | `random_dir` | ablation of a random direction; the control |
-| `abliteration` | refusal-direction removal using Heretic's kernel, with its parameters sampled rather than optimised |
+| `abliteration` | refusal-direction removal with Heretic's kernel; parameters sampled, not optimised |
 | `heretic_ara` | Heretic ARA runs |
-| `lora_sft` | short LoRA fine-tunes on GSM8K training data or on the first 5,000 Alpaca-cleaned examples |
+| `lora_sft` | short LoRA fine-tunes on GSM8K training data or the first 5,000 Alpaca-cleaned examples |
 | `task_vector` | scaled and merged task vectors |
 | `chain` | two to eight edits applied in sequence, each drawn from the families above |
 
-Heretic ARA is the slow one, at roughly eight minutes per trial on the shared 32 GB GPU, so it was moved to a rented Lambda GPU under a $150 cap. A first job was launched on 4 November; until it finishes and syncs, the zoo holds a single test entry from that family. Merging a LoRA delta into bf16 weights rounds away most of a small adapter: about 87% of the non-zero entries for a 5-step adapter in the check we ran. So we store the effective delta, `bf16(W + Δ) − W`, and evaluate that; [docs/DECISIONS.md](docs/DECISIONS.md) has the reasoning (D1).
+Heretic ARA is the slowest family, at about eight minutes per trial on the shared GPU. Its runs moved to a rented Lambda GPU under a $150 cap ([docs/PROGRESS.md](docs/PROGRESS.md)). Board A asked for the 12 flagged ARA entries to be accounted for before use, so the zoo has no production ARA entry yet.
 
-The evaluation battery has three tiers because the base model gets stuck in repetition loops in most of its generations, which makes long generations expensive whatever the score. The fast tier screens zoo entries at 1,024 new tokens on small fixed subsets of GSM8K, MATH-500, IFEval, MMLU-Pro and HellaSwag, plus refusal rate and KL to the base model. The cheap tier runs the full subsets at 4,096 tokens. The faithful tier uses the blog's 32,768 tokens and is meant only for the base model and a handful of entries. Subset item lists are fixed under `configs/eval_subsets/`, and every per-item record is kept.
+Merging a LoRA delta into bf16 weights rounds most of it away. About 87% of the non-zero delta entries disappear for a 5-step adapter ([docs/DECISIONS.md](docs/DECISIONS.md), D1). The zoo therefore stores the effective delta, `bf16(W + Δ) − W`, and evaluates that.
 
-The base model has been measured once at the cheap tier, run `p2/base-final-4096`: GSM8K 15.5%, MATH-500 6.0%, IFEval 42.0%, and 90.2% of generations on the three generative benchmarks reaching the token limit. GSM8K and MATH-500 land near the blog's numbers at an eighth of its token budget, and the loop rate agrees with its main failure mode. The IFEval figure is about twice what the blog reports and we do not trust it until the 32k pass is rerun; that pass died with a CUDA out-of-memory error while the zoo build was using the GPU. Details and the full table are in [docs/RESULTS.md](docs/RESULTS.md).
+The evaluation battery has three tiers, because the base model falls into repetition loops in most generations. Long generations cost a lot whatever the score. The fast tier generates 1,024 new tokens on small fixed subsets of GSM8K, MATH-500, IFEval, MMLU-Pro and HellaSwag, and adds refusal rate and KL to the base model. The cheap tier runs 100 to 300 items per benchmark at 4,096 tokens. The faithful tier uses the blog's 32,768 tokens and is kept for the base model and a few entries. Item lists are fixed under `configs/eval_subsets/`, and every per-item record is kept.
 
-Feature extraction turns each delta into per-tensor statistics and canonical SVD tokens in the style of W2T, then pools them to fixed-width vectors by tensor type, with extra care for Qwen3.5's hybrid linear-attention layers. Trajectory splits group entries by the root of their ancestry, so a chain and its parents never fall on opposite sides of a split. Extraction reads every valid manifest id, including `smoke` and `unlabelled` entries, and skips entries whose artefacts are not built yet, entries already extracted under the same configuration, and entries whose metadata fails validation (those are recorded as failed); filtering by eligibility is left to whoever trains on the features. Three baselines are written and tested on a toy zoo: ridge regression on the delta norm, LightGBM on the statistics, and an MLP on the spectrum. None has seen real scores, because no production entry has a fast- or cheap-tier `eval.json` yet. The only per-entry results so far are an engineering smoke run (`20261104-032002-1c2cc588`: the base model and two production edits, 4 items per benchmark, 32 new tokens), kept under `data/runs/p2-batch/legacy-smoke`. It tested the batch pipeline and its timing. It measured pipeline timing on four items per benchmark, far too few to say anything about the edits' effect on scores.
+Feature extraction turns each delta into per-tensor statistics and canonical SVD tokens in the style of W2T. It pools them by tensor type, with separate handling for Qwen3.5's hybrid linear-attention layers. Trajectory splits group entries by ancestry root, so a chain and its parents never land on opposite sides of a split. The feature table covers 1,235 entries and is marked finished in the status block.
 
-The sequence model will be a Mamba-2 stack. On this machine (CUDA 13.2, compute capability 12.0) neither `mamba-ssm` nor `causal-conv1d` built out of the box; `scripts/build_mamba.sh` patches both to C++20 and takes about eleven minutes. A forward and backward pass at batch 32, length 64, width 256 took 2.65 ms median with the CUDA kernels against 18.67 ms for a plain PyTorch loop, measured while another job held the GPU ([docs/BENCH_SSM.md](docs/BENCH_SSM.md)).
+The predictor code in `src/wsp/predictor/` holds the splits, the baselines and the scan kernels. The protocol v2 suite runs on the 300-entry D3 subset. It compares the learned predictors, including M1 and M2 with matched variants, against StatNN and against two controls: a descriptor-only model that sees edit metadata but no weight statistics, and a delta-norm baseline. Each configuration was run with three seeds ([Board A review](docs/reviews/P4/board-a-synthesis-and-v2-2026-11-05.md)).
 
-The review protocol asks for two reviews before a branch merges. Board A looks for ML errors such as leakage, unseeded randomness, silent fallbacks and missing provenance; Board B reads the way a journal reviewer would. Many branches were sent back for fixes, and PROGRESS records the ones from the first night. [docs/PROGRESS.md](docs/PROGRESS.md) is the dated log of what was tried and what the boards rejected, and [docs/REVIEW_PROTOCOL.md](docs/REVIEW_PROTOCOL.md) describes the process.
+The editor harness in `src/wsp/editor/` is the offline part of H5. H5 asks whether an LLM editor can reach a given final quality with fewer real evaluations. Board A approved the harness to merge with production disabled ([review](docs/reviews/H5/board-a-editor-final-2026-11-04.md)). The council has since parked paid and editor episodes, so the harness runs offline only. The reader agent in `src/wsp/agents/` belongs to H4, which is parked too.
+
+## What we found
+
+### H1 was not demonstrated
+
+The original H1 criterion was not demonstrated. H1 required a per-benchmark Spearman of at least 0.6 and a win over both StatNN and the norm-of-delta baseline. No learned row reaches 0.6 on either target. Across the 25 complete rows, the highest three-seed mean on HellaSwag is 0.46, from M1-matched on the trajectory split. The highest on MMLU-Pro is 0.45, shared by M1-matched on the trajectory split and M2-matched on the seed split ([discussion](paper/sections/discussion.tex)).
+
+H1 also has a falsification rule: Spearman below 0.3 on all benchmarks after honest tuning. Several rows exceed 0.3, so that rule was not triggered. H1 was therefore not demonstrated, and it was not falsified either.
+
+Seed-0 StatNN is the comparator the learned rows have to beat. On the trajectory split, a matched M1 predictor reached mean Spearman 0.45 and 0.46 on the two targets. Seed-0 StatNN reached 0.57 and 0.65. A descriptor-only model with no weight statistics reached 0.52 and 0.61 on the same seed and split. The gap between StatNN and the descriptor-only model is 0.042 on MMLU-Pro and 0.035 on HellaSwag ([SYNTHESIS §1](docs/council/2026-11-05/SYNTHESIS.md)). In these comparisons, edit metadata ranks edits nearly as well as StatNN, so much of the rank StatNN recovers is also available from metadata ([abstract](paper/sections/abstract.tex)).
+
+On the family split the picture is worse. StatNN is near zero there, at -0.02 on MMLU-Pro and 0.11 on HellaSwag. The three-seed mean of every learned row is below seed-0 StatNN on both targets on the seed and trajectory splits.
+
+### The residual signal is exploratory
+
+With family, device and log-norm terms removed using training folds only, StatNN's relative reduction in residual absolute error against an isotonic-norm comparator is θ = 0.146 [0.069, 0.214] for MMLU-Pro. For HellaSwag it is θ = −0.034 [−0.118, 0.037]. The estimate covers 345 rows and 278 clusters. A negative θ means StatNN does worse than the comparator. The MMLU-Pro interval excludes zero and the HellaSwag interval includes it ([discussion](paper/sections/discussion.tex)).
+
+The estimate is exploratory. The MMLU-Pro result uses accuracy data already used for P4, and it does not confirm H1 under a new protocol.
+
+### Many edits barely move the scores
+
+Only 94 of the 300 D3 entries (31.3%, derived) move KL to the base model by more than 0.01. The count by family is 56 of 60 for LoRA, 30 of 50 for chains, 6 of 30 for task vectors, 2 of 100 for abliteration and 0 of 60 for random directions ([SYNTHESIS §1.4](docs/council/2026-11-05/SYNTHESIS.md)). The random-direction family is the control, and none of its 60 entries passes that threshold.
+
+Random-direction edits leave HellaSwag unchanged in every row, and their MMLU-Pro SD is 0.007. Abliteration's SDs are 0.013 and 0.005. Each target moves in steps of one item out of 100, so many edits differ by one item or not at all ([discussion](paper/sections/discussion.tex)).
+
+### Sampled scores are noisy at this size
+
+Each target is a 100-item accuracy with a binomial standard error of 0.045 for MMLU-Pro and 0.049 for HellaSwag at the base values. That is the error of one score. The item standard error of a paired change is a different quantity. For HellaSwag, the residual SD within family and device is 0.0131, below its item SE of 0.0136. For MMLU-Pro, the residual SD is 0.0384, above its item SE of 0.0246, so item sampling does not account for the MMLU-Pro spread ([discussion](paper/sections/discussion.tex) and [metrology output](docs/council/2026-11-05/metrology_budget_output.txt)).
+
+The repeat data do not amount to a noise estimate. The base model and ten control entries matched exactly on every metric when re-evaluated on the same device with a fixed seed. Across hosts, the mean absolute difference on 11 edited entries evaluated on the H100 was 0.008 on MMLU-Pro and 0.003 on HellaSwag. The seed-1 panel gives a seed SD of 0.0000 for the two likelihood-scored targets and between 0.0124 and 0.0504 for the five sampled targets. These repeats bound host disagreement on a few entries. They do not measure the reliability of either target across the suite.
+
+HellaSwag accuracy was retired at the second-round reliability gate, where its signal-variance estimate is negative ([round2-metrology](docs/council/2026-11-05/round2-metrology.md), section 1.4). A heuristic population correlation ceiling for MMLU gold-letter log-probability is 0.979 after family and device centering ([SYNTHESIS §1.5](docs/council/2026-11-05/SYNTHESIS.md)). That ceiling is a heuristic, not a measured reliability.
+
+### The base model
+
+The base model's 4,096-token run, `p2/base-final-4096`, scored GSM8K 15.5%, MATH-500 6.0%, IFEval 42.0%, MMLU-Pro 20.3% and HellaSwag 51.3%. It refused 99 of 100 harmful prompts. 90.2% of generations on the three generative benchmarks reached the token limit ([RESULTS](docs/RESULTS.md), P2 section; status block below).
+
+GSM8K and MATH-500 land near the blog's 13.8% and 7.9% at one eighth of its token budget. The IFEval figure is about twice the blog's 21.0%, and we do not trust it until the 32k pass is rerun. That pass crashed with a CUDA out-of-memory error while another job held the GPU.
+
+The Mamba-2 CUDA kernels ran a forward and backward pass in 2.65 ms median, against 18.67 ms for a plain PyTorch loop. The timing was taken while another job held the GPU ([BENCH_SSM](docs/BENCH_SSM.md)). The kernels need `scripts/build_mamba.sh` to build on this machine.
+
+## What comes next
+
+The council's verdict is that "the original dedicated weight-space world-model goal is unsupported at this scale; fund a bounded test of within-family teacher-forced effect readability, with a measurement/benchmark paper as the default deliverable. A tree winning is a valid outcome" ([SYNTHESIS](docs/council/2026-11-05/SYNTHESIS.md)).
+
+The bounded test is TF-v1, a readability study on normalized MMLU gold-letter log-probability. It is the endpoint of the pre-registered H1a. Each edit is scored on 1,000 paired items against its actual predecessor. The primary estimand is the same θ as above, now on sealed, fresh, source-closed ancestry components. A pass needs θ ≥ 0.15, a lower 95% bound above zero, a half-width no greater than θ/2, at least 100 valid fresh components and at least 80% power at θ = 0.15, shown in advance. An upper 95% bound below 0.05 on a qualified, powered panel would end the practical-readability claim for this endpoint. Anything between those bars is inconclusive ([PREREG_H1_TF](docs/PREREG_H1_TF.md); [SYNTHESIS §3](docs/council/2026-11-05/SYNTHESIS.md)).
+
+The budget is 30 local GPU-hours. The council did not approve new Lambda spend or an additional history run ([PREREG_H1_TF](docs/PREREG_H1_TF.md)).
+
+The design is frozen but not executed. The document calls itself a frozen prospective design, pending Board A acceptance and measured execution gates, and it reports no qualification, timing or power result. Board A's 5 November review said REVISE and listed four blocking items: baseline aggregation, a frozen estimand with TF power, measured qualification, and provenance with ARA and ancestry closure ([Board A review](docs/reviews/P4/board-a-synthesis-and-v2-2026-11-05.md)). The frozen design is written to address those items. Board A has not accepted it, and no gate has been measured.
+
+If the gates fail, the contribution is a measurement and benchmark report with its negative results. Other work still open: the 32k base-model rerun and the second base-model reproduction that the P2 gate requires ([RESULTS](docs/RESULTS.md)).
+
+## Review record
+
+- Board A, protocol v2 and council synthesis (5 November): the v2 descriptive results are usable with qualifications, the confirmatory hypotheses are unestablished, and the synthesis is REVISE ([review](docs/reviews/P4/board-a-synthesis-and-v2-2026-11-05.md)).
+- Board B, final check of the v2 paper (5 November): APPROVE, with two wording items ([review](docs/reviews/P4/board-b-v2-results-final-2026-11-05.md)).
+- Board B, reliability re-review (5 November): APPROVE for the scoped revision ([review](docs/reviews/P4/board-b-reliability-rereview-2026-11-05.md)).
+- Board A, D3 suite (4 November): REVISE, with H1 undetermined and not demonstrated ([review](docs/reviews/P4/board-a-d3-suite-2026-11-04.md)).
+- Board A, H5 editor harness (4 November): APPROVE to merge with production disabled. The first pilot episode is not permitted yet ([review](docs/reviews/H5/board-a-editor-final-2026-11-04.md)).
 
 ## Running it
 
@@ -55,17 +115,19 @@ Anything over two minutes should go through `agent-tmux <name> <cmd>` on the lab
 
 ## What is not done
 
-The fast tier has not been run over the zoo, so no zoo entry has a score a predictor could learn from. Board A's calibrated estimate was 9 to 12 minutes per entry, which came to about 120 GPU-hours for the 700 entries that existed then. The manifest now lists over 1,100, so the full run would take longer, and that figure is a projection from a smoke timing, not a measurement. Decision D3 therefore starts with a stratified subset of about 300 entries, roughly 50 hours. Still pending: a clean timing of one entry, the second base-model reproduction run that the P2 gate requires, and a rerun of the 32k base pass.
+Fast-tier scores exist for the D3 subset, and the protocol v2 suite uses them. The rest of the zoo is not scored. The status block shows 201 evaluated entries against 1,247 in the manifest.
 
-Next comes the first predictor comparison, starting with the baselines on D3 scores; [docs/ROADMAP.md](docs/ROADMAP.md) lays out the remaining phases and their gates. `src/wsp/predictor/` currently holds the scan kernels, splits and baselines, with no training script. The paper in `paper/` has an abstract, introduction, related work, and method, zoo and experiment sections that describe the design; it reports no experimental results.
+Timing is measured for one entry only. A clean fast-tier run on one production abliteration entry took 745 s, about 12.4 minutes, on an otherwise idle local GPU. Extrapolating from that run gives about 62 hours for the 300-entry D3 subset and about 255 hours for the full zoo. Those are projections from a single timed entry, not measurements of either run ([RESULTS](docs/RESULTS.md), D2 timing section).
 
 ## Limitations
 
-**Coverage.** The zoo has one base model, Qwen3.5-0.8B, and one tokenizer, so nothing here says anything about larger models or other architectures. The 27B transfer test is meant to probe that and has not been started.
+**Coverage.** The zoo has one base model, Qwen3.5-0.8B, and one tokenizer. Nothing here says anything about larger models or other architectures. The 27B transfer test has not been started.
 
-**Scoring.** Refusal rate is a keyword match on 100 prompts, and the base model refuses 99 of them, so mild edits have little room to show. The fast and cheap tiers use 25 to 300 items per benchmark, so a single entry's score change will often sit inside sampling noise, and many entries will differ from the base by less than that.
+**Scoring.** Refusal rate is a keyword match on 100 prompts, and the base model refuses 99 of them, so mild edits have little room to show. The fast tier uses 25 to 100 items per benchmark and the cheap tier 100 to 300, so a single entry's score change will often sit inside sampling noise.
 
-**The edits themselves.** Heretic's abliteration kernels are sampled from a hand-set parameter range instead of being found by its optimiser, so those entries are partial abliterations of widely varying strength, not points on the refusal/KL frontier Heretic would pick. Our kernel also skips the row normalisation that Heretic's default settings apply. The LoRA fine-tunes are short, and the bf16 rounding above removes part of the intended change. Chains reuse parents from the same zoo, so their targets are correlated even with ancestry-grouped splits.
+**Targets.** The 260 matched D3 rows with inferred runtime metadata block qualification, and we did not test whether they change the result. The baselines are single seed-0 fits, and their paired intervals condition on those fits. We have not estimated a reliability coefficient for either target, so we cannot say how much of the rank disagreement comes from target noise.
+
+**The edits themselves.** Heretic's abliteration kernels are sampled from a hand-set parameter range instead of being found by its optimiser. Those entries are partial abliterations of widely varying strength, not points on the refusal/KL frontier Heretic would pick. Our kernel also skips the row normalisation that Heretic's default settings apply. The LoRA fine-tunes are short, and the bf16 rounding above removes part of the intended change. Chains reuse parents from the same zoo, so their targets are correlated even with ancestry-grouped splits.
 
 **Review.** Every Board review so far was run by language models, not people, and the paper has not been through an outside reviewer.
 
@@ -76,16 +138,19 @@ Next comes the first predictor comparison, starting with the baselines on D3 sco
 | `src/wsp/zoo/`, `src/wsp/edits/` | edit generators, the Heretic-parity kernels, refusal-direction extraction, zoo builder and applier |
 | `src/wsp/eval/` | benchmark runner, batch evaluator, IFEval checker, report generator |
 | `src/wsp/features/`, `src/wsp/predictor/` | feature extraction and pooling, splits, baselines, selective-scan code |
+| `src/wsp/editor/`, `src/wsp/agents/` | offline editor harness (H5) and reader agent (H4, parked) |
 | `configs/` | zoo and eval configs, fixed benchmark subsets |
 | `docs/` | hypotheses, roadmap, decisions, results, infrastructure, writing and review rules |
-| `board/`, `reviews/`, `sessions/`, `harness/` | agent message board, review records, session notes, lessons |
+| `docs/council/` | the 5 November council round: briefs, round reports, metrology output and the synthesis |
+| `docs/reviews/` | Board A and Board B review records, by phase |
+| `board/`, `sessions/`, `harness/` | agent message board, session notes, lessons |
 | `paper/` | TMLR manuscript sections as they pass review |
 
 ## Status
 
 <!-- status:start -->
 
-_Generated by `scripts/update_readme_status.py` from artefacts on 2026-11-05T14:26:34Z._
+_Generated by `scripts/update_readme_status.py` from artefacts on 2026-11-05T14:25:53Z._
 
 **Zoo** (`data/zoo/qwen3.5-0.8b`): 1247 entries in the manifest.
 
