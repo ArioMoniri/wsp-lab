@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +11,7 @@ import torch
 from safetensors.torch import load_file
 
 from wsp.schema import EditDescriptor
+from wsp.zoo.common import MappedDelta, map_delta_keys
 
 LORA_ADAPTER_FILE = "lora/adapter_model.safetensors"
 
@@ -110,13 +111,19 @@ def lora_dense_delta(
 
 
 def load_entry_delta(
-    entry_dir: str | Path, state_keys: Iterable[str] | None = None
+    entry_dir: str | Path, state_keys: Iterable[str] | Mapping[str, torch.Tensor] | None = None
 ) -> dict[str, torch.Tensor]:
-    """Delta tensors of a zoo entry: dense ``delta.safetensors`` or LoRA ``lora/`` adapter."""
+    """Delta tensors of a zoo entry: dense ``delta.safetensors`` or LoRA ``lora/`` adapter.
+
+    With ``state_keys`` (pass the base state dict itself to also get the shape check) dense tensor
+    names are mapped onto base keys by :func:`wsp.zoo.common.map_delta_keys`; the returned
+    ``key_mapping`` says whether a rename was needed. The stored file is never rewritten.
+    """
     d = Path(entry_dir)
     if (d / "delta.safetensors").exists():
-        return load_file(d / "delta.safetensors")
-    return lora_dense_delta(d / "lora", state_keys)
+        delta = load_file(d / "delta.safetensors")
+        return delta if state_keys is None else map_delta_keys(delta, state_keys)
+    return MappedDelta(lora_dense_delta(d / "lora", state_keys))
 
 
 def load_edited_model(base: Any, zoo_entry_dir: str | Path) -> dict[str, torch.Tensor]:
@@ -144,7 +151,7 @@ def load_edited_model(base: Any, zoo_entry_dir: str | Path) -> dict[str, torch.T
         base_state = base.state_dict()
     else:
         raise TypeError(f"unsupported base type: {type(base)}")
-    delta = load_entry_delta(entry_dir, base_state.keys())
+    delta = load_entry_delta(entry_dir, base_state)
 
     state = dict(base_state)
     for key, d in delta.items():

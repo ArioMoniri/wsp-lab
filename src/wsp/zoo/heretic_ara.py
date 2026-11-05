@@ -23,7 +23,12 @@ from safetensors.torch import save_file
 
 from wsp.schema import EditDescriptor, write_manifest
 from wsp.zoo.apply import load_edited_model
-from wsp.zoo.common import get_git_sha, git_provenance, resolve_base_revision
+from wsp.zoo.common import (
+    get_git_sha,
+    git_provenance,
+    resolve_base_revision,
+    to_text_model_keys,
+)
 
 KERNEL_VARIANT = "wsp_ara_no_row_normalization_v1"
 SELECTION_RULE = "feasible_pareto_lexicographic_refusals_kl_trial_v1"
@@ -297,7 +302,9 @@ def generate(
         model.model = model.get_merged_model()
         model.model.to(dtype=torch.bfloat16)
         verified_refusals, verified_kl = extract_trial_metrics(evaluator, evaluator.get_scores())
-        delta = merged_delta(base_state, model.model.state_dict())
+        # Heretic loads the multimodal wrapper (``model.language_model.*``); save base-state names
+        # (``model.*``, as HFRunner / feature extraction see them) so loaders need no mapping.
+        delta = to_text_model_keys(merged_delta(base_state, model.model.state_dict()))
         touched_tensors = sorted(delta)
         delta_fro_norm = math.sqrt(sum(t.square().sum().item() for t in delta.values()))
 

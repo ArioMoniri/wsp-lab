@@ -367,3 +367,27 @@ rebuild). Eligibility production. The family is labelled a non-row-preserving AR
 closed: $116.22 of the $150 cap. The instance's `hf_sync.sh push zoo` again replaced the hub manifest with its
 metadata-only copy (13 rows); the canonical 1,259-row manifest was re-synced and the job script now uploads only its
 new entry folders.
+
+## D6 addendum 5 (5 Nov 2026) — heretic_ara delta tensor names (`language_model_prefix_v1`)
+Feature extraction failed for all 24 heretic_ara entries (12 flagged, 12 corrected) with
+`KeyError: delta tensor model.language_model.layers.10.linear_attn.out_proj.weight not in the base state`.
+Heretic loads the multimodal Qwen3.5 wrapper, so its exporter saved the language stack as
+`model.language_model.<...>`; the text-only CausalLM state dict used by HFRunner and the extractor names the same
+tensors `model.<...>`. Checked on all 24 `delta.safetensors`: every saved name starts with `model.language_model.`,
+removing the `language_model.` segment lands on exactly one base key per tensor, shapes are equal, `edit.json`
+`touched_tensors` equals the saved names, and nothing else differs (the entries passed the reload-KL gate, so the
+tensors themselves are valid).
+Decision: D1 artefacts stay byte-identical; names are reconciled at load time by one helper,
+`wsp.zoo.common.map_delta_keys`, used by both `wsp.zoo.apply.load_entry_delta` (features, builder, `load_edited_model`)
+and `wsp.eval.zoo_compat.load_entry_delta` (batch/single-run evaluation). An exact name match wins, otherwise the other
+`language_model.` naming is tried; a tensor with no base key, two saved names onto one base key, or a shape difference
+raises (no silent drop). The label `delta_key_mapping: "language_model_prefix_v1"` (null when no rename was needed) is
+written to `features.json` and to each evaluation payload (`eval.json`, batch and single-run); `edit.json` is not
+rewritten. The exporter now saves base-state names directly (`to_text_model_keys`), old entries keep loading through the
+mapping, and the reload gate verifies the new names against the wrapped Heretic state. LoRA entries are unchanged
+(`resolve_state_key` already handled the prefix). The mapping does not change any stored tensor or delta value.
+Note: the change is under `src/wsp`, so it changes the TF-v1 `source_hash`; do not merge it into the scoring tree
+while the D3 queue is running.
+CPU check on corrected entry `0a675e9980a8e171`: with the mapping all 30 saved tensors resolve onto base keys, the
+model after `apply_zoo_entry` equals bf16(base + Δ) on every one of them (0 mismatches, applied − base = Δ_eff exactly),
+no other tensor changes, and the pooled/SVD features are finite (‖Δ_eff‖_F = 14.28).

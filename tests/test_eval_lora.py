@@ -247,3 +247,29 @@ def test_rejected_adapter_contents(tmp_path):
     save_file({"weight": torch.ones(1)}, tmp_path / "delta.safetensors")
     with pytest.raises(ValueError, match="stray delta.safetensors"):
         load_entry_delta(tmp_path)
+
+
+def test_eval_apply_path_maps_wrapped_dense_delta_names(tmp_path):
+    """The evaluation loader (zoo_compat + apply_zoo_entry) accepts Heretic's wrapped names."""
+    from wsp.eval.zoo_compat import load_entry_delta
+
+    model = torch.nn.Sequential()
+    model.add_module("layers", torch.nn.ModuleList([torch.nn.Linear(3, 2, bias=False)]))
+    with torch.no_grad():
+        model.layers[0].weight.zero_()
+    # state_dict key here is "layers.0.weight"; emulate the Qwen layout with a wrapper module
+    outer = torch.nn.Module()
+    outer.model = model
+    key = "model.layers.0.weight"
+    assert key in outer.state_dict()
+    (tmp_path / "edit.json").write_text(json.dumps({"delta_format": "dense"}))
+    save_file(
+        {"model.language_model.layers.0.weight": torch.full((2, 3), 0.5)},
+        tmp_path / "delta.safetensors",
+    )
+    delta = load_entry_delta(tmp_path, outer.state_dict())
+    assert list(delta) == [key] and delta.key_mapping == "language_model_prefix_v1"
+    apply_zoo_entry(outer, tmp_path)
+    assert torch.equal(outer.model.layers[0].weight, torch.full((2, 3), 0.5))
+    with pytest.raises(KeyError, match="not in the base state"):
+        load_entry_delta(tmp_path, ["x.weight"])

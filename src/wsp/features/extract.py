@@ -156,7 +156,8 @@ def extract_entry(
     edit = read_edit(entry_dir)
     n_layers = n_layers or _n_layers(list(base_state))
     lora = not (entry_dir / "delta.safetensors").exists()
-    delta = load_entry_delta(entry_dir, base_state.keys())
+    delta = load_entry_delta(entry_dir, base_state)
+    delta_key_mapping = getattr(delta, "key_mapping", None)
     factors = lora_factors(entry_dir / "lora", base_state.keys()) if lora else {}
     for name, d in delta.items():
         if name not in base_state:
@@ -242,6 +243,7 @@ def extract_entry(
         "base_revision": edit.get("base_revision"),
         "base_commit": base_commit,
         "stored_delta_format": "lora" if lora else "dense",
+        "delta_key_mapping": delta_key_mapping,
         "delta_relative_to": "base",
         "n_layers": n_layers,
         "config": cfg,

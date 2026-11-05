@@ -370,12 +370,14 @@ def run_batch(
         restore.restore()
         runner.edit_id = row["id"] if row else "base"
         runner.rounding_stats = {}
+        delta_key_mapping = None
         source = zoo / row["id"] if row else None
         if row:
             edit = json.loads((source / "edit.json").read_text())
             if edit["base_revision"] != runner.revision:
                 raise ValueError("entry base revision differs from loaded snapshot")
-            delta = load_entry_delta(source, runner.model.state_dict().keys())
+            delta = load_entry_delta(source, runner.model.state_dict())
+            delta_key_mapping = getattr(delta, "key_mapping", None)
             restore.capture(delta)
             del delta
             runner.rounding_stats = apply_zoo_entry(runner.model, source)
@@ -412,6 +414,7 @@ def run_batch(
             "edit_id": runner.edit_id,
             "max_new_tokens": generation["max_new_tokens"],
             "rounding_stats": runner.rounding_stats,
+            "delta_key_mapping": delta_key_mapping,
             "generation": dict(runner.generation),
             "batch_size": used_batch,
             "batch_size_nominal": generation["batch_size"],

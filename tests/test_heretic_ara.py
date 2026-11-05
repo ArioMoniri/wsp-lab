@@ -120,7 +120,10 @@ def test_generate_heretic_ara_smoke_gpu(tmp_path: Path, cuda):
             )
         ).read_text()
     )
-    assert set(desc.touched_tensors) <= set(index["weight_map"])
+    from wsp.zoo.common import to_text_model_keys
+
+    # exported names are base-state (text-model) names; the checkpoint index uses the wrapper's
+    assert set(desc.touched_tensors) <= set(to_text_model_keys(dict.fromkeys(index["weight_map"])))
     assert desc.touched_tensors and math.isfinite(desc.delta_fro_norm) and desc.delta_fro_norm > 0
     assert json.loads((out_dir / "manifest.json").read_text())["git_sha"] == get_git_sha()
     assert desc.family == "heretic_ara"
@@ -573,3 +576,49 @@ def test_optimizer_tracing_handles_initially_converged_module():
     ctx = SimpleNamespace(get_model=lambda: SimpleNamespace(model=module))
     modify_with_trace(SimpleNamespace(modify_model=modify), ctx, None, traces, "converged")
     assert len(traces) == 1 and traces[0]["gradient_norm"] == 0
+
+
+def test_dense_export_saves_base_state_names_and_old_wrapped_names_still_load(tmp_path):
+    """Future entries carry text-model names; the Heretic wrapper prefix is stripped on export."""
+    import torch
+    from safetensors.torch import save_file
+
+    from wsp.zoo.apply import load_edited_model
+    from wsp.zoo.heretic_ara import merged_delta, to_text_model_keys
+
+    key = "model.language_model.layers.0.linear_attn.out_proj.weight"
+    base_wrapped = {key: torch.randn(4, 4).bfloat16(), "model.visual.patch.weight": torch.ones(2)}
+    merged = {key: base_wrapped[key] + 0.5, "model.visual.patch.weight": torch.ones(2)}
+    delta = to_text_model_keys(merged_delta(base_wrapped, merged))
+    assert list(delta) == ["model.layers.0.linear_attn.out_proj.weight"]
+    entry = tmp_path / "e"
+    entry.mkdir()
+    desc = EditDescriptor(family="heretic_ara", params={}, seed=0, base_model="toy")
+    (entry / "edit.json").write_text(desc.to_json())
+    save_file(delta, entry / "delta.safetensors")
+    # verifies against the wrapped (Heretic) state and the text-model (HFRunner) state alike
+    out = load_edited_model(base_wrapped, entry)
+    assert torch.equal(out[key], merged[key].bfloat16())
+    text_base = {"model.layers.0.linear_attn.out_proj.weight": base_wrapped[key]}
+    out = load_edited_model(text_base, entry)
+    assert torch.equal(out["model.layers.0.linear_attn.out_proj.weight"], merged[key].bfloat16())
+
+
+def test_generate_exports_through_to_text_model_keys(tmp_path, fake_heretic, monkeypatch):
+    from wsp.zoo import heretic_ara
+
+    calls = []
+    real = heretic_ara.to_text_model_keys
+    monkeypatch.setattr(
+        heretic_ara, "to_text_model_keys", lambda d: calls.append(sorted(d)) or real(d)
+    )
+    out = tmp_path / "entry"
+    params = {
+        "preserve_good_behavior_weight": 1.0,
+        "trials": 1,
+        "lora_rank": 4,
+        "ara_settings": {"n_optimization_steps": 1, "max_iter": 2},
+        "kl_divergence_target": 100.0,
+    }
+    desc = generate(base_model="toy", params=params, seed=1, out_dir=out)
+    assert len(calls) == 1 and calls[0] == desc.touched_tensors

@@ -100,7 +100,7 @@ def apply_delta(model, delta):
 def apply_zoo_entry(model, entry):
     from wsp.eval.zoo_compat import load_entry_delta
 
-    return apply_delta(model, load_entry_delta(entry, model.state_dict().keys()))
+    return apply_delta(model, load_entry_delta(entry, model.state_dict()))
 
 
 def seed_all(seed):
@@ -187,6 +187,7 @@ class HFRunner:
         self.edit_id = "base"
         self.rounding_stats = {}
         self.delta_format = None
+        self.delta_key_mapping = None
         self.entry_hashes = {}
         if zoo_entry:
             entry = Path(zoo_entry)
@@ -194,7 +195,12 @@ class HFRunner:
             if edit.get("base_model", model_id) != model_id:
                 raise ValueError("zoo entry base_model differs from --model")
             self.edit_id = edit.get("id", entry.name)
-            self.rounding_stats = apply_zoo_entry(self.model, entry)
+            from wsp.eval.zoo_compat import load_entry_delta
+
+            delta = load_entry_delta(entry, self.model.state_dict())
+            self.delta_key_mapping = getattr(delta, "key_mapping", None)
+            self.rounding_stats = apply_delta(self.model, delta)
+            del delta
             self.delta_format = edit.get("delta_format") or (
                 "dense" if (entry / "delta.safetensors").exists() else "lora"
             )
@@ -488,6 +494,7 @@ def main():
         "zoo_entry": args.zoo_entry,
         "edit_id": runner.edit_id,
         "delta_format": runner.delta_format,
+        "delta_key_mapping": runner.delta_key_mapping,
         "entry_hashes": runner.entry_hashes,
         "rounding_stats": runner.rounding_stats,
         "run_id": out.name,

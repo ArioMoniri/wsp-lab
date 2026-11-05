@@ -394,3 +394,43 @@ def test_malformed_resolved_base_revision_is_recorded_not_fatal(tmp_path, zoo, b
     recorded = _manifest_failed(tmp_path / "o")
     assert "resolved_base_revision" in recorded[ids[0]]
     assert (tmp_path / "o" / ids[1] / "features.json").exists()
+
+
+def _rewrite_prefixed(entry):
+    """Re-save a dense toy entry with Heretic's multimodal-wrapper tensor names."""
+    from safetensors.torch import save_file
+
+    path = entry / "delta.safetensors"
+    delta = load_file(path)
+    save_file({k.replace("model.", "model.language_model.", 1): v for k, v in delta.items()}, path)
+
+
+def test_wrapped_name_delta_extracts_identically_and_records_the_mapping(tmp_path, zoo, base):
+    z, ids = zoo
+    dense = next(i for i in ids if (z / i / "delta.safetensors").exists())
+    plain = extract_entry(z / dense, base, tmp_path / "plain", n_layers=4)
+    assert plain["delta_key_mapping"] is None
+    stored = (z / dense / "delta.safetensors").read_bytes()
+    _rewrite_prefixed(z / dense)
+    wrapped_bytes = (z / dense / "delta.safetensors").read_bytes()
+    assert wrapped_bytes != stored
+    info = extract_entry(z / dense, base, tmp_path / "wrapped", n_layers=4)
+    assert info["delta_key_mapping"] == "language_model_prefix_v1"
+    assert (z / dense / "delta.safetensors").read_bytes() == wrapped_bytes  # never rewritten
+    assert [t["name"] for t in info["tensors"]] == [t["name"] for t in plain["tensors"]]
+    for f in ("features.safetensors", "pooled.safetensors"):
+        assert (tmp_path / "wrapped" / f).read_bytes() == (tmp_path / "plain" / f).read_bytes()
+    pooled = load_file(tmp_path / "wrapped" / "pooled.safetensors")
+    assert all(torch.isfinite(t).all() for t in pooled.values())
+
+
+def test_unmatched_wrapped_delta_tensor_is_a_recorded_failure(tmp_path, zoo, base):
+    from safetensors.torch import save_file
+
+    z, ids = zoo
+    dense = next(i for i in ids if (z / i / "delta.safetensors").exists())
+    delta = load_file(z / dense / "delta.safetensors")
+    delta["model.language_model.layers.99.mlp.down_proj.weight"] = torch.ones(2, 2)
+    save_file(delta, z / dense / "delta.safetensors")
+    r = run_extract(z, tmp_path / "o", base_state=base, ids=[dense], n_layers=4)
+    assert r["done"] == 0 and "not in the base state" in r["failed"][dense]

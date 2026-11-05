@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 import warnings
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 import torch
 from safetensors.torch import load_file
+
+from wsp.zoo.common import MappedDelta, map_delta_keys
 
 
 def resolve_state_key(key: str, available: Iterable[str]) -> str | None:
@@ -95,9 +97,13 @@ def lora_dense_delta(
 
 
 def load_entry_delta(
-    entry_dir: str | Path, state_keys: Iterable[str] | None = None
+    entry_dir: str | Path, state_keys: Iterable[str] | Mapping[str, torch.Tensor] | None = None
 ) -> dict[str, torch.Tensor]:
-    """Delta tensors of a zoo entry: dense ``delta.safetensors`` or LoRA ``lora/`` adapter."""
+    """Delta tensors of a zoo entry: dense ``delta.safetensors`` or LoRA ``lora/`` adapter.
+
+    Dense names are mapped onto ``state_keys`` with :func:`wsp.zoo.common.map_delta_keys` (the same
+    helper as :func:`wsp.zoo.apply.load_entry_delta`); the result's ``key_mapping`` records it.
+    """
     d = Path(entry_dir)
     descriptor = d / "edit.json"
     fmt = json.loads(descriptor.read_text()).get("delta_format") if descriptor.exists() else None
@@ -105,9 +111,10 @@ def load_entry_delta(
         warnings.warn("missing delta_format; inferring from files", UserWarning, stacklevel=2)
         fmt = "dense" if (d / "delta.safetensors").exists() else "lora"
     if fmt == "dense":
-        return load_file(d / "delta.safetensors")
+        delta = load_file(d / "delta.safetensors")
+        return delta if state_keys is None else map_delta_keys(delta, state_keys)
     if fmt == "lora":
         if (d / "delta.safetensors").exists():
             raise ValueError("LoRA entry contains stray delta.safetensors")
-        return lora_dense_delta(d / "lora", state_keys)
+        return MappedDelta(lora_dense_delta(d / "lora", state_keys))
     raise ValueError(f"unsupported delta_format: {fmt}")

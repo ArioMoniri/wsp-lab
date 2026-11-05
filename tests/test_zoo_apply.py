@@ -57,3 +57,39 @@ def test_load_edited_model_bf16_roundtrip_exact_on_cuda(cuda, tmp_path):
         assert reconstructed[k].dtype == torch.bfloat16
         assert reconstructed[k].device.type == cuda.type
         assert torch.equal(reconstructed[k], expected[k])
+
+
+def test_wrapped_name_dense_delta_applies_like_text_name_delta_and_leaves_file_untouched(tmp_path):
+    base = {
+        "model.layers.0.mlp.down_proj.weight": torch.randn(4, 6),
+        "model.layers.1.mlp.down_proj.weight": torch.randn(4, 6),
+        "lm_head.weight": torch.randn(5, 4),
+    }
+    delta = {"model.layers.1.mlp.down_proj.weight": torch.randn(4, 6) * 0.1}
+    saved = {k.replace("model.", "model.language_model.", 1): v for k, v in delta.items()}
+    entry = _write_entry(tmp_path, base, saved)
+    before = (entry / "delta.safetensors").read_bytes()
+    out = load_edited_model(base, entry)
+    k = "model.layers.1.mlp.down_proj.weight"
+    assert torch.allclose(out[k], base[k] + delta[k])
+    assert set(out) == set(base)  # no stray wrapped-name tensor was added
+    assert (entry / "delta.safetensors").read_bytes() == before  # D1: artefact immutable
+
+
+def test_load_entry_delta_reports_the_mapping_applied(tmp_path):
+    from wsp.zoo.apply import load_entry_delta
+
+    key = "model.layers.0.mlp.down_proj.weight"
+    base = {key: torch.zeros(2, 2)}
+    wrapped = _write_entry(
+        tmp_path / "w",
+        base,
+        {"model.language_model.layers.0.mlp.down_proj.weight": torch.ones(2, 2)},
+    )
+    plain = _write_entry(tmp_path / "p", base, {key: torch.ones(2, 2)})
+    assert load_entry_delta(wrapped, base).key_mapping == "language_model_prefix_v1"
+    assert load_entry_delta(plain, base).key_mapping is None
+    with pytest.raises(KeyError, match="not in the base state"):
+        load_entry_delta(wrapped, {"other.weight": torch.zeros(2, 2)})
+    with pytest.raises(ValueError, match="shape"):
+        load_entry_delta(wrapped, {key: torch.zeros(3, 3)})
