@@ -358,3 +358,12 @@ The TF-v1 MMLU-Pro (1,000), HellaSwag (500 ranking, 250 used) and KL/over-refusa
 - Training, qualification and confirmation use H0 rows only; unseen device levels fail closed (PREREG §3). Historical fast-tier labels from H1/H2 (Lambda hosts, inferred runtime) never enter training or qualification (D2 quarantine).
 - A change of device, driver or software stack mid-programme changes the runtime metadata, so matched references and the base-logit cache key no longer match and scoring must stop; it is not silently continued. `~/.config/wsp/device_id` stays fail-closed and the cache stays under `tf_cache/H0/`.
 - A cross-device claim needs hardware, an independent qualification on it, and a new dated amendment; none is planned.
+
+## D6 addendum 4 (5 Nov 2026) — corrected ARA rebuild landed
+Twelve heretic_ara entries built on a Lambda A10 (15.9 h, $20.51) at revision 06a9980 with the explicit KL target 0.5
+and the feasible-Pareto rule (variant wsp_ara_no_row_normalization_v1): all 12 pass the reload-KL gate; verified KL
+0.05–0.47 nats, refusals 0.03–0.14, effective-delta Frobenius norms 10–19 (vs 19–1.7e10 for the flagged first
+rebuild). Eligibility production. The family is labelled a non-row-preserving ARA variant in the paper. Lambda total
+closed: $116.22 of the $150 cap. The instance's `hf_sync.sh push zoo` again replaced the hub manifest with its
+metadata-only copy (13 rows); the canonical 1,259-row manifest was re-synced and the job script now uploads only its
+new entry folders.

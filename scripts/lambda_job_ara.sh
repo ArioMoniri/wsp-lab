@@ -38,7 +38,20 @@ PY
 echo "ARA build start $(date -u +%FT%TZ) n=$N trials=$TRIALS rev=$(git rev-parse --short HEAD)"
 python -m wsp.zoo.build --config configs/zoo_qwen3.5-0.8b_ara_lambda.yaml --family heretic_ara --allow-missing-families 2>&1 | tail -40
 echo "ARA build end $(date -u +%FT%TZ)"
-scripts/hf_sync.sh push zoo 2>&1 | tail -1
+python - <<'PY'
+# upload only the entry folders this job created; the canonical manifest is synced by the orchestrator (D6 addendum 4)
+import os, json, time
+from pathlib import Path
+from huggingface_hub import HfApi
+zoo = Path("data/zoo/qwen3.5-0.8b"); start = Path(os.path.expanduser("~/ara.log")).stat().st_mtime - 3600*24
+new = [d.name for d in zoo.iterdir() if d.is_dir() and (d / "edit.json").exists() and (d / "edit.json").stat().st_mtime > start]
+rows = [l for l in (zoo / "manifest.jsonl").read_text().splitlines() if any(f'"{i}"' in l for i in new)]
+(zoo / "manifest.new_entries.jsonl").write_text("\n".join(rows) + "\n")
+api = HfApi(token=os.environ["HF_TOKEN"])
+api.upload_folder(repo_id="Aralario/wsp-lab-zoo", repo_type="dataset", folder_path=str(zoo), path_in_repo="zoo/qwen3.5-0.8b",
+                  allow_patterns=[f"{i}/*" for i in new] + ["manifest.new_entries.jsonl"], commit_message=f"ara entries {len(new)} rev $(git rev-parse --short HEAD)")
+print("uploaded", len(new), "entries")
+PY
 echo JOB_DONE
 # self-terminate: only the instance whose public IP is ours (several wsp-lab instances may run at once)
 MYIP=$(curl -s --max-time 10 https://checkip.amazonaws.com || true)
