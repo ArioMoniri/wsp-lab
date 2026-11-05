@@ -545,3 +545,201 @@ def test_results_embed_tf_metrics_and_item_hashes_without_keyword_aliases(tmp_pa
     assert "refusal_rate" not in result
     assert len(result["item_id_hash"]) == 64
     assert json.loads((tmp_path / "records.jsonl").read_text().splitlines()[0])["item_id"] == "17"
+
+
+# ------------------------------------------- batching (amendment A2.4): identity and bounds
+
+
+class CausalToy(torch.nn.Module):
+    """Deterministic causal LM double: logits at t mix an embedding of every token <= t.
+
+    Row-independent and mask-independent for real positions, as a real causal LM is, so padded and
+    unpadded forwards of the same row agree up to floating-point reduction order."""
+
+    device = "cpu"
+
+    def __init__(self, vocab=11, dim=6, seed=0):
+        super().__init__()
+        gen = torch.Generator().manual_seed(seed)
+        self.emb = torch.nn.Parameter(torch.randn(vocab, dim, generator=gen))
+        self.out = torch.nn.Parameter(torch.randn(dim, vocab, generator=gen))
+        self.forwards, self.shapes = 0, []
+
+    def forward(self, ids, attention_mask=None, use_cache=False, logits_to_keep=0):
+        self.forwards += 1
+        self.shapes.append(tuple(ids.shape))
+        state = self.emb[ids].cumsum(1) / torch.arange(1, ids.shape[1] + 1)[None, :, None]
+        logits = state @ self.out
+        if logits_to_keep:
+            logits = logits[:, -logits_to_keep:]
+        return SimpleNamespace(logits=logits)
+
+    def choice_scores(self, tokenizer, context, choices):
+        prefix = tokenizer.encode(context)
+        scores = []
+        for choice in choices:
+            suffix = tokenizer.encode(" " + choice)
+            ids = torch.tensor([prefix + suffix])
+            logits = self(ids).logits[0, len(prefix) - 1 : -1].float().log_softmax(-1)
+            scores.append(logits.gather(1, ids[0, len(prefix) :, None]).sum().item() / len(choice))
+        return scores
+
+
+def toy_runner(table):
+    model = CausalToy()
+    return SimpleNamespace(model=model, tokenizer=Tokenizer(table), edit_id="e"), model
+
+
+TOY_TABLE = {
+    "ctx a": [1, 2, 3, 4],
+    "ctx b": [5, 6],
+    " end one": [7, 8, 9],
+    " end 2": [3],
+    " endings number three": [2, 2, 4, 5, 6],
+    " e4": [10, 1],
+}
+
+
+def test_batched_hellaswag_matches_batch1_within_probe_bound_and_uses_one_forward():
+    from wsp.eval import tf_v1
+
+    runner, model = toy_runner(TOY_TABLE)
+    endings = ["end one", "end 2", "endings number three", "e4"]
+    for context in ("ctx a", "ctx b"):
+        reference = model.choice_scores(runner.tokenizer, context, endings)
+        model.forwards, model.shapes = 0, []
+        scores, batch = tf_v1.hellaswag_scores(runner, context, endings)
+        assert batch == 4 and model.forwards == 1  # one padded forward for the four endings
+        assert model.shapes[0][0] == 4
+        assert max(abs(a - b) for a, b in zip(scores, reference, strict=True)) <= 0.010
+        again, _ = tf_v1.hellaswag_scores(runner, context, endings)
+        assert again == scores  # the batched path repeats bitwise
+
+
+def test_batched_phrases_match_batch1_within_probe_bound_and_use_one_forward():
+    from wsp.eval import tf_v1
+
+    runner, model = toy_runner({})
+    phrases = {
+        "sorry": [6],
+        "I cannot": [5, 4],
+        "I'm sorry": [5, 4, 2],
+        "sure": [7],
+        "here": [3, 9],
+    }
+    prefix = [1, 2, 3, 4, 5]
+    reference = tf_v1.continuation_scores(runner, prefix, phrases)
+    model.forwards, model.shapes = 0, []
+    scores, batch = tf_v1.batched_continuation_scores(runner, prefix, phrases)
+    assert batch == len(phrases) == model.shapes[0][0] and model.forwards == 1
+    assert list(scores) == list(phrases)  # order is the phrase order
+    assert max(abs(scores[p] - reference[p]) for p in phrases) <= 0.39
+    margin = lambda s: tf_v1.phrase_mass_margin(
+        [s["sorry"], s["I cannot"], s["I'm sorry"]], [s["sure"], s["here"]]
+    )
+    assert abs(margin(scores) - margin(reference)) <= 0.30
+    assert tf_v1.batched_continuation_scores(runner, prefix, phrases)[0] == scores  # bitwise
+
+
+def test_batched_scores_ignore_right_padding_content():
+    from wsp.eval import tf_v1
+
+    runner, _ = toy_runner(TOY_TABLE)
+    short = tf_v1.hellaswag_scores(runner, "ctx b", ["end 2"])[0]  # no padding at all
+    padded = tf_v1.hellaswag_scores(runner, "ctx b", ["end 2", "endings number three"])[0][0]
+    assert abs(short[0] - padded) < 1e-5
+
+
+def test_evaluate_records_carry_the_actual_scoring_batch(monkeypatch):
+    from wsp.eval import tf_v1
+
+    runner, _ = toy_runner(TOY_TABLE)
+    runner.chat = lambda x: x
+    runner.tf_config = {
+        "tf_v1": {
+            "item_salt": SALT,
+            "panel": "development",
+            "over_refusal_offset": 200,
+            "refusal_continuations": {"refusal": ["Sorry"], "compliance": ["Sure"]},
+        }
+    }
+    monkeypatch.setattr(
+        tf_v1,
+        "load_items",
+        lambda *a: (
+            [("3", {"ctx": "ctx a", "endings": ["end one", "end 2", "e4"], "label": "1"})],
+            {"panel": "development"},
+        ),
+    )
+    monkeypatch.setattr(
+        tf_v1, "load_prompts", lambda *a: (["ctx b"], {"panel": "development", "subset_ids": ["0"]})
+    )
+    runner.tokenizer.table |= {"Sorry": [6], "Sure": [7]}
+    records, _ = tf_v1._evaluate(
+        runner,
+        ["hellaswag", "refusal_rate"],
+        {"hellaswag": {"n": 1}, "refusal_rate": {"n": 1}},
+    )
+    hellaswag, refusal = records
+    assert hellaswag.extra["scoring_batch"] == 3 and refusal.extra["scoring_batch"] == 2
+    assert len(hellaswag.extra["raw_option_log_likelihoods"]) == 3
+    assert set(refusal.extra["phrase_log_probs"]) == {"Sorry", "Sure"}
+
+
+# Primary paths are untouched by the batching change: their source is pinned to the round-2 source
+# (commit 98d8c06, `source_hash` 12ee875a68c9) so that MMLU-Pro, KL and WikiText records stay
+# bitwise identical and the KL base-logit cache (root 2ed18bda284b3a89...) stays valid.
+PINNED_SOURCE = {
+    "last_logits": "9af5efd013e53ffe",
+    "letter_token_ids": "7f2d3fb743466a48",
+    "letter_scores": "21fbbbaaf82e563d",
+    "choice_record": "3c33769533c3cf77",
+    "generate_entry": "fa9ee05dfd09a236",
+    "entry_digest": "35526ea94d2e443b",
+    "content_root": "6ad79a586e32311e",
+    "phrase_mass_margin": "617b44c7c9547b88",
+    "continuation_scores": "fec50cd4fe6b60fd",
+    "build_continuations": "4c84cb5011f7fdb9",
+}
+PINNED_SCORER_HASH = "7c42ea73fa33101f7804e7d9f64abbe12737c11be020a78d947fff672fecd514"
+
+
+def test_primary_scoring_paths_are_untouched_by_batching():
+    import inspect
+
+    from wsp.eval import refusal, run, tf_v1
+
+    digest = lambda text: hashlib.sha256(text.encode()).hexdigest()
+    for name, pinned in PINNED_SOURCE.items():
+        assert digest(inspect.getsource(getattr(tf_v1, name)))[:16] == pinned, name
+    assert tf_v1.SCORER_HASH == PINNED_SCORER_HASH  # the KL cache identity
+    assert (
+        digest(inspect.getsource(refusal.kl_values))
+        == "4011e6a2f651a6eca6a4bac063f83f5070e7a631e83f4a92df081bf2f9e95c0c"
+    )
+    assert (
+        digest(inspect.getsource(run.perplexity))
+        == "bb31a97cd2d15859b73986540292e3cdd0b603e1c65f64b365d03e1bf7db73b1"
+    )
+    source = inspect.getsource(tf_v1._evaluate)
+    branch = {
+        "mmlu": (
+            '                if name == "mmlu_pro":\n                    choices',
+            '                else:\n                    context, choices, gold = row["ctx"]',
+        ),
+        "wikitext": (
+            '        elif name == "wikitext_ppl":',
+            '        elif name in ("refusal_rate", "over_refusal"):',
+        ),
+        "kl": (
+            '        elif name == "kl_to_base":',
+            '        else:\n            raise ValueError(f"unsupported TF-v1 benchmark',
+        ),
+    }
+    pinned = {
+        "mmlu": "8b12d182ec15491172e785b9c26f87ad81e7b2fe39a3c754557ab914f34e5471",
+        "wikitext": "7c21b8d1ca7dea444dec2bdd31f4b33ee417931510d8198b9b27136eae1c49cb",
+        "kl": "4d3ce34bb3af2fe6cb0e8e1b21c00780b6bc959a09d9369650de67e08de3d308",
+    }
+    for key, (start, end) in branch.items():
+        assert digest(source[source.index(start) : source.index(end)]) == pinned[key], key

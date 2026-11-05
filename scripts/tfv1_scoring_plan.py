@@ -121,9 +121,7 @@ def summary(p, rows):
         "fresh_spares_unique_scored_ids": len(p["fresh_spares_unique"]),
         "fresh_without_spares_unique_scored_ids": len(p["fresh_without_spares_unique"]),
         "alias_groups_whose_canonical_is_not_the_stratum_row": sum(
-            1
-            for g in set(p["alias_map"].values())
-            if rows[g]["family"] not in STRATUM
+            1 for g in set(p["alias_map"].values()) if rows[g]["family"] not in STRATUM
         ),
     }
 

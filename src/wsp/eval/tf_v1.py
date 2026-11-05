@@ -276,6 +276,55 @@ def letter_scores(runner, context, choices):
     return [lp[i].item() for i in ids], ids
 
 
+# ------------------------------------------------- batched HellaSwag / phrase scoring
+#
+# Amendment A2.4: the 4 HellaSwag endings and the 13 refusal/compliance phrases of a prompt are
+# scored in ONE right-padded forward instead of 4 / 7 batch-1 forwards (measured 43.7 s per entry).
+# This is a different bf16 kernel path than batch 1 (deviations of one to a few bf16 logit steps)
+# and deterministic across repeats. MMLU-Pro letters, KL and WikiText never use it.
+
+
+def padded_log_probs(runner, rows):
+    """One right-padded forward. rows: [(token_ids, first, n)]; returns, per row, the float32
+    log-softmax of the n logit rows predicting positions first+1 .. first+n."""
+    width = max(len(ids) for ids, _, _ in rows)
+    pad = runner.tokenizer.pad_token_id or 0
+    device = runner.model.device
+    batch = torch.tensor([ids + [pad] * (width - len(ids)) for ids, _, _ in rows], device=device)
+    mask = torch.tensor(
+        [[1] * len(ids) + [0] * (width - len(ids)) for ids, _, _ in rows], device=device
+    )
+    with torch.inference_mode():
+        logits = runner.model(batch, attention_mask=mask, use_cache=False).logits
+        return [
+            logits[k, start : start + n].float().log_softmax(-1)
+            for k, (_, start, n) in enumerate(rows)
+        ]
+
+
+def hellaswag_scores(runner, context, endings):
+    """Character-normalised log-likelihood of each ending (the `choice_scores(.., True)` quantity),
+    all endings in one padded forward. Returns (scores, batch)."""
+    prefix = runner.tokenizer.encode(context, add_special_tokens=False)
+    suffixes = [runner.tokenizer.encode(" " + e, add_special_tokens=False) for e in endings]
+    rows = [(prefix + s, len(prefix) - 1, len(s)) for s in suffixes]
+    scores = []
+    for lp, suffix, ending in zip(padded_log_probs(runner, rows), suffixes, endings, strict=True):
+        picked = lp.gather(1, torch.tensor(suffix, device=lp.device)[:, None])
+        scores.append(picked.sum().item() / len(ending))
+    return scores, len(rows)
+
+
+def batched_continuation_scores(runner, prefix, phrases):
+    """Teacher-forced log P(phrase | prompt) summed over all phrase tokens, all phrases in one
+    padded forward (every phrase, including single-token ones). Returns (scores, batch)."""
+    rows = [(prefix + ids[:-1], len(prefix) - 1, len(ids)) for ids in phrases.values()]
+    scores = {}
+    for lp, (phrase, ids) in zip(padded_log_probs(runner, rows), phrases.items(), strict=True):
+        scores[phrase] = sum(lp[k, t].item() for k, t in enumerate(ids))
+    return scores, len(rows)
+
+
 # ----------------------------------------------------- refusal / compliance phrases
 
 
@@ -511,13 +560,14 @@ def _evaluate(runner, names, counts):
                     gold = row["answer_index"]
                 else:
                     context, choices, gold = row["ctx"], row["endings"], int(row["label"])
-                    scores, token_ids = runner.choice_scores(context, choices, True), None
+                    (scores, batch), token_ids = hellaswag_scores(runner, context, choices), None
                 r = choice_record(runner.edit_id, name, item_id, scores, gold)
                 r.extra.update(
                     prompt=context,
                     choices=choices,
                     panel=datasets[name]["panel"],
                     **({"letter_token_ids": token_ids} if token_ids else {}),
+                    **({"scoring_batch": batch} if name == "hellaswag" else {}),
                 )
                 records.append(r)
             datasets[name]["panel_content_hash"] = panel_content_hash(
@@ -547,7 +597,7 @@ def _evaluate(runner, names, counts):
             datasets[name]["continuations"] = sets
             for i, text in enumerate(texts):
                 prefix = runner.tokenizer.encode(runner.chat(text), add_special_tokens=False)
-                scores = continuation_scores(runner, prefix, phrases)
+                scores, batch = batched_continuation_scores(runner, prefix, phrases)
                 refusal = [scores[p] for p in sets["refusal"]]
                 compliance = [scores[p] for p in sets["compliance"]]
                 margin = phrase_mass_margin(refusal, compliance)
@@ -564,6 +614,7 @@ def _evaluate(runner, names, counts):
                             "compliance_log_mass": torch.tensor(compliance).logsumexp(0).item(),
                             "prompt": text,
                             "panel": datasets[name]["panel"],
+                            "scoring_batch": batch,
                         },
                     )
                 )

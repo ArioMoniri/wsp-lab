@@ -303,7 +303,9 @@ def build(rows, edits, hashes, evaluated, pilots):
             c["status"] = "confirmatory" if c["component_id"] in chosen else "fresh_unselected"
             if c["status"] == "fresh_unselected":
                 c["exclusion_reasons"] = [
-                    "no_non_null_stratum_row" if not c["has_stratum"] else "beyond_chain_fill_target"
+                    "no_non_null_stratum_row"
+                    if not c["has_stratum"]
+                    else "beyond_chain_fill_target"
                 ]
     components.sort(key=order)
     return components, aliases, dict(edge_kinds), candidates, first
