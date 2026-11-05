@@ -196,4 +196,5 @@
 | 2026-11-04 | P4 round 2b | codex/gpt-6.1-sol medium | done 713f3e3 (492 tests); compat script: 106 differences vs main incl. statnn — adjudication pending |
 | 2026-11-04 | Board B review paper/reliability | codex/gpt-6.1-terra medium | REVISE (ceiling heuristic overstated; panel provenance; full qualification criteria; table denominators) 84c44db |
 | 2026-11-05 | Scribe round 2: Board B blocking 1–4 on paper/reliability | claude_aio_gmail_api/claude-haiku-5-5 high | running |
-| 2026-11-05 | Board A re-review feat/p4-round2 (adjudicate main-vs-branch differences) | codex/gpt-6.1-terra high | running |
+| 2026-11-05 | Board A re-review feat/p4-round2 | codex/gpt-6.1-terra high | REVISE (93 intended, 13 unintended: missing StatNN metadata keys, undocumented seed schedule, fallback) 7d5ac31 |
+| 2026-11-05 | P4 round 2c (StatNN metadata, seed schedule, DECISIONS addendum, repeat-self) | codex/gpt-6.1-sol medium | running |
