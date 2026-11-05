@@ -335,6 +335,7 @@ def run_batch(
     if generation.get("tier") == "tf_v1":
         runner.tf_config = cfg
         runner.tf_cache_root = REPO / "data/evals" / zoo.name / "base/tf_cache"
+        runner.tf_stop_dir = out / "stops"
     expected = runtime_metadata(runner) | {
         "config_hash": config_hash,
         "model_revision": revision,
@@ -422,6 +423,15 @@ def run_batch(
             "wall_seconds": time.monotonic() - entry_started,
             "model_load_seconds": load_seconds,
             "stage_seconds": getattr(runner, "tf_stage_seconds", {}),
+            **(
+                {
+                    "tier": "tf_v1",
+                    "panel": cfg["tf_v1"]["panel"],
+                    "tf_cache": getattr(runner, "tf_cache_info", None),
+                }
+                if generation.get("tier") == "tf_v1"
+                else {}
+            ),
             "peak_gpu_allocated_bytes": torch.cuda.max_memory_allocated(),
             "peak_gpu_reserved_bytes": torch.cuda.max_memory_reserved(),
             "metadata_provenance": "native-measured",

@@ -1,5 +1,7 @@
 import math
 
+import pytest
+
 from wsp.schema import EvalRecord, aggregate
 
 
@@ -43,6 +45,10 @@ def test_metadata_hashes_order_and_private_device(tmp_path, monkeypatch):
 
     monkeypatch.setenv("HOME", str(tmp_path))
     runner = SimpleNamespace(model=SimpleNamespace())
+    with pytest.raises(FileNotFoundError):
+        runtime_metadata(runner)
+    (tmp_path / ".config/wsp").mkdir(parents=True)
+    (tmp_path / ".config/wsp/device_id").write_text("H0")
     assert runtime_metadata(runner)["eval_device_id"] == "H0"
     rows = [EvalRecord("x", "math500", str(i), 0) for i in range(2)]
     assert item_hashes(rows)["item_id_hash"] == item_hashes(rows[::-1])["item_id_hash"]

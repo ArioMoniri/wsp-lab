@@ -27,11 +27,16 @@ def keyword_refusal(response):
     return any(marker.lower() in response for marker in settings.keyword_markers)
 
 
-def kl_means(base_logits, edited_logits):
-    """Returns first-token and sequence-mean KL on identical teacher-forced contexts."""
+def kl_values(base_logits, edited_logits):
+    """Per-position KL(base || edited) in float32 over the full vocabulary."""
     base = base_logits.float().log_softmax(-1)
     edited = edited_logits.float().log_softmax(-1)
-    values = (base.exp() * (base - edited)).sum(-1).clamp_min(0)
+    return (base.exp() * (base - edited)).sum(-1).clamp_min(0)
+
+
+def kl_means(base_logits, edited_logits):
+    """Returns first-token and sequence-mean KL on identical teacher-forced contexts."""
+    values = kl_values(base_logits, edited_logits)
     return values[0].item(), values.mean().item()
 
 
