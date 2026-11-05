@@ -110,16 +110,16 @@ T = 0.6 from the same items); that requires a seed-1 repeat panel, scheduled onc
 (branch fix/eval-board-a-h5) is merged. Item-count SE from Board B/Board A still applies to any single draw.
 
 **Cross-host control panel, three devices (4 Nov, 22:00 UTC; same seed, config and batch 32; H100 PCIe shard
-`lambda0`, A10 shard `lambda1`, local RTX PRO 4500).** 11 entries evaluated on both local and H100, 4 on local and
+`lambda0`, A10 shard `lambda1`, local RTX PRO 4500).** 11 edited entries evaluated on both local and H100 (the 10 controls plus `013b7b61202fe188`), and 4 edited entries plus the base on local and
 A10 (the A10's other control copies were lost, see board/lambda_spend.md). Mean / max absolute difference and Spearman
 over entries, local vs H100 (n = 11): gsm8k 0.053 / 0.12 / ρ 0.30; math500 0.040 / 0.12 / 0.09; ifeval 0.022 / 0.08 /
 0.29; over-refusal 0.049 / 0.14 / 0.39; mmlu_pro 0.008 / 0.02 / 0.75; hellaswag 0.003 / 0.01 / 0.76; KL 0.000 / 0.001
 / 1.00; loop rate 0.006 / 0.04 / 0.72. Base: gsm8k 0.16 vs 0.06, math500 0.16 vs 0.08, over-refusal 0.10 vs 0.20,
-others within 0.01. Local vs A10 (n = 4): same pattern (math500 max 0.16, ifeval max 0.12; mmlu_pro, hellaswag, KL,
+others within 0.01. Local vs A10 (4 edited entries plus base): same pattern (math500 max 0.16, ifeval max 0.12; mmlu_pro, hellaswag, KL,
 refusal within 0.02). Reading, pending Board A's formal qualification (their rule needs ρ ≥ 0.8 with lower bound
 ≥ 0.6, and this panel has little between-entry variance): the likelihood-scored benchmarks (mmlu_pro, hellaswag),
 KL and the keyword refusal rate transfer across devices; the sampled-generation benchmarks (gsm8k, math500,
-ifeval, over-refusal) do not, and their Δy must be taken against the same-device base. Scripts: ad-hoc, to be replaced
+ifeval, over-refusal) do not, and their Δy must be taken against the same-device base. Local records: the ten controls from `20261104-104702-5fac075c`; `013b7b61202fe188` and the first-pass base from `20261104-084939-f912077b` (source hash `d7cece35`, the controls' is `6f274a83`). Scripts: ad-hoc, to be replaced
 by `wsp.eval.repeats.compare_pairs` once fix/eval-board-a-h5 merges.
 
 ## P4 — first complete predictor suite on the D3 subset (4 Nov 2026, 23:13–23:33 UTC; runs data/runs/p4/d3-*)
