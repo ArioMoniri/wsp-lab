@@ -1,0 +1,243 @@
+{
+  "artifact": "round1-weight-reading.md",
+  "seed": null,
+  "seed_note": "No stochastic run; proposal seeds not yet selected",
+  "config": {
+    "kind": "research-source-inspection",
+    "blog_url": "https://rikiyat.github.io/blog/weight-space-programming/",
+    "external_execution": false,
+    "new_gpu_jobs": false,
+    "source_tree_sha": "4d09ba6d6a7e891dd8063974dfe81b3d78e3494f"
+  },
+  "config_hash": "3c6475b6880c71df218fe46909cf746a2eba34785ee32d3a99c2e9fa46482e67",
+  "git_sha": "52dffc46f264916c655ac76308405b07cb5ec939",
+  "model_revisions": {
+    "qwen_blog": "2fc06364715b967f1860aea9cf38778875588b17",
+    "gemma_blog": "ac82b4e820549b854eebf28ce6dedaf9fdfa17b3"
+  },
+  "retrieved_utc": "2026-11-05T12:26:04.103571+00:00",
+  "blog_sha256": "a326bc5b34b3152a93bf38013f412bb140c9e0a299c72491d27fb17b1b7d9cbb",
+  "sources": [
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/README.md",
+      "git_blob_sha": "63404d03e357ad223fe971740919e221d6297215",
+      "sha256": "b1c51eeb9b9e2935ff227fdc7796c2a67bd3a55014cf99291224f9cc7b93d342",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp1_which_game/README.md",
+      "git_blob_sha": "fbcfa1ed476b885c5b4b53088eb7cc8f7e915dcb",
+      "sha256": "37d3210c9644449810c2eb2e6d63835925484caabefbe87559eacdf58c227d8d",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp2_diffusion/README.md",
+      "git_blob_sha": "b735de73501e0ece690ca1ab8ae727d607bdda94",
+      "sha256": "6bde052987957f89bcdd030651674782436b23da85acf186d644a428563122ca",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp3_language/README.md",
+      "git_blob_sha": "d57e97f4eb67128832b600f61d4db628221a202f",
+      "sha256": "d0466181a173b636b203f8e9b238a724203d5915d83b50524fb1e9347f529a5c",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp3_language/eval/heads.json",
+      "git_blob_sha": "27fae0d9ea51298a2961e57389384e8ddbfbe9d7",
+      "sha256": "3e12103ac6e30a569ac044b6539a2252b414e985d71db37541939b5e0b9da32b",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp3_language/eval/scores.json",
+      "git_blob_sha": "0c3ac1b7bc3d6114c3138b8db39171daf80c4ab7",
+      "sha256": "795a562695e2d6e39419d2842a09322af40e6dc452af315ab7b2639eb6d273bb",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp3_language/runs/english_r0/tool_calls.jsonl",
+      "git_blob_sha": "e0bc447667f9b62b0189081a94afb5903c8b2093",
+      "sha256": "f11057ad63521c68e111caf6e22c533724924e9055c8eb779d71fa23fe558cfa",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp3_language/runs/python_r0/tool_calls.jsonl",
+      "git_blob_sha": "2b7b8a87398c823d6c5606ab9fc410ccc0b02e5c",
+      "sha256": "0e86517d66958ab4cf18f0f8be7fb6d88fb85089cece04f244840935a1d4839c",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp3_language/runs/romaji_r0/tool_calls.jsonl",
+      "git_blob_sha": "8d48152b95f8de7e57bdf6a6b6f22ccfd25e6ccf",
+      "sha256": "46fbfa0568698ffd7550fac1961d0bd35bab8c4fd27dd19d4ed892f6d5168cd9",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp4_fix_car/README.md",
+      "git_blob_sha": "ddd1e15fd68562c2870e262e8d100a303b3e2b1b",
+      "sha256": "97cf395dd262069b09137807c492fc96dee396f45505fd5df2ab4b85a71102ce",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp5_write_from_scratch/README.md",
+      "git_blob_sha": "d51cb4cd4d2abcdd401c3dbb36ef418bdca96629",
+      "sha256": "e74367e0e4eb32d93685441332aceae4b47b1751a07caead42b1630d5547bb16",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp6_go_from_scratch/README.md",
+      "git_blob_sha": "330a52adb7afcf95f38a09ea93e67b8f659f27a5",
+      "sha256": "835e03d29cae4041d41a6b822593434dd455fa331ba4611cee0ec47fa685a5b1",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp7_sycophancy/README.md",
+      "git_blob_sha": "8748c9c3943171698d3d65589883ad9754208408",
+      "sha256": "daebb6645cbeb778529eb98ce8f6aaa7ff85038ffc875f61443e69308a8cd8b5",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp7_sycophancy/code/eval.py",
+      "git_blob_sha": "a77ff288f4e18addfdea9df74f1bd68eb471ad5a",
+      "sha256": "5e55af50d26c4273799d12c50c3e51f535216e18af3ea71659d1a2487956e0e0",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp7_sycophancy/code/make_release.py",
+      "git_blob_sha": "04bd32402e4f9e4841e996a131ee1ad51a8220d0",
+      "sha256": "38aac0551f3a83e9b4b95c0407f61030ceb10edbb5b87fb50070d4514684b962",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp7_sycophancy/code/train.py",
+      "git_blob_sha": "8929116d3db114be78a6ad88c66bb324e8625954",
+      "sha256": "f7db8e313e3a7803594f000d7e8dd6b979afede8c59716996f690bbbaacbe97e",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/README.md",
+      "git_blob_sha": "9232f3da94a9fa6d6b9bc83eef7c8766e48120e5",
+      "sha256": "473e386ade21ff52240103003b6b125e4362d9fa11010916c1b770ddb0edcbbd",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/code/apply_edit.py",
+      "git_blob_sha": "cc1d7c249ece802bd2e7b5907b082caeec716923",
+      "sha256": "d2b627a6cf344f309cca4bcab4ff6ccc6ad1c8f29cabda78d11f99c19d1b1c5d",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/code/build_ckpt.py",
+      "git_blob_sha": "79e80ff89aa1a27e71d4660d86d12c8c0b5a5090",
+      "sha256": "da0759bd0a150392b7aaa330f9d242429f47b49c0f900d0d890c91832c9217db",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/code/evaluate.py",
+      "git_blob_sha": "ba5ae82ebbbc57910a96b08f46c962728d389c26",
+      "sha256": "c93f477c02b3ae0d6b37abe3afad8bb7353e273322ff963eec7ff2270012035d",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/code/make_edit_diff.py",
+      "git_blob_sha": "0472ab6846cc73e8f129940e34b386e59d53c07a",
+      "sha256": "2bf84b497e308e07be94d969d6763cd8396de44cb0aaf5213a6b1075999287a1",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/code/mathqa.py",
+      "git_blob_sha": "808a04776906b1cf4630d397cef54f03d8795477",
+      "sha256": "f0d576a1adc625dede7bff749b3bf8c9a5a8f6bae43d51e2d0ee36d694e89843",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/code/merge.py",
+      "git_blob_sha": "6079efce9f9ffc11183dc518c5cd08ae128c40a8",
+      "sha256": "2ecd0420c929f721f547b8f189cf0a24343d960ed3b0e9b2892d9c7c8cede021",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/code/practice35.py",
+      "git_blob_sha": "e69475f477543105dc1cb27a406fa92889cc5fb7",
+      "sha256": "6e19a615fd04d20af7641900c32198010a716939b91f926c7fe2c1cc781f99db",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/code/profiles.py",
+      "git_blob_sha": "c81f5095ec7bf06d94ec294f8766514a51490e9e",
+      "sha256": "ba4be365e44c3e165b9c3982af9dbcd8ec94f7fd0430e5fd9de1d57f249a4ae4",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/code/st_numpy.py",
+      "git_blob_sha": "f7449556702f8fa8c5fbe83ed1f70b991e13f14a",
+      "sha256": "3c4e532fb8edf374e1a4636aa806a04d062f824943eaf4bca0d3af5b0e7dca40",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/eval/p50c/merged.json",
+      "git_blob_sha": "4e87efcd1ff0720be63d15c8866678353618aa1e",
+      "sha256": "c93d3db30a612ef0da396014fdfbe011efbcf2cd417e2e6125664d7effdd0471",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/eval/unedited/merged.json",
+      "git_blob_sha": "25dc7585fd36ecbe0ddac112434b77dbbb9deca4",
+      "sha256": "5c31370485b9f197f592745e935eeaee6b09dc127daa5b2a8be1ebbcbc210221",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/gemma_followup/README.md",
+      "git_blob_sha": "221848c81fc04bd37b671b95829641645372df9b",
+      "sha256": "a1920da492020d92a24439bbe5ffa711faf1c48e17b071d09a9bc3a26575e674",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/runs/p50c/edit/manifest.json",
+      "git_blob_sha": "d78897bbfc9d626682d4e42a9cefd95a93aed069",
+      "sha256": "83185c1db46e3dafb34af645f8c5ce033c09cc99d4512b9e1b8e3aba9d269225",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/runs/p50c/readable/notes.md",
+      "git_blob_sha": "568a8b52a9fddeaa1d71517eda83757e2ad83380",
+      "sha256": "d74088bc1ebe81aa00ebbef148dc40c446a99ec89c731b61b68a49061d452178",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/runs/p50c/readable/passes.md",
+      "git_blob_sha": "8d4723b28975d505f85febe4760cf816298880ae",
+      "sha256": "c6030f3f23308cd7e26929f7f1af571ecef7a698ee19309d8c054313843996b0",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/runs/p50c/readable/prompt.md",
+      "git_blob_sha": "72f9eb38ce5ba40b069f3236cfd0a2004e174ae8",
+      "sha256": "ce36e273b668e4edb8fa44effaab055cbece7e3b4acbce7ffcc77dde024c8b74",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/runs/p50c/readable/trajectory.md",
+      "git_blob_sha": "caa2d040547e81677f98cccb1854769b1057f3b7",
+      "sha256": "bd9e6758626bc51f05e81f6ac9a01ccda715ae95168ffcef0bd48d086822d14e",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/runs/p50c/tool_calls.jsonl",
+      "git_blob_sha": "ab56697a869235eb34e129be42b277e9cd93565b",
+      "sha256": "4d772ae69caeb1099ee8d134375baa5738c8bdce20bc44236acd466d8c76c597",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    },
+    {
+      "url": "https://github.com/RikiyaT/lm_understand-logs/blob/main/exp8_math/runs/p50c/work_notes/frozen_weights_manifest.json",
+      "git_blob_sha": "20c06b67edc17b5da38378de4e6ea325496e9d7c",
+      "sha256": "f0a76e3cbebce1dd373a2f5e351368f3fdb51be70c494109edf8adc5452f3564",
+      "inspection": "fetched; audited subset described in report, not every transcript or code path"
+    }
+  ],
+  "abstracts_fetched": [
+    "https://arxiv.org/abs/2607.07127",
+    "https://arxiv.org/abs/2610.30847",
+    "https://arxiv.org/abs/2603.15990"
+  ]
+}
