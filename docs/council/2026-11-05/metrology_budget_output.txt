@@ -1,0 +1,313 @@
+gold-label check (argmax agrees with stored correct): {'mmlu_pro': '200/200', 'hellaswag': '200/200'}
+entries: 389  D3 subset (base_run_id None): 300
+fam           dev
+abliteration  H0      27
+              H1      69
+              H2       4
+chain         H0     139
+lora_sft      H0       2
+              H1      52
+              H2       6
+random_dir    H0      21
+              H1      39
+task_vector   H0      11
+              H1      19
+
+aggregate check: item means vs eval.json aggregates differ in 0 cells (expect 0)
+
+seed-panel noise on Δy (n=10 controls, seed1-seed0 difference / sqrt 2; 95% CI from chi-square, df=9):
+  gsm8k          sd_seed=0.0504  CI=[0.0347,0.0921]
+  math500        sd_seed=0.0268  CI=[0.0185,0.0490]
+  ifeval         sd_seed=0.0248  CI=[0.0170,0.0452]
+  refusal_rate   sd_seed=0.0124  CI=[0.0085,0.0226]
+  over_refusal   sd_seed=0.0356  CI=[0.0245,0.0649]
+  mmlu_pro       sd_seed=0.0000  CI=[0.0000,0.0000]
+  hellaswag      sd_seed=0.0000  CI=[0.0000,0.0000]
+  kl_to_base     sd_seed=0.0001  CI=[0.0001,0.0002]
+  wikitext_ppl   sd_seed=0.0000  CI=[0.0000,0.0000]
+
+S/N budget, D3 subset (300 entries), per target:
+          target                   scope   n  sd_dy  sd_seed  sd_itemSE  sd_signal_pop  ceil_fixed  ceil_pop
+           gsm8k pooled (device-centred) 300 0.0702   0.0504     0.0576         0.0401      0.6950    0.5717
+           gsm8k  within family x device 300 0.0587   0.0504     0.0576         0.0115      0.5114    0.1961
+         math500 pooled (device-centred) 300 0.0495   0.0268     0.0703         0.0000      0.8404    0.0000
+         math500  within family x device 300 0.0479   0.0268     0.0703         0.0000      0.8285    0.0000
+          ifeval pooled (device-centred) 300 0.0343   0.0248     0.0386         0.0000      0.6920    0.0000
+          ifeval  within family x device 300 0.0340   0.0248     0.0386         0.0000      0.6840    0.0000
+    refusal_rate pooled (device-centred) 300 0.0813   0.0124     0.0232         0.0779      0.9883    0.9584
+    refusal_rate  within family x device 300 0.0752   0.0124     0.0232         0.0715      0.9863    0.9512
+    over_refusal pooled (device-centred) 300 0.0595   0.0356     0.0612         0.0000      0.8021    0.0000
+    over_refusal  within family x device 300 0.0503   0.0356     0.0612         0.0000      0.7066    0.0000
+        mmlu_pro pooled (device-centred) 300 0.0480   0.0000     0.0246         0.0412      1.0000    0.8588
+        mmlu_pro  within family x device 300 0.0384   0.0000     0.0246         0.0295      1.0000    0.7679
+       hellaswag pooled (device-centred) 300 0.0188   0.0000     0.0136         0.0130      1.0000    0.6885
+       hellaswag  within family x device 300 0.0131   0.0000     0.0136         0.0000      1.0000    0.0000
+     mmlu_pro_lp pooled (device-centred) 300 0.3250   0.0000     0.0581         0.3197      1.0000    0.9839
+     mmlu_pro_lp  within family x device 300 0.2853   0.0000     0.0581         0.2794      1.0000    0.9790
+ mmlu_pro_margin pooled (device-centred) 300 0.5143   0.0000     0.0758         0.5087      1.0000    0.9891
+ mmlu_pro_margin  within family x device 300 0.4387   0.0000     0.0758         0.4321      1.0000    0.9850
+    hellaswag_lp pooled (device-centred) 300 0.0068   0.0000     0.0018         0.0065      1.0000    0.9655
+    hellaswag_lp  within family x device 300 0.0043   0.0000     0.0018         0.0039      1.0000    0.9099
+hellaswag_margin pooled (device-centred) 300 0.0091   0.0000     0.0028         0.0086      1.0000    0.9501
+hellaswag_margin  within family x device 300 0.0053   0.0000     0.0028         0.0045      1.0000    0.8462
+      kl_to_base pooled (device-centred) 300 0.0664   0.0001     0.0019         0.0664      1.0000    0.9996
+      kl_to_base  within family x device 300 0.0590   0.0001     0.0019         0.0590      1.0000    0.9995
+    wikitext_ppl pooled (device-centred) 300 0.0487   0.0000     0.0074         0.0482      1.0000    0.9885
+    wikitext_ppl  within family x device 300 0.0286   0.0000     0.0074         0.0277      1.0000    0.9661
+
+S/N budget, all 389 entries (for reference):
+          target                   scope   n  sd_dy  sd_seed  sd_itemSE  sd_signal_pop  ceil_fixed  ceil_pop
+           gsm8k pooled (device-centred) 389 0.0769   0.0504     0.0588         0.0495      0.7548    0.6438
+         math500 pooled (device-centred) 389 0.0557   0.0268     0.0724         0.0000      0.8764    0.0000
+          ifeval pooled (device-centred) 389 0.0351   0.0248     0.0387         0.0000      0.7078    0.0000
+    refusal_rate pooled (device-centred) 389 0.0894   0.0124     0.0250         0.0858      0.9904    0.9600
+    over_refusal pooled (device-centred) 389 0.0613   0.0356     0.0601         0.0122      0.8144    0.1986
+        mmlu_pro pooled (device-centred) 389 0.0529   0.0000     0.0255         0.0463      1.0000    0.8764
+       hellaswag pooled (device-centred) 389 0.0207   0.0000     0.0146         0.0147      1.0000    0.7103
+     mmlu_pro_lp pooled (device-centred) 389 0.3401   0.0000     0.0609         0.3346      1.0000    0.9838
+ mmlu_pro_margin pooled (device-centred) 389 0.5369   0.0000     0.0798         0.5309      1.0000    0.9889
+    hellaswag_lp pooled (device-centred) 389 0.0075   0.0000     0.0019         0.0072      1.0000    0.9671
+hellaswag_margin pooled (device-centred) 389 0.0097   0.0000     0.0030         0.0093      1.0000    0.9507
+      kl_to_base pooled (device-centred) 389 0.0817   0.0001     0.0022         0.0816      1.0000    0.9997
+    wikitext_ppl pooled (device-centred) 389 0.0488   0.0000     0.0077         0.0482      1.0000    0.9875
+
+per-family budget (device-centred within family, D3 subset):
+          target       family   n  sd_dy  sd_itemSE  sd_seed  ceil_fixed  ceil_pop
+           gsm8k abliteration 100  0.034      0.052    0.050       0.000     0.000
+           gsm8k        chain  50  0.093      0.066    0.050       0.839     0.701
+           gsm8k     lora_sft  60  0.071      0.062    0.050       0.701     0.471
+           gsm8k   random_dir  60  0.042      0.055    0.050       0.000     0.000
+           gsm8k  task_vector  30  0.058      0.054    0.050       0.502     0.363
+         math500 abliteration 100  0.040      0.066    0.027       0.744     0.000
+         math500        chain  50  0.067      0.081    0.027       0.915     0.000
+         math500     lora_sft  60  0.056      0.073    0.027       0.877     0.000
+         math500   random_dir  60  0.036      0.068    0.027       0.665     0.000
+         math500  task_vector  30  0.041      0.065    0.027       0.762     0.000
+          ifeval abliteration 100  0.027      0.028    0.025       0.380     0.000
+          ifeval        chain  50  0.053      0.054    0.025       0.884     0.000
+          ifeval     lora_sft  60  0.039      0.052    0.025       0.769     0.000
+          ifeval   random_dir  60  0.020      0.023    0.025       0.000     0.000
+          ifeval  task_vector  30  0.029      0.030    0.025       0.504     0.000
+    refusal_rate abliteration 100  0.067      0.018    0.012       0.983     0.961
+    refusal_rate        chain  50  0.140      0.037    0.012       0.996     0.965
+    refusal_rate     lora_sft  60  0.068      0.030    0.012       0.983     0.899
+    refusal_rate   random_dir  60  0.006      0.006    0.012       0.000     0.000
+    refusal_rate  task_vector  30  0.022      0.012    0.012       0.823     0.841
+    over_refusal abliteration 100  0.055      0.062    0.036       0.760     0.000
+    over_refusal        chain  50  0.060      0.056    0.036       0.806     0.381
+    over_refusal     lora_sft  60  0.036      0.064    0.036       0.165     0.000
+    over_refusal   random_dir  60  0.049      0.061    0.036       0.695     0.000
+    over_refusal  task_vector  30  0.046      0.062    0.036       0.630     0.000
+        mmlu_pro abliteration 100  0.012      0.014    0.000       1.000     0.000
+        mmlu_pro        chain  50  0.072      0.033    0.000       1.000     0.887
+        mmlu_pro     lora_sft  60  0.048      0.038    0.000       1.000     0.605
+        mmlu_pro   random_dir  60  0.007      0.011    0.000       1.000     0.000
+        mmlu_pro  task_vector  30  0.033      0.020    0.000       1.000     0.804
+       hellaswag abliteration 100  0.005      0.005    0.000       1.000     0.000
+       hellaswag        chain  50  0.026      0.021    0.000       1.000     0.580
+       hellaswag     lora_sft  60  0.012      0.021    0.000       1.000     0.000
+       hellaswag   random_dir  60  0.000      0.000    0.000         NaN       NaN
+       hellaswag  task_vector  30  0.015      0.010    0.000       1.000     0.740
+     mmlu_pro_lp abliteration 100  0.014      0.008    0.000       1.000     0.810
+     mmlu_pro_lp        chain  50  0.589      0.097    0.000       1.000     0.986
+     mmlu_pro_lp     lora_sft  60  0.343      0.092    0.000       1.000     0.964
+     mmlu_pro_lp   random_dir  60  0.005      0.005    0.000       1.000     0.290
+     mmlu_pro_lp  task_vector  30  0.113      0.033    0.000       1.000     0.956
+ mmlu_pro_margin abliteration 100  0.024      0.011    0.000       1.000     0.886
+ mmlu_pro_margin        chain  50  0.882      0.126    0.000       1.000     0.990
+ mmlu_pro_margin     lora_sft  60  0.556      0.119    0.000       1.000     0.977
+ mmlu_pro_margin   random_dir  60  0.011      0.007    0.000       1.000     0.708
+ mmlu_pro_margin  task_vector  30  0.196      0.043    0.000       1.000     0.975
+    hellaswag_lp abliteration 100  0.000      0.000    0.000       1.000     0.000
+    hellaswag_lp        chain  50  0.010      0.003    0.000       1.000     0.953
+    hellaswag_lp     lora_sft  60  0.002      0.003    0.000       1.000     0.000
+    hellaswag_lp   random_dir  60  0.000      0.000    0.000       1.000     0.000
+    hellaswag_lp  task_vector  30  0.004      0.001    0.000       1.000     0.970
+hellaswag_margin abliteration 100  0.001      0.001    0.000       1.000     0.000
+hellaswag_margin        chain  50  0.012      0.005    0.000       1.000     0.919
+hellaswag_margin     lora_sft  60  0.003      0.005    0.000       1.000     0.000
+hellaswag_margin   random_dir  60  0.000      0.000    0.000       1.000     0.000
+hellaswag_margin  task_vector  30  0.006      0.002    0.000       1.000     0.959
+      kl_to_base abliteration 100  0.003      0.000    0.000       0.999     0.987
+      kl_to_base        chain  50  0.135      0.004    0.000       1.000     1.000
+      kl_to_base     lora_sft  60  0.049      0.002    0.000       1.000     0.999
+      kl_to_base   random_dir  60  0.000      0.000    0.000       0.936     0.996
+      kl_to_base  task_vector  30  0.020      0.001    0.000       1.000     0.999
+    wikitext_ppl abliteration 100  0.009      0.002    0.000       1.000     0.984
+    wikitext_ppl        chain  50  0.050      0.011    0.000       1.000     0.976
+    wikitext_ppl     lora_sft  60  0.023      0.012    0.000       1.000     0.838
+    wikitext_ppl   random_dir  60  0.001      0.001    0.000       1.000     0.745
+    wikitext_ppl  task_vector  30  0.054      0.006    0.000       1.000     0.994
+
+raw entry means by family x device (D3 subset):
+                  gsm8k  math500  ifeval  over_refusal
+fam          dev                                      
+abliteration H0   0.079    0.064   0.406         0.169
+             H1   0.081    0.059   0.399         0.179
+             H2   0.060    0.080   0.420         0.180
+chain        H0   0.143    0.083   0.398         0.124
+lora_sft     H0   0.160    0.100   0.360         0.080
+             H1   0.179    0.089   0.393         0.105
+             H2   0.130    0.067   0.400         0.130
+random_dir   H0   0.094    0.074   0.404         0.181
+             H1   0.086    0.054   0.401         0.190
+task_vector  H0   0.087    0.065   0.404         0.175
+             H1   0.094    0.074   0.400         0.175
+base runs (same seed 0): {'H0': 0.16, 'H1': 0.06, 'H2': 0.06} gsm8k; H0 seed-1 base: 0.1
+
+effect sizes per family, matched-reference Δ on D3 subset (median / 90th pct |Δ|, fraction |Δ|>0.02 for binaries):
+      family       target   n  median_abs  p90_abs  frac_gt_002
+abliteration   kl_to_base 100      0.0013   0.0038          NaN
+abliteration refusal_rate 100      0.0000   0.0400       0.1900
+abliteration     mmlu_pro 100      0.0100   0.0200       0.0600
+abliteration  mmlu_pro_lp 100      0.0055   0.0160          NaN
+abliteration    hellaswag 100      0.0000   0.0100       0.0000
+abliteration wikitext_ppl 100      0.0022   0.0113          NaN
+       chain   kl_to_base  50      0.0189   0.2125          NaN
+       chain refusal_rate  50      0.0200   0.2820       0.4600
+       chain     mmlu_pro  50      0.0400   0.1710       0.5800
+       chain  mmlu_pro_lp  50      0.1365   1.3508          NaN
+       chain    hellaswag  50      0.0300   0.0700       0.5200
+       chain wikitext_ppl  50      0.0561   0.1073          NaN
+    lora_sft   kl_to_base  60      0.0413   0.0904          NaN
+    lora_sft refusal_rate  60      0.0200   0.1400       0.4833
+    lora_sft     mmlu_pro  60      0.0600   0.1210       0.8167
+    lora_sft  mmlu_pro_lp  60      0.2239   0.7428          NaN
+    lora_sft    hellaswag  60      0.0300   0.0500       0.8000
+    lora_sft wikitext_ppl  60      0.1047   0.1212          NaN
+  random_dir   kl_to_base  60      0.0006   0.0011          NaN
+  random_dir refusal_rate  60      0.0000   0.0000       0.0000
+  random_dir     mmlu_pro  60      0.0100   0.0100       0.0000
+  random_dir  mmlu_pro_lp  60      0.0039   0.0076          NaN
+  random_dir    hellaswag  60      0.0000   0.0000       0.0000
+  random_dir wikitext_ppl  60      0.0004   0.0011          NaN
+ task_vector   kl_to_base  30      0.0006   0.0318          NaN
+ task_vector refusal_rate  30      0.0000   0.0220       0.1000
+ task_vector     mmlu_pro  30      0.0100   0.0720       0.2000
+ task_vector  mmlu_pro_lp  30      0.0063   0.1152          NaN
+ task_vector    hellaswag  30      0.0000   0.0300       0.1667
+ task_vector wikitext_ppl  30      0.0008   0.1038          NaN
+
+mean matched Δ per family (D3 subset) and share of entries with |Δ|<=0.02 (binaries):
+fam               abliteration   chain  lora_sft  random_dir  task_vector
+target                                                                   
+gsm8k                  -0.0072 -0.0168    0.1103     -0.0063      -0.0053
+hellaswag               0.0020  0.0252    0.0337      0.0000       0.0053
+hellaswag_lp           -0.0000  0.0100    0.0122     -0.0000       0.0016
+hellaswag_margin       -0.0002  0.0126    0.0175     -0.0000       0.0021
+ifeval                  0.0000 -0.0016   -0.0113      0.0020       0.0013
+kl_to_base              0.0020  0.0832    0.0525      0.0007       0.0094
+math500                -0.0484 -0.0768   -0.0153     -0.0467      -0.0387
+mmlu_pro                0.0003 -0.0526   -0.0635      0.0030      -0.0103
+mmlu_pro_lp            -0.0032 -0.3765   -0.2913     -0.0001      -0.0257
+mmlu_pro_margin        -0.0071 -0.6191   -0.5368     -0.0011      -0.0583
+over_refusal            0.0066  0.0240   -0.0817      0.0217       0.0113
+refusal_rate           -0.0216 -0.0944   -0.0510     -0.0017      -0.0073
+wikitext_ppl            0.0021 -0.0480   -0.1003      0.0003      -0.0120
+  mmlu_pro      |Δ|<=0.02: 0.700  (n=300)  sd(Δ) 0.0480
+  hellaswag     |Δ|<=0.02: 0.737  (n=300)  sd(Δ) 0.0191
+  gsm8k         |Δ|<=0.02: 0.290  (n=300)  sd(Δ) 0.0848
+  math500       |Δ|<=0.02: 0.197  (n=300)  sd(Δ) 0.0678
+  ifeval        |Δ|<=0.02: 0.567  (n=300)  sd(Δ) 0.0348
+  over_refusal  |Δ|<=0.02: 0.297  (n=300)  sd(Δ) 0.0739
+  refusal_rate  |Δ|<=0.02: 0.753  (n=300)  sd(Δ) 0.0819
+
+entries with |Δ| > 2 total SE (seed+item), and minimum KL / delta-norm among them:
+  mmlu_pro       49/300  min KL 0.0038  median KL 0.0423  min |delta| 0.245  median |delta| 2.649
+  mmlu_pro_lp    92/300  min KL 0.0003  median KL 0.0192  min |delta| 0.245  median |delta| 1.473
+  hellaswag      29/300  min KL 0.0063  median KL 0.0718  min |delta| 0.452  median |delta| 2.201
+  refusal_rate   35/300  min KL 0.0021  median KL 0.1275  min |delta| 0.612  median |delta| 3.227
+  gsm8k          17/300  min KL 0.0008  median KL 0.1043  min |delta| 1.308  median |delta| 5.168
+  over_refusal   16/300  min KL 0.0004  median KL 0.0117  min |delta| 0.400  median |delta| 1.876
+  wikitext_ppl  184/300  min KL 0.0003  median KL 0.0092  min |delta| 0.059  median |delta| 1.403
+
+items needed for paired SE <= 0.02 / 0.01 (per-item SD of paired diffs, chain entries of D3 subset):
+  mmlu_pro      sd_item median 0.1421 chain 0.3664  n(SE .02) median 51 chain 336  n(SE .01) chain 1343
+  hellaswag     sd_item median 0.0000 chain 0.1969  n(SE .02) median 0 chain 97  n(SE .01) chain 388
+  gsm8k         sd_item median 0.4020 chain 0.4573  n(SE .02) median 405 chain 523  n(SE .01) chain 2092
+  math500       sd_item median 0.3512 chain 0.4000  n(SE .02) median 309 chain 400  n(SE .01) chain 1600
+  ifeval        sd_item median 0.2000 chain 0.2000  n(SE .02) median 100 chain 100  n(SE .01) chain 400
+  over_refusal  sd_item median 0.4281 chain 0.3774  n(SE .02) median 459 chain 357  n(SE .01) chain 1425
+  mmlu_pro_lp   sd_item median 0.0726 chain 0.6423  n(SE .02) median 14 chain 1032  n(SE .01) chain 4126
+  hellaswag_lp  sd_item median 0.0036 chain 0.0243  n(SE .02) median 1 chain 2  n(SE .01) chain 6
+
+family eta^2 (device-centred Δy), and within-family Spearman(delta_fro_norm, Δy):
+  gsm8k           eta2_family=0.293  rho(norm,Δy) within family: {'abliteration': np.float64(0.03), 'chain': np.float64(0.29), 'lora_sft': np.float64(0.4), 'random_dir': np.float64(-0.04), 'task_vector': np.float64(0.24)}
+  math500         eta2_family=0.051  rho(norm,Δy) within family: {'abliteration': np.float64(0.02), 'chain': np.float64(0.02), 'lora_sft': np.float64(0.23), 'random_dir': np.float64(-0.02), 'task_vector': np.float64(-0.09)}
+  ifeval          eta2_family=0.012  rho(norm,Δy) within family: {'abliteration': np.float64(-0.16), 'chain': np.float64(-0.25), 'lora_sft': np.float64(0.07), 'random_dir': np.float64(0.02), 'task_vector': np.float64(-0.18)}
+  refusal_rate    eta2_family=0.126  rho(norm,Δy) within family: {'abliteration': np.float64(-0.49), 'chain': np.float64(-0.56), 'lora_sft': np.float64(-0.54), 'random_dir': np.float64(0.01), 'task_vector': np.float64(-0.27)}
+  over_refusal    eta2_family=0.280  rho(norm,Δy) within family: {'abliteration': np.float64(-0.02), 'chain': np.float64(-0.35), 'lora_sft': np.float64(-0.39), 'random_dir': np.float64(-0.03), 'task_vector': np.float64(-0.23)}
+  mmlu_pro        eta2_family=0.345  rho(norm,Δy) within family: {'abliteration': np.float64(-0.21), 'chain': np.float64(-0.55), 'lora_sft': np.float64(-0.51), 'random_dir': np.float64(0.06), 'task_vector': np.float64(-0.12)}
+  hellaswag       eta2_family=0.505  rho(norm,Δy) within family: {'abliteration': np.float64(0.13), 'chain': np.float64(0.44), 'lora_sft': np.float64(0.21), 'random_dir': None, 'task_vector': np.float64(0.59)}
+  mmlu_pro_lp     eta2_family=0.212  rho(norm,Δy) within family: {'abliteration': np.float64(0.0), 'chain': np.float64(-0.51), 'lora_sft': np.float64(-0.43), 'random_dir': np.float64(-0.15), 'task_vector': np.float64(-0.02)}
+  mmlu_pro_margin eta2_family=0.257  rho(norm,Δy) within family: {'abliteration': np.float64(-0.01), 'chain': np.float64(-0.54), 'lora_sft': np.float64(-0.42), 'random_dir': np.float64(-0.05), 'task_vector': np.float64(-0.14)}
+  hellaswag_lp    eta2_family=0.593  rho(norm,Δy) within family: {'abliteration': np.float64(0.01), 'chain': np.float64(0.52), 'lora_sft': np.float64(0.61), 'random_dir': np.float64(0.03), 'task_vector': np.float64(0.51)}
+  hellaswag_margin eta2_family=0.646  rho(norm,Δy) within family: {'abliteration': np.float64(-0.1), 'chain': np.float64(0.44), 'lora_sft': np.float64(0.37), 'random_dir': np.float64(0.06), 'task_vector': np.float64(0.31)}
+  kl_to_base      eta2_family=0.192  rho(norm,Δy) within family: {'abliteration': np.float64(0.76), 'chain': np.float64(0.65), 'lora_sft': np.float64(0.62), 'random_dir': np.float64(0.91), 'task_vector': np.float64(0.58)}
+  wikitext_ppl    eta2_family=0.640  rho(norm,Δy) within family: {'abliteration': np.float64(0.36), 'chain': np.float64(0.05), 'lora_sft': np.float64(0.23), 'random_dir': np.float64(0.21), 'task_vector': np.float64(-0.3)}
+
+D3 subset entries with KL>0.01 (non-null edits): {'abliteration': '2/100', 'chain': '30/50', 'lora_sft': '56/60', 'random_dir': '0/60', 'task_vector': '6/30'}
+zoo composition (edit.json, all dirs): {'chain': 675, 'abliteration': 205, 'random_dir': 153, 'lora_sft': 121, 'task_vector': 80, 'heretic_ara': 13}
+
+cost of current fast tier (records):
+     decode_steps  choice_forwards  minutes
+dev                                        
+H0         8444.3           1345.0      8.6
+H1         8444.0           1345.0      9.9
+H2         8448.0           1345.0     23.7
+  implied wall time per decode step if generation dominates: 66 ms (H0/H1 mean; derived, not profiled)
+
+power, Fisher-z (two-sided alpha .05, 80% power):
+  n= 300  SE(z)=0.0580  95% CI rho=.6: [0.522,0.668]  rho=.4: [0.300,0.491]
+         P(detect .6 vs 0)=1.0000  P(detect .4 vs 0)=1.0000  P(0.6 vs 0.4, two independent samples)=0.9073  P(single sample truth .6, H0 .4)=0.9964
+         smallest rho detectable vs 0 at 80% power: 0.161
+         reliability 0.5: attenuated rho at true .6 = 0.424, at true .4 = 0.283
+         reliability 0.75: attenuated rho at true .6 = 0.520, at true .4 = 0.346
+         reliability 0.9: attenuated rho at true .6 = 0.569, at true .4 = 0.379
+  n=1000  SE(z)=0.0317  95% CI rho=.6: [0.559,0.638]  rho=.4: [0.347,0.451]
+         P(detect .6 vs 0)=1.0000  P(detect .4 vs 0)=1.0000  P(0.6 vs 0.4, two independent samples)=1.0000  P(single sample truth .6, H0 .4)=1.0000
+         smallest rho detectable vs 0 at 80% power: 0.088
+         reliability 0.5: attenuated rho at true .6 = 0.424, at true .4 = 0.283
+         reliability 0.75: attenuated rho at true .6 = 0.520, at true .4 = 0.346
+         reliability 0.9: attenuated rho at true .6 = 0.569, at true .4 = 0.379
+  n= 246  SE(z)=0.0642  95% CI rho=.6: [0.513,0.674]  rho=.4: [0.289,0.500]
+         P(detect .6 vs 0)=1.0000  P(detect .4 vs 0)=1.0000  P(0.6 vs 0.4, two independent samples)=0.8439  P(single sample truth .6, H0 .4)=0.9875
+         smallest rho detectable vs 0 at 80% power: 0.178
+         reliability 0.5: attenuated rho at true .6 = 0.424, at true .4 = 0.283
+         reliability 0.75: attenuated rho at true .6 = 0.520, at true .4 = 0.346
+         reliability 0.9: attenuated rho at true .6 = 0.569, at true .4 = 0.379
+
+non-null subset: n=94 (KL>0.01 in D3 subset); extrapolated full-zoo non-null count: ~538 of 1247
+  n=94: 95% CI rho=.6 [0.452,0.716]; P(0.6 vs 0.4, independent) = 0.443
+  n=538: 95% CI rho=.6 [0.543,0.651]; P(0.6 vs 0.4, independent) = 0.993
+
+Board A repeat criterion (R_b <= delta/2), seed panel d = Δ(seed1) - Δ(seed0), 10 controls:
+  gsm8k          delta/2=0.0500  R_b(1.96 SD)=0.1398  R_b(max|d|)=0.1800  median item CI half-width=0.1114  qualifies(repeat)=no
+  math500        delta/2=0.0500  R_b(1.96 SD)=0.0744  R_b(max|d|)=0.1600  median item CI half-width=0.1377  qualifies(repeat)=no
+  ifeval         delta/2=0.0500  R_b(1.96 SD)=0.0686  R_b(max|d|)=0.0800  median item CI half-width=0.0784  qualifies(repeat)=no
+  refusal_rate   delta/2=0.0500  R_b(1.96 SD)=0.0343  R_b(max|d|)=0.0400  median item CI half-width=0.0000  qualifies(repeat)=yes
+  over_refusal   delta/2=0.0500  R_b(1.96 SD)=0.0986  R_b(max|d|)=0.0800  median item CI half-width=0.1187  qualifies(repeat)=no
+  mmlu_pro       delta/2=0.0500  R_b(1.96 SD)=0.0000  R_b(max|d|)=0.0000  median item CI half-width=0.0279  qualifies(repeat)=yes
+  hellaswag      delta/2=0.0500  R_b(1.96 SD)=0.0000  R_b(max|d|)=0.0000  median item CI half-width=0.0000  qualifies(repeat)=yes
+  kl_to_base     delta/2=0.0050  R_b(1.96 SD)=0.0003  R_b(max|d|)=0.0003  median item CI half-width=0.0002  qualifies(repeat)=yes
+  wikitext_ppl   delta/2=0.0244  R_b(1.96 SD)=0.0000  R_b(max|d|)=0.0000  median item CI half-width=0.0018  qualifies(repeat)=yes
+
+cross-device aggregate differences, same entry: H0 (zoo) vs H1/H2 copies (n pairs shown per device):
+  H1 n=10 gsm8k          mean diff +0.0040  max|diff| 0.1200  sd 0.0587
+  H1 n=10 math500        mean diff -0.0080  max|diff| 0.1200  sd 0.0559
+  H1 n=10 ifeval         mean diff +0.0160  max|diff| 0.0800  sd 0.0337
+  H1 n=10 refusal_rate   mean diff -0.0020  max|diff| 0.0400  sd 0.0199
+  H1 n=10 over_refusal   mean diff +0.0220  max|diff| 0.1400  sd 0.0569
+  H1 n=10 mmlu_pro       mean diff +0.0040  max|diff| 0.0200  sd 0.0097
+  H1 n=10 hellaswag      mean diff +0.0030  max|diff| 0.0100  sd 0.0048
+  H1 n=10 kl_to_base     mean diff -0.0002  max|diff| 0.0009  sd 0.0003
+  H1 n=10 wikitext_ppl   mean diff +0.0005  max|diff| 0.0012  sd 0.0004
+  H2 n=4 gsm8k          mean diff -0.0050  max|diff| 0.0600  sd 0.0379
+  H2 n=4 math500        mean diff +0.0000  max|diff| 0.1600  sd 0.1306
+  H2 n=4 ifeval         mean diff +0.0300  max|diff| 0.1200  sd 0.0683
+  H2 n=4 refusal_rate   mean diff +0.0000  max|diff| 0.0000  sd 0.0000
+  H2 n=4 over_refusal   mean diff +0.0250  max|diff| 0.0600  sd 0.0252
+  H2 n=4 mmlu_pro       mean diff -0.0050  max|diff| 0.0200  sd 0.0129
+  H2 n=4 hellaswag      mean diff +0.0025  max|diff| 0.0100  sd 0.0050
+  H2 n=4 kl_to_base     mean diff -0.0011  max|diff| 0.0037  sd 0.0017
+  H2 n=4 wikitext_ppl   mean diff +0.0002  max|diff| 0.0006  sd 0.0003
