@@ -208,5 +208,5 @@
 | 2026-11-05 | Council R1 JEPAWG researcher | codex/gpt-6.1-terra high | done 95ead11 |
 | 2026-11-05 | Council R1 features CTO | codex/gpt-6-luna high | done d5728ad (audit written; did not compute importances → evidence task) |
 | 2026-11-05 | Council R1 metrology CTO (signal-to-noise budget, targets) | claude_aio_gmail_api/claude-haiku-5-5 high | running |
-| 2026-11-05 | Council R1 strategy CTO (zoo, hypotheses, plan) | codex/gpt-6.1-sol high | running |
+| 2026-11-05 | Council R1 strategy CTO | codex/gpt-6.1-sol high | done 3b05dc5 — merged |
 | 2026-11-05 | Council evidence: StatNN refit, importances, family variance, within-family skill | codex/gpt-6.1-sol medium | running |
