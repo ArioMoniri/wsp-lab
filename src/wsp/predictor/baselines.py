@@ -92,6 +92,9 @@ def _spearman(y: np.ndarray, p: np.ndarray) -> float:
     return float(np.corrcoef(rankdata(y), rankdata(p))[0, 1])
 
 
+EDIT_CI_METHOD = "seeded percentile bootstrap over edits (not independent trajectories)"
+
+
 def metrics_with_ci(y: np.ndarray, pred: np.ndarray, seed: int = 0, n_boot: int = 1000) -> dict:
     """MAE / RMSE / Spearman with 95 % percentile bootstrap CIs (resampling edits, seeded)."""
     y, pred = np.asarray(y, float), np.asarray(pred, float)
@@ -117,7 +120,7 @@ def metrics_with_ci(y: np.ndarray, pred: np.ndarray, seed: int = 0, n_boot: int 
             if len(finite) >= max(10, n_boot // 10)
             else [math.nan, math.nan]
         )
-        out[k] = {"value": v, "ci95": ci}
+        out[k] = {"value": v, "ci95": ci, "ci_method": EDIT_CI_METHOD}
     return out
 
 

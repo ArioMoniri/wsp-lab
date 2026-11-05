@@ -30,6 +30,12 @@ def collapse_check(latents, ablation):
     }
 
 
+PAIRED_CI_METHOD = (
+    "paired percentile bootstrap resampling independent full-ancestry clusters with replacement, "
+    "retaining all edits and paired predictions in each sampled cluster; conditional on fitted models"
+)
+
+
 def paired_cluster_difference(y, model, baseline, clusters, seed, n_boot):
     y, model, baseline, clusters = map(np.asarray, (y, model, baseline, clusters))
     groups = np.unique(clusters)
@@ -58,6 +64,7 @@ def paired_cluster_difference(y, model, baseline, clusters, seed, n_boot):
         finite = draws[:, j][np.isfinite(draws[:, j])]
         out[name] = {
             "value": float(point[j]),
+            "ci_method": PAIRED_CI_METHOD,
             "ci95": np.percentile(finite, [2.5, 97.5]).tolist()
             if len(finite) >= 2 and len(groups) >= 2
             else [float("nan")] * 2,
@@ -136,7 +143,7 @@ def audit_run(ds, predictions, folds, records, out, seed, n_boot, scaling):
                 label: score_targets(y, pred, subset, ds.names, seed, n_boot)
                 for label, pred in {"model": predictions, **controls}.items()
             }
-    baselines, paired, centered = {}, {}, {}
+    baselines, paired, centered, centered_pooled = {}, {}, {}, {}
     for label, pred in {"model": predictions, **controls}.items():
         if label != "model":
             baselines[label] = {
@@ -144,20 +151,19 @@ def audit_run(ds, predictions, folds, records, out, seed, n_boot, scaling):
             }
             paired[label] = {}
         centered[label] = {}
+        centered_pooled[label] = {}
         for j, name in enumerate(ds.names):
             ok = np.isfinite(y[:, j]) & np.isfinite(pred[:, j]) & np.isfinite(predictions[:, j])
             if not ok.any():
                 continue
-            obs, p, fam = y[ok, j].copy(), pred[ok, j].copy(), families[ok]
-            for family in set(fam):
-                mask = fam == family
-                obs[mask] -= obs[mask].mean()
-                p[mask] -= p[mask].mean()
-            centered[label][name] = {
-                "n": int(ok.sum()),
-                "spearman": _spearman(obs, p),
-                "diagnostic_only": True,
-            }
+            within, pooled = family_centered_correlations(
+                y[:, j],
+                pred[:, j],
+                families,
+                [np.asarray(test)[ok[test]] for _, test in folds],
+            )
+            centered[label][name] = within
+            centered_pooled[label][name] = pooled
             if label != "model":
                 paired[label][name] = paired_cluster_difference(
                     y[ok, j], predictions[ok, j], pred[ok, j], clusters[ok], seed, n_boot
@@ -167,8 +173,38 @@ def audit_run(ds, predictions, folds, records, out, seed, n_boot, scaling):
         "paired_differences": paired,
         "per_family": per_family,
         "family_centered": centered,
+        "family_centered_pooled": centered_pooled,
         "out_of_support": support,
     }
+
+
+def family_centered_correlations(y, pred, families, folds):
+    """Centre within family × test fold; average finite fold correlations by fold n."""
+
+    def score(indices):
+        obs, p, fam = y[indices].copy(), pred[indices].copy(), families[indices]
+        for family in set(fam):
+            mask = fam == family
+            obs[mask] -= obs[mask].mean()
+            p[mask] -= p[mask].mean()
+        return {"n": len(indices), "spearman": _spearman(obs, p)}
+
+    fold_scores = [score(indices) for indices in folds if len(indices)]
+    finite = [r for r in fold_scores if np.isfinite(r["spearman"])]
+    within = {
+        "n": sum(r["n"] for r in fold_scores),
+        "spearman": float(
+            np.average([r["spearman"] for r in finite], weights=[r["n"] for r in finite])
+        )
+        if finite
+        else float("nan"),
+        "folds": fold_scores,
+        "estimand": "family centring within outer test folds; fold-n weighted correlation",
+        "diagnostic_only": True,
+    }
+    pooled = score(np.concatenate(folds))
+    pooled.update(estimand="family centring after pooling outer test folds", diagnostic_only=True)
+    return within, pooled
 
 
 def score_targets(y, pred, indices, names, seed, n_boot):

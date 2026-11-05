@@ -20,7 +20,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Subset
 
-from wsp.predictor.audit import audit_run, collapse_check, seed_summary
+from wsp.predictor.audit import PAIRED_CI_METHOD, audit_run, collapse_check, seed_summary
 from wsp.predictor.baselines import metrics_with_ci
 from wsp.predictor.data import FeatureDataset, collate_trajectories
 from wsp.predictor.models import build_model, effective_rank, seed_all
@@ -473,7 +473,8 @@ def run_training(
             else None
         ),
         "marginal_ci_method": "seeded percentile bootstrap resampling edits, conditional on fitted models; descriptive marginal intervals only",
-        "ci_method": "paired percentile bootstrap resampling independent full-ancestry clusters with replacement, retaining all edits and paired predictions in each sampled cluster; conditional on fitted models",
+        "ci_method": "seeded percentile bootstrap over edits (not independent trajectories)",
+        "paired_ci_method": PAIRED_CI_METHOD,
     }
     (out / "metrics.json").write_text(json.dumps(results, indent=2))
     lines = [

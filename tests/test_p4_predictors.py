@@ -552,7 +552,22 @@ def test_nested_refit_baselines_and_feature_audit(toy, tmp_path):
         frame
     )
     assert r["per_family"] and r["family_centered"] and r["out_of_support"]
-    assert "ancestry clusters" in r["ci_method"]
+    assert "over edits" in r["ci_method"]
+    assert "ancestry clusters" in r["paired_ci_method"]
+    saved = json.loads((out / "metrics.json").read_text())
+
+    def check(block, paired=False):
+        if isinstance(block, dict):
+            if "ci95" in block:
+                expected = saved["paired_ci_method"] if paired else saved["ci_method"]
+                assert block["ci_method"] == expected
+            for key, value in block.items():
+                check(value, paired or key == "paired_differences")
+        elif isinstance(block, list):
+            for value in block:
+                check(value, paired)
+
+    check(saved)
 
 
 def test_device_never_enters_model_inputs(toy, tmp_path):
@@ -673,3 +688,18 @@ def test_seeds_cli_runs_complete_experiments_and_writes_summary(tmp_path, monkey
     assert len({str(c["out"]) for c in calls}) == 3
     summary = json.loads((tmp_path / "multi/metrics.json").read_text())
     assert summary["seed_summary"]["acc"]["mae"]["range"] == [0.0, 2.0]
+
+
+def test_family_centered_fold_offsets():
+    from wsp.predictor.audit import family_centered_correlations
+
+    y = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
+    p = np.array([0.0, 2.0, 1.0, 0.0, 2.0, 1.0])
+    families = np.array(["a"] * 6)
+    folds = [np.arange(3), np.arange(3, 6)]
+    within, pooled = family_centered_correlations(y, p, families, folds)
+    shifted = p + np.array([0.0, 0.0, 0.0, 100.0, 100.0, 100.0])
+    other, other_pooled = family_centered_correlations(y, shifted, families, folds)
+    assert within["spearman"] == pytest.approx(0.5)
+    assert within == other
+    assert pooled["spearman"] != other_pooled["spearman"]
