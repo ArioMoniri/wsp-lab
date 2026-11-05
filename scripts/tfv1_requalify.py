@@ -712,38 +712,40 @@ def effective_increment_norms(rows, ids, zoo, features_dir, cache_path):
             out[i] = float(meta["norms"]["fro_effective"])
     if todo:
         import torch
+        from huggingface_hub import snapshot_download
         from safetensors import safe_open
 
         from wsp.eval.zoo_compat import load_entry_delta
+        from wsp.zoo.common import resolve_base_revision
 
-        header = json.loads((zoo / "manifest.jsonl").read_text().splitlines()[0])
-        from huggingface_hub import snapshot_download
-
-        snap = Path(
-            snapshot_download(
-                header["base_model"], revision=header["base_revision"], local_files_only=True
+        header = next(
+            r
+            for r in reversed(
+                [json.loads(x) for x in (zoo / "manifest.jsonl").read_text().splitlines()]
             )
+            if r.get("type") == "header"
         )
-        base = {}
+        revision = header["base_revision"]
+        if len(revision) != 40:
+            revision = resolve_base_revision(header["base_model"], revision)
+        snap = Path(
+            snapshot_download(header["base_model"], revision=revision, local_files_only=True)
+        )
+        where, real = {}, {}
         for f in sorted(snap.glob("*.safetensors")):
             with safe_open(f, "pt") as stream:
-                for k in stream.keys():  # noqa: SIM118
-                    base[k] = None  # filled lazily below
-        keys = list(base)
-
-        def tensor(name):
-            for f in sorted(snap.glob("*.safetensors")):
-                with safe_open(f, "pt") as stream:
-                    if name in stream.keys():
-                        return stream.get_tensor(name)
-            raise KeyError(name)
+                for key in stream.keys():  # noqa: SIM118
+                    # checkpoint names carry `language_model.`; the model/delta names do not
+                    name = key.replace("model.language_model.", "model.", 1)
+                    where[name], real[name] = f, key
+        keys = list(where)
 
         def merged(delta, name):
-            w = tensor(name).float()
-            d = delta.get(name)
-            return (
-                (w + d.float()).to(torch.bfloat16) if d is not None else w.to(torch.bfloat16)
-            ).float()
+            with safe_open(where[name], "pt") as stream:
+                w = stream.get_tensor(real[name]).float()
+            if name in delta:
+                w = w + delta[name].float()
+            return w.to(torch.bfloat16).float()  # effective bf16 state
 
         for n, i in enumerate(todo):
             di = load_entry_delta(zoo / i, keys)
