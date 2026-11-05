@@ -16,6 +16,9 @@ from wsp.predictor.ssm_torch import TrajectoryPredictor
 def seed_all(seed):
     random.seed(seed)
     np.random.seed(seed)
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)

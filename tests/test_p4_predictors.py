@@ -703,3 +703,62 @@ def test_family_centered_fold_offsets():
     assert within["spearman"] == pytest.approx(0.5)
     assert within == other
     assert pooled["spearman"] != other_pooled["spearman"]
+
+
+@pytest.mark.parametrize("n_fit", [0, 1, 3])
+def test_audit_legacy_statnn_contract(toy, tmp_path, monkeypatch, caplog, n_fit):
+    from wsp.predictor import audit
+
+    ds = FeatureDataset(toy / "features", toy / "evals")
+    train, test = np.arange(n_fit), np.arange(6, 9)
+    folds = [(train, test), (train, test)]
+    seeds = []
+    original = audit._make_model
+
+    def model(name, seed):
+        seeds.append(seed)
+        return original(name, seed)
+
+    monkeypatch.setattr(audit, "_make_model", model)
+    for f in range(2):
+        pd.DataFrame([{"id": ds.rows[i]["id"], "target": "acc"} for i in test]).to_parquet(
+            tmp_path / f"fold-{f}.parquet"
+        )
+    # Normalizer requires context even when no labels are finite.
+    train = np.arange(3)
+    ds.targets[:3] = float("nan")
+    ds.targets[:n_fit] = 0.1
+    folds = [(train, test), (train, test)]
+    result = audit.audit_run(
+        ds, ds.targets.numpy().copy(), folds, [], tmp_path, 17, 10, "standard"
+    )["baselines"]["statnn"]
+    assert {k: result[k] for k in ("model", "n", "n_folds", "n_features")} == {
+        "model": "statnn",
+        "n": len(ds),
+        "n_folds": 2,
+        "n_features": ds.stats_dim,
+    }
+    if n_fit < 2:
+        assert seeds == []
+        assert len(result["skipped_folds"]) == 2
+        assert all(r["skipped_reason"] for r in result["skipped_folds"])
+        assert "fewer than two finite training labels" in caplog.text
+        assert result["targets"]["acc"] == {"n": 0}
+        assert pd.read_parquet(tmp_path / "fold-0.parquet").statnn.isna().all()
+    else:
+        assert seeds == [17, 17]
+
+
+@pytest.mark.parametrize("mode", ["family", "seed", "trajectory"])
+def test_split_ancestry_contexts_are_disjoint(toy, mode):
+    from wsp.predictor.train import Normalizer
+
+    ds = FeatureDataset(toy / "features", toy / "evals")
+    for train, test in ds.folds(mode, 3):
+        train_context = set(Normalizer(ds, train).ids)
+        test_context = {a for i in test for a in ds.chain(ds.rows[i]["id"])}
+        assert train_context.isdisjoint(test_context)
+        for inner_train, inner_val in ds.folds(mode, 2, train):
+            inner_context = set(Normalizer(ds, inner_train).ids)
+            val_context = {a for i in inner_val for a in ds.chain(ds.rows[i]["id"])}
+            assert inner_context.isdisjoint(val_context | test_context)

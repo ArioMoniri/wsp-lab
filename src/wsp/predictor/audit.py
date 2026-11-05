@@ -1,5 +1,6 @@
 """Fold-local controls and conditional paired ancestry-cluster uncertainty for P4."""
 
+import logging
 import warnings
 
 import numpy as np
@@ -87,6 +88,7 @@ def audit_run(ds, predictions, folds, records, out, seed, n_boot, scaling):
         for k in ("statnn", "fold_mean", "delta_norm", "descriptor_only", "device_only")
     }
     support, per_family = {}, {}
+    skipped = []
     for f, (train, test) in enumerate(folds):
         norm = Normalizer(ds, train, scaling)
         support[str(f)] = {}
@@ -103,11 +105,16 @@ def audit_run(ds, predictions, folds, records, out, seed, n_boot, scaling):
             warnings.simplefilter("ignore")
             for j in range(y.shape[1]):
                 fit = np.asarray(train)[np.isfinite(y[train, j])]
-                if not len(fit):
+                if len(fit) < 2:
+                    reason = "fewer than two finite training labels"
+                    skipped.append({"fold": f, "target": ds.names[j], "skipped_reason": reason})
+                    logging.getLogger(__name__).warning(
+                        "Skipping baseline fold %d target %s: %s", f, ds.names[j], reason
+                    )
                     continue
                 controls["fold_mean"][test, j] = y[fit, j].mean()
                 if len(fit) >= 2:
-                    est = _make_model("statnn", seed + f).fit(stats[fit], y[fit, j])
+                    est = _make_model("statnn", seed).fit(stats[fit], y[fit, j])
                     controls["statnn"][test, j] = est.predict(stats[test])
                     # Direction chosen from training labels only, clipped beyond training support.
                     iso = IsotonicRegression(increasing="auto", out_of_bounds="clip").fit(
@@ -118,9 +125,6 @@ def audit_run(ds, predictions, folds, records, out, seed, n_boot, scaling):
                         descriptors[fit], y[fit, j]
                     )
                     controls["descriptor_only"][test, j] = reg.predict(descriptors[test])
-                else:
-                    for key in ("statnn", "delta_norm", "descriptor_only"):
-                        controls[key][test, j] = y[fit, j].mean()
                 # Categorical training-device means; unseen devices use training-fold mean.
                 for i in test:
                     matched = fit[devices[fit] == devices[i]]
@@ -168,6 +172,13 @@ def audit_run(ds, predictions, folds, records, out, seed, n_boot, scaling):
                 paired[label][name] = paired_cluster_difference(
                     y[ok, j], predictions[ok, j], pred[ok, j], clusters[ok], seed, n_boot
                 )
+    baselines["statnn"].update(
+        model="statnn",
+        n=len(stats),
+        n_folds=len(folds),
+        n_features=stats.shape[1],
+        skipped_folds=skipped,
+    )
     return {
         "baselines": baselines,
         "paired_differences": paired,

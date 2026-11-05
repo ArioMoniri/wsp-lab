@@ -153,14 +153,20 @@ def fit_eval(
         "n_folds": len(folds),
         "n_features": int(X.shape[1]),
         "targets": {},
+        "skipped_folds": [],
     }
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # sklearn ConvergenceWarning on tiny folds
         for j, name in enumerate(names):
             pred = np.full(len(X), np.nan)
-            for train, test in folds:
+            for fold, (train, test) in enumerate(folds):
                 train = np.asarray(train)[np.isfinite(Y[np.asarray(train), j])]
                 if len(train) < 2:
+                    reason = "fewer than two finite training labels"
+                    result["skipped_folds"].append(
+                        {"fold": fold, "target": name, "skipped_reason": reason}
+                    )
+                    log.warning("Skipping baseline fold %d target %s: %s", fold, name, reason)
                     continue
                 est = _make_model(model, seed, model_params).fit(X[train], Y[train, j])
                 pred[test] = est.predict(X[test])

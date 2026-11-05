@@ -42,6 +42,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--main-ref", default="main")
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--repeat-self", action="store_true")
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     root = args.out or Path(tempfile.mkdtemp(prefix="wsp-p4-compat-"))
@@ -85,7 +86,10 @@ def main():
         "--batch-size",
         "4",
     ]
-    for label, checkout in [("main", source), ("branch", repo)]:
+    runs = [("main", source), ("branch", repo)]
+    if args.repeat_self:
+        runs.append(("branch-repeat", repo))
+    for label, checkout in runs:
         env = dict(
             os.environ,
             PYTHONPATH=str(checkout / "src"),
@@ -102,6 +106,13 @@ def main():
             subprocess.run(
                 command, cwd=checkout, env=env, stdout=log, stderr=subprocess.STDOUT, check=True
             )
+    if args.repeat_self:
+        identical = (root / "branch/metrics.json").read_bytes() == (
+            root / "branch-repeat/metrics.json"
+        ).read_bytes()
+        (root / "repeat-self.json").write_text(json.dumps({"bitwise_identical": identical}))
+        assert identical, "same-revision metrics.json differs between identical seeded runs"
+        print("repeat-self: bitwise-identical metrics.json")
     before = json.loads((root / "main/metrics.json").read_text())
     after = json.loads((root / "branch/metrics.json").read_text())
     failures = list(differences(before, after))

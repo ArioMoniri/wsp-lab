@@ -216,3 +216,45 @@ for this revision, not retroactively for backfills performed before archives exi
 Empty ancestry folds emit WARNING on stderr through Python logging and appear in
 `skipped_folds` in metrics and manifest; the CPU test captures that warning and
 checks the persisted metrics.
+
+## P4 addendum — 2026-11-05: selection, refit and audit protocol
+
+These old → new rules deliberately change numerical results; round-two metrics
+are not numerically interchangeable with the earlier protocol.
+
+- Selection/refit: first surviving inner split and its trained model → all
+  surviving inner folds select the median best epoch (rounded up), then a fresh
+  model fits all outer-training rows for that fixed epoch budget. Outer-test
+  labels never select epochs. Predictions and losses therefore change.
+- Preprocessing: one inner-train normalizer → separately fitted inner-training
+  normalizers and a fresh outer-training refit normalizer. Signed log1p precedes
+  scaling; train-constant coordinates are zeroed, including at test time.
+  Optional robust scaling uses training medians/IQR rather than mean/std.
+  Different fitted contexts and constant handling change transformed inputs.
+- Baselines: first inner-training subset → the same outer-training refit rows
+  as the predictor. StatNN retains the original identical seed in every fold,
+  not seed + fold; LightGBM uses deterministic row-wise training. Fewer than
+  two finite training labels → explicitly skip that target/fold, log the reason
+  and record skipped_reason; never replace StatNN with a training mean.
+  This preserves the legacy fit_eval skip rule and removes the round-two
+  silent fallback. Audit controls also skip that unsupported target/fold.
+  Legacy StatNN model, n, n_folds and n_features remain model name, total input
+  rows, supplied fold count and input stats width, respectively.
+- Fold reporting: legacy train_ids, normalization_context_ids and history now
+  describe the outer refit; validation_ids is empty and refit validation_loss
+  is null. Validation IDs, losses and epoch selection live in inner_selection.
+  Thus membership, ordering and training-loss fields change interpretation.
+- Splits: family/seed label exclusion alone → full-ancestry cluster exclusion
+  plus ancestor/source metadata purging in affected holdouts. This can remove
+  training rows, including clusters joined through unlabeled ancestors.
+  Trajectory splits already group full ancestry; the compatibility fixture
+  uses trajectory splits and does not demonstrate row loss in these holdouts.
+- Intervals: marginal metrics retain seeded edit percentile bootstrap;
+  paired predictor-minus-control differences use full-ancestry cluster
+  bootstrap with paired predictions retained, conditional on fitted models.
+  Each interval identifies its own method. Changed predictions change marginal
+  endpoints; the paired estimand has a different sampling unit.
+- Centring: family centring after pooling folds → family × outer-test-fold
+  centring and fold-n weighted finite fold correlations. Pooled centring is
+  separately labelled family_centered_pooled. Removing fold offsets changes
+  the within-fold diagnostic and can leave correlations undefined.
