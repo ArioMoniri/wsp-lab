@@ -103,3 +103,75 @@ def test_composition_rule_is_deterministic_and_has_ten_entries():
     assert chosen["task_vector"] == ["t0", "t1"] and chosen["abliteration_largest"] == ["a2"]
     assert chosen["chain"] == ["c0s3", "c1s3", "c2s3"]  # distinct lineages, step >= 3, sorted id
     assert chosen == panel.select(rows, edits, kl)[0]
+
+
+def synthetic_zoo():
+    rows, edits = {}, {}
+
+    def add(i, family, parent=None, **extra):
+        rows[i] = {"id": i, "family": family, "parent_id": parent}
+        edits[i] = {
+            "id": i,
+            "family": family,
+            "parent_id": parent,
+            "eligibility": "production",
+            "params": extra.pop("params", {}),
+            "provenance": extra,
+        }
+
+    add("L1", "lora_sft", generator_edit_id="g1")
+    add("L2", "lora_sft", generator_edit_id="g2")  # unevaluated candidate, fresh
+    add("L3", "lora_sft", generator_edit_id="g3")  # shares nothing, but evaluated -> development
+    add("T1", "task_vector", parent="A1", parent_reuse_key="k", reuse_key="t")
+    add("A1", "abliteration", reuse_key="k")
+    add("T2", "task_vector", parent="L3", parent_reuse_key="k", reuse_key="t")
+    # chain lineage sharing a trained adapter with L1 (generator join) -> one component
+    add("C0", "chain", generator_edit_id="g1", params={"step": 0, "length": 2})
+    add("C1", "chain", parent="C0", params={"step": 1, "length": 2})
+    add("D0", "chain", params={"step": 0, "length": 2})  # exact copy of A1's delta (hash join)
+    add("D1", "chain", parent="D0", params={"step": 1, "length": 2})
+    add("F0", "lora_sft", generator_edit_id="gf")  # flagged ARA id -> excluded
+    add("E0", "chain", params={"step": 0, "length": 1}, generator_edit_id="ge")
+    edits["E0"]["eligibility"] = "smoke"
+    return rows, edits
+
+
+def test_partition_joins_closes_and_seals(monkeypatch):
+    build = load("build_h1a_panel")
+    rows, edits = synthetic_zoo()
+    monkeypatch.setattr(build, "artefact_files", lambda path: [path])
+    monkeypatch.setattr(build, "FLAGGED_ARA", ["F0"])
+    hashes = {i: f"h-{i}" for i in rows} | {"A1": "same", "D0": "same"}
+    evaluated, pilots = {"L3", "A1"}, set()
+    components, aliases, edge_kinds, candidates, first = build.build(
+        rows, edits, hashes, evaluated, pilots
+    )
+    where = {m: c for c in components for m in c["members"]}
+    # parent, generator and delta-hash joins; a task vector joins its source parent
+    assert where["T1"] is where["A1"] is where["D0"] is where["D1"]
+    assert where["C0"] is where["C1"] is where["L1"]
+    assert where["T2"] is where["L3"] and where["T2"]["status"] == "development"
+    # an evaluated A1 puts T1 and the duplicate chain D0/D1 in development: no fresh leak
+    assert where["T1"]["status"] == "development" and where["D1"]["status"] == "development"
+    assert (
+        where["F0"]["status"] == "excluded"
+        and "flagged_ara_diagnostic" in where["F0"]["exclusion_reasons"]
+    )
+    assert where["E0"]["status"] == "excluded"
+    # fresh candidates: L1 (with the generator-sharing chain) and L2 are confirmatory
+    assert where["L1"]["status"] == "confirmatory" and where["L2"]["status"] == "confirmatory"
+    # T2 is an unevaluated candidate whose source L3 is evaluated: candidate, but development
+    assert candidates == {"L1", "L2", "T1", "T2", "F0"}
+    assert aliases == {"same": ["A1", "D0"]}
+    assert edge_kinds["delta_hash"] == 1 and edge_kinds["generator"] == 1
+    summary = build.summarize(
+        components, rows, candidates, first, aliases, edge_kinds, evaluated, hashes
+    )
+    assert summary["confirmatory_components"] == 2 and not summary["met_target"]
+    ids = [c["component_id"] for c in components]
+    assert ids == sorted(
+        ids, key=lambda i: next((c["rank"], i) for c in components if c["component_id"] == i)
+    )
+    # component ids and ranks depend only on membership, never on dict order
+    again = build.build(dict(reversed(list(rows.items()))), edits, hashes, evaluated, pilots)[0]
+    assert {c["component_id"] for c in again} == set(ids)
