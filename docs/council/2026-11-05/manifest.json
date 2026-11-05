@@ -239,5 +239,48 @@
     "https://arxiv.org/abs/2607.07127",
     "https://arxiv.org/abs/2610.30847",
     "https://arxiv.org/abs/2603.15990"
-  ]
+  ],
+  "round2_strategy": {
+    "artifact": "round2-strategy.md",
+    "sha256": "a1b77e9e5a2ca8ee8ee1638a2c175248fbbfa1b3d14eb4a9bd0ec9ea1e657a0f",
+    "seed": null,
+    "seed_note": "Document-only design; no stochastic computation",
+    "config": {
+      "kind": "round2-strategy-design",
+      "gpu_computation": false,
+      "cloud_actions": false,
+      "collection_states": 96,
+      "new_states": 84,
+      "battery_equivalents": 120,
+      "local_gpu_hour_cap": 17.04,
+      "optional_h100_hour_cap": 4,
+      "optional_new_lambda_dollar_cap": 13.16,
+      "project_lambda_dollar_cap": 150
+    },
+    "config_hash": "9d7e09b10145a1e43efc675be637776b34e5236e6676abf791f4db100720d983",
+    "git_sha": "793f5f97ab72282457a85dc2e395bee46256403a",
+    "model_revisions": {
+      "note": "No model loaded; future revisions must be pinned by experiment owner"
+    },
+    "input_sha256": {
+      "BRIEF.md": "c1686948a6971b1d4af051e3ccde404f9d41561b784ade2b432cfbb35b8a15f0",
+      "evidence-statnn-importances.csv": "04865f970828af5ba06cc4c2ccf0c481aeaf3665a717dacce6ad5bed6499da96",
+      "evidence-statnn-importances.md": "e9145fe4c482195dd5cc4d5f636287f4c9596850b778f4963e2f4aed53c84a27",
+      "metrology_budget.py": "11c15eecfa9ae614ecb79eb7b40d279604051276218ec2bf9ff71185c118e627",
+      "metrology_budget_output.txt": "c50139553e2c10c29a2e9e348a9fede37c8307780e2d6f42d94f58132f2d3b40",
+      "round1-features.md": "501371ad401187d753ccffc8c046bce9ac7426a8791372f2b9fe13889059f670",
+      "round1-jepawg.md": "9be5c30523dfb110143b818f490a72dce8530d6d66c2911ecb67b2e0786fb328",
+      "round1-metrology.md": "452261e31bf4ef3f0d7ef10e70927a6be8c840a6bfba71f92840d1f17079c7f7",
+      "round1-strategy.md": "1c7e11e049d156ca8740bced83e4895c376ee287019dadf68ad0fb65d75b03d2",
+      "round1-weight-reading.md": "8a65ecd787aefe20103c65476612db8ca98721520b2cd6a07db1dcf66858b700",
+      "statnn_evidence.py": "3dbcc3368d92ce25bbe0ca2dd4745f9287950b47b0a13491c817e2f479a7b1a4",
+      "strategy_audit.py": "04ca56b64a0b319296ef47448c88c01c7dfb49d8ac444a2e3a11a04826c1a7c6"
+    },
+    "external_sources_reopened": [
+      "https://rikiyat.github.io/blog/weight-space-programming/",
+      "https://arxiv.org/abs/2607.07127",
+      "https://arxiv.org/abs/2610.30847",
+      "https://arxiv.org/abs/2603.15990"
+    ]
+  }
 }
