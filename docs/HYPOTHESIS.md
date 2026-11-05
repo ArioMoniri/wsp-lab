@@ -1,4 +1,37 @@
-# Hypotheses
+# Hypotheses — amended 5 November 2026
+
+## Dated changelog
+
+**2026-11-05 — Board A revision:** H1 becomes H1a/H1b; H2 becomes closure-first within-M2 history ablation with placebo equivalence; H3 requires independent operator/source holdout; H4–H6 are parked. Adopted defaults: TF-v1 yes; ≤30 local GPU-h yes; additional history no; new Lambda no. All new thresholds are prospective criteria. [PREREG_H1_TF](PREREG_H1_TF.md) is binding; historical wording below remains archival. Original H1 was not demonstrated, H2/H3 are undetermined, H4–H6 untested ([Board A](reviews/P4/board-a-synthesis-and-v2-2026-11-05.md)). No new qualification or power result is claimed.
+
+## H1a — residual TF readability (primary)
+
+> On sealed fresh source-closed components, estimate row-weighted relative residual MAE reduction of fixed StatNN versus training-fitted isotonic norm after training-only family, device and log-norm adjustment for predecessor-relative MMLU gold-letter log-prob.
+
+Primary: normalized MMLU gold-letter log-prob, 1,000 disjoint items. θ=1−Σ|r−p_StatNN|/Σ|r−p_isotonic|. Pass only θ≥.15, lower 95% bound>0, half-width≤θ/2, ≥100 genuinely fresh source-closed components, measured qualification and prospective TF-specific ≥80% power at .15. Paired 4,000-component and joint component/item intervals must both pass. Qualified adequately powered upper bounds<.05 kill practical readability for this endpoint only; intermediate/wide intervals are inconclusive. Failed qualification/count/power means untested. Registration §§1–6 freezes the full pipeline and numerical guard.
+
+## H1b — superiority over StatNN (descriptive screen)
+
+One base-anchored signed-projection candidate/head versus original and augmented-feature StatNN, identical labels/information/splits/seeds/budget. Stronger criterion: ≥5% residual MAE gain over both trees, positive paired intervals and MMLU ρ≥.6. The present screen is descriptive; later confirmation needs untouched outcomes, TF-specific ≥80% power and multiplicity protection. Freeze all features before any H1a unsealing, develop on D3 only. A tree winning is useful representation evidence, not world-model superiority. Registration §7 governs.
+
+## H2 — closure-first within-M2 history ablation (compute parked)
+
+Compare true/masked/causally shuffled history inside the same M2, matched initialization/training budget and identical current cumulative state plus incremental edit; include lag/trend controls. Require complete measured ancestry/source closure, length≥4, complete-run holdout and new TF variance-based ≥80% power. Future pass: ≥15% residual MAE gain versus mask, lower joint 95% bound>0, also beat shuffle/lag. Length-one placebo's entire 95% CI must lie within prospective **[−.05,+.05] relative-loss equivalence margin**; non-significance is insufficient. Failed equivalence, SD>1.0, missing closure or unaffordable power stops unresolved; qualified powered upper bound<.05 rejects useful history gain for this design. Forty closures are feasibility only. Additional 10 h declined: cached census/design only this programme; future execution separately funded. Registration §7 governs.
+
+## H3 — unseen edit-operator transfer (conditional, parked)
+
+Reopen after qualified H1 gates with separate budget and power. Hold out merge operator and all sources/descendants from preprocessing, fitting and unlabeled pretraining; report parent-known and source/parent-unseen arms separately. Planned minimum 100 independent held-out components is a floor, followed by ≥80% paired-effect power. JEPA success requires qualified MMLU ρ≥.5, positive residual-MAE advantage over same-input supervised and StatNN controls, and explicit noncollapse qualification. Powered rank upper bound<.2 rejects transfer; insufficient independent support means untested. Original ablation/random→LoRA remains undetermined: M2 LoRA holdout and M3 rank logging do not demonstrate collapse-qualified transfer; M6 fails its acceptance gate (Board A §A).
+
+## H4–H6 — parked; conditions for reopening
+
+- **H4:** pinned reader identity/access, separate token budget/consent, identical frozen summaries, blinded edits, replicated prompts and powered in-family/novel-operator panels. Original directional claim needs predictor superiority in-family and reader superiority on novel operators, both with paired intervals. No paid comparison here.
+- **H5:** offline harness only. Reopen after measurement/sandbox requirements, proposal-distribution calibration, editor consent/budget, priced sealed scoring and power. Preserve ≥30% real-evaluation savings at equal final score, counting all editor/probe/amortized costs. Shadow scores are not success; no production rejection. [Prior Board A protocol](reviews/H5/board-a-prereg-2026-11-04.md) and [H5 protocol](H5_PROTOCOL.md) remain additional gates.
+- **H6:** reopen after fixed-base signal, pinned accessible models, shared-coordinate audit and separate budget/power. Whole-model holdout retains original ≥.4 rank on ≥6 qualified endpoints, calibration separate. Fewer endpoints requires explicit narrowed amendment, not original success. No second-base compute here.
+
+## Historical hypotheses — preserved 3–4 November wording
+
+The following original definitions and proposed scale work are archival, not current authorization. Target migration does not establish historical hypothesis success.
+
 
 Base object: a base model θ₀ and an edit sequence e₁…e_T producing θ₁…θ_T. Each θ_t has a performance
 vector y_t ∈ ℝ^K over K cheap benchmarks (see `docs/ROADMAP.md` §Benchmarks). Δθ_t = θ_t − θ_{t−1}.
