@@ -1,22 +1,25 @@
 \section{Edit zoo}
+\label{sec:zoo}
 The builder implements six families. Random-direction ablation projects selected weight matrices away from sampled directions. Projected abliteration uses the first 400 harmful and harmless dataset prompts by default, with a seeded subsample when fewer are requested. Prompts use the system and user chat template, a generation prompt and the response prefix; the system text is folded into the user turn if needed. At the final prompt token, it averages residuals separately for each prompt set at the embedding and every layer. At each layer it normalizes the harmful-minus-harmless mean, projects out the normalized harmless mean, and normalizes the result again. Its Heretic-parity classic kernel applies $W'=W-w_\ell v(v^\top W)$ with no row normalization. The layer weight $w_\ell$ interpolates linearly from a peak to a floor inside a finite radius and is zero outside it. Directions may be selected or interpolated across residual layers. This is one specific projected variant. It does not use Heretic's default row normalization.
 
 Heretic ARA generates an adapter from Optuna trials scored on refusal and KL. A configured KL constraint restricts which trials are eligible. Heretic describes ARA as its default modifier, and it optimizes with Optuna TPE \citep{heretic2026}. LoRA supervised fine-tuning trains adapters on GSM8K or Alpaca-style data with sampled training parameters. Task-vector entries scale an eligible parent's delta relative to the pinned base. Chains store cumulative snapshots relative to the base. Random-direction and abliteration steps modify the accumulated state. Adapter steps are optimized against the base and then added to that state. To get step deltas, consecutive snapshots must be differenced. A snapshot must never be applied again to its parent.
 
 An entry ID hashes the family, the parameters, the seed, the pinned base revision and the parent. A separate reuse key records further provenance: the kernel, the dtype, the refusal fingerprint and the chain prefix. Any mismatch blocks silent reuse. Eligibility separates production entries from smoke entries and legacy unclassified ones. Smoke status propagates through descendants. A task-vector parent must have a compatible base and provenance, and it is normally a production entry.
 
-Table~\ref{tab:zoo-counts} counts unique entry IDs from the local manifest at 2026-11-04 06:20:20 UTC, using the last row for each ID and excluding headers. The build was still running. Chain rows count cumulative steps, not independent trajectories. The manifest is a build artefact and does not show that every entry has a completed evaluation.
+Table~\ref{tab:zoo-counts} counts unique entry IDs in the canonical local manifest, \texttt{data/zoo/qwen3.5-0.8b/manifest.jsonl}, after the D6 rebuild on 5 November 2026. The file holds 1,255 lines: eight header rows and 1,247 entry rows, one per unique ID. Chain rows count cumulative steps, not independent trajectories. The manifest is a build artefact and does not show that every entry has a completed evaluation.
 \begin{table}[t]
 \centering
 \begin{tabular}{lrrr}\toprule
-Family & Production & Smoke & Unclassified \\\midrule
+Family & Production & Smoke (flagged) & Unclassified \\\midrule
 Random direction & 150 & 0 & 3 \\
 Abliteration & 200 & 0 & 5 \\
-Heretic ARA & 0 & 0 & 1 \\
+Heretic ARA & 0 & 12 & 1 \\
 LoRA SFT & 120 & 0 & 1 \\
 Task vector & 80 & 0 & 0 \\
-Chain steps & 537 & 0 & 20 \\\bottomrule
+Chain steps & 655 & 0 & 20 \\\bottomrule
 \end{tabular}
-\caption{Local \texttt{data/zoo/qwen3.5-0.8b/manifest.jsonl}, snapshot at 06:20:20 UTC on 4 November 2026. Counts are entries by recorded eligibility; unclassified denotes legacy rows without that field.}
+\caption{Local \texttt{data/zoo/qwen3.5-0.8b/manifest.jsonl}, 1,247 entry rows, counted by recorded eligibility on 5 November 2026. Unclassified denotes legacy rows without that field. The Smoke column holds the twelve Heretic ARA entries flagged \texttt{ara\_unconstrained\_surrogate\_scale}.}
 \label{tab:zoo-counts}
 \end{table}
+
+The twelve Heretic ARA entries are the rebuilt set whose selected trials had verified KL to base of 0.77 to 14.0 nats (D6 addendum 2 in \path{docs/DECISIONS.md}). D6 addendum 3 flags them with \texttt{ara\_unconstrained\_surrogate\_scale} and sets their eligibility to \texttt{smoke}, the excluded, non-production class. They remain in the manifest with their identities, deltas and recorded scores. They are excluded from default production panels, from Heretic-quality comparisons, and from every predictor analysis in this paper. The manifest therefore has 1,247 rows: 1,235 unflagged rows and the 12 flagged rows. The unflagged rows include one legacy ARA row with no eligibility field, and that row has no evaluation record. The feature manifest records 1,235 entries (\path{data/features/qwen3.5-0.8b/manifest.json}, \texttt{n\_entries}), which equals the unflagged count. Of the 1,235, 389 have evaluation records and none of the 12 flagged entries does. The v2 suite matches 345 of those 389 to a predecessor target. The D3 subset has 300 evaluated entries, and 260 of them have matched-reference targets.
