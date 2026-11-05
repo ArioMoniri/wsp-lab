@@ -198,5 +198,5 @@
 | 2026-11-05 | Scribe round 2: Board B blocking 1–4 | claude_aio_gmail_api/claude-haiku-5-5 high | done d50d4d1 (10 pages; counts verified) — Board B re-review next |
 | 2026-11-05 | Board A re-review feat/p4-round2 | codex/gpt-6.1-terra high | REVISE (93 intended, 13 unintended: missing StatNN metadata keys, undocumented seed schedule, fallback) 7d5ac31 |
 | 2026-11-05 | P4 round 2c | codex/gpt-6.1-sol medium | done a0864e0 (498 tests; (a) 102 / (b) 0; repeat-self identical) — final review pending |
-| 2026-11-05 | Board B re-review paper/reliability | codex/gpt-6.1-terra medium | running |
-| 2026-11-05 | Board A final re-review feat/p4-round2 | codex/gpt-6.1-terra medium | running |
+| 2026-11-05 | Board B re-review paper/reliability | codex/gpt-6.1-terra medium | APPROVE (4/3/4/4) — merged |
+| 2026-11-05 | Board A final re-review feat/p4-round2 | codex/gpt-6.1-terra medium | APPROVE 991a437 — merged; rerun must label the new protocol |
