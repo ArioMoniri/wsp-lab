@@ -258,3 +258,12 @@ are not numerically interchangeable with the earlier protocol.
   centring and fold-n weighted finite fold correlations. Pooled centring is
   separately labelled family_centered_pooled. Removing fold offsets changes
   the within-fold diagnostic and can leave correlations undefined.
+
+## D6 addendum 2 (5 Nov 2026) — ARA rebuild landed, selection suspect
+The 12 rebuilt heretic_ara entries (Lambda A100, 18.8 h, $37.41; sync zoo 690134e) pass the reload-KL gate
+(kl_reload_difference 0.0 on all 12: the saved Δ is the evaluated model), but the selected trials have verified KL
+to base of 0.77–14.0 nats with refusals 0.0, and delta Frobenius norms from 19 to 1.7e10. Lower-KL trials existed
+and were not selected. Pending Board A's forensic (docs/reviews/P1/heretic-ara-rebuild-forensic-2026-11-05.md), these
+entries stay in the zoo but are NOT used in any Heretic-quality comparison; eligibility disposition follows the review.
+The instance's `hf_sync.sh push zoo` also overwrote the hub manifest with its 458-row copy; the canonical local
+manifest (1,247 rows) is re-synced.
