@@ -222,4 +222,8 @@
 | 2026-11-05 | Scribe: paper v2 results, reframing | claude_aio_gmail_api/claude-haiku-5-5 high | done 6159a5c (13 pages) — humanizer/copy-edit next |
 | 2026-11-05 | Humanizer + copy edit paper/v2-results | claude_aio_gmail_api/claude-haiku-5-5 high | done f7edf8d (+acd9673 registration wording) — Board B next |
 | 2026-11-05 | Board B review paper/v2-results | codex/gpt-6.1-terra medium | REVISE (5: causal/noise claims, registration status, title scope, ARA exclusion, full numeric audit) 22e022a |
-| 2026-11-05 | Scribe round 2 paper/v2-results (Board B blocking 1–5 + audit script) | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-05 | Scribe round 2 paper/v2-results | claude_aio_gmail_api/claude-haiku-5-5 high | done 76d2778 (audit: 673 values, 0 mismatches; 14 pages) — Board B re-review next |
+| 2026-11-05 | eval: TF-v1 tier | codex/gpt-6.1-sol high | FAILED: Codex usage limit reached until 6 Nov 21:10 UTC → rerouted to Claude API sonnet |
+| 2026-11-05 | eval: TF-v1 tier (handoff from Codex) + timing pilot | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-05 | Board B re-review paper/v2-results | claude_aio_gmail_api/claude-sonnet-5-5 high | REVISE narrow (R1–R5; scores 3/3/3/4) e4c6468 |
+| 2026-11-05 | Scribe round 3 paper/v2-results (R1–R5) | claude_aio_gmail_api/claude-haiku-5-5 high | running |

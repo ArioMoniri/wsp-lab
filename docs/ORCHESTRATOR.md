@@ -37,6 +37,7 @@ delegate_task(role="implementation", isolation="worktree", title="P1 zoo: hereti
 Reviews are always a new `delegate_task` with `role="review"`.
 
 ## Routing and budget policy (3 Nov 2026)
+- Provider health (13:35 UTC 5 Nov): Codex (all gpt-6.x models) usage limit reached until 6 Nov 21:10 UTC — route to the Claude API instance (sonnet/opus) or OpenCode until then.
 - Provider health (23:45 UTC 3 Nov): OpenCode Go 5-hour cap reached (kimi/glm/deepseek unavailable until it resets or Extra Usage is enabled); Grok quota exhausted; Copilot OK; Claude API instance OK since 23:46 UTC (workspace header set in ~/.claude-api/settings.json);
   OK; Codex (`gpt-6.1-sol`, `gpt-6.1-terra`) OK; Antigravity: `gemini-3.8-flash` quota exhausted until ~10 Nov 2026, `gpt-oss-120b` route broken
   (malformed messages payload) — do not use; Claude providers reserved.
