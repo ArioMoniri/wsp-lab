@@ -166,3 +166,15 @@ Each fold parquet also retains StatNN, fold-mean, delta-norm, descriptor-only an
 device-only predictions; metrics.json contains their per-family metrics, paired
 differences, centered diagnostic correlations and training-range support checks.
 All artifacts are under `data/runs/p4/p4-round2-m1-family-cpu-final/`.
+
+**Seed-1 repeat panel, same host (5 Nov 05:05–06:40 UTC; run p2-batch/20261105-050543-aad6c310, config
+eval_fast_seed1 = eval_fast with generation seed 1; 10 controls + base, batch 32, device H0).** Seed 0 vs seed 1, mean /
+max absolute difference and Spearman over the 11 records: gsm8k 0.055 / 0.12 / ρ 0.15; math500 0.036 / 0.12 / 0.46;
+ifeval 0.029 / 0.04 / 0.10; over-refusal 0.049 / 0.10 / 0.67; refusal 0.009 / 0.04 / 0.26; loop rate 0.006 / 0.02 /
+0.66; mmlu_pro, hellaswag, KL and wikitext ppl identical (likelihood-scored or teacher-forced: no sampling). Base:
+gsm8k 0.16 → 0.10, math500 0.16 → 0.04, ifeval 0.40 → 0.36. Reading: seed-to-seed sampling noise on one host is the
+same size as the cross-device gaps above, so those gaps are sampling noise under an effectively different draw, not
+a hardware bias; at the fast tier the sampled benchmarks cannot rank small edits (ρ 0.10–0.46 against themselves),
+while the likelihood/teacher-forced metrics are exactly repeatable. Qualification per Board A's rule: mmlu_pro,
+hellaswag, KL and ppl pass the repeat criterion trivially (zero difference) but still need the between-entry
+variance check; gsm8k, math500, ifeval and over-refusal fail it at this tier and need more items or more samples.
