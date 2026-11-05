@@ -18,9 +18,8 @@ def test_select_best_trial_without_target():
         {"trial": 2, "refusals": 0.2, "kl_divergence": 0.30},
         {"trial": 3, "refusals": 0.4, "kl_divergence": 0.15},
     ]
-    # Default selection: lowest refusals
-    best = select_best_trial(trials)
-    assert best["trial"] == 2
+    with pytest.raises(ValueError, match="explicit"):
+        select_best_trial(trials)
 
 
 def test_select_best_trial_with_kl_target():
@@ -244,6 +243,7 @@ def test_ara_seed_reproduces_saved_adapter(tmp_path, fake_heretic):
     from safetensors.torch import load_file
 
     params = {
+        "kl_divergence_target": 100.0,
         "trials": 2,
         "lora_rank": 2,
         "preserve_good_behavior_weight": 2.0,
@@ -258,7 +258,7 @@ def test_ara_seed_reproduces_saved_adapter(tmp_path, fake_heretic):
     assert all(torch.equal(wa[k], wb[k]) for k in wa)
     study = json.loads((tmp_path / "a/study.json").read_text())
     assert all(t["parameters"]["preserve_good_behavior_weight"] == 2 for t in study["trials"])
-    assert study["best_trial"] == select_best_trial(study["trials"])
+    assert study["best_trial"] == select_best_trial(study["trials"], 100.0)
     manifest = json.loads((tmp_path / "a/manifest.json").read_text())
     assert manifest["seed"] == 7 and manifest["git_sha"] == a.git_sha
 
@@ -344,6 +344,7 @@ def test_reload_mismatch_records_failure_without_entry(tmp_path, fake_heretic, m
         generate(
             "toy",
             {
+                "kl_divergence_target": 100.0,
                 "trials": 2,
                 "lora_rank": 2,
                 "ara_settings": {"n_optimization_steps": 1, "max_iter": 2},
@@ -371,7 +372,12 @@ def test_selected_parameters_applied_once_after_search(tmp_path, fake_heretic, m
     monkeypatch.setattr(heretic_ara.ara.ARA, "modify_model", modify)
     generate(
         "toy",
-        {"trials": 2, "lora_rank": 2, "ara_settings": {"n_optimization_steps": 1, "max_iter": 2}},
+        {
+            "kl_divergence_target": 100.0,
+            "trials": 2,
+            "lora_rank": 2,
+            "ara_settings": {"n_optimization_steps": 1, "max_iter": 2},
+        },
         7,
         tmp_path,
     )
@@ -411,3 +417,159 @@ def test_failed_verification_removes_stale_artifacts(tmp_path, fake_heretic, mon
     study = json.loads((out / "study.json").read_text()) if (out / "study.json").exists() else {}
     if study.get("verification_status") == "failed":
         assert not (out / "edit.json").exists() and not (out / "delta.safetensors").exists()
+
+
+@pytest.mark.parametrize("target", [None, 0, -1, float("inf"), float("nan")])
+def test_generate_requires_explicit_positive_finite_target(tmp_path, target):
+    with pytest.raises(ValueError, match="explicit"):
+        generate("must-not-load", {"kl_divergence_target": target}, 0, tmp_path)
+
+
+def test_selection_frontier_breaks_ties_by_kl_then_trial():
+    from wsp.zoo.heretic_ara import feasible_frontier
+
+    trials = [
+        {"trial": 4, "refusals": 0.0, "kl_divergence": 10.0},
+        {"trial": 3, "refusals": 0.1, "kl_divergence": 0.4},
+        {"trial": 2, "refusals": 0.1, "kl_divergence": 0.2},
+        {"trial": 1, "refusals": 0.1, "kl_divergence": 0.2},
+        {"trial": 5, "refusals": 0.2, "kl_divergence": 0.1},
+    ]
+    assert [t["trial"] for t in feasible_frontier(trials, 0.5)] == [1, 2, 5]
+    assert select_best_trial(trials, 0.5)["trial"] == 1
+
+
+@pytest.mark.parametrize("metric", ["refusals", "kl_divergence"])
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
+def test_selection_rejects_nonfinite_metrics(metric, value):
+    trial = {"trial": 1, "refusals": 0.1, "kl_divergence": 0.2, metric: value}
+    with pytest.raises(ValueError, match="Nonfinite"):
+        select_best_trial([trial], 0.5)
+
+
+def test_infeasible_study_records_reason_and_never_exports(tmp_path, fake_heretic, monkeypatch):
+    from heretic.scorer import Score
+
+    from wsp.zoo import heretic_ara
+
+    monkeypatch.setattr(
+        heretic_ara.Evaluator,
+        "get_scores",
+        lambda self: [("Refusals", Score(0, "", "")), ("KL divergence", Score(0.6, "", ""))],
+    )
+    (tmp_path / "delta.safetensors").write_bytes(b"stale")
+    with pytest.raises(ValueError, match="No trial"):
+        generate(
+            "toy",
+            {
+                "trials": 1,
+                "kl_divergence_target": 0.5,
+                "ara_settings": {"n_optimization_steps": 1, "max_iter": 1},
+            },
+            0,
+            tmp_path,
+        )
+    study = json.loads((tmp_path / "study.json").read_text())
+    assert study["verification_status"] == "failed"
+    assert "No trial" in study["verification_error"]
+    assert study["frontier"] == [] and study["best_trial"] is None
+    assert not (tmp_path / "delta.safetensors").exists()
+
+
+def test_deployment_semantics_are_explicit_and_reload_exact(tmp_path, fake_heretic, monkeypatch):
+    import torch
+
+    from wsp.zoo import heretic_ara
+
+    scored = []
+    original = heretic_ara.Evaluator.get_scores
+
+    def scores(self):
+        if not hasattr(self.model.model, "peft_config"):
+            scored.append({k: v.clone() for k, v in self.model.model.state_dict().items()})
+        return original(self)
+
+    monkeypatch.setattr(heretic_ara.Evaluator, "get_scores", scores)
+    desc = generate(
+        "toy",
+        {
+            "trials": 1,
+            "kl_divergence_target": 100.0,
+            "ara_settings": {"n_optimization_steps": 1, "max_iter": 2},
+        },
+        0,
+        tmp_path,
+    )
+    assert len(scored) == 2
+    assert all(torch.equal(scored[0][k], scored[1][k]) for k in scored[0])
+    study = json.loads((tmp_path / "study.json").read_text())
+    assert study["effective_ara_settings"]["preserve_row_magnitudes"] is False
+    assert study["reload_tensor_equal"] is True
+    assert desc.provenance["kernel_variant"] == "wsp_ara_no_row_normalization_v1"
+    assert study["kl_constraint_enabled"] is True
+    assert study["kl_divergence_target"] == 100.0
+    assert study["frontier"] and study["selection_rule"]
+    assert study["optimizer_traces"]
+    assert all(t["module"] and t["adapter_product_norm"] >= 0 for t in study["optimizer_traces"])
+
+
+@pytest.mark.parametrize("verified,reloaded", [(0.51, 0.51), (0.499, 0.501), (float("nan"), 0.1)])
+def test_postmerge_or_reload_violation_fails_without_fallback(
+    tmp_path, fake_heretic, monkeypatch, verified, reloaded
+):
+    from heretic.scorer import Score
+
+    from wsp.zoo import heretic_ara
+
+    outputs = iter([0.1, verified, reloaded])
+
+    def scores(self):
+        return [("Refusals", Score(0.1, "", "")), ("KL divergence", Score(next(outputs), "", ""))]
+
+    monkeypatch.setattr(heretic_ara.Evaluator, "get_scores", scores)
+    (tmp_path / "edit.json").write_text("stale")
+    with pytest.raises(ValueError):
+        generate(
+            "toy",
+            {
+                "trials": 1,
+                "kl_divergence_target": 0.5,
+                "ara_settings": {"n_optimization_steps": 1, "max_iter": 1},
+            },
+            0,
+            tmp_path,
+        )
+    study = json.loads((tmp_path / "study.json").read_text())
+    assert study["verification_status"] == "failed"
+    assert study["verification_error"]
+    assert not (tmp_path / "edit.json").exists()
+
+
+def test_optimizer_tracing_handles_initially_converged_module():
+    from types import SimpleNamespace
+
+    import torch
+
+    from wsp.zoo.heretic_ara import modify_with_trace
+
+    module = torch.nn.Module()
+    module.base_layer = torch.nn.Linear(2, 2, bias=False)
+    module.lora_A = torch.nn.ModuleDict({"default": torch.nn.Linear(2, 1, bias=False)})
+    module.lora_B = torch.nn.ModuleDict({"default": torch.nn.Linear(1, 2, bias=False)})
+    tensors = [module.lora_A["default"].weight, module.lora_B["default"].weight]
+
+    def modify(ctx, parameters):
+        optimizer = torch.optim.LBFGS(tensors)
+
+        def closure():
+            optimizer.zero_grad()
+            loss = sum((t * 0).sum() for t in tensors)
+            loss.backward()
+            return loss
+
+        optimizer.step(closure)
+
+    traces = []
+    ctx = SimpleNamespace(get_model=lambda: SimpleNamespace(model=module))
+    modify_with_trace(SimpleNamespace(modify_model=modify), ctx, None, traces, "converged")
+    assert len(traces) == 1 and traces[0]["gradient_norm"] == 0

@@ -356,7 +356,7 @@ def test_chain_steps_record_lora_vs_base_and_stored_format(tmp_path, fake_genera
         assert prov["stored_delta_format"] == "dense_cumulative" == r["stored_delta_format"]
         assert prov["cumulative_snapshot"] is True
         assert "delta_format" not in prov and "delta_format" not in r
-        assert prov["source_delta_format"] == ("lora" if want == "lora_vs_base" else "dense")
+        assert prov["source_delta_format"] == ("lora" if inner == "lora_sft" else "dense")
         assert (zoo / r["id"] / "delta.safetensors").exists()
     assert seen == {"lora_vs_base", "sequential"}
 

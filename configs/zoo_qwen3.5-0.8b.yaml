@@ -46,6 +46,7 @@ families:
     - mlp
     - both
   heretic_ara:
+    kl_divergence_target: 0.5
     n: 12
     preserve_good_behavior_weight:
       choices:

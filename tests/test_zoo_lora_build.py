@@ -102,11 +102,19 @@ def _fake_family_module(family: str) -> types.ModuleType:
         CALLS.append({"family": family, "base_model": base_model, "params": params, "seed": seed})
         out_dir = Path(out_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
-        write_toy_adapter(out_dir / "lora", seed)
+        delta = write_toy_adapter(out_dir / "lora", seed)
+        fmt = "dense" if family == "heretic_ara" else "lora"
+        if fmt == "dense":
+            import shutil
+
+            from safetensors.torch import save_file
+
+            save_file(delta, out_dir / "delta.safetensors")
+            shutil.rmtree(out_dir / "lora")
         (out_dir / "study.json").write_text("{}")
         desc = EditDescriptor(
             family=family,
-            params={**params, "delta_format": "lora", "git_dirty": False, "git_tree": "t"},
+            params={**params, "delta_format": fmt, "git_dirty": False, "git_tree": "t"},
             seed=seed,
             base_model=base_model,
             base_revision=params["base_revision"],
@@ -206,7 +214,10 @@ def test_lora_family_entries_are_generated_with_sampled_params(tmp_path, fake_ge
     assert not toy_base  # LoRA-only builds never load the CPU base copy
     zoo = tmp_path / "zoo"
     rows = _rows(zoo)
-    assert len(rows) == 4 and all(r["delta_format"] == "lora" for r in rows)
+    assert len(rows) == 4
+    assert all(
+        r["delta_format"] == ("dense" if r["family"] == "heretic_ara" else "lora") for r in rows
+    )
     by_family = {f: [c for c in fake_generators if c["family"] == f] for f in FAMILIES}
     assert len(by_family["heretic_ara"]) == 2 and len(by_family["lora_sft"]) == 2
     for c in by_family["heretic_ara"]:
@@ -222,9 +233,11 @@ def test_lora_family_entries_are_generated_with_sampled_params(tmp_path, fake_ge
         d = zoo / r["id"]
         edit = json.loads((d / "edit.json").read_text())
         assert edit["id"] == r["id"] and edit["git_sha"] == "s"
-        assert (d / "lora" / "adapter_model.safetensors").exists()
-        assert (d / "generator_edit.json").exists() and not (d / "delta.safetensors").exists()
-        assert edit["params"]["delta_format"] == "lora"
+        fmt = "dense" if r["family"] == "heretic_ara" else "lora"
+        assert (d / "generator_edit.json").exists()
+        assert (d / "delta.safetensors").exists() == (fmt == "dense")
+        assert (d / "lora" / "adapter_model.safetensors").exists() == (fmt == "lora")
+        assert edit["params"]["delta_format"] == fmt
         assert edit["provenance"]["config_overrides"] == ["heretic_ara.trials=2"]
         assert edit["provenance"]["resolved_base_revision"] == edit["base_revision"]
         assert edit["delta_fro_norm"] == 1.5 and edit["touched_tensors"]
@@ -286,3 +299,16 @@ def test_apply_overrides_and_scalar_sample():
     for bad in ("nokey", "heretic_ara.trials=2", "seed.x=1"):
         with pytest.raises((ValueError, TypeError)):
             apply_overrides(cfg, [bad])
+
+
+def test_ara_planning_identity_uses_dense_and_versioned_semantics():
+    from random import Random
+
+    from wsp.zoo.build import sample_heretic_ara_params
+
+    params = sample_heretic_ara_params(
+        Random(0), {"preserve_good_behavior_weight": 1, "trials": 10, "kl_divergence_target": 0.5}
+    )
+    assert params["delta_format"] == "dense"
+    assert params["kernel_variant"] == "wsp_ara_no_row_normalization_v1"
+    assert params["kl_divergence_target"] == 0.5
