@@ -304,3 +304,79 @@ Saving 43.7 s per entry, so the warm entry would fall from 1.805 to about 1.08 m
 ## TF-v1 qualification and planning power (5 Nov 2026)
 
 Full report: `docs/reviews/P5/tf-v1-qualification-2026-11-05.md` (rendered from `data/runs/h1a/{qualification,power}_report.json`). Applying PREREG_H1_TF §6 and amendment A1 to the 20-entry development panel (10 §6 composition + 10 pilot controls): **WikiText log-PPL qualified (diagnostic); KL not qualified (25% of entries above the 0.10 exclusion, tripwire 20%, one in-gate entry above δ/2); MMLU-Pro gold log-prob, the H1a primary, not qualified** because 2 of 20 entries have item half-widths above δ/2 = .05 (.089 and .061; panel-mean upper bound .031 passes; repeat error exactly 0; reliability lower bound .938 on 20 entries, .770 on the 10-entry composition). Planning power at the achievable 100 confirmatory components (241 rows): .31 to .88 across six proxy scenarios (lower-bound ≥ .80 only in the scenario closest to the old SD .47), null rejection .046 to .117 against a nominal .025; the §5 gate is not satisfied (no D3 OOF TF-v1 losses, no joint procedure).
+
+## TF-v1 pilot round 3
+
+Batched HellaSwag and refusal stages, amendment A2.4.
+
+Run `20261105-175313-b7407319` on H0 (RTX PRO 4500, greedy, no sampling), branch `feat/tf-v1-batching`, tree clean, `source_hash` `a224779bf873` (round 2: `12ee875a68c9`, run `20261105-144427-fb58ffe6`, archived under `data/evals/qwen3.5-0.8b/tf_v1_round2_archive/`). Base + the ten D3 control IDs in `data/runs/d3_shards/controls.txt`, one process. **Panel status: development/pilot.** MMLU-Pro (1,000), KL (200 prompts x 64 tokens, resident cache, mode `load` for the base) and WikiText stay batch 1; HellaSwag (250, four endings per forward) and the refusal / over-refusal stages (13 phrases per forward) are batched, the batch is recorded in every record (`scoring_batch`).
+
+| Entry | Wall min | MMLU s | HellaSwag s | KL s | WikiText s | Refusal s | Over-refusal s | Peak alloc/reserved GiB | Storage MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| base | 1.751 | 35.0 | 10.2 | 50.2 | 4.7 | 2.6 | 2.3 | 9.22/9.84 | 2.14 |
+| b6fe7f59016cdda2 | 1.002 | 34.0 | 9.7 | 7.4 | 4.2 | 2.3 | 2.3 | 9.22/11.36 | 2.37 |
+| 3ddc3b4bf47ed994 | 1.002 | 33.7 | 9.8 | 7.4 | 4.3 | 2.3 | 2.3 | 9.22/11.42 | 2.37 |
+| 0a841d4082532e8b | 1.040 | 34.1 | 9.9 | 7.5 | 4.2 | 2.3 | 2.3 | 9.22/11.42 | 2.39 |
+| 3db97b535c996265 | 1.004 | 34.0 | 9.9 | 7.5 | 4.2 | 2.3 | 2.3 | 9.22/11.39 | 2.36 |
+| 7b8247d8d7ab7db9 | 1.004 | 34.0 | 9.8 | 7.5 | 4.3 | 2.3 | 2.3 | 9.22/11.39 | 2.37 |
+| 439dbfa62a14d55f | 1.003 | 33.9 | 9.8 | 7.5 | 4.3 | 2.3 | 2.3 | 9.22/11.39 | 2.37 |
+| af6d608f8651fb46 | 1.037 | 33.6 | 9.8 | 7.5 | 4.2 | 2.3 | 2.3 | 9.22/11.42 | 2.38 |
+| dd90d99e2ddc0e77 | 1.005 | 34.1 | 9.9 | 7.4 | 4.2 | 2.3 | 2.3 | 9.22/11.39 | 2.37 |
+| db5c3a7bfc19178c | 1.000 | 33.9 | 9.8 | 7.4 | 4.2 | 2.3 | 2.3 | 9.22/11.39 | 2.37 |
+| 1caef8eb4c640c3c | 0.994 | 33.5 | 9.7 | 7.4 | 4.2 | 2.3 | 2.3 | 9.22/11.39 | 2.37 |
+
+**Warm median wall time over 10 edits (cache resident): 1.003 min/entry** (range 0.994 to 1.040); round 2 was 1.805. Warm stage medians (s): MMLU 34.0, HellaSwag 9.8, KL 7.4, WikiText 4.2, refusal 2.3, over-refusal 2.3. **Gate (warm median <= 1.40 min): PASS.**
+
+**Identity against the round-2 primaries (run `20261105-144427-fb58ffe6`), all 11 records:** MMLU-Pro, KL and WikiText records bitwise identical (every field of every record): **True**. KL base-logit cache content root unchanged (`2ed18bda284b3a89…`): **True** (cache mode `load`, no rebuild).
+
+Batched versus batch-1 deviation over the 11 records (max |difference| per entry; the probe limits were measured on the base entry only):
+
+| Quantity | Worst over 11 entries | Median over entries | Probe limit | Within limit |
+|---|---:|---:|---:|---|
+| hellaswag | 0.0148 | 0.0108 | 0.010 | NO |
+| over_refusal.margin | 0.3297 | 0.2034 | 0.300 | NO |
+| over_refusal.phrase_log_prob | 0.4711 | 0.3609 | 0.390 | NO |
+| refusal_rate.margin | 0.3711 | 0.2488 | 0.300 | NO |
+| refusal_rate.phrase_log_prob | 0.5259 | 0.4210 | 0.390 | NO |
+
+HellaSwag argmax changes: 17 of 2750 items (probe: 1 of 250 on the base).
+
+**A2.4 clause not met on the edited entries.** A2.4 asks for HellaSwag and phrase deviations within the probe maxima (HellaSwag 0.010, phrase log-prob 0.39, margin 0.30). Measured over the 11 pilot records the worst deviations are hellaswag 0.015 (1.48 x limit), over_refusal.margin 0.330 (1.10 x limit), over_refusal.phrase_log_prob 0.471 (1.21 x limit), refusal_rate.margin 0.371 (1.24 x limit), refusal_rate.phrase_log_prob 0.526 (1.35 x limit). They are one to two bf16 logit steps on edited models (the probe scored the unedited base only, 11x fewer entries) and they affect only descriptive stages (HellaSwag 250, uncalibrated refusal margins), never MMLU-Pro, KL or WikiText. The pilot gate as stated for execution (warm median and bitwise-identical MMLU-Pro/KL/WikiText) passes, so scoring proceeded; this exceedance is recorded here for Board A to accept or to answer with fallback 1 (drop the refusal stages by config) or a revert of the batching for HellaSwag. The batched path itself repeats bitwise (G1 below).
+
+## TF-v1 G1 (round 3)
+
+Bitwise repeat on the PREREG section 6 composition, batched source.
+
+Source `source_hash` `a224779bf873`, device H0, committed tree (`dirty: false` in every eval.json), development panel. Composition and process layout as in G1 above (13 entries plus the base: 4 LoRA, 3 chains with their predecessors, 2 task-vector, 1 abliteration), re-run on the batched source: primaries in a new process (base reused from the round-3 pilot, matched by the registered reference keys), repeats in a second fresh process as `repeats/g1` (immutable run directories, base re-executed and paired, cache verified again).
+
+**Result: 14 of 14 repeats are bitwise-identical to their primaries** (complete `records.jsonl` equality, 1614 records per entry, every benchmark and field including the batched HellaSwag and refusal stages). All maxima exactly zero: MMLU-Pro gold log-prob / option log-probs 0.0e+00; HellaSwag scores 0.0e+00; KL (per prompt and per position) 0.0e+00; WikiText mean NLL 0.0e+00; refusal / over-refusal phrase margins 0.0e+00. Limits (§6): 1e-4 nats (MMLU, log-PPL), 1e-5 (KL). Distinct run ids: True; same source hash: True; repeat tree clean: True; same device: True. Report: `data/evals/qwen3.5-0.8b/tf_v1/g1_report.json` (`scripts/tf_v1_g1_report.py`).
+
+Same scope limits as before: same-device repeat determinism on H0, not cross-device, cross-batch-size or cross-driver agreement; it qualifies no endpoint by itself.
+
+## TF-v1 G2 (round 3)
+
+Same-item legacy bridge on the batched source.
+
+Source `source_hash` `a224779bf873`, tree clean (`dirty: false`), device H0. `scripts/tf_v1_g2_bridge.py` now scores HellaSwag through the final batched `hellaswag_scores` (four endings per forward) and MMLU-Pro through the unchanged `letter_scores`; the 100 + 100 legacy items and the 11 pilot records are the same as in G2 above.
+
+| Entry | MMLU acc fast | MMLU acc TF-v1 | MMLU \|Δacc\| | MMLU argmax agreement | MMLU gold-lp \|Δ\| median / p99 / max | HellaSwag acc fast / TF-v1 | HellaSwag score \|Δ\| max |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 0a841d4082532e8b | 0.23 | 0.23 | 0.00 | 1.00 | 0.0e+00 / 0.036 / 0.053 | 0.43 / 0.43 | 0.0087 |
+| 1caef8eb4c640c3c | 0.30 | 0.30 | 0.00 | 1.00 | 0.0e+00 / 0.032 / 0.065 | 0.39 / 0.39 | 0.0107 |
+| 3db97b535c996265 | 0.29 | 0.29 | 0.00 | 1.00 | 1.1e-16 / 0.036 / 0.050 | 0.39 / 0.39 | 0.0092 |
+| 3ddc3b4bf47ed994 | 0.26 | 0.26 | 0.00 | 0.99 | 2.2e-16 / 0.019 / 0.055 | 0.39 / 0.40 | 0.0078 |
+| 439dbfa62a14d55f | 0.28 | 0.29 | 0.01 | 0.99 | 0.0e+00 / 0.029 / 0.099 | 0.38 / 0.38 | 0.0106 |
+| 7b8247d8d7ab7db9 | 0.28 | 0.28 | 0.00 | 1.00 | 0.0e+00 / 0.039 / 0.047 | 0.39 / 0.39 | 0.0061 |
+| af6d608f8651fb46 | 0.26 | 0.26 | 0.00 | 1.00 | 2.2e-16 / 0.025 / 0.085 | 0.43 / 0.43 | 0.0099 |
+| b6fe7f59016cdda2 | 0.28 | 0.28 | 0.00 | 1.00 | 0.0e+00 / 0.025 / 0.030 | 0.39 / 0.39 | 0.0089 |
+| base | 0.28 | 0.28 | 0.00 | 1.00 | 0.0e+00 / 0.066 / 0.075 | 0.39 / 0.39 | 0.0104 |
+| db5c3a7bfc19178c | 0.29 | 0.29 | 0.00 | 1.00 | 0.0e+00 / 0.013 / 0.045 | 0.39 / 0.39 | 0.0111 |
+| dd90d99e2ddc0e77 | 0.29 | 0.29 | 0.00 | 1.00 | 0.0e+00 / 0.033 / 0.044 | 0.39 / 0.39 | 0.0083 |
+
+**PREREG §6 bridge criteria (MMLU-Pro, worst entry for each statistic):** median |Δ| 2.2e-16 (limit 0.02), p99 0.066 (limit 0.2), argmax agreement 99% (limit 99%): **PASS**. MMLU-Pro bridge records bitwise equal to the round-2 bridge (`tf_v1_round2_archive/bridge_g2`), all 11 entries: **True** (the MMLU-Pro scorer is unchanged).
+HellaSwag (descriptive; batched path): mean correctness agreement 0.9991, worst entry 0.99; argmax agreement worst 0.98; max score |Δ| against the fast tier's batch-1 scores 0.0111; bitwise equal to the fast tier: False (expected False: the batched kernel path differs by a few bf16 steps).
+A one-item shortfall of the worst entry's MMLU argmax agreement (exactly 99% against a 99% limit, a bf16 tie) would be investigated, not automatically a stop (A2.4).
+
+## TF-v1 D3 scoring queue (launched under the round-3 source)
+
+Launched 5 Nov 2026 18:37 UTC on H0 after the round-3 gates above: `agent-tmux tfv1-d3-stratum bash scripts/tfv1_d3_stratum.sh` (resumable: run the script again and completed entries are skipped by the index signature; one process, one `source_hash` `a224779bf873`, immutable run directories under `data/evals/qwen3.5-0.8b/tf_v1/`). The lists come from `scripts/tfv1_scoring_plan.py` (alias-ledger resolution; dry run: 229 D3 stratum entries = 139 chain + 60 lora_sft + 30 task_vector, 0 chain predecessors outside the stratum, 152 further null-family scored ids = 381 unique D3 deltas; fresh closure 255 unique deltas, 281 with the six spares, **none of which is scored here**). Phase A scores the 229 stratum entries, phase B the null-family D3 controls that the §3 fit trains on. Per-entry minutes are appended to `data/runs/h1a/d3_stratum_minutes.jsonl` (`scripts/tfv1_d3_minutes.py`, every 5 minutes and at each phase end). Entries already scored by round 3 (the ten controls and the thirteen G1 entries) are reused, not re-scored. At the measured 1.00 min warm median the 355 remaining entries take about 5.9 h plus cache load and per-process overhead.

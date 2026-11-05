@@ -201,7 +201,7 @@ def repeat_bounds(primary, repeat, codes, delta, limit, draws=DRAWS, seed=SEED):
         "pass_max": bool(flat.max() <= limit),
         "pass_p95_upper": bool(upper <= delta / 2),
         "repeat_error_variance": float(
-            np.mean(np.asarray(repeat).mean(1) - np.asarray(primary).mean(1)) ** 2 / 2
+            np.mean((np.asarray(repeat).mean(1) - np.asarray(primary).mean(1)) ** 2) / 2
         ),
     }
 
@@ -361,13 +361,39 @@ def decide(interval, theta_hat, key):
 # --------------------------------------------------------------------- joint procedure
 
 
-def joint_replicates(pop, rows, comp_of_row, n_comp, w_obs, kappa, rng, draws, chunk=100):
+def component_pairs(sizes):
+    """Within-component row pairs i <= i' (rows sorted by component) with weight 1 on the diagonal
+    and 2 off it (symmetry halves the work), and the starts of each component's pair block."""
+    pi, pj, pw, counts = [], [], [], []
+    start = 0
+    for n in sizes:
+        a, b = np.triu_indices(n)
+        pi.append(a + start)
+        pj.append(b + start)
+        pw.append(np.where(a == b, 1.0, 2.0))
+        counts.append(len(a))
+        start += n
+    return (
+        np.concatenate(pi),
+        np.concatenate(pj),
+        np.concatenate(pw),
+        np.r_[0, np.cumsum(counts)[:-1]],
+    )
+
+
+def joint_replicates(
+    pop, rows, comp_of_row, n_comp, w_obs, kappa, rng, draws, chunk=200, mult=None
+):
     """Two-way (component x item) bootstrap of ln R with the two-way studentiser.
 
     pop: dict(D=(rows x J) paired item differences, qa, qb = predictions-plus-nuisance centres);
-    rows: population row index of each panel row; w_obs: observed item multiplicities (J,).
+    rows: population row index of each panel row; w_obs: the observed item multiplicities (J,): the
+    bootstrap resamples the OBSERVED items (probability w_obs / sum), components uniformly.
     Loss A_i = kappa |ybar_i - qa_i|, B_i = |ybar_i - qb_i| with ybar the item-weighted mean.
-    se*^2 = V_comp + V_item - V_both, with V_both the cell (component, item) intersection variance."""
+    se*^2 = V_comp + V_item - V_both with V_both the (component, item) cell variance, evaluated as
+    a pairwise Gram identity: sum_j m_j xi_cj^2 = sum_{i,i' in c} g_i g_i' K_ii' - 2 h_c sum g_i v_i
+    + J h_c^2, K_ii' = sum_j m_j d_ij d_i'j, v_i = sum_j m_j d_ij (all batched BLAS products).
+    `mult=(mult_c, mult_j)` supplies explicit multiplicities (tests)."""
     D = pop["D"][rows]
     J = D.shape[1]
     order = np.argsort(comp_of_row, kind="stable")
@@ -376,36 +402,44 @@ def joint_replicates(pop, rows, comp_of_row, n_comp, w_obs, kappa, rng, draws, c
     n = len(starts)
     sizes = np.diff(np.r_[starts, len(comp)])
     comp_idx = np.repeat(np.arange(n), sizes)
-    ln_star, se_star = np.full(draws, np.nan), np.full(draws, np.nan)
-    for lo in range(0, draws, chunk):
-        b = min(chunk, draws - lo)
-        mult_c = rng.multinomial(n, np.full(n, 1 / n), size=b).astype(float)
-        mult_j = rng.multinomial(J, np.full(J, 1 / J), size=b).astype(float)
-        ybar = mult_j @ D.T / J  # b x rows
-        a, bb = ybar - qa, ybar - qb
+    pi, pj, pw, pstarts = component_pairs(sizes)
+    pairs_d = D[pi] * D[pj]  # pairs x J
+    p_items = np.asarray(w_obs, float) / np.sum(w_obs)
+    total = draws if mult is None else len(mult[0])
+    ln_star, se_star = np.full(total, np.nan), np.full(total, np.nan)
+    nn = n * J
+    for lo in range(0, total, chunk):
+        b = min(chunk, total - lo)
+        if mult is None:
+            mult_c = rng.multinomial(n, np.full(n, 1 / n), size=b).astype(float)
+            mult_j = rng.multinomial(J, p_items, size=b).astype(float)
+        else:
+            mult_c, mult_j = mult[0][lo : lo + b], mult[1][lo : lo + b]
+        v = mult_j @ D.T  # b x rows: J * ybar
+        a, bb = v / J - qa, v / J - qb
         abs_a, abs_b = np.abs(a), np.abs(bb)
         row_mult = mult_c[:, comp_idx]
         sa0, sb0 = (row_mult * abs_a).sum(1), (row_mult * abs_b).sum(1)
-        rows_n = (row_mult).sum(1)
+        rows_n = row_mult.sum(1)
         with np.errstate(divide="ignore", invalid="ignore"):
             ln_star[lo : lo + b] = np.log(kappa * sa0 / sb0)
             ca = np.add.reduceat(abs_a, starts, axis=1)
             cb = np.add.reduceat(abs_b, starts, axis=1)
             u = ca / sa0[:, None] - cb / sb0[:, None]
             v_comp = n / (n - 1) * (mult_c * u**2).sum(1)
-            g = np.sign(a) / sa0[:, None] - np.sign(bb) / sb0[:, None]  # b x rows
+            sign_a, sign_b = np.sign(a), np.sign(bb)
+            g = sign_a / sa0[:, None] - sign_b / sb0[:, None]  # b x rows
             lam = (row_mult * g) @ D  # b x J
             p = mult_j / J
             lam_bar = (p * lam).sum(1)
             v_item = (p * (lam - lam_bar[:, None]) ** 2).sum(1) / (J - 1)
-            h = np.sign(a) * qa / sa0[:, None] - np.sign(bb) * qb / sb0[:, None]
+            h = sign_a * qa / sa0[:, None] - sign_b * qb / sb0[:, None]
             h_c = np.add.reduceat(h, starts, axis=1)  # b x C
-            v_both = np.zeros(b)
-            for r in range(b):
-                xi = np.add.reduceat(g[r][:, None] * D, starts, axis=0) - h_c[r][:, None]
-                v_both[r] = (mult_c[r] * ((xi**2) @ mult_j[r])).sum() / J**2
-            nn = n * J
-            v_both *= nn / (nn - 1)
+            kernel = mult_j @ pairs_d.T  # b x pairs
+            s1 = np.add.reduceat(g[:, pi] * g[:, pj] * kernel * pw, pstarts, axis=1)  # b x C
+            s2 = np.add.reduceat(g * v, starts, axis=1)  # b x C
+            inner = s1 - 2 * h_c * s2 + J * h_c**2  # sum_j m_j xi_cj^2
+            v_both = nn / (nn - 1) * (mult_c * inner).sum(1) / J**2
             var = v_comp + v_item - v_both
             se_star[lo : lo + b] = np.sqrt(np.where(var > 0, var, np.nan))
         bad = (sb0 / np.maximum(rows_n, 1) <= DENOM_TOL) | (sa0 <= 0)
@@ -467,11 +501,25 @@ def make_panel(rng, sizes, classes, pools, merge=False):
     return np.array(rows), np.array(comp)
 
 
-def calibrate_kappa(pop, theta, weights=None):
+def calibrate_kappa(pop, theta):
     """kappa with sum(kappa A)/sum(B) = 1 - theta over the D3 population at the full item set."""
     a = np.abs(pop["D"].mean(1) - pop["qa"])
     b = np.abs(pop["D"].mean(1) - pop["qb"])
     return (1 - theta) * b.sum() / a.sum()
+
+
+def calibrate_kappa_panels(pop, sizes, classes, pools, merge, theta, seed, n_panels=2000):
+    """kappa so that the simulated-panel DGP (sealed sizes, donor components, full item set) has
+    E[sum kappa A] / E[sum B] = 1 - theta exactly in the Monte Carlo sample used to calibrate."""
+    rng = np.random.default_rng(seed)
+    a = np.abs(pop["D"].mean(1) - pop["qa"])
+    b = np.abs(pop["D"].mean(1) - pop["qb"])
+    sa = sb = 0.0
+    for _ in range(n_panels):
+        rows, _ = make_panel(rng, sizes, classes, pools, merge)
+        sa += a[rows].sum()
+        sb += b[rows].sum()
+    return (1 - theta) * sb / sa
 
 
 def inflate_items(pop, factor):
@@ -517,30 +565,21 @@ def joint_observed_se(pop, rows, comp_of_row, n_comp, w_obs, kappa):
 
 
 def joint_replicates_once(pop, rows, comp_of_row, w_obs, kappa):
-    D = pop["D"][rows]
-    J = D.shape[1]
-    order = np.argsort(comp_of_row, kind="stable")
-    D, qa, qb, comp = D[order], pop["qa"][rows][order], pop["qb"][rows][order], comp_of_row[order]
-    starts = np.flatnonzero(np.r_[True, comp[1:] != comp[:-1]])
-    n = len(starts)
-    mult_j = w_obs
-    ybar = D @ mult_j / J
-    a, bb = ybar - qa, ybar - qb
-    sa0, sb0 = np.abs(a).sum(), np.abs(bb).sum()
-    ca, cb = np.add.reduceat(np.abs(a), starts), np.add.reduceat(np.abs(bb), starts)
-    u = ca / sa0 - cb / sb0
-    v_comp = n / (n - 1) * (u**2).sum()
-    g = np.sign(a) / sa0 - np.sign(bb) / sb0
-    lam = g @ D
-    p = mult_j / J
-    v_item = (p * (lam - (p * lam).sum()) ** 2).sum() / (J - 1)
-    h = np.sign(a) * qa / sa0 - np.sign(bb) * qb / sb0
-    h_c = np.add.reduceat(h, starts)
-    xi = np.add.reduceat(g[:, None] * D, starts, axis=0) - h_c[:, None]
-    nn = n * J
-    v_both = nn / (nn - 1) * ((xi**2) @ mult_j).sum() / J**2
-    var = v_comp + v_item - v_both
-    return math.log(kappa * sa0 / sb0), math.sqrt(max(var, 1e-300))
+    """ln R and the two-way studentiser at the observed sample (unit component multiplicities,
+    item multiplicities w_obs)."""
+    n = len(np.unique(comp_of_row))
+    ln, se = joint_replicates(
+        pop,
+        rows,
+        comp_of_row,
+        n,
+        w_obs,
+        kappa,
+        None,
+        1,
+        mult=(np.ones((1, n)), np.asarray(w_obs, float)[None, :]),
+    )
+    return float(ln[0]), float(max(se[0], 1e-300)) if np.isfinite(se[0]) else float("nan")
 
 
 def wilson_lower(k, n):
@@ -599,10 +638,12 @@ def run_scenarios(pop, manifest, panels, joint_panels, draws, workers, scenarios
     for name, (item_factor, merge) in scenarios.items():
         sp = inflate_items(pop, item_factor) if item_factor != 1 else pop
         results[name] = {}
-        for theta in (0.0, *THETA_TARGETS):
-            kappa = calibrate_kappa(sp, theta)
-            true = population_theta(sp, sizes, classes, pools, kappa, merge, SEED + 99)
-            entry = {"kappa": kappa, "theta_true_population": true}
+        # sensitivities need only the null and theta = .15 (A2.3 b); P(decision pass) at .20/.25
+        # (A2.3 e) is read from the empirical scenario.
+        for theta in (0.0, *THETA_TARGETS) if name == "empirical" else (0.0, 0.15):
+            kappa = calibrate_kappa_panels(sp, sizes, classes, pools, merge, theta, SEED + 99)
+            true = population_theta(sp, sizes, classes, pools, kappa, merge, SEED + 99, 2000)
+            entry = {"kappa": kappa, "theta_true_population": true, "theta_target": theta}
             for world, n_panels in (("conditional", panels), ("joint", joint_panels)):
                 t0 = time.monotonic()
                 jobs = [
@@ -824,6 +865,11 @@ def render(report):
     q, g = report["qualification"], report.get("gate")
     lines = [
         f"# TF-v1 re-qualification on the D3 stratum and the section 5 gate ({report['date']})\n",
+        *(
+            ["**SMOKE RUN on a restricted entry list: not the registered re-qualification.**\n"]
+            if report.get("smoke_restricted")
+            else []
+        ),
         f"Generated by `scripts/tfv1_requalify.py` (PREREG_H1_TF amendments A2.1 and A2.3). Source `source_hash` `{report['source_hash'][:12]}`, partition seal `{report['partition_sha256'][:12]}`, "
         f"{report['n_stratum']} D3 stratum entries ({report['family_counts']}), device H0 only. Development panel; nothing here is a fresh outcome.\n",
         "## A. MMLU-Pro qualification under A2.1\n",
@@ -957,8 +1003,18 @@ def assemble(args, log):
             raise SystemExit(f"{i}: item ids differ between the edit and its reference")
         return ve - vr
 
-    stratum = [i for i in p["d3_stratum_entries"]]
-    missing = [i for i in stratum if not (tf / scored(i) / "eval.json").exists()]
+    stratum = list(p["d3_stratum_entries"])
+    if args.restrict_ids:  # SMOKE ONLY: never used for the registered re-qualification
+        keep = set(args.restrict_ids.read_text().split())
+        stratum = [i for i in stratum if i in keep]
+        p["d3_null_entries"] = [i for i in p["d3_null_entries"] if i in keep]
+    have = lambda i: (
+        (tf / scored(i) / "eval.json").exists()
+        and (ref_of(i) == "base" or (tf / ref_of(i) / "eval.json").exists())
+    )
+    if args.restrict_ids:  # smoke: keep entries whose own and reference scores exist
+        stratum = [i for i in stratum if have(i)]
+    missing = [i for i in stratum if not have(i)]
     if missing:
         raise SystemExit(f"{len(missing)} stratum entries are not scored yet, e.g. {missing[:3]}")
     families = [rows[i]["family"] for i in stratum]
@@ -982,6 +1038,7 @@ def assemble(args, log):
         "source_hash": source_hash,
         "partition_sha256": manifest["partition_sha256"],
         "n_stratum": len(stratum),
+        "smoke_restricted": bool(args.restrict_ids),
         "family_counts": dict(Counter(families)),
         "stratum_weights": weights,
         "qualification": {},
@@ -1078,6 +1135,11 @@ def main():
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--date", default=date.today().isoformat())
     parser.add_argument("--skip-gate", action="store_true", help="Part A only")
+    parser.add_argument(
+        "--restrict-ids", type=Path, help="SMOKE ONLY: restrict to the listed entry ids"
+    )
+    parser.add_argument("--out-json", type=Path)
+    parser.add_argument("--out-doc", type=Path)
     parser.add_argument("--tf-dir", type=Path, default=ROOT / "data/evals/qwen3.5-0.8b/tf_v1")
     parser.add_argument("--manifest", type=Path, default=ROOT / "docs/prereg/panel_manifest.json")
     parser.add_argument("--features", type=Path, default=ROOT / "data/features/qwen3.5-0.8b")
@@ -1133,7 +1195,7 @@ def main():
             "results": results,
             "verdict": gate_verdict(results, args.panels, joint_panels, args.draws, qual_ok),
         }
-    out_json = ROOT / "data/runs/h1a/requalification_report.json"
+    out_json = args.out_json or ROOT / "data/runs/h1a/requalification_report.json"
     out_json.write_text(
         json.dumps(
             report,
@@ -1142,7 +1204,7 @@ def main():
             default=lambda o: o.item() if hasattr(o, "item") else str(o),
         )
     )
-    doc = ROOT / f"docs/reviews/P5/tf-v1-requalification-{args.date}.md"
+    doc = args.out_doc or ROOT / f"docs/reviews/P5/tf-v1-requalification-{args.date}.md"
     doc.write_text(render(report))
     log(f"wrote {doc} and {out_json}")
 
