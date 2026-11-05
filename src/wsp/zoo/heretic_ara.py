@@ -5,6 +5,7 @@ from __future__ import annotations
 import gc
 import json
 import math
+from importlib.metadata import version
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -24,34 +25,45 @@ from wsp.schema import EditDescriptor, write_manifest
 from wsp.zoo.apply import load_edited_model
 from wsp.zoo.common import get_git_sha, git_provenance, resolve_base_revision
 
+KERNEL_VARIANT = "wsp_ara_no_row_normalization_v1"
+SELECTION_RULE = "feasible_pareto_lexicographic_refusals_kl_trial_v1"
 
-def select_best_trial(
-    trials: list[dict[str, Any]],
-    kl_divergence_target: float | None = None,
-) -> dict[str, Any]:
-    """Select the best trial from study records.
 
-    If kl_divergence_target is given, chooses the trial with lowest refusal rate
-    among those satisfying kl_divergence <= kl_divergence_target. If none qualify,
-    raises rather than exporting an infeasible edit.
-    Otherwise, chooses the trial minimizing (refusals, kl_divergence).
-    """
-    if not trials:
-        raise ValueError("Cannot select from an empty trial list.")
+def explicit_target(value):
+    """Production ARA always requires a finite positive, explicitly supplied ceiling."""
+    if value is None or not math.isfinite(value) or value <= 0:
+        raise ValueError("ARA requires an explicit finite positive KL divergence target")
+    return float(value)
 
+
+def feasible_frontier(trials, kl_divergence_target):
+    """Return the nondominated feasible records, deterministically ordered."""
+    target = explicit_target(kl_divergence_target)
     for trial in trials:
         if not all(math.isfinite(trial[key]) for key in ("refusals", "kl_divergence")):
             raise ValueError("Nonfinite trial metrics")
-    if kl_divergence_target is not None:
-        eligible = [t for t in trials if t["kl_divergence"] <= kl_divergence_target]
-        if not eligible:
-            raise ValueError("No trial satisfies KL divergence target")
-        return min(eligible, key=lambda t: t["refusals"])
+    feasible = [t for t in trials if t["kl_divergence"] <= target]
+    frontier = [
+        t
+        for t in feasible
+        if not any(
+            u["refusals"] <= t["refusals"]
+            and u["kl_divergence"] <= t["kl_divergence"]
+            and (u["refusals"] < t["refusals"] or u["kl_divergence"] < t["kl_divergence"])
+            for u in feasible
+        )
+    ]
+    return sorted(frontier, key=lambda t: (t["refusals"], t["kl_divergence"], t["trial"]))
 
-    return min(
-        trials,
-        key=lambda t: (t.get("refusals", float("inf")), t.get("kl_divergence", float("inf"))),
-    )
+
+def select_best_trial(trials, kl_divergence_target=None):
+    """Choose (refusals, KL, trial number) from the feasible Pareto frontier."""
+    if not trials:
+        raise ValueError("Cannot select from an empty trial list.")
+    frontier = feasible_frontier(trials, kl_divergence_target)
+    if not frontier:
+        raise ValueError("No trial satisfies KL divergence target")
+    return frontier[0]
 
 
 class FixedWeightTrial:
@@ -109,6 +121,49 @@ def merged_delta(base, merged):
     return delta
 
 
+def modify_with_trace(modifier, ctx, parameters, traces, phase):
+    """Observe each module's LBFGS outer steps without changing upstream optimization."""
+    from torch.optim.optimizer import register_optimizer_step_post_hook
+
+    modules = {}
+    for name, module in ctx.get_model().model.named_modules():
+        if hasattr(module, "lora_A") and "default" in module.lora_A:
+            modules[id(module.lora_A["default"].weight)] = (name, module)
+
+    def record(optimizer, args, kwargs):
+        tensors = optimizer.param_groups[0]["params"]
+        if not isinstance(optimizer, torch.optim.LBFGS) or id(tensors[0]) not in modules:
+            return
+        name, module = modules[id(tensors[0])]
+        a, b = [t.detach().float() for t in tensors]
+        state = optimizer.state[tensors[0]]
+        trace = {
+            "phase": phase,
+            "module": name,
+            "step": 1 + sum(t["phase"] == phase and t["module"] == name for t in traces),
+            # LBFGS can return immediately on zero gradient before storing prev_loss.
+            "last_closure_loss": float(state["prev_loss"]) if "prev_loss" in state else None,
+            "a_norm": float(a.norm()),
+            "b_norm": float(b.norm()),
+            "adapter_product_norm": float((b @ a).norm()),
+            "effective_weight_norm": float(
+                (module.base_layer.weight.detach().float() + b @ a).norm()
+            ),
+            "gradient_norm": math.sqrt(
+                sum(float(t.grad.float().square().sum()) for t in tensors if t.grad is not None)
+            ),
+        }
+        if not all(math.isfinite(v) for v in trace.values() if isinstance(v, float)):
+            raise ValueError(f"Nonfinite optimizer trace: {name}")
+        traces.append(trace)
+
+    handle = register_optimizer_step_post_hook(record)
+    try:
+        modifier.modify_model(ctx, parameters)
+    finally:
+        handle.remove()
+
+
 def generate(
     base_model: str,
     params: dict[str, Any],
@@ -135,7 +190,7 @@ def generate(
         raise ValueError("trials must be positive")
     lora_rank = int(params.get("lora_rank", 50))
     p_weight = params.get("preserve_good_behavior_weight")
-    kl_target = params.get("kl_divergence_target")
+    kl_target = explicit_target(params.get("kl_divergence_target"))
 
     settings_values = {
         "model": base_model,
@@ -153,24 +208,34 @@ def generate(
     settings = Settings(**settings_values)
 
     ctx = modifier = evaluator = model = None
+    study_data = None
     try:
         model = Model(settings)
         # Snapshot before PEFT wraps/mutates the base, on CPU to spare shared VRAM.
         base_state = {k: v.detach().cpu().clone() for k, v in model.model.state_dict().items()}
         evaluator = Evaluator(settings, model)
 
-        ara_settings = ara.Settings(**{"lora_rank": lora_rank, **params.get("ara_settings", {})})
+        ara_values = {"lora_rank": lora_rank, **params.get("ara_settings", {})}
+        if ara_values.get("preserve_row_magnitudes", False):
+            raise ValueError(
+                "This kernel disables row normalization in optimization and deployment"
+            )
+        ara_values["preserve_row_magnitudes"] = False
+        ara_settings = ara.Settings(**ara_values)
         modifier = ara.ARA(heretic_settings=settings, settings=ara_settings)
         ctx = Context(settings=settings, model=model)
         modifier.init(ctx)
 
         trial_records: list[dict[str, Any]] = []
+        optimizer_traces = []
 
         def objective(trial: optuna.Trial) -> tuple[float, ...]:
             parameters = modifier.suggest_parameters(ctx, FixedWeightTrial(trial, p_weight))
 
             modifier.reset_model(ctx)
-            modifier.modify_model(ctx, parameters)
+            modify_with_trace(
+                modifier, ctx, parameters, optimizer_traces, f"trial_{trial.number + 1}"
+            )
 
             scores = evaluator.get_scores()
             objective_values = evaluator.get_objective_values(scores)
@@ -200,12 +265,32 @@ def generate(
             study_name="heretic_ara",
         )
 
+        study_file = out_dir / "study.json"
+        study_data = {
+            "trials": trial_records,
+            "frontier": [],
+            "best_trial": None,
+            "optimizer_traces": optimizer_traces,
+            "selection_rule": SELECTION_RULE,
+            "kl_divergence_target": kl_target,
+            "kl_constraint_enabled": True,
+            "kl_constraint_met": False,
+            "kernel_variant": KERNEL_VARIANT,
+            "effective_ara_settings": ara_settings.model_dump(mode="json"),
+            "effective_heretic_settings": settings.model_dump(mode="json"),
+            "heretic_version": version("heretic-llm"),
+            "search_protocol": "ten-trial startup search" if n_trials == 10 else "TPE startup=30",
+            "verification_status": "pending",
+            "seed": seed,
+            "params": params,
+        }
         study.optimize(objective, n_trials=n_trials)
-
-        best_trial = select_best_trial(trial_records, kl_divergence_target=kl_target)
+        study_data["frontier"] = feasible_frontier(trial_records, kl_target)
+        best_trial = select_best_trial(trial_records, kl_target)
+        study_data["best_trial"] = best_trial
         best_params = ara.Parameters(**best_trial["parameters"])
         modifier.reset_model(ctx)
-        modifier.modify_model(ctx, best_params)
+        modify_with_trace(modifier, ctx, best_params, optimizer_traces, "selected_reapply")
 
         # Reapply selected parameters once through Heretic, never rerun the objective.
         # Score the deployed merged weights themselves, not stale search-trial metrics.
@@ -216,22 +301,17 @@ def generate(
         touched_tensors = sorted(delta)
         delta_fro_norm = math.sqrt(sum(t.square().sum().item() for t in delta.values()))
 
-        study_file = out_dir / "study.json"
-        study_data = {
-            "trials": trial_records,
-            "best_trial": best_trial,
-            "verified_refusals": verified_refusals,
-            "verified_kl": verified_kl,
-            "kl_constraint_met": kl_target is None or verified_kl <= kl_target,
-            "verification_tolerance": 0.01,
-            "verification_status": "pending",
-            "seed": seed,
-            "params": params,
-        }
+        study_data.update(
+            verified_refusals=verified_refusals,
+            verified_kl=verified_kl,
+            kl_constraint_met=verified_kl <= kl_target,
+            verification_tolerance=0.01,
+        )
         study_file.write_text(json.dumps(study_data, indent=2))
 
         desc_params = dict(params)
         desc_params["delta_format"] = "dense"
+        desc_params["kernel_variant"] = KERNEL_VARIANT
         desc_params.update(git_provenance())
         desc = EditDescriptor(
             family="heretic_ara",
@@ -240,6 +320,7 @@ def generate(
             base_model=base_model,
             base_revision=settings_values["model_commit"],
             git_sha=get_git_sha(),
+            provenance={"kernel_variant": KERNEL_VARIANT},
             touched_tensors=touched_tensors,
             delta_fro_norm=delta_fro_norm,
         )
@@ -248,29 +329,26 @@ def generate(
             stage = Path(staging)
             save_file(delta, stage / "delta.safetensors")
             (stage / "edit.json").write_text(desc.to_json())
-            try:
-                reloaded_state = load_edited_model(base_state, stage)
-                model.model.load_state_dict(reloaded_state, strict=True)
-                del reloaded_state
-                reloaded_refusals, reloaded_kl = extract_trial_metrics(
-                    evaluator, evaluator.get_scores()
-                )
-                study_data.update(
-                    reloaded_kl=reloaded_kl,
-                    reloaded_refusals=reloaded_refusals,
-                    kl_reload_difference=abs(reloaded_kl - verified_kl),
-                )
-                if abs(reloaded_kl - verified_kl) > 0.01:
-                    raise ValueError("Saved ARA verification failed: KL difference exceeds 0.01")
-                if not study_data["kl_constraint_met"]:
-                    raise ValueError("Saved ARA verification failed: verified KL exceeds target")
-            except Exception as exc:
-                study_data.update(verification_status="failed", verification_error=str(exc))
-                study_file.write_text(json.dumps(study_data, indent=2))
-                # never leave a previous passing artefact beside a failed study
-                for stale in ("edit.json", "delta.safetensors", "manifest.json"):
-                    (out_dir / stale).unlink(missing_ok=True)
-                raise
+            reloaded_state = load_edited_model(base_state, stage)
+            study_data["reload_tensor_equal"] = all(
+                torch.equal(reloaded_state[k].to(v), v) for k, v in model.model.state_dict().items()
+            )
+            if not study_data["reload_tensor_equal"]:
+                raise ValueError("Saved ARA verification failed: tensor mismatch")
+            model.model.load_state_dict(reloaded_state, strict=True)
+            del reloaded_state
+            reloaded_refusals, reloaded_kl = extract_trial_metrics(
+                evaluator, evaluator.get_scores()
+            )
+            study_data.update(
+                reloaded_kl=reloaded_kl,
+                reloaded_refusals=reloaded_refusals,
+                kl_reload_difference=abs(reloaded_kl - verified_kl),
+            )
+            if abs(reloaded_kl - verified_kl) > 0.01:
+                raise ValueError("Saved ARA verification failed: KL difference exceeds 0.01")
+            if not study_data["kl_constraint_met"] or reloaded_kl > kl_target:
+                raise ValueError("Saved ARA verification failed: verified KL exceeds target")
             study_data["verification_status"] = "passed"
             study_file.write_text(json.dumps(study_data, indent=2))
             (stage / "delta.safetensors").replace(out_dir / "delta.safetensors")
@@ -284,6 +362,13 @@ def generate(
             model_revisions={base_model: desc.base_revision},
             params=desc_params,
         )
+    except Exception as exc:
+        if study_data is not None:
+            study_data.update(verification_status="failed", verification_error=str(exc))
+            (out_dir / "study.json").write_text(json.dumps(study_data, indent=2))
+        for stale in ("edit.json", "delta.safetensors", "manifest.json"):
+            (out_dir / stale).unlink(missing_ok=True)
+        raise
     finally:
         ctx = modifier = evaluator = model = None
         gc.collect()

@@ -124,7 +124,14 @@ OPTIONAL_MODULES = ("heretic_ara", "lora_sft")
 LORA_FAMILIES = ("heretic_ara", "lora_sft")  # generated via wsp.zoo.<family>.generate -> lora/
 # Optional family-config keys forwarded verbatim to ``generate`` when present.
 GENERATE_PASSTHROUGH = {
-    "heretic_ara": ("kl_divergence_target", "lora_rank", "batch_size", "max_response_length"),
+    "heretic_ara": (
+        "kl_divergence_target",
+        "lora_rank",
+        "batch_size",
+        "max_response_length",
+        "ara_settings",
+        "heretic_settings",
+    ),
     "lora_sft": ("targets", "batch_size", "max_length"),
 }
 STAGING_DIR = ".staging"
@@ -520,7 +527,9 @@ def _with_lora_extras(family: str, params: dict[str, Any], family_cfg: dict[str,
     for key in GENERATE_PASSTHROUGH[family]:
         if key in family_cfg:
             params[key] = family_cfg[key]
-    params["delta_format"] = "lora"  # part of the id, so dry-run ids equal real ids
+    params["delta_format"] = "dense" if family == "heretic_ara" else "lora"
+    if family == "heretic_ara":
+        params["kernel_variant"] = "wsp_ara_no_row_normalization_v1"
     return params
 
 
@@ -564,6 +573,7 @@ def _lora_descriptor(
         generated.touched_tensors,
         generated.delta_fro_norm,
     )
+    desc.provenance.update(generated.provenance)
     # the stored format is what the generator actually wrote (heretic_ara exports a dense
     # evaluated delta; lora_sft writes a PEFT adapter), never the planning label
     desc.provenance.update(

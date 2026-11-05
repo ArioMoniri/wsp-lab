@@ -2,7 +2,7 @@
 # Runs ON a Lambda instance. Usage: lambda_job_ara.sh <n_entries> <trials>
 # Builds the heretic_ara zoo family for Qwen3.5-0.8B, pushes entries to the private HF zoo dataset, terminates itself.
 set -euo pipefail
-N="${1:-30}"; TRIALS="${2:-30}"
+N="${1:-12}"; TRIALS="${2:-10}"
 export PATH=$HOME/.local/bin:$PATH
 sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq git rsync tmux python3.12-venv python3.12-dev build-essential >/dev/null || true
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null

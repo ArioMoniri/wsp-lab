@@ -267,3 +267,46 @@ and were not selected. Pending Board A's forensic (docs/reviews/P1/heretic-ara-r
 entries stay in the zoo but are NOT used in any Heretic-quality comparison; eligibility disposition follows the review.
 The instance's `hf_sync.sh push zoo` also overwrote the hub manifest with its 458-row copy; the canonical local
 manifest (1,247 rows) is re-synced.
+
+## D6 addendum 3 (5 Nov 2026) — diagnostic exclusion and corrected ARA protocol
+
+Board A's REVISE disposition in
+`docs/reviews/P1/heretic-ara-rebuild-forensic-2026-11-05.md` is adopted.
+`scripts/flag_ara_unconstrained.py` was run on all 12 IDs in `/tmp/ara_new_ids.json`:
+`edit.json` provenance and canonical manifest rows now carry
+`diagnostic_flag: ara_unconstrained_surrogate_scale`, with `eligibility: smoke`
+(the schema's excluded, non-production class) and an explicit diagnostic reason.
+The script is idempotent. Identities, deltas, generator descriptors, studies and
+measured scores are retained; these entries are excluded from default production
+panels and Heretic-quality comparisons. Diagnostic inclusion requires explicit
+curation and inclusion/exclusion sensitivity analysis. No old delta was rescaled.
+
+The replacement remains **12 entries × 10 trials**, a ten-trial startup search
+(TPE startup remains 30). The new planned exploratory ceiling is explicitly
+`kl_divergence_target: 0.5` nats of baseline-to-edited first-token KL; it is not a
+capability guarantee or a previously preregistered criterion. Missing, nonfinite
+or nonpositive targets are rejected. Reject nonfinite metrics; among KL-feasible
+trials form the nondominated (refusals, KL) frontier and select lexicographically
+by (refusals, KL, trial number). An empty frontier fails the entry, without
+relaxation. Preserve every scored candidate, the complete frontier, target,
+selection rule, effective settings and upstream version in `study.json`.
+Selected parameters are reapplied once; merged and reloaded KL must each meet
+the ceiling, reload KL difference must be ≤0.01, and reloaded tensors must exactly
+equal the scored merged weights. Failures are recorded and no edit is published.
+
+For this round use the review's explicit alternative: **disable row normalization
+in both optimization and deployment**, labelled
+`wsp_ara_no_row_normalization_v1`. A repo-controlled wrapper forces
+`preserve_row_magnitudes=False` and rejects attempts to enable it. This is a
+labelled unnormalized ARA variant, not a row-preserving Heretic treatment.
+Heretic is pinned to 2.0.0; effective settings and per-module LBFGS outer-step
+last-closure losses, factor/product/effective-weight norms and gradient norms
+are recorded. These are diagnostic traces, not proof of solver convergence.
+The kernel version and explicit target enter artifact identity; builder params
+and provenance now agree on dense format, so corrected artifacts receive new IDs.
+The Lambda script keeps its CLI and inherits the explicit target from config;
+its default budget now matches D6.
+
+**Corrected rebuild pending.** No GPU work, rental or new spend was authorized
+or launched here. Fresh search, independent held-out capability evaluation and
+both-board review remain necessary before Heretic-quality or paper claims.
