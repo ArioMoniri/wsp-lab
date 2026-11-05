@@ -1,0 +1,93 @@
+devices [np.str_('H0'), np.str_('H1'), np.str_('H2')] {np.str_('H0'): 158, np.str_('H1'): 179, np.str_('H2'): 8}
+rows 345 clusters 278 families [np.str_('abliteration'), np.str_('chain'), np.str_('lora_sft'), np.str_('random_dir'), np.str_('task_vector')]
+Residual nuisance: family + device + log||Delta||_F (additive, train folds only).
+{
+ "mmlu_pro": {
+  "n": 345,
+  "clusters": 278,
+  "theta": 0.1462,
+  "boot_ci": [
+   0.069,
+   0.214
+  ],
+  "spearman_residual_statnn": 0.484,
+  "spearman_residual_norm_comparator": 0.099,
+  "mae_residual_zero_pred": 0.0202,
+  "mae_residual_statnn": 0.0173,
+  "mae_residual_norm": 0.0203,
+  "nonnull_proxy_theta": {
+   "rows": 187,
+   "clusters": 128,
+   "theta": 0.1922,
+   "boot_ci": [
+    0.109,
+    0.273
+   ]
+  },
+  "implied_cluster_sd_relative": 0.615,
+  "within_family_spearman_statnn": {
+   "abliteration": 0.267,
+   "chain": 0.538,
+   "lora_sft": 0.551,
+   "random_dir": 0.573,
+   "task_vector": 0.453
+  },
+  "within_device_spearman_statnn": {
+   "H0": 0.5,
+   "H1": 0.434
+  }
+ },
+ "hellaswag": {
+  "n": 345,
+  "clusters": 278,
+  "theta": -0.0342,
+  "boot_ci": [
+   -0.118,
+   0.037
+  ],
+  "spearman_residual_statnn": 0.258,
+  "spearman_residual_norm_comparator": 0.114,
+  "mae_residual_zero_pred": 0.0072,
+  "mae_residual_statnn": 0.0074,
+  "mae_residual_norm": 0.0072,
+  "nonnull_proxy_theta": {
+   "rows": 187,
+   "clusters": 128,
+   "theta": -0.0061,
+   "boot_ci": [
+    -0.101,
+    0.078
+   ]
+  },
+  "implied_cluster_sd_relative": 0.657,
+  "within_family_spearman_statnn": {
+   "abliteration": 0.151,
+   "chain": 0.392,
+   "lora_sft": -0.143,
+   "random_dir": 0.568,
+   "task_vector": 0.498
+  },
+  "within_device_spearman_statnn": {
+   "H0": 0.38,
+   "H1": 0.056
+  }
+ }
+}
+
+clusters needed for 80% power (two-sided 0.05) to detect theta* with the implied cluster SD:
+  mmlu_pro   all families                         SD=0.615  theta*=0.10: 297  0.15: 132  0.20: 75
+  mmlu_pro   non-null proxy (lora, chain, task)   SD=0.473  theta*=0.10: 176  0.15: 79  0.20: 44
+  hellaswag  all families                         SD=0.657  theta*=0.10: 339  0.15: 151  0.20: 85
+  hellaswag  non-null proxy (lora, chain, task)   SD=0.517  theta*=0.10: 210  0.15: 94  0.20: 53
+
+minimum detectable theta (80% power, two-sided 0.05) = 2.8016 * cluster SD / sqrt(clusters)
+  mmlu_pro   all families, existing (278 clusters)        MDE=0.103
+  mmlu_pro   non-null proxy, existing (128 clusters)      MDE=0.117
+  mmlu_pro   full zoo non-null, projected (~492 clusters) MDE=0.060
+  mmlu_pro   full zoo, all families (646 clusters)        MDE=0.068
+  mmlu_pro   full zoo + 700 new independent edits (1,346) MDE=0.047
+  hellaswag  all families, existing (278 clusters)        MDE=0.110
+  hellaswag  non-null proxy, existing (128 clusters)      MDE=0.128
+  hellaswag  full zoo non-null, projected (~492 clusters) MDE=0.065
+  hellaswag  full zoo, all families (646 clusters)        MDE=0.072
+  hellaswag  full zoo + 700 new independent edits (1,346) MDE=0.050

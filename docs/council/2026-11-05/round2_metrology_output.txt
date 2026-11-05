@@ -1,0 +1,144 @@
+
+======== A lineage census (full zoo) ========
+entries 1247 evaluated 389
+distinct lineage roots, all entries: 646
+family counts {'chain': 675, 'task_vector': 80, 'abliteration': 205, 'lora_sft': 121, 'random_dir': 153, 'heretic_ara': 13}
+production entries 1205 distinct roots among production 620
+chain lineage nodes>=2: entries 521, roots 154; all-ancestors production+evaluated: entries 94, roots 36
+chain lineage nodes>=3: entries 366, roots 124; all-ancestors production+evaluated: entries 58, roots 22
+chain lineage nodes>=4: entries 242, roots 99; all-ancestors production+evaluated: entries 36, roots 16
+chain lineage nodes>=5: entries 143, roots 71; all-ancestors production+evaluated: entries 20, roots 11
+
+======== B non-null D3 subset (300 entries without base_run_id; KL threshold 0.01) ========
+D3 entries 300 ancestry clusters (all D3) 281
+                n  nonnull
+family                    
+abliteration  100        2
+chain          50       30
+lora_sft       60       56
+random_dir     60        0
+task_vector    30        6
+non-null entries 94 non-null ancestry clusters 86
+              entries  clusters
+family                         
+abliteration        2         2
+chain              30        25
+lora_sft           56        56
+task_vector         6         6
+clusters per non-null entry 0.915
+family non-null rates (D3) {'abliteration': 0.02, 'chain': 0.6, 'lora_sft': 0.933, 'random_dir': 0.0, 'task_vector': 0.2}
+projected non-null full-zoo entries 538 {'chain': 405, 'task_vector': 16, 'abliteration': 4, 'lora_sft': 113, 'random_dir': 0, 'heretic_ara': 0}
+projected non-null full-zoo clusters (D3 clusters/entry ratio applied, approx) 492
+
+======== C measured fast-tier wall time (eval.json minutes) ========
+        size   mean  median    min    max
+device                                   
+H0       111   7.01    7.22   5.93   8.86
+H1       179   9.92    9.67   7.47  11.59
+H2        10  23.66   20.37  15.10  41.71
+all 389 evaluated entries by device
+        size   mean  median
+device                     
+H0       200   8.63    7.64
+H1       179   9.92    9.67
+H2        10  23.66   20.37
+
+======== D stored per-item fields in records.jsonl (D3 sample, all 300 entries) ========
+('gsm8k', 'items') 15000
+('gsm8k', 'output_text_hit_max') 15000
+('hellaswag', 'items') 30000
+('hellaswag', 'scores_len_4') 30000
+('ifeval', 'items') 7500
+('ifeval', 'output_text_hit_max') 7500
+('kl_to_base', 'first_token_kl_and_full_kl') 15000
+('kl_to_base', 'items') 15000
+('math500', 'items') 7500
+('math500', 'output_text_hit_max') 7500
+('mmlu_pro', 'items') 30000
+('mmlu_pro', 'scores_len_10') 23700
+('mmlu_pro', 'scores_len_4') 1200
+('mmlu_pro', 'scores_len_6') 600
+('mmlu_pro', 'scores_len_7') 300
+('mmlu_pro', 'scores_len_8') 1800
+('mmlu_pro', 'scores_len_9') 2400
+('over_refusal', 'items') 15000
+('over_refusal', 'output_text_only') 15000
+('refusal_rate', 'items') 15000
+('refusal_rate', 'output_text_only') 15000
+('wikitext_ppl', 'items') 2400
+('wikitext_ppl', 'mean_nll_and_n_tokens') 2400
+
+======== E history: M2 (sequence) vs M2-matched (stateless), P4 trajectory split, length>=4 ========
+{"label": "mmlu_pro len>=4", "rows": 18, "clusters": 10, "theta": 0.0686, "boot_ci": [-0.428, 0.409], "seed_reductions": [0.076, 0.071, 0.057], "seed_sd": 0.009, "cluster_sd_resid_at_theta_star": 0.681, "clusters_for_80pct_at_15pct": 162, "approx_mde_at_realised_clusters": 0.684}
+{"label": "mmlu_pro all rows (sanity)", "rows": 345, "clusters": 278, "theta": 0.0909, "boot_ci": [-0.002, 0.181], "seed_reductions": [0.066, -0.002, 0.182], "seed_sd": 0.093, "cluster_sd_resid_at_theta_star": 0.744, "clusters_for_80pct_at_15pct": 194, "approx_mde_at_realised_clusters": 0.14}
+{"label": "hellaswag len>=4", "rows": 18, "clusters": 10, "theta": 0.1302, "boot_ci": [-0.195, 0.328], "seed_reductions": [0.266, 0.056, 0.033], "seed_sd": 0.128, "cluster_sd_resid_at_theta_star": 0.404, "clusters_for_80pct_at_15pct": 57, "approx_mde_at_realised_clusters": 0.427}
+{"label": "hellaswag all rows (sanity)", "rows": 345, "clusters": 278, "theta": 0.0351, "boot_ci": [-0.076, 0.132], "seed_reductions": [-0.012, 0.297, -0.283], "seed_sd": 0.29, "cluster_sd_resid_at_theta_star": 0.831, "clusters_for_80pct_at_15pct": 241, "approx_mde_at_realised_clusters": 0.149}
+
+clusters needed for 80% power, mmlu_pro len>=4 (cluster SD at each theta*):
+  theta*=0.05: clusters None
+     -> 1724
+  theta*=0.10: clusters None
+     -> 397
+  theta*=0.15: clusters 162
+     -> 162
+  theta*=0.20: clusters None
+     -> 84
+  theta*=0.30: clusters None
+     -> 31
+PLACEBO {"label": "mmlu_pro length 1 (no history)", "rows": 292, "clusters": 278, "theta": 0.1265, "boot_ci": [0.039, 0.206], "seed_reductions": [0.109, -0.004, 0.229], "seed_sd": 0.116, "cluster_sd_resid_at_theta_star": 0.693, "clusters_for_80pct_at_15pct": 168, "approx_mde_at_realised_clusters": 0.135}
+PLACEBO {"label": "mmlu_pro length 2-3", "rows": 35, "clusters": 21, "theta": -0.1541, "boot_ci": [-0.463, 0.121], "seed_reductions": [-0.243, -0.037, -0.171], "seed_sd": 0.104, "cluster_sd_resid_at_theta_star": 0.642, "clusters_for_80pct_at_15pct": 144, "approx_mde_at_realised_clusters": 0.405}
+PLACEBO {"label": "hellaswag length 1 (no history)", "rows": 292, "clusters": 278, "theta": 0.0476, "boot_ci": [-0.066, 0.147], "seed_reductions": [-0.021, 0.332, -0.298], "seed_sd": 0.316, "cluster_sd_resid_at_theta_star": 0.894, "clusters_for_80pct_at_15pct": 279, "approx_mde_at_realised_clusters": 0.158}
+PLACEBO {"label": "hellaswag length 2-3", "rows": 35, "clusters": 21, "theta": -0.137, "boot_ci": [-0.489, 0.116], "seed_reductions": [-0.21, 0.105, -0.357], "seed_sd": 0.236, "cluster_sd_resid_at_theta_star": 0.6, "clusters_for_80pct_at_15pct": 126, "approx_mde_at_realised_clusters": 0.397}
+hellaswag len>=4 cluster-SD-based clusters needed:
+  theta*=0.05: 650
+  theta*=0.10: 145
+  theta*=0.15: 57
+  theta*=0.20: 29
+  theta*=0.30: 11
+
+======== F paired-MAE power for feature-addition effects on full D3 trajectory split (3 seeds) ========
+{"label": "StatNN vs descriptor_only, mmlu_pro", "rows": 345, "clusters": 278, "theta": 0.041, "boot_ci": [-0.063, 0.14], "seed_reductions": [0.038, 0.05, 0.035], "seed_sd": 0.008, "cluster_sd_resid_at_theta_star": 0.866, "clusters_for_80pct_at_15pct": 2357, "approx_mde_at_realised_clusters": 0.147}
+   clusters for 80% power at 5% MAE gain: 2355; at 10%: 589
+{"label": "StatNN vs descriptor_only, hellaswag", "rows": 345, "clusters": 278, "theta": 0.0554, "boot_ci": [-0.063, 0.164], "seed_reductions": [0.058, 0.063, 0.045], "seed_sd": 0.009, "cluster_sd_resid_at_theta_star": 0.953, "clusters_for_80pct_at_15pct": 2855, "approx_mde_at_realised_clusters": 0.161}
+   clusters for 80% power at 5% MAE gain: 2852; at 10%: 713
+{"label": "StatNN vs delta_norm, mmlu_pro", "rows": 345, "clusters": 278, "theta": 0.3736, "boot_ci": [0.306, 0.435], "seed_reductions": [0.372, 0.38, 0.37], "seed_sd": 0.005, "cluster_sd_resid_at_theta_star": 0.747, "clusters_for_80pct_at_15pct": 1750, "approx_mde_at_realised_clusters": 0.133}
+   clusters for 80% power at 5% MAE gain: 1752; at 10%: 438
+{"label": "StatNN vs delta_norm, hellaswag", "rows": 345, "clusters": 278, "theta": 0.5025, "boot_ci": [0.439, 0.569], "seed_reductions": [0.504, 0.507, 0.497], "seed_sd": 0.005, "cluster_sd_resid_at_theta_star": 0.606, "clusters_for_80pct_at_15pct": 1152, "approx_mde_at_realised_clusters": 0.107}
+   clusters for 80% power at 5% MAE gain: 1153; at 10%: 289
+
+======== G Fisher-z power: rho 0.6 vs rho 0.4 (one-sided alpha 0.05, H0: rho <= 0.4) ========
+  one-sample test (H0: rho<=0.4 vs rho=0.6), single predictor:
+  D3 non-null, entries                         n=   94  power=0.82
+  D3 non-null, ancestry clusters               n=   86  power=0.79
+  full-zoo non-null (projected), entries       n=  538  power=1.00
+  full-zoo non-null (projected), clusters      n=  492  power=1.00
+  D3 all, entries                              n=  300  power=1.00
+  D3 all, clusters                             n=  281  power=1.00
+  two-sample, independent (round-1 definition: P(0.6 vs 0.4) for two separate samples of size n):
+  D3 non-null, entries                         n=   94  power=0.44
+  full-zoo non-null (projected), entries       n=  538  power=0.99
+  note: the H2 cluster SD rests on 10 clusters; its 95% range is about x0.69 to x1.83 (chi-square, df=9).
+  Note: the non-null count and the cluster count, not total entries, set the power.
+
+======== H minimum detectable MAE effect vs ancestry clusters (80% power, two-sided 0.05) ========
+ancestry clusters among the 389 evaluated entries: 281
+ancestry clusters among all 1,247 zoo entries: 646
+  D3 non-null clusters                         C=   86  MDE=0.262
+  D3 all clusters                              C=  281  MDE=0.145
+  evaluated clusters (389)                     C=  281  MDE=0.145
+  zoo clusters, all entries                    C=  646  MDE=0.095
+  zoo clusters + 700 new independent edits     C= 1346  MDE=0.066
+  2,355 clusters (5% target)                   C= 2355  MDE=0.050
+  Required clusters for MDE 5%: 2355 ; 10%: 589 ; 15%: 262
+
+======== I reliability of each endpoint after expansion (signal = residual SD^2 - SE^2; reliability = signal/(signal+SE_new^2)) ========
+  mmlu_pro gold log-prob (nats)        signal SD=0.2790  SE_now=0.0580@100  SE_new=0.0183@1000  reliability=0.996  PASS
+  mmlu_pro gold margin (nats)          signal SD=0.4324  SE_now=0.0760@100  SE_new=0.0240@1000  reliability=0.997  PASS
+  mmlu_pro accuracy                    signal SD=0.0286  SE_now=0.0250@100  SE_new=0.0079@1000  reliability=0.929  PASS
+  hellaswag gold log-prob (per char)   signal SD=0.0039  SE_now=0.0018@100  SE_new=0.0008@500  reliability=0.959  PASS
+  hellaswag accuracy                   signal var < 0 (no residual signal beyond item noise); reliability undefined -> FAIL
+  KL to base (nats)                    signal SD=0.0590  SE_now=0.0019@50  SE_new=0.0009@200  reliability=1.000  PASS
+  wikitext log-ppl                     signal SD=0.0280  SE_now=0.0074@8  SE_new=0.0026@64  reliability=0.991  PASS
+  gsm8k sampled accuracy               signal SD=0.0108  SE_now=0.0580@50  SE_new=0.0183@500  reliability=0.258  FAIL
+  gate: reliability >= 0.90 (equivalently SD_signal/SE >= 3.2 at the TF-v1 item count)
+  note: SE scales as 1/sqrt(items) for item sampling; the 100-item SE is R1's paired item SE.
