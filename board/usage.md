@@ -202,4 +202,5 @@
 | 2026-11-05 | Board A final re-review feat/p4-round2 | codex/gpt-6.1-terra medium | APPROVE 991a437 — merged; rerun must label the new protocol |
 | 2026-11-05 | Board A forensic: rebuilt heretic_ara entries | codex/gpt-6.1-sol high | REVISE: no KL target → refusals-first selection; norms = surrogate/deployment scale mismatch; rebuild with target 0.5 + Pareto rule 9940f1a |
 | 2026-11-05 | zoo: heretic_ara selection fix + diagnostic flag | codex/gpt-6.1-sol high | done 33584f3 (518 tests) — Board A review pending |
-| 2026-11-05 | Board A review fix/heretic-ara-selection | codex/gpt-6.1-terra medium | running |
+| 2026-11-05 | Board A review fix/heretic-ara-selection | codex/gpt-6.1-terra medium | REVISE (Lambda job must pin the reviewed revision) 38cb13c → fixed by orchestrator 4345b86 |
+| 2026-11-05 | Board A re-review fix/heretic-ara-selection (revision pinning) | codex/gpt-6.1-terra low | running |
