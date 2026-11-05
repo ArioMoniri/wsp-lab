@@ -197,3 +197,10 @@ label qualification and benchmark noise panels remain with the orchestrator.
 Final CPU suite: **491 passed, 1 skipped, 8 deselected**, 55.15 s, after all
 training/split/audit changes. Ruff check and format checks passed. The final
 multi-seed summary Markdown addition was subsequently covered by its CLI test.
+
+
+## Board A ARA rebuild forensic — 2026-11-05
+
+Reviewed all 12 rebuilt ARA studies, descriptors and dense safetensors, pinned base tensors, current generator/config and installed Heretic 2.0.0 source. Report: `docs/reviews/P1/heretic-ara-rebuild-forensic-2026-11-05.md`. Verdict REVISE for production/Heretic-quality claims: missing KL target makes the constraint flag vacuously true; refusals-first selection picks high-KL points. Huge deltas concentrate in a few directions under row-normalized optimization but unnormalized scoring/export; precise LBFGS divergence is unproven. Recommend diagnostic flag `ara_unconstrained_surrogate_scale` and a separate corrected 12×10 rebuild (approximately $37–40 plus validation). No data/config/code changed, no GPU or remote work, no spend incurred. Requested main-checkout report commit only; no push.
+
+Reproducible CPU evidence: `data/runs/ara-rebuild-forensic-20261105/{audit.py,audit.json,manifest.json}` (input/source hashes, exhaustive per-module norms/row ratios, power-iteration direction estimates, manifest-based classic-abliteration norm comparison). Full CPU checks through `agent-tmux boardA-ara-checks`: 498 passed, 1 skipped, 8 deselected in 61.10 s; ruff check/format passed. Log `/home/ubuntu/agent-logs/boardA-ara-checks-20261105-052130.log`. An initial tmux invocation omitted explicit `bash -lc` and did not run checks; the corrected invocation above completed them. This was a read-only scientific review apart from the requested report/session documentation; no external board message was sent.
