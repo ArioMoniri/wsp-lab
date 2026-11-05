@@ -205,7 +205,7 @@
 | 2026-11-05 | Board A review fix/heretic-ara-selection | codex/gpt-6.1-terra medium | REVISE (Lambda job must pin the reviewed revision) 38cb13c → fixed by orchestrator 4345b86 |
 | 2026-11-05 | Board A re-review fix/heretic-ara-selection | codex/gpt-6.1-terra low | APPROVE 0df3d82 — merged 06a9980; corrected rebuild launched on an A10 (rev-pinned) |
 | 2026-11-05 | Council R1 weight-reading researcher (blog deep-dive) | codex/gpt-6.1-sol high | running |
-| 2026-11-05 | Council R1 JEPAWG researcher | codex/gpt-6.1-terra high | running |
+| 2026-11-05 | Council R1 JEPAWG researcher | codex/gpt-6.1-terra high | done 95ead11 |
 | 2026-11-05 | Council R1 features CTO | codex/gpt-6-luna high | done d5728ad (audit written; did not compute importances → evidence task) |
 | 2026-11-05 | Council R1 metrology CTO (signal-to-noise budget, targets) | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-05 | Council R1 strategy CTO (zoo, hypotheses, plan) | codex/gpt-6.1-sol high | running |
