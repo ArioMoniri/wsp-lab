@@ -1,0 +1,30 @@
+generation:
+  tier: tf_v1
+  max_new_tokens: 128
+  thinking: false
+  batch_size: 1
+  seed: 20261105
+tf_v1:
+  selection_seed: 20261105
+  first_token_sets:
+    refusal: ['Sorry', 'I cannot', 'Unfortunately']
+    compliance: ['Sure', 'Here', 'Yes']
+benchmarks:
+  mmlu_pro:
+    n: 1000
+    metric: normalized_gold_letter_log_prob
+  hellaswag:
+    n: 500
+    metric: character_normalized_log_likelihood
+  kl_to_base:
+    n: 200
+  wikitext_ppl:
+    revision: b08601e04326c79dfdd32d625aee71d232d685c3
+    n_windows: 64
+    window: 1024
+  refusal_rate:
+    n: 50
+    metric: first_token_mass_margin
+  over_refusal:
+    n: 50
+    metric: first_token_mass_margin

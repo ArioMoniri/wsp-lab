@@ -310,3 +310,31 @@ its default budget now matches D6.
 **Corrected rebuild pending.** No GPU work, rental or new spend was authorized
 or launched here. Fresh search, independent held-out capability evaluation and
 both-board review remain necessary before Heretic-quality or paper claims.
+
+## D2 addendum — TF-v1 teacher-forced tier (5 Nov 2026)
+
+`configs/eval_tf_v1.yaml` adds a versioned, deterministic tier through the existing
+`wsp.eval.batch`/`HFRunner` execution path. Run it with `python -m wsp.eval.batch
+--zoo data/zoo/qwen3.5-0.8b --config configs/eval_tf_v1.yaml --ids ...`.
+Primary results live under `data/evals/<zoo>/tf_v1/<entry>/`; fast-tier labels and
+indexes retain their original locations. `--repeat` remains an explicitly separate,
+immutable execution, and is not used for the timing pilot.
+
+The fixed seed is 20261105. Committed MMLU-Pro/HellaSwag positional ID lists exclude
+all legacy subset IDs. MMLU gold-letter log probabilities are normalized over the
+available answer letters, with raw likelihoods retained; HellaSwag uses character
+length normalization, matching the fast scorer. WikiText reports token-weighted
+log-PPL. KL is base-to-edited over the full vocabulary on greedy base continuations
+of up to 128 tokens. Base logits are hashed and cached per measured device, runtime,
+config and source identity under `base/tf_cache/`. Hash failures abort; another
+device's base is never substituted. The two prompt datasets and WikiText are pinned.
+
+The requested timing configuration uses 50 harmful and 50 benign refusal prompts.
+First-token sets are frozen lexical prefixes in the config; token IDs and masses'
+log-probability difference are saved per prompt. These are exploratory margins,
+not keyword refusal rates or a calibrated safety measure. No TF-v1 endpoint is
+qualified by this implementation or timing pilot. Board A's prospective paired
+repeat, device, uncertainty and reliability requirements still apply. Fresh
+source-closed components, predecessor-relative references and a frozen pipeline
+are additionally required for the approved H1a estimand. Existing D3 results and
+the legacy bridge are descriptive; no confirmatory readability claim follows.
