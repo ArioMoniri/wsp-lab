@@ -92,6 +92,9 @@ def _spearman(y: np.ndarray, p: np.ndarray) -> float:
     return float(np.corrcoef(rankdata(y), rankdata(p))[0, 1])
 
 
+EDIT_CI_METHOD = "seeded percentile bootstrap over edits (not independent trajectories)"
+
+
 def metrics_with_ci(y: np.ndarray, pred: np.ndarray, seed: int = 0, n_boot: int = 1000) -> dict:
     """MAE / RMSE / Spearman with 95 % percentile bootstrap CIs (resampling edits, seeded)."""
     y, pred = np.asarray(y, float), np.asarray(pred, float)
@@ -117,7 +120,7 @@ def metrics_with_ci(y: np.ndarray, pred: np.ndarray, seed: int = 0, n_boot: int 
             if len(finite) >= max(10, n_boot // 10)
             else [math.nan, math.nan]
         )
-        out[k] = {"value": v, "ci95": ci}
+        out[k] = {"value": v, "ci95": ci, "ci_method": EDIT_CI_METHOD}
     return out
 
 
@@ -150,14 +153,20 @@ def fit_eval(
         "n_folds": len(folds),
         "n_features": int(X.shape[1]),
         "targets": {},
+        "skipped_folds": [],
     }
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # sklearn ConvergenceWarning on tiny folds
         for j, name in enumerate(names):
             pred = np.full(len(X), np.nan)
-            for train, test in folds:
+            for fold, (train, test) in enumerate(folds):
                 train = np.asarray(train)[np.isfinite(Y[np.asarray(train), j])]
                 if len(train) < 2:
+                    reason = "fewer than two finite training labels"
+                    result["skipped_folds"].append(
+                        {"fold": fold, "target": name, "skipped_reason": reason}
+                    )
+                    log.warning("Skipping baseline fold %d target %s: %s", fold, name, reason)
                     continue
                 est = _make_model(model, seed, model_params).fit(X[train], Y[train, j])
                 pred[test] = est.predict(X[test])

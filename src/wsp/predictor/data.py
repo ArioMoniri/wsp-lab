@@ -215,7 +215,16 @@ def clean_training(rows, train, test, metadata, ancestry, mode):
         inner = (m.get("params") or {}).get("inner_family") if mode == "family" else None
         if value in held or inner in held:
             forbidden.add(i)
-    kept = [i for i in train if not (ancestor_ids(rows[i]["id"], ancestry) & forbidden)]
+    clusters = trajectory_groups(
+        [{**r, "parent_id": ancestry.get(r["id"], r.get("parent_id"))} for r in rows], ancestry
+    )
+    held_clusters = {clusters[i] for i in test}
+    kept = [
+        i
+        for i in train
+        if clusters[i] not in held_clusters
+        and not (ancestor_ids(rows[i]["id"], ancestry) & forbidden)
+    ]
     return np.asarray(kept, dtype=int), len(train) - len(kept)
 
 
@@ -244,9 +253,25 @@ def descriptor(meta, width=32):
 
 
 class FeatureDataset(Dataset):
-    def __init__(self, features, evals, *, target="delta", targets=None, zoo=None):
+    def __init__(
+        self,
+        features,
+        evals,
+        *,
+        target="delta",
+        targets=None,
+        zoo=None,
+        features_variant="cumulative",
+    ):
         self._cache = OrderedDict()
         self.root = Path(features)
+        if features_variant == "incremental":
+            candidate = self.root / "incremental"
+            if not (candidate / "manifest.json").exists():
+                raise ValueError(
+                    "incremental features unavailable: provide separately extracted features/incremental with manifest.json"
+                )
+            self.root = candidate
         manifest = self.root / "manifest.json"
         self.manifest = json.loads(manifest.read_text()) if manifest.exists() else {}
         zoo = zoo or self.manifest.get("zoo")
@@ -330,6 +355,7 @@ class FeatureDataset(Dataset):
                     "seed": m["seed"],
                     "parent_id": m.get("parent_id"),
                     "relation": m["relation"],
+                    "eval_device_id": observation.get("eval_device_id", "unknown"),
                 }
             )
             values.append(y)

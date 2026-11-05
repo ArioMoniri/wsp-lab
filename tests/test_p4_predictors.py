@@ -518,3 +518,247 @@ def test_empty_ancestry_fold_is_logged_and_skipped(toy, monkeypatch, caplog, tmp
     assert any(
         r.levelno == logging.WARNING and "empty training fold" in r.message for r in caplog.records
     )
+
+
+def test_collapsed_latents_trip_gate():
+    from wsp.predictor.audit import collapse_check
+
+    check = collapse_check(torch.ones(12, 32), torch.randn(12, 32))
+    assert check["collapsed"] and not check["acceptance_gate"]
+    assert check["n_representations"] == 12
+
+
+def test_cluster_bootstrap_preserves_paired_clusters():
+    from wsp.predictor.audit import paired_cluster_difference
+
+    y = np.array([0.0, 1.0, 2.0, 3.0])
+    result = paired_cluster_difference(y, y, y + 1, ["a", "a", "b", "b"], 0, 30)
+    assert result["n_clusters"] == 2
+    assert result["mae"]["ci95"] == [-1.0, -1.0]
+
+
+def test_nested_refit_baselines_and_feature_audit(toy, tmp_path):
+    out = tmp_path / "nested"
+    r = run_training(
+        toy / "features", toy / "evals", "seed", out, epochs=2, n_splits=3, d_model=16, n_boot=10
+    )
+    for f in r["folds"]:
+        assert len(f["inner_selection"]) >= 2
+        assert set(f["train_ids"]) == set(f["refit_ids"])
+        assert not f["validation_ids"]
+        assert f["target_variance"]["train"]
+    frame = pd.read_parquet(out / "fold-0.parquet")
+    assert {"statnn", "fold_mean", "delta_norm", "descriptor_only", "device_only", "family"} <= set(
+        frame
+    )
+    assert r["per_family"] and r["family_centered"] and r["out_of_support"]
+    assert "over edits" in r["ci_method"]
+    assert "ancestry clusters" in r["paired_ci_method"]
+    saved = json.loads((out / "metrics.json").read_text())
+
+    def check(block, paired=False):
+        if isinstance(block, dict):
+            if "ci95" in block:
+                expected = saved["paired_ci_method"] if paired else saved["ci_method"]
+                assert block["ci_method"] == expected
+            for key, value in block.items():
+                check(value, paired or key == "paired_differences")
+        elif isinstance(block, list):
+            for value in block:
+                check(value, paired)
+
+    check(saved)
+
+
+def test_device_never_enters_model_inputs(toy, tmp_path):
+    import shutil
+
+    evals = tmp_path / "evals"
+    shutil.copytree(toy / "evals", evals)
+    before = FeatureDataset(toy / "features", evals)
+    for file in evals.glob("*/eval.json"):
+        file.write_text(json.dumps(json.loads(file.read_text()) | {"eval_device_id": "different"}))
+    after = FeatureDataset(toy / "features", evals)
+    for i in range(len(before)):
+        for key, value in before[i]["entries"][-1].items():
+            torch.testing.assert_close(value, after[i]["entries"][-1][key])
+    assert "device" not in collate_trajectories([after[0]])
+    with pytest.raises(ValueError, match="incremental"):
+        FeatureDataset(toy / "features", evals, features_variant="incremental")
+
+
+def test_m2_matched_uses_identical_pooled_inputs_without_history(toy):
+    ds = FeatureDataset(toy / "features", toy / "evals")
+    seq = build_model("m2", ds, d_model=16)
+    net = build_model("m2_matched", ds, d_model=16).eval()
+    assert sum(p.numel() for p in net.parameters()) == sum(p.numel() for p in seq.parameters())
+    b = collate_trajectories([ds[i] for i in range(len(ds))])
+    p = net(b).detach()
+    changed = {k: v.clone() for k, v in b.items()}
+    changed["pooled"][:, 0] += 20
+    changed["descriptor"][:, 0] += 20
+    torch.testing.assert_close(net(changed)[:, 1:], p[:, 1:])
+
+
+def test_preprocessing_ignores_test_and_zeroes_constants():
+    from wsp.predictor.train import Normalizer
+
+    class Dataset:
+        def __init__(self):
+            self.rows = [{"id": "train"}, {"id": "test"}]
+
+        def chain(self, i):
+            return [i]
+
+        def entry(self, i):
+            x = torch.tensor([1.0, 2.0]) if i == "train" else torch.tensor([100.0, -10.0])
+            return {"tokens": x[None], "pooled": x, "stats": x}
+
+    for scaling in ("standard", "robust"):
+        norm = Normalizer(Dataset(), [0], scaling)
+        assert norm.ids == ["train"]
+        output = norm(Dataset().entry("test"), "cpu")
+        assert all((value == 0).all() for value in output.values())
+
+
+def test_seed_summary_reports_full_seed_range():
+    from wsp.predictor.audit import seed_summary
+
+    results = [
+        {
+            "targets": {"acc": {key: {"value": v} for key in ("mae", "rmse", "spearman")}},
+            "m6_collapse_gate": None,
+        }
+        for v in (1.0, 3.0, 5.0)
+    ]
+    summary = seed_summary(results, [0, 1, 2])
+    assert summary["seed_summary"]["acc"]["mae"] == {"mean": 3.0, "range": [1.0, 5.0], "n_seeds": 3}
+
+
+def test_family_purge_keeps_ancestry_clusters_disjoint():
+    from wsp.predictor.data import clean_training
+
+    rows = [
+        {"id": "root", "family": "random_dir", "seed": 0},
+        {"id": "child", "family": "chain", "seed": 1},
+    ]
+    metadata = {r["id"]: r for r in rows}
+    train, dropped = clean_training(
+        rows, [0], [1], metadata, {"root": None, "child": "root"}, "family"
+    )
+    assert len(train) == 0 and dropped == 1
+
+
+def test_seeds_cli_runs_complete_experiments_and_writes_summary(tmp_path, monkeypatch):
+    from wsp.predictor import train
+
+    calls = []
+
+    def run(**kwargs):
+        calls.append(kwargs)
+        kwargs["out"].mkdir(parents=True)
+        (kwargs["out"] / "manifest.json").write_text(
+            json.dumps({"git_sha": "test", "model_revisions": {}})
+        )
+        return {
+            "targets": {
+                "acc": {
+                    key: {"value": float(kwargs["seed"])} for key in ("mae", "rmse", "spearman")
+                }
+            },
+            "m6_collapse_gate": None,
+        }
+
+    monkeypatch.setattr(train, "run_training", run)
+    main(
+        [
+            "--model",
+            "m1",
+            "--features",
+            "unused",
+            "--evals",
+            "unused",
+            "--out",
+            str(tmp_path / "multi"),
+            "--seeds",
+            "0,1,2",
+        ]
+    )
+    assert [c["seed"] for c in calls] == [0, 1, 2]
+    assert len({str(c["out"]) for c in calls}) == 3
+    summary = json.loads((tmp_path / "multi/metrics.json").read_text())
+    assert summary["seed_summary"]["acc"]["mae"]["range"] == [0.0, 2.0]
+
+
+def test_family_centered_fold_offsets():
+    from wsp.predictor.audit import family_centered_correlations
+
+    y = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
+    p = np.array([0.0, 2.0, 1.0, 0.0, 2.0, 1.0])
+    families = np.array(["a"] * 6)
+    folds = [np.arange(3), np.arange(3, 6)]
+    within, pooled = family_centered_correlations(y, p, families, folds)
+    shifted = p + np.array([0.0, 0.0, 0.0, 100.0, 100.0, 100.0])
+    other, other_pooled = family_centered_correlations(y, shifted, families, folds)
+    assert within["spearman"] == pytest.approx(0.5)
+    assert within == other
+    assert pooled["spearman"] != other_pooled["spearman"]
+
+
+@pytest.mark.parametrize("n_fit", [0, 1, 3])
+def test_audit_legacy_statnn_contract(toy, tmp_path, monkeypatch, caplog, n_fit):
+    from wsp.predictor import audit
+
+    ds = FeatureDataset(toy / "features", toy / "evals")
+    train, test = np.arange(n_fit), np.arange(6, 9)
+    folds = [(train, test), (train, test)]
+    seeds = []
+    original = audit._make_model
+
+    def model(name, seed):
+        seeds.append(seed)
+        return original(name, seed)
+
+    monkeypatch.setattr(audit, "_make_model", model)
+    for f in range(2):
+        pd.DataFrame([{"id": ds.rows[i]["id"], "target": "acc"} for i in test]).to_parquet(
+            tmp_path / f"fold-{f}.parquet"
+        )
+    # Normalizer requires context even when no labels are finite.
+    train = np.arange(3)
+    ds.targets[:3] = float("nan")
+    ds.targets[:n_fit] = 0.1
+    folds = [(train, test), (train, test)]
+    result = audit.audit_run(
+        ds, ds.targets.numpy().copy(), folds, [], tmp_path, 17, 10, "standard"
+    )["baselines"]["statnn"]
+    assert {k: result[k] for k in ("model", "n", "n_folds", "n_features")} == {
+        "model": "statnn",
+        "n": len(ds),
+        "n_folds": 2,
+        "n_features": ds.stats_dim,
+    }
+    if n_fit < 2:
+        assert seeds == []
+        assert len(result["skipped_folds"]) == 2
+        assert all(r["skipped_reason"] for r in result["skipped_folds"])
+        assert "fewer than two finite training labels" in caplog.text
+        assert result["targets"]["acc"] == {"n": 0}
+        assert pd.read_parquet(tmp_path / "fold-0.parquet").statnn.isna().all()
+    else:
+        assert seeds == [17, 17]
+
+
+@pytest.mark.parametrize("mode", ["family", "seed", "trajectory"])
+def test_split_ancestry_contexts_are_disjoint(toy, mode):
+    from wsp.predictor.train import Normalizer
+
+    ds = FeatureDataset(toy / "features", toy / "evals")
+    for train, test in ds.folds(mode, 3):
+        train_context = set(Normalizer(ds, train).ids)
+        test_context = {a for i in test for a in ds.chain(ds.rows[i]["id"])}
+        assert train_context.isdisjoint(test_context)
+        for inner_train, inner_val in ds.folds(mode, 2, train):
+            inner_context = set(Normalizer(ds, inner_train).ids)
+            val_context = {a for i in inner_val for a in ds.chain(ds.rows[i]["id"])}
+            assert inner_context.isdisjoint(val_context | test_context)
