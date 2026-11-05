@@ -360,16 +360,46 @@ def metrology_seed_sd(target: str) -> float:
     raise KeyError(target)
 
 
-def residual_block() -> dict:
-    block = re.search(r'"mmlu_pro":\s*\{(.*?)\n \}', read(RESIDUAL), re.S).group(1)
+def residual_block(target: str = "mmlu_pro") -> dict:
+    block = re.search(rf'"{target}":\s*\{{(.*?)\n \}}', read(RESIDUAL), re.S).group(1)
     ci = re.search(r'"boot_ci":\s*\[\s*([\d.\-]+),\s*([\d.\-]+)\s*\]', block)
-    return {"theta": float(re.search(r'"theta":\s*([\d.]+)', block).group(1)),
+    return {"theta": float(re.search(r'"theta":\s*(-?[\d.]+)', block).group(1)),
             "lo": float(ci.group(1)), "hi": float(ci.group(2)),
             "n": int(re.search(r'"n":\s*(\d+)', block).group(1)),
             "clusters": int(re.search(r'"clusters":\s*(\d+)', block).group(1))}
 
 
 RESID = residual_block()
+RESID_HS = residual_block("hellaswag")
+MET_IDX = {"sd_dy": -6, "sd_seed": -5, "sd_itemSE": -4, "sd_signal_pop": -3}
+WITHIN = "within family x device"
+
+
+def met(target: str, scope: str, field: str) -> float:
+    """Field of a metrology_budget_output.txt row (token positions counted from the row end)."""
+    return float(metrology_row(target, scope)[MET_IDX[field]])
+
+
+def audit_counter(name: str) -> int:
+    return int(re.search(rf"'{name}': (\d+)", read(AUDIT_TXT)).group(1))
+
+
+V2_INFERRED = jload(P4 / "d3v2-m1-trajectory" / "seed-1" / "manifest.json")["targets_with_inferred_runtime"]
+ZOO_EVAL = {c: DATA / "zoo" / "qwen3.5-0.8b" / c / "eval.json" for c in CONTROLS}
+BASE_H0_SEED0 = DATA / "evals" / "qwen3.5-0.8b" / "base" / "devices" / "H0" / "20261104-233637-7c43da7c" / "eval.json"
+SEED1_PANEL = DATA / "runs" / "p2-batch" / "20261105-050543-aad6c310"
+
+
+def seed_panel(key: str) -> tuple[float, float, float]:
+    """Seed 0 against seed 1 over the 10 controls and the base (11 records): mean and max absolute
+    difference, and Spearman across the records. Recomputed from the raw eval.json files."""
+    ids = CONTROLS + ["BASE"]
+    s0 = [float(jeval(ZOO_EVAL[c])[key]) for c in CONTROLS] + [float(jeval(BASE_H0_SEED0)[key])]
+    s1 = [float(jeval(SEED1_PANEL / c / "repeats" / "seed1" / "eval.json")[key]) for c in CONTROLS] \
+        + [float(jeval(SEED1_PANEL / "base" / "repeats" / "seed1" / "eval.json")[key])]
+    assert len(ids) == len(s0) == len(s1) == 11
+    d = [abs(a - b) for a, b in zip(s0, s1)]
+    return sum(d) / len(d), max(d), spearman(s0, s1)
 SUITE_RUNS = [p.name for p in sorted(P4.glob("d3v2-*")) if (p / "metrics.json").exists()]
 LEARNED = {
     "family": ["d3v2-m1-family", "d3v2-m1_matched-family", "d3v2-m2-family", "d3v2-m2_matched-family",
@@ -452,6 +482,9 @@ def build() -> None:
     # ---------------- introduction
     declare("introduction", "0.016\\% of Qwen3.5-0.8B's weights",
             "literature value from Takehi et al. (2026), cited; not in repository data")
+    declare("introduction", "3 and 4 November", "registration dates of H1 to H4 (HYPOTHESIS.md)")
+    declare("introduction", "added on 4 November", "addition date of H5 and H6 (HYPOTHESIS.md)")
+    declare("introduction", "On 5 November", "amendment date (HYPOTHESIS.md changelog)")
     declare("introduction", "from 7.9\\% to 48.1\\%",
             "literature value from Takehi et al. (2026), cited; not in repository data")
     presence("introduction", "$\\rho \\ge 0.6$ on all", HYPOTHESIS, r"ρ ≥ 0\.6", "H1 threshold 0.6") if False else None
@@ -537,10 +570,14 @@ def build() -> None:
           [345, 389, 44], "v2 matched rows; eval count; missing_predecessor_targets")
     claim("experiments", "lists the 25 complete rows", [25], "complete d3v2 run directories (assertion below)")
     claim("experiments", "since all 60 random-direction edits leave", [60], "evidence CSV family_distribution n, random_dir")
-    claim("experiments", "mark 260 targets as having inferred runtime metadata", [260],
-          "trajectory seed-0 targets_with_inferred_runtime")
-    claim("experiments", "The 345 rows are not the 300-entry D3 subset, and they are not the 260 matched D3 edits",
-          [345, 300, 260], "v2 n; D3 subset size; D3 matched size")
+    claim("experiments", "mark 260 of the 345 rows as having inferred runtime metadata", [V2_INFERRED, n_rows(M1T)],
+          "d3v2-m1-trajectory seed-1 manifest targets_with_inferred_runtime; n")
+    claim("experiments", "Those 260 are the matched D3 edits counted in Section", [audit_counter("matched_reference_targets")],
+          "board-a-d3-audit audit.txt COUNTERS matched_reference_targets (D3 subset)")
+    claim("experiments", "The other 85 rows are chain predecessors", [n_rows(M1T) - V2_INFERRED],
+          "345 matched rows minus 260 inferred; the 85 are the chain-predecessor rows (run-loader check)")
+    claim("experiments", "The 345 rows are not the 300-entry D3 subset", [n_rows(M1T), 300],
+          "v2 n; D3 subset size (300 entries)")
     claim("experiments", "the trajectory-split M1-matched row reached mean Spearman 0.45 and 0.46 on MMLU-Pro and HellaSwag",
           [ss(M1M, "mmlu_pro", "spearman", "mean"), ss(M1M, "hellaswag", "spearman", "mean")],
           "d3v2-m1_matched-trajectory seed_summary")
@@ -641,11 +678,15 @@ def build() -> None:
     claim("discussion", "Each target is a 100-item accuracy, with a binomial standard error of 0.045 for MMLU-Pro and 0.049 for HellaSwag",
           [100, binom_se(base_val("mmlu_pro"), 100), binom_se(base_val("hellaswag"), 100)],
           "binomial SE at base fast-tier values (0.28 and 0.39, n = 100)")
-    hs_nums = [float(x) for x in metrology_row("hellaswag", "within family x device") if re.fullmatch(r"[\d.]+", x)]
-    claim("discussion", "the HellaSwag residual SD across the 300 D3 entries is 0.0131, no larger than the 0.0136 item standard error",
-          [hs_nums[0], hs_nums[1], hs_nums[3]],
-          "metrology_budget_output.txt, hellaswag within family x device (n, sd_dy, sd_itemSE)")
-    locator("discussion", "metrology_budget_output.txt}, lines 43 and 44", "metrology lines 43 and 44")
+    claim("discussion", "the residual SD within family and device is 0.0131, no larger than its item SE of 0.0136",
+          [met("hellaswag", WITHIN, "sd_dy"), met("hellaswag", WITHIN, "sd_itemSE")],
+          "metrology_budget_output.txt line 44 (hellaswag within family x device: sd_dy, sd_itemSE)")
+    claim("discussion", "the residual SD is 0.0384, above its item SE of 0.0246, and the remaining signal SD is 0.0295",
+          [met("mmlu_pro", WITHIN, "sd_dy"), met("mmlu_pro", WITHIN, "sd_itemSE"), met("mmlu_pro", WITHIN, "sd_signal_pop")],
+          "metrology_budget_output.txt line 42 (mmlu_pro within family x device)")
+    locator("discussion", "metrology\\_budget\\_output.txt}, lines 42 and 44", "metrology lines 42 and 44 (caption)")
+    claim("discussion", "use the 300 D3 entries", [300], "metrology_budget_output.txt: D3 subset n = 300")
+    claim("discussion", "interval on the 345 matched v2 rows", [n_rows(M1T)], "v2 matched rows (n)")
     claim("discussion", "mean absolute difference on the 11 edited entries evaluated on the H100 was 0.008 on MMLU-Pro and 0.003 on HellaSwag, with Spearman 0.75 and 0.76",
           [11, DEVS["H1"]["MMLU-Pro"]["mean"], DEVS["H1"]["HellaSwag"]["mean"],
            DEVS["H1"]["MMLU-Pro"]["rho"], DEVS["H1"]["HellaSwag"]["rho"]],
@@ -653,9 +694,13 @@ def build() -> None:
     claim("discussion", "On the A10, four edited entries gave mean differences of 0.010 and 0.003",
           [DEVS["H2"]["MMLU-Pro"]["mean"], DEVS["H2"]["HellaSwag"]["mean"]],
           "per-entry eval.json, local vs A10, 4 entries")
-    claim("discussion", "Seed-to-seed SD on the fast tier is 0.0000 for both targets",
-          [metrology_seed_sd("mmlu_pro")], "metrology_budget_output.txt line 24 (mmlu_pro sd_seed)")
-    locator("discussion", "metrology_budget_output.txt}, lines 24 and 25", "metrology lines 24 and 25")
+    claim("discussion", "gives a seed-to-seed SD of 0.0000 for MMLU-Pro and HellaSwag",
+          [metrology_seed_sd("mmlu_pro")], "metrology_budget_output.txt lines 24 and 25 (sd_seed, likelihood-scored)")
+    claim("discussion", "between 0.0124 and 0.0504 for the five sampled targets",
+          [min(metrology_seed_sd(t) for t in ["gsm8k", "math500", "ifeval", "refusal_rate", "over_refusal"]),
+           max(metrology_seed_sd(t) for t in ["gsm8k", "math500", "ifeval", "refusal_rate", "over_refusal"])],
+          "metrology_budget_output.txt lines 19 to 23 (sd_seed, sampled targets: min and max)")
+    locator("discussion", "metrology_budget_output.txt}, lines 19 to 27", "metrology lines 19 to 27 (seed panel block)")
     assertion("discussion", "HellaSwag seed-to-seed SD is 0.0000 (metrology line 25)",
               metrology_seed_sd("hellaswag") == 0.0, "metrology_budget_output.txt line 25")
     claim("discussion", "delta-norm baseline reaches 0.21 and 0.18 on the trajectory split",
@@ -666,14 +711,24 @@ def build() -> None:
     claim("discussion", "Within-family refits on HellaSwag range from $-$0.12 to 0.71",
           [min(finite([ev_within("hellaswag", f) for f in WITHIN_FAMILIES])),
            max(finite([ev_within("hellaswag", f) for f in WITHIN_FAMILIES]))], "evidence CSV within_family hellaswag")
-    claim("discussion", "The 260 targets with inferred runtime metadata", [260], "targets_with_inferred_runtime")
+    claim("discussion", "The 260 matched D3 rows with inferred runtime metadata", [V2_INFERRED],
+          "targets_with_inferred_runtime (v2 trajectory seed-1 manifest)")
+    claim("discussion", "at $-$0.02 on MMLU-Pro and 0.11 on HellaSwag",
+          [bl("d3v2-m1-family", "statnn", "mmlu_pro"), bl("d3v2-m1-family", "statnn", "hellaswag")],
+          "family seed-0 StatNN baselines")
+    claim("discussion", "with a three-seed mean of 0.31", [ss("d3v2-m1_matched-family", "hellaswag", "spearman", "mean")],
+          "d3v2-m1_matched-family seed_summary (HellaSwag spearman mean)")
     claim("discussion", "the Spearman gap is 0.042 on MMLU-Pro and 0.035 on HellaSwag",
           [bl(M1T, "statnn", "mmlu_pro") - bl(M1T, "descriptor_only", "mmlu_pro"),
            bl(M1T, "statnn", "hellaswag") - bl(M1T, "descriptor_only", "hellaswag")], "trajectory seed-0 baselines")
-    claim("discussion", "$\\theta = 0.146$ [0.069, 0.214], over 345 rows and 278 clusters",
-          [RESID["theta"], RESID["lo"], RESID["hi"], RESID["n"], RESID["clusters"]],
-          "round2_residual_estimand_output.txt, mmlu_pro block")
+    claim("discussion", "$\\theta = 0.146$ [0.069, 0.214] for MMLU-Pro",
+          [RESID["theta"], RESID["lo"], RESID["hi"]], "round2_residual_estimand_output.txt, mmlu_pro block")
+    claim("discussion", "$\\theta = -0.034$ [$-$0.118, 0.037] for HellaSwag",
+          [RESID_HS["theta"], RESID_HS["lo"], RESID_HS["hi"]], "round2_residual_estimand_output.txt, hellaswag block")
+    claim("discussion", "over 345 rows and 278 clusters", [RESID["n"], RESID["clusters"]],
+          "round2_residual_estimand_output.txt, mmlu_pro block n and clusters")
     locator("discussion", "round2_residual_estimand_output.txt}, lines 2 to 11", "residual theta line within 2 to 11")
+    locator("discussion", "and 40 to 47", "residual output lines 40 to 47 (hellaswag block)")
     claim("discussion", "$\\theta = 1 - A/B$", [1], "definition of the estimand") if False else None
     declare("discussion", "$\\theta = 1 - A/B$", "definition of the estimand, not a result")
     declare("discussion", "No learned row reaches 0.6 on either target.", "threshold; covered by the assertion below")
@@ -682,12 +737,20 @@ def build() -> None:
     presence("discussion", "a half-width no greater than $\\theta/2$", PREREG, r"≥100 valid genuinely fresh components",
              "PREREG pass rule (components, 100)")
     declare("discussion", "$\\theta/2$", "definition of the pass rule")
+    locator("discussion", "docs/PREREG_H1_TF.md}, section 2", "PREREG section 2 (component definition)")
+    locator("discussion", "round2-metrology.md}, section 1.4", "round2 metrology section 1.4 (HellaSwag accuracy retired; negative signal variance)")
+    claim("discussion", "0.0384 & 0.0246 & 0.0295 & 0.146 [0.069, 0.214]",
+          [met("mmlu_pro", WITHIN, "sd_dy"), met("mmlu_pro", WITHIN, "sd_itemSE"), met("mmlu_pro", WITHIN, "sd_signal_pop"),
+           RESID["theta"], RESID["lo"], RESID["hi"]], "tab:residual MMLU-Pro row (metrology line 42; residual output)")
+    claim("discussion", "0.0131 & 0.0136 & 0.0000 & $-$0.034 [$-$0.118, 0.037]",
+          [met("hellaswag", WITHIN, "sd_dy"), met("hellaswag", WITHIN, "sd_itemSE"), met("hellaswag", WITHIN, "sd_signal_pop"),
+           RESID_HS["theta"], RESID_HS["lo"], RESID_HS["hi"]], "tab:residual HellaSwag row (metrology line 44; residual output)")
     claim("discussion", "at least 80\\% power at $\\theta = 0.15$", [80, 0.15], "docs/PREREG_H1_TF.md pass rule")
     presence("discussion", "at least 80\\% power at $\\theta = 0.15$", PREREG, r"80% power", "PREREG 80% power")
     claim("discussion", "The primary outcome is the mean, over 1,000 paired items per edit,", [1000],
           "docs/PREREG_H1_TF.md section 1 (1,000 paired items)")
     presence("discussion", "over 1,000 paired items per edit", PREREG, r"\*\*1,000\*\* paired", "PREREG 1,000 items")
-    claim("discussion", "An upper 95\\% bound below 0.05 on a qualified", [0.05],
+    claim("discussion", "An upper 95\\% bound below 0.05 on both intervals", [0.05],
           "docs/PREREG_H1_TF.md kill rule")
     presence("discussion", "An upper 95\\% bound below 0.05", PREREG, r"upper 95% bound<\.05", "PREREG kill rule")
     claim("discussion", "A pass needs $\\theta \\ge 0.15$", [0.15], "docs/PREREG_H1_TF.md pass rule")
@@ -701,6 +764,24 @@ def build() -> None:
     claim("reliability", "is taken across the 11 H100 entries", [len(H100_IDS)], "H100 entries")
     claim("reliability", "All records used seed 0, batch size 32", [32],
           "per-entry eval.json batch_size (seed 0 is a seed label)")
+    claim("reliability", "The seed-1 panel reruns the 10 controls and the base", [len(CONTROLS)], "controls.txt")
+    _g = seed_panel("gsm8k"); _m = seed_panel("math500"); _i = seed_panel("ifeval")
+    _o = seed_panel("over_refusal"); _k = seed_panel("kl_to_base")
+    claim("reliability", "Over the 11 records, seed 0 against seed 1 gives a mean and maximum absolute difference of 0.055 and 0.12 with Spearman $\\rho$ 0.15 on GSM8K",
+          [11, _g[0], _g[1], _g[2]], "seed-1 panel recomputed from eval.json (11 records)")
+    claim("reliability", "0.036 and 0.12 with $\\rho$ 0.46 on MATH-500", [_m[0], _m[1], _m[2]], "seed-1 panel recomputed")
+    claim("reliability", "0.029 and 0.04 with $\\rho$ 0.10 on IFEval", [_i[0], _i[1], _i[2]], "seed-1 panel recomputed")
+    claim("reliability", "0.049 and 0.10 with $\\rho$ 0.67 on keyword over-refusal", [_o[0], _o[1], _o[2]], "seed-1 panel recomputed")
+    claim("reliability", "KL differs by at most 0.0003 nats", [_k[1]], "seed-1 panel recomputed (KL max abs difference)")
+    claim("reliability", "MMLU-Pro and HellaSwag agree exactly on all 11 records", [11],
+          "seed-1 panel: 11 records (10 controls and base)")
+    claim("reliability", "IFEval and the pooled share hitting the 1,024-token cap are descriptive", [1024],
+          "fast-tier token cap (per-entry eval.json max_new_tokens)")
+    claim("reliability", "Over the 10 controls, the seed noise in the paired change has SD 0.0504 on GSM8K, 0.0268 on MATH-500, 0.0248 on IFEval, 0.0356 on keyword over-refusal and 0.0124 on keyword refusal, and 0.0000 on MMLU-Pro and HellaSwag",
+          [len(CONTROLS), metrology_seed_sd("gsm8k"), metrology_seed_sd("math500"), metrology_seed_sd("ifeval"),
+           metrology_seed_sd("over_refusal"), metrology_seed_sd("refusal_rate"), 0.0],
+          "metrology_budget_output.txt lines 19 to 27 (sd_seed; 10 controls)")
+    locator("reliability", "metrology_budget_output.txt}, lines 19 to 27", "metrology lines 19 to 27 (seed panel)")
     declare("reliability", "4 November protocol", "date")
     claim("reliability", "with seed 0, the fast-tier configuration and batch size 32", [32],
           "per-entry eval.json batch_size")
@@ -809,7 +890,6 @@ def build() -> None:
           [binom_se(0.28, 100), binom_se(0.39, 100), 100], "binomial SE at base fast-tier values")
     claim("reliability", "(1,024 here", [1024], "per-entry eval max_new_tokens")
     declare("reliability", "32,768 in the blog", "Takehi et al. token limit, cited")
-    declare("reliability", "seeds 1 and 2", "seed labels of the planned repeat panel")
     declare("reliability", "$\\delta/2$", "definition of the reliability bound")
     declare("reliability", "$\\sqrt{p(1-p)/n}$", "formula, not a result")
     declare("reliability", "(identifiers in \\path{data/runs/d3\\_shards/controls.txt})", "identifier list")

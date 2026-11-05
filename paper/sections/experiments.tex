@@ -32,7 +32,7 @@ Measured runs used four hosts. Local work ran on an RTX PRO 4500 with 32 GB. The
 
 \subsection{Predictor suite under protocol v2}
 \label{sec:v2}
-We ran the predictor suite under protocol v2, with three seeds per run. Protocol v2 adds nested model selection, train-only preprocessing and paired bootstrap intervals over ancestry clusters. The matched set has 345 rows from 389 evaluated entries; the other 44 have no matched predecessor target and are excluded. The run files mark 260 targets as having inferred runtime metadata, backfilled from job logs. The 345 rows are not the 300-entry D3 subset, and they are not the 260 matched D3 edits counted in Section~\ref{sec:reliability}. Twenty-five run directories are complete. The directory \texttt{d3v2-m3-family} has a configuration and a split plan but no metrics, so we do not report it.
+We ran the predictor suite under protocol v2, with three seeds per run. Protocol v2 adds nested model selection, train-only preprocessing and paired bootstrap intervals over ancestry clusters. The matched set has 345 rows from 389 evaluated entries; the other 44 have no matched predecessor target and are excluded. The run files mark 260 of the 345 rows as having inferred runtime metadata, backfilled from job logs. Those 260 are the matched D3 edits counted in Section~\ref{sec:reliability}. The other 85 rows are chain predecessors, and neither the row nor its matched reference carries the backfill flag. The 345 rows are not the 300-entry D3 subset. Twenty-five run directories are complete. The directory \texttt{d3v2-m3-family} has a configuration and a split plan but no metrics, so we do not report it.
 
 M1 is the stateless tensor-token predictor and M2 is the state-space sequence predictor. M1-matched and M2-matched are matched-input controls. M3 and M6 use JEPA-style objectives, and M5 is a causal trajectory transformer.
 
@@ -79,7 +79,7 @@ Holdout task vector & 30 / 27 & 0.06 [$-$0.13, 0.35] & 0.39 [0.25, 0.51] & \text
 
 In this exploratory three-seed analysis, the trajectory-split M1-matched row reached mean Spearman 0.45 and 0.46 on MMLU-Pro and HellaSwag. Seed-0 StatNN reached 0.57 and 0.65 on the same split, so that comparison sets a three-seed mean against a single seed. Seed ranges describe training and split variation, not confidence intervals. The labels carry inferred historical runtime, and target qualification is incomplete.
 
-The original H1 criterion was not demonstrated; H2 and H3 remain unresolved, and the suite does not test H4--H6.
+The original H1 criterion was not demonstrated; H2 and H3 are undetermined; H4 to H6 were not tested.
 
 Table~\ref{tab:v2-baselines} gives the three baselines. All three come from seed 0 and are not three-seed means. Within a split, the baseline values are identical across models, so each split cites one source run. Section~\ref{sec:exploits} looks at what the descriptor baseline picks up.
 

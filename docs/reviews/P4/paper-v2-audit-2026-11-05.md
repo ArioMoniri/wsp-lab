@@ -1,8 +1,8 @@
 # Paper v2 numerical audit: output of scripts/audit_paper_numbers.py
 
 Sections audited: abstract, introduction, method, zoo, experiments, results, reliability, discussion.
-Numeric tokens: 303 in prose, 464 in tables; 15 seed labels and 59 declared tokens are listed below, not checked.
-Values checked against sources and passing: 673. Assertions passing: 85. Presence claims: 28.
+Numeric tokens: 352 in prose, 476 in tables; 18 seed labels and 62 declared tokens are listed below, not checked.
+Values checked against sources and passing: 723. Assertions passing: 90. Presence claims: 32.
 Failures: 0 (mismatches, missing snippets, failed assertions or counts). Unclaimed tokens: 0.
 
 ## Failures
@@ -25,13 +25,15 @@ None.
 - experiments: 3 token(s). hardware description
 - experiments: 2 token(s). plan parameters for a tier not yet run
 - experiments: 5 token(s). seed label
+- introduction: 1 token(s). addition date of H5 and H6 (HYPOTHESIS.md)
+- introduction: 1 token(s). amendment date (HYPOTHESIS.md changelog)
 - introduction: 3 token(s). literature value from Takehi et al. (2026), cited; not in repository data
+- introduction: 2 token(s). registration dates of H1 to H4 (HYPOTHESIS.md)
 - reliability: 1 token(s). Takehi et al. token limit, cited
 - reliability: 1 token(s). date
 - reliability: 2 token(s). definition of the reliability bound
 - reliability: 1 token(s). formula, not a result
-- reliability: 5 token(s). seed label
-- reliability: 4 token(s). seed labels of the planned repeat panel
+- reliability: 8 token(s). seed label
 - results: 1 token(s). sample SD convention, not a result
 - results: 3 token(s). seed label
 - zoo: 6 token(s). date
@@ -88,7 +90,7 @@ None.
 - PASS `first 400 harmful and harmless dataset prompts`: shown 400 vs source 400 (src/wsp/edits/refusal.py train[:400])
 - PASS `1,247 entry rows, counted by recorded eligibility`: shown 1,247 vs source 1247 (zoo manifest body rows)
 
-### experiments (331)
+### experiments (333)
 - PASS `GSM8K ours`: shown 15.5 vs source 15.5 (base-final-4096 summary)
 - PASS `GSM8K CI low`: shown 11.1 vs source 11.1396 (Wilson 95%)
 - PASS `GSM8K CI high`: shown 21.2 vs source 21.1607 (Wilson 95%)
@@ -389,10 +391,12 @@ None.
 - PASS `The matched set has 345 rows from 389 evaluated entries; the other 44`: shown 44 vs source 44 (v2 matched rows; eval count; missing_predecessor_targets)
 - PASS `lists the 25 complete rows`: shown 25 vs source 25 (complete d3v2 run directories (assertion below))
 - PASS `since all 60 random-direction edits leave`: shown 60 vs source 60 (evidence CSV family_distribution n, random_dir)
-- PASS `mark 260 targets as having inferred runtime metadata`: shown 260 vs source 260 (trajectory seed-0 targets_with_inferred_runtime)
-- PASS `The 345 rows are not the 300-entry D3 subset, and they are not the 260 matched D`: shown 345 vs source 345 (v2 n; D3 subset size; D3 matched size)
-- PASS `The 345 rows are not the 300-entry D3 subset, and they are not the 260 matched D`: shown 300 vs source 300 (v2 n; D3 subset size; D3 matched size)
-- PASS `The 345 rows are not the 300-entry D3 subset, and they are not the 260 matched D`: shown 260 vs source 260 (v2 n; D3 subset size; D3 matched size)
+- PASS `mark 260 of the 345 rows as having inferred runtime metadata`: shown 260 vs source 260 (d3v2-m1-trajectory seed-1 manifest targets_with_inferred_runtime; n)
+- PASS `mark 260 of the 345 rows as having inferred runtime metadata`: shown 345 vs source 345 (d3v2-m1-trajectory seed-1 manifest targets_with_inferred_runtime; n)
+- PASS `Those 260 are the matched D3 edits counted in Section`: shown 260 vs source 260 (board-a-d3-audit audit.txt COUNTERS matched_reference_targets (D3 subset))
+- PASS `The other 85 rows are chain predecessors`: shown 85 vs source 85 (345 matched rows minus 260 inferred; the 85 are the chain-predecessor rows (run-loader check))
+- PASS `The 345 rows are not the 300-entry D3 subset`: shown 345 vs source 345 (v2 n; D3 subset size (300 entries))
+- PASS `The 345 rows are not the 300-entry D3 subset`: shown 300 vs source 300 (v2 n; D3 subset size (300 entries))
 - PASS `the trajectory-split M1-matched row reached mean Spearman 0.45 and 0.46 on MMLU-`: shown 0.45 vs source 0.446058 (d3v2-m1_matched-trajectory seed_summary)
 - PASS `the trajectory-split M1-matched row reached mean Spearman 0.45 and 0.46 on MMLU-`: shown 0.46 vs source 0.455973 (d3v2-m1_matched-trajectory seed_summary)
 - PASS `Seed-0 StatNN reached 0.57 and 0.65 on the same split`: shown 0.57 vs source 0.565906 (trajectory seed-0 baselines)
@@ -524,7 +528,7 @@ None.
 - PASS `$-$0.063 on MMLU-Pro and $+$0.034 on HellaSwag`: shown $-$0.063 vs source -0.0633898 (evidence CSV family_distribution mean, lora_sft)
 - PASS `$-$0.063 on MMLU-Pro and $+$0.034 on HellaSwag`: shown 0.034 vs source 0.0337288 (evidence CSV family_distribution mean, lora_sft)
 
-### reliability (155)
+### reliability (179)
 - PASS `GSM8K item count in label`: shown 50 vs source 50 (base per-entry eval counts)
 - PASS `dev H1 mean GSM8K`: shown 0.053 vs source 0.0527273 (per-entry eval.json, 11 entries)
 - PASS `dev H1 max GSM8K`: shown 0.12 vs source 0.12 (per-entry eval.json, 11 entries)
@@ -607,6 +611,30 @@ None.
 - PASS `the 10 controls and`: shown 10 vs source 10 (controls.txt)
 - PASS `is taken across the 11 H100 entries`: shown 11 vs source 11 (H100 entries)
 - PASS `All records used seed 0, batch size 32`: shown 32 vs source 32 (per-entry eval.json batch_size (seed 0 is a seed label))
+- PASS `The seed-1 panel reruns the 10 controls and the base`: shown 10 vs source 10 (controls.txt)
+- PASS `Over the 11 records, seed 0 against seed 1 gives a mean and maximum absolute dif`: shown 11 vs source 11 (seed-1 panel recomputed from eval.json (11 records))
+- PASS `Over the 11 records, seed 0 against seed 1 gives a mean and maximum absolute dif`: shown 0.055 vs source 0.0545455 (seed-1 panel recomputed from eval.json (11 records))
+- PASS `Over the 11 records, seed 0 against seed 1 gives a mean and maximum absolute dif`: shown 0.12 vs source 0.12 (seed-1 panel recomputed from eval.json (11 records))
+- PASS `Over the 11 records, seed 0 against seed 1 gives a mean and maximum absolute dif`: shown 0.15 vs source 0.150589 (seed-1 panel recomputed from eval.json (11 records))
+- PASS `0.036 and 0.12 with $\rho$ 0.46 on MATH-500`: shown 0.036 vs source 0.0363636 (seed-1 panel recomputed)
+- PASS `0.036 and 0.12 with $\rho$ 0.46 on MATH-500`: shown 0.12 vs source 0.12 (seed-1 panel recomputed)
+- PASS `0.036 and 0.12 with $\rho$ 0.46 on MATH-500`: shown 0.46 vs source 0.455142 (seed-1 panel recomputed)
+- PASS `0.029 and 0.04 with $\rho$ 0.10 on IFEval`: shown 0.029 vs source 0.0290909 (seed-1 panel recomputed)
+- PASS `0.029 and 0.04 with $\rho$ 0.10 on IFEval`: shown 0.04 vs source 0.04 (seed-1 panel recomputed)
+- PASS `0.029 and 0.04 with $\rho$ 0.10 on IFEval`: shown 0.10 vs source 0.1 (seed-1 panel recomputed)
+- PASS `0.049 and 0.10 with $\rho$ 0.67 on keyword over-refusal`: shown 0.049 vs source 0.0490909 (seed-1 panel recomputed)
+- PASS `0.049 and 0.10 with $\rho$ 0.67 on keyword over-refusal`: shown 0.10 vs source 0.1 (seed-1 panel recomputed)
+- PASS `0.049 and 0.10 with $\rho$ 0.67 on keyword over-refusal`: shown 0.67 vs source 0.666667 (seed-1 panel recomputed)
+- PASS `KL differs by at most 0.0003 nats`: shown 0.0003 vs source 0.000334719 (seed-1 panel recomputed (KL max abs difference))
+- PASS `MMLU-Pro and HellaSwag agree exactly on all 11 records`: shown 11 vs source 11 (seed-1 panel: 11 records (10 controls and base))
+- PASS `IFEval and the pooled share hitting the 1,024-token cap are descriptive`: shown 1,024 vs source 1024 (fast-tier token cap (per-entry eval.json max_new_tokens))
+- PASS `Over the 10 controls, the seed noise in the paired change has SD 0.0504 on GSM8K`: shown 10 vs source 10 (metrology_budget_output.txt lines 19 to 27 (sd_seed; 10 controls))
+- PASS `Over the 10 controls, the seed noise in the paired change has SD 0.0504 on GSM8K`: shown 0.0504 vs source 0.0504 (metrology_budget_output.txt lines 19 to 27 (sd_seed; 10 controls))
+- PASS `Over the 10 controls, the seed noise in the paired change has SD 0.0504 on GSM8K`: shown 0.0268 vs source 0.0268 (metrology_budget_output.txt lines 19 to 27 (sd_seed; 10 controls))
+- PASS `Over the 10 controls, the seed noise in the paired change has SD 0.0504 on GSM8K`: shown 0.0248 vs source 0.0248 (metrology_budget_output.txt lines 19 to 27 (sd_seed; 10 controls))
+- PASS `Over the 10 controls, the seed noise in the paired change has SD 0.0504 on GSM8K`: shown 0.0356 vs source 0.0356 (metrology_budget_output.txt lines 19 to 27 (sd_seed; 10 controls))
+- PASS `Over the 10 controls, the seed noise in the paired change has SD 0.0504 on GSM8K`: shown 0.0124 vs source 0.0124 (metrology_budget_output.txt lines 19 to 27 (sd_seed; 10 controls))
+- PASS `Over the 10 controls, the seed noise in the paired change has SD 0.0504 on GSM8K`: shown 0.0000 vs source 0 (metrology_budget_output.txt lines 19 to 27 (sd_seed; 10 controls))
 - PASS `with seed 0, the fast-tier configuration and batch size 32`: shown 32 vs source 32 (per-entry eval.json batch_size)
 - PASS `All 11 pairs matched exactly on every reported metric`: shown 11 vs source 11 (10 controls and the base)
 - PASS `The mean and maximum absolute differences were 0.000 on each.`: shown 0.000 vs source 0 (retest pairs: eval.json vs eval.local-run1.json, 11 pairs, all metrics)
@@ -681,7 +709,19 @@ None.
 - PASS `Keyword refusal sits at 0.99 to 1.00 on the base model`: shown 1.00 vs source 1 (cheap-tier base refusal 0.99; fast-tier local refusal 1.0)
 - PASS `Seed 0, batch size 32 and one configuration hash throughout.`: shown 32 vs source 32 (per-entry eval.json seed and batch_size)
 
-### discussion (41)
+### discussion (65)
+- PASS `0.0384 & 0.0246 & 0.0295 & 0.146 [0.069, 0.214]`: shown 0.0384 vs source 0.0384 (tab:residual MMLU-Pro row (metrology line 42; residual output))
+- PASS `0.0384 & 0.0246 & 0.0295 & 0.146 [0.069, 0.214]`: shown 0.0246 vs source 0.0246 (tab:residual MMLU-Pro row (metrology line 42; residual output))
+- PASS `0.0384 & 0.0246 & 0.0295 & 0.146 [0.069, 0.214]`: shown 0.0295 vs source 0.0295 (tab:residual MMLU-Pro row (metrology line 42; residual output))
+- PASS `0.0384 & 0.0246 & 0.0295 & 0.146 [0.069, 0.214]`: shown 0.146 vs source 0.1462 (tab:residual MMLU-Pro row (metrology line 42; residual output))
+- PASS `0.0384 & 0.0246 & 0.0295 & 0.146 [0.069, 0.214]`: shown 0.069 vs source 0.069 (tab:residual MMLU-Pro row (metrology line 42; residual output))
+- PASS `0.0384 & 0.0246 & 0.0295 & 0.146 [0.069, 0.214]`: shown 0.214 vs source 0.214 (tab:residual MMLU-Pro row (metrology line 42; residual output))
+- PASS `0.0131 & 0.0136 & 0.0000 & $-$0.034 [$-$0.118, 0.037]`: shown 0.0131 vs source 0.0131 (tab:residual HellaSwag row (metrology line 44; residual output))
+- PASS `0.0131 & 0.0136 & 0.0000 & $-$0.034 [$-$0.118, 0.037]`: shown 0.0136 vs source 0.0136 (tab:residual HellaSwag row (metrology line 44; residual output))
+- PASS `0.0131 & 0.0136 & 0.0000 & $-$0.034 [$-$0.118, 0.037]`: shown 0.0000 vs source 0 (tab:residual HellaSwag row (metrology line 44; residual output))
+- PASS `0.0131 & 0.0136 & 0.0000 & $-$0.034 [$-$0.118, 0.037]`: shown $-$0.034 vs source -0.0342 (tab:residual HellaSwag row (metrology line 44; residual output))
+- PASS `0.0131 & 0.0136 & 0.0000 & $-$0.034 [$-$0.118, 0.037]`: shown $-$0.118 vs source -0.118 (tab:residual HellaSwag row (metrology line 44; residual output))
+- PASS `0.0131 & 0.0136 & 0.0000 & $-$0.034 [$-$0.118, 0.037]`: shown 0.037 vs source 0.037 (tab:residual HellaSwag row (metrology line 44; residual output))
 - PASS `Across the 25 complete rows`: shown 25 vs source 25 (complete d3v2 run directories)
 - PASS `steps of one item out of 100`: shown 100 vs source 100 (base eval counts (100 items))
 - PASS `the highest three-seed mean on HellaSwag is 0.46`: shown 0.46 vs source 0.46 (max over the 25 complete d3v2 suite rows)
@@ -692,9 +732,13 @@ None.
 - PASS `Each target is a 100-item accuracy, with a binomial standard error of 0.045 for `: shown 100 vs source 100 (binomial SE at base fast-tier values (0.28 and 0.39, n = 100))
 - PASS `Each target is a 100-item accuracy, with a binomial standard error of 0.045 for `: shown 0.045 vs source 0.0448999 (binomial SE at base fast-tier values (0.28 and 0.39, n = 100))
 - PASS `Each target is a 100-item accuracy, with a binomial standard error of 0.045 for `: shown 0.049 vs source 0.048775 (binomial SE at base fast-tier values (0.28 and 0.39, n = 100))
-- PASS `the HellaSwag residual SD across the 300 D3 entries is 0.0131, no larger than th`: shown 300 vs source 300 (metrology_budget_output.txt, hellaswag within family x device (n, sd_dy, sd_itemSE))
-- PASS `the HellaSwag residual SD across the 300 D3 entries is 0.0131, no larger than th`: shown 0.0131 vs source 0.0131 (metrology_budget_output.txt, hellaswag within family x device (n, sd_dy, sd_itemSE))
-- PASS `the HellaSwag residual SD across the 300 D3 entries is 0.0131, no larger than th`: shown 0.0136 vs source 0.0136 (metrology_budget_output.txt, hellaswag within family x device (n, sd_dy, sd_itemSE))
+- PASS `the residual SD within family and device is 0.0131, no larger than its item SE o`: shown 0.0131 vs source 0.0131 (metrology_budget_output.txt line 44 (hellaswag within family x device: sd_dy, sd_itemSE))
+- PASS `the residual SD within family and device is 0.0131, no larger than its item SE o`: shown 0.0136 vs source 0.0136 (metrology_budget_output.txt line 44 (hellaswag within family x device: sd_dy, sd_itemSE))
+- PASS `the residual SD is 0.0384, above its item SE of 0.0246, and the remaining signal`: shown 0.0384 vs source 0.0384 (metrology_budget_output.txt line 42 (mmlu_pro within family x device))
+- PASS `the residual SD is 0.0384, above its item SE of 0.0246, and the remaining signal`: shown 0.0246 vs source 0.0246 (metrology_budget_output.txt line 42 (mmlu_pro within family x device))
+- PASS `the residual SD is 0.0384, above its item SE of 0.0246, and the remaining signal`: shown 0.0295 vs source 0.0295 (metrology_budget_output.txt line 42 (mmlu_pro within family x device))
+- PASS `use the 300 D3 entries`: shown 300 vs source 300 (metrology_budget_output.txt: D3 subset n = 300)
+- PASS `interval on the 345 matched v2 rows`: shown 345 vs source 345 (v2 matched rows (n))
 - PASS `mean absolute difference on the 11 edited entries evaluated on the H100 was 0.00`: shown 11 vs source 11 (per-entry eval.json, local vs H100, 11 entries)
 - PASS `mean absolute difference on the 11 edited entries evaluated on the H100 was 0.00`: shown 0.008 vs source 0.00818182 (per-entry eval.json, local vs H100, 11 entries)
 - PASS `mean absolute difference on the 11 edited entries evaluated on the H100 was 0.00`: shown 0.003 vs source 0.00272727 (per-entry eval.json, local vs H100, 11 entries)
@@ -702,26 +746,34 @@ None.
 - PASS `mean absolute difference on the 11 edited entries evaluated on the H100 was 0.00`: shown 0.76 vs source 0.763843 (per-entry eval.json, local vs H100, 11 entries)
 - PASS `On the A10, four edited entries gave mean differences of 0.010 and 0.003`: shown 0.010 vs source 0.01 (per-entry eval.json, local vs A10, 4 entries)
 - PASS `On the A10, four edited entries gave mean differences of 0.010 and 0.003`: shown 0.003 vs source 0.0025 (per-entry eval.json, local vs A10, 4 entries)
-- PASS `Seed-to-seed SD on the fast tier is 0.0000 for both targets`: shown 0.0000 vs source 0 (metrology_budget_output.txt line 24 (mmlu_pro sd_seed))
+- PASS `gives a seed-to-seed SD of 0.0000 for MMLU-Pro and HellaSwag`: shown 0.0000 vs source 0 (metrology_budget_output.txt lines 24 and 25 (sd_seed, likelihood-scored))
+- PASS `between 0.0124 and 0.0504 for the five sampled targets`: shown 0.0124 vs source 0.0124 (metrology_budget_output.txt lines 19 to 23 (sd_seed, sampled targets: min and max))
+- PASS `between 0.0124 and 0.0504 for the five sampled targets`: shown 0.0504 vs source 0.0504 (metrology_budget_output.txt lines 19 to 23 (sd_seed, sampled targets: min and max))
 - PASS `delta-norm baseline reaches 0.21 and 0.18 on the trajectory split`: shown 0.21 vs source 0.20581 (trajectory seed-0 baselines)
 - PASS `delta-norm baseline reaches 0.21 and 0.18 on the trajectory split`: shown 0.18 vs source 0.178552 (trajectory seed-0 baselines)
 - PASS `Under family holdout its Spearman falls to $-$0.13 and $-$0.29`: shown $-$0.13 vs source -0.132722 (family seed-0 baselines)
 - PASS `Under family holdout its Spearman falls to $-$0.13 and $-$0.29`: shown $-$0.29 vs source -0.292076 (family seed-0 baselines)
 - PASS `Within-family refits on HellaSwag range from $-$0.12 to 0.71`: shown $-$0.12 vs source -0.118426 (evidence CSV within_family hellaswag)
 - PASS `Within-family refits on HellaSwag range from $-$0.12 to 0.71`: shown 0.71 vs source 0.705214 (evidence CSV within_family hellaswag)
-- PASS `The 260 targets with inferred runtime metadata`: shown 260 vs source 260 (targets_with_inferred_runtime)
+- PASS `The 260 matched D3 rows with inferred runtime metadata`: shown 260 vs source 260 (targets_with_inferred_runtime (v2 trajectory seed-1 manifest))
+- PASS `at $-$0.02 on MMLU-Pro and 0.11 on HellaSwag`: shown $-$0.02 vs source -0.0180185 (family seed-0 StatNN baselines)
+- PASS `at $-$0.02 on MMLU-Pro and 0.11 on HellaSwag`: shown 0.11 vs source 0.114296 (family seed-0 StatNN baselines)
+- PASS `with a three-seed mean of 0.31`: shown 0.31 vs source 0.305898 (d3v2-m1_matched-family seed_summary (HellaSwag spearman mean))
 - PASS `the Spearman gap is 0.042 on MMLU-Pro and 0.035 on HellaSwag`: shown 0.042 vs source 0.0420505 (trajectory seed-0 baselines)
 - PASS `the Spearman gap is 0.042 on MMLU-Pro and 0.035 on HellaSwag`: shown 0.035 vs source 0.0350195 (trajectory seed-0 baselines)
-- PASS `$\theta = 0.146$ [0.069, 0.214], over 345 rows and 278 clusters`: shown 0.146 vs source 0.1462 (round2_residual_estimand_output.txt, mmlu_pro block)
-- PASS `$\theta = 0.146$ [0.069, 0.214], over 345 rows and 278 clusters`: shown 0.069 vs source 0.069 (round2_residual_estimand_output.txt, mmlu_pro block)
-- PASS `$\theta = 0.146$ [0.069, 0.214], over 345 rows and 278 clusters`: shown 0.214 vs source 0.214 (round2_residual_estimand_output.txt, mmlu_pro block)
-- PASS `$\theta = 0.146$ [0.069, 0.214], over 345 rows and 278 clusters`: shown 345 vs source 345 (round2_residual_estimand_output.txt, mmlu_pro block)
-- PASS `$\theta = 0.146$ [0.069, 0.214], over 345 rows and 278 clusters`: shown 278 vs source 278 (round2_residual_estimand_output.txt, mmlu_pro block)
+- PASS `$\theta = 0.146$ [0.069, 0.214] for MMLU-Pro`: shown 0.146 vs source 0.1462 (round2_residual_estimand_output.txt, mmlu_pro block)
+- PASS `$\theta = 0.146$ [0.069, 0.214] for MMLU-Pro`: shown 0.069 vs source 0.069 (round2_residual_estimand_output.txt, mmlu_pro block)
+- PASS `$\theta = 0.146$ [0.069, 0.214] for MMLU-Pro`: shown 0.214 vs source 0.214 (round2_residual_estimand_output.txt, mmlu_pro block)
+- PASS `$\theta = -0.034$ [$-$0.118, 0.037] for HellaSwag`: shown -0.034 vs source -0.0342 (round2_residual_estimand_output.txt, hellaswag block)
+- PASS `$\theta = -0.034$ [$-$0.118, 0.037] for HellaSwag`: shown $-$0.118 vs source -0.118 (round2_residual_estimand_output.txt, hellaswag block)
+- PASS `$\theta = -0.034$ [$-$0.118, 0.037] for HellaSwag`: shown 0.037 vs source 0.037 (round2_residual_estimand_output.txt, hellaswag block)
+- PASS `over 345 rows and 278 clusters`: shown 345 vs source 345 (round2_residual_estimand_output.txt, mmlu_pro block n and clusters)
+- PASS `over 345 rows and 278 clusters`: shown 278 vs source 278 (round2_residual_estimand_output.txt, mmlu_pro block n and clusters)
 - PASS `at least 100 valid fresh components`: shown 100 vs source 100 (docs/PREREG_H1_TF.md pass rule)
 - PASS `at least 80\% power at $\theta = 0.15$`: shown 80 vs source 80 (docs/PREREG_H1_TF.md pass rule)
 - PASS `at least 80\% power at $\theta = 0.15$`: shown 0.15 vs source 0.15 (docs/PREREG_H1_TF.md pass rule)
 - PASS `The primary outcome is the mean, over 1,000 paired items per edit,`: shown 1,000 vs source 1000 (docs/PREREG_H1_TF.md section 1 (1,000 paired items))
-- PASS `An upper 95\% bound below 0.05 on a qualified`: shown 0.05 vs source 0.05 (docs/PREREG_H1_TF.md kill rule)
+- PASS `An upper 95\% bound below 0.05 on both intervals`: shown 0.05 vs source 0.05 (docs/PREREG_H1_TF.md kill rule)
 - PASS `A pass needs $\theta \ge 0.15$`: shown 0.15 vs source 0.15 (docs/PREREG_H1_TF.md pass rule)
 
 ## Assertions
@@ -799,16 +851,21 @@ None.
 - PASS [experiments] d3v2-m2-holdout-random_dir descriptor_only hellaswag undefined (d3v2-m2-holdout-random_dir)
 - PASS [experiments] d3v2-m2-holdout-random_dir delta_norm hellaswag undefined (d3v2-m2-holdout-random_dir)
 - PASS [results] within random_dir hellaswag undefined (constant target) (within_family empty)
+- PASS [introduction] path exists: docs/HYPOTHESIS.md (docs/HYPOTHESIS.md)
+- PASS [introduction] path exists: docs/PREREG_H1_TF.md (docs/PREREG_H1_TF.md)
 - PASS [method] path exists: data/features/qwen3.5-0.8b (data/features/qwen3.5-0.8b)
 - PASS [zoo] path exists: docs/DECISIONS.md (docs/DECISIONS.md)
+- PASS [zoo] path exists: docs/reviews/P1/heretic-ara-rebuild-forensic-2026-11-05.md (docs/reviews/P1/heretic-ara-rebuild-forensic-2026-11-05.md)
 - PASS [zoo] path exists: data/features/qwen3.5-0.8b/manifest.json (data/features/qwen3.5-0.8b/manifest.json)
 - PASS [results] path exists: docs/council/2026-11-05/evidence-statnn-importances.md (docs/council/2026-11-05/evidence-statnn-importances.md)
 - PASS [results] path exists: docs/council/2026-11-05/round2_metrology_output.txt (docs/council/2026-11-05/round2_metrology_output.txt)
+- PASS [reliability] path exists: docs/council/2026-11-05/metrology_budget_output.txt (docs/council/2026-11-05/metrology_budget_output.txt)
 - PASS [reliability] path exists: docs/reviews/H5/board-a-prereg-2026-11-04.md (docs/reviews/H5/board-a-prereg-2026-11-04.md)
 - PASS [reliability] path exists: docs/PREREG_H1_TF.md (docs/PREREG_H1_TF.md)
-- PASS [discussion] path exists: docs/council/2026-11-05/metrology_budget_output.txt (docs/council/2026-11-05/metrology_budget_output.txt)
-- PASS [discussion] path exists: docs/council/2026-11-05/metrology_budget_output.txt (docs/council/2026-11-05/metrology_budget_output.txt)
 - PASS [discussion] path exists: docs/council/2026-11-05/round2_residual_estimand_output.txt (docs/council/2026-11-05/round2_residual_estimand_output.txt)
+- PASS [discussion] path exists: docs/council/2026-11-05/metrology_budget_output.txt (docs/council/2026-11-05/metrology_budget_output.txt)
+- PASS [discussion] path exists: docs/council/2026-11-05/round2-metrology.md (docs/council/2026-11-05/round2-metrology.md)
+- PASS [discussion] path exists: docs/PREREG_H1_TF.md (docs/PREREG_H1_TF.md)
 - PASS [discussion] path exists: docs/PREREG_H1_TF.md (docs/PREREG_H1_TF.md)
 
 Result: PASS
