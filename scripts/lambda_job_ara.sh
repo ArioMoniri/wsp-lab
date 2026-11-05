@@ -2,13 +2,15 @@
 # Runs ON a Lambda instance. Usage: lambda_job_ara.sh <n_entries> <trials>
 # Builds the heretic_ara zoo family for Qwen3.5-0.8B, pushes entries to the private HF zoo dataset, terminates itself.
 set -euo pipefail
-N="${1:-12}"; TRIALS="${2:-10}"
+N="${1:-12}"; TRIALS="${2:-10}"; WSP_REV="${WSP_REV:?set WSP_REV to the reviewed git revision (full SHA) to run}"
 export PATH=$HOME/.local/bin:$PATH
 sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq git rsync tmux python3.12-venv python3.12-dev build-essential >/dev/null || true
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null
 mkdir -p ~/projects && cd ~/projects
 [ -d wsp-lab ] || git clone -q https://github.com/ArioMoniri/wsp-lab.git
-cd wsp-lab && git pull -q
+cd wsp-lab && git fetch -q origin && git checkout -q --detach "$WSP_REV"
+[ "$(git rev-parse HEAD)" = "$WSP_REV" ] || { echo "revision mismatch: $(git rev-parse HEAD) != $WSP_REV"; exit 1; }
+echo "running wsp-lab at $(git rev-parse --short HEAD)"
 [ -d .venv ] || uv venv --python 3.12 .venv -q
 uv pip install --python .venv/bin/python -e ".[dev]" -q
 # torch must match the host driver: pick the CUDA wheel index from nvidia-smi's reported CUDA version
@@ -27,7 +29,13 @@ c['families']={'heretic_ara': {**c['families']['heretic_ara'], 'n': int("$N"), '
 c['out_dir']='data/zoo/qwen3.5-0.8b'
 yaml.safe_dump(c, open('configs/zoo_qwen3.5-0.8b_ara_lambda.yaml','w'), sort_keys=False)
 PY
-echo "ARA build start $(date -u +%FT%TZ) n=$N trials=$TRIALS"
+python - <<PY
+import yaml,sys
+c=yaml.safe_load(open('configs/zoo_qwen3.5-0.8b_ara_lambda.yaml'))['families']['heretic_ara']
+t=c.get('kl_divergence_target'); assert isinstance(t,(int,float)) and t>0, f"kl_divergence_target missing in launch config: {c}"
+print('launch config kl_divergence_target', t, 'n', c['n'], 'trials', c['trials'])
+PY
+echo "ARA build start $(date -u +%FT%TZ) n=$N trials=$TRIALS rev=$(git rev-parse --short HEAD)"
 python -m wsp.zoo.build --config configs/zoo_qwen3.5-0.8b_ara_lambda.yaml --family heretic_ara --allow-missing-families 2>&1 | tail -40
 echo "ARA build end $(date -u +%FT%TZ)"
 scripts/hf_sync.sh push zoo 2>&1 | tail -1
