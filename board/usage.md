@@ -228,3 +228,4 @@
 | 2026-11-05 | Board B re-review paper/v2-results | claude_aio_gmail_api/claude-sonnet-5-5 high | REVISE narrow (R1–R5; scores 3/3/3/4) e4c6468 |
 | 2026-11-05 | Scribe round 3 paper/v2-results (R1–R5) | claude_aio_gmail_api/claude-haiku-5-5 high | done 8390815 (audit 723/0; 15 pages) — Board B final |
 | 2026-11-05 | Board B final check paper/v2-results | claude_aio_gmail_api/claude-sonnet-5-5 medium | APPROVE 1a92d93 (2 wording items fixed by orchestrator 4801903) — merged |
+| 2026-11-05 | README refresh (reframed study) | claude_aio_gmail_api/claude-haiku-5-5 high | running |

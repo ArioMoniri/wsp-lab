@@ -144,3 +144,16 @@ documented in DECISIONS. Paper: reliability subsection and experiments.tex corre
 humanizer → Board B (APPROVE, claims 4/5; 10 pages). ESM protein-LM idea assessed by Boards A and C: do later
 (P4c). Queued (tmux p4-after-chainpred): 89 chain predecessors (running, 3 workers) → seed-1 repeat panel →
 P4 suite v2 (d3v2-*). ARA rebuild on Lambda at 8/12.
+
+**Council deliberation and reframing (5 Nov, 12:00–14:30 UTC).** Five-member expert council (weight-reading
+researcher, JEPAWG researcher, features CTO, metrology CTO, strategy CTO), two rounds with mutual challenge, chair
+synthesis, Board A critique (docs/council/2026-11-05/). Agreed: descriptor-only (family + edit parameters) reaches
+Spearman 0.52/0.61 vs StatNN 0.57/0.65 on mmlu_pro/hellaswag (weight features add ≈ 0.04; 0.20 on KL); only 94 of 300
+evaluated edits are non-null; sampled benchmarks are at or below noise while teacher-forced fields are near-perfectly
+reliable; the blog never showed Δ-only benchmark prediction. Protocol-v2 suite finished (26 runs, 3 seeds): best
+neural ρ 0.45 vs StatNN 0.57/0.65; held-out families ≈ 0. Board A: H1 not demonstrated, H2/H3 undetermined, synthesis
+REVISE → frozen prospective design docs/PREREG_H1_TF.md (H1a residual TF readability; H1b; H2 history ablation parked),
+HYPOTHESIS/ROADMAP amended. User defaults adopted: TF-v1 programme yes; 30 local GPU-h; no history budget; no new
+Lambda. Paper: protocol-v2 results, "What the baseline exploits", "Reframing", new scoped title; Board B APPROVE after
+three rounds with a scripted audit of 723 numbers (15 pages). Codex usage limit reached 13:35 UTC (until 6 Nov 21:10);
+TF-v1 tier build rerouted to the Claude API (Sonnet). ARA corrected rebuild at 6/12 on the A10.
