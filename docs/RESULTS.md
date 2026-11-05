@@ -6,7 +6,7 @@
 |---|---|---|---|
 | P2 | Base model reproduction vs blog table | p2/base-final-4096 | 4k pass done; 32k rerun pending |
 | P3 | Baselines by family / by seed | — | pending |
-| P4 | H1–H4 | — | pending |
+| P4 | H1–H4, protocol v2 | `data/runs/p4/d3v2-*` (25 complete runs; `d3v2-m3-family` has no metrics) | H1 not demonstrated; H2, H3 undetermined; H4 untested. Table: paper, "Predictor suite under protocol v2" |
 | P5 | 27B transfer | — | pending |
 
 ## P2 reproduction status
