@@ -262,3 +262,29 @@ The predecessor-relative MMLU endpoint needs each chain entry's actual predecess
 Both resident-cache and fresh-load modes are covered (the primary pass loaded the cache for its first entry; the repeat pass loaded it for the base). Warm wall time per entry in these runs was 1.77 to 1.94 min (median 1.80 min for the repeat pass) except where the delta-hashing job for the sealed partition read 255 GB from the same disk (primary-pass entries up to 1.94 min, first-entry cache loads 43 s and 217 s). The timing pilot, not this run, is the gate-1 measurement.
 
 What G1 does not show: it is same-device repeat determinism on H0 (single device; see the D2 addendum "H0 is the sole scoring device"), not cross-device, cross-batch-size or cross-driver agreement, and it qualifies no endpoint by itself (reliability and delta/2 gates are in `docs/reviews/P5/tf-v1-qualification-2026-11-05.md`).
+
+## TF-v1 G2 (same-item legacy bridge)
+
+Date 5 Nov 2026, device H0, batch 1, source `source_hash` 12ee875a68c9 (unchanged: the bridge is `scripts/tf_v1_g2_bridge.py`, outside `src/wsp`), tree clean at c192f82 (`dirty: false`). The TF-v1 panels deliberately exclude the 300 legacy items, so the pilot could not compare scoring item by item. This run scores the fast tier's own **100 MMLU-Pro and 100 HellaSwag items** (the first 100 ids of `configs/eval_subsets/mmlu_pro.txt` and `hellaswag.txt`, exactly the fast tier's `n: 100`) with the TF-v1 scorers (`letter_scores`/`choice_record` for MMLU-Pro, the same `choice_scores(..., True)` call for HellaSwag) on the 11 pilot records (base + the ten D3 controls), and compares each item with the same entry's fast-tier `records.jsonl`. Outputs: `data/evals/qwen3.5-0.8b/tf_v1/bridge_g2/` (records per entry, `g2_report.json`).
+
+| Entry | MMLU acc fast | MMLU acc TF-v1 | MMLU \|Δacc\| | MMLU correctness agreement | MMLU argmax agreement | MMLU gold-lp \|Δ\| median / p99 / max | HellaSwag acc fast / TF-v1 | HellaSwag correctness agreement |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0a841d4082532e8b | 0.23 | 0.23 | 0.00 | 1.00 | 1.00 | 0.0e+00 / 0.036 / 0.053 | 0.43 / 0.43 | 1.00 |
+| 1caef8eb4c640c3c | 0.30 | 0.30 | 0.00 | 1.00 | 1.00 | 0.0e+00 / 0.032 / 0.065 | 0.39 / 0.39 | 1.00 |
+| 3db97b535c996265 | 0.29 | 0.29 | 0.00 | 1.00 | 1.00 | 1.1e-16 / 0.036 / 0.050 | 0.39 / 0.39 | 1.00 |
+| 3ddc3b4bf47ed994 | 0.26 | 0.26 | 0.00 | 1.00 | 0.99 | 2.2e-16 / 0.019 / 0.055 | 0.39 / 0.39 | 1.00 |
+| 439dbfa62a14d55f | 0.28 | 0.29 | 0.01 | 0.99 | 0.99 | 0.0e+00 / 0.029 / 0.099 | 0.38 / 0.38 | 1.00 |
+| 7b8247d8d7ab7db9 | 0.28 | 0.28 | 0.00 | 1.00 | 1.00 | 0.0e+00 / 0.039 / 0.047 | 0.39 / 0.39 | 1.00 |
+| af6d608f8651fb46 | 0.26 | 0.26 | 0.00 | 1.00 | 1.00 | 2.2e-16 / 0.025 / 0.085 | 0.43 / 0.43 | 1.00 |
+| b6fe7f59016cdda2 | 0.28 | 0.28 | 0.00 | 1.00 | 1.00 | 0.0e+00 / 0.025 / 0.030 | 0.39 / 0.39 | 1.00 |
+| base | 0.28 | 0.28 | 0.00 | 1.00 | 1.00 | 0.0e+00 / 0.066 / 0.075 | 0.39 / 0.39 | 1.00 |
+| db5c3a7bfc19178c | 0.29 | 0.29 | 0.00 | 1.00 | 1.00 | 0.0e+00 / 0.013 / 0.045 | 0.39 / 0.39 | 1.00 |
+| dd90d99e2ddc0e77 | 0.29 | 0.29 | 0.00 | 1.00 | 1.00 | 0.0e+00 / 0.033 / 0.044 | 0.39 / 0.39 | 1.00 |
+
+**Agreement.** Per-item correctness agrees on 99.91% of the 1,100 MMLU-Pro (entry, item) pairs (worst entry 99%; one flip) and on 100.00% of the 1,100 HellaSwag pairs. Argmax (predicted choice) agrees on 99.82% for MMLU-Pro (worst entry 99%; two disagreements, both bf16 logit ties or one-step gaps: item 2168 in `3ddc3b4bf47ed994` has a 0.0625 gap in the fast tier and an exact tie in TF-v1, item 1889 in `439dbfa62a14d55f` the reverse) and 100.00% for HellaSwag.
+**Accuracy |Δ| on the same items.** MMLU-Pro: mean 0.0009, max 0.01 (one item in 100, entry `439dbfa62a14d55f`), 10 of 11 entries exactly equal. HellaSwag: 0 for every entry.
+**PREREG §6 bridge criteria (MMLU-Pro normalized gold-letter log-prob, worst entry for each statistic).** median |Δ| 2.2e-16 (limit .02), p99 0.066 (limit .2), argmax agreement 99% (limit 99%): **PASS**. HellaSwag scores are bitwise identical to the fast tier in all 11 entries.
+
+What the difference is. About 47% of MMLU-Pro (entry, item) pairs (520 of 1,100) differ in the last digits, with median nonzero |Δ| of 1e-8 and a tail up to 0.099 nats. The fast tier already scored the answer letters (` A`..`J`) with a full-sequence forward and `choice_scores`; TF-v1 scores the same letter log-probs from a prefix-only forward that keeps only the last position (`logits_to_keep=1`). The model emits bf16 logits, so a different reduction order moves a logit by one bf16 step (0.0625 to 0.125 at logit magnitude 8 to 32), which is the 0.03 to 0.10 tail; it can also create or break exact ties in the argmax. So the bridge compares two near-identical scorers, not option-text versus letter likelihood as PREREG §6 words it: the legacy MMLU score was already letter-based. It is therefore a same-device implementation-parity test (it passes), and it does not show that old and new values pool across devices or batch sizes. Caveats: the fast-tier records carry backfilled (`inferred`/`transcribed`) runtime metadata (DECISIONS D2), so this compares item values, not matched-runtime references; `correct` on bf16 ties depends on the first-index rule in both tiers.
+
+A G2 pass does not qualify signal or effect resolution (PREREG §6): the reliability and δ/2 gates are in `docs/reviews/P5/tf-v1-qualification-2026-11-05.md`.
