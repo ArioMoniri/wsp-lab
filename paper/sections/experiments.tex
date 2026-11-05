@@ -17,10 +17,10 @@ IFEval & 42/100 & 42.0 & 32.8--51.8 & 21.0 & 2 per prompt; prompt count not stat
 MMLU-Pro & 61/300 & 20.3 & 16.2--25.2 & n/a & 1 per question on a fixed 1,000 \\
 HellaSwag & 154/300 & 51.3 & 45.7--56.9 & n/a & not stated \\
 Keyword refusal & 99/100 & 99.0 & 94.6--99.8 & n/a & not applicable \\
-Cap-hit share, GSM8K & 190/200 & 95.0 & 91.0--97.3 & --- & --- \\
-Cap-hit share, MATH-500 & 99/100 & 99.0 & 94.6--99.8 & --- & --- \\
-Cap-hit share, IFEval & 72/100 & 72.0 & 62.5--79.9 & --- & --- \\
-Cap-hit share, pooled & 361/400 & 90.3 & none & --- & --- \\\bottomrule
+Cap-hit share, GSM8K & 190/200 & 95.0 & 91.0--97.3 & n/a & n/a \\
+Cap-hit share, MATH-500 & 99/100 & 99.0 & 94.6--99.8 & n/a & n/a \\
+Cap-hit share, IFEval & 72/100 & 72.0 & 62.5--79.9 & n/a & n/a \\
+Cap-hit share, pooled & 361/400 & 90.3 & none & n/a & n/a \\\bottomrule
 \end{tabular}
 \caption{Base reproduction at the cheap tier: 4,096-token cap, temperature 0.6, top-p 0.95, top-k 20, presence penalty 1.5, batch size 64, seed 0; run \texttt{p2/base-final-4096}, one sample per item. Ours is descriptive, and no comparison is tested. Intervals are Wilson 95\% intervals from the run's counts. The blog column is quoted from its Experiment 8 base row; n/a marks a value the blog does not report. The blog states samples per item but not the number of problems or prompts for MATH-500, GSM8K and IFEval, so those denominators are unknown. Cap-hit rows are not compared with the blog: its 93\% is the MATH-500 share at a 32,768-token limit, and ours is at 4,096 tokens. The pooled share has no interval, because its three benchmarks are different items, and an interval would need the clustered, stratified analysis that the preregistration requires. KL to base is omitted from the table. It compares the model with itself, so it is zero by construction, and it is not a percentage.}
 \label{tab:base-repro}
@@ -30,11 +30,80 @@ Measured runs used four hosts. Local work ran on an RTX PRO 4500 with 32 GB. The
 
 \input{sections/reliability}
 
-The first predictor suite ran on the D3 fast-tier subset. The two passages below report what that suite shows and what it does not.
-\begin{quote}
-On the D3 fast-tier subset, 260 of 300 evaluated edits had matched-reference delta targets; all retained labels used inferred runtime metadata. In exploratory trajectory-grouped evaluation, M2 achieved Spearman .54 [.42,.63] on MMLU-Pro and .49 [.38,.60] on HellaSwag, compared with StatNN .61 and .67. Intervals resample edits conditional on the fitted models and do not correct chain dependence.
-\end{quote}
-\begin{quote}
-The pre-registered H1 criterion was not demonstrated. Ranking qualification of the fast targets remains incomplete, and the P4 delta-norm comparator is pending. Pooled family-holdout correlations were sensitive to between-family calibration offsets and do not establish within-family transfer.
-\end{quote}
-Run ids: \texttt{p4/board-a-d3-audit-20261104} for the target counts; \texttt{p4/d3-m2-trajectory} for the M2 and StatNN trajectory rows (n = 260 edits); and \texttt{p4/d3-m1-family} and \texttt{p4/d3-m2-family} for the pooled family-holdout rows (n = 260 edits each). StatNN is a LightGBM model on weight statistics. Neither passage qualifies a fast target. Neither shows that sequence modeling beats StatNN or that H1 passes, and neither supports claims of general capability, safety, loop repair or hardware-free prediction.
+\subsection{Predictor suite under protocol v2}
+\label{sec:v2}
+We ran the predictor suite under protocol v2 with three seeds per run. Protocol v2 adds nested model selection, train-only preprocessing, and paired bootstrap intervals over ancestry clusters. The matched set has 345 rows from 389 evaluated entries. The other 44 entries have no matched predecessor target and are excluded. The run files record 260 targets with inferred runtime metadata, backfilled from job logs. The 345 rows are not the 300-entry D3 subset, and they are not the 260 matched D3 edits counted in Section~\ref{sec:reliability}. Twenty-five run directories are complete. The directory \texttt{d3v2-m3-family} holds a configuration and a split plan but no metrics, so it is not reported.
+
+M1 is the stateless tensor-token predictor and M2 is the state-space sequence predictor. M1-matched and M2-matched are matched-input controls. M3 and M6 use JEPA-style objectives, and M5 is a causal trajectory transformer.
+
+Table~\ref{tab:v2-suite} lists the 25 complete rows. Each entry is the mean Spearman over three seeds, with the minimum and maximum over seeds in brackets. The brackets describe training and split variation. They are not confidence intervals. Both targets are fast-tier accuracies scored by option likelihood. Neither is qualified under Section~\ref{sec:reliability}.
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrcclc}\toprule
+Model & Rows / clusters & MMLU-Pro $\rho$ & HellaSwag $\rho$ & Run id \\\midrule
+\multicolumn{5}{l}{\emph{Family-held-out}} \\
+M1 & 345 / 278 & $-$0.08 [$-$0.23, 0.14] & 0.03 [$-$0.46, 0.31] & \texttt{d3v2-m1-family} \\
+M1-matched & 345 / 278 & 0.10 [0.00, 0.25] & 0.31 [0.06, 0.52] & \texttt{d3v2-m1\_matched-family} \\
+M2 & 345 / 278 & $-$0.16 [$-$0.30, 0.03] & 0.11 [$-$0.13, 0.25] & \texttt{d3v2-m2-family} \\
+M2-matched & 345 / 278 & $-$0.20 [$-$0.26, $-$0.12] & 0.11 [$-$0.30, 0.39] & \texttt{d3v2-m2\_matched-family} \\
+M5 & 345 / 278 & $-$0.03 [$-$0.19, 0.25] & 0.06 [$-$0.29, 0.55] & \texttt{d3v2-m5-family} \\
+M6 & 345 / 278 & 0.06 [$-$0.13, 0.34] & 0.07 [$-$0.29, 0.25] & \texttt{d3v2-m6-family} \\
+\multicolumn{5}{l}{\emph{Seed-held-out}} \\
+M1 & 345 / 278 & 0.28 [0.26, 0.31] & 0.21 [0.10, 0.30] & \texttt{d3v2-m1-seed} \\
+M1-matched & 345 / 278 & 0.38 [0.35, 0.40] & 0.37 [0.34, 0.40] & \texttt{d3v2-m1\_matched-seed} \\
+M2 & 345 / 278 & 0.36 [0.31, 0.44] & 0.35 [0.25, 0.50] & \texttt{d3v2-m2-seed} \\
+M2-matched & 345 / 278 & 0.45 [0.41, 0.49] & 0.45 [0.30, 0.60] & \texttt{d3v2-m2\_matched-seed} \\
+M3 & 345 / 278 & 0.22 [0.07, 0.37] & 0.22 [0.09, 0.34] & \texttt{d3v2-m3-seed} \\
+M5 & 345 / 278 & 0.19 [$-$0.02, 0.32] & 0.21 [0.18, 0.26] & \texttt{d3v2-m5-seed} \\
+M6 & 345 / 278 & 0.30 [0.21, 0.39] & 0.39 [0.24, 0.52] & \texttt{d3v2-m6-seed} \\
+\multicolumn{5}{l}{\emph{Trajectory}} \\
+M1 & 345 / 278 & 0.38 [0.31, 0.45] & 0.42 [0.25, 0.54] & \texttt{d3v2-m1-trajectory} \\
+M1-matched & 345 / 278 & 0.45 [0.37, 0.52] & 0.46 [0.43, 0.51] & \texttt{d3v2-m1\_matched-trajectory} \\
+M2 & 345 / 278 & 0.35 [0.25, 0.42] & 0.32 [0.29, 0.37] & \texttt{d3v2-m2-trajectory} \\
+M2-matched & 345 / 278 & 0.31 [0.18, 0.46] & 0.29 [0.16, 0.46] & \texttt{d3v2-m2\_matched-trajectory} \\
+M3 & 345 / 278 & 0.15 [0.12, 0.17] & 0.11 [0.09, 0.13] & \texttt{d3v2-m3-trajectory} \\
+M5 & 345 / 278 & 0.41 [0.33, 0.49] & 0.26 [0.12, 0.34] & \texttt{d3v2-m5-trajectory} \\
+M6 & 345 / 278 & 0.14 [$-$0.10, 0.35] & $-$0.03 [$-$0.16, 0.08] & \texttt{d3v2-m6-trajectory} \\
+\multicolumn{5}{l}{\emph{Family-purge holdouts (M2 only)}} \\
+Holdout abliteration & 98 / 98 & $-$0.02 [$-$0.19, 0.22] & 0.03 [0.00, 0.05] & \texttt{d3v2-m2-holdout-abliteration} \\
+Holdout chain & 98 / 45 & 0.15 [$-$0.01, 0.35] & 0.09 [0.00, 0.24] & \texttt{d3v2-m2-holdout-chain} \\
+Holdout LoRA SFT & 59 / 59 & $-$0.12 [$-$0.23, 0.07] & 0.07 [$-$0.24, 0.30] & \texttt{d3v2-m2-holdout-lora\_sft} \\
+Holdout random direction & 60 / 60 & $-$0.10 [$-$0.18, $-$0.04] & undefined & \texttt{d3v2-m2-holdout-random\_dir} \\
+Holdout task vector & 30 / 27 & 0.06 [$-$0.13, 0.35] & 0.39 [0.25, 0.51] & \texttt{d3v2-m2-holdout-task\_vector} \\\bottomrule
+\end{tabular}
+\caption{Protocol-v2 suite, three seeds per run. Cells give the mean Spearman over seeds and, in brackets, the minimum and maximum over seeds. Brackets describe training and split variation, not confidence intervals. Rows / clusters give the matched rows and ancestry clusters evaluated. ``Undefined'' means the observed HellaSwag values are constant, since all 60 random-direction edits leave HellaSwag unchanged. Run ids are directories under \texttt{data/runs/p4/}. The suite has eight targets; only these two are shown, because KL and WikiText have no heads in this suite.}
+\label{tab:v2-suite}
+\end{table}
+
+In an exploratory three-seed protocol-v2 analysis of matched-reference fast-tier accuracy, trajectory-split M1-matched had mean Spearman .45 and .46 on MMLU-Pro and HellaSwag; seed-0 StatNN had .57 and .65, respectively. Seed ranges describe training/split variation, not confidence intervals. Labels have inferred historical runtime and target qualification is incomplete.
+
+The original H1 criterion was not demonstrated; H2 and H3 remain unresolved, and the suite does not test H4--H6.
+
+Table~\ref{tab:v2-baselines} gives the three baselines. These values come from seed 0 only. They are not three-seed means. Within a split, the baseline values are identical across models, so each split cites one source run. Section~\ref{sec:exploits} examines why the descriptor baseline comes close to StatNN. On seed 0 of the trajectory split, every learned row has a larger MAE than StatNN on both targets, and each paired interval excludes zero. For M1-matched the MAE difference is +0.016 [0.012, 0.021] on MMLU-Pro and +0.011 [0.009, 0.014] on HellaSwag. Across the seven learned rows, all 14 intervals lie above zero. A positive difference means the learned row has the larger error. These paired cluster intervals condition on the fitted models. They do not cover item sampling, training variation, or data provenance.
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llccc}\toprule
+Split & Source run, seed 0 & StatNN & Descriptor-only & Delta-norm \\
+ & & MMLU-Pro / HellaSwag & MMLU-Pro / HellaSwag & MMLU-Pro / HellaSwag \\\midrule
+Family-held-out & \texttt{d3v2-m1-family} & $-$0.02 / 0.11 & 0.06 / $-$0.29 & $-$0.13 / $-$0.29 \\
+Seed-held-out & \texttt{d3v2-m1-seed} & 0.58 / 0.65 & 0.52 / 0.62 & 0.20 / 0.18 \\
+Trajectory & \texttt{d3v2-m1-trajectory} & 0.57 / 0.65 & 0.52 / 0.61 & 0.21 / 0.18 \\
+Holdout abliteration & \texttt{d3v2-m2-holdout-abliteration} & $-$0.26 / 0.03 & $-$0.07 / 0.09 & 0.21 / 0.16 \\
+Holdout chain & \texttt{d3v2-m2-holdout-chain} & 0.46 / 0.46 & 0.07 / $-$0.31 & 0.26 / 0.03 \\
+Holdout LoRA SFT & \texttt{d3v2-m2-holdout-lora\_sft} & 0.39 / 0.06 & 0.39 / 0.01 & 0.54 / 0.17 \\
+Holdout random direction & \texttt{d3v2-m2-holdout-random\_dir} & $-$0.17 / undefined & $-$0.14 / undefined & $-$0.07 / undefined \\
+Holdout task vector & \texttt{d3v2-m2-holdout-task\_vector} & 0.21 / 0.10 & 0.07 / 0.58 & 0.10 / 0.67 \\\bottomrule
+\end{tabular}%
+}
+\caption{Baselines on the same rows as Table~\ref{tab:v2-suite}, Spearman by target. Values are from seed 0 of the named run. The same values appear in every run of a split, so one source is cited per split. StatNN is LightGBM on pooled weight statistics. Descriptor-only is ridge regression on hashed edit metadata (family and parameter fields), with no weight statistics. Delta-norm is isotonic regression on the effective Frobenius norm. Undefined means the HellaSwag target is constant in that holdout.}
+\label{tab:v2-baselines}
+\end{table}
+
+The five \texttt{m2-holdout} rows are one-fold family-purge runs. Each holds out one edit family and its descendants from training. They are not extra seeds, and they are not M3 transfer runs. Their test sets contain 98, 98, 59, 60 and 30 rows from 98, 45, 59, 60 and 27 clusters. Ancestry and support limits apply to every holdout.
+
+The suite scores eight targets, and it has no KL or WikiText heads. The dashes in the source summary are missing outputs, not negative results. M6 fails its all-seed collapse gate on all three standard splits. That gate requires an effective rank of at least 2 and at least twice the rank of the frozen predictor. The failure does not prove that every fold has rank below 2. M3 has no acceptance gate, so it is not reported as passing, and no M6 LoRA acceptance run exists. H2 is undetermined. On the trajectory split, M5 reaches 0.41 and 0.26, against 0.45 and 0.46 for M1-matched, and the suite does not establish the registered 15\% MAE gain on adequately powered trajectories of length four or more. H3 is undetermined. No qualifying held-out LoRA result exists, and the M2 LoRA holdout is not that test.
