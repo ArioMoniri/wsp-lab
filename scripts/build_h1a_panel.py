@@ -21,7 +21,7 @@ Algorithm (frozen by PREREG section 2, seed 20261105):
  5. Component id = sha256 of the canonical sorted member / source-identity list; rank = sha256 of
     "20261105:H1a:" + id, ties by id. Select all eligible fresh components containing a candidate
     lora_sft/task_vector entry; if fewer than 100, append eligible fresh chain components in hash
-    order until 100; if more, retain all. No outcome-based selection.
+    order until 106 (A2: floor 100 + six spares); if more, retain all. No outcome-based selection.
  6. Write the manifest (ids and hashes only) and its content hash.
 
 Usage: build_h1a_panel.py [--hash-only] [--out PATH]
@@ -43,7 +43,18 @@ OUT = ROOT / "data/runs/h1a/panel_manifest.json"
 HASH_CACHE = ROOT / "data/runs/h1a/delta_hashes.json"
 SEED = 20261105
 RANK_DOMAIN = f"{SEED}:H1a:"
-TARGET_COMPONENTS = 100
+FLOOR_COMPONENTS = 100  # PREREG section 2/4: at least this many valid fresh components
+# Amendment A2.3: outcome-free closure expansion to the maximum the partition supports (six spare
+# fresh chain components after the 100th, in hash order) so one post-freeze exclusion does not
+# break the floor.
+TARGET_COMPONENTS = 106
+REFERENCE_CONVENTION = {
+    "chain": "actual predecessor (parent_id); step 0 uses the matched base",
+    "lora_sft": "matched base",
+    "task_vector": "matched base (the stored delta is the full scaled delta from the base; the parent is a source, not a predecessor model state)",
+    "abliteration": "matched base",
+    "random_dir": "matched base",
+}
 STRATUM = ("lora_sft", "task_vector", "chain")  # outcome-free non-null family stratum (PREREG 1)
 # PREREG section 8: ara_unconstrained_surrogate_scale diagnostics, always excluded.
 FLAGGED_ARA = [
@@ -292,10 +303,19 @@ def build(rows, edits, hashes, evaluated, pilots):
             c["status"] = "confirmatory" if c["component_id"] in chosen else "fresh_unselected"
             if c["status"] == "fresh_unselected":
                 c["exclusion_reasons"] = [
-                    "no_non_null_stratum_row" if not c["has_stratum"] else "beyond_100_chain_fill"
+                    "no_non_null_stratum_row" if not c["has_stratum"] else "beyond_chain_fill_target"
                 ]
     components.sort(key=order)
     return components, aliases, dict(edge_kinds), candidates, first
+
+
+def spare_ids(components, first):
+    """Selection order is candidate components (rank order) then chain fill (rank order); the
+    components past the floor are the registered spares (amendment A2.3)."""
+    order = lambda c: (c["rank"], c["component_id"])
+    confirm = [c for c in components if c["status"] == "confirmatory"]
+    ordered = list(first) + sorted((c for c in confirm if c not in first), key=order)
+    return [c["component_id"] for c in ordered[FLOOR_COMPONENTS:]]
 
 
 def summarize(
@@ -336,8 +356,9 @@ def summarize(
         "candidate_by_family": dict(Counter(rows[i]["family"] for i in candidates)),
         "components_containing_candidates_fresh": len(first),
         "candidates_in_selected_components": len(candidates & set(members)),
-        "met_target": len(confirm) >= TARGET_COMPONENTS,
+        "met_target": len(confirm) >= FLOOR_COMPONENTS,
         "target_components": TARGET_COMPONENTS,
+        "floor_components": FLOOR_COMPONENTS,
         "closure_scoring_hours_at_warm_median": round(hours, 2),
         "warm_minutes_per_entry": WARM_MINUTES,
         "scoring_cap_hours": SCORING_CAP_HOURS,
@@ -372,7 +393,8 @@ def main():
     summary = summarize(components, rows, candidates, first, aliases, edge_kinds, evaluated, hashes)
     partition = {c["component_id"]: c["status"] for c in components}
     out = {
-        "version": "h1a-partition-v1",
+        "version": "h1a-partition-v2",
+        "reference_convention": REFERENCE_CONVENTION,
         "seed": SEED,
         "rank_domain": RANK_DOMAIN,
         "registration": {
@@ -412,6 +434,7 @@ def main():
             {k: v for k, v in c.items() if k not in ("has_candidate_lora_task",)}
             for c in components
         ],
+        "spare_component_ids": spare_ids(components, first),
         "confirmatory_component_ids": [
             c["component_id"] for c in components if c["status"] == "confirmatory"
         ],

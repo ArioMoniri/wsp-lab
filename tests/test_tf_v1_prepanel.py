@@ -175,3 +175,58 @@ def test_partition_joins_closes_and_seals(monkeypatch):
     # component ids and ranks depend only on membership, never on dict order
     again = build.build(dict(reversed(list(rows.items()))), edits, hashes, evaluated, pilots)[0]
     assert {c["component_id"] for c in again} == set(ids)
+
+
+def test_alias_ledger_resolves_labels_and_references_and_scores_each_delta_once():
+    plan = load("tfv1_scoring_plan")
+    rows = {
+        "a0": {"id": "a0", "family": "random_dir"},  # canonical (smallest id), standalone
+        "c0": {"id": "c0", "family": "chain", "parent_id": None},  # stratum row, byte-copy of a0
+        "c1": {"id": "c1", "family": "chain", "parent_id": "c0"},  # predecessor is the aliased step
+        "t1": {"id": "t1", "family": "task_vector", "parent_id": "l1"},
+        "l1": {"id": "l1", "family": "lora_sft", "parent_id": None},
+        "b0": {"id": "b0", "family": "abliteration", "parent_id": None},
+        "z0": {"id": "z0", "family": "chain", "parent_id": None},  # fresh
+        "z1": {"id": "z1", "family": "chain", "parent_id": "z0"},
+    }
+    ledger = {"h": {"canonical": "a0", "aliases": ["c0"]}}
+    manifest = {
+        "alias_ledger": ledger,
+        "spare_component_ids": ["S"],
+        "components": [
+            {"component_id": "F", "status": "confirmatory", "members": ["z0"]},
+            {"component_id": "S", "status": "confirmatory", "members": ["z1", "c0"]},
+            {"component_id": "D", "status": "development", "members": ["a0", "c0", "c1"]},
+        ],
+    }
+    amap = plan.canonical_map(ledger)
+    assert amap == {"a0": "a0", "c0": "a0"}
+    assert plan.scored_id("c0", amap) == "a0" and plan.scored_id("l1", amap) == "l1"
+    # the step-1 chain row's reference is the scored (canonical) id of its aliased predecessor
+    assert plan.reference_of("c1", rows, amap) == "a0"
+    assert plan.reference_of("c0", rows, amap) == "base"  # step 0: matched base
+    assert plan.reference_of("t1", rows, amap) == "base"  # task vector: base, not its source
+    evaluated = {"a0", "c0", "c1", "t1", "l1", "b0"}
+    p = plan.plan(manifest, rows, evaluated)
+    assert p["stratum_list"] == ["a0", "c1", "l1", "t1"]  # c0 is scored once, as a0
+    assert p["null_list"] == ["b0"]  # a0 is already in the stratum list
+    assert len(p["d3_unique"]) == len(set(p["d3_unique"])) == 5
+    assert p["fresh_spares_unique"] == ["a0", "z1"]
+    assert p["fresh_without_spares_unique"] == ["z0"]
+    assert plan.summary(p, rows)["alias_groups_whose_canonical_is_not_the_stratum_row"] == 1
+
+
+def test_committed_manifest_is_resealed_at_106_with_six_spares_and_frozen_conventions():
+    import json
+
+    manifest = json.loads((SCRIPTS.parent / "docs/prereg/panel_manifest.json").read_text())
+    summary = manifest["summary"]
+    assert manifest["version"] == "h1a-partition-v2"
+    assert summary["confirmatory_components"] == 106 and summary["floor_components"] == 100
+    assert summary["confirmatory_stratum_rows"] == 267
+    assert summary["confirmatory_closure_unique_deltas"] == 281
+    assert len(manifest["spare_component_ids"]) == 6
+    assert set(manifest["spare_component_ids"]) <= set(manifest["confirmatory_component_ids"])
+    assert manifest["reference_convention"]["task_vector"].startswith("matched base")
+    assert manifest["reference_convention"]["chain"].startswith("actual predecessor")
+    assert manifest["partition_sha256"].startswith("ebf0379a15d9")

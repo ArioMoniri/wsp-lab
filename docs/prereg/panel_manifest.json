@@ -12325,9 +12325,7 @@
   {
    "component_id": "ada70fbe8a7feb9de5028ffe28cbb164874facf5f4e1a7fbe4a3bb11e3b00f5d",
    "development_members": [],
-   "exclusion_reasons": [
-    "beyond_100_chain_fill"
-   ],
+   "exclusion_reasons": [],
    "family_counts": {
     "chain": 6
    },
@@ -12351,7 +12349,7 @@
     "delta:9883333d90ab8624ec1857e07838f946d9e00a924f99a2e597602a385e99e23d",
     "generator:eed3fa0e0b616bb6"
    ],
-   "status": "fresh_unselected",
+   "status": "confirmatory",
    "stratum_rows": [
     "33a6ed5bbecf820a",
     "56ca42ca27786162",
@@ -12388,9 +12386,7 @@
   {
    "component_id": "156f28e2b04e839ff5214a73c6e2305dee1431bb4b166304610205bfe7749877",
    "development_members": [],
-   "exclusion_reasons": [
-    "beyond_100_chain_fill"
-   ],
+   "exclusion_reasons": [],
    "family_counts": {
     "chain": 2
    },
@@ -12407,7 +12403,7 @@
     "generator:1215344432381444",
     "generator:15464fea9de61ea3"
    ],
-   "status": "fresh_unselected",
+   "status": "confirmatory",
    "stratum_rows": [
     "2003473f2e697ca2",
     "73e2da61846fad8c"
@@ -12535,9 +12531,7 @@
   {
    "component_id": "f35fc446a54fe345eb6447426c6b18a17702b5a8d632ed0c14733527119c2abe",
    "development_members": [],
-   "exclusion_reasons": [
-    "beyond_100_chain_fill"
-   ],
+   "exclusion_reasons": [],
    "family_counts": {
     "chain": 4
    },
@@ -12557,7 +12551,7 @@
     "delta:a171373c1ed8eb851ddb0e5b0e1bbb497df2ba991a3931ca6aa5520cafc9cac7",
     "generator:629d2347e4badc32"
    ],
-   "status": "fresh_unselected",
+   "status": "confirmatory",
    "stratum_rows": [
     "56e91f878ccdf07b",
     "71874773a901b7ae",
@@ -12637,9 +12631,7 @@
   {
    "component_id": "8db023155087591b23a0f21815f5611ceb6fe34358fae5cf6a444397ecfa53a2",
    "development_members": [],
-   "exclusion_reasons": [
-    "beyond_100_chain_fill"
-   ],
+   "exclusion_reasons": [],
    "family_counts": {
     "abliteration": 1,
     "chain": 2
@@ -12656,7 +12648,7 @@
     "delta:b344d2af6c4c02011ab33b753e87905d8c657b1b147564e9cd0ad965273292a1",
     "delta:f491807ed49d7c8ce368066f4147b0642a8e1996e682454a1689110bccb9c1dd"
    ],
-   "status": "fresh_unselected",
+   "status": "confirmatory",
    "stratum_rows": [
     "455dbfe3098c13dc",
     "4d055739592f4545"
@@ -12943,9 +12935,7 @@
   {
    "component_id": "134048ce920e96d2620d552f872a0977a549189fb2bb0f315d9f9463a3d8e730",
    "development_members": [],
-   "exclusion_reasons": [
-    "beyond_100_chain_fill"
-   ],
+   "exclusion_reasons": [],
    "family_counts": {
     "chain": 5
    },
@@ -12968,7 +12958,7 @@
     "generator:467ede7827eeebc1",
     "generator:6ce310723df7efc6"
    ],
-   "status": "fresh_unselected",
+   "status": "confirmatory",
    "stratum_rows": [
     "1f1ef6d8211d380c",
     "37af6305fa4b0b2b",
@@ -13446,9 +13436,7 @@
   {
    "component_id": "702a87d3c5df4664f94dbe3265c83f1ece4dc7e36beb78bcd789ba681481bef4",
    "development_members": [],
-   "exclusion_reasons": [
-    "beyond_100_chain_fill"
-   ],
+   "exclusion_reasons": [],
    "family_counts": {
     "chain": 7
    },
@@ -13474,7 +13462,7 @@
     "delta:feae0d476d3ac7eb58ba2010656240c032d5496d14a0462c419d08a75b1439de",
     "generator:4c624a85d5444840"
    ],
-   "status": "fresh_unselected",
+   "status": "confirmatory",
    "stratum_rows": [
     "60c07507e0eb64c9",
     "7259f5c9dc6eca84",
@@ -13801,22 +13789,35 @@
   "6762968e12e9127d08374bfc021786e4cc63c86d28cd793ae9a4c5bba29bc6a5",
   "bbc51ff008d901ae1d4eb8f6b5b28f469cc374e34c35a217473c5f50a1c0188e",
   "4d88052ff57c1e9e6acc711b5ee18baa9a59626aa83b1f4f0b4575418384c7f9",
+  "ada70fbe8a7feb9de5028ffe28cbb164874facf5f4e1a7fbe4a3bb11e3b00f5d",
+  "156f28e2b04e839ff5214a73c6e2305dee1431bb4b166304610205bfe7749877",
+  "f35fc446a54fe345eb6447426c6b18a17702b5a8d632ed0c14733527119c2abe",
   "03bd329c871908b8c82c402dd820e47884be2b0b5ce13921648366326d18b554",
   "2b9c7ce4061b5183fd35901395e7c09bcd99adde220193a2d6d8848148f7e8a8",
+  "8db023155087591b23a0f21815f5611ceb6fe34358fae5cf6a444397ecfa53a2",
   "fb24c2239a573598e4a32b90e6004f3fbe8dd4245628e56cb34a907b9a8257cf",
+  "134048ce920e96d2620d552f872a0977a549189fb2bb0f315d9f9463a3d8e730",
   "edc8cf0ff30d487a8813d2ee5f281e5f35fec42e98f2b4c8ccc54c4512f9b26a",
   "82ea209390b9c16220f56660b3a8b0603ffa4f8965fe8cff9bbbd315eaebdf75",
   "f307f2b3e5903d3fd19bcd7ca366a359628221f91e8ab225a0542f360201937b",
   "79fa0d13de0dcc4cdacabf95f04b29aa5bd166a138ee03a56b77354ef74cf2cc",
+  "702a87d3c5df4664f94dbe3265c83f1ece4dc7e36beb78bcd789ba681481bef4",
   "0bf2746e90646e0746e3e7d81762368d89116f5c69699bf4583b7ca21b10e016"
  ],
  "device_assignment": "H0 (single-device scope, DECISIONS D2 addendum)",
- "manifest_content_sha256": "9da1b943ac731b274e5a4d65e50a9a23b9d497080e247b5010f0e6d0375f6b5d",
+ "manifest_content_sha256": "13c20fde5cc7e85bccf1e74e1ec3a12c9ba145667d40e07396afb9a391eecfe8",
  "model_revision": "main",
- "partition_sha256": "df4689983f1bfe0131c965cf13a0f032674f8cc9f0d2178eba02b805efc64d22",
+ "partition_sha256": "ebf0379a15d95b592ee8c227836406f3365a56a3ef46e6978d369c2d42c0ff3f",
  "rank_domain": "20261105:H1a:",
+ "reference_convention": {
+  "abliteration": "matched base",
+  "chain": "actual predecessor (parent_id); step 0 uses the matched base",
+  "lora_sft": "matched base",
+  "random_dir": "matched base",
+  "task_vector": "matched base (the stored delta is the full scaled delta from the base; the parent is a source, not a predecessor model state)"
+ },
  "registration": {
-  "git_head": "19673b9766121a765e2451905084e3ae8a81776e",
+  "git_head": "5cbe2e3400bd804fd736cb6d0a11de9173ebb442",
   "prereg": "docs/PREREG_H1_TF.md",
   "prereg_last_commit": "ed70b4fefa2ab5f19e0af2f1fc4c3c67aa30b0c0"
  },
@@ -13851,6 +13852,14 @@
   "manifest_sha256": "6175c3728f03859f54c373bbec79f49564df4a10a3db94ba6db7fd366d986bcd",
   "pilot_and_qualification_ids_sha256": "59e51f1cda927a54be6d3d92968f62ae48ebad4f0fdc96680fe2b8cd433343eb"
  },
+ "spare_component_ids": [
+  "ada70fbe8a7feb9de5028ffe28cbb164874facf5f4e1a7fbe4a3bb11e3b00f5d",
+  "156f28e2b04e839ff5214a73c6e2305dee1431bb4b166304610205bfe7749877",
+  "f35fc446a54fe345eb6447426c6b18a17702b5a8d632ed0c14733527119c2abe",
+  "8db023155087591b23a0f21815f5611ceb6fe34358fae5cf6a444397ecfa53a2",
+  "134048ce920e96d2620d552f872a0977a549189fb2bb0f315d9f9463a3d8e730",
+  "702a87d3c5df4664f94dbe3265c83f1ece4dc7e36beb78bcd789ba681481bef4"
+ ],
  "summary": {
   "candidate_by_family": {
    "lora_sft": 61,
@@ -13858,40 +13867,40 @@
   },
   "candidate_lora_task_entries": 111,
   "candidates_in_selected_components": 80,
-  "closure_scoring_hours_at_warm_median": 7.67,
+  "closure_scoring_hours_at_warm_median": 8.45,
   "component_size_distribution": {
    "1": 47,
    "11": 1,
    "18": 1,
-   "2": 24,
-   "3": 4,
-   "4": 2,
-   "5": 10,
-   "6": 2,
-   "7": 1,
+   "2": 25,
+   "3": 5,
+   "4": 3,
+   "5": 11,
+   "6": 3,
+   "7": 2,
    "8": 7,
    "9": 1
   },
   "components_by_status": {
-   "confirmatory": 100,
+   "confirmatory": 106,
    "development": 252,
    "excluded": 19,
-   "fresh_unselected": 112
+   "fresh_unselected": 106
   },
   "components_containing_candidates_fresh": 71,
   "components_total": 483,
-  "confirmatory_closure_entries": 278,
-  "confirmatory_closure_unique_deltas": 255,
-  "confirmatory_components": 100,
+  "confirmatory_closure_entries": 305,
+  "confirmatory_closure_unique_deltas": 281,
+  "confirmatory_components": 106,
   "confirmatory_family_rows": {
-   "abliteration": 18,
-   "chain": 161,
+   "abliteration": 19,
+   "chain": 187,
    "lora_sft": 55,
    "random_dir": 19,
    "task_vector": 25
   },
-  "confirmatory_non_null_components": 100,
-  "confirmatory_stratum_rows": 241,
+  "confirmatory_non_null_components": 106,
+  "confirmatory_stratum_rows": 267,
   "d3_evaluated_entries": 389,
   "d3_scoring_hours_at_warm_median": 11.46,
   "d3_unique_deltas": 381,
@@ -13906,6 +13915,7 @@
    "eligibility_smoke": 12,
    "flagged_ara_diagnostic": 12
   },
+  "floor_components": 100,
   "join_edges_by_kind": {
    "delta_hash": 104,
    "generator": 71,
@@ -13913,8 +13923,8 @@
   },
   "met_target": true,
   "scoring_cap_hours": 19.0,
-  "target_components": 100,
+  "target_components": 106,
   "warm_minutes_per_entry": 1.805
  },
- "version": "h1a-partition-v1"
+ "version": "h1a-partition-v2"
 }
