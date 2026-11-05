@@ -194,4 +194,5 @@
 | 2026-11-04 | Humanizer: paper/reliability | claude_aio_gmail_api/claude-haiku-5-5 high | done 18de8b5 (33 of 77 sentences; build 9 pages) — Board B next |
 | 2026-11-04 | Board A review feat/p4-round2 | codex/gpt-6.1-terra medium | REVISE (ci_method relabelled; family centring across folds) 3f52db0 |
 | 2026-11-04 | P4 round 2b (ci_method labels, within-fold centring, compat script) | codex/gpt-6.1-sol medium | running |
-| 2026-11-04 | Board B review paper/reliability | codex/gpt-6.1-terra medium | running |
+| 2026-11-04 | Board B review paper/reliability | codex/gpt-6.1-terra medium | REVISE (ceiling heuristic overstated; panel provenance; full qualification criteria; table denominators) 84c44db |
+| 2026-11-05 | Scribe round 2: Board B blocking 1–4 on paper/reliability | claude_aio_gmail_api/claude-haiku-5-5 high | running |
