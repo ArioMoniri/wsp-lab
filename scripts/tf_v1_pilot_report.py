@@ -13,9 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def report():
     zoo = ROOT / "data/evals/qwen3.5-0.8b"
     ids = ["base", *(ROOT / "data/runs/d3_shards/controls.txt").read_text().splitlines()]
-    from wsp.eval.batch import provenance
-
-    measured_source = provenance()["source_hash"]
+    measured_source = json.loads((zoo / "tf_v1/base/eval.json").read_text())["source_hash"]
     rows = []
     for edit_id in ids:
         directory = zoo / "tf_v1" / edit_id
@@ -36,6 +34,7 @@ def report():
         assert summarize(records) == payload["tf_v1"]
         assert len({(r.benchmark, r.item_id) for r in records}) == len(records)
         tf = payload["tf_v1"]["mmlu_pro"]
+        cache_hash = next(r for r in records if r.benchmark == "kl_to_base").extra["cache_hash"]
         rows.append(
             {
                 "edit_id": edit_id,
@@ -51,10 +50,23 @@ def report():
                 "gold_log_prob": tf["mean_gold_log_prob"],
                 "legacy_run_id": legacy["run_id"],
                 "stage_seconds": payload["stage_seconds"],
+                "kl_cache_hash": cache_hash,
             }
         )
+    # Cold entry = first completed entry per base-cache hash (it builds the cache).
+    seen = set()
+    for r in sorted(
+        rows, key=lambda r: (zoo / "tf_v1" / r["edit_id"] / "eval.json").stat().st_mtime
+    ):
+        r["cache_rebuilt"] = r["kl_cache_hash"] not in seen
+        seen.add(r["kl_cache_hash"])
+    warm_rows = [r for r in rows[1:] if not r["cache_rebuilt"]]
     result = {
         "rows": rows,
+        "warm_median_minutes": float(np.median([r["wall_minutes"] for r in warm_rows])),
+        "warm_median_minutes_all_10": float(np.median([r["wall_minutes"] for r in rows[1:]])),
+        "n_warm": len(warm_rows),
+        "cold_entries": [r["edit_id"] for r in rows if r["cache_rebuilt"]],
         "median_abs_accuracy_delta": float(
             np.median([abs(r["accuracy_1000"] - r["accuracy_100"]) for r in rows])
         ),
@@ -66,9 +78,12 @@ def report():
             "gold_log_prob_vs_accuracy_pearson": float(pearsonr(x, y).statistic),
             "gold_log_prob_vs_accuracy_spearman": float(spearmanr(x, y).statistic),
         }
-    result["shared_cache_bytes"] = sum(
-        p.stat().st_size for p in (zoo / "base/tf_cache").rglob("*") if p.is_file()
-    )
+    caches = {h: zoo / "base/tf_cache/H0" / h for h in {r["kl_cache_hash"] for r in rows}}
+    sizes = {
+        h: sum(p.stat().st_size for p in d.rglob("*") if p.is_file()) for h, d in caches.items()
+    }
+    result["shared_cache_bytes"] = sizes[rows[0]["kl_cache_hash"]]
+    result["duplicate_cache_bytes"] = sum(sizes.values()) - result["shared_cache_bytes"]
     result["median_entry_storage_bytes"] = float(np.median([r["storage_bytes"] for r in rows[1:]]))
     out = zoo / "tf_v1/pilot_report.json"
     out.write_text(json.dumps(result, indent=2))
@@ -109,13 +124,14 @@ def report():
         lines.append(
             f"| {r['edit_id']} | {r['wall_minutes']:.3f} | {r['model_load_seconds']:.2f} | {r['peak_gpu_allocated_gib']:.3f}/{r['peak_gpu_reserved_gib']:.3f} | {r['accuracy_1000']:.3f} | {r['accuracy_100']:.3f} | {r['gold_log_prob']:.6f} | {r['records_bytes'] / 2**20:.3f} |"
         )
-    warm = float(np.median([r["wall_minutes"] for r in rows[1:]]))
+    warm = result["warm_median_minutes"]
+    rebuilt = [r["edit_id"] for r in rows[1:] if r["cache_rebuilt"]]
     lines.extend(
         [
             "",
-            f"Median warm entry storage (records + eval/summary/manifest): {result['median_entry_storage_bytes'] / 2**20:.3f} MiB; shared base logits cache: {result['shared_cache_bytes'] / 2**30:.3f} GiB (not duplicated per entry).",
+            f"Median warm entry storage (records + eval/summary/manifest): {result['median_entry_storage_bytes'] / 2**20:.3f} MiB; shared base logits cache: {result['shared_cache_bytes'] / 2**30:.3f} GiB (not duplicated per entry). The pilot also left an orphan byte-identical duplicate cache of {result['duplicate_cache_bytes'] / 2**30:.3f} GiB (see caveat).",
             "",
-            f"Warm ten-edit median wall time: **{warm:.3f} min/entry**; shared model load **{rows[0]['model_load_seconds']:.2f} s** (not charged eleven times). Base includes cold greedy-continuation cache construction. The council warm timing pass criterion is ≤2.0 minutes; >3.0 minutes calls for revision and re-pilot. This fixed-count pilot does not silently reduce the requested item counts. Per-stage times are in `data/evals/qwen3.5-0.8b/tf_v1/pilot_report.json`; wall includes weight restore/application but excludes shared model load and result serialization.",
+            f"Warm median wall time over {result['n_warm']} edits that reused a cache: **{warm:.3f} min/entry** (all ten edits: {result['warm_median_minutes_all_10']:.3f}); entry `{', '.join(rebuilt)}` hit a cache-key defect (git sha/dirty flag in the key; a WIP commit during the run changed them) that rebuilt a byte-identical base cache (KL stage ~10 min) and is excluded from the warm median; the following three edits reused that duplicate. Pilot code `source_hash` {measured_source[:12]}; the key is fixed afterwards in a later commit.  Model load: **{rows[0]['model_load_seconds']:.2f} s** once per batch invocation (not charged eleven times). Base includes cold greedy-continuation cache construction. The council warm timing pass criterion is ≤2.0 minutes; >3.0 minutes calls for revision and re-pilot. This fixed-count pilot does not silently reduce the requested item counts. Per-stage times are in `data/evals/qwen3.5-0.8b/tf_v1/pilot_report.json`; wall includes weight restore/application but excludes shared model load and result serialization.",
             "",
             f"Legacy bridge (11 paired records): median |accuracy(1000 new) − accuracy(100 legacy)| = **{result['median_abs_accuracy_delta']:.4f}** ({100 * result['median_abs_accuracy_delta']:.2f} percentage points). Legacy run `{rows[0]['legacy_run_id']}`. This compares different item sets; it is not a same-item numerical-parity or qualification test.",
             "",

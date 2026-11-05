@@ -338,3 +338,8 @@ repeat, device, uncertainty and reliability requirements still apply. Fresh
 source-closed components, predecessor-relative references and a frozen pipeline
 are additionally required for the approved H1a estimand. Existing D3 results and
 the legacy bridge are descriptive; no confirmatory readability claim follows.
+
+TF-v1 timing-pilot note (5 Nov 2026): the base-logit cache key now uses the source content
+hash only (not git sha/dirty flag), because a mid-pilot commit otherwise orphaned and rebuilt an
+identical cache. Pilot results: see "TF-v1 timing pilot" in `docs/RESULTS.md`; its warm timing
+fails the council gate and the legacy bridge is between different item sets (descriptive).

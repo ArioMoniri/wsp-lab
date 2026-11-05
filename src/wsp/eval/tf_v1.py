@@ -156,7 +156,9 @@ def cache_kl(runner, texts, metadata):
 
     identity = (
         runtime_metadata(runner)
-        | provenance()
+        # Content hash only: git_sha/dirty change on every commit and would orphan a
+        # byte-identical cache (observed in the pilot: a duplicate 11 GB rebuild).
+        | {"source_hash": provenance()["source_hash"]}
         | {
             "model_revision": runner.revision,
             "generation": runner.generation,

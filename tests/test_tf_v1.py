@@ -86,6 +86,11 @@ def test_base_cache_is_greedy_reused_and_detects_corruption(tmp_path, monkeypatc
     monkeypatch.setattr(tf_v1, "last_logits", lambda *a: torch.zeros(3, 5))
     root, meta = tf_v1.cache_kl(runner, ["prompt"], {"revision": "pinned"})
     assert runner.model.calls == 1
+    monkeypatch.setattr(
+        batch, "provenance", lambda: {"source_hash": "fixed", "git_sha": "new", "dirty": True}
+    )
+    assert tf_v1.cache_kl(runner, ["prompt"], {"revision": "pinned"}) == (root, meta)
+    assert runner.model.calls == 1
     assert tf_v1.cache_kl(runner, ["prompt"], {"revision": "pinned"}) == (root, meta)
     assert runner.model.calls == 1
     data = torch.load(root / "0.pt", weights_only=True)
