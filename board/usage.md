@@ -231,4 +231,5 @@
 | 2026-11-05 | README refresh (reframed study) | claude_aio_gmail_api/claude-haiku-5-5 high | done 4e16e9a — merged; status counter fixed (389 evaluated) |
 | 2026-11-05 | Board A review feat/tf-v1 | claude_aio_gmail_api/claude-sonnet-5-5 high | REVISE (4 blocking: letter fallback, refusal tokens, item ranking/device default, cache verification); gate 1 FAILED (4.53 min); recommended KL 200×64 + HS 250 ≈ 1.5 min 49ad63f |
 | 2026-11-05 | Docs accuracy check: README after reframe | claude_aio_gmail_api/claude-haiku-5-5 medium | done aab3490 (114 claims, 18 fixed) — merged |
-| 2026-11-05 | eval: TF-v1 round 2 (blocking fixes, recommended config, re-pilot) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-05 | eval: TF-v1 round 2 | claude_aio_gmail_api/claude-sonnet-5-5 high | done 9013d76 (pilot 1.805 min/entry warm; agent ended before its report step, orchestrator committed it) — Board A re-review pending |
+| 2026-11-05 | Board A re-review feat/tf-v1 (merge + gate 1) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
