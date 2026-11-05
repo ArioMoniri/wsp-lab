@@ -64,7 +64,7 @@ Random-direction edits leave HellaSwag unchanged in every row, and their MMLU-Pr
 
 Each target is a 100-item accuracy with a binomial standard error of 0.045 for MMLU-Pro and 0.049 for HellaSwag at the base values. That is the error of one score. The item standard error of a paired change is a different quantity. For HellaSwag, the residual SD within family and device is 0.0131, below its item SE of 0.0136. For MMLU-Pro, the residual SD is 0.0384, above its item SE of 0.0246, so item sampling does not account for the MMLU-Pro spread ([discussion](paper/sections/discussion.tex) and [metrology output](docs/council/2026-11-05/metrology_budget_output.txt)).
 
-The repeat data do not amount to a noise estimate. The base model and ten control entries matched exactly on every metric when re-evaluated on the same device with a fixed seed. Across hosts, the mean absolute difference on 11 edited entries evaluated on the H100 was 0.008 on MMLU-Pro and 0.003 on HellaSwag. The seed-1 panel gives a seed SD of 0.0000 for the two likelihood-scored targets and between 0.0124 and 0.0504 for the five sampled targets. These repeats bound host disagreement on a few entries. They do not measure the reliability of either target across the suite.
+The repeat data give a partial noise estimate. The base model and ten control entries matched exactly on every metric when re-evaluated on the same device with a fixed seed. Across hosts, the mean absolute difference on 11 edited entries evaluated on the H100 was 0.008 on MMLU-Pro and 0.003 on HellaSwag. The seed-1 panel gives a seed SD of 0.0000 for the two likelihood-scored targets and between 0.0124 and 0.0504 for the five sampled targets. These repeats bound host disagreement on a few entries. They do not measure the reliability of either target across the suite.
 
 HellaSwag accuracy was retired at the second-round reliability gate, where its signal-variance estimate is negative ([round2-metrology](docs/council/2026-11-05/round2-metrology.md), section 1.4). A heuristic population correlation ceiling for MMLU gold-letter log-probability is 0.979 after family and device centering ([SYNTHESIS §1.5](docs/council/2026-11-05/SYNTHESIS.md)). That ceiling is a heuristic, not a measured reliability.
 
@@ -115,7 +115,7 @@ Anything over two minutes should go through `agent-tmux <name> <cmd>` on the lab
 
 ## What is not done
 
-Fast-tier scores exist for the D3 subset, and the protocol v2 suite uses them. The rest of the zoo is not scored. The status block shows 201 evaluated entries against 1,247 in the manifest.
+Fast-tier scores exist for the D3 subset, and the protocol v2 suite uses them. The rest of the zoo is not scored. The status block counts 389 entries with a complete fast-tier result (the 300-entry D3 subset plus 89 chain predecessors) against 1,247 manifest rows.
 
 Timing is measured for one entry only. A clean fast-tier run on one production abliteration entry took 745 s, about 12.4 minutes, on an otherwise idle local GPU. Extrapolating from that run gives about 62 hours for the 300-entry D3 subset and about 255 hours for the full zoo. Those are projections from a single timed entry, not measurements of either run ([RESULTS](docs/RESULTS.md), D2 timing section).
 
