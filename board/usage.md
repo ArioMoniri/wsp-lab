@@ -210,3 +210,8 @@
 | 2026-11-05 | Council R1 metrology CTO | claude_aio_gmail_api/claude-haiku-5-5 high | done 5063167 — merged |
 | 2026-11-05 | Council R1 strategy CTO | codex/gpt-6.1-sol high | done 3b05dc5 — merged |
 | 2026-11-05 | Council evidence: StatNN refit, importances, family variance, within-family skill | codex/gpt-6.1-sol medium | running |
+| 2026-11-05 | Council R2 (answer/challenge/revise): weight-reading | codex/gpt-6.1-sol high | running |
+| 2026-11-05 | Council R2: JEPAWG | codex/gpt-6.1-terra high | running |
+| 2026-11-05 | Council R2: features CTO | codex/gpt-6-luna high | running |
+| 2026-11-05 | Council R2: metrology CTO | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-05 | Council R2: strategy CTO | codex/gpt-6.1-sol high | running |
