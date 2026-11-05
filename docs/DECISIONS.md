@@ -343,3 +343,7 @@ TF-v1 timing-pilot note (5 Nov 2026): the base-logit cache key now uses the sour
 hash only (not git sha/dirty flag), because a mid-pilot commit otherwise orphaned and rebuilt an
 identical cache. Pilot results: see "TF-v1 timing pilot" in `docs/RESULTS.md`; its warm timing
 fails the council gate and the legacy bridge is between different item sets (descriptive).
+
+### TF-v1 panel status and cache (5 Nov 2026, Board A round 2 fixes)
+
+The TF-v1 MMLU-Pro (1,000), HellaSwag (500 ranking, 250 used) and KL/over-refusal prompt panels in `configs/eval_subsets/*_tf_v1.txt` are **development/pilot** panels (hash-ranked by sha256(item_id + salt), salt recorded in each file and in `configs/eval_tf_v1.yaml`). They were scored on D3 controls and are barred from the sealed confirmatory panel (PREREG_H1_TF §2), which is built later under the distinct `TF-v1:item:` domain. KL and over-refusal prompts are disjoint. Refusal margins score continuation phrases and remain non-reportable as a refusal measure until calibrated on a disjoint set. The base-logit cache is keyed on the scorer's identity (not the full source tree) and every KL record carries its content hash.
