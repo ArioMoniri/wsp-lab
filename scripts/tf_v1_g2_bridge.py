@@ -4,12 +4,12 @@
 PREREG_H1_TF section 6: the TF panels deliberately exclude the 300 legacy fast-tier items, so the
 pilot could not compare old and new scoring item by item. This script scores the first 100 ids of
 configs/eval_subsets/{mmlu_pro,hellaswag}.txt (exactly the fast tier's `n: 100`) with the TF-v1
-scorers (`wsp.eval.tf_v1.letter_scores`, `choice_record`; HellaSwag through the same
-`runner.choice_scores(..., True)` call) on the 11 pilot records (base + the ten D3 controls), then
+scorers (`wsp.eval.tf_v1.letter_scores`, `choice_record`; HellaSwag through the final batched
+`wsp.eval.tf_v1.hellaswag_scores`, amendment A2.4, four endings in one padded forward, so HellaSwag
+is no longer bitwise equal to the fast tier's batch-1 scores) on the 11 pilot records (base + the ten D3 controls), then
 compares each item with the fast-tier `records.jsonl` of the same entry.
 
-It lives under scripts/ so that `src/wsp` (and with it the TF-v1 `source_hash` the pilot references
-were measured on) is unchanged. Outputs: data/evals/<zoo>/tf_v1/bridge_g2/<entry>/records.jsonl and
+It lives under scripts/ so that it does not change the TF-v1 `source_hash` of `src/wsp`. Outputs: data/evals/<zoo>/tf_v1/bridge_g2/<entry>/records.jsonl and
 bridge_g2/g2_report.json.
 
 Usage: tf_v1_g2_bridge.py [--compare-only]
@@ -138,7 +138,7 @@ def read_jsonl(path):
 
 def score_entry(runner, edit_id):
     from wsp.eval.subsets import load_items
-    from wsp.eval.tf_v1 import choice_record, letter_scores
+    from wsp.eval.tf_v1 import choice_record, hellaswag_scores, letter_scores
 
     out = {}
     for name in ("mmlu_pro", "hellaswag"):
@@ -157,7 +157,7 @@ def score_entry(runner, edit_id):
                 gold = row["answer_index"]
             else:
                 context, choices, gold = row["ctx"], row["endings"], int(row["label"])
-                scores, token_ids = runner.choice_scores(context, choices, True), None
+                scores, token_ids = hellaswag_scores(runner, context, choices)[0], None
             record = choice_record(edit_id, name, item_id, scores, gold)
             record.extra.update(
                 prompt=context,

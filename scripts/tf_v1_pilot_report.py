@@ -26,7 +26,7 @@ def prefix_kl(records, length):
     return float(np.mean([np.mean(r["extra"]["position_kl"][:length]) for r in kl]))
 
 
-def report(load_probe=None, probe_id=None):
+def report(load_probe=None, probe_id=None, gate=(GATE_PASS, GATE_REVISE)):
     out = ZOO / "tf_v1"
     ids = ["base", *(ROOT / "data/runs/d3_shards/controls.txt").read_text().split()]
     rows, base_payload = [], None
@@ -95,12 +95,12 @@ def report(load_probe=None, probe_id=None):
         "median_entry_storage_bytes": float(np.median([r["storage_bytes"] for r in edits])),
         "median_records_bytes": float(np.median([r["records_bytes"] for r in edits])),
         "gate1": {
-            "pass_line_minutes": GATE_PASS,
-            "revise_line_minutes": GATE_REVISE,
+            "pass_line_minutes": gate[0],
+            "revise_line_minutes": gate[1],
             "status": "PASS"
-            if np.median(warm) <= GATE_PASS
+            if np.median(warm) <= gate[0]
             else "REVISE (reduce scope, re-pilot)"
-            if np.median(warm) <= GATE_REVISE
+            if np.median(warm) <= gate[1]
             else "FAIL (remove optional scope, re-pilot)",
         },
     }
