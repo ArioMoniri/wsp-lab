@@ -200,4 +200,5 @@
 | 2026-11-05 | P4 round 2c | codex/gpt-6.1-sol medium | done a0864e0 (498 tests; (a) 102 / (b) 0; repeat-self identical) — final review pending |
 | 2026-11-05 | Board B re-review paper/reliability | codex/gpt-6.1-terra medium | APPROVE (4/3/4/4) — merged |
 | 2026-11-05 | Board A final re-review feat/p4-round2 | codex/gpt-6.1-terra medium | APPROVE 991a437 — merged; rerun must label the new protocol |
-| 2026-11-05 | Board A forensic: rebuilt heretic_ara entries (KL 0.8–14, norms to 1.7e10) | codex/gpt-6.1-sol high | running |
+| 2026-11-05 | Board A forensic: rebuilt heretic_ara entries | codex/gpt-6.1-sol high | REVISE: no KL target → refusals-first selection; norms = surrogate/deployment scale mismatch; rebuild with target 0.5 + Pareto rule 9940f1a |
+| 2026-11-05 | zoo: heretic_ara selection fix + diagnostic flag | codex/gpt-6.1-sol high | running |
