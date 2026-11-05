@@ -220,4 +220,5 @@
 | 2026-11-05 | eval: TF-v1 teacher-forced tier + 10-entry timing pilot (gate 1) | codex/gpt-6.1-sol high | running |
 | 2026-11-05 | Chair revision: PREREG_H1_TF.md, HYPOTHESIS/ROADMAP amendments | codex/gpt-6.1-sol high | done dc6224a — merged (Board A sign-off pending on measured items) |
 | 2026-11-05 | Scribe: paper v2 results, reframing | claude_aio_gmail_api/claude-haiku-5-5 high | done 6159a5c (13 pages) — humanizer/copy-edit next |
-| 2026-11-05 | Humanizer + copy edit paper/v2-results (title, tense, feature counts, PREREG ref) | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-05 | Humanizer + copy edit paper/v2-results | claude_aio_gmail_api/claude-haiku-5-5 high | done f7edf8d (+acd9673 registration wording) — Board B next |
+| 2026-11-05 | Board B review paper/v2-results | codex/gpt-6.1-terra medium | running |
