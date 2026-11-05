@@ -1,4 +1,27 @@
-# Roadmap (cut as of 3 Nov 2026)
+# Roadmap — adopted programme, 5 November 2026
+
+This programme supersedes conflicting historical phases below. TF-v1 yes; core ≤30 local GPU-h; additional history no; new Lambda $0. Existing A10 liability remains open. [Frozen registration](PREREG_H1_TF.md) controls all gates. None is checked by this design revision; Board A remains REVISE pending evidence.
+
+| Date (2026) | Deliverable / owner | Required gate |
+|---|---|---|
+| **6 Nov** | Ten-entry pilot / Eval, Metrology, ledger owner | Inventory/source/item freeze before TF scoring; measured cold/warm/reference/retry/closure overhead; median≤2 min and full projected scope fits remaining 19-h scoring/30-h core caps. Reconcile A10 bill/liability. Reprice optional scope/re-pilot or stop if it cannot fit. |
+| **7 Nov** | Legacy bridge / Eval, Metrology | 100 legacy items; median≤.02 nats, p99≤.2, argmax≥99%; failure versions endpoint/rebuilds matched references. Independently measured repeat/device/uncertainty gates in registration §6; bridge alone is insufficient. |
+| **8–11 Nov** | Qualified fresh panel / Zoo, Metrology | Hash-ranked 110-candidate LoRA/task inventory plus chain closure, ≥100 genuinely fresh source components, disjoint 1,000-item primary; measured reliability lower bound≥.90 and paired uncertainty upper bounds≤δ/2. Certify provenance/device support, quarantine, missingness and all ancestors. |
+| **12–13 Nov** | Residual estimand / Predictor, Metrology | D3-only fixed pipeline, three prediction-averaged seeds, pre-unsealing TF-specific ≥80% power and qualification; once-only sealed H1a, paired/joint 4,000-replicate CIs, θ≥.15/lower>0/half-width≤θ/2. Missing gates mean untested; Board A acceptance pending means exploratory. |
+| **14–16 Nov** | Directional screen / Features | Candidate frozen before H1a unsealing; D3-only development and matched tree/destroyed-frame controls. +.05 residual-rank and ≥5% MAE continuation screen, not powered falsifier. Sealed H1b descriptive only; no fresh-label feature development. |
+| **17–18 Nov** | History census / Modeling, Metrology | Additional 10 h declined: cached closure/cost/design only, no history compute. Future mask/shuffle study needs separate funding, TF power and length-one CI inside ±.05 equivalence margin. |
+| **19 Nov** | Report freeze / Chair | All outcomes/exclusions, per-cell baseline/collapse audit, manifests, actual spend and unresolved gates. Stop at cap, no automatic extension. |
+
+- [ ] Pilot timing, measured provenance and bill reconciliation.
+- [ ] Bridge and prospective measured qualification.
+- [ ] Source/item manifests, frozen models and TF-specific power.
+- [ ] Once-only H1a and descriptive directional screen.
+- [ ] Cached history census and final claim/budget report; H2 compute parked.
+
+Budget: 19.00 scoring +4.22 cache repair +2.11 directional extraction +2.00 fits +2.67 reserve = **30.00 local GPU-h**, all overhead included. TF 1–2 min and directional 33 s remain unmeasured assumptions. [Registration §9](PREREG_H1_TF.md#9-budget-reconciliation-and-scaling-stop) reconciles allocations and $95.71 closed Lambda spend plus the unresolved A10 bill. Measurement/benchmark work is an accepted outcome. Later powered H2/H3 are needed for dynamics/transfer; H4–H6 remain parked under [HYPOTHESIS](HYPOTHESIS.md).
+
+## Historical roadmap — 3–4 November (preserved, not current authorization)
+
 
 Gates are pass/fail. A phase is done when its DoD (`docs/DOD.md`) is met and its gate script is green.
 
