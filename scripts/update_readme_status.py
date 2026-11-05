@@ -86,7 +86,17 @@ def eval_counts(root: Path) -> dict | None:
             ids.add(row.get("edit_id"))
             if row.get("eval_status") == "complete":
                 complete.add(row.get("edit_id"))
-    return {"rows": rows, "entries": len(ids), "complete_entries": len(complete)}
+    # The index only records entries evaluated on this host; entries pulled back from other devices land as
+    # <zoo>/<id>/eval.json without an index row, so count the artefacts themselves as the source of truth.
+    zoo_complete = 0
+    for ev in (root / "data" / "zoo").glob("*/*/eval.json"):
+        try:
+            import json as _json
+            if _json.loads(ev.read_text()).get("eval_status") == "complete":
+                zoo_complete += 1
+        except Exception:
+            continue
+    return {"rows": rows, "entries": max(len(ids), zoo_complete), "complete_entries": max(len(complete), zoo_complete)}
 
 
 def base_summary(root: Path) -> dict | None:
