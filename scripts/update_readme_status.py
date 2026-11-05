@@ -92,11 +92,16 @@ def eval_counts(root: Path) -> dict | None:
     for ev in (root / "data" / "zoo").glob("*/*/eval.json"):
         try:
             import json as _json
+
             if _json.loads(ev.read_text()).get("eval_status") == "complete":
                 zoo_complete += 1
         except Exception:
             continue
-    return {"rows": rows, "entries": max(len(ids), zoo_complete), "complete_entries": max(len(complete), zoo_complete)}
+    return {
+        "rows": rows,
+        "entries": max(len(ids), zoo_complete),
+        "complete_entries": max(len(complete), zoo_complete),
+    }
 
 
 def base_summary(root: Path) -> dict | None:

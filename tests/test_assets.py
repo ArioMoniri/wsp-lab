@@ -81,10 +81,12 @@ def test_lottie_is_portable_four_second_bodymovin():
 
 def test_generator_reproduces_both_assets(tmp_path):
     import pytest
-    from matplotlib.font_manager import findfont, FontProperties
+    from matplotlib.font_manager import FontProperties, findfont
 
     # The generator outlines text with Liberation Sans; without that font the glyph paths differ byte for byte.
-    if "Liberation" not in findfont(FontProperties(family="Liberation Sans"), fallback_to_default=True):
+    if "Liberation" not in findfont(
+        FontProperties(family="Liberation Sans"), fallback_to_default=True
+    ):
         pytest.skip("Liberation Sans not installed (CI installs fonts-liberation)")
 
     with pytest.raises(SystemExit) as exc:
