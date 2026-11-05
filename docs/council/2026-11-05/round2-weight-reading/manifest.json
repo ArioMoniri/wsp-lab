@@ -1,0 +1,41 @@
+{
+  "artifact": "../round2-weight-reading.md",
+  "artifact_sha256": "936c8bbc572e4e07b589d5fd474906f5f50293b409eab8bc9e836339ce76eefd",
+  "seed": null,
+  "seed_note": "No stochastic experiment executed; seeds in config are prospective.",
+  "config": {
+    "kind": "round2-research-review",
+    "external_execution": false,
+    "new_gpu_jobs": false,
+    "proposal_seeds": [
+      0,
+      1,
+      2
+    ]
+  },
+  "config_hash": "94acdf72101f1eb8322cc6866f35d9aeae88fce69e403a6f076ea6edd4ff18d3",
+  "git_sha": "920771e905ec519b7bb05efb58508f097a395649",
+  "model_revisions": {
+    "scope": "No model loaded; base revisions must be frozen before proposed experiments.",
+    "round1_provenance": "../manifest.json"
+  },
+  "inputs_sha256": {
+    "docs/council/2026-11-05/BRIEF.md": "c1686948a6971b1d4af051e3ccde404f9d41561b784ade2b432cfbb35b8a15f0",
+    "docs/council/2026-11-05/evidence-statnn-importances.csv": "04865f970828af5ba06cc4c2ccf0c481aeaf3665a717dacce6ad5bed6499da96",
+    "docs/council/2026-11-05/evidence-statnn-importances.md": "e9145fe4c482195dd5cc4d5f636287f4c9596850b778f4963e2f4aed53c84a27",
+    "docs/council/2026-11-05/manifest.json": "637add38987300fa78363235e6fb45d0fe97eb69b4ed0afbcb5fdb14325ae801",
+    "docs/council/2026-11-05/metrology_budget.py": "11c15eecfa9ae614ecb79eb7b40d279604051276218ec2bf9ff71185c118e627",
+    "docs/council/2026-11-05/metrology_budget_output.txt": "c50139553e2c10c29a2e9e348a9fede37c8307780e2d6f42d94f58132f2d3b40",
+    "docs/council/2026-11-05/round1-features.md": "501371ad401187d753ccffc8c046bce9ac7426a8791372f2b9fe13889059f670",
+    "docs/council/2026-11-05/round1-jepawg.md": "9be5c30523dfb110143b818f490a72dce8530d6d66c2911ecb67b2e0786fb328",
+    "docs/council/2026-11-05/round1-metrology.md": "452261e31bf4ef3f0d7ef10e70927a6be8c840a6bfba71f92840d1f17079c7f7",
+    "docs/council/2026-11-05/round1-strategy.md": "1c7e11e049d156ca8740bced83e4895c376ee287019dadf68ad0fb65d75b03d2",
+    "docs/council/2026-11-05/round1-weight-reading.md": "8a65ecd787aefe20103c65476612db8ca98721520b2cd6a07db1dcf66858b700",
+    "docs/council/2026-11-05/statnn_evidence.py": "3dbcc3368d92ce25bbe0ca2dd4745f9287950b47b0a13491c817e2f479a7b1a4",
+    "docs/council/2026-11-05/strategy_audit.py": "04ca56b64a0b319296ef47448c88c01c7dfb49d8ac444a2e3a11a04826c1a7c6"
+  },
+  "refetched_primary_sources": [
+    "https://raw.githubusercontent.com/RikiyaT/lm_understand-logs/main/exp3_language/README.md",
+    "https://raw.githubusercontent.com/RikiyaT/lm_understand-logs/main/exp7_sycophancy/README.md"
+  ]
+}
