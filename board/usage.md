@@ -224,8 +224,9 @@
 | 2026-11-05 | Board B review paper/v2-results | codex/gpt-6.1-terra medium | REVISE (5: causal/noise claims, registration status, title scope, ARA exclusion, full numeric audit) 22e022a |
 | 2026-11-05 | Scribe round 2 paper/v2-results | claude_aio_gmail_api/claude-haiku-5-5 high | done 76d2778 (audit: 673 values, 0 mismatches; 14 pages) — Board B re-review next |
 | 2026-11-05 | eval: TF-v1 tier | codex/gpt-6.1-sol high | FAILED: Codex usage limit reached until 6 Nov 21:10 UTC → rerouted to Claude API sonnet |
-| 2026-11-05 | eval: TF-v1 tier (handoff from Codex) + timing pilot | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-05 | eval: TF-v1 tier + timing pilot | claude_aio_gmail_api/claude-sonnet-5-5 high | done dfac7e8 (526 tests; 4.53 min/entry warm — gate 1 not met, KL dominates) — Board A review pending |
 | 2026-11-05 | Board B re-review paper/v2-results | claude_aio_gmail_api/claude-sonnet-5-5 high | REVISE narrow (R1–R5; scores 3/3/3/4) e4c6468 |
 | 2026-11-05 | Scribe round 3 paper/v2-results (R1–R5) | claude_aio_gmail_api/claude-haiku-5-5 high | done 8390815 (audit 723/0; 15 pages) — Board B final |
 | 2026-11-05 | Board B final check paper/v2-results | claude_aio_gmail_api/claude-sonnet-5-5 medium | APPROVE 1a92d93 (2 wording items fixed by orchestrator 4801903) — merged |
 | 2026-11-05 | README refresh (reframed study) | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-05 | Board A review feat/tf-v1 + gate-1 item cuts | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
