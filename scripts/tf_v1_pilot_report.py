@@ -17,9 +17,7 @@ GATE_PASS, GATE_REVISE = 2.0, 3.0  # minutes, PREREG_H1_TF section 9
 
 def load(directory):
     payload = json.loads((directory / "eval.json").read_text())
-    records = [
-        json.loads(line) for line in (directory / "records.jsonl").read_text().splitlines()
-    ]
+    records = [json.loads(line) for line in (directory / "records.jsonl").read_text().splitlines()]
     return payload, records
 
 
@@ -65,7 +63,12 @@ def report(load_probe=None, probe_id=None):
         )
     edits = rows[1:]
     warm = [r["wall_minutes"] for r in edits if r["cache_mode"] == "resident"]
-    cache_dir = ZOO / "base/tf_cache" / base_payload["eval_device_id"] / base_payload["tf_cache"]["cache_hash"]
+    cache_dir = (
+        ZOO
+        / "base/tf_cache"
+        / base_payload["eval_device_id"]
+        / base_payload["tf_cache"]["cache_hash"]
+    )
     cache_bytes = sum(p.stat().st_size for p in cache_dir.rglob("*") if p.is_file())
     stages = sorted({k for r in edits for k in r["stage_seconds"]})
     result = {
@@ -158,7 +161,7 @@ def markdown(result):
         "",
         f"Storage: median {result['median_entry_storage_bytes'] / 2**20:.2f} MiB per entry (records {result['median_records_bytes'] / 2**20:.2f} MiB, including per-position KL); shared base-logit cache {result['cache_bytes'] / 2**30:.2f} GiB on disk (manifest bytes {result['cache_manifest_bytes'] / 2**30:.2f} GiB, {len(rows[0]['kl_prefix'])} prefix lengths recorded), content root `{result['base_logits_sha256'][:16]}…` recorded in every KL record, datasets and eval.json. Peak GPU allocated {max(r['peak_gpu_allocated_gib'] for r in rows):.2f} GiB with the resident cache.",
         "",
-        f"Mean per-prompt KL(base‖edited) by continuation prefix length across the ten edits (descriptive; for choosing the token cap): "
+        "Mean per-prompt KL(base‖edited) by continuation prefix length across the ten edits (descriptive; for choosing the token cap): "
         + ", ".join(
             f"{n} tokens: median entry value {np.median([r['kl_prefix'][n] for r in rows[1:]]):.5f}"
             for n in (16, 32, 64)
