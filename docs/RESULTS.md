@@ -239,3 +239,26 @@ Mean per-prompt KL(base‖edited) by continuation prefix length across the ten e
 Not run: G1 bitwise repeat on two entries, same-item G2 bridge, G3 second device, the §6 ten-entry composition (these are the ten D3 controls: 3 random-direction, 3 abliteration, 2 LoRA, 2 task-vector), and the reliability procedure. Endpoints remain unqualified.
 
 Reading and caveats (round 2). Gate 1 passes on the 2.0 min line (warm median 1.805 min) but not with the margin Board A asked for (target ≤1.8 min): at 1.805 min, 552 runs cost about 16.6 h of the 19.0 h scoring cap, leaving about 2.4 h for cold bases, retries and qualification repeats, so the full programme must still be repriced before scaling. The warm time is dominated by MMLU-Pro (35 s), HellaSwag (37 s) and the two refusal stages (12 s each; 13 continuation phrases, 7 forwards per prompt); KL is now 7.7 s because the cache is resident. The cache costs 47 s to load and verify in each new process (not per entry) and about 4.4 min to build cold. Refusal margins are phrase-scored but still uncalibrated and descriptive. The repeat of one entry in a separate process reproduced all records exactly; this is one observation, not the two-entry G1 test. Round-1 caches `5a5159df…` and `bd82d791…` (content-identical) were deleted after this cache was built and verified; the alias is recorded in `tf_v1_round1_archive/cache_alias.json`.
+
+## TF-v1 G1 (bitwise repeat on the PREREG section 6 composition)
+
+Date 5 Nov 2026, device H0 (RTX PRO 4500), batch 1, greedy, committed source (`source_hash` 12ee875a68c9, identical to the timing pilot; branch `feat/tf-v1-prepanel` @ 3b66f30 for the primary pass, @ c192f82 for the repeat pass, tree clean in both, `dirty: false` in every eval.json). Panel status: development.
+
+**Composition.** PREREG §6 fixes the ten-entry composition by rule (4 LoRA: two nearest the median legacy KL of the D3-evaluated lora_sft entries and the two largest; 3 chains with >= 4 nodes; 2 task-vector; 1 largest-KL abliteration; unspecified choices and ties by sorted ID), it does not leave it to the ten D3 controls, which have no chain and no 4-node lineage and are therefore not used for G1. The rule is implemented in `scripts/tf_v1_qualification_panel.py` and the result is committed at `docs/prereg/qualification_panel.json`. Legacy KL (fast tier) selects this development pilot only.
+
+| Group | Entries |
+|---|---|
+| LoRA, nearest median legacy KL (median 0.0413) | `2f61a4086395b719`, `b5d0ac5d76c3cad6` |
+| LoRA, largest legacy KL | `d7f933d3b4e5d25e`, `c3ae3e8c8edca6b8` |
+| Chain, step >= 3 (4th node or later), distinct lineages | `0027efdf2eae7405`, `00f8111cbad8218f`, `057dcfbedea3251f` |
+| Task vector | `023b384a7799a787`, `02a1b5e21971290f` |
+| Abliteration, largest legacy KL | `5c766ee2fa8bf915` |
+| Chain predecessors (scoring references, needed for the predecessor-relative endpoint) | `b7edbb9f8b339f52`, `34ee195e55227908`, `86ea1fe0ec777cf8` |
+
+The predecessor-relative MMLU endpoint needs each chain entry's actual predecessor, so G1 covers 13 entries plus the base (14 repeats). All 13 were scored in a new process (cache loaded and verified once, base reused from the pilot run `20261105-144427-fb58ffe6`, matched by the registered reference keys, `matched_base_missing: false`), then re-executed in a second fresh process as `repeats/g1` (immutable run directories, a new run id, the base re-executed and paired in the same process, cache verified again). Cache modes: `load` for the first entry of each process, `resident` after.
+
+**Result: all 14 repeats are bitwise-identical to their primaries.** Complete `records.jsonl` equality (all 1,614 records per entry, every benchmark and field) holds for every entry; maximum absolute differences over all entries are exactly 0 for the MMLU-Pro gold log-prob and option log-probs (1,000 items), HellaSwag scores (250), per-prompt and per-position KL (200 x 64), WikiText mean NLL (64 windows) and refusal / over-refusal phrase margins (50 + 50). Limits registered in §6 are 1e-4 nats (MMLU, log-PPL) and 1e-5 (KL): met with zero discrepancy. Report: `data/evals/qwen3.5-0.8b/tf_v1/g1_report.json` (`scripts/tf_v1_g1_report.py`).
+
+Both resident-cache and fresh-load modes are covered (the primary pass loaded the cache for its first entry; the repeat pass loaded it for the base). Warm wall time per entry in these runs was 1.77 to 1.94 min (median 1.80 min for the repeat pass) except where the delta-hashing job for the sealed partition read 255 GB from the same disk (primary-pass entries up to 1.94 min, first-entry cache loads 43 s and 217 s). The timing pilot, not this run, is the gate-1 measurement.
+
+What G1 does not show: it is same-device repeat determinism on H0 (single device; see the D2 addendum "H0 is the sole scoring device"), not cross-device, cross-batch-size or cross-driver agreement, and it qualifies no endpoint by itself (reliability and delta/2 gates are in `docs/reviews/P5/tf-v1-qualification-2026-11-05.md`).

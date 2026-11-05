@@ -1,0 +1,81 @@
+{
+  "chain_lengths": {
+    "0027efdf2eae7405": 5,
+    "00f8111cbad8218f": 4,
+    "057dcfbedea3251f": 7
+  },
+  "chain_predecessors": [
+    "b7edbb9f8b339f52",
+    "34ee195e55227908",
+    "86ea1fe0ec777cf8"
+  ],
+  "chain_steps": {
+    "0027efdf2eae7405": 4,
+    "00f8111cbad8218f": 3,
+    "057dcfbedea3251f": 5
+  },
+  "composition": {
+    "abliteration_largest": [
+      "5c766ee2fa8bf915"
+    ],
+    "chain": [
+      "0027efdf2eae7405",
+      "00f8111cbad8218f",
+      "057dcfbedea3251f"
+    ],
+    "lora_largest": [
+      "d7f933d3b4e5d25e",
+      "c3ae3e8c8edca6b8"
+    ],
+    "lora_nearest_median": [
+      "2f61a4086395b719",
+      "b5d0ac5d76c3cad6"
+    ],
+    "task_vector": [
+      "023b384a7799a787",
+      "02a1b5e21971290f"
+    ]
+  },
+  "entries": [
+    "2f61a4086395b719",
+    "b5d0ac5d76c3cad6",
+    "d7f933d3b4e5d25e",
+    "c3ae3e8c8edca6b8",
+    "0027efdf2eae7405",
+    "00f8111cbad8218f",
+    "057dcfbedea3251f",
+    "023b384a7799a787",
+    "02a1b5e21971290f",
+    "5c766ee2fa8bf915"
+  ],
+  "legacy_kl": {
+    "0027efdf2eae7405": 0.01558734107762575,
+    "00f8111cbad8218f": 0.0023575186100788415,
+    "023b384a7799a787": 0.003766708264593035,
+    "02a1b5e21971290f": 0.00697782757692039,
+    "057dcfbedea3251f": 0.345106198489666,
+    "2f61a4086395b719": 0.04033303659409285,
+    "5c766ee2fa8bf915": 0.01942333297803998,
+    "b5d0ac5d76c3cad6": 0.042340715192258356,
+    "c3ae3e8c8edca6b8": 0.20564738899469376,
+    "d7f933d3b4e5d25e": 0.20892715319991112
+  },
+  "lora_median_legacy_kl": 0.0413368758931756,
+  "panel": "development",
+  "rule": "Derive the PREREG_H1_TF section 6 ten-entry qualification composition (development only).\n\nRule (PREREG section 6, \"metrology's ten-entry rule\"; unspecified choices and ties sorted by ID):\n  4 LoRA   two nearest the median legacy KL of the D3-evaluated lora_sft entries, two largest;\n  3 chains three D3-evaluated chain entries from distinct lineages, each at step >= 3 (>= 4 nodes\n           counting the lineage root), the first three by sorted ID;\n  2 task   the first two D3-evaluated task_vector entries by sorted ID;\n  1 abliteration  the D3-evaluated abliteration entry with the largest legacy KL.\nLegacy KL is the fast-tier `kl_full_sequence_mean` and selects this development pilot only, never\nthe fresh panel. The predecessor-relative endpoint needs each chain entry's actual predecessor, so\nthose three parents are listed separately as scoring references (13 entries in total).\n\nPREREG leaves the composition to this rule rather than to the ten D3 controls\n(data/runs/d3_shards/controls.txt: 3 random-direction, 3 abliteration, 2 LoRA, 2 task-vector, no\nchain), so the controls are not used for G1.",
+  "score_ids": [
+    "2f61a4086395b719",
+    "b5d0ac5d76c3cad6",
+    "d7f933d3b4e5d25e",
+    "c3ae3e8c8edca6b8",
+    "0027efdf2eae7405",
+    "00f8111cbad8218f",
+    "057dcfbedea3251f",
+    "023b384a7799a787",
+    "02a1b5e21971290f",
+    "5c766ee2fa8bf915",
+    "b7edbb9f8b339f52",
+    "34ee195e55227908",
+    "86ea1fe0ec777cf8"
+  ]
+}
