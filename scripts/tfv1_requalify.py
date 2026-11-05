@@ -23,9 +23,18 @@ ln R, R = sum A / sum B, 4,000 draws, linearised cluster-robust se), the BCa fal
 percentile interval reported alongside, for the conditional (component) and the joint (component x
 item) procedures. Scenarios: empirical, item-noise inflated, cluster-merged. A pass is declared only at
 the registered scale (4,000 panels x 4,000 draws, both procedures); smaller runs are labelled
-INDICATIVE. Writes docs/reviews/P5/tf-v1-requalification-<date>.md and
+INDICATIVE. Cost: about 2.5 CPU-s per joint panel at 4,000 draws (the conditional world is ~0.5 s);
+the registered scale is 8 simulation cells x 4,000 joint panels, about 22 CPU-h, i.e. about 3 h with
+`--workers 8` once the D3 scoring has finished. A quick check: `--panels 200 --joint-panels 40
+--draws 400`. Writes docs/reviews/P5/tf-v1-requalification-<date>.md and
 data/runs/h1a/requalification_report.json.
 """
+
+import os
+
+# one BLAS thread per process: parallelism comes from --workers (set before numpy loads)
+for _var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ.setdefault(_var, "1")
 
 import argparse
 import hashlib
@@ -907,6 +916,14 @@ def render(report):
             f"**Status: {v['status']}.** Simulation scale: {g['panels']} conditional panels, {g['joint_panels']} joint panels, {g['draws']} bootstrap draws (registered: 4,000 / 4,000 / 4,000). Interval chosen on simulated data: `{v['method_chosen']}`.\n",
             f"D3 fit: {g['fit']['n_rows']} development rows ({g['fit']['n_stratum']} stratum + {g['fit']['n_null']} null-family controls), five inner folds, StatNN seeds 0,1,2 averaged before the loss, isotonic on incremental norm. "
             f"Empirical OOF row-summed ratio on the stratum rows: theta_hat = {fmt(g['fit']['theta_hat_stratum'])}; n_eff = {fmt(g['fit']['n_eff'])}; top-five component share of sum B = {fmt(g['fit']['top5_share'])}.\n",
+            "A2.1 (iv) leave-out sensitivity of the empirical OOF ratio theta = 1 - sum A / sum B (descriptive; the rows with h_i > delta/2 for either endpoint are left out):\n",
+            "| Rows | theta_hat | conditional bootstrap-t | joint bootstrap-t | conditional BCa | joint BCa |",
+            "|---|---:|---|---|---|---|",
+            *[
+                f"| {label} | {fmt(v['theta_hat'])} | [{fmt(v['conditional_bootstrap_t'][0])}, {fmt(v['conditional_bootstrap_t'][1])}] | [{fmt(v['joint_bootstrap_t'][0])}, {fmt(v['joint_bootstrap_t'][1])}] | [{fmt(v['conditional_bca'][0])}, {fmt(v['conditional_bca'][1])}] | [{fmt(v['joint_bca'][0])}, {fmt(v['joint_bca'][1])}] |"
+                for label, v in g["fit"]["leave_out_sensitivity"].items()
+            ],
+            "",
             "| Scenario | theta (true) | procedure | method | rejection | power lower 95% | coverage | mean half-width | P(decision pass) | denom. failures |",
             "|---|---:|---|---|---:|---:|---:|---:|---:|---:|",
         ]
