@@ -38,3 +38,10 @@ the upload step enumerates artefacts on disk; the ids file only says what to com
 `scripts/wt.sh merge` failed (dirty README.md in the main checkout) and the chained `wt.sh rm` deleted the branch
 anyway; the commit was recovered from its hash. Rule: merge, verify the merge commit exists, then remove; `wt.sh merge`
 should refuse to run with a dirty main checkout (TODO).
+
+## 2026-11-05 — test a process gate before trusting it; never pkill a pattern your own shell contains
+`pgrep -f "a\|b"` never matched (ERE treats `\|` as a literal bar), so the queued seed-1 panel and the protocol-v2
+suite started 3 h early on a saturated GPU (the panel crashed with the model left on CPU). Separately, a
+`pkill -f wsp.predictor.train` killed the orchestrator's own shell because the pattern appeared in its command
+line. Rules: run the gate expression by hand and confirm it blocks; use `pgrep -fc "<fixed string>"`; kill by PID
+from `pgrep -f "patt[e]rn"` (bracket trick) so the caller's own command line cannot match.
