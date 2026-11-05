@@ -216,4 +216,7 @@
 | 2026-11-05 | Council R2: metrology CTO | claude_aio_gmail_api/claude-haiku-5-5 high | done — merged |
 | 2026-11-05 | Council R2: strategy CTO | codex/gpt-6.1-sol high | done — merged |
 | 2026-11-05 | Council chair synthesis | codex/gpt-6.1-sol high | done 90234e8 — merged (docs/council/2026-11-05/SYNTHESIS.md) |
-| 2026-11-05 | Board A critique: council synthesis + protocol-v2 suite | codex/gpt-6.1-terra high | running |
+| 2026-11-05 | Board A critique: council synthesis + protocol-v2 suite | codex/gpt-6.1-terra high | v2: H1 not demonstrated, H2/H3 undetermined; synthesis REVISE (4 blocking) 21d94ec |
+| 2026-11-05 | eval: TF-v1 teacher-forced tier + 10-entry timing pilot (gate 1) | codex/gpt-6.1-sol high | running |
+| 2026-11-05 | Chair revision: PREREG_H1_TF.md, HYPOTHESIS/ROADMAP amendments | codex/gpt-6.1-sol high | running |
+| 2026-11-05 | Scribe: paper v2 results, baseline-exploits subsection, reframing | claude_aio_gmail_api/claude-haiku-5-5 high | running |
