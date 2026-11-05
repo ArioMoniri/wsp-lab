@@ -12,7 +12,7 @@ default:
   image: nvidia/cuda:13.2.0-runtime-ubuntu24.04
   tags: [t3, gpu]            # runner tags set at registration (adjust via scripts/ci-register)
   before_script:
-    - apt-get update -qq && apt-get install -y -qq python3.12 python3.12-venv curl git >/dev/null
+    - apt-get update -qq && apt-get install -y -qq python3.12 python3.12-venv curl git fonts-liberation >/dev/null
     - curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH=$HOME/.local/bin:$PATH
     - uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -e ".[dev]" -q
     - . .venv/bin/activate

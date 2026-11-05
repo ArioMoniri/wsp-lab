@@ -39,6 +39,7 @@ serve = ["vllm"]
 [tool.pytest.ini_options]
 addopts = "-m 'not gpu and not slow and not net'"
 testpaths = ["tests"]
+pythonpath = ["."]
 timeout = 600
 markers = ["gpu: needs CUDA", "slow: long-running", "net: needs network/HF"]
 [tool.ruff]
