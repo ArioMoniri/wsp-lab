@@ -128,3 +128,19 @@ evaluates the base model. First Lambda attempt lost its log by self-terminating 
 harness/lessons.md); the job now keeps failed instances and uploads the log. The P4 training path was exercised on real
 v4 features with the 48 targets available so far (`data/runs/p4/smoke-m1-realdata`, M1, family split, 5 folds): a
 data-path check only, no claims from it. Gemma 3 270M (both variants) downloaded with the official licence.
+
+**H5 council, P4 first suite, reliability section (4 Nov 14:15 – 5 Nov 00:20 UTC).** User asked whether the blog's
+Experiment 8 (an editor LLM improving Qwen3.5-0.8B by hand-editing weights) can be reproduced by our agents. Council
+wave: researcher (protocol extracted, docs/H5_RESEARCH.md), Board C design (docs/H5_DESIGN.md), Board A
+pre-registration + noise qualification, Board B reporting requirements; synthesis in docs/H5_PROTOCOL.md. Editor
+harness implemented and merged after three Board A rounds (482 tests; production disabled; pilot preconditions in
+GitHub issue 31). Eval reliability fixes merged after five rounds (same-device references, immutable repeats,
+reliability statistics, labelled backfill). D3 subset completed on three hosts (300/300; H100 $38.33, A10 $11.48).
+Same-host retest bit-identical; three-device control panel in docs/RESULTS.md. First P4 suite: Board A REVISE, H1 not
+demonstrated (M2 ρ .54/.49 vs StatNN .61/.67 on the trajectory split; family-split negatives are family offsets).
+P4 round 2 (nested selection, fold-mean/delta-norm/descriptor/device baselines, per-family centred metrics,
+ancestry-cluster paired bootstrap, multi-seed) merged after three rounds with the 102 intended numeric changes
+documented in DECISIONS. Paper: reliability subsection and experiments.tex corrections merged after scribe →
+humanizer → Board B (APPROVE, claims 4/5; 10 pages). ESM protein-LM idea assessed by Boards A and C: do later
+(P4c). Queued (tmux p4-after-chainpred): 89 chain predecessors (running, 3 workers) → seed-1 repeat panel →
+P4 suite v2 (d3v2-*). ARA rebuild on Lambda at 8/12.
