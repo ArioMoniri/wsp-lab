@@ -60,7 +60,7 @@ Run under tmux `post-zoo` (log `~/agent-logs/post-zoo-20261104-053857.log`), ent
 **745 s = 12.4 min per entry** for the fast tier (gsm8k 50 / math500 25 / ifeval 25 / mmlu_pro 100 / hellaswag 100 /
 refusal 50 / kl 50, max_new_tokens 1024, batch 32, HF generate). First edited-entry scores (percent): GSM8K 14.0,
 MATH-500 8.0, IFEval 44.0, MMLU-Pro 28.0, HellaSwag 39.0, refusal 100, KL-to-base 0.001, loop rate 100.
-Projection: D3 subset (300 entries) ≈ 62 h on this GPU with the HF path; full zoo ≈ 255 h. The throughput
+Projection: D3 subset (300 entries) ≈ 62 h on this GPU with the HF path; all 1,247 manifest rows ≈ 258 h (1,247 × 745 s). The throughput
 benchmark (HF static cache vs vLLM) runs next and decides the engine; Lambda A100 is the fallback once the ARA family ends.
 
 ## P2 — Engine throughput (docs/BENCH_EVAL.md, branch perf/eval-throughput 73f1419)
