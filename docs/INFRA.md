@@ -60,3 +60,7 @@ Set `~/.config/wsp/device_id` outside the repository to an opaque `H<number>` id
 Absent files default to `H0`; allocate distinct IDs privately before cross-device runs.
 Only the opaque ID and GPU class enter evaluation artifacts. Keep the mapping to actual
 infrastructure private; do not put hostnames or instance IDs in this file or artifacts.
+
+- Canonical data directory (6 Nov 2026, D8): `/home/ubuntu/wsp-data`, outside the git checkout; `data/` in the
+  checkout and in every worktree is a symlink to it. The pre-commit hook refuses any staged path matching `^data($|/)`
+  and `wt.sh merge` refuses branches that touch it. No backup yet covers it (policy pending the user's approval).

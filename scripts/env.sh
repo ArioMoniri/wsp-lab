@@ -7,3 +7,6 @@ export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH="$WSP_ROOT/src:${PYTHONPATH:-}"
 [ -f "$HOME/.config/wsp/env" ] && set -a && . "$HOME/.config/wsp/env" && set +a
 export PATH="$WSP_CANON/.venv/bin:$HOME/.local/bin:$PATH"
+
+# Canonical data lives outside the checkout since the 6 Nov 2026 incident (D8); data/ in the checkout is a symlink.
+export WSP_DATA_ROOT="${WSP_DATA_ROOT:-/home/ubuntu/wsp-data}"
