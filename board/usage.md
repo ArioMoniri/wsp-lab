@@ -243,4 +243,4 @@
 | 2026-11-06 | Scribe: paper TF-study outcome section | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-06 | Execute adjudication (A4, companions, H1w gate) | claude_aio_gmail_api/claude-sonnet-5-5 high | done 742ab58 — merged; H1w gate FAIL (θ̂ 0.007); companions: MMLU signal positive in point estimate, intervals on zero |
 | 2026-11-06 | Scribe: paper TF-study outcome section | claude_aio_gmail_api/claude-haiku-5-5 high | done 8ec2289 (17 pages; audit 842/0) — merged; companions + H1w still to add |
-| 2026-11-06 | Board A: incident D8 — reproducibility disclosure and regeneration plan | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-06 | Board A: incident D8 plan | claude_aio_gmail_api/claude-sonnet-5-5 high | done d64e410: 12 A / 21 B / 4 C; regen ≈3.15 GPU-h (+5.2 for full TF) + 8–10 CPU-h; H2 impossible; backup policy needs user approval |

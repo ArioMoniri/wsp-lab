@@ -415,3 +415,17 @@ item-level records of the 189 entries scored on H0. Policy: artefacts cited by r
 exist must be either regenerated under the same source hash or disclosed as lost in the paper's reproducibility
 statement; Board A decides which. Guards added: pre-commit refuses `^data($|/)`; `.gitignore` lists `data`;
 lesson in harness/lessons.md.
+
+## D8 addendum (6 Nov 2026) — Board A incident plan adopted
+Per docs/reviews/P5/board-a-incident-d8-2026-11-06.md: 63 of the 421 missing chain deltas are byte-identical to
+recovered ones (358 truly missing; 317/675 chain deltas usable; 62 of 139 evaluated chain entries usable end to end;
+H2 no longer possible — 3 evaluated lineages of length ≥ 4 remain). Results: 12 groups re-derivable, 21 regenerable
+(15 depend on chain rows), 4 irrecoverable and to be disclosed (feature-manifest sentence; P4 directory facts; TF pilot
+timings; D3 TF scoring minutes). Minimum regeneration ≈ 3.15 GPU-h (three H0 base re-evaluations under the three
+historical source hashes, seed-1 panel, TF fingerprint audit, G1, G2) + 8–10 CPU-h (restore verification, features
+≈ 5 h, P4 suite 2–4 h); full TF re-scoring of the recoverable D3 entries brings it to ≈ 8.3 GPU-h; all from a clean
+detached worktree at verified commits. Manifest rows are never edited: losses go into a committed sidecar
+(`artefact_lost: true`). Process: the last live worktree removed; the canonical data directory moves out of the git
+checkout (`/home/ubuntu/wsp-data`, reached through a symlink the hook refuses to commit); the hub manifest-overwrite
+path closed. Backup policy (needs the user's approval for the bucket and IAM change): nightly versioned S3 copy of
+data/ with deletes denied, daily EBS snapshots with the DLM role repaired, a sha256 inventory in git, a restore drill.
