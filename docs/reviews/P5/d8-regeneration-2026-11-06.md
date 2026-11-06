@@ -21,7 +21,7 @@ Every regeneration ran from a clean detached worktree (`git status` empty, `dirt
 | 3 | Three H0 bases regenerated; **458 of 458 records bitwise equal on every scored field across the three source trees**; all printed base scalars reproduce; reference keys equal those of the restored H0 entries of the same source hash. |
 | 4 | Seed-1 panel: **every printed number reproduces** (11 records, 10 controls + base). KL is *not* identical between seeds (max 3.35e-4): the paper's "at most 0.0003 nats" is right, RESULTS.md's "identical" is wrong. |
 | 5 | KL cache root `2ed18bda284b3a89…` reproduced; G1 **12 of 12** repeats bitwise (14 of 14 originally; 2 chain predecessors lost); G2 **11 of 11 table rows** reproduce; **28 of 28** recoverable (y, h) rows reproduce to the printed 4 digits. |
-| 6 | See the end of this file and `docs/reviews/P4/d3v2r-summary-2026-11-06.md`. |
+| 6 | 25 of 26 runs (m3-family fails as on 5 Nov); 297 rows / 270 clusters; same ordering as 5 Nov (StatNN ≥ neural; descriptor-only within 0.07); see §6. |
 
 ## 1. Restore verification and loss sidecar
 
@@ -96,7 +96,19 @@ Driver `scripts/d8_tf_audit.sh` (log `~/agent-logs/d8-gpu-chain-20261106-045434.
 
 ## 6. P4 suite on the recovered set
 
-(See the section appended below once the suite has finished.)
+`scripts/d8_p4_prepare.py` builds the input view (`runs/d8/p4_input_rebind`): the complete-ancestry rule keeps the 780 feature sets whose whole history has features (121 chain rows dropped), and 297 matched same-device rows result (abliteration 98, chain 50, lora_sft 59, random_dir 60, task_vector 30; 11 matched rows lack a reference; 255 targets carry inferred runtime metadata). The 33 depth-0 entries that named the three lost `p2-chainpred-*` base runs are bound to the regenerated `e871923e` base in the view only (`rebound_base_run_ids` in `p4_dataset_report_rebind.json`; the zoo records are untouched). `scripts/d8_p4_suite.sh` then ran the 26 runs of the 5 Nov list (CPU, 3 seeds, 1,000 bootstrap draws; flags inferred as documented in the script) as `data/runs/p4/d3v2r-*`, 08:17 to 16:03 UTC, 26.6 run-wall-h over up to 4 parallel workers. 25 runs have metrics; `m3-family` fails exactly as on 5 Nov ("training fold has no parent-child pairs").
+
+Table and row-by-row comparison: [`docs/reviews/P4/d3v2r-summary-2026-11-06.md`](../P4/d3v2r-summary-2026-11-06.md) (`scripts/d8_p4_summary.py`). **This is a different experiment from the 5 Nov suite** (297 rows in 270 clusters against 345 in 278; the chain holdout's test rows fall from 98 to 50), so no value is expected to reproduce and none is gated. What the recovered set says, read on its own:
+
+| | mmlu_pro ρ | hellaswag ρ |
+|---|---|---|
+| StatNN (seed split, seed 0) | 0.54 | 0.65 |
+| descriptor-only (seed split) | 0.48 | 0.58 |
+| best neural, seed split (m1_matched) | 0.47 [0.43, 0.49] | 0.54 [0.46, 0.59] |
+| best neural, trajectory split (m1_matched) | 0.46 [0.44, 0.48] | 0.55 [0.46, 0.62] |
+| family split, every model | within [-0.07, 0.18] | within [-0.21, 0.16] |
+
+The ordering of the 5 Nov suite holds: StatNN is at or above every neural predictor on both targets, descriptor-only is within 0.07 of StatNN, delta-norm alone is weak (0.16 / 0.21), and no model transfers across families. The P4/X1 fingerprint check Board A asked for is impossible (no original fold table or feature file survives); the recovered-set table is reported next to the retained 5 Nov table in the paper, never mixed with it.
 
 ## Deviations and findings that change the record
 
@@ -121,5 +133,5 @@ Driver `scripts/d8_tf_audit.sh` (log `~/agent-logs/d8-gpu-chain-20261106-045434.
 | 5 TF pilot + KL cache + G1 + G2 | 0.81 | — |
 | 5b H0 controls (deviation) | 1.42 | — |
 | 5d 28-row audit (deviation) | 0.59 | — |
-| 6 P4 | 0 | see below |
+| 6 P4 | 0 | 26.6 (run-wall sum, ≤ 4 parallel x 2 threads) |
 | **Total so far** | **4.69** (planned 3.15 for these steps) | |
