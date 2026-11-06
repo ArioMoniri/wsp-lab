@@ -1,14 +1,24 @@
-# Hypotheses — amended 5 November 2026
+# Hypotheses — amended 6 November 2026
 
 ## Dated changelog
 
 **2026-11-05 — Board A revision:** H1 becomes H1a/H1b; H2 becomes closure-first within-M2 history ablation with placebo equivalence; H3 requires independent operator/source holdout; H4–H6 are parked. Adopted defaults: TF-v1 yes; ≤30 local GPU-h yes; additional history no; new Lambda no. All new thresholds are prospective criteria. [PREREG_H1_TF](PREREG_H1_TF.md) is binding; historical wording below remains archival. Original H1 was not demonstrated, H2/H3 are undetermined, H4–H6 untested ([Board A](reviews/P4/board-a-synthesis-and-v2-2026-11-05.md)). No new qualification or power result is claimed.
+
+**2026-11-06 — Board A re-qualification adjudication; PREREG amendment A4:** on the 229 D3 stratum entries MMLU-Pro gold log-prob failed A2.1 (ii) (max h 0.1137 > 0.10) and (iii) (P upper 97.5% 0.2264 > 0.20), so **H1a is untested, not falsified**; no sealed MMLU-Pro scoring (decision (c)); the sealed partition stays unspent. **H1w** (a separately named exploratory claim on the qualified WikiText log-PPL endpoint) is **registered** by A4; it is not a replacement for H1a and may not be cited as H1a. No H1w estimate existed when A4 was committed. H1b is unaffected ([Board A](reviews/P5/board-a-requalification-adjudication-2026-11-06.md), [PREREG A4](PREREG_H1_TF.md)).
+
+**Status: untested (not falsified).** MMLU-Pro gold log-prob is unqualified (A2.1 (ii) and (iii) fail), the §5 gate was not met, and no sealed item will be scored (decision (c)). The D3 development estimate (θ̂ = 0.129, all intervals within 0.01 of zero) is exploratory.
 
 ## H1a — residual TF readability (primary)
 
 > On sealed fresh source-closed components, estimate row-weighted relative residual MAE reduction of fixed StatNN versus training-fitted isotonic norm after training-only family, device and log-norm adjustment for predecessor-relative MMLU gold-letter log-prob.
 
 Primary: normalized MMLU gold-letter log-prob, 1,000 disjoint items. θ=1−Σ|r−p_StatNN|/Σ|r−p_isotonic|. Pass only θ≥.15, lower 95% bound>0, half-width≤θ/2, ≥100 genuinely fresh source-closed components, measured qualification and prospective TF-specific ≥80% power at .15. Paired 4,000-component and joint component/item intervals must both pass. Qualified adequately powered upper bounds<.05 kill practical readability for this endpoint only; intermediate/wide intervals are inconclusive. Failed qualification/count/power means untested. Registration §§1–6 freezes the full pipeline and numerical guard.
+
+## H1w — WikiText log-perplexity sensitivity (exploratory, registered by A4)
+
+> On the development stratum {lora_sft, task_vector, chain}, estimate the row-weighted relative residual MAE reduction of fixed StatNN versus training-fitted isotonic norm, after training-only family, device and log-norm adjustment, for the predecessor-relative change in token-weighted WikiText log-perplexity (nats; 64 windows × 1,024 tokens, pinned revision).
+
+**Status: exploratory, registered (A4, 6 Nov 2026).** A conditional predictive-loss contrast about generic distributional sensitivity; it is not task-likelihood readability, not H1a, and may not be cited as H1a. All six intervals are reported and none is decisive; "distinguishable from zero" only if the lower bounds of all six are > 0; no pass/kill label. It stays exploratory unless the A2.3 gate (a)–(e) is met on the WikiText D3 OOF losses; fresh scoring would first need a committed sealed WikiText window panel and the A3 bitwise re-check. Qualification (A2.1) is already met for WikiText (max h 0.0128 against δ = 0.0488). Registration A4 governs.
 
 ## H1b — superiority over StatNN (descriptive screen)
 
