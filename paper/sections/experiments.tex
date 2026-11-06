@@ -30,7 +30,7 @@ Cap-hit share, pooled & 361/400 & 90.3 & none & n/a & n/a \\\bottomrule
 \label{tab:base-repro}
 \end{table}
 
-Measured runs used four hosts. Local work ran on an RTX PRO 4500 with 32 GB. The Heretic ARA family ran on one NVIDIA A100-SXM4 40 GB instance on Lambda GPU compute, at \$1.99/h. Cross-host controls and D3 shards also ran on a Lambda A10 and a Lambda H100 PCIe, and some D3 entries moved between hosts during the run.
+Measured runs used four hosts. Local work ran on an RTX PRO 4500 with 32 GB. The Heretic ARA family ran on one NVIDIA A100-SXM4 40 GB instance on Lambda GPU compute, at \$1.99/h. Cross-host controls and D3 shards also ran on a Lambda A10 and a Lambda H100 PCIe, and some D3 entries moved between hosts during the run. Rented compute, from the committed spend ledger (\path{board/lambda_spend.md}): 23.1 A100 hours, 11.7 H100 hours and 24.8 A10 hours, in total \$116.22, including failed and repeated runs. Local GPU hours before the incident cannot be totalled: the run directories that recorded them were lost. The post-incident regeneration used 4.69 local GPU hours; the recovered-set predictor suite ran on CPU (26.6 run-hours over up to four parallel workers).
 
 \input{sections/reliability}
 
