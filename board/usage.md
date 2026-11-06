@@ -46,7 +46,7 @@
 | 2026-11-03 | plots+lottie (2nd) | copilot/auto | done 536ba07 |
 | 2026-11-03 | Board A feat/plots-design | claude_aio_gmail_api/claude-haiku-5-5 | running |
 | 2026-11-03 | zoo REVISE round (1st) | codex/gpt-6.1-terra high | partial, WIP committed |
-| 2026-11-03 | zoo REVISE round (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-03 | zoo REVISE round (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors) after steps 1–5 and launching step 6; orchestrator finished step 6; merged ab20983 |
 | 2026-11-03 | Board A feat/p1-heretic-lora | claude_info/claude-haiku-5-5 | REVISE (4 blocking) |
 | 2026-11-03 | heretic+lora REVISE round | codex/gpt-6.1-sol high | done — merged |
 | 2026-11-03 | scribe: intro + related (paper) | copilot/auto | running |
@@ -73,7 +73,7 @@
 | 2026-11-04 | Board A re-review feat/p1-zoo-build | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | fix eval LoRA loading (fix/eval-lora) | codex/gpt-6.1-terra high | done — merged |
 | 2026-11-04 | Board A re-review feat/p1-zoo-build | codex/gpt-6.1-sol medium | REVISE (3 blocking) |
-| 2026-11-04 | zoo REVISE round 3 | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | zoo REVISE round 3 | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors) after steps 1–5 and launching step 6; orchestrator finished step 6; merged ab20983 |
 | 2026-11-04 | fix eval LoRA loading | codex/gpt-6.1-terra high | done 28c80a9 |
 | 2026-11-04 | Board A fix/eval-lora | claude_aio_gmail_api/claude-haiku-5-5 high | done — merged |
 | 2026-11-04 | Board A fix/eval-lora | claude_aio_gmail_api/claude-haiku-5-5 | REVISE (F1 blocking; F2 decision D1) |
@@ -93,7 +93,7 @@
 | 2026-11-04 | P3 features extractor + baselines | codex/gpt-6.1-terra high | done — merged |
 | 2026-11-04 | P2 batch eval over zoo (resumable) | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | P3 features (1st) | codex/gpt-6.1-terra high | partial 20fc391 (splits, pooling) |
-| 2026-11-04 | P3 features (2nd: extractor+baselines) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | P3 features (2nd: extractor+baselines) | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors) after steps 1–5 and launching step 6; orchestrator finished step 6; merged ab20983 |
 | 2026-11-04 | P2 batch runner | codex/gpt-6.1-sol medium | done 9143644 |
 | 2026-11-04 | Board A feat/p2-batch | claude_aio_gmail_api/claude-haiku-5-5 high | done — merged |
 | 2026-11-04 | perf: eval throughput (vLLM/static cache) | codex/gpt-6.1-terra high | done — merged |
@@ -106,12 +106,12 @@
 | 2026-11-04 | P3 features (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | done fbf60e5 (184 tests) |
 | 2026-11-04 | Board A feat/p3-features | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | Board A feat/p3-features | codex/gpt-6.1-sol medium | REVISE (4 blocking) |
-| 2026-11-04 | P3 REVISE round | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | P3 REVISE round | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors) after steps 1–5 and launching step 6; orchestrator finished step 6; merged ab20983 |
 | 2026-11-04 | P3 REVISE | claude_aio_gmail_api/claude-sonnet-5-5 high | done 59db218 (227 tests) |
 | 2026-11-04 | Board A re-review feat/p3-features | codex/gpt-6.1-sol medium | running |
 | 2026-11-04 | Board A re-review feat/p3-features | codex/gpt-6.1-sol medium | REVISE (1) → fixed by orchestrator, merged |
 | 2026-11-04 | design: hero SVG + Lottie redo | codex/gpt-6.1-sol high | done — merged |
-| 2026-11-04 | writer: README + PROGRESS + live status script | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | writer: README + PROGRESS + live status script | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors) after steps 1–5 and launching step 6; orchestrator finished step 6; merged ab20983 |
 | 2026-11-04 | scribe: paper method/zoo/experiments | codex/gpt-6.1-terra high | done — merged |
 | 2026-11-04 | checker: docs accuracy + commands + tests | claude_aio_gmail_api/claude-haiku-5-5 high | done — merged |
 | 2026-11-04 | scribe method/zoo/experiments | codex/gpt-6.1-terra high | done e73b576 (6-page PDF) |
@@ -135,7 +135,7 @@
 | 2026-11-04 | docs fix round 18–25 | claude_aio_gmail_api/claude-haiku-5-5 medium | done 6293d84, merged |
 | 2026-11-04 | P4 predictors M1/M2/M3/M5/M6 training code | codex/gpt-6.1-sol high | done — merged |
 | 2026-11-04 | H4 LLM-reader harness (1st) | codex/gpt-6.1-terra medium | no work done |
-| 2026-11-04 | H4 LLM-reader harness (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | H4 LLM-reader harness (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors) after steps 1–5 and launching step 6; orchestrator finished step 6; merged ab20983 |
 | 2026-11-04 | H4 harness (2nd) | claude_aio_gmail_api/claude-sonnet-5-5 high | done c46cc4f (43 tests) |
 | 2026-11-04 | Board A feat/h4-reader | codex/gpt-6.1-terra medium | running |
 | 2026-11-04 | Board A feat/h4-reader | codex/gpt-6.1-terra medium | REVISE (3 blocking) |
@@ -154,7 +154,7 @@
 | 2026-11-04 | p4-predictors round 3 | codex/gpt-6.1-sol medium | done 9ae970f (325 tests), merged |
 | 2026-11-04 | perf eval throughput (2nd, GPU after post-zoo) | codex/gpt-6.1-sol high | done — merged |
 | 2026-11-04 | Board C: H6 cross-model transfer assessment | codex/gpt-6-luna medium | running |
-| 2026-11-04 | zoo: multi-base-model configs (LFM3-1.7B, Qwen3.5-4B, Gemma-3-270M) + pooling audit | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-04 | zoo: multi-base-model configs (LFM3-1.7B, Qwen3.5-4B, Gemma-3-270M) + pooling audit | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors) after steps 1–5 and launching step 6; orchestrator finished step 6; merged ab20983 |
 | 2026-11-04 | Board C H6 | codex/gpt-6-luna medium | done 7d70888, merged |
 | 2026-11-04 | multi-model zoo configs | claude_aio_gmail_api/claude-sonnet-5-5 high | done f1325ba (394 tests) — merge after post-zoo extraction (feature_version 4) |
 | 2026-11-04 | Board A feat/multi-model-zoo | codex/gpt-6.1-terra medium | running |
@@ -239,10 +239,13 @@
 | 2026-11-05 | Board A: A2.4 batching deviations | claude_aio_gmail_api/claude-sonnet-5-5 medium | ACCEPT with registered note (bf16 rounding under batch kernel; base deviates equally; descriptive stages) 5e979b1; D3 scoring continues |
 | 2026-11-05 | zoo/features: ARA delta key mapping | claude_aio_gmail_api/claude-sonnet-5-5 high | done 5f45f6b (587 tests; 24/24 ARA features extracted) — merged; PREREG A3 note (source_hash changed) |
 | 2026-11-06 | Board A: re-qualification adjudication | claude_aio_gmail_api/claude-sonnet-5-5 high | DECISION (c): no sealed scoring; H1a untested (not falsified); H1w (WikiText) exploratory via A4; θ̂ borderline, carried by large-effect rows c692567 |
-| 2026-11-06 | Execute adjudication: PREREG A4, §5 companions, WikiText CPU gate | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-06 | Execute adjudication: PREREG A4, §5 companions, WikiText CPU gate | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors) after steps 1–5 and launching step 6; orchestrator finished step 6; merged ab20983 |
 | 2026-11-06 | Scribe: paper TF-study outcome section | claude_aio_gmail_api/claude-haiku-5-5 high | running |
 | 2026-11-06 | Execute adjudication (A4, companions, H1w gate) | claude_aio_gmail_api/claude-sonnet-5-5 high | done 742ab58 — merged; H1w gate FAIL (θ̂ 0.007); companions: MMLU signal positive in point estimate, intervals on zero |
 | 2026-11-06 | Scribe: paper TF-study outcome section | claude_aio_gmail_api/claude-haiku-5-5 high | done 8ec2289 (17 pages; audit 842/0) — merged; companions + H1w still to add |
 | 2026-11-06 | Board A: incident D8 plan | claude_aio_gmail_api/claude-sonnet-5-5 high | done d64e410: 12 A / 21 B / 4 C; regen ≈3.15 GPU-h (+5.2 for full TF) + 8–10 CPU-h; H2 impossible; backup policy needs user approval |
-| 2026-11-06 | D8 regeneration (sidecar, features, 3× H0 base, seed-1 panel, TF fingerprint/G1/G2, P4 recovered set) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-06 | D8 regeneration (sidecar, features, 3× H0 base, seed-1 panel, TF fingerprint/G1/G2, P4 recovered set) | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors) after steps 1–5 and launching step 6; orchestrator finished step 6; merged ab20983 |
 | 2026-11-06 | Scribe: companions + H1w + D8 disclosure | claude_aio_gmail_api/claude-haiku-5-5 high | done 917203d (19 pages) — merged; Board B after regeneration lands |
+| 2026-11-06 | Scribe: regeneration complete, run ids, recovered-set paragraph | claude_aio_gmail_api/claude-sonnet-5-5 high | failed (repeated API errors, no work); done by the orchestrator, merged 3579bf4 (20 pages; audit PASS both modes) |
+| 2026-11-06 | Board A: D8 regeneration acceptance and incident close | antigravity/claude-opus-4-6-thinking high | running (review/board-a-d8-close) |
+| 2026-11-06 | Board B: whole-manuscript read | opencode/deepseek-v4-pro high | running (review/board-b-whole) |
