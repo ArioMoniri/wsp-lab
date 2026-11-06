@@ -45,3 +45,16 @@ suite started 3 h early on a saturated GPU (the panel crashed with the model lef
 `pkill -f wsp.predictor.train` killed the orchestrator's own shell because the pattern appeared in its command
 line. Rules: run the gate expression by hand and confirm it blocks; use `pgrep -fc "<fixed string>"`; kill by PID
 from `pgrep -f "patt[e]rn"` (bracket trick) so the caller's own command line cannot match.
+
+## 2026-11-06 — a committed `data` symlink destroyed the canonical data directory
+`scripts/wt.sh` gives every worktree a symlink `data -> /home/ubuntu/projects/wsp-lab/data`. An agent ran `git add -A`
+in its worktree, which staged that symlink (ignored paths do not protect a symlink named `data` because the pattern
+`data/` matches directories only). Merging the branch into main checked the symlink out over the real `data`
+directory: git removed the ignored directory contents (≈ 260 GB: the zoo deltas including every chain delta, v4
+features, all run artefacts, TF-v1 records and caches) and left a symlink pointing at itself. The nightly DR tarball
+is config-only (632 MB) and the daily EBS snapshots belong to another volume; the last snapshot of this volume predates
+the project. Rules now enforced: the pre-commit hook refuses any staged path matching `^data($|/)`; `.gitignore` lists
+`data` without the trailing slash as well; `wt.sh merge` must run `git diff --name-only main..<branch> | grep -E '^data($|/)'`
+and refuse. Recovery: non-chain deltas, metadata, eval records and the Lambda base evaluations come back from the public
+HF dataset; chain deltas, v4 features (re-extractable for non-chain entries), data/runs (P4 metrics, TF-v1 records and
+KL cache, requalification JSON beyond the docs/prereg copies) are lost and must be either regenerated or disclosed.

@@ -1,2 +1,9 @@
 #!/usr/bin/env bash
+
+# Never let the data tree (or a symlink named data) into the index: worktrees carry a symlink to the canonical data
+# directory and checking it out on main replaced the real directory and destroyed it (6 Nov 2026 incident).
+if git diff --cached --name-only | grep -qE '^data($|/)'; then
+  echo "pre-commit: refusing to commit a path under data/ (or the data symlink). Unstage it: git rm --cached -r data" >&2
+  exit 1
+fi
 scripts/secret_scan.sh && exec scripts/precommit.sh
