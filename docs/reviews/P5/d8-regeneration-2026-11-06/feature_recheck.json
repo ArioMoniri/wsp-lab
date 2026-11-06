@@ -1,0 +1,69 @@
+{
+ "ids": [
+  "2f61a4086395b719",
+  "d7f933d3b4e5d25e",
+  "8cd3182b6e55dcbf",
+  "5c766ee2fa8bf915",
+  "023b384a7799a787",
+  "0027efdf2eae7405",
+  "34ee195e55227908",
+  "69d1f20f07b412da",
+  "7f9c11a8ebcc2286",
+  "0f36e3d5fda8e73f"
+ ],
+ "byte_identical": {
+  "2f61a4086395b719": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  },
+  "d7f933d3b4e5d25e": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  },
+  "8cd3182b6e55dcbf": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  },
+  "5c766ee2fa8bf915": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  },
+  "023b384a7799a787": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  },
+  "0027efdf2eae7405": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  },
+  "34ee195e55227908": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  },
+  "69d1f20f07b412da": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  },
+  "7f9c11a8ebcc2286": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  },
+  "0f36e3d5fda8e73f": {
+   "features.json": true,
+   "features.safetensors": true,
+   "pooled.safetensors": true
+  }
+ },
+ "all_identical": true,
+ "workers_main": 4,
+ "workers_recheck": 2
+}

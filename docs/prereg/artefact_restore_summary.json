@@ -1,0 +1,36 @@
+{
+ "by_family": {
+  "abliteration:present": 205,
+  "chain:alias": 63,
+  "chain:lost": 358,
+  "chain:present": 254,
+  "heretic_ara:present": 25,
+  "lora_sft:present": 121,
+  "random_dir:present": 153,
+  "task_vector:present": 80
+ },
+ "counts": {
+  "alias": 63,
+  "delta_present": 838,
+  "lost": 358
+ },
+ "entries_without_component_identity": 12,
+ "eval_present": 389,
+ "evaluated_and_alias": 21,
+ "evaluated_and_lost": 62,
+ "hash_verified": 838,
+ "ledger_unverified": [],
+ "manifest_sha256": "71a396e5bab2e53f8f74b0a8a0c646e1a791ef92bb3cf3f3df5c51c8010140e7",
+ "n_manifest_entries": 1259,
+ "norm_checked": {
+  "dense": 716,
+  "lora_product": 122
+ },
+ "norm_max_rel_err": {
+  "dense": 6.420973153925647e-08,
+  "lora_product": 1.7676369888239678e-08
+ },
+ "problems": [],
+ "records_present": 200,
+ "seconds": 1057.596349954605
+}

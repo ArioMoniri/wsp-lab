@@ -1,0 +1,36 @@
+{
+ "features_dropped_by_family": {
+  "chain": 121
+ },
+ "features_kept": 780,
+ "match_report": {
+  "abliteration|H0|inferred-only": 1,
+  "abliteration|H0|matched-inferred": 26,
+  "abliteration|H1|matched-inferred": 69,
+  "abliteration|H2|batch-mismatch": 1,
+  "abliteration|H2|matched-inferred": 3,
+  "chain|H0|chain-without-ancestry": 29,
+  "chain|H0|inferred-only": 8,
+  "chain|H0|matched": 13,
+  "chain|H0|matched-inferred": 8,
+  "lora_sft|H0|matched-inferred": 2,
+  "lora_sft|H1|matched-inferred": 52,
+  "lora_sft|H2|batch-mismatch": 1,
+  "lora_sft|H2|matched-inferred": 5,
+  "random_dir|H0|matched-inferred": 21,
+  "random_dir|H1|matched-inferred": 39,
+  "task_vector|H0|matched-inferred": 11,
+  "task_vector|H1|matched-inferred": 19
+ },
+ "matched_reference_targets": 268,
+ "missing_matched_reference": 40,
+ "rows": 268,
+ "rows_by_family": {
+  "abliteration": 98,
+  "chain": 21,
+  "lora_sft": 59,
+  "random_dir": 60,
+  "task_vector": 30
+ },
+ "targets_with_inferred_runtime": 255
+}
