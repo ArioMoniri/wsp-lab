@@ -134,12 +134,13 @@ def main():
         }
         for bm in RETAINED_BASE
     }
-    # item-level bitwise state of the likelihood / teacher-forced metrics
+    # Item-level bitwise state of the likelihood / teacher-forced metrics, base only: zoo/<id>/records.jsonl of the
+    # controls is the H1 (Lambda) record, not the H0 seed-0 record (the H0 item records are lost, D8 item iv).
     bitwise = {}
     for bm in ("mmlu_pro", "hellaswag", "kl_to_base", "wikitext_ppl"):
         same = 0
         maxdiff = 0.0
-        for i in ids:
+        for i in ("base",):
             r0 = {str(r["item_id"]): r for r in recs0[i] if r["benchmark"] == bm}
             r1 = {str(r["item_id"]): r for r in recs1[i] if r["benchmark"] == bm}
             assert set(r0) == set(r1), (i, bm)
@@ -152,7 +153,7 @@ def main():
                 maxdiff, max(abs(float(r0[k]["correct"]) - float(r1[k]["correct"])) for k in r0)
             )
         bitwise[bm] = {
-            "records_identical_entries": f"{same}/{len(ids)}",
+            "records_identical_entries_base_only": f"{same}/1",
             "max_abs_correct_diff": maxdiff,
         }
     kl_diff = max(abs(val(s1[i], "kl_to_base") - val(s0[i], "kl_to_base")) for i in ids)
