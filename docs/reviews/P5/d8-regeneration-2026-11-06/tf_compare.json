@@ -1,0 +1,172 @@
+{
+ "g1": {
+  "all_records_identical": true,
+  "max_abs_over_all": 0.0,
+  "n_repeats": 12
+ },
+ "g2": {},
+ "g2_report_keys": [
+  "dirty",
+  "entries",
+  "eval_device_id",
+  "git_sha",
+  "n_items_per_benchmark",
+  "per_entry",
+  "pooled",
+  "source_hash"
+ ],
+ "gates": {
+  "devices": [
+   "H0"
+  ],
+  "dirty": [
+   false
+  ],
+  "kl_cache_roots": [
+   "2ed18bda284b3a89"
+  ],
+  "kl_root_matches_2ed18bda284b3a89": true,
+  "matched_base_missing": [
+   false
+  ],
+  "run_ids": [
+   "20261106-062239-29d865d2"
+  ],
+  "source_hashes": [
+   "a224779bf873"
+  ],
+  "status": [
+   "complete"
+  ]
+ },
+ "kl_prefix_medians": {
+  "16": 0.0014385898857552427,
+  "32": 0.0015282943118183267,
+  "64": 0.001604945547908141
+ },
+ "kl_prefix_medians_match_printed_digits": true,
+ "pilot_round1": {
+  "0a841d4082532e8b": {
+   "match": false,
+   "printed": [
+    0.175,
+    -2.569524
+   ],
+   "regenerated": [
+    0.17,
+    -2.571223
+   ]
+  },
+  "1caef8eb4c640c3c": {
+   "match": false,
+   "printed": [
+    0.209,
+    -2.449637
+   ],
+   "regenerated": [
+    0.185,
+    -2.45082
+   ]
+  },
+  "3db97b535c996265": {
+   "match": false,
+   "printed": [
+    0.205,
+    -2.441007
+   ],
+   "regenerated": [
+    0.185,
+    -2.442562
+   ]
+  },
+  "3ddc3b4bf47ed994": {
+   "match": false,
+   "printed": [
+    0.192,
+    -2.467125
+   ],
+   "regenerated": [
+    0.171,
+    -2.452354
+   ]
+  },
+  "439dbfa62a14d55f": {
+   "match": false,
+   "printed": [
+    0.207,
+    -2.460094
+   ],
+   "regenerated": [
+    0.18,
+    -2.462052
+   ]
+  },
+  "7b8247d8d7ab7db9": {
+   "match": false,
+   "printed": [
+    0.206,
+    -2.438299
+   ],
+   "regenerated": [
+    0.183,
+    -2.442168
+   ]
+  },
+  "af6d608f8651fb46": {
+   "match": false,
+   "printed": [
+    0.221,
+    -2.440941
+   ],
+   "regenerated": [
+    0.226,
+    -2.402621
+   ]
+  },
+  "b6fe7f59016cdda2": {
+   "match": false,
+   "printed": [
+    0.209,
+    -2.451112
+   ],
+   "regenerated": [
+    0.178,
+    -2.457638
+   ]
+  },
+  "base": {
+   "match": false,
+   "printed": [
+    0.201,
+    -2.442048
+   ],
+   "regenerated": [
+    0.182,
+    -2.443826
+   ]
+  },
+  "db5c3a7bfc19178c": {
+   "match": false,
+   "printed": [
+    0.203,
+    -2.449961
+   ],
+   "regenerated": [
+    0.182,
+    -2.453512
+   ]
+  },
+  "dd90d99e2ddc0e77": {
+   "match": false,
+   "printed": [
+    0.205,
+    -2.439536
+   ],
+   "regenerated": [
+    0.182,
+    -2.443292
+   ]
+  }
+ },
+ "pilot_round1_all_match_superseded_scorer_not_a_gate": false
+}

@@ -58,7 +58,8 @@ def main():
         == {"2ed18bda284b3a89"},
         "matched_base_missing": sorted({bool(e["matched_base_missing"]) for e in ev.values()}),
     }
-    # round-1 pilot table: Entry | Wall | Load | Peak | TF acc | Fast acc | Gold log-prob | Records
+    # round-1 pilot table (run 20261105-131348-277686c3, scorer superseded by the round-2 letter-stop fix, 02c2847): reported for
+    # completeness, NOT a fingerprint of the frozen source. Entry | Wall | Load | Peak | TF acc | Fast acc | Gold log-prob | Records
     rows = table_after(r"## TF-v1 timing pilot\n", "| Entry")
     ok = True
     for r in rows:
@@ -73,7 +74,7 @@ def main():
             "regenerated": [round(got_acc, 3), round(got_gold, 6)],
             "match": match,
         }
-    out["pilot_round1_all_match"] = ok
+    out["pilot_round1_all_match_superseded_scorer_not_a_gate"] = ok
     for L in (16, 32, 64):
         vals = []
         for i in CONTROLS:
