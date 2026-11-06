@@ -2866,8 +2866,12 @@ def build_d8() -> None:
            "incident review section 1.1")
     quoted("zoo", "all 584 non-chain rows keep bytes", [r"all 584 non-chain entries"], inc,
            "incident review section 1.1")
-    quoted("zoo", "at most 901 entries can have features: the 838 rows with stored delta bytes and the 63 chain rows",
+    quoted("zoo", "901 of the 1,259 rows have feature files (the 838 rows with stored delta bytes and the 63 chain rows",
            [r"at most 901 \(838 \+ 63 aliases\)"], inc, "incident review section 0 (Z3)")
+    quoted("experiments", "These checks do not regenerate the registered 229-row A2.1 analysis", [r"229-row panel"], inc, "incident review section 3")
+    quoted("experiments", "the 229-row analysis was not regenerated", [r"229-row panel"], inc, "incident review section 3")
+    quoted("appendix", "The registered 229-row TF-v1 analysis was not regenerated", [r"229-row panel"], inc, "incident review section 3")
+    quoted("appendix", "by the measured 901-entry extraction result", [r"at most 901 \(838 \+ 63 aliases\)"], inc, "incident review section 0 (Z3)")
 
     # ---- appendix: verbatim paragraph, chain status, classification
     app = read(SEC / "appendix.tex")
@@ -2886,7 +2890,7 @@ def build_d8() -> None:
     quoted("appendix", "The registered 229-row TF-v1 panel", [r"229-row panel"], inc, "incident review section 3")
     claim("appendix", "recomputable from surviving raw records & 12", [12], "incident review section 1 counts")
     claim("appendix", "regenerable under the recorded source hash & 21", [21], "incident review section 1 counts")
-    claim("appendix", "cannot be regenerated; reported from logs & 4", [4], "incident review section 1 counts")
+    claim("appendix", "not recoverable as originally stated; retained descriptive results are reported from logs & 4", [4], "incident review section 1 counts")
     claim("appendix", "Total & & 37", [37], "incident review section 1 counts")
 
     # ---- regeneration outcome (appendix, experiments, reliability): docs/reviews/P5/d8-regeneration-2026-11-06.md
@@ -2900,10 +2904,37 @@ def build_d8() -> None:
            [r"\*\*901 entries re-extracted\*\* \(838 \+ 63 aliases\), 0 failed"], reg, f"{rs} summary row 2")
     quoted("appendix", "a ten-entry re-extraction in a fresh process was byte-identical",
            [r"10-entry re-extraction byte-identical"], reg, f"{rs} summary row 2")
-    quoted("appendix", "all 458 records are bitwise identical across the source trees on every field they share",
+    quoted("appendix", "all 458 records agree across the source trees on every field they share",
            [r"458 of 458 identical on every field both records carry"], reg, f"{rs} step 3")
-    quoted("appendix", "KL differs by at most 0.0003 nats between seeds",
-           [r"KL differs by up to 3\.3e-4 nats between seeds"], reg, f"{rs} step 4")
+    quoted("appendix", "the third tree adds a field to 100 generative records",
+           [r"the 100 generative records differ only by an `invalid_final_answer` key"], reg, f"{rs} step 3")
+    # JSON-backed checks (Board A close review): the committed evidence files, not the report prose
+    RJ = DOCS / "reviews" / "P5" / "d8-regeneration-2026-11-06"
+    s1 = jload(RJ / "seed1_compare.json"); klmax = s1["kl_max_abs_diff"]["regenerated"]
+    assertion("appendix", "seed1_compare.json: KL max 3.3472e-4 to the displayed precision", abs(klmax - 3.3472e-4) < 5e-9, "seed1_compare.json")
+    claim("appendix", "the maximum absolute seed-to-seed KL difference is $3.3472\\times10^{-4}$ nats", None, "seed1_compare.json")
+    claim("reliability", "the maximum absolute seed-to-seed KL difference is $3.3472\\times10^{-4}$ nats", None, "seed1_compare.json")
+    claim("reliability", "whose maximum seed-to-seed difference is $3.3472\\times10^{-4}$ nats", None, "seed1_compare.json")
+    fr = jload(RJ / "feature_root.json")
+    assertion("zoo", "feature_root.json: 901 entries, 63 aliases, 358 without artefacts", fr["entries"] == 901 and fr["alias_entries_extracted"] == 63 and fr["no_artifacts"] == 358, "feature_root.json")
+    claim("zoo", "901 of the 1,259 rows have feature files (the 838 rows with stored delta bytes and the 63 chain rows that are byte-identical to a stored delta), 0 entries failed extraction, and the 358 rows without delta bytes have no features", None, "feature_root.json")
+    rsum = jload(DOCS / "prereg" / "artefact_restore_summary.json")["counts"]
+    assertion("appendix", "artefact_restore_summary.json: 838 / 63 / 358", rsum["delta_present"] == 838 and rsum["alias"] == 63 and rsum["lost"] == 358, "artefact_restore_summary.json")
+    g1 = jload(RJ / "g1_report.json")
+    assertion("appendix", "g1_report.json: 12 entries, all identical", g1["n_entries"] == 12 and g1["all_records_identical"] is True, "g1_report.json")
+    g2 = jload(RJ / "g2_compare.json")
+    assertion("appendix", "g2_compare.json: 11 rows, all match", len(g2["rows"]) == 11 and g2["all_rows_match"] is True, "g2_compare.json")
+    yh = jload(RJ / "tf_yh_audit.json")
+    assertion("appendix", "tf_yh_audit.json: 28 rows, y and h all match", yh["n"] == 28 and yh["y_all_match"] is True and yh["h_all_match"] is True, "tf_yh_audit.json")
+    bc = jload(RJ / "base_compare.json")["pairwise"]
+    first = next(iter(bc.values()))
+    assertion("appendix", "base_compare.json: first pair 458/458 identical per benchmark", first["n_a"] == 458 and all(v["identical"] == v["n"] for v in first["per_benchmark"].values()), "base_compare.json")
+    for h in ("d7cece35fad9", "6f274a830401", "e871923e1e18"):
+        assertion("appendix", f"regeneration report names source {h}", h in reg, f"{rs} step table")
+    quoted("experiments", "12 of 12 repeatable G1 entries were bitwise identical, 11 of 11 G2 bridge rows and 28 of 28 recoverable requalification $(y, h)$ rows reproduced",
+           [r"G1 \*\*12 of 12\*\*", r"G2 \*\*11 of 11 table rows\*\*", r"\*\*28 of 28\*\* recoverable"], reg, f"{rs} summary row 5")
+    quoted("experiments", "After the artefact loss, 12 of the 14 entries could be repeated, and all 12 were bitwise identical",
+           [r"12 repeats, all bitwise identical to their primaries", r"2 of the original 14 cannot be repeated"], reg, f"{rs} step 5")
     quoted("appendix", "12 of 12 repeatable G1 entries were bitwise identical (2 of the original 14 are chain predecessors whose deltas are lost)",
            [r"G1 \*\*12 of 12\*\* repeats bitwise \(14 of 14 originally; 2 chain predecessors lost\)"], reg, f"{rs} summary row 5")
     quoted("appendix", "all 11 rows of the G2 bridge reproduced",
@@ -2942,7 +2973,12 @@ def build_d8() -> None:
     assertion("experiments", f"{rd}: family-split ranges", min(mm) >= -0.07 - 5e-3 and max(mm) <= 0.18 + 5e-3 and min(hs) >= -0.21 - 5e-3 and max(hs) <= 0.16 + 5e-3, rd)
     claim("experiments", "every model lies within $-$0.07 to 0.18 on MMLU-Pro and within $-$0.21 to 0.16 on HellaSwag", None, rd)
     assertion("experiments", f"{rd}: descriptor-only within 0.07 of StatNN", round(0.54 - 0.48, 2) <= 0.07 and round(0.65 - 0.58, 2) <= 0.07, rd)
-    claim("experiments", "descriptor-only is within 0.07 of it", None, rd)
+    claim("experiments", "descriptor-only is within 0.07 of StatNN on those splits", None, rd)
+    famst = row("m1-family")
+    assertion("experiments", f"{rd}: family-split StatNN -0.18 / 0.06", famst[5] == "-0.18 / 0.06", rd)
+    assertion("experiments", f"{rd}: family-split neural maxima 0.18 / 0.16", abs(max(mm) - 0.18) < 5e-3 and abs(max(hs) - 0.16) < 5e-3, rd)
+    claim("experiments", "where the StatNN baseline is $-$0.18 and 0.06 while neural runs reach 0.18 and 0.16", None, rd)
+    quoted("experiments", "does not establish the ordering of Table~\\ref{tab:v2-suite} on the original 345-row set", [r"\*\*This is a different experiment from the 5 Nov suite, not a reproduction of it\*\*"], r, f"{rd} header")
     assertion("experiments", f"{rd}: m3-family no metrics", "| m3-family | no metrics |" in r, rd)
     claim("appendix", "Of the 21 B results, 15 depend on chain rows", [21, 15], "incident review section 1 counts")
     for needle in ["**A = 12**", "**B = 21**", "**C = 4 results", "Total 37 result groups"]:

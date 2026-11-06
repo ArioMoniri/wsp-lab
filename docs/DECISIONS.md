@@ -429,3 +429,30 @@ detached worktree at verified commits. Manifest rows are never edited: losses go
 checkout (`/home/ubuntu/wsp-data`, reached through a symlink the hook refuses to commit); the hub manifest-overwrite
 path closed. Backup policy (needs the user's approval for the bucket and IAM change): nightly versioned S3 copy of
 data/ with deletes denied, daily EBS snapshots with the DLM role repaired, a sha256 inventory in git, a restore drill.
+
+## D8 addendum 2 (6 Nov 2026) — regeneration review
+
+Board A reviewed the regeneration against the adopted D8 plan (docs/reviews/P5/board-a-d8-close-2026-11-06.md). Restore
+verification covered 1,259 manifest rows: 838 stored deltas passed the recorded header, hash and norm checks; 63 chain rows
+are byte-identical aliases; 358 chain rows remain lost. Feature extraction completed for 901 rows with no extraction
+failures, but cannot be compared with the lost feature set. The H0 base runs reproduce the printed scalars and all 458
+records on shared fields; the third source tree adds an `invalid_final_answer` field to 100 records, so exact serialized
+identity across all three trees is not claimed.
+
+The seed-1 panel reproduces its retained values. Its maximum absolute KL difference is 3.3472e-4 nats; the prior "at most
+0.0003" wording is replaced. TF-v1 checks reproduce the cache root, 12 of 12 repeatable G1 entries, 11 of 11 G2 rows and
+28 of 28 recoverable (y, h) rows. The two other G1 chain entries and the remaining 14 of 42 requalification rows lack
+required deltas. The round-1 pilot table is retained-log evidence from a superseded source. The original 229-row A2.1
+analysis was not regenerated and remains "reported from logs; artefacts lost".
+
+The P4 recovered-set suite is a separate analysis on 297 rows in 270 clusters, not a reproduction of the original
+345-row suite. It must not be used to claim that the original suite's ordering is reproduced. The H0-control correction
+(+1.42 GPU-h) and 28-row audit (+0.59 GPU-h) are accepted as documented, evidence-required deviations. Total GPU use was
+4.69 GPU-h against the 3.15 GPU-h estimate; this is recorded as an overrun, not budget adherence.
+
+The paper may proceed after the required edits in the Board A close review (applied 6 Nov, branch
+paper/board-a-close-edits). D8 remains open until the required backup, inventory, restore, freshness and
+repository/manifest protections are installed and verified; the incident is not represented as operationally closed
+before that evidence is recorded. Outstanding from the plan: the `historical-item-identities.json` reconstruction is
+not evidenced.
+
