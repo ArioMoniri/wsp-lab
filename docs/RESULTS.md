@@ -380,3 +380,9 @@ A one-item shortfall of the worst entry's MMLU argmax agreement (exactly 99% aga
 ## TF-v1 D3 scoring queue (launched under the round-3 source)
 
 Launched 5 Nov 2026 18:37 UTC on H0 after the round-3 gates above: `agent-tmux tfv1-d3-stratum bash scripts/tfv1_d3_stratum.sh` (resumable: run the script again and completed entries are skipped by the index signature; one process, one `source_hash` `a224779bf873`, immutable run directories under `data/evals/qwen3.5-0.8b/tf_v1/`). The lists come from `scripts/tfv1_scoring_plan.py` (alias-ledger resolution; dry run: 229 D3 stratum entries = 139 chain + 60 lora_sft + 30 task_vector, 0 chain predecessors outside the stratum, 152 further null-family scored ids = 381 unique D3 deltas; fresh closure 255 unique deltas, 281 with the six spares, **none of which is scored here**). Phase A scores the 229 stratum entries, phase B the null-family D3 controls that the §3 fit trains on. Per-entry minutes are appended to `data/runs/h1a/d3_stratum_minutes.jsonl` (`scripts/tfv1_d3_minutes.py`, every 5 minutes and at each phase end). Entries already scored by round 3 (the ten controls and the thirteen G1 entries) are reused, not re-scored. At the measured 1.00 min warm median the 355 remaining entries take about 5.9 h plus cache load and per-process overhead.
+
+**TF-v1 D3 stratum scoring complete (6 Nov 00:45 UTC; source a224779bf873; tmux tfv1-d3-stratum).** 378 of the 381
+planned unique deltas scored (229 stratum entries + null-family controls), median wall 1.02 min/entry. The 3 unscored
+ids (2dc33acfdbd47f92 chain, 4f31558031fe08c8 and 8cd3182b6e55dcbf random_dir) are legacy manifest rows without an
+eligibility field, which the production runner excludes by design; they are removed from the scoring plan and
+recorded as excluded (not failures). Re-qualification (amended MMLU rule, §5 gate with cluster bootstrap-t) runs next.
