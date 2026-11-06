@@ -174,3 +174,12 @@ rule (max half-width 0.114 > 0.10; tripwire 0.226 > 0.20); WikiText log-ppl qual
 every interval crossing zero; leaving out high-item-variance rows gives θ̂ = 0.007. Board A adjudicating whether to
 switch the primary to WikiText, run the sealed panel as exploratory, or stop and report. Corrected ARA family landed
 (12 entries) and featurised after the delta-key mapping fix (D6 addenda 4–5, PREREG A3). Lambda closed at $116.22.
+
+**Board A decision on the re-qualification (6 Nov 02:30 UTC; docs/reviews/P5/board-a-requalification-adjudication-2026-11-06.md).**
+Decision (c): the sealed MMLU-Pro panel is not scored (endpoint unqualified; power lower bound 0.43–0.47; one-shot
+asset). H1a is untested, not falsified. θ̂ = 0.129 is borderline (all six intervals within 0.01 of zero) and carried by
+the large-effect rows; the item-split replicates (0.105/0.117) argue against pure item-variance noise, so neither
+"real" nor "artefact" is established; the §5 step-1 companions (outcome-free family × norm strata, flexible nuisance,
+weighted/restricted θ̂) settle it on CPU. WikiText log-PPL is qualified and may carry a separately named exploratory
+claim H1w by amendment A4 (CPU gate ≈ 3 h; fresh scoring ≈ 1.9 GPU-h only if it passes). Paper gets the permitted
+sentences. Delegated: A4 + companions + WikiText gate (Sonnet); paper outcome section (Haiku).
