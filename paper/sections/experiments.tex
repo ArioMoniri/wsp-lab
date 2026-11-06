@@ -2,7 +2,7 @@
 The subject is Qwen3.5-0.8B with thinking enabled. Fixed subsets cover GSM8K, MATH-500, IFEval, MMLU-Pro and HellaSwag. We also measure WikiText perplexity, refusal on harmful prompts, over-refusal on harmless prompts, and KL to the base. The cap-hit share is the fraction of responses pooled across GSM8K, MATH-500 and IFEval that reach the token limit without EOS (1,024 tokens at the fast tier, 4,096 at the cheap tier). It is a truncation proxy, not a validated detector of semantic repetition. Refusal keyword matching is a surface measure. It does not establish harmfulness.
 
 % D8-BEGIN
-Artefact loss on 6 November 2026 removed run directories, per-item records and some zoo deltas behind several results in this section. Appendix~\ref{sec:repro} lists what survives, what is reported from retained summaries and what is being regenerated.
+Artefact loss on 6 November 2026 removed run directories, per-item records and some zoo deltas behind several results in this section. Appendix~\ref{sec:repro} lists what survives, what is reported from retained summaries and what was regenerated.
 % D8-END
 
 The fast tier uses 50 GSM8K, 25 MATH-500, 25 IFEval, 100 MMLU-Pro and 100 HellaSwag items, plus 50 prompts each for refusal, over-refusal and KL. Generation is capped at 1024 tokens. At these sizes, a single binomial score for GSM8K, MATH-500 or IFEval has a standard error of 0.05 to 0.10 at the base fast-tier values (Section~\ref{sec:reliability}). GSM8K, MATH-500 and IFEval are therefore reported as descriptive at this tier. MMLU-Pro, HellaSwag, WikiText perplexity and KL are candidate predictor targets, but none is qualified until the criteria in Section~\ref{sec:reliability} are met. Measuring their floors is the first of those steps.
@@ -36,7 +36,7 @@ Measured runs used four hosts. Local work ran on an RTX PRO 4500 with 32 GB. The
 
 \subsection{Predictor suite under protocol v2}
 \label{sec:v2}
-We ran the predictor suite under protocol v2, with three seeds per run. Protocol v2 adds nested model selection, train-only preprocessing and paired bootstrap intervals over ancestry clusters. The matched set has 345 rows from 389 evaluated entries; the other 44 have no matched predecessor target and are excluded. The run files mark 260 of the 345 rows as having inferred runtime metadata, backfilled from job logs. Those 260 are the matched D3 edits counted in Section~\ref{sec:reliability}. The other 85 rows are chain predecessors, and neither the row nor its matched reference carries the backfill flag. The 345 rows are not the 300-entry D3 subset. Twenty-five run directories are reported as complete, from retained summaries (artefacts lost). The directory \texttt{d3v2-m3-family} has a configuration and a split plan but no metrics, so we do not report it.
+We ran the predictor suite under protocol v2, with three seeds per run. Protocol v2 adds nested model selection, train-only preprocessing and paired bootstrap intervals over ancestry clusters. The matched set has 345 rows from 389 evaluated entries; the other 44 have no matched predecessor target and are excluded. The run files mark 260 of the 345 rows as having inferred runtime metadata, backfilled from job logs. Those 260 are the matched D3 edits counted in Section~\ref{sec:reliability}. The other 85 rows are chain predecessors, and neither the row nor its matched reference carries the backfill flag. The 345 rows are not the 300-entry D3 subset. Twenty-five run directories are reported as complete, from retained summaries (artefacts lost); the run ids in Table~\ref{tab:v2-suite} name directories that no longer exist. The directory \texttt{d3v2-m3-family} has a configuration and a split plan but no metrics, so we do not report it.
 
 M1 is the stateless tensor-token predictor and M2 is the state-space sequence predictor. M1-matched and M2-matched are matched-input controls. M3 and M6 use JEPA-style objectives, and M5 is a causal trajectory transformer.
 
@@ -46,7 +46,7 @@ Table~\ref{tab:v2-suite} lists the 25 complete rows. Each cell is the mean Spear
 \footnotesize
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{lrcclc}\toprule
-Model & Rows / clusters & MMLU-Pro $\rho$ & HellaSwag $\rho$ & Run id \\\midrule
+Model & Rows / clusters & MMLU-Pro $\rho$ & HellaSwag $\rho$ & Run id (artefacts lost) \\\midrule
 \multicolumn{5}{l}{\emph{Family-held-out}} \\
 M1 & 345 / 278 & $-$0.08 [$-$0.23, 0.14] & 0.03 [$-$0.46, 0.31] & \texttt{d3v2-m1-family} \\
 M1-matched & 345 / 278 & 0.10 [0.00, 0.25] & 0.31 [0.06, 0.52] & \texttt{d3v2-m1\_matched-family} \\
@@ -77,9 +77,13 @@ Holdout LoRA SFT & 59 / 59 & $-$0.12 [$-$0.23, 0.07] & 0.07 [$-$0.24, 0.30] & \t
 Holdout random direction & 60 / 60 & $-$0.10 [$-$0.18, $-$0.04] & undefined & \texttt{d3v2-m2-holdout-random\_dir} \\
 Holdout task vector & 30 / 27 & 0.06 [$-$0.13, 0.35] & 0.39 [0.25, 0.51] & \texttt{d3v2-m2-holdout-task\_vector} \\\bottomrule
 \end{tabular}
-\caption{Protocol-v2 suite, three seeds per run. Cells give the mean Spearman over seeds and, in brackets, the minimum and maximum over seeds. Brackets describe training and split variation, not confidence intervals. Rows / clusters give the matched rows and ancestry clusters evaluated. ``Undefined'' means the observed HellaSwag values are constant, since all 60 random-direction edits leave HellaSwag unchanged. Run ids are directories under \texttt{data/runs/p4/}. The suite has eight targets; only these two are shown, because KL and WikiText have no heads in this suite.}
+\caption{Protocol-v2 suite, three seeds per run. Cells give the mean Spearman over seeds and, in brackets, the minimum and maximum over seeds. Brackets describe training and split variation, not confidence intervals. Rows / clusters give the matched rows and ancestry clusters evaluated. ``Undefined'' means the observed HellaSwag values are constant, since all 60 random-direction edits leave HellaSwag unchanged. Run ids are the original directories under \texttt{data/runs/p4/}, which were lost on 6 November 2026; the values are reported from the retained summary. The suite has eight targets; only these two are shown, because KL and WikiText have no heads in this suite.}
 \label{tab:v2-suite}
 \end{table}
+
+% D8-BEGIN
+\paragraph{Recovered-set rerun.} After the artefact loss, the same suite was rerun on 6 November 2026 on the rows whose whole edit history keeps delta bytes (\path{docs/reviews/P4/d3v2r-summary-2026-11-06.md}; runs \texttt{d3v2r-*}). That set has 297 matched rows in 270 ancestry clusters, against 345 rows in 278 clusters above; 48 chain rows with a lost ancestor delta are absent from every fold, and the chain holdout's test rows fall from 98 to 50. It is a different experiment from Table~\ref{tab:v2-suite}, not a reproduction of it, and the two are not mixed. On the recovered set, with the same protocol and seeds, StatNN reaches 0.54 on MMLU-Pro and 0.65 on HellaSwag on the seed split, descriptor-only reaches 0.48 and 0.58, and delta norm alone reaches 0.16 and 0.21. The best neural run on the seed split is M1-matched at 0.47 [0.43, 0.49] and 0.54 [0.46, 0.59]; on the trajectory split it is again M1-matched at 0.46 [0.44, 0.48] and 0.55 [0.46, 0.62]. On the family split every model lies within $-$0.07 to 0.18 on MMLU-Pro and within $-$0.21 to 0.16 on HellaSwag. The M3 family run fails on the recovered set for the same reason as before (no parent--child pair in a training fold). The ordering of Table~\ref{tab:v2-suite} therefore holds on the recovered set: StatNN is at or above every neural predictor on both targets, and descriptor-only is within 0.07 of it.
+% D8-END
 
 In this exploratory three-seed analysis, the trajectory-split M1-matched row reached mean Spearman 0.45 and 0.46 on MMLU-Pro and HellaSwag. Seed-0 StatNN reached 0.57 and 0.65 on the same split, so that comparison sets a three-seed mean against a single seed. Seed ranges describe training and split variation, not confidence intervals. The labels carry inferred historical runtime, and target qualification is incomplete.
 
@@ -120,7 +124,7 @@ H2 is not testable on the surviving zoo. Its registered test needs complete traj
 \label{sec:tfv1}
 \sloppy
 The pre-registered test of H1a runs on a teacher-forced tier, TF-v1, specified in \path{docs/PREREG_H1_TF.md}. The candidate endpoint is the gold-letter log-probability on fixed MMLU-Pro items, scored under the edited model against its actual predecessor. The tier scores the likelihood of fixed answers, so it generates no text. As built, it scores 1,000 MMLU-Pro items, 250 HellaSwag items (a nested prefix of a 500-item ranking), 200 KL prompts with 64 greedy tokens each over the full vocabulary, 64 WikiText windows, 50 harmful prompts for refusal and 50 harmless prompts for over-refusal, with 13 continuation phrases scored per prompt. Under amendment A2.1, MMLU-Pro and WikiText log-perplexity are the candidate endpoints. HellaSwag, KL and the refusal stages are descriptive. % D8-BEGIN
-Until regeneration lands, the TF-v1 numbers below are reported from retained summaries (Appendix~\ref{sec:repro}).
+The TF-v1 artefacts were regenerated on 6 November 2026 under source hash \texttt{a224779bf873} (run \texttt{20261106-062239-29d865d2}): the KL cache content root, the G1 repeats, the G2 bridge rows and the recoverable requalification rows all reproduce the retained summaries (Appendix~\ref{sec:repro}). The round-1 and round-2 pilot run ids below are the original, lost runs.
 % D8-END
 
 Timing was the first gate. The round-2 timing pilot (run \texttt{20261105-144427-fb58ffe6}) measured a warm median of 1.805 min per entry against a 1.40 min gate. Amendment A2.4 batches the HellaSwag and refusal stages and keeps MMLU-Pro, KL and WikiText at batch 1. The round-3 pilot (run \texttt{20261105-175313-b7407319}, one process, cache resident) measured a warm median of 1.003 min per entry over ten edited entries, with a range of 0.994 to 1.040 min, and passed the gate. These timings are reported from run logs (artefacts lost). The MMLU-Pro, KL and WikiText records of all 11 pilot entries, the base and ten controls, are bitwise identical to the round-2 records.
