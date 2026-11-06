@@ -2980,6 +2980,23 @@ def build_d8() -> None:
     claim("experiments", "where the StatNN baseline is $-$0.18 and 0.06 while neural runs reach 0.18 and 0.16", None, rd)
     quoted("experiments", "does not establish the ordering of Table~\\ref{tab:v2-suite} on the original 345-row set", [r"\*\*This is a different experiment from the 5 Nov suite, not a reproduction of it\*\*"], r, f"{rd} header")
     assertion("experiments", f"{rd}: m3-family no metrics", "| m3-family | no metrics |" in r, rd)
+    # ---- access paragraph (appendix) and compute statement (experiments)
+    quoted("appendix", "runs the 26 configurations with the recorded flags (CPU, three seeds, 1,000 bootstrap draws)",
+           [r"ran the 26 runs of the 5 Nov list \(CPU, 3 seeds, 1,000 bootstrap draws"], reg, f"{rs} step 6")
+    quoted("appendix", "The original 345-row fold tables cannot be regenerated", [r"\| 345 → 297 \|"], r, f"{rd} comparison")
+    assertion("appendix", "commit 7418ea0 carries the recovered-rerun scripts",
+              __import__("subprocess").run(["git", "cat-file", "-e", "7418ea0:scripts/d8_p4_suite.sh"], cwd=ROOT, capture_output=True).returncode == 0, "git")
+    led = read(LAMBDA); hours = defaultdict(float); dollars = 0.0
+    for ln in led.splitlines():
+        c = [x.strip() for x in ln.strip("|").split("|")]
+        if len(c) >= 8 and re.match(r"\d{4}-", c[0]):
+            key = "A100" if "a100" in c[3].lower() else "H100" if "h100" in c[3].lower() else "A10" if "a10" in c[3].lower() else c[3]
+            hours[key] += float(c[5]); dollars += float(c[6])
+    assertion("experiments", "lambda_spend.md: 23.1 A100 h, 11.7 H100 h, 24.8 A10 h, $116.22",
+              abs(hours["A100"] - 23.1) < 0.05 and abs(hours["H100"] - 11.7) < 0.05 and abs(hours["A10"] - 24.8) < 0.05 and abs(dollars - 116.22) < 0.005, "board/lambda_spend.md")
+    claim("experiments", "23.1 A100 hours, 11.7 H100 hours and 24.8 A10 hours, in total \\$116.22", None, "board/lambda_spend.md")
+    quoted("experiments", "The post-incident regeneration used 4.69 local GPU hours", [r"\*\*4\.69\*\*"], reg, f"{rs} resource table")
+    quoted("experiments", "26.6 run-hours over up to four parallel workers", [r"26\.6 run-wall-h over up to 4 parallel workers"], reg, f"{rs} step 6")
     claim("appendix", "Of the 21 B results, 15 depend on chain rows", [21, 15], "incident review section 1 counts")
     for needle in ["**A = 12**", "**B = 21**", "**C = 4 results", "Total 37 result groups"]:
         assertion("appendix", f"incident review count: {needle}", needle in inc, "incident review section 1")

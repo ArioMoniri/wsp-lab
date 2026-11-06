@@ -27,5 +27,7 @@ Total & & 37 \\\bottomrule
 \label{tab:d8-classes}
 \end{table}
 
-The recovery plan, its acceptance tests and the backup policy are recorded in \path{docs/DECISIONS.md} (D8 and its addendum).
+The recovery plan, its acceptance tests and the backup policy are recorded in \path{docs/DECISIONS.md} (D8 and its addenda).
+
+\textbf{Access.} \ifarxivpreprint The code repository and the dataset are public under the handles given above.\else Anonymised links to the code repository and the dataset are supplied through the submission system; this review copy names neither, so the document paths cited in this appendix are not retrievable from the manuscript alone, and the reproducibility claim is limited accordingly.\fi The surviving artefacts (zoo manifest, edit records, deltas with bytes, evaluation summaries and item records, both Lambda base evaluations) are in the dataset. The recovered-set rerun of Section~\ref{sec:v2} is reproducible from the repository at commit \texttt{7418ea0}: \path{scripts/d8_p4_prepare.py} builds the input view under the complete-ancestry rule and \path{scripts/d8_p4_suite.sh} runs the 26 configurations with the recorded flags (CPU, three seeds, 1,000 bootstrap draws). The original 345-row fold tables cannot be regenerated because their row set includes lost chain deltas.
 % D8-END

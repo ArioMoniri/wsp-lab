@@ -205,3 +205,13 @@ cite regenerated run ids, v2 table keeps original ids marked lost, recovered-set
 modes. CI test-gpu was red because the runner's read-only HF cache lived under data/; repopulated, green. The regeneration
 and scribe delegates on the Claude API instance both died on repeated API errors; the orchestrator finished both.
 
+**Board A close review and Board B whole-manuscript read (6 Nov 18:00–20:30 UTC).** Four providers failed in a row (Claude API
+instance: repeated API errors; Antigravity: quota; Grok: no credits; OpenCode: blocked response); both reviews ran on Copilot.
+Board A: ACCEPT WITH REQUIRED EDITS, eight paper edits applied (KL 3.3472e-4, 901-entry extraction, ordering scoped to the
+seed and trajectory splits, G1 14/14 and the A2.1 results as reported from logs, base hashes with the shared-field qualifier,
+class C meaning, TF note scope), D8 addendum 2 adopted, audit reads the regeneration JSON files; D8 stays open until the
+backup controls are verified. Board B: MAJOR REVISION (1 blocking: author name outside the anonymity switch; 2 major:
+ordering claim, access links; 4 minor; 1 nit), all addressed: author behind the switch, access paragraph naming the
+recovered-rerun commit, broader-impact paragraph, compute statement from the spend ledger, contribution stated once,
+StatNN defined. Paper 20 pages; audit PASS in both modes.
+
