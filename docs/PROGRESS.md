@@ -193,3 +193,15 @@ regeneration ≈ 3.15 GPU-h + 8–10 CPU-h from detached worktrees at verified c
 removed. Backup policy (S3 versioned copy + EBS DLM repair) awaits the user's approval. Earlier the same night: H1w
 WikiText gate FAILED (θ̂ 0.007), companions keep the MMLU residual signal positive in point estimate but on zero;
 A4 recorded; paper outcome section merged (17 pages).
+
+**D8 regeneration complete; paper updated (6 Nov 16:03–17:30 UTC).** Steps 1–6 of the Board A plan executed from detached
+worktrees (docs/reviews/P5/d8-regeneration-2026-11-06.md): 838 stored / 63 aliased / 358 lost; 901 feature sets re-extracted;
+three base re-evaluations bitwise across source trees; seed-1 panel reproduces every printed value (KL differs by ≤ 3.4e-4
+between seeds; RESULTS.md corrected); TF-v1 cache root, G1 12/12, G2 11/11 and 28/28 (y, h) rows reproduce. Step 6: the
+protocol-v2 suite on the recovered set (d3v2r-*, 297 rows / 270 clusters, 25 of 26 runs) keeps the 5 Nov ordering (StatNN
+0.54/0.65 at or above every neural model; descriptor-only 0.48/0.58). GPU 4.69 h against the 3.15 h plan (two deviations
+inside Board A's scope). Merged ab20983. Paper: appendix states the completed regeneration and labels, TF-v1 and seed-1
+cite regenerated run ids, v2 table keeps original ids marked lost, recovered-set paragraph added; audit passes in both
+modes. CI test-gpu was red because the runner's read-only HF cache lived under data/; repopulated, green. The regeneration
+and scribe delegates on the Claude API instance both died on repeated API errors; the orchestrator finished both.
+

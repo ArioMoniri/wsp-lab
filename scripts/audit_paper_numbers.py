@@ -2674,6 +2674,8 @@ TABLE_CHECKS = {
 H1A_JSON = DOCS / "reviews" / "P5" / "h1a-companions-2026-11-06.json"
 H1W_JSON = DOCS / "reviews" / "P5" / "h1w-gate-2026-11-06.json"
 INCIDENT = DOCS / "reviews" / "P5" / "board-a-incident-d8-2026-11-06.md"
+REGEN = DOCS / "reviews" / "P5" / "d8-regeneration-2026-11-06.md"
+D3V2R = DOCS / "reviews" / "P4" / "d3v2r-summary-2026-11-06.md"
 D8_BLOCK = re.compile(r"% D8-BEGIN\n(.*?)% D8-END", re.DOTALL)
 LEGACY = [0]  # legacy tokens not checked because their sources are absent
 MODE_NOTE = ""
@@ -2690,6 +2692,7 @@ def in_d8(spans: list[tuple[int, int]], pos: int) -> bool:
 def tex2md(s: str) -> str:
     """Render a LaTeX paragraph the way the incident review writes it, for the verbatim check."""
     s = s.replace("``", '"').replace("''", '"').replace("\u2019", "'")
+    s = re.sub(r"\(\\ifarxivpreprint(.*?)\\else.*?\\fi\)", r"\1", s, flags=re.DOTALL)
     s = re.sub(r"\\textbf\{([^{}]*)\}", r"**\1**", s)
     s = re.sub(r"\\(?:texttt|path)\{([^{}]*)\}", r"`\1`", s)
     s = s.replace("\\_", "_").replace("\\%", "%").replace("~", " ")
@@ -2885,6 +2888,62 @@ def build_d8() -> None:
     claim("appendix", "regenerable under the recorded source hash & 21", [21], "incident review section 1 counts")
     claim("appendix", "cannot be regenerated; reported from logs & 4", [4], "incident review section 1 counts")
     claim("appendix", "Total & & 37", [37], "incident review section 1 counts")
+
+    # ---- regeneration outcome (appendix, experiments, reliability): docs/reviews/P5/d8-regeneration-2026-11-06.md
+    reg = read(REGEN)
+    rs = "regeneration report"
+    quoted("appendix", "Of the 1,259 manifest rows, 838 have delta bytes, 63 are byte-identical to a stored delta and 358 are lost",
+           [r"1,259 manifest rows: \*\*838 with bytes, 63 aliased, 358 lost\*\*"], reg, f"{rs} summary row 1")
+    quoted("appendix", "the 838 stored deltas show no hash, header or norm mismatch",
+           [r"0 hash, header or norm misses over the 838 stored deltas"], reg, f"{rs} summary row 1")
+    quoted("appendix", "Feature re-extraction covered 901 entries with no failure",
+           [r"\*\*901 entries re-extracted\*\* \(838 \+ 63 aliases\), 0 failed"], reg, f"{rs} summary row 2")
+    quoted("appendix", "a ten-entry re-extraction in a fresh process was byte-identical",
+           [r"10-entry re-extraction byte-identical"], reg, f"{rs} summary row 2")
+    quoted("appendix", "all 458 records are bitwise identical across the source trees on every field they share",
+           [r"458 of 458 identical on every field both records carry"], reg, f"{rs} step 3")
+    quoted("appendix", "KL differs by at most 0.0003 nats between seeds",
+           [r"KL differs by up to 3\.3e-4 nats between seeds"], reg, f"{rs} step 4")
+    quoted("appendix", "12 of 12 repeatable G1 entries were bitwise identical (2 of the original 14 are chain predecessors whose deltas are lost)",
+           [r"G1 \*\*12 of 12\*\* repeats bitwise \(14 of 14 originally; 2 chain predecessors lost\)"], reg, f"{rs} summary row 5")
+    quoted("appendix", "all 11 rows of the G2 bridge reproduced",
+           [r"G2 \*\*11 of 11 table rows\*\* reproduce"], reg, f"{rs} summary row 5")
+    quoted("appendix", "all 28 recoverable rows of the requalification audit reproduced to the printed four digits",
+           [r"\*\*28 of 28\*\* recoverable \(y, h\) rows reproduce to the printed 4 digits"], reg, f"{rs} summary row 5")
+    quoted("experiments", "regenerated on 6 November 2026 under source hash \\texttt{a224779bf873} (run \\texttt{20261106-062239-29d865d2})",
+           [r"Run `20261106-062239-29d865d2`", r"`source_hash a224779bf873"], reg, f"{rs} step 5")
+    quoted("reliability", "regenerated on 6 November 2026 as run \\texttt{p2-batch/20261106-045437-03cde0e3} under source hash \\texttt{ec88cfd95d7d}",
+           [r"run `p2-batch/20261106-045437-03cde0e3`", r"`ec88cfd95d7d`"], reg, f"{rs} step 4")
+    declare("appendix", "6 November 2026", "incident date (D8)")
+    declare("experiments", "6 November 2026", "incident date (D8)")
+    declare("reliability", "6 November 2026", "incident date (D8)")
+
+    # ---- recovered-set rerun (experiments): docs/reviews/P4/d3v2r-summary-2026-11-06.md
+    r = read(D3V2R)
+    rd = "d3v2r summary"
+    def row(name):
+        ln = next(l for l in r.splitlines() if l.startswith(f"| {name} |"))
+        return [c.strip() for c in ln.strip("|").split("|")]
+    seed = row("m1_matched-seed"); traj = row("m1_matched-trajectory")
+    quoted("experiments", "That set has 297 matched rows in 270 ancestry clusters, against 345 rows in 278 clusters above",
+           [r"\| 345 → 297 \| 278 → 270 \|"], r, f"{rd} comparison")
+    quoted("experiments", "48 chain rows with a lost ancestor delta are absent from every fold, and the chain holdout's test rows fall from 98 to 50",
+           [r"48 chain rows with a lost ancestor delta removed from every fold; the chain holdout's test rows fall from 98 to 50"], r, f"{rd} comparison")
+    assertion("experiments", f"{rd}: StatNN seed split 0.54 / 0.65", seed[5] == "0.54 / 0.65", rd)
+    assertion("experiments", f"{rd}: descriptor-only seed split 0.48 / 0.58", seed[6] == "0.48 / 0.58", rd)
+    assertion("experiments", f"{rd}: delta-norm seed split 0.16 / 0.21", seed[7] == "0.16 / 0.21", rd)
+    claim("experiments", "StatNN reaches 0.54 on MMLU-Pro and 0.65 on HellaSwag on the seed split, descriptor-only reaches 0.48 and 0.58, and delta norm alone reaches 0.16 and 0.21", None, rd)
+    assertion("experiments", f"{rd}: m1_matched-seed cells", seed[1] == "0.47 [0.43,0.49]" and seed[2] == "0.54 [0.46,0.59]", rd)
+    assertion("experiments", f"{rd}: m1_matched-trajectory cells", traj[1] == "0.46 [0.44,0.48]" and traj[2] == "0.55 [0.46,0.62]", rd)
+    claim("experiments", "M1-matched at 0.47 [0.43, 0.49] and 0.54 [0.46, 0.59]", None, rd)
+    claim("experiments", "M1-matched at 0.46 [0.44, 0.48] and 0.55 [0.46, 0.62]", None, rd)
+    fam = [row(f"{m}-family") for m in ("m1", "m1_matched", "m2", "m2_matched", "m5", "m6")]
+    mm = [float(x[1].split()[0]) for x in fam]; hs = [float(x[2].split()[0]) for x in fam]
+    assertion("experiments", f"{rd}: family-split ranges", min(mm) >= -0.07 - 5e-3 and max(mm) <= 0.18 + 5e-3 and min(hs) >= -0.21 - 5e-3 and max(hs) <= 0.16 + 5e-3, rd)
+    claim("experiments", "every model lies within $-$0.07 to 0.18 on MMLU-Pro and within $-$0.21 to 0.16 on HellaSwag", None, rd)
+    assertion("experiments", f"{rd}: descriptor-only within 0.07 of StatNN", round(0.54 - 0.48, 2) <= 0.07 and round(0.65 - 0.58, 2) <= 0.07, rd)
+    claim("experiments", "descriptor-only is within 0.07 of it", None, rd)
+    assertion("experiments", f"{rd}: m3-family no metrics", "| m3-family | no metrics |" in r, rd)
     claim("appendix", "Of the 21 B results, 15 depend on chain rows", [21, 15], "incident review section 1 counts")
     for needle in ["**A = 12**", "**B = 21**", "**C = 4 results", "Total 37 result groups"]:
         assertion("appendix", f"incident review count: {needle}", needle in inc, "incident review section 1")
