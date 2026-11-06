@@ -11,6 +11,7 @@ per-run comparison with the reason each run differs (the recovered set has fewer
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -23,7 +24,7 @@ TARGETS = ("mmlu_pro", "hellaswag")
 
 
 def fmt(x, nd=2):
-    return "nan" if x is None or x != x else f"{x:.{nd}f}"
+    return "nan" if x is None or math.isnan(x) else f"{x:.{nd}f}"
 
 
 def cell(node):
@@ -73,8 +74,8 @@ def main():
         f"# P4 suite, protocol v2, recovered set (runs data/runs/p4/d3v2r-*; regenerated {a.date}; 3 full seeds: mean [min,max]; baselines from seed 0)",
         "",
         "Recovered-set rerun after the D8 data loss: same code, protocol and run list as `d3v2-summary-2026-11-05.md`, features re-extracted from the restored and aliased deltas, "
-        "and only the rows whose whole history (chain predecessors back to the root, task-vector sources) has features. **This is a different experiment from the 5 Nov suite, not a reproduction of it**: "
-        "48 matched chain rows are missing because their deltas are lost (see the regeneration report, step 6). Do not mix the two tables.",
+        + "and only the rows whose whole history (chain predecessors back to the root, task-vector sources) has features. **This is a different experiment from the 5 Nov suite, not a reproduction of it**: "
+        + "48 matched chain rows are missing because their deltas are lost (see the regeneration report, step 6). Do not mix the two tables.",
         "",
         "| model-split | mmlu_pro ρ | hellaswag ρ | KL ρ | wikitext ρ | StatNN mmlu/hs | descriptor-only mmlu/hs | delta-norm mmlu/hs | rows / clusters |",
         "|---|---|---|---|---|---|---|---|---|",

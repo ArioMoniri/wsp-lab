@@ -58,3 +58,13 @@ the project. Rules now enforced: the pre-commit hook refuses any staged path mat
 and refuse. Recovery: non-chain deltas, metadata, eval records and the Lambda base evaluations come back from the public
 HF dataset; chain deltas, v4 features (re-extractable for non-chain entries), data/runs (P4 metrics, TF-v1 records and
 KL cache, requalification JSON beyond the docs/prereg copies) are lost and must be either regenerated or disclosed.
+
+## 2026-11-06 — regeneration after D8: logs outside data/ saved the provenance; scripts inside data/ did not
+The seed-1 panel could be re-run at the exact source only because `~/agent-logs` (outside `data/`) still held two manifests of
+the original run (git sha, source hash, config hash). The launch scripts that lived under `data/runs/` (`p4/run_suite.sh`,
+`d3_shards/controls.txt`) were lost with it: the P4 flags had to be inferred and the control list reconstructed. Rules: commit
+every launch script and id list (or keep it outside `data/`); log the full provenance line of every run to `~/agent-logs`.
+Two more: the hub overwrote the H0 `records.jsonl` of the 11 controls with the Lambda copy (same file name, different device),
+so per-device records must live in `devices/<H>/<run>/` and nothing may be uploaded over `<id>/records.jsonl`; and
+`agent-tmux <name> bash -c '<quoted string>'` loses the quotes (tmux joins the arguments) and the window dies at once, so put
+waiters and chains in script files.
