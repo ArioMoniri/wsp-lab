@@ -245,4 +245,4 @@
 | 2026-11-06 | Scribe: paper TF-study outcome section | claude_aio_gmail_api/claude-haiku-5-5 high | done 8ec2289 (17 pages; audit 842/0) — merged; companions + H1w still to add |
 | 2026-11-06 | Board A: incident D8 plan | claude_aio_gmail_api/claude-sonnet-5-5 high | done d64e410: 12 A / 21 B / 4 C; regen ≈3.15 GPU-h (+5.2 for full TF) + 8–10 CPU-h; H2 impossible; backup policy needs user approval |
 | 2026-11-06 | D8 regeneration (sidecar, features, 3× H0 base, seed-1 panel, TF fingerprint/G1/G2, P4 recovered set) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
-| 2026-11-06 | Scribe: companions + H1w + D8 reproducibility disclosure | claude_aio_gmail_api/claude-haiku-5-5 high | running |
+| 2026-11-06 | Scribe: companions + H1w + D8 disclosure | claude_aio_gmail_api/claude-haiku-5-5 high | done 917203d (19 pages) — merged; Board B after regeneration lands |
