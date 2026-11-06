@@ -31,6 +31,7 @@ import csv
 import json
 import math
 import re
+import statistics
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -646,27 +647,13 @@ def build() -> None:
         "H2 bar",
     )
 
-    # ---------------- zoo
-    claim("zoo", "The file holds 1,255 lines", [1255], "zoo manifest line count")
-    claim(
-        "zoo", "1,247 entry rows, one per unique ID", [1247], "zoo manifest body rows (unique ids)"
-    )
+    # ---------------- zoo (count claims live in build_tfv1; these are unchanged)
     claim(
         "zoo",
-        "The manifest therefore has 1,247 rows: 1,235 unflagged rows and the 12 flagged rows.",
-        [1247, 1235, 12],
-        "zoo manifest rows; unflagged = 1247 - 12",
+        "The v2 suite matches 345 of those 389",
+        [345, 389],
+        "v2 matched rows; eval count",
     )
-    claim(
-        "zoo", "The feature manifest records 1,235 entries", [1235], "features manifest n_entries"
-    )
-    claim(
-        "zoo",
-        "Of the 1,235, 389 have evaluation records and none of the 12 flagged entries does.",
-        [1235, 389, 12],
-        "unflagged rows; eval.json present; flagged ids without eval",
-    )
-    claim("zoo", "The v2 suite matches 345 of those 389", [345, 389], "v2 matched rows; eval count")
     claim(
         "zoo",
         "The D3 subset has 300 evaluated entries, and 260 of them have matched-reference targets.",
@@ -689,16 +676,6 @@ def build() -> None:
     presence("zoo", "D6 addendum 3 flags them", DECISIONS, r"D6 addendum 3", "D6 addendum 3")
     presence(
         "zoo",
-        "verified KL to base of 0.77 to 14.0 nats",
-        DECISIONS,
-        r"0\.77–14\.0 nats",
-        "0.77 to 14.0 nats",
-    ) if False else None
-    claim(
-        "zoo", "The twelve Heretic ARA entries are the rebuilt set", [], "word form"
-    ) if False else None
-    presence(
-        "zoo",
         "\\texttt{ara\\_unconstrained\\_surrogate\\_scale}",
         DECISIONS,
         r"ara_unconstrained_surrogate_scale",
@@ -716,9 +693,6 @@ def build() -> None:
         "first 400 harmful and harmless dataset prompts",
         [400],
         "src/wsp/edits/refusal.py train[:400]",
-    )
-    claim(
-        "zoo", "1,247 entry rows, counted by recorded eligibility", [1247], "zoo manifest body rows"
     )
     declare("zoo", "5 November 2026", "date")
     declare("zoo", "The builder implements six families.", "")  # word count, no digits
@@ -1270,20 +1244,6 @@ def build() -> None:
         "threshold; covered by the assertion below",
     )
     declare("discussion", "Several rows exceed 0.3", "threshold; covered by the assertion below")
-    claim(
-        "discussion", "at least 100 valid fresh components", [100], "docs/PREREG_H1_TF.md pass rule"
-    )
-    presence(
-        "discussion",
-        "a half-width no greater than $\\theta/2$",
-        PREREG,
-        r"≥100 valid genuinely fresh components",
-        "PREREG pass rule (components, 100)",
-    )
-    declare("discussion", "$\\theta/2$", "definition of the pass rule")
-    locator(
-        "discussion", "docs/PREREG_H1_TF.md}, section 2", "PREREG section 2 (component definition)"
-    )
     locator(
         "discussion",
         "round2-metrology.md}, section 1.4",
@@ -1315,52 +1275,6 @@ def build() -> None:
         ],
         "tab:residual HellaSwag row (metrology line 44; residual output)",
     )
-    claim(
-        "discussion",
-        "at least 80\\% power at $\\theta = 0.15$",
-        [80, 0.15],
-        "docs/PREREG_H1_TF.md pass rule",
-    )
-    presence(
-        "discussion",
-        "at least 80\\% power at $\\theta = 0.15$",
-        PREREG,
-        r"80% power",
-        "PREREG 80% power",
-    )
-    claim(
-        "discussion",
-        "The primary outcome is the mean, over 1,000 paired items per edit,",
-        [1000],
-        "docs/PREREG_H1_TF.md section 1 (1,000 paired items)",
-    )
-    presence(
-        "discussion",
-        "over 1,000 paired items per edit",
-        PREREG,
-        r"\*\*1,000\*\* paired",
-        "PREREG 1,000 items",
-    )
-    claim(
-        "discussion",
-        "An upper 95\\% bound below 0.05 on both intervals",
-        [0.05],
-        "docs/PREREG_H1_TF.md kill rule",
-    )
-    presence(
-        "discussion",
-        "An upper 95\\% bound below 0.05",
-        PREREG,
-        r"upper 95% bound<\.05",
-        "PREREG kill rule",
-    )
-    claim(
-        "discussion", "A pass needs $\\theta \\ge 0.15$", [0.15], "docs/PREREG_H1_TF.md pass rule"
-    )
-    presence(
-        "discussion", "A pass needs $\\theta \\ge 0.15$", PREREG, r"θ≥\.15", "PREREG theta 0.15"
-    )
-
     # ---------------- reliability
     claim(
         "reliability",
@@ -2315,6 +2229,415 @@ def t_devices(body: str, file: str) -> int:
     return n
 
 
+# ------------------------------------------------------------------ TF-v1 section (6 Nov 2026)
+
+REQUAL = DATA / "runs" / "h1a" / "requalification_report.json"
+ROUND3 = DATA / "evals" / "qwen3.5-0.8b" / "tf_v1" / "round3_check.json"
+G1_REPORT = DATA / "evals" / "qwen3.5-0.8b" / "tf_v1" / "g1_report.json"
+G2_REPORT = DATA / "evals" / "qwen3.5-0.8b" / "tf_v1" / "bridge_g2" / "g2_report.json"
+MINUTES = DATA / "runs" / "h1a" / "d3_stratum_minutes.jsonl"
+PLAN_SUMMARY = DATA / "runs" / "h1a" / "d3_plan_summary.json"
+PANEL_MANIFEST = DATA / "runs" / "h1a" / "panel_manifest.json"
+REVIEW_BA = DOCS / "reviews" / "P5" / "board-a-requalification-adjudication-2026-11-06.md"
+
+
+def rq() -> dict:
+    return jload(REQUAL)
+
+
+def zoo_counts() -> dict:
+    lines = [ln for ln in ZOO_MANIFEST.read_text().splitlines() if ln.strip()]
+    rows = [json.loads(ln) for ln in lines]
+    rows = [r for r in rows if "family" in r and r.get("type") != "header"]
+    smoke = [r for r in rows if r.get("eligibility") == "smoke"]
+    corrected = [
+        r for r in rows if r.get("family") == "heretic_ara" and r.get("eligibility") == "production"
+    ]
+    unflagged = [r for r in rows if r.get("eligibility") != "smoke"]
+    evald = [
+        r
+        for r in unflagged
+        if (DATA / "zoo" / "qwen3.5-0.8b" / r["id"] / "eval.json").exists()
+        or (EV / r["id"] / "eval.json").exists()
+    ]
+    feat = jload(FEATURE_MANIFEST)
+    return {
+        "lines": len(lines),
+        "rows": len(rows),
+        "smoke": len(smoke),
+        "corrected": len(corrected),
+        "unflagged": len(unflagged),
+        "eval_unflagged": len(evald),
+        "features": feat["n_entries"],
+        "features_failed": len(feat.get("failed", {})),
+    }
+
+
+def d3_minutes() -> list[dict]:
+    return [json.loads(ln) for ln in MINUTES.read_text().splitlines() if ln.strip()]
+
+
+def review_nums() -> dict:
+    t = read(REVIEW_BA)
+    return {
+        "lora": float(re.search(r"lora_sft (0\.\d+)", t).group(1)) * 100,
+        "chain": float(re.search(r"chain (0\.\d+) \(60%\)", t).group(1)) * 100,
+        "tv": -float(re.search(r"task_vector −(0\.\d+)", t).group(1)) * 100,
+        "ab": float(re.search(r"A→B (0\.\d+)", t).group(1)) * 100,
+        "ba": float(re.search(r"B→A (0\.\d+)", t).group(1)) * 100,
+    }
+
+
+def power_lower(theta_key: str) -> list[float]:
+    res = rq()["gate"]["results"]["empirical"][theta_key]
+    return [
+        res[p][m]["rejection_wilson_lower95"]
+        for p in ("conditional", "joint")
+        for m in ("bootstrap_t", "bca", "percentile")
+    ]
+
+
+def tfqual_expect() -> list[tuple[str, list]]:
+    q = rq()
+    mm = q["qualification"]["mmlu_gold_log_prob"]
+    wt = q["qualification"]["wikitext_log_ppl"]
+    return [
+        (
+            "(i) panel-mean",
+            [
+                mm["i_panel_mean"]["limit_delta_over_2"],
+                mm["i_panel_mean"]["upper97_5"],
+                wt["i_panel_mean"]["limit_delta_over_2"],
+                wt["i_panel_mean"]["upper97_5"],
+            ],
+        ),
+        (
+            "(ii) maximum",
+            [
+                mm["ii_ceiling"]["limit_delta"],
+                mm["ii_ceiling"]["max_halfwidth"],
+                wt["ii_ceiling"]["limit_delta"],
+                wt["ii_ceiling"]["max_halfwidth"],
+            ],
+        ),
+        (
+            "(iii) tripwire P, upper",
+            [
+                mm["iii_tripwire"]["limit"],
+                mm["iii_tripwire"]["P_upper97_5"],
+                wt["iii_tripwire"]["limit"],
+                wt["iii_tripwire"]["P_upper97_5"],
+            ],
+        ),
+        (
+            "(iii) tripwire P, point",
+            [None, mm["iii_tripwire"]["P_point"], None, wt["iii_tripwire"]["P_point"]],
+        ),
+        (
+            "Repeat, maximum",
+            [
+                mm["repeat"]["limit_max"],
+                mm["repeat"]["max_abs_discrepancy"],
+                wt["repeat"]["limit_max"],
+                wt["repeat"]["max_abs_discrepancy"],
+            ],
+        ),
+        (
+            "Repeat, 95th",
+            [
+                mm["repeat"]["limit_p95_upper"],
+                mm["repeat"]["p95_upper97_5_component_bootstrap"],
+                wt["repeat"]["limit_p95_upper"],
+                wt["repeat"]["p95_upper97_5_component_bootstrap"],
+            ],
+        ),
+        (
+            "Reliability",
+            [
+                mm["reliability"]["lower_bound_threshold"],
+                mm["reliability"]["reliability_ci95"][0],
+                wt["reliability"]["lower_bound_threshold"],
+                wt["reliability"]["reliability_ci95"][0],
+            ],
+        ),
+    ]
+
+
+def t_tfqual(body: str, file: str) -> int:
+    """Checks every value cell of the qualification table against the requalification report.
+    Returns the number of value-cell tokens it checked (label tokens are declared separately)."""
+    expect = tfqual_expect()
+    n = 0
+    for row in rows_of(body):
+        c = cells(row)
+        for prefix, exps in expect:
+            if not c[0].startswith(prefix):
+                continue
+            for idx, exp in enumerate(exps, start=1):
+                if exp is None:
+                    continue
+                for t in numeric_tokens(mask_nonprose(c[idx])):
+                    n += 1
+                    add(
+                        "CHECKED",
+                        file,
+                        f"tab:tfqual {prefix} col {idx}",
+                        t["text"],
+                        exp,
+                        same(t["text"], exp),
+                        "requalification_report.json",
+                    )
+            break
+    return n
+
+
+def build_tfv1() -> None:
+    q = rq()
+    fit = q["gate"]["fit"]
+    mm = q["qualification"]["mmlu_gold_log_prob"]
+    wt = q["qualification"]["wikitext_log_ppl"]
+    fam = q["family_counts"]
+    w = q["stratum_weights"]
+    n_st = q["n_stratum"]
+    n_null = fit["n_null"]
+    n_over = mm["n_entries_over_half_delta"]
+    theta = fit["theta_hat_stratum"] * 100
+    n_eff = fit["n_eff"]
+    lo_all = fit["leave_out_sensitivity"]["all_rows"]
+    lo_wo = fit["leave_out_sensitivity"]["without_over_half_delta"]
+    lo_keys = [k for k in lo_all if k != "theta_hat"]
+    lows = [lo_all[k][0] * 100 for k in lo_keys]
+    highs = [lo_all[k][1] * 100 for k in lo_keys]
+    cond_pct_lo = lo_all["conditional_percentile"][0] * 100
+    pw = power_lower("theta_0.15")
+    r3 = jload(ROUND3)
+    r3_max: dict = {}
+    for e in r3["entries"].values():
+        for k, v in e["max_abs"].items():
+            r3_max[k] = max(r3_max.get(k, 0.0), v)
+    probe = r3["probe_limits"]
+    g1 = jload(G1_REPORT)
+    g2 = jload(G2_REPORT)
+    g2m = g2["pooled"]["mmlu_pro"]
+    g2h = g2["pooled"]["hellaswag"]
+    mins = d3_minutes()
+    med_wall = statistics.median([r["wall_minutes"] for r in mins])
+    plan = jload(PLAN_SUMMARY)
+    n_confirm = len(jload(PANEL_MANIFEST)["confirmatory_component_ids"])
+    rv = review_nums()
+    zc = zoo_counts()
+    pw_lo, pw_hi = min(pw), max(pw)
+
+    # ---------------- abstract
+    claim("abstract", "on 229 development entries the MMLU-Pro endpoint", [n_st], "requalification_report.json n_stratum")
+
+    # ---------------- experiments: TF-v1 subsection
+    E = "experiments"
+    presence(E, "As built, it scores 1,000 MMLU-Pro items", RESULTS_MD, r"MMLU-Pro 1,000", "RESULTS TF-v1 config")
+    presence(
+        E,
+        "250 HellaSwag items (a nested prefix of a 500-item ranking)",
+        RESULTS_MD,
+        r"HellaSwag 250 \(nested prefix of the 500-item ranking\)",
+        "RESULTS TF-v1 config",
+    )
+    presence(E, "200 KL prompts with 64 greedy tokens each", RESULTS_MD, r"KL 200 prompts x 64 greedy tokens", "RESULTS TF-v1 config")
+    presence(E, "64 WikiText windows", RESULTS_MD, r"WikiText 64,", "RESULTS TF-v1 config")
+    presence(
+        E,
+        "50 harmful prompts for refusal and 50 harmless prompts for over-refusal",
+        RESULTS_MD,
+        r"refusal 50 \+ 50",
+        "RESULTS TF-v1 config",
+    )
+    presence(E, "with 13 continuation phrases scored per prompt", RESULTS_MD, r"13 continuation phrases", "RESULTS TF-v1 config")
+    presence(E, "measured a warm median of 1.805 min per entry", RESULTS_MD, r"round 2 was 1\.805", "RESULTS round-2 timing")
+    claim(E, "against a 1.40 min gate", [r3["gate_minutes"]], "round3_check gate_minutes")
+    claim(E, "measured a warm median of 1.003 min per entry", [r3["warm_median_minutes"]], "round3_check warm_median_minutes")
+    claim(E, "a range of 0.994 to 1.040 min", list(r3["warm_range_minutes"]), "round3_check warm_range_minutes")
+    claim(E, "records of all 11 pilot entries", [len(r3["entries"])], "round3_check entries")
+    claim(E, "keeps MMLU-Pro, KL and WikiText at batch 1", [1], "A2.4 batch configuration (round3 records)")
+    claim(E, "Over the 11 pilot records, the worst deviations", [len(r3["entries"])], "round3_check entries")
+    claim(E, "were 0.0148 on HellaSwag", [r3_max["hellaswag"]], "round3_check max_abs (worst over entries)")
+    claim(E, "(probe limit 0.010)", [probe["hellaswag"]], "round3_check probe_limits")
+    claim(E, "0.526 on the refusal phrase log-probability", [r3_max["refusal_rate.phrase_log_prob"]], "round3_check max_abs")
+    claim(E, "(limit 0.39)", [probe["phrase_log_prob"]], "round3_check probe_limits")
+    claim(E, "0.371 on the refusal margin", [r3_max["refusal_rate.margin"]], "round3_check max_abs")
+    claim(E, "(limit 0.30)", [probe["margin"]], "round3_check probe_limits")
+    claim(E, "changed on 17 of 2,750 items", [r3["hellaswag_argmax_changes_total"], 11 * 250], "round3_check; 11 records x 250 items")
+    claim(E, "G1 repeats the registered composition, 13 edited entries and the base", [g1["n_entries"] - 1], "g1_report n_entries minus base")
+    claim(E, "for the 13 edited entries and", [g1["n_entries"] - 1], "g1_report n_entries minus base")
+    claim(E, "All 14 repeats match their primaries", [g1["n_entries"]], "g1_report n_entries")
+    claim(E, "maximum discrepancy of 0 on each endpoint", [0], "g1_report worst_max_abs")
+    claim(
+        E,
+        "the fast tier's own 100 MMLU-Pro and 100 HellaSwag items on the 11 pilot records",
+        [g2["n_items_per_benchmark"], g2["n_items_per_benchmark"], g2m["entries"]],
+        "g2_report n_items_per_benchmark, entries",
+    )
+    presence(E, "(limit 0.02)", RESULTS_MD, r"median \|Δ\| 2\.2e-16 \(limit 0\.02\)", "RESULTS G2 round 3 (PREREG §6 limit)")
+    claim(E, "99th percentile 0.066", [g2m["gold_score_abs_diff_p99_max"]], "g2_report pooled mmlu_pro p99 max")
+    presence(E, "(limit 0.2)", RESULTS_MD, r"p99 0\.066 \(limit 0\.2\)", "RESULTS G2 round 3 (PREREG §6 limit)")
+    claim(E, "argmax agreement of 99\\%", [g2m["argmax_agreement_min"] * 100], "g2_report pooled mmlu_pro argmax min")
+    presence(E, "(limit 99\\%)", RESULTS_MD, r"argmax agreement 99% \(limit 99%\)", "RESULTS G2 round 3 (PREREG §6 limit)")
+    claim(E, "agrees with the fast tier on 99.9\\% of correctness labels", [g2h["correctness_agreement_mean"] * 100], "g2_report pooled hellaswag")
+    claim(
+        E,
+        "(mean 0.9991 over 11 entries, worst entry 0.99)",
+        [g2h["correctness_agreement_mean"], g2h["entries"], g2h["correctness_agreement_min"]],
+        "g2_report pooled hellaswag",
+    )
+    claim(
+        E,
+        "Of the 381 unique D3 deltas in the scoring plan, 378 were scored",
+        [plan["d3_unique_scored_ids"], len(mins)],
+        "d3_plan_summary d3_unique_scored_ids; d3_stratum_minutes rows",
+    )
+    claim(
+        E,
+        "the 229 stratum entries (139 chain, 60 LoRA SFT and 30 task-vector entries) and 149 null-family controls",
+        [n_st, fam["chain"], fam["lora_sft"], fam["task_vector"], len(mins) - n_st],
+        "requalification family_counts; minutes rows minus stratum",
+    )
+    claim(E, "median wall time of 1.02 min per entry", [round(med_wall, 2)], "d3_stratum_minutes wall_minutes median")
+    claim(E, "all 378 scored entries", [len(mins)], "d3_stratum_minutes rows")
+    claim(E, "use 229 stratum rows and 157 null-family control rows", [n_st, n_null], "requalification_report n_stratum, n_null")
+    claim(
+        E,
+        "uses the 229 stratum entries, the 1,000 MMLU-Pro items and the 64 WikiText windows",
+        [n_st, mm["n_items"], wt["n_items"]],
+        "requalification_report n_stratum, n_items",
+    )
+    claim(E, "chain 0.700, LoRA SFT 0.206 and task vector 0.094", [w["chain"], w["lora_sft"], w["task_vector"]], "requalification stratum_weights")
+    declare(E, "$\\delta/2$", "threshold: half of delta (0.05 MMLU, 0.024 WikiText); limits are checked in the table")
+    declare(E, "97.5\\%", "percentile label (97.5th), not a result")
+    claim(E, "on the 229 D3 stratum entries (source", [n_st], "requalification_report n_stratum")
+    claim(E, "compared with the 20\\% limit", [mm["iii_tripwire"]["limit"] * 100], "requalification tripwire limit")
+    claim(E, "The repeat bounds use 10 entries per endpoint.", [mm["repeat"]["entries"]], "requalification repeat entries")
+    claim(
+        E,
+        "On 229 stratum entries scored under one source hash, repeat scoring on 10 entries was bitwise identical (maximum discrepancy 0)",
+        [n_st, mm["repeat"]["entries"], mm["repeat"]["max_abs_discrepancy"]],
+        "requalification repeat block",
+    )
+    claim(
+        E,
+        "was 0.990 for MMLU-Pro gold-letter log-probability and 0.992 for WikiText log-perplexity",
+        [mm["reliability"]["reliability_ci95"][0], wt["reliability"]["reliability_ci95"][0]],
+        "requalification reliability_ci95 lower bounds",
+    )
+    claim(E, "of 0.013 against $\\delta = 0.049$", [wt["ii_ceiling"]["max_halfwidth"], wt["ii_ceiling"]["limit_delta"]], "requalification ii_ceiling")
+    claim(E, "was 0.114, against a limit of 0.10", [mm["ii_ceiling"]["max_halfwidth"], mm["ii_ceiling"]["limit_delta"]], "requalification ii_ceiling")
+    claim(E, "A family-weighted 17.6\\% of entries exceeded", [mm["iii_tripwire"]["P_point"] * 100], "requalification iii_tripwire P_point")
+    claim(
+        E,
+        "upper bound of 22.6\\% against a 20\\% limit",
+        [mm["iii_tripwire"]["P_upper97_5"] * 100, mm["iii_tripwire"]["limit"] * 100],
+        "requalification iii_tripwire P_upper97_5",
+    )
+    claim(
+        E,
+        "Unweighted, 42 of 229 entries (18.3\\%) exceed it",
+        [n_over, n_st, n_over / n_st * 100],
+        "requalification n_entries_over_half_delta; n_stratum",
+    )
+    presence(E, "(Spearman 0.92)", REVIEW_BA, r"Spearman\(h, \\\|y\\\|\) = 0\.92", "board A requalification adjudication §1a and §2")
+    claim(
+        E,
+        "The gate used 4,000 simulated panels per scenario and 4,000 bootstrap draws per interval, with seed 20261105",
+        [q["gate"]["panels"], q["gate"]["draws"]],
+        "requalification gate panels, draws",
+    )
+    claim(E, "at $\\theta = 0.15$ was 0.43 to 0.47", [0.15, pw_lo, pw_hi], "requalification gate results empirical theta_0.15 rejection_wilson_lower95")
+    presence(E, "against the 0.80 required", PREREG, r"≥ 0\.80 for \*\*both\*\*", "PREREG A2.3 gate (a)")
+    presence(E, "null-size limit (0.035)", PREREG, r"≤ 0\.035", "PREREG A2.3 gate (b)")
+    presence(E, "coverage limit (0.93)", PREREG, r"≥ 0\.93", "PREREG A2.3 gate (b)")
+    claim(
+        E,
+        "by 12.9\\% (effective sample size 39.7, about 40 component equivalents)",
+        [theta, n_eff, 40],
+        "requalification theta_hat_stratum, n_eff",
+    )
+    claim(E, "run from $-$0.8\\% to 24.3\\%", [min(lows), max(highs)], "requalification leave_out_sensitivity all_rows, six intervals")
+    claim(E, "is +0.3 points", [cond_pct_lo], "requalification conditional_percentile lower bound")
+    claim(
+        E,
+        "LoRA SFT 23\\%, chain 9\\% and task vector $-$5\\%",
+        [rv["lora"], rv["chain"], rv["tv"]],
+        "board A requalification adjudication §2 (family theta)",
+    )
+    claim(E, "With the 42 entries whose item half-width", [n_over], "requalification n_entries_over_half_delta")
+    claim(
+        E,
+        "it falls to 0.7\\% [$-$20\\%, 15\\%]",
+        [lo_wo["theta_hat"] * 100, lo_wo["conditional_bootstrap_t"][0] * 100, lo_wo["conditional_bootstrap_t"][1] * 100],
+        "requalification leave_out_sensitivity without_over_half_delta",
+    )
+    claim(E, "fit on all 229 stratum rows and the 157 null-family rows", [n_st, n_null], "requalification_report n_stratum, n_null")
+    claim(E, "(10.5\\% and 11.7\\%)", [rv["ab"], rv["ba"]], "board A requalification adjudication §2 (item halves)")
+    claim(E, "fit on 229 stratum rows plus 157 null-family controls", [n_st, n_null], "requalification_report n_stratum, n_null")
+
+    # ---------------- discussion: H1a status and closing paragraph
+    D = "discussion"
+    claim(D, "on the 229 development stratum entries", [n_st], "requalification_report n_stratum")
+    claim(D, "gave a lower power bound of 0.43 to 0.47 at $\\theta = 0.15$", [pw_lo, pw_hi, 0.15], "requalification gate results empirical theta_0.15")
+    presence(D, "against the 0.80 required. On the same panel", PREREG, r"≥ 0\.80 for \*\*both\*\*", "PREREG A2.3 gate (a)")
+    claim(D, "the exploratory residual estimate of 12.9\\%", [theta], "requalification theta_hat_stratum")
+    claim(D, "sealed panel of 106 fresh components", [n_confirm], "panel_manifest confirmatory_component_ids")
+    claim(D, "with 1,000 paired items per edit", [mm["n_items"]], "requalification mmlu n_items")
+    claim(D, "the power gate gave lower bounds of 0.43 to 0.47 at $\\theta = 0.15$", [pw_lo, pw_hi, 0.15], "requalification gate results empirical theta_0.15")
+    presence(D, "against the 0.80 required. A fresh outcome", PREREG, r"≥ 0\.80 for \*\*both\*\*", "PREREG A2.3 gate (a)")
+
+    # ---------------- zoo (manifest counts; corrected Heretic ARA entries, D6 addendum 4)
+    Z = "zoo"
+    claim(Z, "The file holds 1,267 lines", [zc["lines"]], "zoo manifest line count")
+    claim(Z, "1,259 entry rows, one per unique ID", [zc["rows"]], "zoo manifest entry rows")
+    claim(
+        Z,
+        "The manifest therefore has 1,259 rows: 1,247 unflagged rows, which include the 12 corrected entries, and the 12 flagged rows.",
+        [zc["rows"], zc["unflagged"], zc["corrected"], zc["smoke"]],
+        "zoo manifest: rows, unflagged = rows minus smoke, corrected = heretic production, smoke",
+    )
+    claim(Z, "The feature manifest records 1,259 entries", [zc["features"]], "features manifest n_entries")
+    claim(
+        Z,
+        "Of the 1,247 unflagged rows, 389 have evaluation records, and none of the 24 flagged or corrected Heretic ARA entries does.",
+        [zc["unflagged"], zc["eval_unflagged"], zc["smoke"] + zc["corrected"]],
+        "unflagged rows with eval.json; 24 = 12 flagged + 12 corrected",
+    )
+    claim(Z, "1,259 entry rows, counted by recorded eligibility", [zc["rows"]], "zoo manifest entry rows")
+    presence(Z, "(D6 addendum 4)", DECISIONS, r"D6 addendum 4", "DECISIONS D6 addendum 4")
+    presence(Z, "carry production eligibility under D6 addendum 4", DECISIONS, r"D6 addendum 4", "DECISIONS D6 addendum 4")
+    assertion(Z, "zoo features: no failed feature extractions", zc["features_failed"] == 0, "features manifest failed")
+    corrected = [
+        r["id"]
+        for r in zoo_rows()
+        if r.get("family") == "heretic_ara" and r.get("eligibility") == "production"
+    ]
+    listed = set()
+    for name in ("d3_ids.stratum.txt", "d3_ids.null.txt", "d3_ids.fresh_spares.txt"):
+        listed |= set((DATA / "runs" / "h1a" / name).read_text().split())
+    pm_text = read(DATA / "runs" / "h1a" / "panel_manifest.json")
+    assertion(
+        Z,
+        "zoo: corrected Heretic entries absent from the D3 and fresh lists",
+        not any(i in listed or i in pm_text for i in corrected),
+        "d3_ids.*.txt and panel_manifest.json",
+    )
+    assertion(Z, "zoo: 12 corrected Heretic entries (D6 addendum 4)", len(corrected) == 12, "zoo manifest")
+
+
+def zoo_rows() -> list[dict]:
+    out = []
+    for ln in ZOO_MANIFEST.read_text().splitlines():
+        if ln.strip():
+            r = json.loads(ln)
+            if "family" in r and r.get("type") != "header":
+                out.append(r)
+    return out
+
+
+
 TABLE_CHECKS = {
     "tab:v2-suite": t_suite,
     "tab:v2-baselines": t_baselines,
@@ -2323,6 +2646,7 @@ TABLE_CHECKS = {
     "tab:zoo-counts": t_zoo,
     "tab:base-repro": t_base,
     "tab:devices": t_devices,
+    "tab:tfqual": t_tfqual,
 }
 
 
@@ -2387,6 +2711,7 @@ def run_declared(
 
 def run() -> int:
     build()
+    build_tfv1()
     unclaimed: list[dict] = []
     total_prose = total_table = seed_labels = 0
     for name in SECTIONS:
