@@ -400,3 +400,18 @@ Source: [Board A re-qualification adjudication](reviews/P5/board-a-requalificati
 - **H1w registered as a separately named exploratory claim (A4)** on the qualified WikiText log-PPL endpoint; not a replacement for H1a and not citable as H1a. CPU only: the mandatory MMLU companions and the A2.3 gate on WikiText D3 OOF losses. Fresh WikiText scoring (≈ 1.9 GPU-h, derived) is not authorised and would first need a sealed WikiText window panel and the A3 bitwise re-check.
 - H1b is unaffected. The paper is the measurement/benchmark paper with the D3 predictor result stated as exploratory and not distinguishable from zero.
 - **Result (same day):** the MMLU companions ([h1a-companions](reviews/P5/h1a-companions-2026-11-06.md)) leave H1a untested (point estimates 0.13–0.23 under outcome-free readings, intervals on zero, none under 1/h²-weighting). The H1w WikiText gate ([h1w-gate](reviews/P5/h1w-gate-2026-11-06.md)) at the registered scale gives θ̂ = 0.0071, not distinguishable from zero, gate FAIL on power (0.73 / 0.60 < 0.80), flexible-nuisance θ̂ = −0.049; Board A's reversal criteria are not met, so no GPU scoring (≈ 1.9 GPU-h for fresh WikiText, derived) is run or recommended.
+
+## D8 (6 Nov 2026, 03:20 UTC) — data-loss incident and recovery plan
+A `data` symlink committed from a worktree (ea78234) was checked out over the canonical data directory when the
+branch was merged, destroying `data/` (≈ 260 GB). No backup covered it (nightly DR tarball is config-only; the daily
+EBS snapshots belong to another volume; the last snapshot of this volume predates the project). Recovery from the
+public HF dataset (136.9 GB, 4,242 files, started 03:20 UTC): 719 dense deltas + 122 LoRA entries (every non-chain
+entry), 254 of 675 chain deltas (those pushed by the first ARA instance's full-zoo sync), eval.json for all 389
+evaluated entries, records.jsonl for the 200 Lambda-scored entries, both Lambda base evaluations, the 24 ARA entries.
+Lost: 421 chain deltas (the chain family beyond the 254), v4 features (to be re-extracted ≈ 5 CPU-h for recovered
+entries), every artefact under data/runs (P4 metric files; their summaries survive in docs/reviews/P4; TF-v1 per-item
+records and the KL cache; requalification JSON beyond docs/prereg copies), the H0 base evaluation record and the
+item-level records of the 189 entries scored on H0. Policy: artefacts cited by run id in the paper that no longer
+exist must be either regenerated under the same source hash or disclosed as lost in the paper's reproducibility
+statement; Board A decides which. Guards added: pre-commit refuses `^data($|/)`; `.gitignore` lists `data`;
+lesson in harness/lessons.md.
