@@ -821,8 +821,12 @@ def inner_folds(component_ids, k=5):
     return {c: n % k for n, c in enumerate(ordered)}
 
 
-def fit_oof(features, y, families, inc_norm, codes, seeds=(0, 1, 2)):
-    """Frozen section 3 pipeline on development rows; returns OOF nuisance, residual, StatNN, isotonic."""
+def fit_oof(features, y, families, inc_norm, codes, seeds=(0, 1, 2), nuisance=None):
+    """Frozen section 3 pipeline on development rows; returns OOF nuisance, residual, StatNN, isotonic.
+
+    `nuisance(train, test)` (descriptive companions only) replaces the registered OLS nuisance with
+    a function returning the held-out nuisance predictions from training rows only; the default is
+    the registered family dummies + log1p(incremental norm) OLS."""
     from sklearn.isotonic import IsotonicRegression
 
     from wsp.predictor.baselines import _make_model
@@ -835,6 +839,9 @@ def fit_oof(features, y, families, inc_norm, codes, seeds=(0, 1, 2)):
     m = np.zeros(n)
     for k in sorted(set(fold)):
         train, test = fold != k, fold == k
+        if nuisance is not None:
+            m[test] = nuisance(train, test)
+            continue
         levels = sorted(set(np.asarray(families)[train]))
         xtr = design(list(np.asarray(families)[train]), log_norm[train], levels)
         beta = np.linalg.pinv(xtr) @ y[train]
@@ -1104,8 +1111,22 @@ def assemble(args, log):
     )
 
 
-def d3_fit(ctx, args, log):
-    """Frozen section 3 fit on all complete D3 rows; returns the population of stratum rows."""
+def block_means(D, block):
+    """Collapse consecutive `block` items to their mean: the resampling unit of A2.1 (WikiText: two
+    windows). The paired endpoint mean is unchanged (equal-size blocks), so y and the losses are too."""
+    if block == 1:
+        return D
+    if D.shape[1] % block:
+        raise ValueError(f"{D.shape[1]} items do not divide into blocks of {block}")
+    return D.reshape(D.shape[0], D.shape[1] // block, block).mean(2)
+
+
+def d3_fit(ctx, args, log, endpoint="mmlu_gold_log_prob"):
+    """Frozen section 3 fit on all complete D3 rows; returns the population of stratum rows.
+
+    endpoint: the paired endpoint whose mean is y (MMLU-Pro gold log-prob is the registered H1a
+    endpoint; wikitext_log_ppl is H1w, amendment A4). The joint procedure resamples the endpoint's
+    resampling blocks, so `pop["D"]` holds block means."""
     from wsp.predictor.baselines import load_feature_table
 
     rows, stratum, tf, scored = ctx["rows"], ctx["stratum"], ctx["tf"], ctx["scored"]
@@ -1116,13 +1137,13 @@ def d3_fit(ctx, args, log):
     if missing:
         raise SystemExit(f"{len(missing)} D3 entries without weight-only features")
     X = np.stack([feats[i] for i in entries])
-    y = np.array([ctx["paired"](i, "mmlu_gold_log_prob").mean() for i in entries])
+    y = np.array([ctx["paired"](i, endpoint).mean() for i in entries])
     fams = [rows[i]["family"] for i in entries]
     codes = [ctx["component_of"][i] for i in entries]
     inc = [ctx["inc"][i] for i in entries]
     fit = fit_oof(X, y, fams, inc, codes)
     n = len(stratum)
-    D = np.array([ctx["paired"](i, "mmlu_gold_log_prob") for i in stratum])
+    D = block_means(np.array([ctx["paired"](i, endpoint) for i in stratum]), ENDPOINTS[endpoint][4])
     qa = fit["m"][:n] + fit["p_nn"][:n]
     qb = fit["m"][:n] + fit["p_iso"][:n]
     a = np.abs(fit["resid"][:n] - fit["p_nn"][:n])
@@ -1130,6 +1151,7 @@ def d3_fit(ctx, args, log):
     cb = np.array([b[np.array(ctx["codes"]) == c].sum() for c in sorted(set(ctx["codes"]))])
     pop = {"D": D, "qa": qa, "qb": qb, "codes": ctx["codes"], "families": ctx["families"]}
     info = {
+        "endpoint": endpoint,
         "n_rows": len(entries),
         "n_stratum": n,
         "n_null": len(null),
