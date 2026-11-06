@@ -1,0 +1,14 @@
+{
+ "entries": 901,
+ "content_root_sha256": "60f3787ec553a5f2cb0b092597a33e4b04763b72da4c3659b92b5e9a7dad70db",
+ "manifest_json_sha256": "ce3b84e62e1a3c708ae849f58d65c28dec6c08c6ef8781b901435ea9d4025840",
+ "config_hash": "43edff1b534edec2b769de3f57ee113053961ec3468cd45d8112e9e14cbd64e1",
+ "identity_hash": "6eb3c3bc79edf4db2d4f3f52f1b61eff0d09fc4f8b2eabc7240feba86f0df0ca",
+ "feature_version": 4,
+ "n_entries_manifest": 901,
+ "failed": {},
+ "no_artifacts": 358,
+ "alias_entries_extracted": 63,
+ "torch": "2.15.0+cu132",
+ "numpy": "2.5.4"
+}

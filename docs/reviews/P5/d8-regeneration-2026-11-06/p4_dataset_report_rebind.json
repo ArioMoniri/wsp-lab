@@ -1,0 +1,40 @@
+{
+ "features_dropped_by_family": {
+  "chain": 121
+ },
+ "features_kept": 780,
+ "match_report": {
+  "abliteration|H0|inferred-only": 1,
+  "abliteration|H0|matched-inferred": 26,
+  "abliteration|H1|matched-inferred": 69,
+  "abliteration|H2|batch-mismatch": 1,
+  "abliteration|H2|matched-inferred": 3,
+  "chain|H0|inferred-only": 8,
+  "chain|H0|matched": 42,
+  "chain|H0|matched-inferred": 8,
+  "lora_sft|H0|matched-inferred": 2,
+  "lora_sft|H1|matched-inferred": 52,
+  "lora_sft|H2|batch-mismatch": 1,
+  "lora_sft|H2|matched-inferred": 5,
+  "random_dir|H0|matched-inferred": 21,
+  "random_dir|H1|matched-inferred": 39,
+  "task_vector|H0|matched-inferred": 11,
+  "task_vector|H1|matched-inferred": 19
+ },
+ "matched_reference_targets": 297,
+ "missing_matched_reference": 11,
+ "rebound_base_run_ids": {
+  "20261104-233616-e04693d7": "20261106-044735-5ac57b8f",
+  "20261104-233637-7c43da7c": "20261106-044735-5ac57b8f",
+  "20261104-233657-d17ba458": "20261106-044735-5ac57b8f"
+ },
+ "rows": 297,
+ "rows_by_family": {
+  "abliteration": 98,
+  "chain": 50,
+  "lora_sft": 59,
+  "random_dir": 60,
+  "task_vector": 30
+ },
+ "targets_with_inferred_runtime": 255
+}
