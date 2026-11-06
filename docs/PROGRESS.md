@@ -166,3 +166,11 @@ nested panels, required device id, content-verified resident cache; KL 200 × 64
 pytest pythonpath fixes). Before the fresh non-null panel: G1 bitwise repeat, G2 same-item bridge, single-device
 scope, PREREG amendment, sealed-panel manifest, §6 qualification + §5 power (running). README rewritten for the
 reframed study and accuracy-checked (114 claims, 18 fixes). ARA corrected rebuild 7/12 on the A10.
+
+**Re-qualification result (6 Nov, 00:50–01:37 UTC; docs/reviews/P5/tf-v1-requalification-2026-11-06.md).** D3 stratum
+scored under one source (378/381; 3 legacy rows excluded). MMLU-Pro gold log-prob NOT qualified even under the amended
+rule (max half-width 0.114 > 0.10; tripwire 0.226 > 0.20); WikiText log-ppl qualified. §5 gate: exploratory
+(power-limited); no interval procedure passed all simulation checks. Empirical out-of-fold θ̂ = 0.129 (n_eff 40) with
+every interval crossing zero; leaving out high-item-variance rows gives θ̂ = 0.007. Board A adjudicating whether to
+switch the primary to WikiText, run the sealed panel as exploratory, or stop and report. Corrected ARA family landed
+(12 entries) and featurised after the delta-key mapping fix (D6 addenda 4–5, PREREG A3). Lambda closed at $116.22.
