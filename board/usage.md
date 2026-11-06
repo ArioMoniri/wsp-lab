@@ -238,4 +238,6 @@
 | 2026-11-05 | Execute adjudication (A2, batching, re-pilot, G1/G2, D3 queue) | claude_aio_gmail_api/claude-sonnet-5-5 high | done bcb96cb — merged; pilot r3 1.003 min, bitwise MMLU/KL/WikiText; HellaSwag/phrase deviations on edited entries exceed probe limits (descriptive stages) → Board A; D3 stratum scoring running (ETA 6 Nov 00:45 UTC) |
 | 2026-11-05 | Board A: A2.4 batching deviations | claude_aio_gmail_api/claude-sonnet-5-5 medium | ACCEPT with registered note (bf16 rounding under batch kernel; base deviates equally; descriptive stages) 5e979b1; D3 scoring continues |
 | 2026-11-05 | zoo/features: ARA delta key mapping | claude_aio_gmail_api/claude-sonnet-5-5 high | done 5f45f6b (587 tests; 24/24 ARA features extracted) — merged; PREREG A3 note (source_hash changed) |
-| 2026-11-06 | Board A: adjudicate re-qualification (primary endpoint, exploratory status, proceed with sealed panel?) | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-06 | Board A: re-qualification adjudication | claude_aio_gmail_api/claude-sonnet-5-5 high | DECISION (c): no sealed scoring; H1a untested (not falsified); H1w (WikiText) exploratory via A4; θ̂ borderline, carried by large-effect rows c692567 |
+| 2026-11-06 | Execute adjudication: PREREG A4, §5 companions, WikiText CPU gate | claude_aio_gmail_api/claude-sonnet-5-5 high | running |
+| 2026-11-06 | Scribe: paper TF-study outcome section | claude_aio_gmail_api/claude-haiku-5-5 high | running |
