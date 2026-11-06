@@ -22,7 +22,6 @@ import concurrent.futures
 import hashlib
 import json
 import math
-import os
 import struct
 import sys
 import time
@@ -136,7 +135,11 @@ def main():
     zoo, out = Path(args.zoo), Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    rows = [json.loads(line) for line in (zoo / "manifest.jsonl").read_text().splitlines() if line.strip()]
+    rows = [
+        json.loads(line)
+        for line in (zoo / "manifest.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
     entries = [r for r in rows if "id" in r]
     ids = [r["id"] for r in entries]
     assert len(ids) == len(set(ids)) == 1259, (len(ids), len(set(ids)))
@@ -152,8 +155,7 @@ def main():
             if n % 100 == 0:
                 print(f"verified {n}/{len(ids)} {time.time() - t0:.0f}s", flush=True)
     with open(out / "restore_verify.jsonl", "w") as f:
-        for i in ids:
-            f.write(json.dumps(results[i], sort_keys=True) + "\n")
+        f.writelines(json.dumps(results[i], sort_keys=True) + "\n" for i in ids)
 
     panel = json.loads(PANEL.read_text())
     ledger = panel["alias_ledger"]
@@ -169,15 +171,32 @@ def main():
         if not r["bytes"]:
             continue
         if "error" in r or not r.get("header_ok"):
-            problems.append({"id": i, "problem": "header/read", "detail": r.get("error") or r.get("header_error")})
+            problems.append(
+                {
+                    "id": i,
+                    "problem": "header/read",
+                    "detail": r.get("error") or r.get("header_error"),
+                }
+            )
             continue
         rel = r.get("norm_rel_err")
         tol = 1e-3 if r["norm_kind"] == "dense" else 5e-2
         if rel is not None and rel > tol:
-            problems.append({"id": i, "problem": "norm", "kind": r["norm_kind"], "norm": r["norm"], "edit_norm": r["edit_norm"], "rel_err": rel})
+            problems.append(
+                {
+                    "id": i,
+                    "problem": "norm",
+                    "kind": r["norm_kind"],
+                    "norm": r["norm"],
+                    "edit_norm": r["edit_norm"],
+                    "rel_err": rel,
+                }
+            )
         if i in identity_of:
             if f"delta:{r['hash']}" not in identity_of[i]:
-                problems.append({"id": i, "problem": "hash_not_in_source_identities", "hash": r["hash"]})
+                problems.append(
+                    {"id": i, "problem": "hash_not_in_source_identities", "hash": r["hash"]}
+                )
         else:
             members_missing_identity.append(i)
 
@@ -191,7 +210,11 @@ def main():
             if hash_of[m] != key:
                 ledger_unverified.append({"id": m, "ledger_key": key, "actual": hash_of[m]})
         ok_present = [m for m in present if hash_of[m] == key]
-        target = g["canonical"] if g["canonical"] in ok_present else (ok_present[0] if ok_present else None)
+        target = (
+            g["canonical"]
+            if g["canonical"] in ok_present
+            else (ok_present[0] if ok_present else None)
+        )
         for m in members:
             if m not in hash_of and target is not None:
                 alias_of[m] = target
@@ -213,12 +236,17 @@ def main():
     if args.limit:
         print("limit set: sidecar not written")
     else:
-        Path(args.sidecar).write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in sidecar))
+        Path(args.sidecar).write_text(
+            "".join(json.dumps(r, sort_keys=True) + "\n" for r in sidecar)
+        )
 
     c = Counter()
     for r in sidecar:
         c["delta_present" if r["delta_present"] else "alias" if r["alias_of"] else "lost"] += 1
-    by_family = Counter((r["family"], "present" if r["delta_present"] else "alias" if r["alias_of"] else "lost") for r in sidecar)
+    by_family = Counter(
+        (r["family"], "present" if r["delta_present"] else "alias" if r["alias_of"] else "lost")
+        for r in sidecar
+    )
     summary = {
         "n_manifest_entries": len(entries),
         "counts": dict(c),
@@ -232,7 +260,10 @@ def main():
         "problems": problems,
         "ledger_unverified": ledger_unverified,
         "norm_max_rel_err": {
-            k: max((r["norm_rel_err"] for r in results.values() if r.get("norm_kind") == k), default=None)
+            k: max(
+                (r["norm_rel_err"] for r in results.values() if r.get("norm_kind") == k),
+                default=None,
+            )
             for k in ("dense", "lora_product")
         },
         "norm_checked": Counter(r.get("norm_kind") for r in results.values() if "norm" in r),
@@ -241,7 +272,9 @@ def main():
     }
     summary["norm_checked"] = dict(summary["norm_checked"])
     (out / "restore_summary.json").write_text(json.dumps(summary, indent=1, sort_keys=True))
-    print(json.dumps({k: v for k, v in summary.items() if k != "problems"}, indent=1, sort_keys=True))
+    print(
+        json.dumps({k: v for k, v in summary.items() if k != "problems"}, indent=1, sort_keys=True)
+    )
     print("problems:", len(problems), problems[:10])
     return 0 if not problems and not ledger_unverified else 1
 

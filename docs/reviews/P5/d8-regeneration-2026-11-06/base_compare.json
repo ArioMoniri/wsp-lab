@@ -1,0 +1,703 @@
+{
+ "controls_same_source": {
+  "20261106-043002-501554db": {
+   "all_same_items": true,
+   "controls_with_records": 1,
+   "examples": [
+    {
+     "id": "013b7b61202fe188",
+     "order_hash_stored": "2548af19ec43f247",
+     "same_items": true
+    }
+   ]
+  },
+  "20261106-044003-37b3ae3d": {
+   "all_same_items": true,
+   "controls_with_records": 10,
+   "examples": [
+    {
+     "id": "0a841d4082532e8b",
+     "order_hash_stored": "2548af19ec43f247",
+     "same_items": true
+    },
+    {
+     "id": "1caef8eb4c640c3c",
+     "order_hash_stored": "2548af19ec43f247",
+     "same_items": true
+    },
+    {
+     "id": "3db97b535c996265",
+     "order_hash_stored": "2548af19ec43f247",
+     "same_items": true
+    }
+   ]
+  },
+  "20261106-044735-5ac57b8f": {
+   "all_same_items": true,
+   "controls_with_records": 0,
+   "examples": []
+  }
+ },
+ "lambda": {
+  "20261106-043002-501554db|base-lambda-129-153-20-232": {
+   "extra_keys_present_in_only_one": [],
+   "n_a": 458,
+   "n_b": 458,
+   "per_benchmark": {
+    "gsm8k": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "hellaswag": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "ifeval": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 25
+    },
+    "kl_to_base": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "math500": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 25
+    },
+    "mmlu_pro": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 100
+    },
+    "over_refusal": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "refusal_rate": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "wikitext_ppl": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0522003173828125,
+     "n": 8
+    }
+   },
+   "records_identical": "0/458",
+   "records_identical_on_shared_fields": "0/458",
+   "same_item_set": true,
+   "same_order": true
+  },
+  "20261106-043002-501554db|base-lambda-209-20-158-168": {
+   "extra_keys_present_in_only_one": [],
+   "n_a": 458,
+   "n_b": 458,
+   "per_benchmark": {
+    "gsm8k": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "hellaswag": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "ifeval": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 25
+    },
+    "kl_to_base": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "math500": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 25
+    },
+    "mmlu_pro": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 100
+    },
+    "over_refusal": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "refusal_rate": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "wikitext_ppl": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.06241607666015625,
+     "n": 8
+    }
+   },
+   "records_identical": "0/458",
+   "records_identical_on_shared_fields": "0/458",
+   "same_item_set": true,
+   "same_order": true
+  },
+  "20261106-044003-37b3ae3d|base-lambda-129-153-20-232": {
+   "extra_keys_present_in_only_one": [],
+   "n_a": 458,
+   "n_b": 458,
+   "per_benchmark": {
+    "gsm8k": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "hellaswag": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "ifeval": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 25
+    },
+    "kl_to_base": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "math500": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 25
+    },
+    "mmlu_pro": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 100
+    },
+    "over_refusal": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "refusal_rate": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "wikitext_ppl": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0522003173828125,
+     "n": 8
+    }
+   },
+   "records_identical": "0/458",
+   "records_identical_on_shared_fields": "0/458",
+   "same_item_set": true,
+   "same_order": true
+  },
+  "20261106-044003-37b3ae3d|base-lambda-209-20-158-168": {
+   "extra_keys_present_in_only_one": [],
+   "n_a": 458,
+   "n_b": 458,
+   "per_benchmark": {
+    "gsm8k": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "hellaswag": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "ifeval": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 25
+    },
+    "kl_to_base": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "math500": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 25
+    },
+    "mmlu_pro": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 100
+    },
+    "over_refusal": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "refusal_rate": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "wikitext_ppl": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.06241607666015625,
+     "n": 8
+    }
+   },
+   "records_identical": "0/458",
+   "records_identical_on_shared_fields": "0/458",
+   "same_item_set": true,
+   "same_order": true
+  },
+  "20261106-044735-5ac57b8f|base-lambda-129-153-20-232": {
+   "extra_keys_present_in_only_one": [
+    "invalid_final_answer"
+   ],
+   "n_a": 458,
+   "n_b": 458,
+   "per_benchmark": {
+    "gsm8k": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "hellaswag": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "ifeval": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 25
+    },
+    "kl_to_base": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "math500": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 25
+    },
+    "mmlu_pro": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 100
+    },
+    "over_refusal": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "refusal_rate": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "wikitext_ppl": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0522003173828125,
+     "n": 8
+    }
+   },
+   "records_identical": "0/458",
+   "records_identical_on_shared_fields": "0/458",
+   "same_item_set": true,
+   "same_order": true
+  },
+  "20261106-044735-5ac57b8f|base-lambda-209-20-158-168": {
+   "extra_keys_present_in_only_one": [
+    "invalid_final_answer"
+   ],
+   "n_a": 458,
+   "n_b": 458,
+   "per_benchmark": {
+    "gsm8k": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "hellaswag": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "ifeval": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 25
+    },
+    "kl_to_base": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "math500": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 25
+    },
+    "mmlu_pro": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 100
+    },
+    "over_refusal": {
+     "identical": 0,
+     "max_abs_correct_diff": 1.0,
+     "n": 50
+    },
+    "refusal_rate": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "wikitext_ppl": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.06241607666015625,
+     "n": 8
+    }
+   },
+   "records_identical": "0/458",
+   "records_identical_on_shared_fields": "0/458",
+   "same_item_set": true,
+   "same_order": true
+  }
+ },
+ "pairwise": {
+  "20261106-043002-501554db|20261106-044003-37b3ae3d": {
+   "extra_keys_present_in_only_one": [],
+   "n_a": 458,
+   "n_b": 458,
+   "per_benchmark": {
+    "gsm8k": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "hellaswag": {
+     "identical": 100,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "ifeval": {
+     "identical": 25,
+     "max_abs_correct_diff": 0.0,
+     "n": 25
+    },
+    "kl_to_base": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "math500": {
+     "identical": 25,
+     "max_abs_correct_diff": 0.0,
+     "n": 25
+    },
+    "mmlu_pro": {
+     "identical": 100,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "over_refusal": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "refusal_rate": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "wikitext_ppl": {
+     "identical": 8,
+     "max_abs_correct_diff": 0.0,
+     "n": 8
+    }
+   },
+   "records_identical": "458/458",
+   "records_identical_on_shared_fields": "458/458",
+   "same_item_set": true,
+   "same_order": true
+  },
+  "20261106-043002-501554db|20261106-044735-5ac57b8f": {
+   "extra_keys_present_in_only_one": [
+    "invalid_final_answer"
+   ],
+   "n_a": 458,
+   "n_b": 458,
+   "per_benchmark": {
+    "gsm8k": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "hellaswag": {
+     "identical": 100,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "ifeval": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 25
+    },
+    "kl_to_base": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "math500": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 25
+    },
+    "mmlu_pro": {
+     "identical": 100,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "over_refusal": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "refusal_rate": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "wikitext_ppl": {
+     "identical": 8,
+     "max_abs_correct_diff": 0.0,
+     "n": 8
+    }
+   },
+   "records_identical": "358/458",
+   "records_identical_on_shared_fields": "458/458",
+   "same_item_set": true,
+   "same_order": true
+  },
+  "20261106-044003-37b3ae3d|20261106-044735-5ac57b8f": {
+   "extra_keys_present_in_only_one": [
+    "invalid_final_answer"
+   ],
+   "n_a": 458,
+   "n_b": 458,
+   "per_benchmark": {
+    "gsm8k": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "hellaswag": {
+     "identical": 100,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "ifeval": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 25
+    },
+    "kl_to_base": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "math500": {
+     "identical": 0,
+     "max_abs_correct_diff": 0.0,
+     "n": 25
+    },
+    "mmlu_pro": {
+     "identical": 100,
+     "max_abs_correct_diff": 0.0,
+     "n": 100
+    },
+    "over_refusal": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "refusal_rate": {
+     "identical": 50,
+     "max_abs_correct_diff": 0.0,
+     "n": 50
+    },
+    "wikitext_ppl": {
+     "identical": 8,
+     "max_abs_correct_diff": 0.0,
+     "n": 8
+    }
+   },
+   "records_identical": "358/458",
+   "records_identical_on_shared_fields": "458/458",
+   "same_item_set": true,
+   "same_order": true
+  }
+ },
+ "runs": {
+  "20261106-043002-501554db": {
+   "batch_size": 32,
+   "config_hash": "519e18781b214281",
+   "dirty": false,
+   "eval_status": "complete",
+   "git_sha": "846ff8423b9c67a9d9a9bfa3c1a46ec8f3feb2e5",
+   "minutes": 7.062326052216425,
+   "n_records": 458,
+   "order_hash": "2548af19ec43f247",
+   "scalars_vs_RESULTS": {
+    "gsm8k": {
+     "match": true,
+     "printed": 0.16,
+     "regenerated": 0.16
+    },
+    "hellaswag": {
+     "match": true,
+     "printed": 0.39,
+     "regenerated": 0.39
+    },
+    "ifeval": {
+     "match": true,
+     "printed": 0.4,
+     "regenerated": 0.4
+    },
+    "math500": {
+     "match": true,
+     "printed": 0.16,
+     "regenerated": 0.16
+    },
+    "mmlu_pro": {
+     "match": true,
+     "printed": 0.28,
+     "regenerated": 0.28
+    },
+    "over_refusal": {
+     "match": true,
+     "printed": 0.1,
+     "regenerated": 0.1
+    },
+    "wikitext_ppl": {
+     "match": true,
+     "printed": 22.9,
+     "regenerated": 22.904104405301634
+    }
+   },
+   "source_hash": "d7cece35fad9"
+  },
+  "20261106-044003-37b3ae3d": {
+   "batch_size": 32,
+   "config_hash": "519e18781b214281",
+   "dirty": false,
+   "eval_status": "complete",
+   "git_sha": "f63a08e79a05f5006a8829b7063a3694bf1467bf",
+   "minutes": 6.586745567716814,
+   "n_records": 458,
+   "order_hash": "2548af19ec43f247",
+   "scalars_vs_RESULTS": {
+    "gsm8k": {
+     "match": true,
+     "printed": 0.16,
+     "regenerated": 0.16
+    },
+    "hellaswag": {
+     "match": true,
+     "printed": 0.39,
+     "regenerated": 0.39
+    },
+    "ifeval": {
+     "match": true,
+     "printed": 0.4,
+     "regenerated": 0.4
+    },
+    "math500": {
+     "match": true,
+     "printed": 0.16,
+     "regenerated": 0.16
+    },
+    "mmlu_pro": {
+     "match": true,
+     "printed": 0.28,
+     "regenerated": 0.28
+    },
+    "over_refusal": {
+     "match": true,
+     "printed": 0.1,
+     "regenerated": 0.1
+    },
+    "wikitext_ppl": {
+     "match": true,
+     "printed": 22.9,
+     "regenerated": 22.904104405301634
+    }
+   },
+   "source_hash": "6f274a830401"
+  },
+  "20261106-044735-5ac57b8f": {
+   "batch_size": 32,
+   "config_hash": "519e18781b214281",
+   "dirty": false,
+   "eval_status": "complete",
+   "git_sha": "f90f5918b8d59b633c5054808dbd1d3931548025",
+   "minutes": 6.439943916733318,
+   "n_records": 458,
+   "order_hash": "2548af19ec43f247",
+   "scalars_vs_RESULTS": {
+    "gsm8k": {
+     "match": true,
+     "printed": 0.16,
+     "regenerated": 0.16
+    },
+    "hellaswag": {
+     "match": true,
+     "printed": 0.39,
+     "regenerated": 0.39
+    },
+    "ifeval": {
+     "match": true,
+     "printed": 0.4,
+     "regenerated": 0.4
+    },
+    "math500": {
+     "match": true,
+     "printed": 0.16,
+     "regenerated": 0.16
+    },
+    "mmlu_pro": {
+     "match": true,
+     "printed": 0.28,
+     "regenerated": 0.28
+    },
+    "over_refusal": {
+     "match": true,
+     "printed": 0.1,
+     "regenerated": 0.1
+    },
+    "wikitext_ppl": {
+     "match": true,
+     "printed": 22.9,
+     "regenerated": 22.904104405301634
+    }
+   },
+   "source_hash": "e871923e1e18"
+  }
+ }
+}
