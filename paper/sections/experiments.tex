@@ -1,6 +1,10 @@
 \section{Experiments}
 The subject is Qwen3.5-0.8B with thinking enabled. Fixed subsets cover GSM8K, MATH-500, IFEval, MMLU-Pro and HellaSwag. We also measure WikiText perplexity, refusal on harmful prompts, over-refusal on harmless prompts, and KL to the base. The cap-hit share is the fraction of responses pooled across GSM8K, MATH-500 and IFEval that reach the token limit without EOS (1,024 tokens at the fast tier, 4,096 at the cheap tier). It is a truncation proxy, not a validated detector of semantic repetition. Refusal keyword matching is a surface measure. It does not establish harmfulness.
 
+% D8-BEGIN
+Artefact loss on 6 November 2026 removed run directories, per-item records and some zoo deltas behind several results in this section. Appendix~\ref{sec:repro} lists what survives, what is reported from retained summaries and what is being regenerated.
+% D8-END
+
 The fast tier uses 50 GSM8K, 25 MATH-500, 25 IFEval, 100 MMLU-Pro and 100 HellaSwag items, plus 50 prompts each for refusal, over-refusal and KL. Generation is capped at 1024 tokens. At these sizes, a single binomial score for GSM8K, MATH-500 or IFEval has a standard error of 0.05 to 0.10 at the base fast-tier values (Section~\ref{sec:reliability}). GSM8K, MATH-500 and IFEval are therefore reported as descriptive at this tier. MMLU-Pro, HellaSwag, WikiText perplexity and KL are candidate predictor targets, but none is qualified until the criteria in Section~\ref{sec:reliability} are met. Measuring their floors is the first of those steps.
 
 The cheap tier uses the larger fixed battery with a 4096-token limit, except for MMLU-Pro, which has a 1024-token limit. A faithful 32768-token tier is reserved for the base and at most 10 selected entries. The cheap tier has been run only on the base model (Table~\ref{tab:base-repro}), and the zoo evaluation configs record a 1,024-token cap. A timing measurement and coverage beyond the D3 sample have not been run. D3 drew production entries without replacement, using seed 0 and sorted IDs, with quotas of 60 random direction, 100 abliteration, 60 LoRA SFT, 30 task vector and 50 chain steps. Where a family fell short, D3 would take every available entry. On the current manifest (Table~\ref{tab:zoo-counts}), these quotas resolve to 300 entries, and all 300 were evaluated. Sampling settings and fixed item IDs are recorded in the evaluation configuration.
@@ -32,7 +36,7 @@ Measured runs used four hosts. Local work ran on an RTX PRO 4500 with 32 GB. The
 
 \subsection{Predictor suite under protocol v2}
 \label{sec:v2}
-We ran the predictor suite under protocol v2, with three seeds per run. Protocol v2 adds nested model selection, train-only preprocessing and paired bootstrap intervals over ancestry clusters. The matched set has 345 rows from 389 evaluated entries; the other 44 have no matched predecessor target and are excluded. The run files mark 260 of the 345 rows as having inferred runtime metadata, backfilled from job logs. Those 260 are the matched D3 edits counted in Section~\ref{sec:reliability}. The other 85 rows are chain predecessors, and neither the row nor its matched reference carries the backfill flag. The 345 rows are not the 300-entry D3 subset. Twenty-five run directories are complete. The directory \texttt{d3v2-m3-family} has a configuration and a split plan but no metrics, so we do not report it.
+We ran the predictor suite under protocol v2, with three seeds per run. Protocol v2 adds nested model selection, train-only preprocessing and paired bootstrap intervals over ancestry clusters. The matched set has 345 rows from 389 evaluated entries; the other 44 have no matched predecessor target and are excluded. The run files mark 260 of the 345 rows as having inferred runtime metadata, backfilled from job logs. Those 260 are the matched D3 edits counted in Section~\ref{sec:reliability}. The other 85 rows are chain predecessors, and neither the row nor its matched reference carries the backfill flag. The 345 rows are not the 300-entry D3 subset. Twenty-five run directories are reported as complete, from retained summaries (artefacts lost). The directory \texttt{d3v2-m3-family} has a configuration and a split plan but no metrics, so we do not report it.
 
 M1 is the stateless tensor-token predictor and M2 is the state-space sequence predictor. M1-matched and M2-matched are matched-input controls. M3 and M6 use JEPA-style objectives, and M5 is a causal trajectory transformer.
 
@@ -79,7 +83,7 @@ Holdout task vector & 30 / 27 & 0.06 [$-$0.13, 0.35] & 0.39 [0.25, 0.51] & \text
 
 In this exploratory three-seed analysis, the trajectory-split M1-matched row reached mean Spearman 0.45 and 0.46 on MMLU-Pro and HellaSwag. Seed-0 StatNN reached 0.57 and 0.65 on the same split, so that comparison sets a three-seed mean against a single seed. Seed ranges describe training and split variation, not confidence intervals. The labels carry inferred historical runtime, and target qualification is incomplete.
 
-The original H1 criterion was not demonstrated; H2 and H3 are undetermined; H4 to H6 were not tested.
+The original H1 criterion was not demonstrated; H2 is not testable on the surviving zoo; H3 is undetermined; H4 to H6 were not tested.
 
 Table~\ref{tab:v2-baselines} gives the three baselines. All three come from seed 0 and are not three-seed means. Within a split, the baseline values are identical across models, so each split cites one source run. Section~\ref{sec:exploits} looks at what the descriptor baseline picks up.
 
@@ -110,14 +114,16 @@ The five \texttt{m2-holdout} rows are one-fold family-purge runs. Each holds out
 
 The suite scores eight targets, but it has no KL or WikiText heads. The dashes in the source summary mark missing outputs, not negative results. M6 fails its all-seed collapse gate on all three standard splits. That gate requires an effective rank of at least 2 and at least twice the rank of the frozen predictor, and the failure does not prove that every fold has rank below 2. M3 has no acceptance gate, so it is not reported as passing, and no M6 LoRA acceptance run exists.
 
-H2 is undetermined. On the trajectory split, M5 reaches 0.41 and 0.26, against 0.45 and 0.46 for M1-matched. The suite does not establish the registered 15\% MAE gain on adequately powered trajectories of length four or more. H3 is undetermined: no qualifying held-out LoRA result exists, and the M2 LoRA holdout is not that test.
+H2 is not testable on the surviving zoo. Its registered test needs complete trajectories of length four or more, and only three evaluated lineages of that length remain (Appendix~\ref{sec:repro}). On the trajectory split, M5 reaches 0.41 and 0.26, against 0.45 and 0.46 for M1-matched. The suite does not establish the registered 15\% MAE gain on adequately powered trajectories of length four or more. H3 is undetermined: no qualifying held-out LoRA result exists, and the M2 LoRA holdout is not that test.
 
 \subsection{Pre-registered teacher-forced study}
 \label{sec:tfv1}
 \sloppy
-The pre-registered test of H1a runs on a teacher-forced tier, TF-v1, specified in \path{docs/PREREG_H1_TF.md}. The candidate endpoint is the gold-letter log-probability on fixed MMLU-Pro items, scored under the edited model against its actual predecessor. The tier scores the likelihood of fixed answers, so it generates no text. As built, it scores 1,000 MMLU-Pro items, 250 HellaSwag items (a nested prefix of a 500-item ranking), 200 KL prompts with 64 greedy tokens each over the full vocabulary, 64 WikiText windows, 50 harmful prompts for refusal and 50 harmless prompts for over-refusal, with 13 continuation phrases scored per prompt. Under amendment A2.1, MMLU-Pro and WikiText log-perplexity are the candidate endpoints. HellaSwag, KL and the refusal stages are descriptive.
+The pre-registered test of H1a runs on a teacher-forced tier, TF-v1, specified in \path{docs/PREREG_H1_TF.md}. The candidate endpoint is the gold-letter log-probability on fixed MMLU-Pro items, scored under the edited model against its actual predecessor. The tier scores the likelihood of fixed answers, so it generates no text. As built, it scores 1,000 MMLU-Pro items, 250 HellaSwag items (a nested prefix of a 500-item ranking), 200 KL prompts with 64 greedy tokens each over the full vocabulary, 64 WikiText windows, 50 harmful prompts for refusal and 50 harmless prompts for over-refusal, with 13 continuation phrases scored per prompt. Under amendment A2.1, MMLU-Pro and WikiText log-perplexity are the candidate endpoints. HellaSwag, KL and the refusal stages are descriptive. % D8-BEGIN
+Until regeneration lands, the TF-v1 numbers below are reported from retained summaries (Appendix~\ref{sec:repro}).
+% D8-END
 
-Timing was the first gate. The round-2 timing pilot (run \texttt{20261105-144427-fb58ffe6}) measured a warm median of 1.805 min per entry against a 1.40 min gate. Amendment A2.4 batches the HellaSwag and refusal stages and keeps MMLU-Pro, KL and WikiText at batch 1. The round-3 pilot (run \texttt{20261105-175313-b7407319}, one process, cache resident) measured a warm median of 1.003 min per entry over ten edited entries, with a range of 0.994 to 1.040 min, and passed the gate. The MMLU-Pro, KL and WikiText records of all 11 pilot entries, the base and ten controls, are bitwise identical to the round-2 records.
+Timing was the first gate. The round-2 timing pilot (run \texttt{20261105-144427-fb58ffe6}) measured a warm median of 1.805 min per entry against a 1.40 min gate. Amendment A2.4 batches the HellaSwag and refusal stages and keeps MMLU-Pro, KL and WikiText at batch 1. The round-3 pilot (run \texttt{20261105-175313-b7407319}, one process, cache resident) measured a warm median of 1.003 min per entry over ten edited entries, with a range of 0.994 to 1.040 min, and passed the gate. These timings are reported from run logs (artefacts lost). The MMLU-Pro, KL and WikiText records of all 11 pilot entries, the base and ten controls, are bitwise identical to the round-2 records.
 
 The batched stages do not reproduce batch-1 scores exactly. Over the 11 pilot records, the worst deviations were 0.0148 on HellaSwag (probe limit 0.010), 0.526 on the refusal phrase log-probability (limit 0.39) and 0.371 on the refusal margin (limit 0.30). HellaSwag argmax changed on 17 of 2,750 items. The probe limits were measured on the unedited base alone, and the exceedances are one to two bf16 logit steps. They touch only the descriptive stages, never MMLU-Pro, KL or WikiText. The exceedance is recorded here. The fallbacks in A2.4, dropping the refusal stages or reverting batching for HellaSwag, have not been invoked.
 
@@ -125,7 +131,7 @@ Two further checks used the same source. G1 repeats the registered composition, 
 
 Every number in this subsection comes from source hash \texttt{a224779bf873}. Amendment A2 froze that source for the round-3 pilot, the G1 and G2 checks, and the D3 scoring. Round-2 records under \texttt{12ee875a68c9} are archived and are not pooled with them. Amendment A3 changes the source hash to add a key mapping for the Heretic ARA deltas. A3 is not applied to any number here, and its bitwise check must pass before any fresh scoring.
 
-The D3 stratum was scored under the same source after the round-3 gates. Of the 381 unique D3 deltas in the scoring plan, 378 were scored: the 229 stratum entries (139 chain, 60 LoRA SFT and 30 task-vector entries) and 149 null-family controls. Three legacy manifest rows without an eligibility field are excluded by the production runner. They are recorded as excluded, not as failures. The minutes log lists all 378 scored entries, with a median wall time of 1.02 min per entry (\path{data/runs/h1a/d3_stratum_minutes.jsonl}). The requalification and gate fit use 229 stratum rows and 157 null-family control rows (\texttt{n\_null} in \path{data/runs/h1a/requalification_report.json}).
+The D3 stratum was scored under the same source after the round-3 gates. Of the 381 unique D3 deltas in the scoring plan, 378 were scored: the 229 stratum entries (139 chain, 60 LoRA SFT and 30 task-vector entries) and 149 null-family controls. Three legacy manifest rows without an eligibility field are excluded by the production runner. They are recorded as excluded, not as failures. The minutes log, which listed all 378 scored entries with a median wall time of 1.02 min per entry, is lost, so these figures are reported from run logs (artefacts lost). The requalification and gate fit use 229 stratum rows and 157 null-family control rows (the re-qualification report, \path{docs/reviews/P5/tf-v1-requalification-2026-11-06.md}).
 
 Qualification under amendment A2.1 uses the 229 stratum entries, the 1,000 MMLU-Pro items and the 64 WikiText windows. The family weights are recomputed from the manifest: chain 0.700, LoRA SFT 0.206 and task vector 0.094. Table~\ref{tab:tfqual} gives each condition. The tripwire is the family-weighted share of entries whose item half-width exceeds $\delta/2$.
 \begin{table}[t]
@@ -143,7 +149,7 @@ Repeat, 95th percentile upper bound & 0.05 & 0 & 0.024 & 0 \\
 Reliability, lower 95\% bound & 0.90 & 0.990 & 0.90 & 0.992 \\\midrule
 Outcome & \multicolumn{2}{c}{not qualified} & \multicolumn{2}{c}{qualified} \\\bottomrule
 \end{tabular}
-\caption{TF-v1 qualification under A2.1 on the 229 D3 stratum entries (source \texttt{a224779bf873}, development panel). Limits are the registered values. The tripwire is the family-weighted share of entries with item half-width above $\delta/2$, and its 97.5\% upper bound is compared with the 20\% limit. The repeat bounds use 10 entries per endpoint. Reliability is the lower 95\% bound, with the nuisance refit in each bootstrap draw. Source \texttt{data/runs/h1a/requalification\_report.json}.}
+\caption{TF-v1 qualification under A2.1 on the 229 D3 stratum entries (source \texttt{a224779bf873}, development panel). Limits are the registered values. The tripwire is the family-weighted share of entries with item half-width above $\delta/2$, and its 97.5\% upper bound is compared with the 20\% limit. The repeat bounds use 10 entries per endpoint. Reliability is the lower 95\% bound, with the nuisance refit in each bootstrap draw. Source: \texttt{docs/reviews/P5/tf-v1-requalification-2026-11-06.md}, reported from the retained re-qualification report (the JSON artefact is lost).}
 \label{tab:tfqual}
 \end{table}
 
@@ -151,9 +157,64 @@ On 229 stratum entries scored under one source hash, repeat scoring on 10 entrie
 
 The pre-specified gate that would have upgraded H1a to confirmatory was not met. The gate used 4,000 simulated panels per scenario and 4,000 bootstrap draws per interval, with seed 20261105, and it chose no interval procedure on the simulated data. In simulations calibrated on the development out-of-fold losses, the lower 95\% bound on the power at $\theta = 0.15$ was 0.43 to 0.47 against the 0.80 required. No interval procedure met both the null-size limit (0.035) and the coverage limit (0.93) in every scenario. H1a is therefore exploratory and power-limited. Estimates and intervals are reported with no pass or kill label. The sealed fresh panel was not scored.
 
-On the same development panel, a fixed StatNN predictor on weight statistics reduced out-of-fold residual MAE relative to an isotonic function of incremental norm by 12.9\% (effective sample size 39.7, about 40 component equivalents). The 95\% intervals from three procedures, each conditional on items and joint over items, run from $-$0.8\% to 24.3\%. Five of the six lower bounds are negative. The sixth, from the conditional percentile interval, is +0.3 points, so the data do not distinguish a modest residual readability from none. The estimate is exploratory. It is carried by large-effect edits: LoRA SFT 23\%, chain 9\% and task vector $-$5\%. With the 42 entries whose item half-width exceeds $\delta/2$ left out, it falls to 0.7\% [$-$20\%, 15\%]. That leave-out drops rows from the scored sums only. The nuisance terms, StatNN and the isotonic comparator were still fit on all 229 stratum rows and the 157 null-family rows. The estimate replicates across disjoint item halves (10.5\% and 11.7\%) and has not been tested on fresh components. The flexible family-by-spline(norm) nuisance and the equal-component-weight ratio that the registration requires are not yet reported. The item-half and family figures come from Board A's CPU re-analysis of this panel, recorded in its adjudication.
+On the same development panel, a fixed StatNN predictor on weight statistics reduced out-of-fold residual MAE relative to an isotonic function of incremental norm by 12.9\% (effective sample size 39.7, about 40 component equivalents). The 95\% intervals from three procedures, each conditional on items and joint over items, run from $-$0.8\% to 24.3\%. Five of the six lower bounds are negative. The sixth, from the conditional percentile interval, is +0.3 points, so the data do not distinguish a modest residual readability from none. The estimate is exploratory. It is carried by large-effect edits: LoRA SFT 23\%, chain 9\% and task vector $-$5\%. With the 42 entries whose item half-width exceeds $\delta/2$ left out, it falls to 0.7\% [$-$20\%, 15\%]. That leave-out drops rows from the scored sums only. The nuisance terms, StatNN and the isotonic comparator were still fit on all 229 stratum rows and the 157 null-family rows. The estimate replicates across disjoint item halves (10.5\% and 11.7\%) and has not been tested on fresh components. % D8-BEGIN
+The item-half figures are recomputed in \path{docs/reviews/P5/h1a-companions-2026-11-06.md}.
+
+The companion analyses that the adjudication made mandatory are in Table~\ref{tab:h1a-companions}. They are descriptive and post hoc, and they use the development panel only. They add no registered claim and change no status. Unless a row says otherwise, each uses the 229 stratum rows, and each interval is a component-bootstrap percentile interval over 4,000 draws. The cells were chosen after the fact, so no interval in the table is confirmatory.
+
+With a flexible nuisance (a family-by-natural-spline term in log incremental norm, fit on training rows only), $\hat\theta$ is 0.135, and a shared spline with family slopes gives 0.126. Applying the all-six rule, under which an estimate is distinguishable from zero only if all six lower bounds are positive, the flexible estimate is not distinguishable from zero. Its six lower bounds lie between $-$0.005 and 0.008.
+
+The other outcome-free readings are positive: equal component weights give 0.176, the high-norm tertile gives 0.195, and LoRA SFT alone gives 0.230. Several percentile intervals in the table exclude zero, but none is confirmatory. The signal is absent in task vectors ($-$0.048, 30 rows, 27 components). It is negative in the lowest-norm tertile of chain steps ($-$0.776, 42 rows, 27 components), which is one of 27 stratum cells in the companion file.
+
+The estimate does not survive inverse-square weighting by the item half-width $h_i$, which gives $-$0.257 [$-$0.666, 0.074]. The 42 rows with $h_i > \delta/2$ carry 0.09\% of that weight. Restricting the sum to the 187 rows with $h_i \le \delta/2$, under the fit on all rows, gives 0.007 [$-$0.164, 0.154]. Refitting the nuisance and StatNN without the 42 wide rows gives 0.119 [0.0003, 0.231] on 187 rows. The two leave-out readings disagree, so the 0.7\% reported above depends on the fitting convention. The leave-out results do not show that the signal is item noise either.
+
+The 20 random item splits all give positive estimates. Their means, across the four combinations of split halves, run from 0.109 to 0.126.
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}\toprule
+Stratum or variant & Rows & Components & $\hat\theta$ & 95\% percentile interval \\\midrule
+Registered estimate (reference) & 229 & 120 & 0.129 & [0.002, 0.239] \\
+Flexible nuisance, family by natural spline & 229 & 120 & 0.135 & [0.009, 0.253] \\
+Flexible nuisance, shared spline with family slopes & 229 & 120 & 0.126 & [$-$0.003, 0.242] \\
+Equal component weights & 229 & 120 & 0.176 & [0.027, 0.301] \\
+High-norm tertile, all families & 77 & 56 & 0.195 & [0.045, 0.321] \\
+LoRA SFT only & 60 & 60 & 0.230 & [0.014, 0.399] \\
+Task vectors only & 30 & 27 & $-$0.048 & [$-$0.489, 0.225] \\
+Chain, lowest-norm tertile & 42 & 27 & $-$0.776 & [$-$1.956, $-$0.092] \\
+Inverse-square $h_i$ weighting & 229 & 120 & $-$0.257 & [$-$0.666, 0.074] \\
+Rows with $h_i \le \delta/2$, fit on all rows & 187 & 96 & 0.007 & [$-$0.164, 0.154] \\
+Refit without rows with $h_i > \delta/2$ & 187 & 96 & 0.119 & [0.0003, 0.231] \\\bottomrule
+\end{tabular}
+\caption{Companion analyses on the D3 development stratum (source \texttt{a224779bf873}). All rows are descriptive and post hoc, and none is registered. $\hat\theta$ is the row-summed relative residual MAE reduction of StatNN against isotonic on incremental norm, as in the registered estimate. Intervals are component-bootstrap percentile intervals with 4,000 draws. Rows marked $h_i$ use the item half-width sensitivities, and the threshold is the registered one. Raw values are in \texttt{docs/reviews/P5/h1a-companions-2026-11-06.json}.}
+\label{tab:h1a-companions}
+\end{table}
+% D8-END
 
 The predictor was fit on 229 stratum rows plus 157 null-family controls (the three legacy rows excluded), a small training set for a StatNN-versus-isotonic comparison. The per-entry A2.1 half-width criterion is an absolute limit, and it is unsuited to endpoints whose item uncertainty scales with the effect.
 
-The qualified WikiText endpoint could carry a separately named exploratory claim about the sensitivity of generic distributional fidelity to edit structure, not about task behaviour. An amendment registering an exploratory WikiText claim is pending. No WikiText out-of-fold loss, $\hat\theta$ or interval is reported here.
+% D8-BEGIN
+H1w is the separately named exploratory claim that amendment A4 registered on the qualified WikiText endpoint. It is not H1a, and it may not be cited as H1a. It runs the H1a pipeline (A4.3) on the same 229 stratum rows in 120 components, with WikiText log-perplexity as the outcome. WikiText met the A2.1 qualification, with a maximum item half-width of 0.013 against $\delta = 0.049$. The estimate is $\hat\theta = 0.0071$ (\path{docs/reviews/P5/h1w-gate-2026-11-06.md}). Its six lower bounds run from $-$0.094 to $-$0.139, so under the A4.4 wording rule the estimate is not distinguishable from zero (Table~\ref{tab:h1w}).
+
+The A4.5 gate fails on power. The lower 95\% bound on power at $\theta = 0.15$ is 0.73 for the conditional bootstrap-t procedure and 0.60 for the joint procedure, against 0.80. For bootstrap-t, the registered primary procedure, power is the only failing criterion: null size and coverage pass in all three scenarios. Unlike the MMLU-Pro gate, where no interval procedure met both limits in every scenario, bootstrap-t meets both here.
+
+The flexible-nuisance estimate is $-$0.049 (percentile interval $-$0.151 to 0.037), so the reversal condition in the adjudication, a gate pass with a positive flexible-nuisance estimate, is not met. The pooled value combines opposite family signs: $-$1.13 for LoRA SFT (60 rows, 60 components) and 0.38 for task vectors (30 rows, 27 components). These family cells are post hoc. H1w stays exploratory, with no pass or kill label. Fresh WikiText scoring would first need a sealed window panel and the A3 bitwise check, and it is not authorised.
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}\toprule
+Interval & $\hat\theta$ interval & Null size & Coverage at $\theta = 0.15$ \\\midrule
+Conditional, bootstrap-t & [$-$0.094, 0.098] & 0.025 & 0.956 \\
+Conditional, BCa & [$-$0.098, 0.097] & 0.027 & 0.950 \\
+Conditional, percentile & [$-$0.098, 0.097] & 0.022 & 0.959 \\
+Joint, bootstrap-t & [$-$0.139, 0.122] & 0.028 & 0.952 \\
+Joint, BCa & [$-$0.131, 0.114] & 0.030 & 0.948 \\
+Joint, percentile & [$-$0.116, 0.125] & 0.032 & 0.956 \\\bottomrule
+\end{tabular}
+\caption{Six intervals of the A4 gate, with 4,000 panels per scenario and 4,000 bootstrap draws, on 229 stratum rows in 120 components. Null size is the simulated one-sided rejection rate at the null, with limit 0.035. Coverage is the simulated two-sided 95\% coverage at $\theta = 0.15$, with limit 0.93. Both come from the empirical scenario. No interval is decisive under A4.4. Source: \texttt{docs/reviews/P5/h1w-gate-2026-11-06.json}.}
+\label{tab:h1w}
+\end{table}
+% D8-END
 \fussy
