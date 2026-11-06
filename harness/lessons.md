@@ -68,3 +68,9 @@ Two more: the hub overwrote the H0 `records.jsonl` of the 11 controls with the L
 so per-device records must live in `devices/<H>/<run>/` and nothing may be uploaded over `<id>/records.jsonl`; and
 `agent-tmux <name> bash -c '<quoted string>'` loses the quotes (tmux joins the arguments) and the window dies at once, so put
 waiters and chains in script files.
+
+## 2026-11-06 — the GitLab runner's read-only HF cache lived under data/ and was lost with it
+`test-gpu` failed on three pipelines after D8 with "Read-only file system" because the runner bind-mounts `data/hf` read-only
+and the model and `openai/gsm8k` were gone. Fixed by re-downloading `Qwen/Qwen3.5-0.8B` at the pinned revision and the
+GSM8K dataset into `/home/ubuntu/wsp-data/hf` (job 17813124960 green). Rule: after any data restore, repopulate the CI
+cache (model + the datasets the `gpu` tests load) before reading CI red as a code failure.
