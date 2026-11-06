@@ -183,3 +183,13 @@ the large-effect rows; the item-split replicates (0.105/0.117) argue against pur
 weighted/restricted θ̂) settle it on CPU. WikiText log-PPL is qualified and may carry a separately named exploratory
 claim H1w by amendment A4 (CPU gate ≈ 3 h; fresh scoring ≈ 1.9 GPU-h only if it passes). Paper gets the permitted
 sentences. Delegated: A4 + companions + WikiText gate (Sonnet); paper outcome section (Haiku).
+
+**Data-loss incident and recovery (6 Nov 03:18–04:30 UTC; D8).** A committed `data` symlink (ea78234) destroyed the
+canonical data directory on merge. Restored from the public HF dataset (137 GB): 1,259 entry dirs, 716 dense + 122
+LoRA deltas, 389 eval.json, 200 records.jsonl, both Lambda base evaluations. Board A plan (d64e410): 12 result groups
+re-derivable, 21 regenerable, 4 irrecoverable (to be disclosed); 358 chain deltas lost → H2 no longer testable;
+regeneration ≈ 3.15 GPU-h + 8–10 CPU-h from detached worktrees at verified commits (running). Canonical data now at
+/home/ubuntu/wsp-data outside the checkout; pre-commit, ignore and wt.sh merge guards added; 25 stale worktrees
+removed. Backup policy (S3 versioned copy + EBS DLM repair) awaits the user's approval. Earlier the same night: H1w
+WikiText gate FAILED (θ̂ 0.007), companions keep the MMLU residual signal positive in point estimate but on zero;
+A4 recorded; paper outcome section merged (17 pages).
