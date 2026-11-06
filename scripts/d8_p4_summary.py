@@ -89,7 +89,9 @@ def main():
         mfile = d / "metrics.json"
         if not mfile.exists():
             lines.append(f"| {name} | no metrics | | | | | | | |")
-            compare.append(f"| d3v2-{name} | — | — | — | — | no metrics.json in the recovered run (see log) |")
+            compare.append(
+                f"| d3v2-{name} | — | — | — | — | no metrics.json in the recovered run (see log) |"
+            )
             status.append((name, "no metrics"))
             continue
         m = json.loads(mfile.read_text())
@@ -103,7 +105,14 @@ def main():
         for b in ("statnn", "descriptor_only", "delta_norm"):
             vals = []
             for t in TARGETS:
-                v = s0["baselines"].get(b, {}).get("targets", {}).get(t, {}).get("spearman", {}).get("value")
+                v = (
+                    s0["baselines"]
+                    .get(b, {})
+                    .get("targets", {})
+                    .get(t, {})
+                    .get("spearman", {})
+                    .get("value")
+                )
                 vals.append(fmt(v) if v is not None else "—")
             base[b] = " / ".join(vals)
         n = s0["targets"][TARGETS[0]]["n"]
@@ -116,7 +125,11 @@ def main():
         )
         o = orig_vals.get(f"d3v2-{name}", {})
         ob = orig_tab.get(name)
-        reasons = ["row set: 48 chain rows with a lost ancestor delta removed from every fold" if o.get("rows") else "no original rows in the audit log"]
+        reasons = [
+            "row set: 48 chain rows with a lost ancestor delta removed from every fold"
+            if o.get("rows")
+            else "no original rows in the audit log"
+        ]
         if "holdout-chain" in name:
             reasons.append("the chain holdout's test rows fall from 98 to 50")
         if name.startswith("m3"):
@@ -128,9 +141,13 @@ def main():
                 r1=n,
                 c0=o.get("clusters", "—"),
                 c1=ncl,
-                a0=fmt(o.get(("mmlu_pro", "mean")), 4) if ("mmlu_pro", "mean") in o else (ob[1].split(" ")[0] if ob else "—"),
+                a0=fmt(o.get(("mmlu_pro", "mean")), 4)
+                if ("mmlu_pro", "mean") in o
+                else (ob[1].split(" ")[0] if ob else "—"),
                 a1=fmt(ss["mmlu_pro"]["spearman"]["mean"], 4) if "mmlu_pro" in ss else "—",
-                b0=fmt(o.get(("hellaswag", "mean")), 4) if ("hellaswag", "mean") in o else (ob[2].split(" ")[0] if ob else "—"),
+                b0=fmt(o.get(("hellaswag", "mean")), 4)
+                if ("hellaswag", "mean") in o
+                else (ob[2].split(" ")[0] if ob else "—"),
                 b1=fmt(ss["hellaswag"]["spearman"]["mean"], 4) if "hellaswag" in ss else "—",
                 why="; ".join(reasons),
             )
