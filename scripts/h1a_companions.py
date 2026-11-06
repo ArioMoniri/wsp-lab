@@ -24,6 +24,12 @@ primary theta of `tfv1_requalify.py` (A2.3). Reported, each labelled by n rows /
 `compute_companions` and `render_companions` are reused by `h1w_gate.py` (A4.3, WikiText).
 """
 
+import os
+
+# one BLAS thread per process (parallelism comes from --workers): set before numpy loads
+for _var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ.setdefault(_var, "1")
+
 import argparse
 import json
 import sys

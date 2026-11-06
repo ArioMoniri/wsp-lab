@@ -18,6 +18,12 @@ Output: docs/reviews/P5/h1w-gate-<date>.md and data/runs/h1w/gate_report.json (p
 the JSON next to the document). PASS/FAIL per Board A's criteria (A4.5 and its reversal evidence).
 """
 
+import os
+
+# one BLAS thread per process (parallelism comes from --workers): set before numpy loads
+for _var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ.setdefault(_var, "1")
+
 import argparse
 import json
 import subprocess
