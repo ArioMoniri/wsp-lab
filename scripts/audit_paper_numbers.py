@@ -39,6 +39,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SEC = ROOT / "paper" / "sections"
 DATA = ROOT / "data"
+# The legacy checks read run artefacts that the 6 Nov 2026 incident (D8) removed. They run only when
+# these marker artefacts are restored; otherwise only committed-document checks run (--committed-only).
+DATA_MARKERS = [
+    DATA / "runs" / "p4" / "d3v2-m1-trajectory" / "metrics.json",
+    DATA / "runs" / "h1a" / "requalification_report.json",
+    DATA / "runs" / "p2" / "base-final-4096",
+]
+DATA_PRESENT = all(p.exists() for p in DATA_MARKERS)
 DOCS = ROOT / "docs"
 P4 = DATA / "runs" / "p4"
 EV = DATA / "evals" / "qwen3.5-0.8b"
@@ -68,6 +76,7 @@ SECTIONS = [
     "results",
     "reliability",
     "discussion",
+    "appendix",
 ]
 
 # ------------------------------------------------------------------ number syntax
@@ -294,11 +303,12 @@ def jeval(p: Path) -> dict:
     return jload(p)
 
 
-CONTROLS = [
-    l.strip()
-    for l in (DATA / "runs" / "d3_shards" / "controls.txt").read_text().split()
-    if l.strip()
-]
+_CONTROLS_FILE = DATA / "runs" / "d3_shards" / "controls.txt"
+CONTROLS = (
+    [l.strip() for l in _CONTROLS_FILE.read_text().split() if l.strip()]
+    if _CONTROLS_FILE.exists()
+    else []
+)
 H100_IDS = CONTROLS + ["013b7b61202fe188"]
 A10_IDS = ["0a841d4082532e8b", "3db97b535c996265", "af6d608f8651fb46", "dd90d99e2ddc0e77"]
 DEV_KEYS = {  # table label -> eval.json key
@@ -374,10 +384,13 @@ def base_dev(dev: str, key: str) -> float:
     return float(jeval(p)[key])
 
 
-DEVS = {
-    "H1": {lab: cross_host(H100_IDS, h100_eval, key) for lab, key in DEV_KEYS.items()},
-    "H2": {lab: cross_host(A10_IDS, a10_eval, key) for lab, key in DEV_KEYS.items()},
-}
+try:
+    DEVS = {
+        "H1": {lab: cross_host(H100_IDS, h100_eval, key) for lab, key in DEV_KEYS.items()},
+        "H2": {lab: cross_host(A10_IDS, a10_eval, key) for lab, key in DEV_KEYS.items()},
+    }
+except FileNotFoundError:  # per-entry eval.json files are lost (D8); legacy checks are not run
+    DEVS = {}
 
 
 def metrology_row(target: str, scope: str) -> list[str]:
@@ -422,9 +435,12 @@ def audit_counter(name: str) -> int:
     return int(re.search(rf"'{name}': (\d+)", read(AUDIT_TXT)).group(1))
 
 
-V2_INFERRED = jload(P4 / "d3v2-m1-trajectory" / "seed-1" / "manifest.json")[
-    "targets_with_inferred_runtime"
-]
+try:
+    V2_INFERRED = jload(P4 / "d3v2-m1-trajectory" / "seed-1" / "manifest.json")[
+        "targets_with_inferred_runtime"
+    ]
+except FileNotFoundError:  # run directories are lost (D8)
+    V2_INFERRED = None
 ZOO_EVAL = {c: DATA / "zoo" / "qwen3.5-0.8b" / c / "eval.json" for c in CONTROLS}
 BASE_H0_SEED0 = (
     DATA
@@ -2650,6 +2666,230 @@ TABLE_CHECKS = {
 }
 
 
+# ------------------------------------------------------------------ D8 artefact loss (6 Nov 2026)
+# Text between "% D8-BEGIN" and "% D8-END" was written or rewritten after the incident. Every numeric
+# token there must be claimed (from a committed JSON or a committed document), declared, or quoted.
+# Legacy text outside those blocks is checked only when data/runs exists (DATA_PRESENT).
+
+H1A_JSON = DOCS / "reviews" / "P5" / "h1a-companions-2026-11-06.json"
+H1W_JSON = DOCS / "reviews" / "P5" / "h1w-gate-2026-11-06.json"
+INCIDENT = DOCS / "reviews" / "P5" / "board-a-incident-d8-2026-11-06.md"
+D8_BLOCK = re.compile(r"% D8-BEGIN\n(.*?)% D8-END", re.DOTALL)
+LEGACY = [0]  # legacy tokens not checked because their sources are absent
+MODE_NOTE = ""
+
+
+def d8_spans(raw: str) -> list[tuple[int, int]]:
+    return [(m.start(), m.end()) for m in D8_BLOCK.finditer(raw)]
+
+
+def in_d8(spans: list[tuple[int, int]], pos: int) -> bool:
+    return any(a <= pos < b for a, b in spans)
+
+
+def tex2md(s: str) -> str:
+    """Render a LaTeX paragraph the way the incident review writes it, for the verbatim check."""
+    s = s.replace("``", '"').replace("''", '"').replace("\u2019", "'")
+    s = re.sub(r"\\textbf\{([^{}]*)\}", r"**\1**", s)
+    s = re.sub(r"\\(?:texttt|path)\{([^{}]*)\}", r"`\1`", s)
+    s = s.replace("\\_", "_").replace("\\%", "%").replace("~", " ")
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def quoted(file: str, snippet: str, patterns: list[str], doc: str, desc: str) -> None:
+    """A prose snippet whose facts must appear in a committed document (each regex must match)."""
+    claim(file, snippet, None, desc)
+    for pat in patterns:
+        assertion(file, f"{desc}: /{pat}/", re.search(pat, doc) is not None, desc)
+
+
+def build_d8() -> None:
+    a = jload(H1A_JSON)
+    w = jload(H1W_JSON)
+    inc = read(INCIDENT)
+    dec = read(DECISIONS)
+    hyp = read(HYPOTHESIS)
+    src_a = "docs/reviews/P5/h1a-companions-2026-11-06.json"
+    src_w = "docs/reviews/P5/h1w-gate-2026-11-06.json"
+
+    for needle, label in [
+        ("untested (not falsified)", "H1a"),
+        ("not distinguishable from zero", "H1w"),
+        ("not testable on the surviving zoo", "H2"),
+    ]:
+        assertion("experiments", f"HYPOTHESIS.md status line quoted for {label}", needle in hyp, "docs/HYPOTHESIS.md")
+
+    # ---- H1a companions (experiments): table rows, the whole row text is the snippet
+    fx = a["flexible_nuisance"]["family_x_natural_spline"]
+    sh = a["flexible_nuisance"]["shared_natural_spline_family_slope"]
+    reg = a["registered"]
+    eq = a["equal_component_weight"]
+    st = a["strata"]
+    hv = a["h_variants"]
+    t3 = st["tertile"]["T3"]
+    lora = st["family"]["lora_sft"]
+    tv = st["family"]["task_vector"]
+    c1 = st["cross"]["chain|T1"]
+    inv = hv["inverse_h_squared_weighted"]
+    rst = hv["restricted_h_le_half_delta"]
+    rf = hv["refit_without_over_half_delta"]
+    splits = a["item_split"]["random_splits"]
+    means = [v["mean"] for v in splits["by_combination"].values()]
+    lows = [v[0] for v in fx["six_intervals"].values() if isinstance(v, list)]
+    n_wide = a["half_width_summary"]["n_over_half_delta"]
+    n_cells = sum(len(st[k]) for k in ("family", "tertile", "cross", "within_family_tertile", "pre_declared"))
+    F = "experiments"
+    rows = [
+        (r"Registered estimate (reference) & 229 & 120 & 0.129 & [0.002, 0.239]",
+         [a["n_rows"], a["n_components"], reg["theta"], *reg["cluster_percentile95"]]),
+        (r"Flexible nuisance, family by natural spline & 229 & 120 & 0.135 & [0.009, 0.253]",
+         [a["n_rows"], a["n_components"], fx["theta"], *fx["cluster_percentile95"]]),
+        (r"Flexible nuisance, shared spline with family slopes & 229 & 120 & 0.126 & [$-$0.003, 0.242]",
+         [a["n_rows"], a["n_components"], sh["theta"], *sh["cluster_percentile95"]]),
+        (r"Equal component weights & 229 & 120 & 0.176 & [0.027, 0.301]",
+         [a["n_rows"], a["n_components"], eq["theta_row_weight_1_over_nc"], *eq["cluster_percentile95_row_weight_1_over_nc"]]),
+        (r"High-norm tertile, all families & 77 & 56 & 0.195 & [0.045, 0.321]",
+         [t3["n_rows"], t3["n_components"], t3["theta"], *t3["cluster_percentile95"]]),
+        (r"LoRA SFT only & 60 & 60 & 0.230 & [0.014, 0.399]",
+         [lora["n_rows"], lora["n_components"], lora["theta"], *lora["cluster_percentile95"]]),
+        (r"Task vectors only & 30 & 27 & $-$0.048 & [$-$0.489, 0.225]",
+         [tv["n_rows"], tv["n_components"], tv["theta"], *tv["cluster_percentile95"]]),
+        (r"Chain, lowest-norm tertile & 42 & 27 & $-$0.776 & [$-$1.956, $-$0.092]",
+         [c1["n_rows"], c1["n_components"], c1["theta"], *c1["cluster_percentile95"]]),
+        (r"Inverse-square $h_i$ weighting & 229 & 120 & $-$0.257 & [$-$0.666, 0.074]",
+         [a["n_rows"], a["n_components"], inv["theta"], *inv["cluster_percentile95"]]),
+        (r"Rows with $h_i \le \delta/2$, fit on all rows & 187 & 96 & 0.007 & [$-$0.164, 0.154]",
+         [2, rst["n_rows"], rst["n_components"], rst["theta"], *rst["cluster_percentile95"]]),
+        (r"Refit without rows with $h_i > \delta/2$ & 187 & 96 & 0.119 & [0.0003, 0.231]",
+         [2, rf["n_rows"], rf["n_components"], rf["theta"], *rf["cluster_percentile95"]]),
+    ]
+    for snip, vals in rows:
+        claim(F, snip, vals, f"{src_a}: companion table row")
+    claim(F, "percentile intervals with 4,000 draws", [4000], "h1a-companions: draws")
+
+    # ---- H1a companions (experiments): prose
+    prose = [
+        (r"each uses the 229 stratum rows, and each interval is a component-bootstrap percentile interval over 4,000 draws",
+         [a["n_rows"], 4000]),
+        (r"is 0.135, and a shared spline with family slopes gives 0.126", [fx["theta"], sh["theta"]]),
+        (r"lie between $-$0.005 and 0.008", [min(lows), max(lows)]),
+        (r"equal component weights give 0.176, the high-norm tertile gives 0.195, and LoRA SFT alone gives 0.230",
+         [eq["theta_row_weight_1_over_nc"], t3["theta"], lora["theta"]]),
+        (r"($-$0.048, 30 rows, 27 components)", [tv["theta"], tv["n_rows"], tv["n_components"]]),
+        (r"($-$0.776, 42 rows, 27 components), which is one of 27 stratum cells in the companion file",
+         [c1["theta"], c1["n_rows"], c1["n_components"], n_cells]),
+        (r"which gives $-$0.257 [$-$0.666, 0.074]", [inv["theta"], *inv["cluster_percentile95"]]),
+        (r"The 42 rows with $h_i > \delta/2$ carry 0.09\% of that weight",
+         [n_wide, 2, inv["share_of_weight_on_rows_over_half_delta"] * 100]),
+        (r"Restricting the sum to the 187 rows with $h_i \le \delta/2$, under the fit on all rows, gives 0.007 [$-$0.164, 0.154]",
+         [rst["n_rows"], 2, rst["theta"], *rst["cluster_percentile95"]]),
+        (r"Refitting the nuisance and StatNN without the 42 wide rows gives 0.119 [0.0003, 0.231] on 187 rows",
+         [n_wide, rf["theta"], *rf["cluster_percentile95"], rf["n_rows"]]),
+        (r"so the 0.7\% reported above", [rst["theta"] * 100]),
+        (r"The 20 random item splits all give positive estimates. Their means, across the four combinations of split halves, run from 0.109 to 0.126.",
+         [splits["n_splits"], min(means), max(means)]),
+    ]
+    for snip, vals in prose:
+        claim(F, snip, vals, f"{src_a}: text")
+
+    # ---- H1w (experiments): prose, caption and table
+    wc = w["companions"]
+    wg = w["gate"]
+    iv = wg["interval_table"]
+    pw = wg["criteria"]["per_method"]["bootstrap_t"]
+    pw_c = pw["(a) power lower95 >= 0.80 at theta 0.15, conditional"]["value"]
+    pw_j = pw["(a) power lower95 >= 0.80 at theta 0.15, joint"]["value"]
+    fxw = wc["flexible_nuisance"]["family_x_natural_spline"]
+    lw = wc["strata"]["family"]["lora_sft"]
+    tw = wc["strata"]["family"]["task_vector"]
+    lows_w = [x["theta_interval"][0] for x in iv]
+    highs_w = [x["theta_interval"][1] for x in iv]
+    h1w = [
+        (r"WikiText met the A2.1 qualification, with a maximum item half-width of 0.013 against $\delta = 0.049$",
+         [wc["half_width_summary"]["max_h"], math.log(1.05)]),
+        (r"The estimate is $\hat\theta = 0.0071$", [wc["registered"]["theta"]]),
+        (r"Its six lower bounds run from $-$0.094 to $-$0.139", [max(lows_w), min(lows_w)]),
+        (r"at $\theta = 0.15$ is 0.73 for the conditional bootstrap-t procedure and 0.60 for the joint procedure, against 0.80",
+         [0.15, pw_c, pw_j, 0.80]),
+        (r"The flexible-nuisance estimate is $-$0.049 (percentile interval $-$0.151 to 0.037)",
+         [wg["criteria"]["flexible_nuisance_theta_hat"], *fxw["cluster_percentile95"]]),
+        (r"$-$1.13 for LoRA SFT (60 rows, 60 components) and 0.38 for task vectors (30 rows, 27 components)",
+         [lw["theta"], lw["n_rows"], lw["n_components"], tw["theta"], tw["n_rows"], tw["n_components"]]),
+        (r"the same 229 stratum rows in 120 components", [w["n_stratum"], wc["n_components"]]),
+        (r"with 4,000 panels per scenario and 4,000 bootstrap draws, on 229 stratum rows in 120 components",
+         [4000, 4000, w["n_stratum"], wc["n_components"]]),
+        (r"with limit 0.035", [0.035]),
+        (r"at $\theta = 0.15$, with limit 0.93", [0.15, 0.93]),
+        (r"Coverage at $\theta = 0.15$", [0.15]),
+    ]
+    for snip, vals in h1w:
+        claim(F, snip, vals, f"{src_w}: text")
+    h1w_rows = [
+        "Conditional, bootstrap-t & [$-$0.094, 0.098] & 0.025 & 0.956",
+        "Conditional, BCa & [$-$0.098, 0.097] & 0.027 & 0.950",
+        "Conditional, percentile & [$-$0.098, 0.097] & 0.022 & 0.959",
+        "Joint, bootstrap-t & [$-$0.139, 0.122] & 0.028 & 0.952",
+        "Joint, BCa & [$-$0.131, 0.114] & 0.030 & 0.948",
+        "Joint, percentile & [$-$0.116, 0.125] & 0.032 & 0.956",
+    ]
+    for snip, x in zip(h1w_rows, iv):
+        claim(F, snip, [x["theta_interval"][0], x["theta_interval"][1], x["null_size"], x["coverage_at_0.15"]],
+              f"{src_w}: interval_table")
+
+    # ---- H1 status and dates in the experiments, discussion, abstract and introduction
+    quoted(F, "H2 is not testable on the surviving zoo", [r"not testable on the surviving zoo"], hyp,
+           "docs/HYPOTHESIS.md H2 status")
+    quoted(F, "only three evaluated lineages of that length remain", [r"3 evaluated lineages of length ≥ 4 remain"],
+           dec, "docs/DECISIONS.md D8 addendum")
+    declare(F, "6 November 2026", "incident date (D8)")
+    claim("discussion", "give point estimates from 0.135 to 0.230", [fx["theta"], lora["theta"]], f"{src_a}: text")
+    claim("discussion", "Its estimate, 0.0071, is not distinguishable from zero", [wc["registered"]["theta"]],
+          f"{src_w}: text")
+    quoted("introduction", "H2 is not testable on the surviving zoo", [r"not testable on the surviving zoo"], hyp,
+           "docs/HYPOTHESIS.md H2 status")
+    quoted("abstract", "H2 is not testable on the surviving zoo", [r"not testable on the surviving zoo"], hyp,
+           "docs/HYPOTHESIS.md H2 status")
+    quoted("abstract", "The exploratory WikiText claim H1w is not distinguishable from zero",
+           [r"not distinguishable from zero"], hyp, "docs/HYPOTHESIS.md H1w status")
+    declare("abstract", "6 November 2026", "incident date (D8)")
+    declare("method", "6 November 2026", "incident date (D8)")
+
+    # ---- zoo: artefact-loss footnote and the feature-manifest sentence
+    declare("zoo", "6 November 2026", "incident date (D8)")
+    quoted("zoo", "Delta bytes are missing for 358 of the 675 chain rows",
+           [r"358 truly missing", r"317/675 chain deltas usable"], dec, "docs/DECISIONS.md D8 addendum")
+    quoted("zoo", "The other 317 chain rows keep bytes (254 stored and 63 byte-identical duplicates)",
+           [r"317 of the 675 chain steps \(254 stored, 63 byte-identical duplicates"], inc,
+           "incident review section 1.1")
+    quoted("zoo", "all 584 non-chain rows keep bytes", [r"all 584 non-chain entries"], inc,
+           "incident review section 1.1")
+    quoted("zoo", "at most 901 entries can have features: the 838 rows with stored delta bytes and the 63 chain rows",
+           [r"at most 901 \(838 \+ 63 aliases\)"], inc, "incident review section 0 (Z3)")
+
+    # ---- appendix: verbatim paragraph, chain status, classification
+    app = read(SEC / "appendix.tex")
+    m = re.search(r"% D8-VERBATIM-BEGIN\n(.*?)\n% D8-VERBATIM-END", app, re.DOTALL)
+    para = m.group(1).strip()
+    md_line = next(ln for ln in inc.splitlines() if ln.startswith("> **Artefact loss.**"))
+    md_para = re.sub(r"\s+", " ", md_line[2:]).strip()
+    claim("appendix", para, None, "verbatim: incident review section 1.1")
+    assertion("appendix", "verbatim paragraph equals incident review section 1.1",
+              tex2md(para) == md_para, "docs/reviews/P5/board-a-incident-d8-2026-11-06.md")
+    quoted("appendix", "Of the 675 chain steps, 317 keep delta bytes and 358 do not.",
+           [r"317 of the 675 chain steps", r"358 need replay"], inc, "incident review section 1.1")
+    quoted("appendix", "Of the 99 lineages of length four or more, six keep their first four steps, and three of those six are evaluated.",
+           [r"99 lineages of length ≥ 4", r"only \*\*6\*\* have ≥ 4 leading steps recovered, \*\*3\*\* of those evaluated"],
+           inc, "incident review section 3")
+    quoted("appendix", "The registered 229-row TF-v1 panel", [r"229-row panel"], inc, "incident review section 3")
+    claim("appendix", "recomputable from surviving raw records & 12", [12], "incident review section 1 counts")
+    claim("appendix", "regenerable under the recorded source hash & 21", [21], "incident review section 1 counts")
+    claim("appendix", "cannot be regenerated; reported from logs & 4", [4], "incident review section 1 counts")
+    claim("appendix", "Total & & 37", [37], "incident review section 1 counts")
+    claim("appendix", "Of the 21 B results, 15 depend on chain rows", [21, 15], "incident review section 1 counts")
+    for needle in ["**A = 12**", "**B = 21**", "**C = 4 results", "Total 37 result groups"]:
+        assertion("appendix", f"incident review count: {needle}", needle in inc, "incident review section 1")
+
+
 # ------------------------------------------------------------------ runner
 
 
@@ -2710,19 +2950,33 @@ def run_declared(
 
 
 def run() -> int:
-    build()
-    build_tfv1()
+    global MODE_NOTE
+    if DATA_PRESENT:
+        MODE_NOTE = "Mode: full (source artefacts present under data/)."
+        build()
+        build_tfv1()
+    else:
+        MODE_NOTE = (
+            "Mode: committed-only. data/runs is absent (artefact loss, D8), so the legacy claims that read "
+            "data/ are not run. Checked: D8 blocks, the verbatim incident paragraph, the D8 table companions, "
+            "quoted facts in committed documents, and every \\path target."
+        )
+    build_d8()
     unclaimed: list[dict] = []
     total_prose = total_table = seed_labels = 0
     for name in SECTIONS:
         raw = (SEC / f"{name}.tex").read_text()
         masked_full = mask_nonprose(raw)
+        spans = d8_spans(raw)
         envs = list(table_envs(raw))
         table_spans = [(e0, e1) for _, _, _, e0, e1 in envs]
         body_spans = [(b0, b1) for _, b0, b1, _, _ in envs]
         # tables: each body must be fully accounted for by its checker, in-table claims and declarations
-        for lab, b0, b1, _, _ in envs:
+        for lab, b0, b1, e0, _ in envs:
             body = numeric_tokens(masked_full, b0, b1)
+            if not DATA_PRESENT and not in_d8(spans, e0):
+                LEGACY[0] += len(body)
+                continue
             total_table += len(body)
             checker_count = 0
             fn = TABLE_CHECKS.get(lab)
@@ -2762,6 +3016,9 @@ def run() -> int:
                 continue
             if t["start"] in covered:
                 continue
+            if not DATA_PRESENT and not in_d8(spans, t["start"]):
+                LEGACY[0] += 1
+                continue
             line = raw[: t["start"]].count("\n") + 1
             unclaimed.append(
                 {
@@ -2784,6 +3041,12 @@ def report(total_prose: int, total_table: int, seed_labels: int, unclaimed: list
     presence_ok = [r for r in RESULTS if r["kind"] == "PRESENCE"]
     out = ["# Paper v2 numerical audit: output of scripts/audit_paper_numbers.py", ""]
     out.append(f"Sections audited: {', '.join(SECTIONS)}.")
+    out.append(MODE_NOTE)
+    if not DATA_PRESENT:
+        out.append(
+            f"Legacy tokens not checked (their sources are absent): {LEGACY[0]} in prose and tables, "
+            "outside the D8 blocks. They are listed as not run, not as passing."
+        )
     out.append(
         f"Numeric tokens: {total_prose} in prose, {total_table} in tables; {seed_labels} seed labels and "
         f"{sum(1 for d in DECLARED)} declared tokens are listed below, not checked."
@@ -2856,7 +3119,15 @@ def main() -> int:
         description="Audit numbers in the v2 paper sections against their sources."
     )
     ap.add_argument("--report", type=Path, default=None, help="also write the output to this path")
+    ap.add_argument(
+        "--committed-only",
+        action="store_true",
+        help="run only the checks that need committed documents (skip legacy checks that read data/)",
+    )
     args = ap.parse_args()
+    global DATA_PRESENT
+    if args.committed_only:
+        DATA_PRESENT = False
     REPORT_PATH = args.report
     return run()
 

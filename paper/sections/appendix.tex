@@ -1,1 +1,31 @@
-% appendix — filled per phase after Board A+B approval (docs/REVIEW_PROTOCOL.md)
+% D8-BEGIN
+\section{Reproducibility statement}
+\label{sec:repro}
+% D8-VERBATIM-BEGIN
+\textbf{Artefact loss.} On 6 November 2026 a version-control error deleted this project's working data directory (about 260 GB) before any off-machine backup of it existed (incident record: \texttt{docs/DECISIONS.md}, D8). The public Hugging Face dataset \texttt{Aralario/wsp-lab-zoo} preserved the zoo manifest and every edit record, the fast-tier evaluation summaries of all 389 evaluated entries (item-level records for 200 of them), both Lambda base evaluations, and the deltas of all 584 non-chain entries and of 317 of the 675 chain steps (254 stored, 63 byte-identical duplicates of stored deltas). The following artefacts were lost and are not released: (i) the deltas of 358 chain steps and everything derived from them; (ii) the run directories of the protocol-v2 predictor suite (\texttt{data/runs/p4/d3v2-*}: per-seed metric files, fold prediction tables, manifests); (iii) the per-item records, timing logs, KL base cache and qualification JSON of the TF-v1 pilot, G1, G2 and D3 stratum runs as originally produced; (iv) the item-level fast-tier records of the 189 locally evaluated entries (their summaries survive); (v) the original local base-model evaluation records. Where a number below was recomputed from regenerated artefacts, the text names the regeneration date and the source hash; regenerated values replace the originals wherever they differ, and the originals are listed in the appendix. Numbers marked ``reported from logs'' come from committed run summaries (\texttt{docs/RESULTS.md}, \texttt{docs/reviews/P4/}, \texttt{docs/reviews/P5/}) whose underlying artefacts no longer exist; they cannot be re-derived, and they are not used to support any claim stronger than descriptive.
+% D8-VERBATIM-END
+
+Regeneration is in progress. It runs from clean detached worktrees at the commits that carry the recorded source hashes, and each run checks its first record for the source hash and a clean tree. This version prints no regenerated value. Where a regenerated value differs from a value printed here, the regenerated value will replace it, and the printed original will be listed in this appendix.
+
+Results that depend on lost artefacts carry one of three labels. ``Reported from logs; artefacts lost'' marks a result whose artefacts no longer exist and whose printed value comes from a committed summary; it supports only descriptive claims. ``Regenerated on a stated date under the stated source hash, agreeing with the retained summary to the printed precision'' and ``Regenerated on a stated date, differing from the retained summary'' mark regenerated results. No result in this version carries a regenerated label. The labelling is incomplete: the protocol-v2 and TF-v1 tables still name run directories that no longer exist, and their run-id columns will be replaced by regenerated run ids or by ``retained summary''.
+
+The chain family is affected most. Of the 675 chain steps, 317 keep delta bytes and 358 do not. H2 is therefore not testable on the surviving zoo. Of the 99 lineages of length four or more, six keep their first four steps, and three of those six are evaluated. The registered 229-row TF-v1 panel cannot be reproduced without the lost chain deltas, and a recovered-set panel would be a different panel.
+
+The incident review classifies every result group in the v2 paper, and Table~\ref{tab:d8-classes} gives the counts. Of the 21 B results, 15 depend on chain rows. The four C results are the protocol-v2 directory facts, the TF-v1 pilot timings, the D3 scoring minutes and the feature-manifest sentence. Section~\ref{sec:zoo} rewrites that last sentence.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{llr}\toprule
+Class & Meaning & Result groups \\\midrule
+A & recomputable from surviving raw records & 12 \\
+B & regenerable under the recorded source hash & 21 \\
+C & cannot be regenerated; reported from logs & 4 \\\midrule
+Total & & 37 \\\bottomrule
+\end{tabular}
+\caption{Classes of the result groups in the v2 paper, from the incident review \texttt{docs/reviews/P5/board-a-incident-d8-2026-11-06.md}.}
+\label{tab:d8-classes}
+\end{table}
+
+The recovery plan, its acceptance tests and the backup policy are recorded in \path{docs/DECISIONS.md} (D8 and its addendum).
+% D8-END
