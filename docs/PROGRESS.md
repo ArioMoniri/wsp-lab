@@ -245,3 +245,11 @@ view: 1,241 feature sets with complete ancestry, **342 matched rows** (original 
 `d3v2f-*` running (tmux `d8-p4-full`). G6 census running on H0 (tmux `d8-g6-census`): G1 repeats of the two regenerated
 predecessors, then TF-v1 on the 635 stored chain entries without a record (repriced from 296, ≈ 11 GPU-h). A5.11 manifest package
 being built on branch `prereg/a5-manifests`.
+
+**7 Nov 2026, 13:00–14:00 UTC.** A5.11 manifest package merged (`docs/prereg/a5_manifests/`: components, selection, references,
+text groups, code hashes; builder `scripts/a5_build_manifests.py`). Chair ruling recorded in A5.3.1: an edit whose actual
+predecessor state is lost is ineligible, not a selection block; under it the Part A selection is 30 lora_sft (10/10/10 by
+norm tertile) and 10 chain (4/3/3), 40 distinct components, 3 chain picks with re-trained lineage flagged. References to
+score before G3: 24 originals and 6 predecessors (31 min). Gradient/probe panels, control seeds and null-size inputs are
+being built on `prereg/a5-panels`. G6 census restarted on 618 entries after excluding 17 legacy-revision rows
+(`base_revision: main`, pre-production commits; list in `runs/d8/g6_dropped_legacy.json`).
