@@ -116,3 +116,33 @@ families and sizes (Qwen3.5-0.8B, LFM3-1.7B, Qwen3.5-4B; Gemma-3-270M as a small
 trained on two of them reaches Spearman ρ ≥ 0.4 on the held-out model's edits for ≥ 6 of K benchmarks
 without any target from that model. Falsified if ρ < 0.2 on all benchmarks. This is expected to be the hardest
 hypothesis; a per-model calibration arm (≤ 20 labelled edits from the new model) is reported alongside.
+
+## Amendment — 7 Nov 2026: H1-OR, oriented local response
+
+**Status: exploratory draft for Board A.** [PREREG Appendix A5](PREREG_H1_TF.md#appendix-a5--oriented-local-response-h1-or) governs.
+Authority: [chair synthesis version 3.1](council/2026-11-07/SYNTHESIS.md), §§3–6.
+H1-OR supersedes the unfrozen H1b candidate prospectively; it changes no historical result or wording.
+H1a stays **untested**; H1w stays **inconclusive** (synthesis §§1, 5).
+
+Hypothesis: oriented base-sensitivity features predict local WikiText response to effective weight edits beyond matched field-absent controls.
+Part A compares signed predictions with realised intact/rotated and ladder responses, conditional on the frozen field and fixed panel.
+Part B estimates C=1−A_cand/A_aug, a same-information representation contrast, plus matched field-ablation and destruction contrasts.
+The field is the single primary arm; chart and probe-response arms are secondary and cannot be promoted after outcomes (synthesis §4.2).
+The inherited 0.15/0.05 funding thresholds are chair choices for this new estimand, not measured effects (synthesis §4.2).
+A4.4's no-kill wording governs Part B; scientific and funding conclusions remain separate.
+
+WikiText is sensitivity, not task readability; MMLU remains descriptive until qualified (synthesis §2).
+Success will be reported as “weights plus base sensitivity” or “weights plus predecessor”.
+The project's original claim, prediction from the weights and the edit alone, stays untested (synthesis verdict).
+D3 WikiText θ̂=0.0071 and MMLU θ̂=0.129 were known before this design (synthesis §§1, 4.2).
+The old sealed partition stays unspent and is not reused for G7 (synthesis §5).
+
+H2 stays parked: the closure ceiling is 242 depth-at-least-four rows in 99 lineages, not certified independent components (synthesis §3 G6).
+Closure is census; any history experiment needs its own prospective amendment.
+
+H5's critic consumes validated incremental effective deltas, exact coordinates, rounding loss and pinned predecessors (synthesis §§2, 6).
+Cached post-gating inputs are separately labelled activation assistance; no rationale is an input.
+Keep all attempts, including invalid and rejected ones, in the ledger; preserve immutable snapshots and an accept/abstain adapter.
+G5 is feasibility only; G8 needs fresh episodes, frozen calibration/rejection and joint savings/noninferiority/guardrail criteria (synthesis §§3, 4.4).
+A powered negative structural contrast rejects only the registered representation's incremental benefit on that population.
+It does not reject structural mechanisms generally; deployment decisions are separate (synthesis §4.4).
