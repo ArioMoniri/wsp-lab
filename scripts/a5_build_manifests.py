@@ -819,9 +819,22 @@ NOT_CERTIFIED = [
     "  (`selection.json:inputs.tf_v1_records`); n_D/n_P must be regenerated with this script before G3 launch.",
     "- The eight alias reuse proofs, G0/G1 overlap, retries and preprocessing costs (A5.2.2) are not included.",
     "- Tensor coverage / single-matrix chain eligibility and rotation audits (A5.3.3) are G3 staging outputs.",
-    "- Gradient/factor/probe panels and their disjointness certificates, control seeds, NULL-SIZE inputs and",
-    "  report, and Board A acceptance are outstanding.",
+    "- Gradient/factor/probe panels, disjointness certificates, control seeds and the NULL-SIZE input",
+    "  specification are in the companion section below (scripts/a5_build_panels.py); NULL-SIZE inputs,",
+    "  its report and Board A acceptance are outstanding.",
 ]
+
+
+COMPANION_BEGIN, COMPANION_END = b"<!-- a5_build_panels:begin -->", b"<!-- a5_build_panels:end -->"
+
+
+def keep_companion_section(old: bytes, new: bytes) -> bytes:
+    """Carry the README section written by scripts/a5_build_panels.py over a regeneration."""
+    if COMPANION_BEGIN not in old or COMPANION_END not in old:
+        return new
+    start = old.index(COMPANION_BEGIN)
+    end = old.index(COMPANION_END) + len(COMPANION_END)
+    return new.rstrip(b"\n") + b"\n\n" + old[start:end] + b"\n"
 
 
 def main(argv=None):
@@ -854,6 +867,9 @@ def main(argv=None):
     }
     files = build(paths, a.n_lora, a.n_chain, a.ref)
     out.mkdir(parents=True, exist_ok=True)
+    old_readme = out / "README.md"
+    if old_readme.exists():
+        files["README.md"] = keep_companion_section(old_readme.read_bytes(), files["README.md"])
     for name, blob in files.items():
         (out / name).write_bytes(blob)
         print(f"{sha256_bytes(blob)}  {name}")

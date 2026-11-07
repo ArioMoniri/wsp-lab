@@ -6,6 +6,9 @@ eligible (default true)}; donor rows additionally have residuals [64,3]
 (edit, rotation, predecessor) and audit [3] (default true). NPZ stores this
 same JSON object as a scalar Unicode `payload`. Fields JSON maps donor row IDs
 to three finite predictions in [rotation, ladder .25, ladder .5] order.
+`--inputs-spec SPEC` only validates INPUT against the registered NULL-SIZE input
+specification (docs/prereg/a5_manifests/nullsize_inputs.json) and writes the
+report to --output; it exits non-zero unless the status is "valid".
 No project data discovery or access is performed.
 """
 
@@ -253,17 +256,107 @@ def simulate(payload, fields=None, *, replicates=10000, draws=4000, quotas=None,
     }
 
 
+def validate_inputs(payload, spec):
+    """Check a NULL-SIZE payload against docs/prereg/a5_manifests/nullsize_inputs.json; no simulation.
+
+    Returns {"status": "valid" | "invalid" | "blocked", "errors", "blockers", "counts"}. Errors are schema
+    violations of the payload; blockers are open registration issues named by the spec itself.
+    """
+    schema = spec["payload_schema"]
+    errors, blockers = [], []
+    missing = [k for k in schema["required_keys"] if k not in payload]
+    errors += [f"missing key {k!r}" for k in missing]
+    families = set(schema["family_map"].values())
+    inventory, donors = payload.get("inventory", []), payload.get("donors", [])
+    ids = [r.get("id") for r in inventory]
+    if len(set(ids)) != len(ids):
+        errors.append("duplicate inventory ids")
+    by_id = {r.get("id"): r for r in inventory}
+    for r in inventory:
+        if not isinstance(r.get("id"), str) or not isinstance(r.get("component"), str):
+            errors.append(f"inventory row {r.get('id')!r}: id/component must be strings")
+        if r.get("family") not in families:
+            errors.append(
+                f"inventory row {r.get('id')!r}: family {r.get('family')!r} not in {sorted(families)}"
+            )
+        eligible = r.get("eligible", True)
+        if not isinstance(eligible, bool):
+            errors.append(f"inventory row {r.get('id')!r}: eligible must be boolean")
+        if eligible and not (isinstance(r.get("norm"), int | float) and math.isfinite(r["norm"])):
+            errors.append(f"inventory row {r.get('id')!r}: eligible rows need a finite norm")
+    shape = tuple(schema["residual_shape"])
+    nonfinite = 0
+    for r in donors:
+        rid = r.get("id")
+        base = by_id.get(rid)
+        if base is None:
+            errors.append(f"donor {rid!r} is not an inventory row")
+        elif any(base.get(k) != r.get(k) for k in ("component", "family", "norm", "eligible")):
+            errors.append(f"donor {rid!r} metadata differs from its inventory row")
+        try:
+            res = np.asarray(r.get("residuals"), dtype=float)
+        except (TypeError, ValueError):
+            res = np.zeros(0)
+        if res.shape != shape:
+            errors.append(f"donor {rid!r}: residuals shape {res.shape} != {shape}")
+        else:
+            nonfinite += int((~np.isfinite(res)).sum())
+        audit = r.get("audit", [True] * len(schema["audit_order"]))
+        if len(audit) != len(schema["audit_order"]) or not all(isinstance(a, bool) for a in audit):
+            errors.append(f"donor {rid!r}: audit must be {len(schema['audit_order'])} booleans")
+        prov = payload.get("provenance", {}).get("donors", {}).get(rid)
+        if prov is None or any(k not in prov for k in spec["provenance_per_donor"]):
+            errors.append(f"donor {rid!r}: provenance needs {spec['provenance_per_donor']}")
+    if "window_ids" in payload and payload["window_ids"] != schema["window_item_ids"]:
+        errors.append("window_ids differ from the registered development window order")
+    rotation = spec["rotation_column"]
+    if not rotation["allowed_sources"]:
+        blockers.append(f"rotation column: {rotation['status']}: {rotation['issue']}")
+    elif payload.get("rotation_source") not in rotation["allowed_sources"]:
+        errors.append(f"rotation_source {payload.get('rotation_source')!r} is not registered")
+    if not errors:
+        try:
+            _, boundaries = selection_cells(inventory)
+            donor_cells(donors, boundaries)
+        except ValueError as exc:
+            errors.append(f"selection/donor cells: {exc}")
+    return {
+        "status": "invalid" if errors else "blocked" if blockers else "valid",
+        "errors": errors,
+        "blockers": blockers,
+        "counts": {
+            "inventory": len(inventory),
+            "eligible": sum(bool(r.get("eligible", True)) for r in inventory),
+            "donors": len(donors),
+            "nonfinite_residuals": nonfinite,
+        },
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("inputs", type=Path)
     parser.add_argument("--fields", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--inputs-spec",
+        type=Path,
+        help="validate INPUT against this NULL-SIZE spec (nullsize_inputs.json) and exit; no simulation",
+    )
     args = parser.parse_args()
     if args.inputs.suffix == ".npz":
         with np.load(args.inputs, allow_pickle=False) as archive:
             payload = json.loads(str(archive["payload"].item()))
     else:
         payload = json.loads(args.inputs.read_text())
+    if args.inputs_spec:
+        report = validate_inputs(payload, json.loads(args.inputs_spec.read_text()))
+        report["input_provenance"] = {
+            str(p): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in (args.inputs, args.inputs_spec)
+        }
+        args.output.write_text(json.dumps(report, indent=2) + "\n")
+        return 0 if report["status"] == "valid" else 1
     fields = json.loads(args.fields.read_text()) if args.fields else None
     result = simulate(payload, fields)
     result["input_provenance"] = {
@@ -271,7 +364,8 @@ def main():
         for path in [args.inputs, *([args.fields] if args.fields else [])]
     }
     args.output.write_text(json.dumps(result, indent=2) + "\n")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
