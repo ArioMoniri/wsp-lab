@@ -28,7 +28,9 @@ def main() -> None:
     )
     ap.add_argument("--zoo", type=Path, required=True)
     ap.add_argument("--staging", type=Path, required=True)
-    ap.add_argument("--report", type=Path, required=True, help="restore report.json")
+    ap.add_argument(
+        "--report", type=Path, required=True, nargs="+", help="restore report.json (one per shard)"
+    )
     ap.add_argument(
         "--sidecar", type=Path, required=True, help="canonical artefact_status.jsonl (rewritten)"
     )
@@ -46,7 +48,11 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    report = json.loads(args.report.read_text())
+    reports = [json.loads(p.read_text()) for p in args.report]
+    report = {
+        "environment": reports[0]["environment"],
+        "chains": [c for r in reports for c in r["chains"]],
+    }
     rows = [json.loads(line) for line in args.sidecar.read_text().splitlines() if line.strip()]
     by_id = {r["id"]: r for r in rows}
     installed, rejected = [], []

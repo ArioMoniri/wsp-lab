@@ -422,6 +422,9 @@ def main() -> None:
     )
     ap.add_argument("--max-chains", type=int, default=None)
     ap.add_argument(
+        "--shard", default=None, help="i/n: process every n-th chain (0-based i) of the sorted list"
+    )
+    ap.add_argument(
         "--skip-families",
         default="",
         help="comma-separated inner families to skip chains containing",
@@ -450,6 +453,9 @@ def main() -> None:
             for r in roots
             if not any(edits[i]["params"]["inner_family"] in skip for i in groups[r])
         ]
+    if args.shard:
+        i, n = (int(x) for x in args.shard.split("/"))
+        roots = [r for k, r in enumerate(roots) if k % n == i]
     if args.max_chains:
         roots = roots[: args.max_chains]
     print(
