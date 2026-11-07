@@ -1,0 +1,2236 @@
+{
+ "additional_minutes": 31.2,
+ "identity": {
+  "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+  "counts": {
+   "hellaswag": 250,
+   "kl_to_base": 200,
+   "mmlu_pro": 1000,
+   "over_refusal": 50,
+   "refusal_rate": 50,
+   "wikitext_ppl": 64
+  }
+ },
+ "minutes_per_entry": 1.04,
+ "missing_originals": [
+  "014f8a9ec78db2be",
+  "0559051354691a70",
+  "0d055869527177b4",
+  "13b02fe2673cc296",
+  "14cdaabee246493b",
+  "1ab850a41051fe45",
+  "1b2b671e5da5d625",
+  "1fc51f7164052d50",
+  "22659cefc904e29f",
+  "2971f30e5276edd9",
+  "2d1de332e36d8f00",
+  "2d7f5f78fac4a9ae",
+  "2fb8d03d2547f357",
+  "3499f7dcc5968d96",
+  "3996bea032c24200",
+  "453d8c08966438e0",
+  "455b881d5de4e6e0",
+  "4f918f6bbd264b34",
+  "61d1f61e25212068",
+  "649bd035e79488e5",
+  "72d3756e968e3209",
+  "7d03d89c0b0299e6",
+  "85366c308158ea48",
+  "983c5e13c59e0022"
+ ],
+ "missing_predecessors": [
+  "2114e313c73f15a6",
+  "86ea1fe0ec777cf8",
+  "983bb1066d0fd006",
+  "b7edbb9f8b339f52",
+  "bc6edb1e3c913a10",
+  "fe7f8926879f91db"
+ ],
+ "n_D": 24,
+ "n_P": 6,
+ "n_variants": 120,
+ "not_priced": "preprocessing and retries are charged separately (A5.3.4 stop-and-reprice)",
+ "predecessors_without_own_bytes": [
+  "983bb1066d0fd006",
+  "bc6edb1e3c913a10"
+ ],
+ "references_to_score": 30,
+ "rows": [
+  {
+   "closure_proof": {
+    "bytes_holder": "0027efdf2eae7405",
+    "closure_certified": true,
+    "component_id": "9b6ae9e48d16881b767314e50c00d9c313fc987dfc7d7ee0d79f95bb94d27a48",
+    "entry_delta_hash": "a212652cf4c48260b9be6cc2d52157baf33bb48312416a9b23d71a19f737e9a8",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "0027efdf2eae7405",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "0027efdf2eae7405",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "182610c3949eb6a67104e894632f3aa54c8abd69ad4a9bb124b68f3b02248c1d"
+    },
+    "eval_json_sha256": "f8757cd2d254cabf9305464350b534e85ca9af43e727ee980df4fe3c3de51a87",
+    "exists": true,
+    "failed_checks": [],
+    "id": "0027efdf2eae7405",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "0027efdf2eae7405/eval.json",
+    "recorded_entry_hashes": {
+     "delta.safetensors": "182610c3949eb6a67104e894632f3aa54c8abd69ad4a9bb124b68f3b02248c1d"
+    },
+    "records_jsonl_sha256": "ab7d2927e37da606091da9c93dc6b4881e18f57282005df937944a1983aac9d2",
+    "repeats_on_file": [
+     "g1"
+    ],
+    "run_id": "20261106-063946-8b12b69a"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": "b7edbb9f8b339f52",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "b7edbb9f8b339f52",
+    "on_file": false,
+    "record": "b7edbb9f8b339f52/eval.json",
+    "repeats_on_file": [
+     "g1b"
+    ]
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": {
+    "bytes_holder": "b7edbb9f8b339f52",
+    "closure_certified": true,
+    "component_id": "9b6ae9e48d16881b767314e50c00d9c313fc987dfc7d7ee0d79f95bb94d27a48",
+    "entry_delta_hash": "4b0c51cf64f5b87c6da014f10a7e5ce829fbe17283e8baec3709dc6f60646f38",
+    "exactness": "bitwise",
+    "hash_in_source_identities": false
+   },
+   "predecessor_id": "b7edbb9f8b339f52",
+   "predecessor_missing": true,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "00f8111cbad8218f",
+    "closure_certified": true,
+    "component_id": "3cfd4b564fd66ac848a2ff717317d396f1b99e10b420737d5574a593f14cf2e6",
+    "entry_delta_hash": "96fb2d639cdd4b8be847e2f28a42905b86041e535557fe8e2dcf9bd3a3281a63",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "00f8111cbad8218f",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "00f8111cbad8218f",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "a8e2a07f623c54609f4e8624a22e665f61dccd003fdf52be0eb35434b13f4013"
+    },
+    "eval_json_sha256": "0518007f509d54f3becdf64c6010c9011f2a8200965f23debb3eff3a2b839013",
+    "exists": true,
+    "failed_checks": [],
+    "id": "00f8111cbad8218f",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "00f8111cbad8218f/eval.json",
+    "recorded_entry_hashes": {
+     "delta.safetensors": "a8e2a07f623c54609f4e8624a22e665f61dccd003fdf52be0eb35434b13f4013"
+    },
+    "records_jsonl_sha256": "73b360a5c8b8259417b2f3088cd532cce1242e0a946a637ff87dd9cb5fa440d0",
+    "repeats_on_file": [
+     "g1"
+    ],
+    "run_id": "20261106-063946-8b12b69a"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": "34ee195e55227908",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "24f85da273f1860565a8504b8b0fabbacec1c103ea7f73eadd66970330070e5c"
+    },
+    "eval_json_sha256": "545d8395f4c5df1aa80e7eae8f44293376f4de70ed1639d7d4c425aed56f8121",
+    "exists": true,
+    "failed_checks": [],
+    "id": "34ee195e55227908",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "34ee195e55227908/eval.json",
+    "recorded_entry_hashes": {
+     "delta.safetensors": "24f85da273f1860565a8504b8b0fabbacec1c103ea7f73eadd66970330070e5c"
+    },
+    "records_jsonl_sha256": "ca1920e1596002bf8f77cb1de846f459d2234bbc8108a20bdbd53e745cd06cb0",
+    "repeats_on_file": [
+     "g1"
+    ],
+    "run_id": "20261106-063946-8b12b69a"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": {
+    "bytes_holder": "34ee195e55227908",
+    "closure_certified": true,
+    "component_id": "3cfd4b564fd66ac848a2ff717317d396f1b99e10b420737d5574a593f14cf2e6",
+    "entry_delta_hash": "da43cb066532a1c37574b341f01db5b6fa56fc28d8e6f5b7974457d66f61cc50",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "predecessor_id": "34ee195e55227908",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "014f8a9ec78db2be",
+    "closure_certified": true,
+    "component_id": "0216df69dd0ff5e4aecdbaff2af84edd2c48d076ee5b9d739f92bf4aaf55bdfd",
+    "entry_delta_hash": "68ec0ee0912de92145544ee322ea640cfb2fa8554f6cb1851ddf629523701414",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "014f8a9ec78db2be",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "014f8a9ec78db2be",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "014f8a9ec78db2be",
+    "on_file": false,
+    "record": "014f8a9ec78db2be/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "05531ce1db4df63f",
+    "closure_certified": true,
+    "component_id": "d3f507e27069e01d9b6f0f289ac58091e1efbf2f4e393cc5ea16e762b0d470da",
+    "entry_delta_hash": "912d8a29d3845f457d275d2e101f93e9e62da283d75bdbacc5eb0fb2810853d0",
+    "exactness": "re-trained",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "05531ce1db4df63f",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "05531ce1db4df63f",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "0279204acc348021c070a5ec6e042b9bf662e2823fae5fad730c4c256294af0b"
+    },
+    "eval_json_sha256": "90f00e46aac41235b3735e54abbe13270e84242fcbdd4dc66edfce675fb915c1",
+    "exists": true,
+    "failed_checks": [],
+    "id": "05531ce1db4df63f",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "05531ce1db4df63f/eval.json",
+    "recorded_entry_hashes": {
+     "delta.safetensors": "0279204acc348021c070a5ec6e042b9bf662e2823fae5fad730c4c256294af0b"
+    },
+    "records_jsonl_sha256": "4a0c5042bf07eaf1d009f0fa3dc7d10ad1fb7ae946a9f1f25c1577a9b4a94b58",
+    "repeats_on_file": [],
+    "run_id": "20261107-083302-c65c0351"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": "8ea1a0633ad30d22",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "066ae650bcdd897903eb466e2319a6dc9ffd9d26f4b836d0d98ece77dfeaecde"
+    },
+    "eval_json_sha256": "daecbd3bb6bf0a0072028c184a0bc23d7d061440cbfdb3fde5e380c43c128e79",
+    "exists": true,
+    "failed_checks": [],
+    "id": "8ea1a0633ad30d22",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "8ea1a0633ad30d22/eval.json",
+    "recorded_entry_hashes": {
+     "delta.safetensors": "066ae650bcdd897903eb466e2319a6dc9ffd9d26f4b836d0d98ece77dfeaecde"
+    },
+    "records_jsonl_sha256": "b4061af4aeb9a9659b37cb8a6160533a179d696fecf521ff03bf4745076ec681",
+    "repeats_on_file": [],
+    "run_id": "20261107-083302-c65c0351"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": {
+    "bytes_holder": "8ea1a0633ad30d22",
+    "closure_certified": true,
+    "component_id": "d3f507e27069e01d9b6f0f289ac58091e1efbf2f4e393cc5ea16e762b0d470da",
+    "entry_delta_hash": "7ff45babbae03498e4ffeb5486ec004d6277eb593134b4f561fe098747cbd892",
+    "exactness": "re-trained",
+    "hash_in_source_identities": false
+   },
+   "predecessor_id": "8ea1a0633ad30d22",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "0559051354691a70",
+    "closure_certified": true,
+    "component_id": "ded006e691f6b75c3ab985c4a5d5cd00328d0fef505bd2f0653b7e30c9fab41e",
+    "entry_delta_hash": "6f50473876314b4a057561d623d2446010bab1f1dfae24f806f289a7b4353f0c",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "0559051354691a70",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "0559051354691a70",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "0559051354691a70",
+    "on_file": false,
+    "record": "0559051354691a70/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "057dcfbedea3251f",
+    "closure_certified": true,
+    "component_id": "0208a24dd15efbc24fff85b80c4f100bf31843a63c5665f93dad9ff43885290d",
+    "entry_delta_hash": "ff0dd843eef19be65bb87374e4bfc43bd9b2c7b521c37f543944cd87e4bf3505",
+    "exactness": "re-trained",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "057dcfbedea3251f",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "057dcfbedea3251f",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "d3c373919be1399350d1cc52d2198993786b2c74dd8842c245db712b7ee5b849"
+    },
+    "eval_json_sha256": "5c28f78b6903c5b595a4c39b25cc30a97c1302d5e2de1065bfcf8b52493f9249",
+    "exists": true,
+    "failed_checks": [],
+    "id": "057dcfbedea3251f",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "057dcfbedea3251f/eval.json",
+    "recorded_entry_hashes": {
+     "delta.safetensors": "d3c373919be1399350d1cc52d2198993786b2c74dd8842c245db712b7ee5b849"
+    },
+    "records_jsonl_sha256": "e00095d9e76fccc54ef2c7f88a9591fe45b151aff025096dc683e45f3712f12e",
+    "repeats_on_file": [
+     "g1"
+    ],
+    "run_id": "20261106-063946-8b12b69a"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": "86ea1fe0ec777cf8",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "86ea1fe0ec777cf8",
+    "on_file": false,
+    "record": "86ea1fe0ec777cf8/eval.json",
+    "repeats_on_file": [
+     "g1b"
+    ]
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": {
+    "bytes_holder": "86ea1fe0ec777cf8",
+    "closure_certified": true,
+    "component_id": "0208a24dd15efbc24fff85b80c4f100bf31843a63c5665f93dad9ff43885290d",
+    "entry_delta_hash": "6aba8023ef7790354136831dd9ae5b6ecae1a7e13fb4128a219a066774622771",
+    "exactness": "re-trained",
+    "hash_in_source_identities": false
+   },
+   "predecessor_id": "86ea1fe0ec777cf8",
+   "predecessor_missing": true,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "0712caa1d248514a",
+    "closure_certified": true,
+    "component_id": "370449bfb5b289761c23b302da53da6a28a69f03d7cad0dda89bea71264bc000",
+    "entry_delta_hash": "e9d1ad5bb35932e6639a61df377ab7b3f8f47ca4af5d8354e0cd7413d0fa3cb8",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "0712caa1d248514a",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "0712caa1d248514a",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1",
+     "lora/adapter_model.safetensors": "14c257b1879cc5f7023385aceefd94348f92c9a24e4c1742b4f21dc60a2a8573"
+    },
+    "eval_json_sha256": "9a41bdeeab21ed0803c05dbd9b765ac8ecb44b4164c2ed8a3ca4b3666fd515e6",
+    "exists": true,
+    "failed_checks": [],
+    "id": "0712caa1d248514a",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "0712caa1d248514a/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1",
+     "lora/adapter_model.safetensors": "14c257b1879cc5f7023385aceefd94348f92c9a24e4c1742b4f21dc60a2a8573"
+    },
+    "records_jsonl_sha256": "91e6366be3da4b78a5307b47637589ce99d4fd735d6c188b2cbcc88569a39a82",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "07f9a50b29a7ef5c",
+    "closure_certified": true,
+    "component_id": "1feaa5486539c83202ceeba872ac818bba71d46d1eb4f5474889a7b7dc39cad8",
+    "entry_delta_hash": "dc543d64750dc230bfdb47bdb1863ad2a317dba7d4b6b9701751bb4e92923bdb",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "07f9a50b29a7ef5c",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "07f9a50b29a7ef5c",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4",
+     "lora/adapter_model.safetensors": "1d04691a823ea718c71978b5c7f3d1ff7905b25b73a00c3394d7b1bc5e8b27ef"
+    },
+    "eval_json_sha256": "391eff626791ce051b80baa8e3e46cc3374a83c8494804cda73701c7ac124f62",
+    "exists": true,
+    "failed_checks": [],
+    "id": "07f9a50b29a7ef5c",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "07f9a50b29a7ef5c/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4",
+     "lora/adapter_model.safetensors": "1d04691a823ea718c71978b5c7f3d1ff7905b25b73a00c3394d7b1bc5e8b27ef"
+    },
+    "records_jsonl_sha256": "f739e9a05d123f9ff72e90be42beda96c28f4da3eb1d12e00e432772eb836121",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "0a841d4082532e8b",
+    "closure_certified": true,
+    "component_id": "7c2a40e8acd52130608b1e7a145009651a822789a7928723570f3af08ed5d8ad",
+    "entry_delta_hash": "2247e025671fbf333de9ff3c381b1d7f2428310c504e6eb84ccb1a3883e98d01",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "0a841d4082532e8b",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "0a841d4082532e8b",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4",
+     "lora/adapter_model.safetensors": "93555b04ad31120a0f2b37a80f31465e28c7dbaef10a57a615ca08aa62476c4d"
+    },
+    "eval_json_sha256": "2e123b0d1da765f953e0f691807ec6c60c1b5a294c8216168caa98c5a59982ac",
+    "exists": true,
+    "failed_checks": [],
+    "id": "0a841d4082532e8b",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "0a841d4082532e8b/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4",
+     "lora/adapter_model.safetensors": "93555b04ad31120a0f2b37a80f31465e28c7dbaef10a57a615ca08aa62476c4d"
+    },
+    "records_jsonl_sha256": "69563dd73e334ced89dff2e0fc62b18895f816aae622425d9f002ad898f6dbf9",
+    "repeats_on_file": [],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "0bc0a0c4ad0520e0",
+    "closure_certified": true,
+    "component_id": "48c9358699122fe3ae182654fb5f9e0c727deb43d95fac03bcb12c5699f0cc04",
+    "entry_delta_hash": "95abf3d638b49c4101d7e53053f2921960e8088a01dca531aeb050c481e9e723",
+    "exactness": "re-trained",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "0bc0a0c4ad0520e0",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "0bc0a0c4ad0520e0",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "cea2b4e744827c8f2b72a8c880eb57126daaa7451952d93060dde4e9ac8a30fe"
+    },
+    "eval_json_sha256": "3ad4ae1be90e6b2f82d8e7c920c8b8279bd8ec464e3be51daf18d52e92dce958",
+    "exists": true,
+    "failed_checks": [],
+    "id": "0bc0a0c4ad0520e0",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "0bc0a0c4ad0520e0/eval.json",
+    "recorded_entry_hashes": {
+     "delta.safetensors": "cea2b4e744827c8f2b72a8c880eb57126daaa7451952d93060dde4e9ac8a30fe"
+    },
+    "records_jsonl_sha256": "7d88049edb18885cb0fb852e52df348f020264c0058a291420b761b81464e551",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": "fe7f8926879f91db",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "fe7f8926879f91db",
+    "on_file": false,
+    "record": "fe7f8926879f91db/eval.json",
+    "repeats_on_file": []
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": {
+    "bytes_holder": "fe7f8926879f91db",
+    "closure_certified": true,
+    "component_id": "48c9358699122fe3ae182654fb5f9e0c727deb43d95fac03bcb12c5699f0cc04",
+    "entry_delta_hash": "ab93c2c14058b6c5dd2e3cd59a8f7560f158c5ece33375df27b6a7587161553c",
+    "exactness": "re-trained",
+    "hash_in_source_identities": false
+   },
+   "predecessor_id": "fe7f8926879f91db",
+   "predecessor_missing": true,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "0d055869527177b4",
+    "closure_certified": true,
+    "component_id": "5606abb68cff63f616f49ba2e482dc1ca3f8115aa1a9717c5e647a6fc1dd1ebe",
+    "entry_delta_hash": "ee3643e5ffe3ff359c1dab6e19a71e0a140f2ceed206f75d7cdeb9fe04fad0bc",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "0d055869527177b4",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "0d055869527177b4",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "0d055869527177b4",
+    "on_file": false,
+    "record": "0d055869527177b4/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": "2114e313c73f15a6",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "2114e313c73f15a6",
+    "on_file": false,
+    "record": "2114e313c73f15a6/eval.json",
+    "repeats_on_file": []
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": {
+    "bytes_holder": "2114e313c73f15a6",
+    "closure_certified": true,
+    "component_id": "5606abb68cff63f616f49ba2e482dc1ca3f8115aa1a9717c5e647a6fc1dd1ebe",
+    "entry_delta_hash": "8d346acf1330859fe5ac0639eebed0cf4e3fcdd0df98a29bf06fba42addef28a",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "predecessor_id": "2114e313c73f15a6",
+   "predecessor_missing": true,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "13b02fe2673cc296",
+    "closure_certified": true,
+    "component_id": "e39eda74e4de77daf117d5fcea24223e4cc5997f3d5035dc9de0188f850a8bbb",
+    "entry_delta_hash": "5c4e3e811de5b0cf8d7e752dce72a61f79c922f52a866871be70b89ee5c53ae7",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "13b02fe2673cc296",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "13b02fe2673cc296",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "13b02fe2673cc296",
+    "on_file": false,
+    "record": "13b02fe2673cc296/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": "4b84f551adaf52ba",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "bc6edb1e3c913a10",
+    "on_file": false,
+    "record": "bc6edb1e3c913a10/eval.json",
+    "repeats_on_file": []
+   },
+   "predecessor_bytes_present": false,
+   "predecessor_closure_proof": {
+    "bytes_holder": "4b84f551adaf52ba",
+    "closure_certified": true,
+    "component_id": "e39eda74e4de77daf117d5fcea24223e4cc5997f3d5035dc9de0188f850a8bbb",
+    "entry_delta_hash": "42e9d432c68f282e75dfa9ef6128b2ca6386711fa246e9743c7a53357a21e6de",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "predecessor_id": "bc6edb1e3c913a10",
+   "predecessor_missing": true,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "14cdaabee246493b",
+    "closure_certified": true,
+    "component_id": "287ca8a418d91e5edd6e74ecfd8d080aa5589413d91b4d505296403f105bdba5",
+    "entry_delta_hash": "1fef4fdd9f35856640d563bdbc9b9382ebe9ab849b315bcf0331b7af542476f2",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "14cdaabee246493b",
+   "family": "chain",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "14cdaabee246493b",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "14cdaabee246493b",
+    "on_file": false,
+    "record": "14cdaabee246493b/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": "345a7db356689c69",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "983bb1066d0fd006",
+    "on_file": false,
+    "record": "983bb1066d0fd006/eval.json",
+    "repeats_on_file": []
+   },
+   "predecessor_bytes_present": false,
+   "predecessor_closure_proof": {
+    "bytes_holder": "345a7db356689c69",
+    "closure_certified": true,
+    "component_id": "287ca8a418d91e5edd6e74ecfd8d080aa5589413d91b4d505296403f105bdba5",
+    "entry_delta_hash": "05422a863dac6333333807cb829943dd521278a1e2b3d44273933e650f46940d",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "predecessor_id": "983bb1066d0fd006",
+   "predecessor_missing": true,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "15a53586efc72a50",
+    "closure_certified": true,
+    "component_id": "af5ed4c73a1f336e2097794e6216bfdbf545097dba94413498a6710652de4f85",
+    "entry_delta_hash": "46088bb71694b268fcf2de5bcd4ebd47fe27ca4ceaeb5775dd7dbda87f0a5667",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "15a53586efc72a50",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "15a53586efc72a50",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1",
+     "lora/adapter_model.safetensors": "876035672da0eb3d9d8b9fb7040474bef2b3b44b005922345069f3db033496f5"
+    },
+    "eval_json_sha256": "0404129804cd283af6e58a0cb5b58a8c027df9359ff74a354d1b0fe1acfd55e6",
+    "exists": true,
+    "failed_checks": [],
+    "id": "15a53586efc72a50",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "15a53586efc72a50/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1",
+     "lora/adapter_model.safetensors": "876035672da0eb3d9d8b9fb7040474bef2b3b44b005922345069f3db033496f5"
+    },
+    "records_jsonl_sha256": "860daee9d5b377022d1b9c01f354ecb2ec2a33b3876820e2743d6fa9ee3d273d",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "19d9a98cfb2db6e2",
+    "closure_certified": true,
+    "component_id": "7f7c3303efef9d06322b7a4501991f7f0d4b046fa27428af324c31e040ffaa2d",
+    "entry_delta_hash": "b8e06a64bf3734356c060c35a102f1c13dd6417c2106fcfaa903ca76c5747774",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "19d9a98cfb2db6e2",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "19d9a98cfb2db6e2",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9",
+     "lora/adapter_model.safetensors": "522769d03e8484cc60a535d5a782dca646845d4f211f65cda4c2194d9e0c1bd2"
+    },
+    "eval_json_sha256": "59f6ad1eafff6a7deaa3905cb37319ecc95393653dcf1fce7e57ceeeb2d0aeb2",
+    "exists": true,
+    "failed_checks": [],
+    "id": "19d9a98cfb2db6e2",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "19d9a98cfb2db6e2/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9",
+     "lora/adapter_model.safetensors": "522769d03e8484cc60a535d5a782dca646845d4f211f65cda4c2194d9e0c1bd2"
+    },
+    "records_jsonl_sha256": "a9b88faffe441b7ad539b9b078bde10ff3d93b56e9199da6a0f01123753742bb",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "1ab850a41051fe45",
+    "closure_certified": true,
+    "component_id": "64f38953d3e852ee16332f6c8590114c6386c4ab9c82dfcb8816e3a78a832b94",
+    "entry_delta_hash": "6f38e86ecfac8d0973932bcea210f06dff63fa895fd4556e8c7bdc8e6b195088",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "1ab850a41051fe45",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "1ab850a41051fe45",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "1ab850a41051fe45",
+    "on_file": false,
+    "record": "1ab850a41051fe45/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "1b2b671e5da5d625",
+    "closure_certified": true,
+    "component_id": "a112b6f1853c17d4d52be58c038c64c552d7c48746d6ddeb31d051a4f9183a79",
+    "entry_delta_hash": "08d75f09b3c8129190f886154c4df89ce1d060fbf2a50199bc10caab92213a15",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "1b2b671e5da5d625",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "1b2b671e5da5d625",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "1b2b671e5da5d625",
+    "on_file": false,
+    "record": "1b2b671e5da5d625/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "1fc51f7164052d50",
+    "closure_certified": true,
+    "component_id": "a12b1b2e0ed993985030705efcf14ac08e15045d7f819d4e8dbec6c80a8e4c00",
+    "entry_delta_hash": "8be8a7b7c814638b854a672d396944757e7749ba8d3167d08329cd1125a1ecf2",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "1fc51f7164052d50",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "1fc51f7164052d50",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "1fc51f7164052d50",
+    "on_file": false,
+    "record": "1fc51f7164052d50/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "2233954b0cc3edc0",
+    "closure_certified": true,
+    "component_id": "c600fffb69dc055f24d9bea721d7a58111e02e43e2f8faa4953f383f6e2486b0",
+    "entry_delta_hash": "35670112be54312e9fb2bc799d289703fbe17eca63eb77a016416e8846e400ac",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "2233954b0cc3edc0",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "2233954b0cc3edc0",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1",
+     "lora/adapter_model.safetensors": "9bdb249bca6f7cfe923c58fe718c7951b5b509de4e8aeb1dd2e356dac84a6f6a"
+    },
+    "eval_json_sha256": "1e4559008675f348132968ac4edebac327195b2f02f00ecd7ef8357122081c0f",
+    "exists": true,
+    "failed_checks": [],
+    "id": "2233954b0cc3edc0",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "2233954b0cc3edc0/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1",
+     "lora/adapter_model.safetensors": "9bdb249bca6f7cfe923c58fe718c7951b5b509de4e8aeb1dd2e356dac84a6f6a"
+    },
+    "records_jsonl_sha256": "4f22eef58e87fffaec23e85e37c79b5dee36e46f30a08edc89227a4161d0360b",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "22659cefc904e29f",
+    "closure_certified": true,
+    "component_id": "e21dceb560230ee8eba9280061d4ca2daeba1ed866d0feb481b86f69e439dd03",
+    "entry_delta_hash": "d2c6a0b49a9609f668809720a6f765ad2429ad93bed55c56234b4aa0f7403ad8",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "22659cefc904e29f",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "22659cefc904e29f",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "22659cefc904e29f",
+    "on_file": false,
+    "record": "22659cefc904e29f/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "2971f30e5276edd9",
+    "closure_certified": true,
+    "component_id": "d114bac9a285cc58eaaecbecfb9996f6a7fba33000b36fc4c5249f4c85b5ef41",
+    "entry_delta_hash": "ea87e8103d6442e378b0a360661ad9818574d6d7e8c93ca3131acc474e8d01f7",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "2971f30e5276edd9",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "2971f30e5276edd9",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "2971f30e5276edd9",
+    "on_file": false,
+    "record": "2971f30e5276edd9/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "2d1de332e36d8f00",
+    "closure_certified": true,
+    "component_id": "5afd9d9b4750f8f7399354c3a6488e1028d8cc11083d580127bf48334f979e65",
+    "entry_delta_hash": "391e210e42773d634d89d9b99ca9b40544d3a81c2a63869bb4be8fd30f7dba04",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "2d1de332e36d8f00",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "2d1de332e36d8f00",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "2d1de332e36d8f00",
+    "on_file": false,
+    "record": "2d1de332e36d8f00/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "2d7f5f78fac4a9ae",
+    "closure_certified": true,
+    "component_id": "4cfe528c50f1653fa094f2d89138662e65e011adb79f013f8e2bfb0a89adb2ba",
+    "entry_delta_hash": "47486d56af6ee1d840831f2666747b7c1c15c25a9c5cecded42aa5d57023ce94",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "2d7f5f78fac4a9ae",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "2d7f5f78fac4a9ae",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "2d7f5f78fac4a9ae",
+    "on_file": false,
+    "record": "2d7f5f78fac4a9ae/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "2f61a4086395b719",
+    "closure_certified": true,
+    "component_id": "a10b64a499521921da7993c80fa6fe04e750a74afdc9b84f276cc5ece061404d",
+    "entry_delta_hash": "c6fa9807b9c4ddef2fc26dcef93c1ffc93349d7411e12aaf517bc97dea6655b6",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "2f61a4086395b719",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "2f61a4086395b719",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c",
+     "lora/adapter_model.safetensors": "1c04ea819fe698a034fb99698ca734e66dc28489e2b08e6007ec9046109eed00"
+    },
+    "eval_json_sha256": "6c2590ec72a7b822af09f69efa22527aa9dc084b44b001c87b71bcb0212887e7",
+    "exists": true,
+    "failed_checks": [],
+    "id": "2f61a4086395b719",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "2f61a4086395b719/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c",
+     "lora/adapter_model.safetensors": "1c04ea819fe698a034fb99698ca734e66dc28489e2b08e6007ec9046109eed00"
+    },
+    "records_jsonl_sha256": "a3a735da2493e6821c3746f51e6a3a16c515bf8a7027af8daa736565d5e9f3f8",
+    "repeats_on_file": [
+     "g1"
+    ],
+    "run_id": "20261106-063946-8b12b69a"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "2fb8d03d2547f357",
+    "closure_certified": true,
+    "component_id": "7c932623ad055e55d64ae6474e5f2287386164d6f2d59e6ce3b1f62bfec863c6",
+    "entry_delta_hash": "d8235a175c156f30a24d580ec3eaf823324a25c35671f30fac17ce17e03a6254",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "2fb8d03d2547f357",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "2fb8d03d2547f357",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "2fb8d03d2547f357",
+    "on_file": false,
+    "record": "2fb8d03d2547f357/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "3499f7dcc5968d96",
+    "closure_certified": true,
+    "component_id": "7f21c0409a635b3e6abeba382811811ee7176125fd30e627f1f162027951bd51",
+    "entry_delta_hash": "5e5ed2dd6b1c45ed4e155abb53de7a8b1903892a8d331453c88408a9a3807dbf",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "3499f7dcc5968d96",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "3499f7dcc5968d96",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "3499f7dcc5968d96",
+    "on_file": false,
+    "record": "3499f7dcc5968d96/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "34e407b92a902282",
+    "closure_certified": true,
+    "component_id": "d5b407591349e4a035aaefca2febfd1a10114f41bcfdede9adbc74967431f073",
+    "entry_delta_hash": "f4df668a0c69e47548670364971b6de62d4806618452ebc4881df895ebcadc85",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "34e407b92a902282",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "34e407b92a902282",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9",
+     "lora/adapter_model.safetensors": "3fa284725e9d207a8097dbced1e38cffa6a47416aa58395b7403d01572b8470c"
+    },
+    "eval_json_sha256": "b06c549d5bae9fb724f77a6bef1c7cd07e6ca6a956926f8d9d60c4f325e315e9",
+    "exists": true,
+    "failed_checks": [],
+    "id": "34e407b92a902282",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "34e407b92a902282/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9",
+     "lora/adapter_model.safetensors": "3fa284725e9d207a8097dbced1e38cffa6a47416aa58395b7403d01572b8470c"
+    },
+    "records_jsonl_sha256": "6fe57c77ef08fc95d3a11268a7d105840cd2cd8b28ce7c2887778cee843de466",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "3996bea032c24200",
+    "closure_certified": true,
+    "component_id": "85fa675f089978b017004bfaaf36d4cac9dc1fd50ff71c09bb5dbeb404c871c1",
+    "entry_delta_hash": "2efa84a7dca94f4f138df7c2010503af4e0a076c057fe1ad69f0953d3dcea45a",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "3996bea032c24200",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "3996bea032c24200",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "3996bea032c24200",
+    "on_file": false,
+    "record": "3996bea032c24200/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "453d8c08966438e0",
+    "closure_certified": true,
+    "component_id": "c73cb9d1bec835dafbe131ec5452a0b50b4c8109325f4961b92c71d5f2f645ba",
+    "entry_delta_hash": "a38d21fcc487a48cdd34ccb1df4f0e8f9a7b27f85d2bf2ea36007a5c5ef1431d",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "453d8c08966438e0",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "453d8c08966438e0",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "453d8c08966438e0",
+    "on_file": false,
+    "record": "453d8c08966438e0/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "455b881d5de4e6e0",
+    "closure_certified": true,
+    "component_id": "dafc84b5ba4e696124cee53b06d23787a166bc118603d6fa8d9326bd10098d76",
+    "entry_delta_hash": "b2740744025afaa2250f1d1e043af5c22a013eb830e1d7bb46b4286cee6d832e",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "455b881d5de4e6e0",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "455b881d5de4e6e0",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "455b881d5de4e6e0",
+    "on_file": false,
+    "record": "455b881d5de4e6e0/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "4f918f6bbd264b34",
+    "closure_certified": true,
+    "component_id": "27e7448317bbdd04dea4804551d0006acbfa119bd5b250a1653c09bdbd3f498a",
+    "entry_delta_hash": "b0dff15463b152938117b8ea7f4f8c734dd328e121f11c2711098e502ffe1bdb",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "4f918f6bbd264b34",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "4f918f6bbd264b34",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "4f918f6bbd264b34",
+    "on_file": false,
+    "record": "4f918f6bbd264b34/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "5abd76a640cc2b9d",
+    "closure_certified": true,
+    "component_id": "26e6a36f5832443382f5162853855634637157b99aa8d0a9f1a6eedfaecc26c0",
+    "entry_delta_hash": "25b2388e6221d0ac5f3d8efb29ef91e239a1b98a24454d99a8471616c7dd89e6",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "5abd76a640cc2b9d",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "5abd76a640cc2b9d",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1",
+     "lora/adapter_model.safetensors": "264832818290d67c0e26500c1884dff104c65e194e3d25d3007de8550a3093e8"
+    },
+    "eval_json_sha256": "79c88be5dfbf4aa3255068ae8c6150f9f0b326dd22e750eb7ad71d39732cc911",
+    "exists": true,
+    "failed_checks": [],
+    "id": "5abd76a640cc2b9d",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "5abd76a640cc2b9d/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1",
+     "lora/adapter_model.safetensors": "264832818290d67c0e26500c1884dff104c65e194e3d25d3007de8550a3093e8"
+    },
+    "records_jsonl_sha256": "965e9d970154e19e31dcf1fec478853660784479d0325b9e7bd62ef4f4151cc3",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "5f80bd482d092938",
+    "closure_certified": true,
+    "component_id": "375eea190dd969a586b962f3884686311ca1bfb3f8133bf6340c8481715b902a",
+    "entry_delta_hash": "90fa310d5de14f718f65efabee2b1506b1d8612b37681172897ceb133f86d185",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "5f80bd482d092938",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "5f80bd482d092938",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9",
+     "lora/adapter_model.safetensors": "760017f4b6683952c7557c279e417b60ce912a1efeb17e0a8601edd324c86510"
+    },
+    "eval_json_sha256": "3e674097e6e20088c9bfc747257c07cfc6d61adc5961680e6eb5fe65591c79b3",
+    "exists": true,
+    "failed_checks": [],
+    "id": "5f80bd482d092938",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "5f80bd482d092938/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9",
+     "lora/adapter_model.safetensors": "760017f4b6683952c7557c279e417b60ce912a1efeb17e0a8601edd324c86510"
+    },
+    "records_jsonl_sha256": "7d5316d1200e30bf26f29f73a1a670c6d8f69d8fee08f45e1e39034cdfcab847",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "61d1f61e25212068",
+    "closure_certified": true,
+    "component_id": "3c5190a2d412413369e94bdb3f1daf3dac37e9e1c1a930539e25752ea46f1aa3",
+    "entry_delta_hash": "706acf8fdb2f2544658e760486af45211742e803b9fcf67da8d21d9ce195c8c0",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "61d1f61e25212068",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "61d1f61e25212068",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "61d1f61e25212068",
+    "on_file": false,
+    "record": "61d1f61e25212068/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "649bd035e79488e5",
+    "closure_certified": true,
+    "component_id": "d5e6377075d89a96ecdf7fb2f2d413b76897c804a6891d14bc4a8d5f610e2c84",
+    "entry_delta_hash": "f0db67a1a2b4758248a1c72704e1299e4b5b4e99fe36d54356c45723fc4a0cfd",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "649bd035e79488e5",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "649bd035e79488e5",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "649bd035e79488e5",
+    "on_file": false,
+    "record": "649bd035e79488e5/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "low"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "72d3756e968e3209",
+    "closure_certified": true,
+    "component_id": "9690c4c62608f0ba97e6841e01b664009a71b3454982e64bc8162cba32394e88",
+    "entry_delta_hash": "d722a43646ca2fdf38cabdb3c73356ca1f5f31e9b85b2641653c7a3cc0a784a2",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "72d3756e968e3209",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "72d3756e968e3209",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "72d3756e968e3209",
+    "on_file": false,
+    "record": "72d3756e968e3209/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "7d03d89c0b0299e6",
+    "closure_certified": true,
+    "component_id": "868d9b7672acc2e100c9c52b46710f271cd3310cbe5b347007e0e1c5e31124ac",
+    "entry_delta_hash": "9bed8d36fe16f085eba2c236203042aa8dd07c485dd798599eb69e076348323f",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "7d03d89c0b0299e6",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "7d03d89c0b0299e6",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "7d03d89c0b0299e6",
+    "on_file": false,
+    "record": "7d03d89c0b0299e6/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "85366c308158ea48",
+    "closure_certified": true,
+    "component_id": "6067239045dbb96265945fef50cc2ef15c717ecf7e6061b17eefc260f305fae8",
+    "entry_delta_hash": "5350f5c8106f99aa9187b92d5a8423eb82189fb34b408ba8b644f4810c0e775e",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "85366c308158ea48",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "85366c308158ea48",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "85366c308158ea48",
+    "on_file": false,
+    "record": "85366c308158ea48/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "8cfc1393b97300ab",
+    "closure_certified": true,
+    "component_id": "ff73ce3c3589b7df1d9a084896e43726b10f4078c21b2800770bdeb9225f61d4",
+    "entry_delta_hash": "b506491446259040aa7fa3eb8bfa7453d4184a230eae45dbae3e9e0a757fbf76",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "8cfc1393b97300ab",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "8cfc1393b97300ab",
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4",
+     "lora/adapter_model.safetensors": "e5de566a1886e54702a0ea870bedcf104dd4c59af0d23215d98227254299a998"
+    },
+    "eval_json_sha256": "3f2184a217b91ff095a8d7bacd14f001f593cb994709c2d14e4aa238428490be",
+    "exists": true,
+    "failed_checks": [],
+    "id": "8cfc1393b97300ab",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "8cfc1393b97300ab/eval.json",
+    "recorded_entry_hashes": {
+     "lora/README.md": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720",
+     "lora/adapter_config.json": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4",
+     "lora/adapter_model.safetensors": "e5de566a1886e54702a0ea870bedcf104dd4c59af0d23215d98227254299a998"
+    },
+    "records_jsonl_sha256": "f7eb2bf48fd982c7be80f4e60a07c8d80ddbfababb5fb1b19efc238820a45560",
+    "repeats_on_file": [],
+    "run_id": "20261106-083621-8ab3f88c"
+   },
+   "original_missing": false,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "high"
+  },
+  {
+   "closure_proof": {
+    "bytes_holder": "983c5e13c59e0022",
+    "closure_certified": true,
+    "component_id": "cae032b2c36f62231744b264dad65753710e70c238414105fca742defda45010",
+    "entry_delta_hash": "a541c7f9e4c0b5b87617bd6b39a408f5f611f55bfa95601a0b9c67c0a7f6f569",
+    "exactness": "bitwise",
+    "hash_in_source_identities": true
+   },
+   "edit_id": "983c5e13c59e0022",
+   "family": "lora_sft",
+   "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+   "original": {
+    "bytes_holder": "983c5e13c59e0022",
+    "exists": false,
+    "failed_checks": [
+     "no_record"
+    ],
+    "id": "983c5e13c59e0022",
+    "on_file": false,
+    "record": "983c5e13c59e0022/eval.json",
+    "repeats_on_file": []
+   },
+   "original_missing": true,
+   "predecessor": {
+    "bytes_holder": null,
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": null,
+    "eval_json_sha256": "c89686d8fd6bec62835704d896e49ae310881a23ff244da2cd726c07e9c7ddab",
+    "exists": true,
+    "failed_checks": [],
+    "id": "base",
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
+    "record": "base/eval.json",
+    "recorded_entry_hashes": {},
+    "records_jsonl_sha256": "845e06b0be40cc01699cdfe134827d00b40145a67327537b1c537835bed68b2a",
+    "repeats_on_file": [
+     "g1",
+     "g1b"
+    ],
+    "run_id": "20261106-062239-29d865d2"
+   },
+   "predecessor_bytes_present": true,
+   "predecessor_closure_proof": null,
+   "predecessor_id": "base",
+   "predecessor_missing": false,
+   "tertile": "middle"
+  }
+ ],
+ "schema": "a5-references-v1",
+ "selection_basis": "conditional (see selection.json)",
+ "selection_status": "selected",
+ "total_minutes": 156.0
+}

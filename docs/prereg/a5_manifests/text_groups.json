@@ -1,0 +1,699 @@
+{
+ "blocks_source": "scripts/a5_simulation.py:contrasts reshapes the 64 windows to (32, 2) in item order",
+ "disjointness": "Every auxiliary gradient, factor and probe panel (A5.2.1; S31 \u00a73) must be text-group disjoint from these registered development windows, i.e. use none of the token spans listed here (test-split tokens [0, 65536) at this revision), and from the calibration and sealed scored items. Those panels are not defined in this package; their disjointness certificates are still required before G2.",
+ "hash_convention": "sha256 of json.dumps(sorted list of strings), default separators",
+ "records_checked": [
+  "0027efdf2eae7405",
+  "00f8111cbad8218f",
+  "023b384a7799a787",
+  "02a1b5e21971290f",
+  "05531ce1db4df63f",
+  "057dcfbedea3251f",
+  "0712caa1d248514a",
+  "07b20ae70dabb189",
+  "07f9a50b29a7ef5c",
+  "0a841d4082532e8b",
+  "0b1bb5258ba81522",
+  "0b541f5d5e7ece06",
+  "0bc0a0c4ad0520e0",
+  "15a53586efc72a50",
+  "17668df17662b3f7",
+  "19d9a98cfb2db6e2",
+  "1ac30f3c7a209fe6",
+  "1caef8eb4c640c3c",
+  "20d26bb6a1a15e42",
+  "20ea5147124c9035",
+  "2122fc25aa8a3b78",
+  "2233954b0cc3edc0",
+  "2410c595817dc20b",
+  "2f61a4086395b719",
+  "313209464e63eba4",
+  "3174a9a3edd5826b",
+  "340b4903607966c9",
+  "34e407b92a902282",
+  "34ee195e55227908",
+  "3c0d5c177d6d3c8b",
+  "3db97b535c996265",
+  "3ddc3b4bf47ed994",
+  "3e371f1f8110dc6c",
+  "3e729611e09b40b5",
+  "439dbfa62a14d55f",
+  "45cd0be9fea1c139",
+  "45f8e2ffb5fdebc9",
+  "463cb4a12e0178e7",
+  "47c9c01fe6318c51",
+  "49fe929b3dde6c07",
+  "4bebad82b78ea98f",
+  "4c2b5a58bb1f997c",
+  "4e3bed7d8c2c7f4d",
+  "536041cd736d5bd9",
+  "56120fdd4f4f654e",
+  "57208a42e16a7a9e",
+  "5abd76a640cc2b9d",
+  "5b658aba55ce4be6",
+  "5c766ee2fa8bf915",
+  "5f80bd482d092938",
+  "616cb91e3c204b56",
+  "665b3b482d216d6b",
+  "6a5920de294c3a43",
+  "6ce32a860a85d556",
+  "6f0ae034993529e2",
+  "794b32f35c61f497",
+  "7b8247d8d7ab7db9",
+  "7d98819050e7f2d6",
+  "8433ed9390d6ec51",
+  "8cfc1393b97300ab",
+  "8d29ac2adb7fdda0",
+  "8ea1a0633ad30d22",
+  "8f8555491baeb119",
+  "9bac68c953cdeea0",
+  "9c5a366672eca1b7",
+  "9e65cbcd43a17237",
+  "9f1492cc2fe1f79a",
+  "a1b8ef27605f18c0",
+  "a4c0e39b3d209e93",
+  "a5cf6d9fea171ef4",
+  "af6d608f8651fb46",
+  "b2dbc10d04dc095b",
+  "b5d0ac5d76c3cad6",
+  "b6fe7f59016cdda2",
+  "b943ccc4c39696a6",
+  "base",
+  "bc23f466e8503d75",
+  "c12f6ec6bad59ba3",
+  "c3ae3e8c8edca6b8",
+  "c538973e5ad53477",
+  "ceed4c7fe04b679f",
+  "d7f933d3b4e5d25e",
+  "d8a9fc56d92a3ad1",
+  "db5c3a7bfc19178c",
+  "dd114eddf99d65c6",
+  "dd90d99e2ddc0e77",
+  "df9805ef6778d3a3",
+  "e2535f6026911af2",
+  "e2f05338501c10ab",
+  "e59c38db36785f4f",
+  "e8a104c5c6086424",
+  "e9ebe9610a3aeddf",
+  "f1d7ab497acfbd3a",
+  "f307a952fd7b9a79",
+  "f39a1bdc9d9e5051",
+  "f3be2e023f0e6938",
+  "f42490d1191fd991",
+  "fbe56a7d69f3fbf9",
+  "fd69d121f1cc6ec6"
+ ],
+ "records_consistent": true,
+ "records_disagreeing": [],
+ "schema": "a5-text-groups-v1",
+ "source": {
+  "config": "configs/eval_tf_v1.yaml",
+  "construction": "tokenizer.encode('\\n\\n'.join(test texts)); window i = tokens [i*window, (i+1)*window) (src/wsp/eval/run.py:perplexity)",
+  "dataset": "Salesforce/wikitext wikitext-2-raw-v1 split=test",
+  "n_windows": 64,
+  "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+  "window": 1024
+ },
+ "token_ids_hashes_sorted_sha256": "cebc4611fea2b722a1a6fc5f13a55ed65e454f43bed7a0fa1e1dfaee2708b2cf",
+ "two_window_blocks": [
+  [
+   0,
+   1
+  ],
+  [
+   2,
+   3
+  ],
+  [
+   4,
+   5
+  ],
+  [
+   6,
+   7
+  ],
+  [
+   8,
+   9
+  ],
+  [
+   10,
+   11
+  ],
+  [
+   12,
+   13
+  ],
+  [
+   14,
+   15
+  ],
+  [
+   16,
+   17
+  ],
+  [
+   18,
+   19
+  ],
+  [
+   20,
+   21
+  ],
+  [
+   22,
+   23
+  ],
+  [
+   24,
+   25
+  ],
+  [
+   26,
+   27
+  ],
+  [
+   28,
+   29
+  ],
+  [
+   30,
+   31
+  ],
+  [
+   32,
+   33
+  ],
+  [
+   34,
+   35
+  ],
+  [
+   36,
+   37
+  ],
+  [
+   38,
+   39
+  ],
+  [
+   40,
+   41
+  ],
+  [
+   42,
+   43
+  ],
+  [
+   44,
+   45
+  ],
+  [
+   46,
+   47
+  ],
+  [
+   48,
+   49
+  ],
+  [
+   50,
+   51
+  ],
+  [
+   52,
+   53
+  ],
+  [
+   54,
+   55
+  ],
+  [
+   56,
+   57
+  ],
+  [
+   58,
+   59
+  ],
+  [
+   60,
+   61
+  ],
+  [
+   62,
+   63
+  ]
+ ],
+ "window_ids_sorted_sha256": "a7d795f9682813bcc48a2e43d02e64713e258e0a250f34524f69067df3ae9b9a",
+ "windows": [
+  {
+   "item_id": "0",
+   "token_end": 1024,
+   "token_ids_hash": "10154359c39c2f3d0c9a221b9b3920f1a2f35e2c020c222f58749e4a6172051f",
+   "token_start": 0,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:0"
+  },
+  {
+   "item_id": "1",
+   "token_end": 2048,
+   "token_ids_hash": "24bd1e3acef3ce70cdcb31727465b497f02f75dbb4de6561ab3f875b6df45b8b",
+   "token_start": 1024,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:1"
+  },
+  {
+   "item_id": "2",
+   "token_end": 3072,
+   "token_ids_hash": "2c38cc81dfce93549bc6602d510428efee717d512f91d246b1f9a7686a108507",
+   "token_start": 2048,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:2"
+  },
+  {
+   "item_id": "3",
+   "token_end": 4096,
+   "token_ids_hash": "e3a4b446a1d761bf509b90fbba87f2218387dd603b0138aa5ec582c133c4d8d1",
+   "token_start": 3072,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:3"
+  },
+  {
+   "item_id": "4",
+   "token_end": 5120,
+   "token_ids_hash": "5d09cb767f9405af3d84fd0d3f7f34a4aae26cbc2fb224e81a18d1809ff8e92b",
+   "token_start": 4096,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:4"
+  },
+  {
+   "item_id": "5",
+   "token_end": 6144,
+   "token_ids_hash": "bad7db94f7e2185ef04ba93b23eb3768f67d28df8800999ee0a098564ecfd822",
+   "token_start": 5120,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:5"
+  },
+  {
+   "item_id": "6",
+   "token_end": 7168,
+   "token_ids_hash": "dd554f2ad389ae8ec32938c54395eeb390d5e444bd914f510708d13e0f389f6a",
+   "token_start": 6144,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:6"
+  },
+  {
+   "item_id": "7",
+   "token_end": 8192,
+   "token_ids_hash": "0d8ed6f8d6762b45492d167cd28bc35342bd8727e85ae4409b2ef116d8e19896",
+   "token_start": 7168,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:7"
+  },
+  {
+   "item_id": "8",
+   "token_end": 9216,
+   "token_ids_hash": "48052724e1399071440be53657c1eb84c830196f1624171973582cd9faa34447",
+   "token_start": 8192,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:8"
+  },
+  {
+   "item_id": "9",
+   "token_end": 10240,
+   "token_ids_hash": "b39faea04a91843902c018fcc793fe20e9385e284be5721390efc30a310920d2",
+   "token_start": 9216,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:9"
+  },
+  {
+   "item_id": "10",
+   "token_end": 11264,
+   "token_ids_hash": "b6f773d81f68036f52a439921fac1140e3b2fcee5b4f29ef0cff85ad434fd95d",
+   "token_start": 10240,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:10"
+  },
+  {
+   "item_id": "11",
+   "token_end": 12288,
+   "token_ids_hash": "ec6401be7c551ec24c227de71818bb4298862112e025e7176163e764994d68ba",
+   "token_start": 11264,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:11"
+  },
+  {
+   "item_id": "12",
+   "token_end": 13312,
+   "token_ids_hash": "707c7b18c1a1c1c3e6ba397376e3b96aa67e7d271543001e791e6684acd2f84a",
+   "token_start": 12288,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:12"
+  },
+  {
+   "item_id": "13",
+   "token_end": 14336,
+   "token_ids_hash": "d9b82841e3b5a5734ccd3e833ed8e836e6d2eaee08086094a66dd7ded4a66b9b",
+   "token_start": 13312,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:13"
+  },
+  {
+   "item_id": "14",
+   "token_end": 15360,
+   "token_ids_hash": "baf08cca0f511ab0e0b049c72ec3777f1eb132e6df33dca66c1106d6f1ab7cd5",
+   "token_start": 14336,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:14"
+  },
+  {
+   "item_id": "15",
+   "token_end": 16384,
+   "token_ids_hash": "a1b774ee8613b3afc8003aaeed78b98b2eab13fc86fd40639122c3039a75f0a7",
+   "token_start": 15360,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:15"
+  },
+  {
+   "item_id": "16",
+   "token_end": 17408,
+   "token_ids_hash": "ce5ce2168521b9ccc7df088c34346a7214dbb6dc300c1ea681592a64f68dbaac",
+   "token_start": 16384,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:16"
+  },
+  {
+   "item_id": "17",
+   "token_end": 18432,
+   "token_ids_hash": "1717cb122ad6aeb85456eb30778c6030278f615c8d54c536957541e0b0121237",
+   "token_start": 17408,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:17"
+  },
+  {
+   "item_id": "18",
+   "token_end": 19456,
+   "token_ids_hash": "d775445fd0114cb83621faab8fd78f79d3cf2c95a30ec30423952c56928fccd2",
+   "token_start": 18432,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:18"
+  },
+  {
+   "item_id": "19",
+   "token_end": 20480,
+   "token_ids_hash": "15fdb60504ccfbb66ec68848cc3ad9de711d10a27589feb88e9b27865a832ce2",
+   "token_start": 19456,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:19"
+  },
+  {
+   "item_id": "20",
+   "token_end": 21504,
+   "token_ids_hash": "a3ba7fa676f7235aa5f66a12628fe623122d9946d14a2a4e06f3759873ee6f30",
+   "token_start": 20480,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:20"
+  },
+  {
+   "item_id": "21",
+   "token_end": 22528,
+   "token_ids_hash": "e977b21fc151091b183eb2903d7db937f6a1b0a361210d138f52e973f16f166e",
+   "token_start": 21504,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:21"
+  },
+  {
+   "item_id": "22",
+   "token_end": 23552,
+   "token_ids_hash": "98858dc4cfba83242ca2e6cac44deed22ec12104a2b54ee452240ae4b067ee00",
+   "token_start": 22528,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:22"
+  },
+  {
+   "item_id": "23",
+   "token_end": 24576,
+   "token_ids_hash": "153f2db5b9ef106c9b8a62adaa901d8dc5e0319b23d240c2f170f75c868f81c3",
+   "token_start": 23552,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:23"
+  },
+  {
+   "item_id": "24",
+   "token_end": 25600,
+   "token_ids_hash": "b956d706b0e7dbff4db3a9009a432139a18356a1f637134e46a1aa533cad02f6",
+   "token_start": 24576,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:24"
+  },
+  {
+   "item_id": "25",
+   "token_end": 26624,
+   "token_ids_hash": "8901eaf1ed323bfe9979ee76841d32d5a2684e92423dbf5dab6b0feb9b46b8f6",
+   "token_start": 25600,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:25"
+  },
+  {
+   "item_id": "26",
+   "token_end": 27648,
+   "token_ids_hash": "74dc2185d049ce6292a7fd485da047938569e77a1348b9ce1cb4433f9aa4d50d",
+   "token_start": 26624,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:26"
+  },
+  {
+   "item_id": "27",
+   "token_end": 28672,
+   "token_ids_hash": "e93d552025b24ec9679c19fed8fc54a572250d129f49d7f6bdb0b6d5ddc134aa",
+   "token_start": 27648,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:27"
+  },
+  {
+   "item_id": "28",
+   "token_end": 29696,
+   "token_ids_hash": "4f7787c823d00eb68aff05a0110c43664790d930e0ee88acc5560033d1850ad8",
+   "token_start": 28672,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:28"
+  },
+  {
+   "item_id": "29",
+   "token_end": 30720,
+   "token_ids_hash": "fb0e2c00d88c9a678996a5e79797a98bb9e674c3ad2a0dcd5b96b8957a0f0fc9",
+   "token_start": 29696,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:29"
+  },
+  {
+   "item_id": "30",
+   "token_end": 31744,
+   "token_ids_hash": "dbc553cf3b57f66eb7a81b8d7736cb3494b8376d57da4ce7d17efa810d925c94",
+   "token_start": 30720,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:30"
+  },
+  {
+   "item_id": "31",
+   "token_end": 32768,
+   "token_ids_hash": "08dd1c6013e2c39464d0f2e06ee212fa97ed1e9f651beeb43a61a51aeec9f90f",
+   "token_start": 31744,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:31"
+  },
+  {
+   "item_id": "32",
+   "token_end": 33792,
+   "token_ids_hash": "ad89235523bb1ba9eaa9165290d99e81012120b5a24e6da9b41ca4df7a6a7442",
+   "token_start": 32768,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:32"
+  },
+  {
+   "item_id": "33",
+   "token_end": 34816,
+   "token_ids_hash": "17bc319cafbd8497bc521da8b1a447c9e1d9641aa1ccc5468af967a2f1fe7c00",
+   "token_start": 33792,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:33"
+  },
+  {
+   "item_id": "34",
+   "token_end": 35840,
+   "token_ids_hash": "39b487de751c71c0923aac4634c0e1e7a028b2427fbc83ddfd12068b79bc5b58",
+   "token_start": 34816,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:34"
+  },
+  {
+   "item_id": "35",
+   "token_end": 36864,
+   "token_ids_hash": "0c18e0bfe241ae9cfd1785702ac6bf011b29a025a81d6ad52c17ba2726048e92",
+   "token_start": 35840,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:35"
+  },
+  {
+   "item_id": "36",
+   "token_end": 37888,
+   "token_ids_hash": "48ed429694383d98e58a3b3aede60d946e602de9f3eadfe15451b317d6c78408",
+   "token_start": 36864,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:36"
+  },
+  {
+   "item_id": "37",
+   "token_end": 38912,
+   "token_ids_hash": "01805be0179d2d6893a02fc049b9e6f219e61a51263375dee1ee8382c9f51fa8",
+   "token_start": 37888,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:37"
+  },
+  {
+   "item_id": "38",
+   "token_end": 39936,
+   "token_ids_hash": "633da5431c308792821c30c0b0aa9baa63bddcb77529ccda79d354e0d5ae0c6f",
+   "token_start": 38912,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:38"
+  },
+  {
+   "item_id": "39",
+   "token_end": 40960,
+   "token_ids_hash": "83964d714d02e22210254fd2b53fd3867bb186b607cbba724fac799a5ad4fafe",
+   "token_start": 39936,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:39"
+  },
+  {
+   "item_id": "40",
+   "token_end": 41984,
+   "token_ids_hash": "c19734709df6020e13a97430c543ea0c201da9cecc68b7e254982613b1c44db8",
+   "token_start": 40960,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:40"
+  },
+  {
+   "item_id": "41",
+   "token_end": 43008,
+   "token_ids_hash": "a705e6d8d972524c0e6a3349f1819fc10ed24c02f69a0c0bfbe3d8106f55f9a7",
+   "token_start": 41984,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:41"
+  },
+  {
+   "item_id": "42",
+   "token_end": 44032,
+   "token_ids_hash": "013cd1d8b063a48790b0dda8f045f544f472608975f4a7b3dbb108bf022ceb76",
+   "token_start": 43008,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:42"
+  },
+  {
+   "item_id": "43",
+   "token_end": 45056,
+   "token_ids_hash": "ea5b31260078b61336f7fcc06d0b201872cc69e60a9cc7cca6d34605ed34c654",
+   "token_start": 44032,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:43"
+  },
+  {
+   "item_id": "44",
+   "token_end": 46080,
+   "token_ids_hash": "5ecdaee5a13b1499d5498516e9ee97ecbd6e17edd022a680e995ea949ba2fa38",
+   "token_start": 45056,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:44"
+  },
+  {
+   "item_id": "45",
+   "token_end": 47104,
+   "token_ids_hash": "1fbdda21a9fcfd59b9f62a7311ff72ba9a0387523b2e743c7f77920f92783683",
+   "token_start": 46080,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:45"
+  },
+  {
+   "item_id": "46",
+   "token_end": 48128,
+   "token_ids_hash": "138fafddf7d8b524fd408e0fbe95581e83ea74ebcfff13af643f6d88415c665d",
+   "token_start": 47104,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:46"
+  },
+  {
+   "item_id": "47",
+   "token_end": 49152,
+   "token_ids_hash": "7f51b84a5611dd26487a4559e95499e7b02bb72e5c6f1cbfd62b300555fad79c",
+   "token_start": 48128,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:47"
+  },
+  {
+   "item_id": "48",
+   "token_end": 50176,
+   "token_ids_hash": "457a3472e906ff8be04517cb543593d766e25153a55aecd7e1fae038bd2a3853",
+   "token_start": 49152,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:48"
+  },
+  {
+   "item_id": "49",
+   "token_end": 51200,
+   "token_ids_hash": "0a9a30c42c7a07af44bba80984ec6faf6a00dd750cc1295f5f029ba8a52cb464",
+   "token_start": 50176,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:49"
+  },
+  {
+   "item_id": "50",
+   "token_end": 52224,
+   "token_ids_hash": "aadc4518297718466be8fced7f689e308175646736f0f32228d7530d88ac3b0d",
+   "token_start": 51200,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:50"
+  },
+  {
+   "item_id": "51",
+   "token_end": 53248,
+   "token_ids_hash": "4becb2cb95a71928b305dc0e0da2782b03b15dc4502622ac5fafe363bc0c7e48",
+   "token_start": 52224,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:51"
+  },
+  {
+   "item_id": "52",
+   "token_end": 54272,
+   "token_ids_hash": "192529501734e92de1f5a6f20110886347cea0b006ed340a696db11ba5650ab0",
+   "token_start": 53248,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:52"
+  },
+  {
+   "item_id": "53",
+   "token_end": 55296,
+   "token_ids_hash": "f53150ab2b3411d6faeeea5f1632c04cf14b958579d13102171998ac15b970c2",
+   "token_start": 54272,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:53"
+  },
+  {
+   "item_id": "54",
+   "token_end": 56320,
+   "token_ids_hash": "910d5f4ff2fc8327ba8d7bf1f5efbd4584f3c9ebb3d27bb85e24a3dfbda2b51f",
+   "token_start": 55296,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:54"
+  },
+  {
+   "item_id": "55",
+   "token_end": 57344,
+   "token_ids_hash": "779d6d7c168284da62140bacf594e4bdf20f3ae9ee0bd80e6e593a3ea3139c3c",
+   "token_start": 56320,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:55"
+  },
+  {
+   "item_id": "56",
+   "token_end": 58368,
+   "token_ids_hash": "e020f4245adc193e3b1676dc10ea7d983e3f14a05de3fc7f53225d71393d9907",
+   "token_start": 57344,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:56"
+  },
+  {
+   "item_id": "57",
+   "token_end": 59392,
+   "token_ids_hash": "7e3ee4b6a2e09dcb229f4f2e4d2f2a10d295bb6b56ec7b4e61219e78764df630",
+   "token_start": 58368,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:57"
+  },
+  {
+   "item_id": "58",
+   "token_end": 60416,
+   "token_ids_hash": "5bcb4106e63fdf911fd809ff485a7d0321ccf09da1f0c32146f179ed90772081",
+   "token_start": 59392,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:58"
+  },
+  {
+   "item_id": "59",
+   "token_end": 61440,
+   "token_ids_hash": "70e6190fcb633d0f27752a9123b0a62ba523a5f7637b08482f654d29fca4b072",
+   "token_start": 60416,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:59"
+  },
+  {
+   "item_id": "60",
+   "token_end": 62464,
+   "token_ids_hash": "5644eda790effa084fa2923729f3981dac1b12fa462285db85fb70a2db7308c3",
+   "token_start": 61440,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:60"
+  },
+  {
+   "item_id": "61",
+   "token_end": 63488,
+   "token_ids_hash": "375e133c766e0427f9c43919b646c7644937409eaf3db2db29a3ec12871cde89",
+   "token_start": 62464,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:61"
+  },
+  {
+   "item_id": "62",
+   "token_end": 64512,
+   "token_ids_hash": "9fc2916dad133db2b092f0712295265b43514a2e350a5dcc4604f0b8d4f5c551",
+   "token_start": 63488,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:62"
+  },
+  {
+   "item_id": "63",
+   "token_end": 65536,
+   "token_ids_hash": "b6789b578ffabc8e14eb7ae583d8d99753a065bd805e3bf6261b751544c5d7b3",
+   "token_start": 64512,
+   "window_id": "Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:window1024:63"
+  }
+ ]
+}

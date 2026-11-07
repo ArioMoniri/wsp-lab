@@ -1,0 +1,42 @@
+{
+ "additional_files": {
+  "scripts/a5_incremental_norms.py": {
+   "sha256": "fbea8c8e9ee147e18f6ca0d6f8d8232866ebc417dd1b5acabda7f2105bc26c3b",
+   "working_tree_matches": true
+  },
+  "tests/test_a5_simulation.py": {
+   "sha256": "6a250c2c800d484cb8c72c5f2f8e336e2add15043d1b4765f76c0360ab949042",
+   "working_tree_matches": true
+  }
+ },
+ "files": {
+  "configs/eval_tf_v1.yaml": {
+   "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317",
+   "working_tree_matches": true
+  },
+  "scripts/a5_simulation.py": {
+   "sha256": "a04f603a9f8c2e87b3e040ee9d30cbb89d31e3714cde6af38183ca2946ba29dd",
+   "working_tree_matches": true
+  },
+  "src/wsp/eval/response_intervention.py": {
+   "sha256": "7cf453f263b92b3dc056109e06766b7dbd3dc606ad463f11aa4ccdec1b73f903",
+   "working_tree_matches": true
+  },
+  "src/wsp/features/response_chart.py": {
+   "sha256": "f23397779c13d2d63cb9db79f126886612eb3deb67d1d97b433ead7ec5bcc0c6",
+   "working_tree_matches": true
+  },
+  "src/wsp/features/response_field.py": {
+   "sha256": "68cdb857fee029c13b986af93378a9018d410d6776737f22ad33c9dfe4b99475",
+   "working_tree_matches": true
+  },
+  "src/wsp/features/rotation.py": {
+   "sha256": "f3ff12426ad89dac69073b2d06ca034f83de7257edd248d2a8063a194b1897e3",
+   "working_tree_matches": true
+  }
+ },
+ "git_sha": "5e0686dc5d05e23a39e8158b3da419aa6f1e07b8",
+ "note": "sha256 of the file bytes at git_sha (git show); a null sha256 means the file is absent there",
+ "ref": "main",
+ "schema": "a5-code-hashes-v1"
+}
