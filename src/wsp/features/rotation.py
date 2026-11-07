@@ -1,7 +1,10 @@
-"""Rotation controls for realised increments of stored bf16 states.
+"""Rotation controls for realised increments of stored bf16 states (SYNTHESIS 7 Nov §4.1, PREREG A5).
 
-An increment is successor minus predecessor, subtracted in fp32. Spectrum-matched
-refers to the pre-rounding construction, not necessarily the stored result.
+An increment is successor minus predecessor, both stored bf16 states, subtracted in fp32. The control
+R = Q_out U Σ Vᵀ Q_inᵀ = Q_out D_block Q_inᵀ rotates the realised block with Haar-orthogonal Q on each side, so it
+does not depend on the choice of singular basis: degenerate (repeated) singular values are irrelevant to the
+construction, and the SVD is only used for the rank and spectrum audits. "Spectrum-matched" refers to the
+pre-rounding construction; the scored object is bf16(W + R) − W, which :func:`audit` compares with D_eff.
 """
 
 import torch
@@ -48,11 +51,13 @@ def rotate_block(D, rows, cols, seed, shared_generator=None):
         generator.manual_seed(seed)
     else:
         generator.set_state(shared_generator.get_state())
-    u, s, vh, _ = block_svd(D, rows, cols)
+    block = D.float()[rows[:, None], cols]
     q_out = haar_orthogonal(len(rows), generator)
     q_in = haar_orthogonal(len(cols), generator)
     result = torch.zeros_like(D, dtype=torch.float32)
-    result[rows[:, None], cols] = q_out @ (u * s) @ vh @ q_in.T
+    result[rows[:, None], cols] = (
+        q_out @ block @ q_in.T
+    )  # equals Q_out U Σ Vᵀ Q_inᵀ for any SVD of the block
     return result
 
 
@@ -99,13 +104,18 @@ def audit(
 
 
 def exclusion_reason(D, rows, cols):
-    """Classify unsupported edits and zero or rank-degenerate matrix blocks."""
+    """Why a tensor cannot be rotated (None if it can): ``not_single_matrix``, ``non_2d``, ``zero_block``,
+    ``non_finite`` or ``rank_degenerate`` (numerical rank 0 at the audit tolerance, which a nonzero block
+    can still have when its entries are below rank_rtol of a rounding artefact). Low rank is *not* an
+    exclusion: LoRA blocks have rank 4–32 on 1,024-wide blocks and rotate exactly like any other matrix."""
     if not isinstance(D, torch.Tensor):
         return "not_single_matrix"
     if D.ndim != 2:
         return "non_2d"
+    if not torch.isfinite(D).all():
+        return "non_finite"
     if len(rows) == 0 or len(cols) == 0 or not torch.any(D[rows[:, None], cols]):
         return "zero_block"
-    if block_svd(D, rows, cols)[-1] < min(len(rows), len(cols)):
+    if block_svd(D, rows, cols)[-1] == 0:
         return "rank_degenerate"
     return None

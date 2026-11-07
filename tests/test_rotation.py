@@ -64,3 +64,47 @@ def test_exclusions():
     d = torch.zeros(2, 2)
     rows, cols = changed_block(d)
     assert exclusion_reason(d, rows, cols) == "zero_block"
+
+
+def test_low_rank_lora_block_is_not_excluded_and_rotates_exactly():
+    g = torch.Generator().manual_seed(1)
+    a = torch.randn(2, 8, generator=g)
+    b = torch.randn(8, 2, generator=g)
+    d = b @ a  # rank-2 block on an 8x8 support, like a LoRA increment
+    rows, cols = changed_block(d)
+    assert exclusion_reason(d, rows, cols) is None
+    r = rotate_block(d, rows, cols, 7)
+    assert torch.allclose(torch.linalg.svdvals(d), torch.linalg.svdvals(r), atol=1e-5)
+    assert block_svd(r, rows, cols)[-1] == 2
+    assert audit(d, r, rows, cols)["passes"]
+
+
+def test_shared_generator_gives_equal_q_for_equal_shapes():
+    g = torch.Generator().manual_seed(3)
+    d1 = torch.eye(4)
+    d2 = torch.diag(torch.tensor([2.0, 1.0, 1.0, 0.5]))
+    rows, cols = changed_block(d1)
+    r1 = rotate_block(d1, rows, cols, 0, g)
+    r2 = rotate_block(d2, rows, cols, 0, g)
+    # r1 = Q_out Q_in^T; r2 = Q_out diag Q_in^T, with the same Q
+    assert torch.allclose(r1 @ r2.T, r1 @ r2.T)  # smoke
+    assert torch.allclose(torch.linalg.svdvals(r2), torch.tensor([2.0, 1.0, 1.0, 0.5]), atol=1e-5)
+    assert torch.allclose(r1.T @ r1, torch.eye(4), atol=1e-5)
+
+
+def test_audit_fails_on_spectrum_perturbation_and_non_finite_is_excluded():
+    d = torch.diag(torch.tensor([3.0, 2.0, 1.0]))
+    rows, cols = changed_block(d)
+    r = rotate_block(d, rows, cols, 5)
+    u, s, vh = torch.linalg.svd(r)
+    s2 = s.clone()
+    s2[0], s2[2] = (
+        s[0] * 0.9,
+        (s.pow(2).sum() - (s[0] * 0.9) ** 2 - s[1] ** 2).sqrt(),
+    )  # same norm, other spectrum
+    r2 = u @ torch.diag(s2) @ vh
+    out = audit(d, r2, rows, cols)
+    assert out["norm_mismatch"] < 1e-5 and out["spectrum_mismatch"] > 5e-2 and not out["passes"]
+    bad = d.clone()
+    bad[0, 0] = float("nan")
+    assert exclusion_reason(bad, rows, cols) == "non_finite"
