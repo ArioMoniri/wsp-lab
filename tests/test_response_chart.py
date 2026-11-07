@@ -142,7 +142,9 @@ def test_qwen3_5_slot_count_matches_registry_layout():
     assert layout == sorted(layout, key=lambda s: (s[0], s[1]))
     k = 2
     values, names, mask = to_columns([], {"architecture": "qwen3_5", "layer_types": QWEN_TYPES})
-    assert len(values) == len(names) == len(mask) == n_matrix * (3 * 4 * 4 + 8) + n_vector * 3  # 10,812 columns at k = 4
+    assert (
+        len(values) == len(names) == len(mask) == n_matrix * (3 * 4 * 4 + 8) + n_vector * 3
+    )  # 10,812 columns at k = 4
     values, names, _ = to_columns(
         [], {"architecture": "qwen3_5", "layer_types": QWEN_TYPES, "projector_dim": k}
     )
