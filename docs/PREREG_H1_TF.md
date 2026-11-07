@@ -412,6 +412,8 @@ Use separate rotation and ladder-strength denominators; no borrowing between str
 An interval touching zero is unresolved; a zero prediction is disagreement (S31 §4.1).
 Close the ledger before the single analysis; restrict variant-outcome access until closure.
 
+**A5.3.1 clarification (chair ruling, 7 Nov 2026, before freeze; Board A confirms at freeze).** An edit whose actual predecessor state is lost (no stored or aliased bytes) has no incremental feature manifest and is therefore **ineligible** for selection; it does not block the selection. Root edits use the effective-delta norm `features.json:norms.fro_effective`; chain steps use the predecessor-relative norm of `runs/d8/a5_incremental_norms.jsonl`. Rows without an `eligibility` field are ineligible. Only D3-evaluated development members are eligible (sealed confirmatory components stay closed, A5.9). Under this ruling the selection of `docs/prereg/a5_manifests/selection.json` (`conditional`, 30 lora_sft 10/10/10 and 10 chain 4/3/3 by tertile, 40 distinct components; 3 chain picks with re-trained lineage, flagged) is the registered Part A selection; `references.json` and `text_groups.json` are rebuilt with `scripts/a5_build_manifests.py` after the G6 census closes and before G3, and their hashes enter A5.1 at freeze.
+
 **A5.3.2 — BA3 obligation 5: inference and calibration.** CP means exact equal-tail, two-sided binomial intervals, including boundary cases.
 Bootstrap percentiles use linear interpolation at 0.025/0.975.
 PCG64 with seed 20261107 and that quantile convention are **chair default, Board A may change before freeze**.
