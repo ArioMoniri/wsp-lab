@@ -7,11 +7,12 @@ Never launches evaluations.
 """
 
 import json
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TF = ROOT / "data/evals/qwen3.5-0.8b/tf_v1"
-LABEL = "g1"
+LABEL = os.environ.get("TF_G1_LABEL", "g1")  # g1b: the two chain predecessors regenerated on 7 Nov
 FIELDS = {
     "mmlu_pro": ("gold_log_prob", "option_log_probs", "raw_option_log_likelihoods"),
     "hellaswag": ("gold_log_prob", "option_log_probs", "raw_option_log_likelihoods"),
