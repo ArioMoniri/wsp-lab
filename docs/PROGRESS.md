@@ -253,3 +253,12 @@ norm tertile) and 10 chain (4/3/3), 40 distinct components, 3 chain picks with r
 score before G3: 24 originals and 6 predecessors (31 min). Gradient/probe panels, control seeds and null-size inputs are
 being built on `prereg/a5-panels`. G6 census restarted on 618 entries after excluding 17 legacy-revision rows
 (`base_revision: main`, pre-production commits; list in `runs/d8/g6_dropped_legacy.json`).
+
+**7 Nov 2026, 14:00–16:00 UTC.** Board A reviewed the A5.11 package and the three chair rulings (ACCEPT WITH REQUIRED EDITS,
+`docs/reviews/council/board-a-a5-package-2026-11-07.md`, seven-step freeze checklist). Checklist items 1–2 merged (1974b65):
+freeze-prep amendments appended to A5 (registered forty picks, 20-prompt harmful exception, rejected extraction fill, 500-ranked
+first-64 prefix, whole-article WikiText rule, executable null-size proxy mapping, G3 staging outputs frozen by schema, future
+sealed-builder exclusion obligation); `scripts/a5_simulation.py --inputs-spec` accepts the edit-minus-predecessor donor; positive
+lost-predecessor check in the manifest builder; procedural pins and cutpoints in `code_hashes.json` / `selection.json`;
+`response_field.registered_field_items` enforces the registered panel sizes. Items 3–7 (snapshot closure, manifest and panel
+rebuild, null-size run, hash freeze) wait for the G6 census to close.
