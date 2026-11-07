@@ -1,42 +1,105 @@
 {
- "additional_files": {
-  "scripts/a5_incremental_norms.py": {
-   "sha256": "fbea8c8e9ee147e18f6ca0d6f8d8232866ebc417dd1b5acabda7f2105bc26c3b",
-   "working_tree_matches": true
-  },
-  "tests/test_a5_simulation.py": {
-   "sha256": "6a250c2c800d484cb8c72c5f2f8e336e2add15043d1b4765f76c0360ab949042",
-   "working_tree_matches": true
-  }
+ "environment": {
+  "datasets": "5.1.0",
+  "numpy": "2.5.4",
+  "python": "3.12.3",
+  "pyyaml": "6.0.3",
+  "safetensors": "0.8.0",
+  "tokenizers": "0.23.3",
+  "torch": "2.15.0",
+  "transformers": "5.22.1"
  },
  "files": {
+  "configs/editor_qwen3.5-0.8b.yaml": {
+   "role": "model and revision",
+   "sha256": "cd53d67beb2cb231351b3e2dcc8bdc76ad2278d0da0cd6f720e08ae749f41ed4"
+  },
   "configs/eval_tf_v1.yaml": {
-   "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317",
-   "working_tree_matches": true
+   "role": "resolved TF-v1 config",
+   "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317"
+  },
+  "scripts/a5_build_manifests.py": {
+   "role": "builder",
+   "sha256": "759bb79e4a3f8df8dcf2a7f0cff53ff05a21f14d7b1f76ee824e736a7d9716dd"
+  },
+  "scripts/a5_build_panels.py": {
+   "role": "builder",
+   "sha256": "d659c7a590afe1c9ea54e09f576b9c080b1bb57aca64462bdb892b99a00225ab"
+  },
+  "scripts/a5_incremental_norms.py": {
+   "role": "producer of the incremental-norm input",
+   "sha256": "fbea8c8e9ee147e18f6ca0d6f8d8232866ebc417dd1b5acabda7f2105bc26c3b"
   },
   "scripts/a5_simulation.py": {
-   "sha256": "a04f603a9f8c2e87b3e040ee9d30cbb89d31e3714cde6af38183ca2946ba29dd",
-   "working_tree_matches": true
+   "role": "simulation and NULL-SIZE input validator",
+   "sha256": "ecde1dd7cb99e2b6dc450da5bcbc229e417e21c75b2b94a2a9db61f6b3870668"
+  },
+  "src/wsp/eval/batch.py": {
+   "role": "effective_config_hash (imported)",
+   "sha256": "122b0fbac62e3b94d7a5c356bd2f45692a18f96ea1a7811c45763b0863e789c6"
   },
   "src/wsp/eval/response_intervention.py": {
-   "sha256": "7cf453f263b92b3dc056109e06766b7dbd3dc606ad463f11aa4ccdec1b73f903",
-   "working_tree_matches": true
+   "role": "selection, tertiles, reference identity (imported)",
+   "sha256": "7cf453f263b92b3dc056109e06766b7dbd3dc606ad463f11aa4ccdec1b73f903"
+  },
+  "src/wsp/eval/run.py": {
+   "role": "WikiText window construction (perplexity)",
+   "sha256": "24d01a9e7cb846da34e63bf157f8a49bde817570ce474e3120999f267e39c69a"
+  },
+  "src/wsp/eval/subsets.py": {
+   "role": "dataset revisions and subset specs (imported by the panel builder)",
+   "sha256": "5f8b55ad555aa910c3ca2024cc830d5bda479021a0a01de268d5f27a5c26f24f"
+  },
+  "src/wsp/eval/tf_v1.py": {
+   "role": "TF-v1 rankings and panels (imported by the panel builder)",
+   "sha256": "29125dac45ddf7ffa7a490c0daead1ea06236835f09a0f34f7b38579043caef9"
   },
   "src/wsp/features/response_chart.py": {
-   "sha256": "f23397779c13d2d63cb9db79f126886612eb3deb67d1d97b433ead7ec5bcc0c6",
-   "working_tree_matches": true
+   "role": "A5.8.2 chart",
+   "sha256": "f23397779c13d2d63cb9db79f126886612eb3deb67d1d97b433ead7ec5bcc0c6"
   },
   "src/wsp/features/response_field.py": {
-   "sha256": "68cdb857fee029c13b986af93378a9018d410d6776737f22ad33c9dfe4b99475",
-   "working_tree_matches": true
+   "role": "G2 field and registered panel-size consumer check",
+   "sha256": "94bbe9b89ee51b8a444ca9859cb3415182c38dca61ce90133df8beef5bb3bd4d"
   },
   "src/wsp/features/rotation.py": {
-   "sha256": "f3ff12426ad89dac69073b2d06ca034f83de7257edd248d2a8063a194b1897e3",
-   "working_tree_matches": true
+   "role": "A5.3.3 rotation (imported)",
+   "sha256": "f3ff12426ad89dac69073b2d06ca034f83de7257edd248d2a8063a194b1897e3"
+  },
+  "tests/test_a5_build_manifests.py": {
+   "role": "test",
+   "sha256": "2c4e616853717cadc6786c617b49fb1be3e5a2c7881ce55d8555ce05f4e92b53"
+  },
+  "tests/test_a5_build_panels.py": {
+   "role": "test",
+   "sha256": "84f734f3dcdfb97d10087d76ff9787e6a8064119f02843166cbd186d66f800f4"
+  },
+  "tests/test_a5_simulation.py": {
+   "role": "test",
+   "sha256": "c1bae99ae8565143c688bc5dabbee8a979904ae4a8ff7b14318d5128948a4709"
   }
  },
- "git_sha": "5e0686dc5d05e23a39e8158b3da419aa6f1e07b8",
- "note": "sha256 of the file bytes at git_sha (git show); a null sha256 means the file is absent there",
- "ref": "main",
- "schema": "a5-code-hashes-v1"
+ "git_sha": "f9395ad988a862aabbc09a27a1fec8b5b8dd422e",
+ "model": {
+  "model": {
+   "repo": "Qwen/Qwen3.5-0.8B",
+   "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+  },
+  "source": "configs/editor_qwen3.5-0.8b.yaml base_model/base_revision",
+  "tokenizer": {
+   "repo": "Qwen/Qwen3.5-0.8B",
+   "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+  }
+ },
+ "note": "sha256 of the pinned file bytes; a null sha256 means the file is absent. 'working tree' pins are the bytes committed together with this file (git_sha is their parent): verify with `git show <commit>:<path> | sha256sum`. No flag here describes any later tree.",
+ "pinned_from": "working tree",
+ "resolved_config": {
+  "effective_config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+  "hash_function": "wsp.eval.batch.effective_config_hash (eval.json config_hash)",
+  "path": "configs/eval_tf_v1.yaml",
+  "records_config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+  "records_match": true,
+  "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317"
+ },
+ "schema": "a5-code-hashes-v2"
 }

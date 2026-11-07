@@ -246,23 +246,167 @@ def test_reference_entry_hash_mismatch_is_not_on_file(tmp_path):
     assert st["failed_checks"] == ["windows"]
 
 
-def test_lost_predecessor_blocks_registered_selection(tmp_path):
-    rows = [*ROWS, ("k3c", "chain", "k3b", "K3", "development", True, None, True, True, {})]
-    paths = toy(tmp_path, rows)
+LOST_ROWS = [*ROWS, ("k3c", "chain", "k3b", "K3", "development", True, None, True, True, {})]
+
+
+def _set_norm_error(paths, row_id, error):
     norms = bm.read_jsonl(paths["norms"])
     for r in norms:
-        if r["id"] == "k3c":
-            r["error"] = "predecessor: [Errno 2] No such file"
+        if r["id"] == row_id:
+            r["error"] = error
     paths["norms"].write_text("".join(json.dumps(r) + "\n" for r in norms))
+
+
+def _set_status(paths, row_id, **fields):
+    rows = bm.read_jsonl(paths["zoo"] / "artefact_status.jsonl")
+    for r in rows:
+        if r["id"] == row_id:
+            r.update(fields)
+    (paths["zoo"] / "artefact_status.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+
+
+def test_lost_predecessor_is_a_registered_exclusion_with_positive_proof(tmp_path):
+    paths = toy(tmp_path, LOST_ROWS)
+    # No error string is inspected: a non-'predecessor:' message still gets the positive proof.
+    _set_norm_error(paths, "k3c", "something else entirely")
     files = build(paths)
     sel = json.loads(files["selection.json"])
-    assert sel["registered"]["status"] == "blocked"
-    assert sel["registered"]["blocking_ids"] == ["k3c"]
-    cond = sel["conditional"]
-    assert cond["extra_exclusions"] == {"k3c": "actual_predecessor_state_lost:k3b"}
-    assert cond["status"] == "selected" and "NOT REGISTERED" in cond["ruling"]
-    assert json.loads(files["references.json"])["selection_basis"].startswith("conditional")
-    assert "Status: **blocked**" in files["README.md"].decode()
+    reg = sel["registered"]
+    assert reg["status"] == "selected" and reg["ruling"].startswith("REGISTERED")
+    excl = reg["registered_exclusions"]["k3c"]
+    assert excl["reason"] == "actual_predecessor_state_lost:k3b"
+    assert excl["proof"]["sidecar"] == {
+        "delta_present": False,
+        "alias_of": None,
+        "artefact_lost": None,
+    }
+    assert excl["proof"]["predecessor_bytes_present"] is False
+    assert sel["pre_ruling_literal"]["status"] == "blocked"
+    assert sel["pre_ruling_literal"]["status_label"].startswith("SUPERSEDED")
+    assert "conditional" not in sel
+    assert json.loads(files["references.json"])["selection_basis"].startswith("registered")
+    readme = files["README.md"].decode()
+    assert "Status: **selected**" in readme and "NOT REGISTERED" not in readme
+    assert "`excluded:actual_predecessor_state_lost` | 1 | REGISTERED" in readme
+
+
+def test_lost_predecessor_check_is_positive_not_an_error_prefix(tmp_path):
+    # The old prefix test: 'predecessor:' error, but the predecessor has aliased bytes -> still blocks.
+    paths = toy(tmp_path / "a", LOST_ROWS)
+    _set_norm_error(paths, "k3c", "predecessor: [Errno 2] No such file")
+    _set_status(paths, "k3b", alias_of="k3a")
+    sel = json.loads(build(paths)["selection.json"])
+    assert (
+        sel["registered"]["status"] == "blocked" and not sel["registered"]["registered_exclusions"]
+    )
+    assert sel["registered"]["blocking_ids"] == ["k3c"] and sel["pre_ruling_literal"] is None
+    # delta_present not explicitly false (unknown) is not a proof either.
+    paths = toy(tmp_path / "b", LOST_ROWS)
+    _set_status(paths, "k3b", delta_present=None)
+    assert json.loads(build(paths)["selection.json"])["registered"]["status"] == "blocked"
+    # No sidecar row for the predecessor: no proof.
+    inv = {
+        r["id"]: r
+        for r in map(
+            json.loads,
+            build(toy(tmp_path / "c", LOST_ROWS))["components.jsonl"].decode().splitlines(),
+        )
+    }
+    assert bm.lost_predecessor_proof(inv["k3c"], inv, {}) is None
+    status = {"k3b": {"id": "k3b", "delta_present": False, "alias_of": None}}
+    assert bm.lost_predecessor_proof(inv["k3c"], inv, status)["predecessor_id"] == "k3b"
+    # An alias-ledger holder with bytes is not a lost predecessor.
+    holder = dict(inv["k3b"], canonical_id="k3a")
+    assert bm.lost_predecessor_proof(inv["k3c"], inv | {"k3b": holder}, status) is None
+    # Rows that do not block (eligible or excluded) never get an exclusion.
+    assert bm.lost_predecessor_proof(inv["k1b"], inv, status) is None
+
+
+def _write_package(files, out):
+    out.mkdir(parents=True)
+    for name, blob in files.items():
+        (out / name).write_bytes(blob)
+
+
+def test_procedural_freeze_from_committed_package(tmp_path):
+    paths = toy(tmp_path, LOST_ROWS)
+    (paths["root"] / "configs").mkdir()
+    (paths["root"] / "configs/eval_tf_v1.yaml").write_bytes(paths["config"].read_bytes())
+    files = build(paths)
+    out = tmp_path / "pkg"
+    _write_package(files, out)
+    status = paths["zoo"] / "artefact_status.jsonl"
+    env = {"python": "3.x", "numpy": "1"}
+    frozen = bm.build_procedural_freeze(out, paths["root"], status, environment=env)
+    assert set(frozen) == {"selection.json", "references.json", "code_hashes.json", "README.md"}
+    sel = json.loads(frozen["selection.json"])
+    freeze = sel.pop("procedural_freeze")
+    assert sel == json.loads(files["selection.json"])  # same registered selection as a full build
+    assert freeze["label"] == "procedural freeze" and freeze["date"] == "2026-11-07"
+    assert "evidence" in freeze["separate_from"]
+    assert freeze["registered_edit_ids"] == sel["registered"]["edit_ids"]
+    assert (
+        freeze["registered_edit_ids_sorted_sha256"]
+        == hashlib.sha256(json.dumps(sel["registered"]["edit_ids"]).encode()).hexdigest()
+    )
+    for fam, c in freeze["cutpoints"].items():
+        assert c["keys"] == sel["registered"]["ledger"]["families"][fam]["cutpoints"]
+    assert freeze["inventory"]["registered_exclusions"] == ["k3c"]
+    assert freeze["retrained_lineage_picks"] == ["k2b"]
+    assert freeze["board_a_cutpoints_match"] is False  # toy inventory, not the registered one
+    code_bytes = frozen["code_hashes.json"]
+    assert freeze["code_hashes_json_sha256"] == hashlib.sha256(code_bytes).hexdigest()
+    code = json.loads(code_bytes)
+    assert code["pinned_from"] == "working tree" and code["environment"] == env
+    assert code["resolved_config"]["records_match"]
+    assert code["resolved_config"]["effective_config_hash"] == effective_config_hash(CFG)
+    for path in (
+        "scripts/a5_build_manifests.py",
+        "scripts/a5_build_panels.py",
+        "scripts/a5_simulation.py",
+        "tests/test_a5_simulation.py",
+        "tests/test_a5_build_manifests.py",
+        "tests/test_a5_build_panels.py",
+        "src/wsp/eval/response_intervention.py",
+        "src/wsp/eval/batch.py",
+        "configs/eval_tf_v1.yaml",
+    ):
+        assert path in code["files"]
+    assert (
+        code["files"]["configs/eval_tf_v1.yaml"]["sha256"]
+        == hashlib.sha256(paths["config"].read_bytes()).hexdigest()
+    )
+    readme = frozen["README.md"].decode()
+    assert "## Procedural freeze (2026-11-07)" in readme and "superseded" in readme
+    # The a5-selection-v1 layout (ruling run labelled 'conditional') converts to the same result.
+    v1 = json.loads(files["selection.json"])
+    literal = {k: v for k, v in v1.pop("pre_ruling_literal").items() if k != "status_label"}
+    reg = v1.pop("registered")
+    body = {k: v for k, v in reg.items() if k not in ("ruling", "registered_exclusions")}
+    v1["registered"] = literal
+    v1["conditional"] = {
+        "ruling": "CONDITIONAL, NOT REGISTERED",
+        "extra_exclusions": {"k3c": "actual_predecessor_state_lost:k3b"},
+    } | body
+    (out / "selection.json").write_bytes(bm.dumps(v1))
+    again = bm.build_procedural_freeze(out, paths["root"], status, environment=env)
+    assert again["selection.json"] == frozen["selection.json"]
+    # A later full build must reproduce the frozen ids and cutpoints, or it stops.
+    full = build_frozen(paths, freeze)
+    assert json.loads(full["selection.json"])["procedural_freeze"] == freeze
+    tampered = dict(freeze, registered_edit_ids=freeze["registered_edit_ids"][1:])
+    with pytest.raises(AssertionError, match="procedural freeze"):
+        build_frozen(paths, tampered)
+    # The sidecar must be the committed input; anything else stops before relabelling.
+    status.write_text(status.read_text() + "\n")
+    with pytest.raises(ValueError, match="sidecar"):
+        bm.build_procedural_freeze(out, paths["root"], status, environment=env)
+
+
+def build_frozen(paths, freeze):
+    return bm.build(
+        paths, 3, 3, git_sha="0" * 40, read_blob=lambda p: p.encode(), procedural_freeze=freeze
+    )
 
 
 def test_shortage_is_recorded_not_filled(tmp_path):
@@ -289,10 +433,14 @@ def test_text_groups_hash_and_consistency(tmp_path):
 
 def test_code_hashes_pin_blob_bytes(tmp_path):
     code = json.loads(build(toy(tmp_path))["code_hashes.json"])
-    assert code["git_sha"] == "0" * 40
+    assert code["git_sha"] == "0" * 40 and code["schema"] == "a5-code-hashes-v2"
     path = "src/wsp/eval/response_intervention.py"
     assert code["files"][path]["sha256"] == hashlib.sha256(path.encode()).hexdigest()
     assert set(code["files"]) == set(bm.CODE_FILES)
+    assert {"python", "numpy", "torch", "transformers"} <= set(code["environment"])
+    assert code["resolved_config"]["effective_config_hash"] == effective_config_hash(CFG)
+    assert bm.verify_code_hashes(code, lambda p: p.encode()) == []
+    assert bm.verify_code_hashes(code, lambda p: b"x" if p == path else p.encode()) == [path]
 
 
 def test_refuses_to_write_under_data():

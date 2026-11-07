@@ -1,7 +1,191 @@
 {
  "algorithm": "wsp.eval.response_intervention.select_with_ledger / select_edits (A5.3.1)",
  "components_jsonl_sha256": "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec",
- "conditional": {
+ "inputs": {
+  "artefact_status": {
+   "path": "data/zoo/qwen3.5-0.8b/artefact_status.jsonl",
+   "sha256": "376a829c3d5839604c61319f41123ef3d4e544b05586988f9012c7c7b02c1878"
+  },
+  "eval_config": {
+   "path": "configs/eval_tf_v1.yaml",
+   "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317"
+  },
+  "feature_manifests": {
+   "ids_sha256": "2e3cbcbecc1bdd5822881129feaa01d00b5336c7f693f753ca3f5b6aeb72a67d",
+   "n_available": 1252,
+   "path": "data/features/qwen3.5-0.8b"
+  },
+  "incremental_norms": {
+   "path": "data/runs/d8/a5_incremental_norms.jsonl",
+   "sha256": "6d8954f1aefde5b0af63944c1286f73f86d7f5b35dbe2ec2d8d1f470edc7a11a"
+  },
+  "panel_manifest": {
+   "path": "docs/prereg/panel_manifest.json",
+   "sha256": "7c72bfd3280954a82de1161e640a870da5f3a876c03b22247656701ed6af2c67"
+  },
+  "tf_v1_records": {
+   "index_convention": "sha256 of json.dumps(sorted [[dir, sha256(eval.json)]]) over dirs with eval.json and records.jsonl, listed once per build",
+   "index_sha256": "f2c25ef337302cc158928a5b2471b044dbbe36745822eff3c84076c4e97583b5",
+   "n_primary_eval_json": 99,
+   "path": "data/evals/qwen3.5-0.8b/tf_v1"
+  },
+  "zoo_manifest": {
+   "path": "data/zoo/qwen3.5-0.8b/manifest.jsonl",
+   "sha256": "71a396e5bab2e53f8f74b0a8a0c646e1a791ef92bb3cf3f3df5c51c8010140e7"
+  }
+ },
+ "inputs_scope": "partial input index, not a full immutable snapshot: feature-file contents and donor/record contents are not hashed here (Board A A5 package review item 1; checklist item 4)",
+ "pre_ruling_literal": {
+  "action": "A5.3.1: missing/nonfinite norms or uncertified sources block selection; no row is dropped and no selection is made until resolved by amendment/ruling",
+  "blocking_ids": [
+   "1952501f1b2bae55"
+  ],
+  "error": "1952501f1b2bae55: missing or nonfinite effective norm None",
+  "n_chain": 10,
+  "n_lora": 30,
+  "quotas": {
+   "chain": [
+    4,
+    3,
+    3
+   ],
+   "lora_sft": [
+    10,
+    10,
+    10
+   ]
+  },
+  "status": "blocked",
+  "status_label": "SUPERSEDED: literal A5.3.1 run before the chair ruling; audit record only"
+ },
+ "procedural_freeze": {
+  "basis": "Board A A5 package review (docs/reviews/council/board-a-a5-package-2026-11-07.md) item 8, checklist items 1-2; PREREG_H1_TF A5 freeze-prep amendments (7 Nov 2026)",
+  "board_a_cutpoints_match": true,
+  "code_hashes_json_sha256": "2b93ec10b728c981aaee126d9f4d5e5ded70210b08f842bf8906a454ac900a95",
+  "counts": {
+   "chain": {
+    "high": 3,
+    "low": 4,
+    "middle": 3
+   },
+   "lora_sft": {
+    "high": 10,
+    "low": 10,
+    "middle": 10
+   }
+  },
+  "cutpoint_rule": "(effective_norm, canonical_edit_id) keys at ranks floor(N/3) and floor(2N/3) of each family's globally deduplicated representatives; a key equal to a cutpoint belongs to the higher half-open cell",
+  "cutpoints": {
+   "chain": {
+    "N_representatives": 39,
+    "b1": 13,
+    "b2": 26,
+    "keys": [
+     [
+      0.7725259468377004,
+      "7af5977862ec021f"
+     ],
+     [
+      1.3049782925751559,
+      "14cdaabee246493b"
+     ]
+    ],
+    "quota": [
+     4,
+     3,
+     3
+    ]
+   },
+   "lora_sft": {
+    "N_representatives": 60,
+    "b1": 20,
+    "b2": 40,
+    "keys": [
+     [
+      1.0580346482037204,
+      "f4b10903b8e09e24"
+     ],
+     [
+      2.2141261523655484,
+      "f8c2cf0c6b9ffa8c"
+     ]
+    ],
+    "quota": [
+     10,
+     10,
+     10
+    ]
+   }
+  },
+  "date": "2026-11-07",
+  "inventory": {
+   "components_jsonl_sha256": "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec",
+   "eligible": 179,
+   "inputs": "selection.json:inputs (partial index; see inputs_scope)",
+   "registered_exclusions": [
+    "1952501f1b2bae55"
+   ],
+   "rows": 1259
+  },
+  "label": "procedural freeze",
+  "not_pinned_at_this_freeze": [
+   "feature-file contents and donor/record content hashes (checklist item 4)",
+   "closed G0/G1/G6 census, reference and exposure/cost ledger snapshot (checklist item 3)",
+   "regenerated references/text_groups/panels against that snapshot (checklist items 4-5)",
+   "NULL-SIZE payload, its validation and report (checklist item 6)"
+  ],
+  "registered_component_ids_sorted_sha256": "238e63ffb2f167c25abcbee14408eec79fe6fd833c77d01fcf213f6ecdea1104",
+  "registered_edit_ids": [
+   "0027efdf2eae7405",
+   "00f8111cbad8218f",
+   "014f8a9ec78db2be",
+   "05531ce1db4df63f",
+   "0559051354691a70",
+   "057dcfbedea3251f",
+   "0712caa1d248514a",
+   "07f9a50b29a7ef5c",
+   "0a841d4082532e8b",
+   "0bc0a0c4ad0520e0",
+   "0d055869527177b4",
+   "13b02fe2673cc296",
+   "14cdaabee246493b",
+   "15a53586efc72a50",
+   "19d9a98cfb2db6e2",
+   "1ab850a41051fe45",
+   "1b2b671e5da5d625",
+   "1fc51f7164052d50",
+   "2233954b0cc3edc0",
+   "22659cefc904e29f",
+   "2971f30e5276edd9",
+   "2d1de332e36d8f00",
+   "2d7f5f78fac4a9ae",
+   "2f61a4086395b719",
+   "2fb8d03d2547f357",
+   "3499f7dcc5968d96",
+   "34e407b92a902282",
+   "3996bea032c24200",
+   "453d8c08966438e0",
+   "455b881d5de4e6e0",
+   "4f918f6bbd264b34",
+   "5abd76a640cc2b9d",
+   "5f80bd482d092938",
+   "61d1f61e25212068",
+   "649bd035e79488e5",
+   "72d3756e968e3209",
+   "7d03d89c0b0299e6",
+   "85366c308158ea48",
+   "8cfc1393b97300ab",
+   "983c5e13c59e0022"
+  ],
+  "registered_edit_ids_sorted_sha256": "e2bd6cb2956c0fbe64194b3f1ebbb481248ecec45b8a729a59a54b9a2bac9d6b",
+  "retrained_lineage_picks": [
+   "05531ce1db4df63f",
+   "057dcfbedea3251f",
+   "0bc0a0c4ad0520e0"
+  ],
+  "separate_from": "the later pre-G2 evidence freeze (checklist items 3-7: closed G0/G1/G6 snapshot, regenerated references/text groups/panels, NULL-SIZE payload and report). No evidence hash exists at this date and none is claimed"
+ },
+ "registered": {
   "component_ids": [
    "0208a24dd15efbc24fff85b80c4f100bf31843a63c5665f93dad9ff43885290d",
    "0216df69dd0ff5e4aecdbaff2af84edd2c48d076ee5b9d739f92bf4aaf55bdfd",
@@ -98,9 +282,6 @@
    "8cfc1393b97300ab",
    "983c5e13c59e0022"
   ],
-  "extra_exclusions": {
-   "1952501f1b2bae55": "actual_predecessor_state_lost:c60bc6ef765e5e84"
-  },
   "ledger": {
    "families": {
     "chain": {
@@ -5382,7 +5563,24 @@
     10
    ]
   },
-  "ruling": "CONDITIONAL, NOT REGISTERED: an edit whose actual predecessor state is lost (no stored or aliased bytes) has no predecessor-relative incremental feature manifest and is therefore ineligible under A5.3.1's 'pre-outcome feature-manifest availability', instead of blocking selection as a missing norm. Valid only if Board A/chair adopts this reading before freeze.",
+  "registered_exclusions": {
+   "1952501f1b2bae55": {
+    "proof": {
+     "alias_holder_bytes_present": false,
+     "alias_ledger_holder": null,
+     "predecessor_bytes_present": false,
+     "predecessor_bytes_via_alias": null,
+     "predecessor_id": "c60bc6ef765e5e84",
+     "sidecar": {
+      "alias_of": null,
+      "artefact_lost": true,
+      "delta_present": false
+     }
+    },
+    "reason": "actual_predecessor_state_lost:c60bc6ef765e5e84"
+   }
+  },
+  "ruling": "REGISTERED: chair ruling A5.3.1 (7 Nov 2026), adopted by Board A (docs/reviews/council/board-a-a5-package-2026-11-07.md item 1) and the PREREG_H1_TF A5 freeze-prep amendments (7 Nov 2026): an edit whose actual predecessor has no stored and no aliased bytes (positive sidecar proof below) has no incremental feature manifest and is ineligible; it does not block selection",
   "selected": [
    {
     "bytes_present": true,
@@ -5947,60 +6145,5 @@
   ],
   "status": "selected"
  },
- "inputs": {
-  "artefact_status": {
-   "path": "data/zoo/qwen3.5-0.8b/artefact_status.jsonl",
-   "sha256": "376a829c3d5839604c61319f41123ef3d4e544b05586988f9012c7c7b02c1878"
-  },
-  "eval_config": {
-   "path": "configs/eval_tf_v1.yaml",
-   "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317"
-  },
-  "feature_manifests": {
-   "ids_sha256": "2e3cbcbecc1bdd5822881129feaa01d00b5336c7f693f753ca3f5b6aeb72a67d",
-   "n_available": 1252,
-   "path": "data/features/qwen3.5-0.8b"
-  },
-  "incremental_norms": {
-   "path": "data/runs/d8/a5_incremental_norms.jsonl",
-   "sha256": "6d8954f1aefde5b0af63944c1286f73f86d7f5b35dbe2ec2d8d1f470edc7a11a"
-  },
-  "panel_manifest": {
-   "path": "docs/prereg/panel_manifest.json",
-   "sha256": "7c72bfd3280954a82de1161e640a870da5f3a876c03b22247656701ed6af2c67"
-  },
-  "tf_v1_records": {
-   "index_convention": "sha256 of json.dumps(sorted [[dir, sha256(eval.json)]]) over dirs with eval.json and records.jsonl, listed once per build",
-   "index_sha256": "f2c25ef337302cc158928a5b2471b044dbbe36745822eff3c84076c4e97583b5",
-   "n_primary_eval_json": 99,
-   "path": "data/evals/qwen3.5-0.8b/tf_v1"
-  },
-  "zoo_manifest": {
-   "path": "data/zoo/qwen3.5-0.8b/manifest.jsonl",
-   "sha256": "71a396e5bab2e53f8f74b0a8a0c646e1a791ef92bb3cf3f3df5c51c8010140e7"
-  }
- },
- "registered": {
-  "action": "A5.3.1: missing/nonfinite norms or uncertified sources block selection; no row is dropped and no selection is made until resolved by amendment/ruling",
-  "blocking_ids": [
-   "1952501f1b2bae55"
-  ],
-  "error": "1952501f1b2bae55: missing or nonfinite effective norm None",
-  "n_chain": 10,
-  "n_lora": 30,
-  "quotas": {
-   "chain": [
-    4,
-    3,
-    3
-   ],
-   "lora_sft": [
-    10,
-    10,
-    10
-   ]
-  },
-  "status": "blocked"
- },
- "schema": "a5-selection-v1"
+ "schema": "a5-selection-v2"
 }

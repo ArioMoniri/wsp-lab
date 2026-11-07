@@ -3118,9 +3118,6 @@
  "panels": {
   "hellaswag_gold_char_log_likelihood": {
    "certificate": {
-    "by_construction": [
-     "Sealed/calibration sets for this dataset: none registered (PREREG §2 secondary panels 'keep the development panels' (A1 item 4); A5.3.2 calibration is a development-only simulation with no scored calibration items). Any later sealed panel must exclude reserved_item_ids (A5.2.1); disjointness from it holds by construction, not by an id check."
-    ],
     "computed_checks": {
      "hellaswag_legacy": {
       "group_overlap": 0,
@@ -3133,7 +3130,11 @@
       "n_checked": 500
      }
     },
-    "computed_disjoint": true
+    "computed_disjoint": true,
+    "future_seal_obligations": [
+     "Sealed/calibration sets for this dataset: none registered (PREREG §2 secondary panels 'keep the development panels' (A1 item 4); A5.3.2 calibration is a development-only simulation with no scored calibration items). Any later sealed panel must exclude reserved_item_ids (A5.2.1); disjointness from it holds by construction, not by an id check."
+    ],
+    "future_seal_status": "OBLIGATION, NOT A CERTIFICATE: a future sealed builder must load the frozen A5 manifests and the complete exposure ledger, reject every reserved group/article and exposed prompt/extraction group, and write its own certificate before G7 qualification opens (A5 freeze-prep amendments)"
    },
    "dataset": {
     "config": null,
@@ -8246,6 +8247,7 @@
     "excluded_groups": 785,
     "groups": 8383
    },
+   "registered_rule": "REGISTERED (chair rulings A5.3.2/A5.8.1 (i)-(iii), 7 Nov 2026; Board A ACCEPT WITH REQUIRED EDITS (docs/reviews/council/board-a-a5-package-2026-11-07.md items 3, 5, 6); PREREG_H1_TF A5 freeze-prep amendments (7 Nov 2026)): all 500 ranked groups (every reserved_item_id) are G2 exposure; the field uses exactly the first 64 in rank order, never another prefix",
    "reserved_item_ids": [
     "2",
     "15",
@@ -8844,9 +8846,6 @@
   },
   "mmlu_gold_log_prob": {
    "certificate": {
-    "by_construction": [
-     "Sealed MMLU-Pro items: no sealed item panel exists (PREREG §2 'Items'; A1 item 4 'not built by this amendment'; A4.1 'No sealed MMLU-Pro item is built or scored'). §2 builds it later under the distinct `TF-v1:item:` domain after removing every legacy, pilot and calibration item/group; these 500 groups (reserved_item_ids) are G2 exposure (A5.2.1) and must be removed from that pool. Disjointness from any sealed MMLU-Pro panel therefore holds by construction of the future build, not by an id check."
-    ],
     "computed_checks": {
      "mmlu_pro_legacy": {
       "group_overlap": 0,
@@ -8859,7 +8858,11 @@
       "n_checked": 1000
      }
     },
-    "computed_disjoint": true
+    "computed_disjoint": true,
+    "future_seal_obligations": [
+     "Sealed MMLU-Pro items: no sealed item panel exists (PREREG §2 'Items'; A1 item 4 'not built by this amendment'; A4.1 'No sealed MMLU-Pro item is built or scored'). §2 builds it later under the distinct `TF-v1:item:` domain after removing every legacy, pilot and calibration item/group; these 500 groups (reserved_item_ids) are G2 exposure (A5.2.1) and must be removed from that pool. Disjointness from any sealed MMLU-Pro panel therefore holds by construction of the future build, not by an id check."
+    ],
+    "future_seal_status": "OBLIGATION, NOT A CERTIFICATE: a future sealed builder must load the frozen A5 manifests and the complete exposure ledger, reject every reserved group/article and exposed prompt/extraction group, and write its own certificate before G7 qualification opens (A5 freeze-prep amendments)"
    },
    "dataset": {
     "config": null,
@@ -13895,6 +13898,7 @@
     "excluded_groups": 1297,
     "groups": 11641
    },
+   "registered_rule": "REGISTERED (chair rulings A5.3.2/A5.8.1 (i)-(iii), 7 Nov 2026; Board A ACCEPT WITH REQUIRED EDITS (docs/reviews/council/board-a-a5-package-2026-11-07.md items 3, 5, 6); PREREG_H1_TF A5 freeze-prep amendments (7 Nov 2026)): all 500 ranked groups (every reserved_item_id) are G2 exposure; the field uses exactly the first 64 in rank order, never another prefix",
    "reserved_item_ids": [
     "14",
     "26",
@@ -14415,9 +14419,6 @@
   },
   "probe_response": {
    "certificate": {
-    "by_construction": [
-     "Sealed/calibration sets for this dataset: none registered (PREREG §2 secondary panels 'keep the development panels' (A1 item 4); A5.3.2 calibration is a development-only simulation with no scored calibration items). Any later sealed panel must exclude reserved_item_ids (A5.2.1); disjointness from it holds by construction, not by an id check."
-    ],
     "computed_checks": {
      "harmless_legacy_heretic_test_prefix": {
       "group_overlap": 0,
@@ -14440,7 +14441,11 @@
       "n_checked": 64
      }
     },
-    "computed_disjoint": true
+    "computed_disjoint": true,
+    "future_seal_obligations": [
+     "Sealed/calibration sets for this dataset: none registered (PREREG §2 secondary panels 'keep the development panels' (A1 item 4); A5.3.2 calibration is a development-only simulation with no scored calibration items). Any later sealed panel must exclude reserved_item_ids (A5.2.1); disjointness from it holds by construction, not by an id check."
+    ],
+    "future_seal_status": "OBLIGATION, NOT A CERTIFICATE: a future sealed builder must load the frozen A5 manifests and the complete exposure ledger, reject every reserved group/article and exposed prompt/extraction group, and write its own certificate before G7 qualification opens (A5 freeze-prep amendments)"
    },
    "dataset": {
     "column": "text",
@@ -15117,9 +15122,6 @@
   },
   "refusal_margin_harmful": {
    "certificate": {
-    "by_construction": [
-     "Sealed/calibration sets for this dataset: none registered (PREREG §2 secondary panels 'keep the development panels' (A1 item 4); A5.3.2 calibration is a development-only simulation with no scored calibration items). Any later sealed panel must exclude reserved_item_ids (A5.2.1); disjointness from it holds by construction, not by an id check."
-    ],
     "computed_checks": {
      "harmful_direction_extraction_train_prefix": {
       "group_overlap": 0,
@@ -15137,9 +15139,30 @@
       "n_checked": 50
      }
     },
-    "computed_disjoint": true
+    "computed_disjoint": true,
+    "future_seal_obligations": [
+     "Sealed/calibration sets for this dataset: none registered (PREREG §2 secondary panels 'keep the development panels' (A1 item 4); A5.3.2 calibration is a development-only simulation with no scored calibration items). Any later sealed panel must exclude reserved_item_ids (A5.2.1); disjointness from it holds by construction, not by an id check."
+    ],
+    "future_seal_status": "OBLIGATION, NOT A CERTIFICATE: a future sealed builder must load the frozen A5 manifests and the complete exposure ledger, reject every reserved group/article and exposed prompt/extraction group, and write its own certificate before G7 qualification opens (A5 freeze-prep amendments)"
    },
-   "conditional_fill_not_registered": {
+   "dataset": {
+    "column": "text",
+    "fingerprints": {
+     "test": "192104fa5cc3041b",
+     "train": "bf09ba112ab2d2df"
+    },
+    "n_rows": {
+     "test": 104,
+     "train": 416
+    },
+    "repo": "mlabonne/harmful_behaviors",
+    "revision": "01cead01398926d81f7c52bdb790ee8cf77ebba7",
+    "splits": [
+     "train",
+     "test"
+    ]
+   },
+   "extraction_fill_rejected": {
     "item_ids": [
      "train:208",
      "train:303",
@@ -15187,24 +15210,7 @@
      "train:108"
     ],
     "item_ids_sorted_sha256": "9838986afb6a0b4db847a9f6609698f0ff524390cbdf3b3f0ddd84106292867a",
-    "status": "CONDITIONAL, NOT REGISTERED: requires a Board A/chair ruling admitting direction-extraction prompts (abliteration source inputs, A5.2.1 generated-direction identities) into the refusal panel"
-   },
-   "dataset": {
-    "column": "text",
-    "fingerprints": {
-     "test": "192104fa5cc3041b",
-     "train": "bf09ba112ab2d2df"
-    },
-    "n_rows": {
-     "test": 104,
-     "train": 416
-    },
-    "repo": "mlabonne/harmful_behaviors",
-    "revision": "01cead01398926d81f7c52bdb790ee8cf77ebba7",
-    "splits": [
-     "train",
-     "test"
-    ]
+    "status": "REJECTED (chair rulings A5.3.2/A5.8.1 (i)-(iii), 7 Nov 2026; Board A ACCEPT WITH REQUIRED EDITS (docs/reviews/council/board-a-a5-package-2026-11-07.md items 3, 5, 6); PREREG_H1_TF A5 freeze-prep amendments (7 Nov 2026)): direction-extraction prompts entered the construction of the abliteration edits; their full normalized-text groups are excluded and never used to fill this panel"
    },
    "group_rule": "normalized prompt text",
    "item_ids": [
@@ -15392,13 +15398,15 @@
      "rank_key": "ff44f2c18f0a8fe5f90da1396e287ab7cd65c93fd7ed6ab7c5ec9317f5a599f7"
     }
    ],
+   "n_generic_clause": 64,
    "n_produced": 20,
-   "n_requested": 64,
+   "n_requested": 20,
    "pool_counts": {
     "eligible_groups": 20,
     "excluded_groups": 500,
     "groups": 520
    },
+   "registered_size": 20,
    "reserved_item_ids": [
     "test:100",
     "test:101",
@@ -15424,13 +15432,11 @@
    "reserved_item_ids_sorted_sha256": "87f128f77be6c080170f4ff9c04b8e2deed46c8ae6ec8a10ff2b74f549940e6b",
    "role": "harmful",
    "selection_rule": "rank eligible text groups by sha256('20261107:field:' + 'mlabonne/harmful_behaviors@01cead01398926d81f7c52bdb790ee8cf77ebba7:<split>:<index>:' + representative id); representative = smallest positional id; take groups in rank order",
-   "short_by": 44
+   "short_by": 0,
+   "size_rule": "REGISTERED (chair rulings A5.3.2/A5.8.1 (i)-(iii), 7 Nov 2026; Board A ACCEPT WITH REQUIRED EDITS (docs/reviews/council/board-a-a5-package-2026-11-07.md items 3, 5, 6); PREREG_H1_TF A5 freeze-prep amendments (7 Nov 2026)): the whole unexposed harmful pool (20 prompts) overrides the generic 64-group clause of A5.8.1 for this objective only; equal prompt weights within the harmful role, never pooled with the harmless role; descriptive, never decisive. Checked by src/wsp/features/response_field.py:registered_field_items"
   },
   "refusal_margin_harmless": {
    "certificate": {
-    "by_construction": [
-     "Sealed/calibration sets for this dataset: none registered (PREREG §2 secondary panels 'keep the development panels' (A1 item 4); A5.3.2 calibration is a development-only simulation with no scored calibration items). Any later sealed panel must exclude reserved_item_ids (A5.2.1); disjointness from it holds by construction, not by an id check."
-    ],
     "computed_checks": {
      "harmless_legacy_heretic_test_prefix": {
       "group_overlap": 0,
@@ -15448,7 +15454,11 @@
       "n_checked": 250
      }
     },
-    "computed_disjoint": true
+    "computed_disjoint": true,
+    "future_seal_obligations": [
+     "Sealed/calibration sets for this dataset: none registered (PREREG §2 secondary panels 'keep the development panels' (A1 item 4); A5.3.2 calibration is a development-only simulation with no scored calibration items). Any later sealed panel must exclude reserved_item_ids (A5.2.1); disjointness from it holds by construction, not by an id check."
+    ],
+    "future_seal_status": "OBLIGATION, NOT A CERTIFICATE: a future sealed builder must load the frozen A5 manifests and the complete exposure ledger, reject every reserved group/article and exposed prompt/extraction group, and write its own certificate before G7 qualification opens (A5 freeze-prep amendments)"
    },
    "dataset": {
     "column": "text",
@@ -16217,9 +16227,6 @@
     }
    ],
    "certificate": {
-    "by_construction": [
-     "Sealed WikiText windows: no sealed window panel exists (A4.5 requires one before fresh H1w scoring; A5.6 requires a new disjoint WikiText item panel for G7; neither is built). The articles in document_ids are G2 exposure (A5.2.1) and must be excluded whole from any later sealed WikiText panel, which can draw only from unreserved_articles_for_future_sealed_panels. Disjointness holds by construction of that future build, not by an id check."
-    ],
     "computed_checks": {
      "wikitext_development_windows": {
       "article_overlap": 0,
@@ -16247,7 +16254,11 @@
       "window_ids_sorted_sha256": "a7d795f9682813bcc48a2e43d02e64713e258e0a250f34524f69067df3ae9b9a"
      }
     },
-    "computed_disjoint": true
+    "computed_disjoint": true,
+    "future_seal_obligations": [
+     "Sealed WikiText windows: no sealed window panel exists (A4.5 requires one before fresh H1w scoring; A5.6 requires a new disjoint WikiText item panel for G7; neither is built). The articles in document_ids are G2 exposure (A5.2.1) and must be excluded whole from any later sealed WikiText panel, which can draw only from unreserved_articles_for_future_sealed_panels. Disjointness holds by construction of that future build, not by an id check."
+    ],
+    "future_seal_status": "OBLIGATION, NOT A CERTIFICATE: a future sealed builder must load the frozen A5 manifests and the complete exposure ledger, reject every reserved group/article and exposed prompt/extraction group, and write its own certificate before G7 qualification opens (A5 freeze-prep amendments)"
    },
    "dataset": {
     "config": "wikitext-2-raw-v1",
@@ -16260,7 +16271,6 @@
      "revision": "2fc06364715b967f1860aea9cf38778875588b17"
     }
    },
-   "deviation_from_a5_8_1": "A5.8.1 asks for one item per text group; the test split has 60 articles, 12 of them touched by development windows, so 64 one-window-per-article groups do not exist in this split. Windows here may span article boundaries inside the panel stream (as development windows do); the text group of every window is listed. Board A ruling required.",
    "document_ids": [
     "article:2342",
     "article:2594",
@@ -16279,6 +16289,7 @@
    "group_rule": "text group = article: a ' = Title = ' line with empty neighbouring lines starts an article (sub-headings ' = = ' do not); leading blank lines belong to the first article",
    "n_produced": 64,
    "n_requested": 64,
+   "registered_rule": "REGISTERED (chair rulings A5.3.2/A5.8.1 (i)-(iii), 7 Nov 2026; Board A ACCEPT WITH REQUIRED EDITS (docs/reviews/council/board-a-a5-package-2026-11-07.md items 3, 5, 6); PREREG_H1_TF A5 freeze-prep amendments (7 Nov 2026)): whole held-out articles in rank order until 64 windows; all 11 articles (including unused tails) are G2 exposure. Windows may share or straddle articles: 64 windows are not 64 independent text groups; article membership is listed per window and any item-level inference must respect it",
    "selection_rule": "articles touched by the development span (any character before the end of development token 65535 in tokenizer.encode('\\n\\n'.join(test lines))) are excluded; the rest are ranked by sha256('20261107:field:' + 'Salesforce/wikitext:wikitext-2-raw-v1:test@b08601e04326c79dfdd32d625aee71d232d685c3:' + doc_id); whole articles are taken in rank order, their lines joined with '\\n\\n' in rank order, until the stream has >= 65536 tokens; window i = stream tokens [i*1024, (i+1)*1024), i < 64",
    "short_by": 0,
    "stream_tokens": 71506,
@@ -17043,5 +17054,6 @@
    ]
   }
  },
- "schema": "a5-panels-v1"
+ "rulings": "chair rulings A5.3.2/A5.8.1 (i)-(iii), 7 Nov 2026; Board A ACCEPT WITH REQUIRED EDITS (docs/reviews/council/board-a-a5-package-2026-11-07.md items 3, 5, 6); PREREG_H1_TF A5 freeze-prep amendments (7 Nov 2026)",
+ "schema": "a5-panels-v2"
 }
