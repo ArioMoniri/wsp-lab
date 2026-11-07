@@ -262,3 +262,9 @@ sealed-builder exclusion obligation); `scripts/a5_simulation.py --inputs-spec` a
 lost-predecessor check in the manifest builder; procedural pins and cutpoints in `code_hashes.json` / `selection.json`;
 `response_field.registered_field_items` enforces the registered panel sizes. Items 3–7 (snapshot closure, manifest and panel
 rebuild, null-size run, hash freeze) wait for the G6 census to close.
+
+**7 Nov 2026, 22:10 UTC.** G6 census closed: TF-v1 records for all 618 stored chain entries without one (10:56–22:09 UTC on H0,
+≈ 11.2 GPU-h as repriced); 652 of 675 chain entries now carry a TF-v1 record (the rest are the 7 lost, their descendants and
+the 17 legacy-revision rows). H2 census: 95 of the 99 root-to-leaf lineages with ≥ 4 nodes are now fully TF-v1-scored (512
+nodes), up from 16 lineages; still below the historical 162-lineage stand-in, so H2 stays parked per the synthesis. Full-set P4
+suite: 24 of 26 runs done, no errors. G1 primaries for the two regenerated predecessors queued behind the census.
