@@ -62,12 +62,32 @@ class Arch:
     post_norms_flag: str | None = None  # text-config key that must be truthy for post_norms
     norm_gain: str = "weight"  # "weight" (T5/LFM RMSNorm) or "one_plus_weight" (Gemma)
     lora_targets: Mapping[str, tuple[str, ...]] = field(default_factory=lambda: LEGACY_LORA_TARGETS)
+    # Response-chart slots (``wsp.features.response_chart``), keyed by HF ``layer_types`` value plus
+    # ``"all"`` for every layer: matrix roles get a full chart token, vector roles (norms, biases,
+    # mixer state) a reduced one. Empty means the architecture has no chart layout yet.
+    chart_roles: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    chart_vector_roles: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 ARCHS: dict[str, Arch] = {
     "qwen3_5": Arch(
         name="qwen3_5",
         model_types=("qwen3_5", "qwen3_5_text"),
+        chart_roles={
+            "all": ("mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"),
+            "full_attention": tuple("self_attn." + x + "_proj" for x in ("q", "k", "v", "o")),
+            "linear_attention": tuple(
+                "linear_attn." + x
+                for x in ("in_proj_qkv", "in_proj_z", "in_proj_b", "in_proj_a", "out_proj")
+            ),
+        },
+        chart_vector_roles={
+            "all": ("input_layernorm", "post_attention_layernorm"),
+            "full_attention": ("self_attn.q_norm", "self_attn.k_norm"),
+            "linear_attention": tuple(
+                "linear_attn." + x for x in ("norm", "conv1d", "A_log", "dt_bias")
+            ),
+        },
         writers={
             "attn_out": (r"self_attn\.o_proj", r"linear_attn\.out_proj"),
             "mlp_out": (r"mlp\.down_proj",),
