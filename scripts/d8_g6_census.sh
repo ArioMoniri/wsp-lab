@@ -15,7 +15,7 @@ nvidia-smi --query-compute-apps=pid --format=csv,noheader | grep -q . && { echo 
 git rev-parse HEAD
 date -u +"start %FT%TZ"
 echo "=== G1 repeat (two regenerated predecessors) $(date -u +%FT%TZ)"
-$PY -m wsp.eval.batch --zoo $D/runs/d8/stage_zoo/qwen3.5-0.8b --config configs/eval_tf_v1.yaml --repeat g1 --ids b7edbb9f8b339f52 86ea1fe0ec777cf8
+$PY -m wsp.eval.batch --zoo $D/runs/d8/stage_zoo/qwen3.5-0.8b --config configs/eval_tf_v1.yaml --repeat g1b --ids b7edbb9f8b339f52 86ea1fe0ec777cf8  # repeat id g1 exists for the base from the 6 Nov audit
 echo "=== G6 census $(date -u +%FT%TZ) n=$(wc -l < $D/runs/d8/g6_ids.txt)"
 $PY -m wsp.eval.batch --zoo $D/runs/d8/stage_zoo/qwen3.5-0.8b --config configs/eval_tf_v1.yaml --ids $(cat $D/runs/d8/g6_ids.txt)
 date -u +"end %FT%TZ"
