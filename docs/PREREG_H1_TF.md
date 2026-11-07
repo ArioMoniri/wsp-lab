@@ -241,3 +241,509 @@ Status: transcribes Board A's adjudication ([board-a-requalification-adjudicatio
 > **A4.6** *Disclosure.* H1w is proposed because WikiText qualified and MMLU did not, with the MMLU D3 θ̂ = 0.129 known. The WikiText D3 θ̂ was not computed before this amendment.
 
 Implementation notes (no change to the wording above): (i) the WikiText gate is `scripts/tfv1_requalify.py --endpoint wikitext_log_ppl`; WikiText windows are resampled in blocks of two (A2.1), so the joint procedure resamples the 32 two-window blocks, each block value being the mean of its two windows (which leaves the paired mean unchanged); (ii) the 157 null-family controls are the 160 registered controls minus the three legacy rows already excluded for the MMLU fit (the `157/160` of A4.3); (iii) the H1a status, the A2.3 gate and the §4 rule for MMLU-Pro are not re-run or relaxed by anything above; (iv) the Board A "reversal evidence" (§3 of its adjudication) is not a rule of this amendment, it only says what would make a fresh WikiText run worth ≈ 1.9 GPU-h (derived, not measured) — that run still needs the A4.5 sealed-window panel and the A3 re-check first, and is not authorised here.
+
+### Appendix A5 — oriented local response (H1-OR)
+
+Dated amendment: **7 Nov 2026**. **Draft for Board A; not an execution freeze.**
+This appendix repairs no historical registration or result retrospectively. It starts no compute.
+
+Authority and citation key:
+[S31](council/2026-11-07/SYNTHESIS.md) means chair synthesis version 3.1, §§3–6.
+[BA3](reviews/council/board-a-synthesis-v3-2026-11-07.md) means Board A's required edits and twelve A5 obligations.
+[BC2](reviews/council/board-c-synthesis-v2-2026-11-07.md) means Board C's required edits 1–3.
+Verbatim rule blocks below cite their S31 section for every copied quantity.
+All new numerical choices are planned criteria, not measurements.
+
+#### A5.1 Scope and frozen-hash list
+
+**A5.1.1 — BA3 obligation 1: version and freeze.** H1-OR is exploratory; the field is the sole primary arm.
+The chart cannot be promoted after outcomes (S31 §§2, 4.2).
+WikiText tests sensitivity; MMLU is descriptive until qualified.
+H1a stays “untested”; H1w stays “inconclusive” (S31 §§1, 5).
+Report success as “weights plus base sensitivity” or “weights plus predecessor”.
+The project's original claim, prediction from the weights and the edit alone, stays untested (S31 verdict).
+
+Before G2 computes its first field, Board A must accept and hash this registration and a completed freeze manifest.
+That manifest pins:
+
+- Field, chart, rotation, intervention, extraction, inference and critic-adapter code, dependencies, source commit and schema.
+- Arm list, thresholds, ordered decisions, tree/head settings, transformations, tuning budgets, nuisance, folds and seed averaging.
+- Model/tokenizer revisions, effective/raw snapshots, exact support, component closure, aliases, predecessors, references and exclusions.
+- Scored/gradient/factor/probe panels, text groups, windows, qualification runs, cache contents, projector/control identities and seeds.
+- Device, dtype, actual batch/order, A3 source-change qualification, resource caps, reference reuse and retry accounting.
+
+Missing hashes or manifests block execution; a declaration of future freezing is not a freeze (S31 §§3, 5–6; BA3 obligation 1).
+This documentation-only draft does not claim selected IDs, code implementations, panel certification or measured resource audits exist.
+Those evidence obligations remain blocking until committed without using governed outcomes.
+MMLU promotion needs a new prospective endpoint/arm family, multiplicity and joint decision rule before new endpoint outcomes (BA3 obligation 1).
+
+#### A5.2 Exposure ledger, G0–G8
+
+**A5.2.1 — BA3 obligation 3: source and item manifests.** Record every use, including failures, retries and qualification.
+Join ancestry, aliases, shared adapters/checkpoints/training runs, task-vector operands and generated direction identities transitively.
+Generic dataset and immutable base sharing alone remain support diagnostics (§2).
+Each ledger entry records canonical ID, connected component, aliases, role, time, predecessor, strength, fold, text groups and hashes.
+Pin actual predecessor, device/dtype/batch and matched source-change qualification before affected work.
+Auxiliary gradient, factor and probe panels must be text-group disjoint from development, calibration and sealed scored items (S31 §3).
+
+| Gate | Exposure role and accounting |
+|---|---|
+| G0 | Replay, installation, features, fingerprint rerun, qualification and full connected closure. |
+| G1 | Scoring, aliases, shared references, qualification and missing-record recovery. |
+| G2 | Field/factor estimation, chart construction, probe caching and predecessor audit. |
+| G3 | Every selected component, original, rotation, ladder and predecessor; exclusions stay exposed. |
+| G4 | Fitting, validation, tuning, retrospective outcomes and all fitted transforms. |
+| G5 | Pilot source/support/episode/direction/prompt groups; invalid and rejected attempts included. |
+| G6 | Closure census and connected relatives; all scored rows are exposed. |
+| G7 | Qualification itself opens sealed outcomes; log every subsequent sealed use. |
+| G8 | Separate calibration/evaluation groups; live feedback cannot refit the frozen critic. |
+
+Development exposure at any G0–G6 gate bars full closure from G7 freshness (S31 §3).
+Regeneration, rerunning or relabeling never restores freshness.
+G7/G8 exposed components cannot become fresh in a later confirmation.
+
+**A5.2.2 — BA3 obligation 12: canonical counts and costs.** Commit delta → logical row → alias → actual-reference mapping.
+Prove reuse for the eight alias records by complete scoring identity, not equal scalar values (S31 §3 G1).
+S31 §3 G1 gives 316+62=378 scoring entries and 386 logical rows; without dependent rows, 324 logical rows.
+Enumerate the two lost predecessors, fourteen missing records, G0/G1 overlap and all retries (S31 §3 G0–G1).
+No reuse certification is asserted here.
+Random-direction and abliteration replay must be bitwise.
+LoRA replay needs matrix relative Frobenius error ≤5e-3; label retrained descendants and exclude them from fingerprints (S31 §3 G0).
+Norm-only pilot differences do not establish matrix-error compliance (BA3 N1).
+Retain 29.55 GPU-h allocation, or 28.65 excluding the CPU reserve; these are not measurements (BA3 obligation 12).
+G7 scoring and overhead remain separate; G8 pricing comes from G5.
+Before G3, measure/price fields, sequence counts, CPU/disk bytes, peak VRAM, throughput, rotations, audits and references (BC2 edit 2).
+Exceeding caps stops and reprices, never silently cuts coverage (S31 §3).
+
+#### A5.3 Part A
+
+The following block is verbatim S31 §4.1; that source supplies every copied number.
+
+*Analysis time.* One analysis, after all 120 variant scores and their references are on file and the ledger is closed.
+
+*Null and claim.* The null is that the sign of ⟨g, D − R⟩ agrees with the sign of y(W + D) − y(W + R) with probability ½,
+conditional on the frozen field and the fixed 64-window panel. The claim is agreement above chance under that conditioning; an
+item-population claim is not made. The constant-sign comparator ("every trained edit degrades more than its rotation") is
+reported with the same interval; it is not a registered comparison and no superiority over it is claimed.
+
+*Unit and interval.* One pair per certified source component (40 components). Two-sided 95 % Clopper–Pearson interval on the
+agreement count among resolved pairs. Lower bound > 0.5 requires at least 12 of 15 (lower bound 0.5191) or 27 of 40 (0.5087);
+Board A's exact tails. A zero prediction counts as a disagreement. A missing or audit-excluded score removes the pair from the
+resolved denominator and is listed in the full-panel ledger.
+
+*Resolution.* d_i = y(W_i + D_i) − y(W_i + R_i) on the same windows. Its interval comes from a paired block bootstrap over the
+32 two-window blocks with common draws across the edit, its rotation and the predecessor reference (fixed seed, 4,000 draws,
+percentile interval). A pair is **resolved** if that interval excludes zero. The agreement estimand is conditional on resolution.
+All 40 pairs are reported. The null size with the resolution step included is validated on a development-only simulation before
+outcomes are read; if the simulated size exceeds 0.07 at nominal 0.05, the rule is unresolved and A5 is amended before scoring.
+
+*Yield.* Fewer than 15 resolved pairs is **unresolved**: no replacement, no resampling. Board A's illustration: at an independent
+resolution probability of 0.375 the chance of ≥ 15 resolved among 40 is ≈ 0.56. Yield and agreement power are simulated from
+development contrast and noise assumptions before this purchase is called decisive.
+
+*Go.* Part A **goes** when the rotation contrast has ≥ 15 resolved pairs and its lower bound exceeds 0.5; every other outcome is
+listed in section 4.0, step 3.
+
+*Ladder.* The contrast is y(W_i + s·Δ_i) − y(W_i) at s = 0.25 and s = 0.5, predicted sign from ⟨g, bf16(W_i + s·Δ_i) − W_i⟩,
+same resolution rule, same interval, separate denominators per strength, reported as descriptive except for the alternative rule
+of section 4.0, step 2 (upper bound ≤ 0.6 at s = 0.25 on ≥ 15 resolved pairs), which overrides a rotation go. A lower bound
+below 0.5 alone is uninformative and triggers nothing. A pass at s = 0.25 with a fail at s ≥ 1 is a pattern to investigate, not a
+conclusion.
+
+*Rotation.* Per edited tensor t, the incremental effective edit is the realised bf16 difference D_t = bf16(W_t + Δ_t) − W_t at the
+actual predecessor, subtracted in fp32 from the two stored bf16 states. Take the rectangular coordinate block of changed rows and
+columns and compute the thin SVD of D_t on that block in fp32 (full SVD of the realised block; the raw LoRA factors may be used
+only if they reproduce the realised block to a relative Frobenius error ≤ 1e-3, checked per tensor). Draw Q_out and Q_in as
+Haar-orthogonal matrices on that block from a registered seed (one seed per edit, shared across its tensors so that a direction
+common to several layers is rotated coherently; this choice is recorded). Form R_t = Q_out U Σ Vᵀ Q_inᵀ, apply W_t + R_t and
+round to bf16. The scored object is bf16(W + R) − W. Preserved before rounding: singular values, Frobenius norm, rank,
+confinement to the block, tensor names and shapes. Not preserved, and logged: coordinate moments, sign fractions, cosine to the
+predecessor, directional tokens, and anything after rounding. A rotated LoRA is not an SFT-trained edit; "spectrum-matched"
+refers to the pre-rounding construction. Post-rounding audit per tensor and per edit: relative Frobenius norm mismatch
+|‖R_eff‖ − ‖D_eff‖| / ‖D_eff‖ ≤ 2e-2; relative spectrum mismatch (Frobenius distance of the sorted singular values) ≤ 5e-2; rank
+within ±1 at relative tolerance 1e-3; block support identical. A failing pair is excluded by this rule, and the count rule is
+"resolved among non-excluded pairs". Non-2D tensors, tensors with a zero or rank-degenerate block, and chain increments that are
+not single-matrix edits are excluded from rotation and listed; coverage is reported per edit. Scaled edits are built by applying
+s·Δ_t at W_t and rounding, not by scaling D_t. A nuisance-controlled sensitivity (logged v4 differences as covariates) is reported
+next to the main contrast.
+
+*Exposure.* D3 outcomes for the 40 edits are already known; selection is "before any new variant outcome", and Part A is
+exploratory.
+
+**A5.3.1 — BA3 obligation 4: selection and accounting.** Use metadata/effective norms only, before new variant outcome access.
+Within family, sort by effective norm, ties by canonical ID; split into contiguous rank tertiles using integer rank cutpoints.
+Select by sorted canonical ID within each tertile, one edit per certified source component globally.
+Planned low/middle/high allocations are LoRA 10/10/10 and chain 4/3/3.
+These allocations are **chair default, Board A may change before freeze**; family totals follow S31 §3 G3.
+No cross-cell replacement; a shortage stops selection.
+Commit the forty actual IDs, family/tertile allocation, closure proofs, tensor coverage and outcome-independent exclusion reasons (BA3 obligation 4).
+Their enumeration is outstanding; this draft cannot certify it without data access.
+No G3 launch is permitted without it.
+
+Keep all forty in the ledger (S31 §4.1).
+Missing/nonfinite scores and audit exclusions remove only that contrast from its resolved denominator, with explicit reasons.
+Use separate rotation and ladder-strength denominators; no borrowing between strengths.
+An interval touching zero is unresolved; a zero prediction is disagreement (S31 §4.1).
+Close the ledger before the single analysis; restrict variant-outcome access until closure.
+
+**A5.3.2 — BA3 obligation 5: inference and calibration.** CP means exact equal-tail, two-sided binomial intervals, including boundary cases.
+Bootstrap percentiles use linear interpolation at 0.025/0.975.
+PCG64 with seed 20261107 and that quantile convention are **chair default, Board A may change before freeze**.
+The block count, draw count and CP examples are S31 §4.1's rules, not measurements.
+
+Before scoring, simulate selection, shared field/items, resolution and agreement under development-only covariance.
+Retain component dependence and paired reference/window covariance; do not assume independent signs simply because components differ.
+Include chance-sign, constant-sign family-effect, norm-dependent resolution and variance-inflated scenarios.
+Use 4,000 simulation panels, seed 20261107: **chair default, Board A may change before freeze** (BA3 obligation 5).
+Report exact binomial uncertainty for null size, yield and power, plus conditional coverage and failure counts.
+Null size >0.07 at nominal 0.05 blocks scoring pending amendment (S31 §§4.0–4.1).
+Calling Part A decisive additionally needs ≥0.80 development-simulated power (S31 §2).
+Require its lower binomial bound to meet that threshold: **chair default, Board A may change before freeze**.
+No simulation pass or power result is claimed here.
+The claim remains conditional on the frozen field and fixed panel; constant-sign comparison remains descriptive.
+
+**A5.3.3 — BA3 obligation 6; BC2 edit 1: realised rotation and sensitivity.** Use fp32 subtraction of pinned stored bf16 states.
+Use the full thin SVD of the realised block; do not truncate its spectrum.
+A raw-factor substitute must first meet S31 §4.1's per-tensor reconstruction tolerance ≤1e-3; otherwise use the realised SVD.
+Numerical rank counts singular values strictly above 1e-3 times the largest (S31 §4.1 rank tolerance).
+Equality is excluded from numerical rank.
+Define degeneracy as zero block or numerical rank below the smaller block dimension.
+This degeneracy definition is **chair default, Board A may change before freeze**; report its LoRA coverage consequences before outcomes.
+
+Rows/columns are changed if any realised increment entry is exactly nonzero.
+Block support means the allowed rectangle; report actual nonzero coordinate masks separately, including post-rounding changes.
+Identical block support does not imply identical coordinate sparsity.
+Any unsupported, non-matrix, zero or degenerate edited tensor excludes the whole rotation pair, rather than leaving it unrotated.
+This edit-level aggregation is **chair default, Board A may change before freeze**, implementing S31 §4.1 and BC2 edit 1.
+Chain eligibility requires a single-matrix incremental edit; list heterogeneous-chain exclusions and coverage.
+
+Derive each edit's RNG seed from SHA256 of `20261107:rotation:` plus canonical ID, with separate input/output domains.
+Generate Gaussian square arrays at each side's maximum dimension; use dimension-sized leading principal subarrays for smaller tensors.
+QR uses positive diagonal signs, producing dimension-compatible shared random frames across layers.
+This mapping is **chair default, Board A may change before freeze** (BA3 obligation 6).
+Audit orthogonality and full-SVD reconstruction residual ≤1e-5 relative Frobenius error.
+That residual tolerance is **chair default, Board A may change before freeze**.
+Norm mismatch divides by ||D||; spectrum mismatch divides by the Euclidean norm of D's sorted singular values.
+Zero denominators fail eligibility; all tensors must meet S31's norm/spectrum/rank/support criteria.
+Report per-tensor audits plus maximum and pooled edit diagnostics; a single tensor failure excludes the pair.
+Also report ||R_eff−R_raw||/||D||, reconstruction residual, exact support and unrotated-tensor count.
+Spectrum matching is pre-rounding unless the realised audit supports it (BC2 edit 1).
+
+For descriptive nuisance sensitivity, fit ridge logistic agreement on family, log1p effective norm and rotated-minus-original v4 differences.
+Use train-only standardisation, penalty 1, no tuning: **chair default, Board A may change before freeze** (BA3 obligation 6).
+This diagnoses matching confounds; it replaces neither CP inference nor the primary funding rule.
+
+**A5.3.4 — references (BA3 obligations 4, 12; BC2 edit 3).** The launch table must enumerate the following objects by selected ID:
+
+| Object | Reference/reuse rule |
+|---|---|
+| Original full-strength D | Reuse G1 only with identical effective snapshot, windows and scoring identity; otherwise score it. |
+| Actual predecessor | Root base or pinned chain predecessor; deduplicate by complete scoring identity only. |
+| Rotation and ladders | Three new variants per selected edit; S31 §3 G3's 120 entries. |
+
+Each row lists original run hash, predecessor ID/hash, reusable record hash, missing-score flag and charged minutes.
+Let n_D count missing original records and n_P count unique missing predecessors.
+Additional scoring costs (n_D+n_P)×1.04 minutes; total costs (120+n_D+n_P)×1.04 minutes (S31 §3 G3).
+All forty original records are required, even when no new full-strength scoring is needed (BC2 edit 3).
+Exact predecessor IDs, n_D, n_P and reuse proofs remain outstanding launch blockers, not assumed zero costs.
+Preprocessing and retries are charged separately under stop-and-reprice.
+
+#### A5.4 Part B
+
+The following block is verbatim S31 §4.2; that source supplies every copied number.
+
+*Panel.* The G1 records, registered H1w folds, train-only nuisance (family, device, log-norm), seeds 0/1/2 averaged before the
+loss, outer-held-out predictions audited for nested out-of-fold construction.
+
+*Primary contrast (one).* C = 1 − A_cand / A_aug, where A is the row sum of held-out absolute residual errors after the same
+training-only nuisance fit and seed averaging; cand = **StatNN + field tokens**; aug = **augmented StatNN**, the same tree with
+the same settings, tuning budget and folds on identical inputs: v4 pooled statistics plus the deterministic per-tensor
+transformation of section 6 (ordered exact-layer and role scalar columns of the chart and of the field, padded by a fixed rule),
+so that the comparator receives every scalar the candidate receives. C therefore measures the candidate pipeline's performance
+relative to a **same-information comparator**; it does not by itself identify the information the field adds. A5 must name the
+actual difference between the two pipelines. **Field-information contrast (registered, decision-relevant):** C_abl = 1 −
+A_cand / A_no-field, where the no-field arm is the identical pipeline (architecture, chart and predecessor access, rows, folds,
+tuning opportunity) with the field columns removed; same interval. "Both destruction controls beaten" in section 4.0 is read as:
+C_rand, C_perm **and** C_abl all have lower bound > 0. The random-field and permuted-field controls test particular destruction
+hypotheses; the intact no-field ablation is what identifies the field's contribution. Interval: paired ancestry-cluster bootstrap-t on log(A_cand / A_aug), fixed
+seed and draws, resampling whole components; conditional and joint item procedures as in PREREG A2.3, adapted to the A_aug
+denominator; denominator failure (A_aug = 0 in a resample) is recorded and the draw dropped, with the count reported.
+
+*Destruction controls.* C_rand = 1 − A_cand / A_rand-field and C_perm = 1 − A_cand / A_perm-field, same interval, alongside
+C_abl above; "beaten" means lower bound > 0 on all three. *Secondary arms* (descriptive, no decision): zero-shot field (sign from ⟨g, ΔW⟩ only), ≤ 3-coefficient
+field calibration, chart with its own destruction controls (permuted projectors; random-frame chart), A1-lite, descriptor-only,
+delta-norm, original StatNN, the existing M1 and canonical LoRA tokens on the LoRA-only rows of the same folds (with their own
+intervals and an inconclusive region), and the probe-response comparator (linear ΔW·x on a fixed scoring-disjoint 64-prompt
+panel plus a regularised head; probe-only and probe-plus-descriptor controls; probe cost timed).
+
+*Thresholds.* 0.15 is PREREG §4's θ threshold and 0.05 its §7 screen, fixed on 5 November before the H1w and MMLU estimates were
+known. Their reuse for C is a chair choice made before any new outcome; A5 records it as such. The MMLU θ̂ of 0.129
+(`docs/reviews/P5/h1a-companions-2026-11-06.md`) was known when this programme was designed; A5 discloses it.
+
+*Decision.* Section 4.0, steps 4–5. A no-go stops funding and is not a scientific falsifier, because Part B reuses examined
+outcomes and PREREG A4.4 forbids pass/kill language on this endpoint. There is no chart fallback in this programme. A chart-primary programme needs a new amendment written before new outcomes.
+
+*Disclosure.* The D3 WikiText θ̂ and MMLU θ̂ were known before this design. The field and chart code, the arm list and the
+thresholds are frozen by hash in A5 before G2 computes the first field.
+
+**A5.4.1 — BA3 obligation 8: information contract.** Candidate and augmented tree receive the same underlying scalar information.
+Candidate uses v4 plus masked within-role mean/sum/maximum token summaries; augmented tree uses the full ordered unpooled scalar columns.
+Candidate summaries are deterministic functions of augmented inputs, including masks and tensor dimensions.
+This pooling choice is **chair default, Board A may change before freeze**, resolving S31 §4.2 and BA3 E2.
+C measures predictive use of supplied information; only the matched field-absent contrast identifies field contribution.
+C_abl removes all field-derived columns and summaries, holding architecture, chart/predecessor access, rows, folds and tuning fixed.
+No duplicate field proxy remains in that ablation.
+
+Use H1w source-closed folds and nested OOF training targets, with §3's train-only OLS nuisance and preprocessing.
+Nuisance includes intercept, family/device treatment dummies and log1p incremental effective norm; unsupported levels fail closed.
+Average seed predictions before absolute loss; seeds are not independent observations (S31 §4.2; §3).
+There is no tuning or early stopping; all pipelines have the same fixed fitting opportunity.
+
+**A5.4.2 — BA3 obligation 9: ratio inference.** Let A_x=Σ_i |r_i−mean_s p_x,s(i)|, a row sum retaining whole components.
+For each comparator, use L=log(A_cand/A_comparator).
+Apply A2.3's bootstrap-t construction and component influences u_c=A_c/ΣA−B_c/ΣB.
+Map [L_lo,L_hi] to [1−exp(L_hi),1−exp(L_lo)], reversing endpoints.
+Conditional draws resample components; joint draws also resample common item blocks across rows and shared references.
+Joint studentisation uses A2.3's V_comp+V_item−V_both.
+Evaluation draws hold fitted nuisance/predictors fixed; qualification simulations refit nuisance as A2 requires.
+
+Use 4,000 draws, PCG64 seed 20261107 and linear 0.025/0.975 quantiles.
+These choices are **chair default, Board A may change before freeze**, completing S31 §4.2.
+Either loss sum per row ≤1e-12 nats is undefined, adopting §4's numerical guard for both numerator and denominator.
+Zero/nonfinite log ratios, nonpositive/nonfinite studentising variance and insufficient components fail validity.
+The minimum usable count is all 4,000 draws: **chair default, Board A may change before freeze** (BA3 obligation 9).
+Record failed draws; valid-only intervals remain diagnostics, never funding or scientific success evidence.
+Do not retry, clamp losses, floor variances or replace invalid draws.
+This strengthens S31's “drop and report” into an explicit unresolved action.
+Apply identical rules to C_abl, C_rand, C_perm and secondary comparator intervals.
+
+Funding needs both conditional and joint bootstrap-t lower bounds to pass, including all three controls.
+No-go requires both upper bounds and adequate power for both procedures.
+This interpretation is **chair default, Board A may change before freeze** (BA3 obligation 2).
+A4.4 additionally governs all six conditional/joint bootstrap-t, BCa and percentile intervals and their scientific wording.
+Simulate the actual augmented-denominator C, not isotonic θ, using A2.3's null calibration, coverage and failure gates.
+Retain empirical paired-loss covariance, component sizes, shared-item dependence and conservative variance scenarios (§5; BA3 obligation 9).
+No calibration, power or coverage result is asserted here.
+
+**A5.4.3 — secondary comparators (BC2 edit 3).** M1 and canonical tokens use identical eligible LoRA-only rows and inherited folds.
+Compare each with LoRA-only augmented StatNN under the same nuisance, seed averaging and ratio interval procedure.
+Intervals including zero are inconclusive, never equivalence evidence; these arms cannot fund G7 (S31 §4.2).
+Publish eligible-row exclusions before fitting.
+Probe-response and probe-only/probe-plus-descriptor controls receive paired ancestry-cluster intervals and timed probe costs.
+An interval including zero is inconclusive; no secondary promotion follows outcomes.
+
+**A5.4.4 — disclosure (A4.6 style).** This design follows known D3 WikiText θ̂=0.0071 (S31 §1).
+MMLU θ̂=0.129 was also known (S31 §4.2, citing the H1a companions review).
+The inherited 0.15/0.05 thresholds concern another estimand; reusing them for C is chair choice (S31 §4.2).
+Neither is a measured oriented-response effect.
+
+#### A5.5 Ordered if/else decision function
+
+**A5.5.1 — BA3 obligation 2: executable priority.** The following block is verbatim S31 §4.0.
+Evaluate once in order; a terminating branch wins, and otherwise continue to the next step.
+Invalid/undefined statistics, including A5.4.2 failures, enter validity first.
+
+Equality conventions are stated per rule below: point thresholds written with ≥ or ≤ are inclusive; "lower bound > 0" and
+"lower bound > 0.5" are strict. There is no blanket rule.
+
+1. **Validity.** Missing manifests or hashes, a failed qualification, an exhausted allocation, or a development null-size
+   simulation above 0.07 at nominal 0.05 → the gate is **unresolved**; nothing downstream runs. The G2 predecessor audit has one
+   action: fewer than 16 of 20 passing predecessors is a **hard stop** of G2 pending a new amendment (exact-predecessor
+   gradients may be registered there with their cost); it does not silently disable the approximation.
+2. **Ladder alternative.** At s = 0.25, ≥ 15 resolved pairs and agreement upper bound ≤ 0.6 → **alternative**: the field is not
+   pursued, no sealed purchase on the field arm, the probe-response comparator becomes development work only (it has no
+   purchase criterion until a new amendment gives it one). This branch overrides a rotation go.
+3. **Part A evidence.** Fewer than 15 resolved rotation pairs → **Part A unresolved**. Interval includes 0.5 → **Part A
+   unresolved**. Interval entirely below 0.5 → **Part A unresolved**, with the observed disagreement reported (no scientific
+   kill). Otherwise (≥ 15 pairs, lower bound > 0.5) → **Part A go**.
+4. **Part B eligibility.** Part B is always computed and reported. It can fund only if Part A went and both destruction
+   controls are beaten (lower bound > 0 on both); otherwise the funding decision is **unresolved** regardless of C, and the
+   extension-only exception below does not apply.
+5. **Funding (if eligible), evaluated in this order:** if C ≥ 0.15 and lower 95 % > 0 → **go**; else if C ≥ 0.05 → **screen**
+   (Part A extension only, never sealed rows); else if upper 95 % < 0.05 and simulated power at C = 0.15 ≥ 0.80 → **no-go**
+   (funding stops; not a scientific falsifier); else → **unresolved**. Intervals are never assumed to contain their point
+   estimate; the branches are evaluated as written.
+Scientific consequences are stated separately from funding consequences in every report.
+
+Part B reporting is always required once valid upstream inputs exist, even when Part A evidence is unresolved.
+This does not override the validity hard stop or permit funding without Part A go.
+Equality follows each displayed operator; touching zero fails a strict positive-bound rule.
+Exactly fifteen resolved pairs meet the floor; exactly 0.6 meets the ladder upper-bound rule (S31 §4.0).
+Exactly 0.15/0.05 meet point thresholds; upper bound exactly 0.05 does not meet no-go (S31 §4.0).
+Exactly 0.80 meets the power threshold; audit count exactly sixteen passes (S31 §§3–4).
+Funding, scientific wording and deployment decisions are reported separately (BA3 E1–E4).
+
+#### A5.6 G7 sealed purchase
+
+**A5.6.1 — BA3 obligation 10: sealed contract.** The following block is verbatim S31 §4.3.
+
+Scientific success keeps the PREREG §§4–5 contract, re-stated for C on the new denominator: endpoint qualified on the new
+sealed panel; item precision; conditional and joint calibrated intervals; independent component count; outcome-free power lower
+bound ≥ 0.80 from a development-only simulation; C ≥ 0.15 with lower bound > 0 for the single frozen arm against augmented
+StatNN; both destruction controls beaten; the intact-versus-rotated contrast positive with lower bound > 0. Source graph closure
+as in the exposure ledger. A3 source-change qualification and matched actual-predecessor, device, dtype and batch identity are
+required. No tuning, replacement or arm change after exposure. The panel is sized between 100 and 300 blocks by the simulation;
+insufficient power at 300 is "unresolved", not a larger purchase.
+
+G7 needs G3 go and G4 go, never screen or alternative (S31 §3 G7; §4.0).
+Freeze one arm, fresh source-closed blocks and a new disjoint WikiText item panel before any outcome, including sealed qualification.
+Each block has intact/rotated edits at strengths {−1, ½, 1} (S31 §3 G7).
+Define d_i as intact-minus-rotated predecessor-relative NLL change at strength 1.
+The primary orientation estimand is mean_i sign(〈g,D_i−R_i〉)d_i; zero predictions contribute zero, never disappear.
+Use paired component/item bootstrap-t intervals on this signed mean, with common references.
+This estimand choice is **chair default, Board A may change before freeze** (BA3 obligation 10).
+Require positive lower bounds for both conditional and joint intervals, with shared references and A5.4.2 validity handling.
+The independent-component floor is 100; simulation chooses the fixed count up to 300, never outcomes (S31 §4.3; §§4–5).
+New-panel endpoint qualification and A2.1 item precision remain mandatory, including fresh-stage tripwire disclosure.
+Apply §§4–5 precision and power gates to C and the frozen control/rotation family; all success requirements are conjunctive.
+C_rand, C_perm and C_abl must each have positive conditional and joint lower bounds (S31 §§4.2–4.3; BA3 obligation 2).
+A development-only simulation must calibrate joint success across these correlated contrasts, retaining shared item/reference covariance.
+Size and report power for the actual contrasts; inability to meet power at 300 blocks is unresolved (S31 §4.3).
+No replacement, tuning, enlarged purchase or arm change after exposure.
+Record the conditional scoring and overhead caps separately (S31 §3 G7); no G7 purchase is authorised by this draft.
+
+#### A5.7 G8 prospective H5 trial
+
+**A5.7.1 — BA3 obligation 11: live contract.** The following block is verbatim S31 §4.4.
+
+Arms: critic-guided search; the same editor without critic; random ranking; same-support gradient search; single-draw best-of-N
+at equal real-evaluation budget (one score draw per candidate, no repeated-draw archive); Adam/Muon at equal forward budget. The
+primary comparator is the same editor without critic; savings and non-inferiority must hold jointly against it; the other arms
+are reported. Pass: realised real-evaluation savings ≥ 30 % with paired 95 % lower bound ≥ 30 %; final-score difference lower
+bound ≥ −1 percentage point; guardrails met; one-sided 95 % upper bound on missed qualifying proposals among rejected ≤ 5 % with
+episode clustering, denominator = all rejected candidates including failed attempts; positive net GPU saving after charging
+diagnostics, gradients, probes, failed attempts and amortised training. Episode count and budget are set from G5 variance to
+≥ 0.80 simulated joint power before any episode runs. **Kill** critic deployment only if a powered test shows a savings upper
+bound < 30 % or demonstrated inferiority (upper bound of the score difference < −1 point); an interval too wide to show
+non-inferiority is unresolved. A powered incremental residual-MAE gain with upper bound < 0.05 against augmented StatNN **and** field-only, on the contrast
+fixed in A5 before any episode, **rejects the registered structural representation's incremental predictive benefit on that
+population**; it does not kill the structural mechanism in general, and deployment kill is a separate decision. Calibration, power or
+budget failure leaves H5 unresolved.
+
+G8 additionally needs G5 feasibility and G3/G4 go (S31 §3 G8).
+Before live evaluation, commit fresh episode/item groups, calibration/evaluation split, editor/critic hashes, rejection policy, count and budget.
+Choose those counts from G5 variance and prospective joint-power simulation, never evaluation outcomes (S31 §4.4).
+Source/direction/prompt-connected episodes stay together in splits and paired clustered inference.
+Calibration episodes cannot enter evaluation; no evaluation feedback updates calibration.
+
+Log every attempt, including invalid proposals without deltas, failed attempts and rejected proposals (S31 §§2, 6).
+Pin immutable validated effective snapshots, exact coordinates, rounding loss and predecessor/panel provenance before critic access.
+The trusted adapter returns accept/abstain, meters costs and uses separately hashed probe hooks/cache with an intervention path.
+No rationale or editor transcript is a critic input; retain transcripts only for audit (S31 §§2, 6; BC2 edit 2).
+Audit missing outcomes through blinded adjudication; missing outcomes cannot count as successful savings.
+For the missed-proposal guardrail, conservatively count unauditable rejected attempts as missed qualifying proposals.
+That missingness policy is **chair default, Board A may change before freeze** (BA3 obligation 11).
+Charge failed attempts, diagnostics, gradients, probes and amortised training over the registered evaluation episodes.
+
+The powered structural contrasts are critic residual-MAE gain against augmented StatNN and against field-only, each C=1−A_critic/A_comparator.
+Use A5.4.2 paired episode/item inference, with both conditional and joint bounds.
+This contrast specification is **chair default, Board A may change before freeze** (S31 §4.4; BA3 obligation 11).
+A powered upper bound <0.05 for both rejects only that registered representation's incremental benefit on that population.
+It does not reject structural mechanisms generally; deployment rejection is a separate savings/inferiority decision (S31 §4.4; BA3 E4).
+Exactly 30% savings and lower bound, −1-point noninferiority lower bound, and 5% missed-proposal upper bound satisfy inclusive limits.
+Equality at an inferiority upper bound does not meet the strict rejection rule (S31 §4.4).
+Calibration, power, missingness or budget failures leave H5 unresolved.
+
+#### A5.8 Complete field, chart, probe and augmented-StatNN schema
+
+**A5.8.1 — BA3 obligation 7; BC2 edit 2: field and state.** The following completes S31 §6's open schema.
+Every new concrete choice in this section is **chair default, Board A may change before freeze**.
+Values are planned settings, not observations; S31 §6 delegates their selection to A5.
+
+| Field | Frozen draft value and interpretation |
+|---|---|
+| WikiText objective | Mean NLL per valid next token, nats; token-weighted over equal-length windows; lower is better. |
+| MMLU objective | Mean normalized gold-letter log-prob per item, nats; equal item weights; higher is better; §1 scoring semantics. |
+| HellaSwag objective | Gold-option character-normalised log-likelihood, equal item weights; higher is better; descriptive only. |
+| Refusal objective | Mean refusal-minus-compliance phrase margin, equal prompt weights; retain harmful/harmless roles separately; descriptive, uncalibrated. |
+| Gradient sign | Differentiate the named score itself; signed contraction predicts that score's change, without relabeling NLL as gain. |
+| Auxiliary sampling | Hash-sort text groups with `20261107:field:`; 64 groups per objective, separate from all scored panels; one item/prompt per group. |
+| Auxiliary lengths | WikiText windows use 1,024 next-token positions (A4.2 convention); other prompts truncate at 1,024 tokens, keeping gold scoring positions. |
+| Fisher estimator | Model-expected loss-gradient outer products, one model-sampled target per valid token, fixed RNG; no edited-outcome labels. |
+| Factors | A=mean xxᵀ including bias coordinate where present; G=mean output-loss-gradient outer product, valid-position weighting. |
+| Factor shapes | For an out×in linear map, A is (in+bias) square and G is out square; store exact dimensions and counts. |
+| Coverage | Every supported edited linear map; full-attention Q/K/V/O, GatedDeltaNet maps, MLP gate/up/down are distinct typed roles. |
+| Missing hooks | Any supported module lacking a valid hook fails G2; no silent zero factors. |
+| Damping | Add 1e-3×trace(F)/dim(F) to each factor diagonal; zero-trace factors retain an explicit zero flag. |
+| Truncation | Keep eigenvectors through 99% nonnegative eigenvalue energy; retain omitted trace/energy as tail features, never call it exact curvature. |
+| Precision | fp32 gradients, factors and spectral algebra; finite/symmetry/PSD audits; materially negative eigenvalues fail the gate. |
+| Negative-eigenvalue tolerance | Absolute negative eigenvalue ≤1e-6×max(trace/dimension,1e-12) may be rounded to zero; larger violations fail. |
+| Normalisation | Store raw contractions and magnitudes; training-fold z-scores for fitted features only, no outcome-dependent token normalisation. |
+| Base versus predecessor | Base field primary; predecessor, base displacement E=W−W₀ and incremental D stay separate. |
+| Cross term | Approximate gradient g(W)≈g₀+G E A; prediction Σ_t[〈g₀,t,D_t〉+tr(D_tᵀG_tE_tA_t)]. |
+| Trust-region term | q_t=½tr(G_t D_t A_t D_tᵀ), nonnegative magnitude only; never a signed Hessian correction. |
+
+Audit twenty chain predecessors selected by sorted canonical ID, without outcomes (count from S31 §3 G2).
+Compare exact predecessor contraction with the base-plus-cross-term approximation.
+Relative error divides absolute contraction error by max(|exact contraction|,1e-3 nats).
+Error ≤0.1 on at least sixteen of twenty is required (S31 §3 G2).
+For multiple objectives require that count separately per objective; selection and this aggregation are chair defaults under this section's label.
+Fewer passing predecessors hard-stops G2 pending amendment, never silently disables the approximation (S31 §4.0; BA3 E3).
+The Fisher approximation is not a Hessian and the weight contraction is not a loss Jacobian (S31 §2; BC2 edit 2).
+
+**A5.8.2 — chart schema.** All new values here are **chair default, Board A may change before freeze** (S31 §6).
+Projector dimension is 32 per side, seed 20261107, Gaussian then QR with positive diagonal convention.
+For smaller dimensions use min(32,dimension); pad unused coordinates with zero and a presence mask.
+P_out has shape 32×out and P_in has shape in×32 after padding; active columns/rows are orthonormal.
+For each matrix X∈{W,E,D}, store P_out X P_in, plus signed 〈P_out D P_in,P_out W P_in〉 and displacement contractions.
+Also store raw 〈D,W〉, 〈D,E〉, norms, rounding loss, support, role, layer and spectral/tail features.
+Use epsilon 1e-12 for dimensionless normalisations; zero denominators produce explicit zero/presence flags, never hidden imputations.
+Vectors use identity-side projection and a vector role; scalars use a scalar role, with presence masks.
+No non-matrix chart token becomes a rotation-eligible matrix by reshaping.
+Predecessor and successor identities/lineage are pinned, with fp32 subtraction of stored bf16 states (BC2 edit 2).
+
+The secondary chart head is a masked within-layer set encoder, width 32, mean pooling and a linear response head.
+Evaluate f(W,E,D)−f(W,E,0), enforcing zero at zero edit exactly.
+Train for 100 epochs, batch 16, Adam learning rate 0.001, no early stopping or search.
+These architecture/training choices are **chair default, Board A may change before freeze**; training-scale values match configs/p4_predictors.json.
+Pure field, pure chart and hybrid arms stay separately named; no assumed representation containment (S31 §2).
+
+**A5.8.3 — columns, controls and probes.** All new choices here are **chair default, Board A may change before freeze** (S31 §6).
+Order tensors by numerical layer, exact role string and full tensor name; order objective columns by the table above.
+Flatten all field/chart entries in row-major order; include norms, dimensions, predecessor/displacement inputs, exact support and tail flags.
+Use the architecture's fixed tensor slots, zero padding and explicit presence masks for variable tensor sets.
+Never pool exact layer/role identity away in augmented StatNN; candidate pooling follows A5.4.1.
+
+C_rand and C_perm use the identical candidate pipeline, replacing only the field and recomputing every field-derived transform.
+Random field uses seeded Gaussian gradients rescaled to each intact gradient's Frobenius norm.
+Random covariance factors use Gaussian eigenframes with intact spectra; regenerate all derived field scalars consistently.
+Layer permutation uses a seeded derangement within shape/role-compatible groups; singleton groups remain fixed and disclosed.
+Failure to destroy a sufficient compatible field leaves control interpretation unresolved, never an automatic win.
+Use domain-separated `20261107:random-field:` and `20261107:permuted-field:` seeds before outcomes.
+Chart destruction uses permuted compatible projector identities and independently seeded random frames, reported separately.
+
+Zero-shot sign is the signed linear contraction alone; q never changes its sign.
+Field calibration is intercept plus summed signed contraction plus summed q, ridge penalty 1, training folds only.
+This uses no more than S31 §4.2's three coefficients.
+Probe response uses cached post-gating x for MLP writers, D·x, mean and RMS per supported output coordinate.
+Use a separate scoring-disjoint 64-prompt cache (S31 §4.2), hashed panel/predecessor/hook identities and matched probe-only controls.
+Fit a ridge head, penalty 1, training-fold standardisation and no search; record cache generation and inference costs.
+A1-lite uses the frozen TF-v1 KL vector only, retaining its activation-assisted label (S31 §§2, 4.2).
+
+**A5.8.4 — fitting defaults and config discrepancy.** configs/p4_predictors.json has no tree-specific parameters.
+It supplies n_splits=5, seed=0, CPU, standard scaling and neural training settings; these are not LightGBM settings.
+Copy tree settings from §3 and src/wsp/predictor/baselines.py instead: 300 trees, learning rate 0.05, eight leaves, min-child five.
+Also use subsample 0.8/frequency one, column fraction 0.5, L2 one, two threads, deterministic row-wise execution (§3).
+Seeds 0/1/2 and no tuning follow S31 §4.2.
+This source resolution is **chair default, Board A may change before freeze**; do not claim absent JSON tree settings were copied.
+Freeze the complete resolved config with code/schema hashes before G2 (BA3 obligation 8).
+
+#### A5.9 Old seal and Part B wording
+
+The unspent partition `ebf0379a15d95b592ee8c227836406f3365a56a3ef46e6978d369c2d42c0ff3f` stays sealed (A2.3; S31 §5).
+It is not reused for G7; G7 requires newly certified fresh closure and a new item panel.
+A4.4 governs Part B, including all six intervals, calibration disclosure and no pass/kill wording (S31 §§4.2, 5).
+Funding “go”, “screen”, “no-go” and “unresolved” are not scientific falsifiers.
+
+#### A5.10 New amendments and acceptance crosswalk
+
+Any change to endpoint/orientation, scope, estimand, arm, information access, controls, thresholds, selection, exclusions or inference needs a dated prospective amendment.
+Changes to source closure, panels, preprocessing, seeds, schema, predecessor approximation or resource-driven coverage likewise need amendment before affected outcomes.
+Board A may change labelled chair defaults before freeze, recording the accepted version and hashes.
+After freeze, a code/config change requires versioning and any matched qualification before new outcomes, never retrospective repair.
+Infrastructure retries retain identical inputs and immutable failed-attempt records; they cannot select scientific outcomes.
+Unresolved manifests, code, calibration or resource evidence prevent acceptance/execution, rather than becoming assumed results.
+
+BA3's twelve obligations have numbered homes: 1→A5.1.1; 2→A5.5.1; 3→A5.2.1; 4→A5.3.1; 5→A5.3.2; 6→A5.3.3.
+The remaining homes are 7→A5.8.1; 8→A5.4.1; 9→A5.4.2; 10→A5.6.1; 11→A5.7.1; 12→A5.2.2.
+Cross-references supplement those clauses; none of the obligations is waived by this draft.
