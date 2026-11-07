@@ -236,3 +236,12 @@ A5.11 manifests; merged 62d73bf). G2 code merged: `src/wsp/features/rotation.py`
 Open design item for the A5 freeze: at the chair-default projector dimension k = 32 the augmented-StatNN layout has 318 slots and
 571,836 columns, far too wide for a tree on a few hundred rows; k must be reduced (4 gives 48 contraction columns per matrix slot)
 or the contractions pooled before freeze. Codex gpt-6.1-terra stopped early on three implementation tasks today; rerouted to Claude Opus.
+
+**7 Nov 2026, 11:00–13:00 UTC.** Chain replay finished and installed: 351 of 358 lost snapshots back in the zoo (sidecar 1,189
+stored / 63 aliased / 7 lost); re-trained LoRA steps measured at 3–15 % matrix relative error (norms within 1e-3), recorded as the
+"re-trained" exactness class (regeneration report §7, D9). TF-v1 (y, h) audit: all 27 bitwise-lineage rows reproduce, 13 of 14
+re-trained-lineage rows differ as expected. Features re-extracted for the 351 (0 failed; 99 s/entry under contention). Full-set P4
+view: 1,241 feature sets with complete ancestry, **342 matched rows** (original 345; 3 rows lost with the 7 entries); suite
+`d3v2f-*` running (tmux `d8-p4-full`). G6 census running on H0 (tmux `d8-g6-census`): G1 repeats of the two regenerated
+predecessors, then TF-v1 on the 635 stored chain entries without a record (repriced from 296, ≈ 11 GPU-h). A5.11 manifest package
+being built on branch `prereg/a5-manifests`.
