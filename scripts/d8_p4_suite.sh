@@ -10,6 +10,7 @@ CODE="$(cd "$(dirname "$0")/.." && pwd)"
 PY=/home/ubuntu/projects/wsp-lab/.venv/bin/python
 DATA=/home/ubuntu/wsp-data
 VIEW=${1:-$DATA/runs/d8/p4_input}
+PREFIX=${PREFIX:-d3v2r}   # d3v2f for the full-set rerun after the chain regeneration
 OUTROOT=$DATA/runs/p4
 cd "$CODE"
 export PYTHONPATH="$CODE/src" CUDA_VISIBLE_DEVICES="" OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 TOKENIZERS_PARALLELISM=false
@@ -20,7 +21,7 @@ for split in seed trajectory family; do echo "m3 $split -"; done >> "$jobs_file"
 for fam in abliteration chain lora_sft random_dir task_vector; do echo "m2 family $fam"; done >> "$jobs_file"
 run_one() {
   model=$1; split=$2; hold=$3
-  if [ "$hold" = "-" ]; then name="d3v2r-$model-$split"; extra=(); else name="d3v2r-$model-holdout-$hold"; extra=(--holdout "$hold"); fi
+  if [ "$hold" = "-" ]; then name="$PREFIX-$model-$split"; extra=(); else name="$PREFIX-$model-holdout-$hold"; extra=(--holdout "$hold"); fi
   out="$OUTROOT/$name"
   [ -e "$out" ] && { echo "SKIP $name exists"; return 0; }
   start=$(date +%s)
@@ -29,6 +30,6 @@ run_one() {
     --targets mmlu_pro hellaswag "${extra[@]}" --out "$out" > "$DATA/runs/d8/p4-$name.log" 2>&1
   echo "DONE $name exit=$? seconds=$(( $(date +%s) - start ))"
 }
-export -f run_one; export PY DATA VIEW OUTROOT
+export -f run_one; export PY DATA VIEW OUTROOT PREFIX
 xargs -P "${P4_PARALLEL:-4}" -L 1 bash -c 'run_one $0 $1 $2' < "$jobs_file"
 echo "P4-SUITE-FINISHED"
