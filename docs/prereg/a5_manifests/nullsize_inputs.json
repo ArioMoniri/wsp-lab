@@ -1,0 +1,159 @@
+{
+ "audit": {
+  "ladder": "true unless the scaled-edit construction fails (A5.3.1 'audit-excluded')",
+  "rotation": "A5.3.3 outcome-free rotation audit of the donor edit (pass = true)",
+  "status": "computed at G0/G1 closure from metadata/bytes, never from outcomes"
+ },
+ "consumer": "scripts/a5_simulation.py (validate: --inputs-spec this file; run: INPUT --output SIZE.json)",
+ "donors": {
+  "missing": "a row lacking either record is not a donor; it is listed with its reason in provenance.missing; no imputation. An empty (family, tertile) donor cell leaves calibration unresolved (A5.3.2)",
+  "records": "data/evals/qwen3.5-0.8b/tf_v1/<id>/records.jsonl, primary run (repeat_id null); the reference is 'base' for roots and the actual predecessor (parent_id) for chain steps; both must pass src/wsp/eval/response_intervention.py:_reference_on_file with the same scoring identity (config_hash, model_revision, source_hash, device), as references.json checks",
+  "rows": "eligible inventory rows that are D3 development members with a TF-v1 primary record and a matched predecessor-reference record on file after G0/G1 closure"
+ },
+ "input_file": {
+  "commit": "its sha256, inventory and provenance enter docs/prereg/a5_manifests/ before NULL-SIZE",
+  "format": "JSON object (or NPZ with the same JSON as scalar Unicode 'payload', no pickle)",
+  "path": "data/runs/a5/nullsize/inputs.json"
+ },
+ "inventory": {
+  "cutpoints": "frozen from this inventory by scripts/a5_simulation.py:selection_cells",
+  "source": "docs/prereg/a5_manifests/components.jsonl rows with family in family_map (frozen selection inventory, A5.3.1); every such row is listed, eligible or not"
+ },
+ "payload_schema": {
+  "audit_order": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "donor_row": "an inventory row plus residuals [64,3] and audit [3]",
+  "family_map": {
+   "chain": "chain",
+   "lora_sft": "LoRA"
+  },
+  "inventory_row": {
+   "component": "components.jsonl component_id",
+   "eligible": "components.jsonl eligibility == 'eligible' (chair ruling A5.3.1: predecessor-lost rows are ineligible)",
+   "family": "components.jsonl family mapped by family_map",
+   "id": "canonical edit id (components.jsonl id)",
+   "norm": "components.jsonl effective_norm (finite for eligible rows; may be null otherwise)"
+  },
+  "required_keys": [
+   "inventory",
+   "donors",
+   "window_ids",
+   "rotation_source",
+   "provenance"
+  ],
+  "residual_columns": [
+   "edit",
+   "rotation",
+   "predecessor"
+  ],
+  "residual_shape": [
+   64,
+   3
+  ],
+  "window_item_ids": [
+   "0",
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "8",
+   "9",
+   "10",
+   "11",
+   "12",
+   "13",
+   "14",
+   "15",
+   "16",
+   "17",
+   "18",
+   "19",
+   "20",
+   "21",
+   "22",
+   "23",
+   "24",
+   "25",
+   "26",
+   "27",
+   "28",
+   "29",
+   "30",
+   "31",
+   "32",
+   "33",
+   "34",
+   "35",
+   "36",
+   "37",
+   "38",
+   "39",
+   "40",
+   "41",
+   "42",
+   "43",
+   "44",
+   "45",
+   "46",
+   "47",
+   "48",
+   "49",
+   "50",
+   "51",
+   "52",
+   "53",
+   "54",
+   "55",
+   "56",
+   "57",
+   "58",
+   "59",
+   "60",
+   "61",
+   "62",
+   "63"
+  ]
+ },
+ "provenance_layout": "provenance = {'donors': {donor id: {edit_record_sha256, reference_id, reference_record_sha256, run_ids}}, 'missing': {inventory id: reason}}; record hashes are sha256 of the records.jsonl bytes",
+ "provenance_per_donor": [
+  "edit_record_sha256",
+  "reference_id",
+  "reference_record_sha256",
+  "run_ids"
+ ],
+ "residuals": {
+  "benchmark": "wikitext_ppl",
+  "columns": "E_edit[w], E_rotation[w], E_predecessor[w]: raw per-window values, NOT centred; the simulation centres U_x = E_x - E_predecessor (A5.3.2)",
+  "field": "extra.mean_nll (nats per valid next token; each window has n_tokens 1023, so the mean over windows is token-weighted)",
+  "nonfinite": "a missing/nonfinite window value is written as NaN (JSON NaN) and becomes an audit/nonfinite failure of that contrast in the simulation; never replaced",
+  "window_order": "item_id '0'..'63' = text_groups.json windows in order; the simulation forms the 32 two-window blocks (2k, 2k+1)"
+ },
+ "resolution": {
+  "blocks": 32,
+  "draws": 4000,
+  "replicates": 10000,
+  "seed": 20261107
+ },
+ "rotation_column": {
+  "allowed_sources": [],
+  "issue": "A5.3.2 says G1 TF-v1 development records supply (edit, rotation, predecessor) residuals, but rotation variants are first scored at G3 (A5.3.4, S31 §3 G3): no TF-v1 rotation record exists for any development row. The NULL-SIZE payload cannot be formed as specified.",
+  "options_for_ruling": [
+   "score development rotations at G0/G1 (priced under A5.2.2) and use their records",
+   "an amended null model that uses only the edit and predecessor columns"
+  ],
+  "status": "UNRESOLVED (blocking)",
+  "validator": "--inputs-spec reports 'blocked' while allowed_sources is empty"
+ },
+ "rotation_source": "string naming the registered rotation_column source; must be in allowed_sources",
+ "schema": "a5-nullsize-inputs-spec-v1",
+ "status": "specification only; not run on real data; inputs exist only after G0/G1 closure (A5.3.2, A5.11)",
+ "window_ids": "the list window_item_ids, in order",
+ "window_ids_sha256_check": true,
+ "window_ids_sorted_sha256": "a7d795f9682813bcc48a2e43d02e64713e258e0a250f34524f69067df3ae9b9a"
+}

@@ -1,0 +1,111 @@
+{
+ "auxiliary_sampling": {
+  "domain": "20261107:field:",
+  "panels": "panels.json",
+  "probe_domain": "20261107:probe:"
+ },
+ "bootstrap": {
+  "rule_reference": "A5.3.2 / A5.4.2 / A5.6.1: PCG64 seed 20261107, 4,000 draws, linear .025/.975 quantiles"
+ },
+ "chart_projectors": {
+  "destruction_controls": "A5.8.3 asks for permuted projector identities and independently seeded random frames but names no domain; not registered here (secondary/descriptive arm)",
+  "rule_reference": "A5.8.2 (seed 20261107); src/wsp/features/response_chart.py:tensor_seed = SeedSequence([20261107, crc32(tensor name)]) first uint64"
+ },
+ "derivation": {
+  "reference_implementation": "scripts/a5_build_panels.py:domain_seed (tested); src/wsp/eval/response_intervention.py:rotation_seed for the rotation domain",
+  "rule": "seed(domain, key) = int.from_bytes(sha256(UTF-8 domain + key)[:8], 'big') mod 2^63 (the A5.3.3 rotation convention, applied to the A5.8.3 domains)",
+  "status": "A5.8.3 registers the two domains; the key formats below are chair-default proposals for Board A acceptance at freeze, fixed here before any field exists (no seed search after a failure, A5.8.3)"
+ },
+ "fisher_sampling": {
+  "rule_reference": "A5.8.1 'one model-sampled target per valid token, fixed RNG'; src/wsp/features/response_field.py SEED = 20261107 (torch.Generator('cpu').manual_seed)"
+ },
+ "permuted_field": {
+  "construction": "within each compatibility group (exact role string AND exact tensor shape), layer indices sorted ascending are permuted by the seeded derangement; whole gradient/factor tuples of all objectives move together; singleton groups stay fixed and are disclosed, never reshaped",
+  "derangement": "numpy.random.Generator(PCG64(seed)).permutation(n) repeated until no fixed point (scripts/a5_build_panels.py:derangement); n = 1 is fixed",
+  "domain": "20261107:permuted-field:",
+  "key": "<exact role string>:<shape as 'outxin'>",
+  "note": "test vectors use a synthetic key and only pin the functions; the actual groups come from the frozen supported-module inventory at G2 staging and are written to the destruction-audit artefact (A5.8.3)",
+  "registered_by": "A5.8.3",
+  "test_vectors": {
+   "derangement(5, seed('synthetic-test-vector'))": [
+    2,
+    0,
+    1,
+    4,
+    3
+   ],
+   "seed('synthetic-test-vector')": 4661840015071019582
+  }
+ },
+ "random_field": {
+  "construction": "per tensor token, an independent Gaussian gradient rescaled to that token's intact Frobenius norm (not one global norm); zero-norm tokens stay zero with explicit flags; random covariance factors use Gaussian eigenframes with the intact spectra; every field-derived scalar is recomputed",
+  "domain": "20261107:random-field:",
+  "generator": "torch.Generator('cpu').manual_seed(seed); gradient = randn(out, in) in fp32 then rescaled; frames = sign-corrected QR (positive diagonal, zero -> +1) of randn(d, d), as A5.3.3",
+  "keys": {
+   "A_frame": "<objective>:<exact tensor name>:A_frame",
+   "G_frame": "<objective>:<exact tensor name>:G_frame",
+   "gradient": "<objective>:<exact tensor name>:gradient"
+  },
+  "objectives": [
+   "wikitext_nll",
+   "mmlu_gold_log_prob",
+   "hellaswag_gold_char_log_likelihood",
+   "refusal_margin_harmful",
+   "refusal_margin_harmless"
+  ],
+  "registered_by": "A5.8.3",
+  "test_vectors": {
+   "seed('synthetic-test-vector')": 1356489376464760849
+  }
+ },
+ "root_seed": 20261107,
+ "rotation": {
+  "domain": "20261107:rotation:",
+  "implementation": "src/wsp/eval/response_intervention.py:rotation_seed",
+  "rule_reference": "PREREG A5.3.3: SHA256 of '20261107:rotation:' + canonical ID, first eight bytes big-endian, mod 2^63; torch generator cloned per tensor; out x out then in x in Gaussian draws; sign-corrected QR",
+  "test_vectors": {
+   "seed('synthetic-test-vector')": 3336192590354858683
+  }
+ },
+ "schema": "a5-control-seeds-v1",
+ "simulation": {
+  "blocks": 32,
+  "construction": "numpy.random.SeedSequence(20261107).spawn(3) -> PCG64 generators in the order [panels, signs, resolution]",
+  "implementation": "scripts/a5_simulation.py:simulate",
+  "replicates": 10000,
+  "resolution_draws": 4000,
+  "rule_reference": "A5.3.2",
+  "streams": [
+   {
+    "first_state_uint32": [
+     2876113469,
+     595368693
+    ],
+    "name": "panels",
+    "spawn_key": [
+     0
+    ]
+   },
+   {
+    "first_state_uint32": [
+     325814665,
+     2468576286
+    ],
+    "name": "signs",
+    "spawn_key": [
+     1
+    ]
+   },
+   {
+    "first_state_uint32": [
+     1057170187,
+     2130167766
+    ],
+    "name": "resolution",
+    "spawn_key": [
+     2
+    ]
+   }
+  ]
+ }
+}
