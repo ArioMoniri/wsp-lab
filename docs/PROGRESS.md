@@ -228,3 +228,11 @@ edits applied in v3.1 and merged (9f59e3d). Programme: oriented local response (
 arm; predecessor chart as registered secondary), WikiText-first, Part A rotation-and-ladder intervention on 40 existing edits
 and Part B exploratory retrospective decide whether sealed rows are bought; gates G0–G8 with ≈ 29 GPU-h of allocations on H0;
 the registration (PREREG appendix A5) is the next deliverable and must be frozen before any field is computed.
+
+**7 Nov 2026, 09:30–11:00 UTC.** PREREG appendix A5 drafted and reviewed by Board A in three passes (ACCEPT as a draft pending the
+A5.11 manifests; merged 62d73bf). G2 code merged: `src/wsp/features/rotation.py` (rotation controls), `response_field.py`
+(gradients, K-FAC, contractions, predecessor audit), `response_chart.py` (chart tokens and augmented-StatNN columns),
+`src/wsp/eval/response_intervention.py` (Part A selection, variants, manifests, scoring plan), `scripts/a5_simulation.py`.
+Open design item for the A5 freeze: at the chair-default projector dimension k = 32 the augmented-StatNN layout has 318 slots and
+571,836 columns, far too wide for a tree on a few hundred rows; k must be reduced (4 gives 48 contraction columns per matrix slot)
+or the contractions pooled before freeze. Codex gpt-6.1-terra stopped early on three implementation tasks today; rerouted to Claude Opus.
