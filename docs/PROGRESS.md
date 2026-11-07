@@ -215,3 +215,16 @@ ordering claim, access links; 4 minor; 1 nit), all addressed: author behind the 
 recovered-rerun commit, broader-impact paragraph, compute statement from the spend ledger, contribution stated once,
 StatNN defined. Paper 20 pages; audit PASS in both modes.
 
+
+**7 Nov 2026, 06:00–09:30 UTC.** User decisions: GPU time approved (local and Lambda beyond the earlier cap); recreate the data
+lost in D8; run the agentic council on every negative and neutral result to find a world-model structure. Chain regeneration
+(branch `feat/d8-chain-replay`): the zoo sampler code of the chain build is not in the repository, so the 358 lost snapshots
+are replayed from their surviving edit descriptors; pilot on three intact chains reproduced random_dir and abliteration steps
+bitwise (refusal fingerprint `0b6e272d…` rebuilt from scratch) and re-trained LoRA steps within bf16 rounding (norm differences
+≤ 9.1e-4 relative; the matrix-level error metric was added afterwards and is still to be measured). Full restore running as three
+GPU shards. Council 7 Nov (`docs/council/2026-11-07/`): four members, two rounds, chair synthesis in three versions reviewed by
+Boards A, B and C (`docs/reviews/council/`); final state ACCEPT WITH REQUIRED EDITS by all three boards as a programme proposal,
+edits applied in v3.1 and merged (9f59e3d). Programme: oriented local response (base-anchored sensitivity field as the primary
+arm; predecessor chart as registered secondary), WikiText-first, Part A rotation-and-ladder intervention on 40 existing edits
+and Part B exploratory retrospective decide whether sealed rows are bought; gates G0–G8 with ≈ 29 GPU-h of allocations on H0;
+the registration (PREREG appendix A5) is the next deliverable and must be frozen before any field is computed.
