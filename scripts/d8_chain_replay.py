@@ -194,17 +194,23 @@ def compare(delta: dict[str, torch.Tensor], stored: dict[str, torch.Tensor]) -> 
         "n_keys": len(keys_a),
     }
     max_abs, n_bitwise, n_diff_elems, n_elems = 0.0, 0, 0, 0
+    diff_sq, stored_sq = (
+        0.0,
+        0.0,
+    )  # ||D_regenerated - D_stored||_F^2 and ||D_stored||_F^2 over shared keys
     for k in keys_a & keys_b:
         a, b = delta[k], stored[k]
         if a.shape != b.shape or a.dtype != b.dtype:
             out.setdefault("shape_or_dtype_mismatch", []).append(k)
             continue
+        stored_sq += float(b.float().pow(2).sum())
         if torch.equal(a, b):
             n_bitwise += 1
         else:
             diff = (a.float() - b.float()).abs()
             max_abs = max(max_abs, float(diff.max()))
             n_diff_elems += int((diff > 0).sum())
+            diff_sq += float(diff.pow(2).sum())
         n_elems += a.numel()
     out.update(
         {
@@ -216,6 +222,8 @@ def compare(delta: dict[str, torch.Tensor], stored: dict[str, torch.Tensor]) -> 
             "frac_elements_differing": (n_diff_elems / n_elems) if n_elems else 0.0,
             "fro_regenerated": fro_norm(delta),
             "fro_stored": fro_norm(stored),
+            # relative Frobenius error of the matrices (Board A N1): the norm difference above is only a lower bound
+            "fro_diff_rel": (math.sqrt(diff_sq) / math.sqrt(stored_sq)) if stored_sq > 0 else None,
         }
     )
     return out
