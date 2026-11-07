@@ -1,14 +1,16 @@
 {
  "audit": {
+  "evidence": "'computed' when the audit ran on the pinned bytes; 'unavailable' when its evidence does not exist pre-G2 (e.g. G3 staging outputs). Unavailable is never a default pass: the registered run treats it as pass (more pairs, conservative for size) and the frozen 'unavailable_audit_fails' scenario treats it as fail; both are reported",
   "ladder": "true unless the scaled-edit construction fails (A5.3.1 'audit-excluded')",
-  "rotation": "A5.3.3 outcome-free rotation audit of the donor edit (pass = true)",
-  "status": "computed at G0/G1 closure from metadata/bytes, never from outcomes"
+  "rotation": "A5.3.3 outcome-free rotation audit of the donor edit's bytes (pass = true)",
+  "timing": "masks, audit flags and evidence are fixed when the payload is materialised after G0/G1 closure and before NULL-SIZE; they are never updated from G2 or G3 outcomes"
  },
- "consumer": "scripts/a5_simulation.py (validate: --inputs-spec this file; run: INPUT --output SIZE.json)",
+ "consumer": "scripts/a5_simulation.py (validate: --inputs-spec this file; run: INPUT --output SIZE.json [--scenario registered|variance_x2|unavailable_audit_fails])",
+ "donor_source": "must be in proxy.allowed_sources ('tf_v1_edit_minus_actual_predecessor')",
  "donors": {
   "missing": "a row lacking either record is not a donor; it is listed with its reason in provenance.missing; no imputation. An empty (family, tertile) donor cell leaves calibration unresolved (A5.3.2)",
   "records": "data/evals/qwen3.5-0.8b/tf_v1/<id>/records.jsonl, primary run (repeat_id null); the reference is 'base' for roots and the actual predecessor (parent_id) for chain steps; both must pass src/wsp/eval/response_intervention.py:_reference_on_file with the same scoring identity (config_hash, model_revision, source_hash, device), as references.json checks",
-  "rows": "eligible inventory rows that are D3 development members with a TF-v1 primary record and a matched predecessor-reference record on file after G0/G1 closure"
+  "rows": "eligible inventory rows that are D3 development members with a TF-v1 primary record and a matched actual-predecessor record on file after G0/G1 closure"
  },
  "input_file": {
   "commit": "its sha256, inventory and provenance enter docs/prereg/a5_manifests/ before NULL-SIZE",
@@ -16,42 +18,48 @@
   "path": "data/runs/a5/nullsize/inputs.json"
  },
  "inventory": {
-  "cutpoints": "frozen from this inventory by scripts/a5_simulation.py:selection_cells",
+  "cutpoints": "frozen from this inventory by scripts/a5_simulation.py:selection_cells; they must equal selection.json:procedural_freeze.cutpoints",
   "source": "docs/prereg/a5_manifests/components.jsonl rows with family in family_map (frozen selection inventory, A5.3.1); every such row is listed, eligible or not"
  },
  "payload_schema": {
+  "audit_evidence_values": [
+   "computed",
+   "unavailable"
+  ],
   "audit_order": [
    "rotation",
    "ladder_0.25",
    "ladder_0.5"
   ],
-  "donor_row": "an inventory row plus residuals [64,3] and audit [3]",
+  "centred_noise_shape": [
+   "n_pairs",
+   64
+  ],
+  "donor_mean_shape": [
+   "n_pairs"
+  ],
+  "donor_row": "an inventory row plus audit [3] (explicit booleans) and audit_evidence [3] ('computed' | 'unavailable'); no residuals key",
   "family_map": {
    "chain": "chain",
    "lora_sft": "LoRA"
   },
   "inventory_row": {
    "component": "components.jsonl component_id",
-   "eligible": "components.jsonl eligibility == 'eligible' (chair ruling A5.3.1: predecessor-lost rows are ineligible)",
+   "eligible": "components.jsonl eligibility == 'eligible' (chair ruling A5.3.1, registered: predecessor-lost rows are ineligible)",
    "family": "components.jsonl family mapped by family_map",
    "id": "canonical edit id (components.jsonl id)",
    "norm": "components.jsonl effective_norm (finite for eligible rows; may be null otherwise)"
   },
+  "pair_order": "row j of centred_noise/window_mask/donor_mean is donors[j]",
   "required_keys": [
    "inventory",
    "donors",
    "window_ids",
-   "rotation_source",
+   "donor_source",
+   "centred_noise",
+   "window_mask",
+   "donor_mean",
    "provenance"
-  ],
-  "residual_columns": [
-   "edit",
-   "rotation",
-   "predecessor"
-  ],
-  "residual_shape": [
-   64,
-   3
   ],
   "window_item_ids": [
    "0",
@@ -118,6 +126,10 @@
    "61",
    "62",
    "63"
+  ],
+  "window_mask_shape": [
+   "n_pairs",
+   64
   ]
  },
  "provenance_layout": "provenance = {'donors': {donor id: {edit_record_sha256, reference_id, reference_record_sha256, run_ids}}, 'missing': {inventory id: reason}}; record hashes are sha256 of the records.jsonl bytes",
@@ -127,11 +139,22 @@
   "reference_record_sha256",
   "run_ids"
  ],
+ "proxy": {
+  "allowed_sources": [
+   "tf_v1_edit_minus_actual_predecessor"
+  ],
+  "centring": "within pair over its valid windows: centred_noise_i[w] = U_i[w] - mean_valid(U_i); donor_mean_i = mean_valid(U_i) is pinned separately (the donor effect)",
+  "contrasts": "scripts/a5_simulation.py:contrasts; scales a = (1, 0.25, 0.5) for (rotation, ladder 0.25, ladder 0.5). Null: a_c * sigma_k * (donor_mean + block noise), one fair-coin sigma_k per simulated component per replicate shared by mean and noise of all three contrasts. Registered alternative: a_c * (|donor_mean| * sign(prediction_c) * B_k + block noise), one B_k per component, P(B=+1)=0.75. The resolution step (32 two-window blocks, 4,000 common paired draws) is applied to each contrast separately",
+  "definition": "U_i[w] = y(W_i + D_i)[w] - y(W_i)[w]: per-window difference between the TF-v1 primary record of development edit i and the record of its actual predecessor (base for roots), same scoring identity and the same 64 windows",
+  "not_an_observed_rotation": "no rotation record exists before G3; no rotation column is fabricated and predecessor data is never relabelled as a rotation. Null size and power are conditional on this surrogate and the sign-flip DGP; it is not an empirical certification of the rotation null",
+  "post_g2": "POWER-AND-YIELD uses the identical payload file (same sha256), never G3 contrasts",
+  "shared": "one donor block (mean and centred noise) per slot is shared by all three contrasts; the outer 32-block panel draw and the resolution draws are common to all slots and contrasts",
+  "status": "REGISTERED (chair ruling A5.3.2(ii), 7 Nov 2026; Board A accepted with caveats, docs/reviews/council/board-a-a5-package-2026-11-07.md item 4)"
+ },
  "residuals": {
   "benchmark": "wikitext_ppl",
-  "columns": "E_edit[w], E_rotation[w], E_predecessor[w]: raw per-window values, NOT centred; the simulation centres U_x = E_x - E_predecessor (A5.3.2)",
   "field": "extra.mean_nll (nats per valid next token; each window has n_tokens 1023, so the mean over windows is token-weighted)",
-  "nonfinite": "a missing/nonfinite window value is written as NaN (JSON NaN) and becomes an audit/nonfinite failure of that contrast in the simulation; never replaced",
+  "masks": "window_mask[j, w] is False where either record lacks window w or its value is nonfinite; centred_noise[j, w] is then NaN/null. A pair with any masked window has all three simulated contrasts missing (counted as audit/nonfinite failures, removed from the resolved denominators, never imputed or replaced)",
   "window_order": "item_id '0'..'63' = text_groups.json windows in order; the simulation forms the 32 two-window blocks (2k, 2k+1)"
  },
  "resolution": {
@@ -140,19 +163,13 @@
   "replicates": 10000,
   "seed": 20261107
  },
- "rotation_column": {
-  "allowed_sources": [],
-  "issue": "A5.3.2 says G1 TF-v1 development records supply (edit, rotation, predecessor) residuals, but rotation variants are first scored at G3 (A5.3.4, S31 §3 G3): no TF-v1 rotation record exists for any development row. The NULL-SIZE payload cannot be formed as specified.",
-  "options_for_ruling": [
-   "score development rotations at G0/G1 (priced under A5.2.2) and use their records",
-   "an amended null model that uses only the edit and predecessor columns"
-  ],
-  "status": "UNRESOLVED (blocking)",
-  "validator": "--inputs-spec reports 'blocked' while allowed_sources is empty"
+ "scenarios": {
+  "registered": "noise_scale 1, unavailable audit assumed pass",
+  "unavailable_audit_fails": "unavailable audit evidence counted as failure",
+  "variance_x2": "centred noise doubled, donor means unchanged (variance inflation)"
  },
- "rotation_source": "string naming the registered rotation_column source; must be in allowed_sources",
- "schema": "a5-nullsize-inputs-spec-v1",
- "status": "specification only; not run on real data; inputs exist only after G0/G1 closure (A5.3.2, A5.11)",
+ "schema": "a5-nullsize-inputs-spec-v2",
+ "status": "specification only; not run on real data; inputs exist only after G0/G1 closure (A5.3.2, A5.11). Registered proxy: chair ruling A5.3.2(ii) and the A5 freeze-prep amendments (7 Nov 2026)",
  "window_ids": "the list window_item_ids, in order",
  "window_ids_sha256_check": true,
  "window_ids_sorted_sha256": "a7d795f9682813bcc48a2e43d02e64713e258e0a250f34524f69067df3ae9b9a"

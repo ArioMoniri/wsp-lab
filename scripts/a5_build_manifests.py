@@ -8,16 +8,27 @@ no absolute paths in the output):
   component (docs/prereg/panel_manifest.json), alias-ledger canonical id, lineage exactness, incremental norm and
   outcome-independent eligibility. Its ``id/component_id/closure_certified/exclusion_reason/canonical_id`` fields
   are the sidecar format of :func:`wsp.eval.response_intervention.select_with_ledger`.
-* ``selection.json`` — the output of ``select_edits`` (n_lora=30, n_chain=10) on that inventory, with its ledger.
-  If the registered run is blocked or short, the block/shortage and the A5.3.1 action are recorded; a run under an
-  explicitly named conditional ruling is reported separately and never replaces the registered status.
+* ``selection.json`` — the output of ``select_edits`` (n_lora=30, n_chain=10) on that inventory, with its ledger,
+  under the registered chair ruling (positively proven lost-predecessor exclusions); the literal pre-ruling run is
+  kept as a superseded audit record. A block/shortage and the A5.3.1 action are recorded, never patched.
 * ``references.json`` — per selected edit: predecessor id (or base), TF-v1 primary records on file with the same
   scoring identity (A5.3.4), closure proofs, n_D, n_P and priced minutes at 1.04 min per entry.
 * ``text_groups.json`` — the 64 registered WikiText development windows (config + TF-v1 records) and their hash.
-* ``code_hashes.json`` — git sha of the reference branch and sha256 of the pinned code/config files at that sha.
+* ``code_hashes.json`` — sha256 of the pinned builders, validators/tests, imported selection/grouping/reference
+  modules and configs (at ``--ref`` or, with ``--pin-worktree``, the working tree committed with the package),
+  the resolved TF-v1 config hash, model/tokenizer revision and Python/dependency versions.
 * ``README.md`` — every file with its sha256 and how it was produced.
 
-    python scripts/a5_build_manifests.py [--out docs/prereg/a5_manifests] [--ref main]
+The chair ruling on A5.3.1 is registered: a missing-norm chain step whose actual predecessor has a positive
+lost proof (no stored and no aliased bytes in the artefact_status sidecar, :func:`lost_predecessor_proof`) is
+excluded and does not block. ``--procedural-freeze`` (Board A checklist items 1-2) relabels and pins the
+committed package and records the dated procedural freeze (inventory, cutpoints, forty ids, code pins); it does
+not rebuild components, references or text groups against live data. A later full build must reproduce the
+frozen ids and cutpoints (:func:`check_procedural_freeze`).
+
+    python scripts/a5_build_manifests.py [--out docs/prereg/a5_manifests] [--ref main | --pin-worktree]
+    python scripts/a5_build_manifests.py --procedural-freeze
+    python scripts/a5_build_manifests.py --verify-pins HEAD
 """
 
 from __future__ import annotations
@@ -26,6 +37,7 @@ import argparse
 import hashlib
 import json
 import math
+import platform
 import subprocess
 import sys
 from collections import Counter
@@ -41,24 +53,43 @@ from wsp.eval.batch import effective_config_hash
 N_LORA, N_CHAIN = 30, 10
 VARIANTS_PER_EDIT = 3  # rotation at s = 1 and the edit at s = 0.25, 0.5 (S31 §3 G3)
 TERTILES = ("low", "middle", "high")
-CODE_FILES = (
-    "src/wsp/features/rotation.py",
-    "src/wsp/features/response_field.py",
-    "src/wsp/features/response_chart.py",
-    "src/wsp/eval/response_intervention.py",
-    "scripts/a5_simulation.py",
-    "configs/eval_tf_v1.yaml",
+# Pinned source (A5.11; Board A A5 package review item 7): builders, validators/tests, the imported
+# selection/grouping/reference logic and the resolved configs. Role is descriptive only.
+CODE_FILES = {
+    "scripts/a5_build_manifests.py": "builder",
+    "scripts/a5_build_panels.py": "builder",
+    "scripts/a5_simulation.py": "simulation and NULL-SIZE input validator",
+    "scripts/a5_incremental_norms.py": "producer of the incremental-norm input",
+    "tests/test_a5_simulation.py": "test",
+    "tests/test_a5_build_manifests.py": "test",
+    "tests/test_a5_build_panels.py": "test",
+    "src/wsp/eval/response_intervention.py": "selection, tertiles, reference identity (imported)",
+    "src/wsp/eval/batch.py": "effective_config_hash (imported)",
+    "src/wsp/eval/tf_v1.py": "TF-v1 rankings and panels (imported by the panel builder)",
+    "src/wsp/eval/subsets.py": "dataset revisions and subset specs (imported by the panel builder)",
+    "src/wsp/eval/run.py": "WikiText window construction (perplexity)",
+    "src/wsp/features/rotation.py": "A5.3.3 rotation (imported)",
+    "src/wsp/features/response_field.py": "G2 field and registered panel-size consumer check",
+    "src/wsp/features/response_chart.py": "A5.8.2 chart",
+    "configs/eval_tf_v1.yaml": "resolved TF-v1 config",
+    "configs/editor_qwen3.5-0.8b.yaml": "model and revision",
+}
+ENV_PACKAGES = ("numpy", "torch", "transformers", "tokenizers", "datasets", "safetensors", "pyyaml")
+PROCEDURAL_FREEZE_DATE = "2026-11-07"
+RULING = (
+    "REGISTERED: chair ruling A5.3.1 (7 Nov 2026), adopted by Board A "
+    "(docs/reviews/council/board-a-a5-package-2026-11-07.md item 1) and the PREREG_H1_TF A5 freeze-prep "
+    "amendments (7 Nov 2026): an edit whose actual predecessor has no stored and no aliased bytes (positive "
+    "sidecar proof below) has no incremental feature manifest and is ineligible; it does not block selection"
 )
-EXTRA_CODE_FILES = (  # A5.11 also names the simulation test; the norms script produced an input
-    "tests/test_a5_simulation.py",
-    "scripts/a5_incremental_norms.py",
-)
-CONDITIONAL_RULING = (
-    "CONDITIONAL, NOT REGISTERED: an edit whose actual predecessor state is lost (no stored or aliased bytes) "
-    "has no predecessor-relative incremental feature manifest and is therefore ineligible under A5.3.1's "
-    "'pre-outcome feature-manifest availability', instead of blocking selection as a missing norm. "
-    "Valid only if Board A/chair adopts this reading before freeze."
-)
+# Board A's independent reconstruction (A5 package review item 1): the registered (norm, id) cutpoint keys.
+BOARD_A_CUTPOINTS = {
+    "lora_sft": [
+        [1.0580346482037204, "f4b10903b8e09e24"],
+        [2.2141261523655484, "f8c2cf0c6b9ffa8c"],
+    ],
+    "chain": [[0.7725259468377004, "7af5977862ec021f"], [1.3049782925751559, "14cdaabee246493b"]],
+}
 
 
 # ---------------------------------------------------------------------------------------------- helpers
@@ -197,10 +228,55 @@ def build_inventory(
     return rows
 
 
-def predecessor_lost(row, norm_rows_by_id) -> bool:
-    return row["eligibility"].startswith("blocked:missing_incremental_norm") and str(
-        norm_rows_by_id.get(row["id"], {}).get("error", "")
-    ).startswith("predecessor:")
+def lost_predecessor_proof(row, inventory_by_id, status_by_id):
+    """Positive proof that ``row``'s actual predecessor has no stored and no aliased bytes, else None.
+
+    Required (chair ruling A5.3.1; Board A A5 package review item 1): the row is a blocked
+    missing-norm successor; its predecessor has an inventory row and an artefact_status sidecar row;
+    no own bytes on disk; sidecar ``delta_present`` is explicitly false and ``alias_of`` is empty;
+    and no alias-ledger holder of the predecessor has bytes. Anything less is not a proof, so the
+    row keeps blocking selection. No error string is inspected.
+    """
+    parent = row.get("parent_id")
+    if parent is None or not row["eligibility"].startswith("blocked:missing_incremental_norm"):
+        return None
+    pred, side = inventory_by_id.get(parent), status_by_id.get(parent)
+    if pred is None or side is None:
+        return None
+    holder = pred["canonical_id"] if pred["canonical_id"] != parent else None
+    holder_bytes = bool(holder and inventory_by_id.get(holder, {}).get("bytes_present"))
+    if (
+        pred["bytes_present"]
+        or pred["bytes_via_alias"]
+        or side.get("alias_of")
+        or side.get("delta_present") is not False
+        or holder_bytes
+    ):
+        return None
+    return {
+        "predecessor_id": parent,
+        "predecessor_bytes_present": False,
+        "predecessor_bytes_via_alias": None,
+        "sidecar": {
+            "delta_present": side.get("delta_present"),
+            "alias_of": side.get("alias_of"),
+            "artefact_lost": side.get("artefact_lost"),
+        },
+        "alias_ledger_holder": holder,
+        "alias_holder_bytes_present": holder_bytes,
+    }
+
+
+def lost_predecessor_exclusions(inventory, status_rows):
+    """{edit id: (exclusion reason, proof)} for every positively proven lost predecessor."""
+    by_id = {r["id"]: r for r in inventory}
+    status = {r["id"]: r for r in status_rows}
+    out = {}
+    for r in inventory:
+        proof = lost_predecessor_proof(r, by_id, status)
+        if proof is not None:
+            out[r["id"]] = (f"actual_predecessor_state_lost:{r['parent_id']}", proof)
+    return out
 
 
 # -------------------------------------------------------------------------------------------- selection
@@ -513,32 +589,250 @@ def git_blob_reader(root: Path, ref: str):
     return sha, read
 
 
-def build_code_hashes(ref, git_sha, read_blob, root: Path):
-    def entry(path):
-        blob = read_blob(path)
-        work = root / path
-        return {
-            "sha256": None if blob is None else sha256_bytes(blob),
-            "working_tree_matches": None
-            if blob is None or not work.exists()
-            else sha256_file(work) == sha256_bytes(blob),
-        }
+def worktree_reader(root: Path):
+    """Pin the working-tree bytes (to be committed unchanged with the package); base = HEAD."""
+    sha = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True, check=False
+    ).stdout.strip()
 
+    def read(path):
+        p = Path(root) / path
+        return p.read_bytes() if p.is_file() else None
+
+    return sha or None, read
+
+
+def environment_identity():
+    """Interpreter and dependency versions of the build environment (package metadata, no imports)."""
+    from importlib import metadata
+
+    def version(name):
+        try:
+            return metadata.version(name)
+        except metadata.PackageNotFoundError:
+            return None
+
+    return {"python": platform.python_version()} | {p: version(p) for p in ENV_PACKAGES}
+
+
+def model_identity(root: Path):
+    """Model and tokenizer repo/revision from the pinned editor config (the tokenizer ships with it)."""
+    import yaml
+
+    p = Path(root) / "configs/editor_qwen3.5-0.8b.yaml"
+    if not p.exists():
+        return None
+    cfg = yaml.safe_load(p.read_bytes())
+    ident = {"repo": cfg.get("base_model"), "revision": cfg.get("base_revision")}
     return {
-        "schema": "a5-code-hashes-v1",
-        "ref": ref,
-        "git_sha": git_sha,
-        "files": {p: entry(p) for p in CODE_FILES},
-        "additional_files": {p: entry(p) for p in EXTRA_CODE_FILES},
-        "note": "sha256 of the file bytes at git_sha (git show); a null sha256 means the file is absent there",
+        "model": ident,
+        "tokenizer": dict(ident),
+        "source": "configs/editor_qwen3.5-0.8b.yaml base_model/base_revision",
     }
+
+
+def resolved_config(cfg, config_bytes: bytes, records_config_hash):
+    """The resolved TF-v1 config: file bytes and effective_config_hash as the TF-v1 records store it."""
+    chash = effective_config_hash(cfg)
+    return {
+        "path": "configs/eval_tf_v1.yaml",
+        "sha256": sha256_bytes(config_bytes),
+        "effective_config_hash": chash,
+        "hash_function": "wsp.eval.batch.effective_config_hash (eval.json config_hash)",
+        "records_config_hash": records_config_hash,
+        "records_match": records_config_hash == chash,
+    }
+
+
+def build_code_hashes(pinned_from, git_sha, read_blob, *, environment, model, config):
+    files = {}
+    for path, role in CODE_FILES.items():
+        blob = read_blob(path)
+        files[path] = {"role": role, "sha256": None if blob is None else sha256_bytes(blob)}
+    return {
+        "schema": "a5-code-hashes-v2",
+        "pinned_from": pinned_from,
+        "git_sha": git_sha,
+        "files": files,
+        "resolved_config": config,
+        "model": model,
+        "environment": environment,
+        "note": "sha256 of the pinned file bytes; a null sha256 means the file is absent. 'working tree' "
+        "pins are the bytes committed together with this file (git_sha is their parent): verify with "
+        "`git show <commit>:<path> | sha256sum`. No flag here describes any later tree.",
+    }
+
+
+def verify_code_hashes(code, read_blob):
+    """Paths whose bytes under ``read_blob`` differ from the pins (empty list = all match)."""
+    return sorted(
+        p
+        for p, e in code["files"].items()
+        if (None if (b := read_blob(p)) is None else sha256_bytes(b)) != e["sha256"]
+    )
+
+
+# ------------------------------------------------------------------------------------- registered selection
+
+
+def with_ruling(selection_run, exclusions):
+    """The registered A5.3.1 run with the chair ruling's positively proven exclusions recorded."""
+    return {
+        "ruling": RULING,
+        "registered_exclusions": {
+            i: {"reason": reason, "proof": proof}
+            for i, (reason, proof) in sorted(exclusions.items())
+        },
+    } | selection_run
+
+
+def assemble_selection(inputs, components_sha, literal, registered, freeze=None):
+    out = {
+        "schema": "a5-selection-v2",
+        "algorithm": "wsp.eval.response_intervention.select_with_ledger / select_edits (A5.3.1)",
+        "inputs": inputs,
+        "inputs_scope": "partial input index, not a full immutable snapshot: feature-file contents and "
+        "donor/record contents are not hashed here (Board A A5 package review item 1; checklist item 4)",
+        "components_jsonl_sha256": components_sha,
+        "registered": registered,
+        "pre_ruling_literal": None
+        if not registered["registered_exclusions"]
+        else {
+            "status_label": "SUPERSEDED: literal A5.3.1 run before the chair ruling; audit record only",
+        }
+        | literal,
+    }
+    if freeze is not None:
+        out["procedural_freeze"] = freeze
+    return out
+
+
+def reproduce_selection(inventory, quotas):
+    """Independent A5.3.1 reproduction from components.jsonl (global dedup, (norm, id) cutpoints)."""
+    reps = {}
+    for r in sorted(
+        (r for r in inventory if r["eligibility"] == "eligible"), key=lambda r: r["id"]
+    ):
+        reps.setdefault(r["component_id"], r)
+    out = {}
+    for family, quota in quotas.items():
+        ordered = sorted(
+            (r for r in reps.values() if r["family"] == family),
+            key=lambda r: (r["effective_norm"], r["id"]),
+        )
+        n = len(ordered)
+        b1, b2 = n // 3, 2 * n // 3
+        cells = [ordered[:b1], ordered[b1:b2], ordered[b2:]]
+        picks = [sorted(c, key=lambda r: r["id"])[:q] for c, q in zip(cells, quota)]
+        out[family] = {
+            "N": n,
+            "b1": b1,
+            "b2": b2,
+            "cutpoints": [
+                [ordered[b]["effective_norm"], ordered[b]["id"]] for b in (b1, b2) if b < n
+            ],
+            "selected": [[r["id"] for r in p] for p in picks],
+        }
+    return out
+
+
+def procedural_freeze_block(selection, inventory, code_bytes: bytes):
+    """Distinct, dated procedural freeze: inventory, cutpoints, the forty ids and the code pins."""
+    reg = selection["registered"]
+    if reg.get("status") != "selected":
+        raise ValueError(
+            f"no procedural freeze without a registered selection ({reg.get('status')})"
+        )
+    again = reproduce_selection(inventory, reg["quotas"])
+    ids = sorted(i for f in again.values() for cell in f["selected"] for i in cell)
+    if ids != reg["edit_ids"]:
+        raise AssertionError("independent reproduction differs from the registered selection")
+    cutpoints = {}
+    for family, f in again.items():
+        ledger = reg["ledger"]["families"][family]
+        if [list(c) for c in ledger["cutpoints"]] != f["cutpoints"]:
+            raise AssertionError(f"{family}: ledger cutpoints differ from the reproduction")
+        cutpoints[family] = {
+            "N_representatives": f["N"],
+            "b1": f["b1"],
+            "b2": f["b2"],
+            "keys": f["cutpoints"],
+            "quota": reg["quotas"][family],
+        }
+    by_id = {r["id"]: r for r in inventory}
+    return {
+        "label": "procedural freeze",
+        "date": PROCEDURAL_FREEZE_DATE,
+        "basis": "Board A A5 package review (docs/reviews/council/board-a-a5-package-2026-11-07.md) "
+        "item 8, checklist items 1-2; PREREG_H1_TF A5 freeze-prep amendments (7 Nov 2026)",
+        "separate_from": "the later pre-G2 evidence freeze (checklist items 3-7: closed G0/G1/G6 snapshot, "
+        "regenerated references/text groups/panels, NULL-SIZE payload and report). No evidence hash "
+        "exists at this date and none is claimed",
+        "inventory": {
+            "components_jsonl_sha256": selection["components_jsonl_sha256"],
+            "rows": len(inventory),
+            "eligible": sum(r["eligibility"] == "eligible" for r in inventory),
+            "registered_exclusions": sorted(reg["registered_exclusions"]),
+            "inputs": "selection.json:inputs (partial index; see inputs_scope)",
+        },
+        "cutpoints": cutpoints,
+        "cutpoint_rule": "(effective_norm, canonical_edit_id) keys at ranks floor(N/3) and floor(2N/3) of "
+        "each family's globally deduplicated representatives; a key equal to a cutpoint belongs to the "
+        "higher half-open cell",
+        "board_a_cutpoints_match": cutpoints
+        and {f: c["keys"] for f, c in cutpoints.items()} == BOARD_A_CUTPOINTS,
+        "registered_edit_ids": reg["edit_ids"],
+        "registered_edit_ids_sorted_sha256": sha256_bytes(json.dumps(reg["edit_ids"]).encode()),
+        "registered_component_ids_sorted_sha256": sha256_bytes(
+            json.dumps(reg["component_ids"]).encode()
+        ),
+        "counts": reg["counts"],
+        "retrained_lineage_picks": sorted(
+            i for i in reg["edit_ids"] if by_id[i]["exactness"] == "re-trained"
+        ),
+        "code_hashes_json_sha256": sha256_bytes(code_bytes),
+        "not_pinned_at_this_freeze": [
+            "feature-file contents and donor/record content hashes (checklist item 4)",
+            "closed G0/G1/G6 census, reference and exposure/cost ledger snapshot (checklist item 3)",
+            "regenerated references/text_groups/panels against that snapshot (checklist items 4-5)",
+            "NULL-SIZE payload, its validation and report (checklist item 6)",
+        ],
+    }
+
+
+def check_procedural_freeze(selection, freeze):
+    """A later full build must reproduce the frozen forty ids and cutpoints exactly (checklist item 4)."""
+    reg = selection["registered"]
+    if reg.get("status") != "selected" or reg["edit_ids"] != freeze["registered_edit_ids"]:
+        raise AssertionError("registered selection differs from the procedural freeze")
+    for family, c in freeze["cutpoints"].items():
+        if [list(k) for k in reg["ledger"]["families"][family]["cutpoints"]] != c["keys"]:
+            raise AssertionError(f"{family}: cutpoints differ from the procedural freeze")
+    if len(set(reg["component_ids"])) != len(reg["edit_ids"]):
+        raise AssertionError("selected components are not distinct")
 
 
 # -------------------------------------------------------------------------------------------------- build
 
+REFERENCES_BASIS = "registered (A5.3.1 with the registered chair ruling; see selection.json)"
 
-def build(paths: dict, n_lora=N_LORA, n_chain=N_CHAIN, ref="main", git_sha=None, read_blob=None):
-    """Return {filename: bytes} for the package. ``paths``: zoo, norms, features, evals, panel, config, root."""
+
+def build(
+    paths: dict,
+    n_lora=N_LORA,
+    n_chain=N_CHAIN,
+    ref="main",
+    git_sha=None,
+    read_blob=None,
+    *,
+    pin_worktree=False,
+    environment=None,
+    procedural_freeze=None,
+):
+    """Return {filename: bytes} for the package. ``paths``: zoo, norms, features, evals, panel, config, root.
+
+    ``procedural_freeze``: the committed freeze block; the build must reproduce its ids and cutpoints.
+    """
     import yaml
 
     root, zoo = Path(paths["root"]), Path(paths["zoo"])
@@ -546,7 +840,8 @@ def build(paths: dict, n_lora=N_LORA, n_chain=N_CHAIN, ref="main", git_sha=None,
     status_rows = read_jsonl(zoo / "artefact_status.jsonl")
     norm_rows = read_jsonl(paths["norms"])
     panel = json.loads(Path(paths["panel"]).read_text())
-    cfg = yaml.safe_load(Path(paths["config"]).read_bytes())
+    config_bytes = Path(paths["config"]).read_bytes()
+    cfg = yaml.safe_load(config_bytes)
     features = Path(paths["features"])
     ids = [r["id"] for r in manifest_rows if "id" in r]
     feature_ids = {i for i in ids if (features / i / "features.json").exists()}
@@ -562,34 +857,26 @@ def build(paths: dict, n_lora=N_LORA, n_chain=N_CHAIN, ref="main", git_sha=None,
     inventory = build_inventory(
         manifest_rows, status_rows, norm_rows, panel, feature_ids, bytes_present, root_norms
     )
-    norms_by_id = {r["id"]: r for r in norm_rows}
-    registered = run_selection(manifest_rows, inventory, n_lora, n_chain)
-    conditional = None
-    if registered["status"] == "blocked":
-        lost_pred = {
-            r["id"]: f"actual_predecessor_state_lost:{r['parent_id']}"
-            for r in inventory
-            if predecessor_lost(r, norms_by_id)
-        }
-        if set(lost_pred) == set(registered["blocking_ids"]):
-            conditional = run_selection(manifest_rows, inventory, n_lora, n_chain, lost_pred)
-            conditional = {
-                "ruling": CONDITIONAL_RULING,
-                "extra_exclusions": lost_pred,
-            } | conditional
+    literal = run_selection(manifest_rows, inventory, n_lora, n_chain)
+    exclusions = lost_predecessor_exclusions(inventory, status_rows)
+    run = (
+        run_selection(
+            manifest_rows, inventory, n_lora, n_chain, {i: e[0] for i, e in exclusions.items()}
+        )
+        if exclusions
+        else literal
+    )
+    registered = with_ruling(run, exclusions)
     evals = Path(paths["evals"])
     dirs = record_dirs(evals)
     record_index = [[d.name, sha256_file(d / "eval.json")] for d in dirs]
     text_groups = build_text_groups(evals, cfg, dirs)
     windows = [(w["item_id"], w["token_ids_hash"]) for w in text_groups["windows"]]
-    effective = registered if registered["status"] == "selected" else (conditional or {})
     references = build_references(
-        effective, manifest_rows, inventory, zoo, evals, cfg, panel, windows
+        registered, manifest_rows, inventory, zoo, evals, cfg, panel, windows
     )
     if references is not None:
-        references["selection_basis"] = (
-            "registered" if effective is registered else "conditional (see selection.json)"
-        )
+        references["selection_basis"] = REFERENCES_BASIS
     else:
         references = {
             "schema": "a5-references-v1",
@@ -629,28 +916,106 @@ def build(paths: dict, n_lora=N_LORA, n_chain=N_CHAIN, ref="main", git_sha=None,
             "with eval.json and records.jsonl, listed once per build",
         },
     }
-    selection = {
-        "schema": "a5-selection-v1",
-        "algorithm": "wsp.eval.response_intervention.select_with_ledger / select_edits (A5.3.1)",
-        "inputs": inputs,
-        "components_jsonl_sha256": None,  # filled below
-        "registered": registered,
-        "conditional": conditional,
-    }
     if git_sha is None or read_blob is None:
-        git_sha, read_blob = git_blob_reader(root, ref)
-    code = build_code_hashes(ref, git_sha, read_blob, root)
+        git_sha, read_blob = worktree_reader(root) if pin_worktree else git_blob_reader(root, ref)
+    code = build_code_hashes(
+        "working tree" if pin_worktree else f"git:{ref}",
+        git_sha,
+        read_blob,
+        environment=environment_identity() if environment is None else environment,
+        model=model_identity(root),
+        config=resolved_config(cfg, config_bytes, effective_config_hash(cfg)),
+    )
     files = {
         "components.jsonl": b"".join(
             (json.dumps(r, sort_keys=True) + "\n").encode() for r in inventory
         ),
     }
-    selection["components_jsonl_sha256"] = sha256_bytes(files["components.jsonl"])
+    selection = assemble_selection(
+        inputs, sha256_bytes(files["components.jsonl"]), literal, registered, procedural_freeze
+    )
+    if procedural_freeze is not None:
+        check_procedural_freeze(selection, procedural_freeze)
     files["selection.json"] = dumps(selection)
     files["references.json"] = dumps(references)
     files["text_groups.json"] = dumps(text_groups)
     files["code_hashes.json"] = dumps(code)
-    files["README.md"] = readme(files, inventory, registered, conditional, references, text_groups)
+    files["README.md"] = readme(files, inventory, selection, references, text_groups)
+    return files
+
+
+def build_procedural_freeze(out: Path, root: Path, status_path: Path, *, environment=None):
+    """Checklist items 1-2: registered labels, code/config/model/environment pins and the dated procedural
+    freeze, from the COMMITTED package. References, text groups, panels and components are not rebuilt
+    against live data; the only data read is the artefact_status sidecar (read-only), whose sha256 must
+    equal ``selection.json:inputs.artefact_status``, for the positive lost-predecessor proof.
+    Returns {filename: bytes} for selection.json, references.json, code_hashes.json and README.md.
+    """
+    import yaml
+
+    out, root = Path(out), Path(root)
+    comp_bytes = (out / "components.jsonl").read_bytes()
+    inventory = [json.loads(x) for x in comp_bytes.decode().splitlines() if x.strip()]
+    committed = json.loads((out / "selection.json").read_text())
+    references = json.loads((out / "references.json").read_text())
+    text_groups = json.loads((out / "text_groups.json").read_text())
+    if sha256_bytes(comp_bytes) != committed["components_jsonl_sha256"]:
+        raise ValueError("components.jsonl differs from selection.json:components_jsonl_sha256")
+    if sha256_file(status_path) != committed["inputs"]["artefact_status"]["sha256"]:
+        raise ValueError("artefact_status sidecar differs from the committed input hash; stop")
+    if "conditional" in committed:  # a5-selection-v1: the ruling's run was labelled conditional
+        literal = committed["registered"]
+        cond = committed["conditional"] or {}
+        prior = cond.get("extra_exclusions", {})
+        body = {k: v for k, v in cond.items() if k not in ("ruling", "extra_exclusions")}
+    else:
+        literal = {
+            k: v for k, v in (committed["pre_ruling_literal"] or {}).items() if k != "status_label"
+        } or None
+        prior = {
+            i: e["reason"] for i, e in committed["registered"]["registered_exclusions"].items()
+        }
+        body = {
+            k: v
+            for k, v in committed["registered"].items()
+            if k not in ("ruling", "registered_exclusions")
+        }
+    exclusions = lost_predecessor_exclusions(inventory, read_jsonl(status_path))
+    if {i: e[0] for i, e in exclusions.items()} != prior:
+        raise AssertionError(f"positive lost-predecessor proof {sorted(exclusions)} != {prior}")
+    if literal and set(literal.get("blocking_ids", [])) != set(exclusions):
+        raise AssertionError("the registered exclusions do not account for every literal block")
+    registered = with_ruling(body, exclusions)
+    if references.get("selection_status") == "selected":
+        references["selection_basis"] = REFERENCES_BASIS
+    cfg = yaml.safe_load((root / "configs/eval_tf_v1.yaml").read_bytes())
+    git_sha, read_blob = worktree_reader(root)
+    code = build_code_hashes(
+        "working tree",
+        git_sha,
+        read_blob,
+        environment=environment_identity() if environment is None else environment,
+        model=model_identity(root),
+        config=resolved_config(
+            cfg,
+            (root / "configs/eval_tf_v1.yaml").read_bytes(),
+            references.get("identity", {}).get("config_hash"),
+        ),
+    )
+    code_bytes = dumps(code)
+    selection = assemble_selection(
+        committed["inputs"], committed["components_jsonl_sha256"], literal, registered
+    )
+    selection["procedural_freeze"] = procedural_freeze_block(selection, inventory, code_bytes)
+    files = {
+        "components.jsonl": comp_bytes,
+        "selection.json": dumps(selection),
+        "references.json": dumps(references),
+        "text_groups.json": (out / "text_groups.json").read_bytes(),
+        "code_hashes.json": code_bytes,
+    }
+    files["README.md"] = readme(files, inventory, selection, references, text_groups)
+    del files["components.jsonl"], files["text_groups.json"]
     return files
 
 
@@ -662,15 +1027,21 @@ def _counts_table(sel):
     return lines
 
 
-def readme(files, inventory, registered, conditional, references, text_groups):
+def readme(files, inventory, selection, references, text_groups):
     shas = {k: sha256_bytes(v) for k, v in sorted(files.items())}
+    registered, literal = selection["registered"], selection.get("pre_ruling_literal")
+    freeze = selection.get("procedural_freeze")
+    excluded = registered.get("registered_exclusions", {})
     supported = [r for r in inventory if r["family"] in ri.FAMILIES]
-    by_reason = Counter(
-        ":".join(
+
+    def reason(r):
+        if r["id"] in excluded:
+            return "excluded:actual_predecessor_state_lost"
+        return ":".join(
             r["eligibility"].split(" (")[0].split(":")[: 2 if "alias_of" in r["eligibility"] else 3]
         )
-        for r in supported
-    )
+
+    by_reason = Counter(reason(r) for r in supported)
     reason_rows = []
     for k, v in sorted(by_reason.items()):
         rule = k.split(":")[1] if ":" in k else k
@@ -696,7 +1067,9 @@ def readme(files, inventory, registered, conditional, references, text_groups):
         "",
         "Generated by `python scripts/a5_build_manifests.py` (CPU, read-only on `data/`); rerunning it on the same",
         "inputs and git ref reproduces every byte. Do not edit by hand. Inputs and their sha256 are in",
-        "`selection.json:inputs`; code identities in `code_hashes.json`.",
+        "`selection.json:inputs` (a partial input index, not a full immutable snapshot); code, config, model and",
+        "environment identities are in `code_hashes.json`. `--procedural-freeze` regenerates only the labels,",
+        "pins and the dated procedural freeze from the committed files (no rebuild against live data).",
         "",
         "| file | sha256 | produced from |",
         "|---|---|---|",
@@ -704,11 +1077,13 @@ def readme(files, inventory, registered, conditional, references, text_groups):
     produced = {
         "components.jsonl": "zoo manifest + artefact_status sidecar + panel_manifest components/alias ledger "
         "+ a5_incremental_norms + feature-manifest availability",
-        "selection.json": "`select_with_ledger`/`select_edits` on components.jsonl (n_lora=30, n_chain=10)",
+        "selection.json": "`select_with_ledger`/`select_edits` on components.jsonl (n_lora=30, n_chain=10) "
+        "with the registered lost-predecessor exclusion; procedural freeze",
         "references.json": "TF-v1 records (`data/evals/qwen3.5-0.8b/tf_v1`) checked with "
         "`response_intervention._reference_on_file` + primary/window checks; current zoo bytes",
         "text_groups.json": "`configs/eval_tf_v1.yaml` wikitext_ppl spec + every TF-v1 records.jsonl",
-        "code_hashes.json": "`git show <sha>:<path>` for the pinned files",
+        "code_hashes.json": "pinned file bytes (`pinned_from`), resolved config, model/tokenizer revision, "
+        "Python and dependency versions",
     }
     for k in (
         "components.jsonl",
@@ -738,8 +1113,16 @@ def readme(files, inventory, registered, conditional, references, text_groups):
         "",
         "## Registered selection",
         "",
-        f"Status: **{registered['status']}**.",
+        f"Status: **{registered['status']}** (A5.3.1 with the registered chair ruling, 7 Nov 2026).",
     ]
+    if excluded:
+        out += [
+            "",
+            "Registered exclusions (positive proof: the actual predecessor has no stored and no aliased bytes "
+            "in the artefact_status sidecar and no alias-ledger holder with bytes): "
+            + ", ".join(f"`{i}` ({e['reason']})" for i, e in sorted(excluded.items()))
+            + ".",
+        ]
     if registered["status"] == "selected":
         out += ["", *_counts_table(registered)]
     else:
@@ -749,25 +1132,51 @@ def readme(files, inventory, registered, conditional, references, text_groups):
             "",
             f"Action: {registered.get('action')}.",
         ]
-    if conditional:
-        out += ["", "## Conditional selection (not registered)", "", conditional["ruling"], ""]
-        out.append(
-            f"Extra exclusions: {json.dumps(conditional['extra_exclusions'], sort_keys=True)}."
-        )
-        out.append(f"Status under the ruling: **{conditional['status']}**.")
-        if conditional["status"] == "selected":
-            out += ["", *_counts_table(conditional)]
+    if freeze:
+        out += [
+            "",
+            f"## Procedural freeze ({freeze['date']})",
+            "",
+            (
+                "Distinct from, and earlier than, the pre-G2 evidence freeze; no evidence hash is "
+                f"claimed. Forty ids sha256 `{freeze['registered_edit_ids_sorted_sha256']}`; "
+                f"`code_hashes.json` sha256 `{freeze['code_hashes_json_sha256']}`."
+            ),
+            "",
+            "| family | N representatives | cutpoint keys (effective_norm, id) | quota |",
+            "|---|---|---|---|",
+            *(
+                f"| {f} | {c['N_representatives']} | "
+                + "; ".join(f"({k[0]!r}, `{k[1]}`)" for k in c["keys"])
+                + f" | {'/'.join(map(str, c['quota']))} |"
+                for f, c in freeze["cutpoints"].items()
+            ),
+            "",
+            f"Board A's reconstructed cutpoints match: {freeze['board_a_cutpoints_match']}. Re-trained lineage "
+            "picks (retained, development-exposed): "
+            + (", ".join(f"`{i}`" for i in freeze["retrained_lineage_picks"]) or "none")
+            + ".",
+        ]
+    if literal:
+        out += [
+            "",
+            "## Pre-ruling literal run (superseded; audit record only)",
+            "",
+            f"Status: {literal['status']}. Reason: {literal.get('error')}",
+        ]
     if "n_D" in references:
         out += [
             "",
-            f"## References ({references['selection_basis']})",
+            "## References",
+            "",
+            f"Selection basis: {references['selection_basis']}.",
             "",
             (
                 f"n_D = {references['n_D']} missing original records, n_P = {references['n_P']} missing "
                 f"unique predecessors: {references['references_to_score']} references to score, "
                 f"{references['additional_minutes']} min at {references['minutes_per_entry']} min/entry; "
                 f"total with the {references['n_variants']} variants {references['total_minutes']} min. "
-                "Preprocessing and retries are not included."
+                "Preprocessing and retries are not included. Stale-build estimate, not a final cost."
             ),
             "",
             "Predecessors without their own bytes in the zoo (G3 staging must load the alias holder): "
@@ -803,25 +1212,31 @@ RULES = {
     "artefact_lost": "no stored bytes and no alias holder (D8 artefact_status)",
     "alias_of": "alias-ledger alias: the component is represented through its canonical id",
     "no_feature_manifest": "A5.3.1 pre-outcome feature-manifest availability (`features/<id>/features.json`)",
-    "missing_incremental_norm": "A5.3.1: a missing/nonfinite norm BLOCKS selection (not dropped)",
+    "missing_incremental_norm": "A5.3.1: a missing/nonfinite norm of an otherwise eligible, reconstructible "
+    "edit BLOCKS selection (not dropped)",
+    "actual_predecessor_state_lost": "REGISTERED chair ruling A5.3.1: actual predecessor has no stored and no "
+    "aliased bytes (positive sidecar proof); ineligible, does not block",
     "closure_not_certified": "A5.3.1: uncertified source closure BLOCKS selection",
 }
 
 BLOCKED_NOTE = [
-    "- The registered A5.3.1 run did not select (see above); any conditional selection is offered for a",
-    "  Board A/chair ruling only and is not a registered selection. No G3 launch may use it before that ruling.",
+    "- The registered A5.3.1 run did not select (see above); no G3 launch may proceed until it does.",
 ]
 NOT_CERTIFIED = [
     "- Closure is component membership in `docs/prereg/panel_manifest.json` (its manifest snapshot predates the",
     "  12 heretic_ara entries added since); `hash_in_source_identities` in references.json shows whether current",
     "  bytes match a registered source identity. Re-trained chain bytes cannot match the original identity.",
+    "  The G6 closure must be reconciled before the evidence freeze (checklist item 3).",
     "- references.json and text_groups.json reflect the TF-v1 records on file at build time",
-    "  (`selection.json:inputs.tf_v1_records`); n_D/n_P must be regenerated with this script before G3 launch.",
-    "- The eight alias reuse proofs, G0/G1 overlap, retries and preprocessing costs (A5.2.2) are not included.",
-    "- Tensor coverage / single-matrix chain eligibility and rotation audits (A5.3.3) are G3 staging outputs.",
+    "  (`selection.json:inputs.tf_v1_records`); they are regenerated with this script against the closed",
+    "  snapshot after the G6 census and before G3 (checklist items 3-4).",
+    "- The eight alias reuse proofs and the tensor-coverage / single-matrix chain eligibility / rotation audits",
+    "  (A5.3.3) are G3 staging outputs. Their algorithms, inputs, output schemas, responsible gate and",
+    "  fail-closed policy are frozen in A5 (freeze-prep amendments, 7 Nov 2026); the outputs are not here.",
+    "- G0/G1 overlap, retries and preprocessing costs (A5.2.2) are not included.",
     "- Gradient/factor/probe panels, disjointness certificates, control seeds and the NULL-SIZE input",
-    "  specification are in the companion section below (scripts/a5_build_panels.py); NULL-SIZE inputs,",
-    "  its report and Board A acceptance are outstanding.",
+    "  specification are in the companion section below (scripts/a5_build_panels.py); the NULL-SIZE payload,",
+    "  its report and Board A acceptance of the pre-G2 evidence are outstanding.",
 ]
 
 
@@ -852,6 +1267,22 @@ def main(argv=None):
     p.add_argument("--ref", default="main", help="git ref whose sha and file bytes are pinned")
     p.add_argument("--n-lora", type=int, default=N_LORA)
     p.add_argument("--n-chain", type=int, default=N_CHAIN)
+    p.add_argument(
+        "--pin-worktree",
+        action="store_true",
+        help="pin working-tree bytes (committed with the package) instead of --ref blobs",
+    )
+    p.add_argument(
+        "--procedural-freeze",
+        action="store_true",
+        help="checklist items 1-2: registered labels, pins and the dated procedural freeze from the "
+        "committed package; reads only the artefact_status sidecar; no live rebuild",
+    )
+    p.add_argument(
+        "--verify-pins",
+        metavar="REF",
+        help="compare code_hashes.json in --out with the file bytes at REF and exit",
+    )
     a = p.parse_args(argv)
     out = a.out.resolve()
     if out.is_relative_to(data.resolve()) or out.is_relative_to(Path("/home/ubuntu/wsp-data")):
@@ -865,7 +1296,25 @@ def main(argv=None):
         "panel": a.panel,
         "config": a.config,
     }
-    files = build(paths, a.n_lora, a.n_chain, a.ref)
+    if a.verify_pins:
+        _, read = git_blob_reader(ROOT, a.verify_pins)
+        bad = verify_code_hashes(json.loads((out / "code_hashes.json").read_text()), read)
+        print("differs: " + ", ".join(bad) if bad else "all pins match")
+        return 1 if bad else 0
+    if a.procedural_freeze:
+        files = build_procedural_freeze(out, ROOT, a.zoo / "artefact_status.jsonl")
+        freeze = json.loads(files["selection.json"])["procedural_freeze"]
+        code = json.loads(files["code_hashes.json"])
+        if not freeze["board_a_cutpoints_match"] or not code["resolved_config"]["records_match"]:
+            p.error("cutpoints or resolved config hash do not match the registered values; stop")
+    else:
+        sel_path = out / "selection.json"
+        frozen = (
+            json.loads(sel_path.read_text()).get("procedural_freeze") if sel_path.exists() else None
+        )
+        files = build(
+            paths, a.n_lora, a.n_chain, a.ref, pin_worktree=a.pin_worktree, procedural_freeze=frozen
+        )
     out.mkdir(parents=True, exist_ok=True)
     old_readme = out / "README.md"
     if old_readme.exists():

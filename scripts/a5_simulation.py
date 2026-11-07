@@ -1,11 +1,27 @@
 #!/usr/bin/env python3
 """CPU/numpy-only A5 calibration; reads only explicitly supplied JSON/NPZ files.
 
-JSON schema: inventory and donors are lists of {id, component, family, norm,
-eligible (default true)}; donor rows additionally have residuals [64,3]
-(edit, rotation, predecessor) and audit [3] (default true). NPZ stores this
-same JSON object as a scalar Unicode `payload`. Fields JSON maps donor row IDs
-to three finite predictions in [rotation, ladder .25, ladder .5] order.
+Registered NULL-SIZE proxy (PREREG_H1_TF A5 freeze-prep amendments, 7 Nov 2026; chair ruling
+A5.3.2(ii)): no rotation is scored before G3, so the donor for each development pair is the
+edit-minus-predecessor TF-v1 response U_i[w] = y(W_i + D_i)[w] - y(W_i)[w] on the 64 registered
+windows (same actual predecessor, scoring identity and windows). The payload carries, per donor
+pair and aligned with ``donors``:
+
+* ``centred_noise`` [n_pairs, 64]: U_i centred within the pair over its valid windows
+  (U_i[w] - mean_w U_i), NaN (or null) where the window is missing;
+* ``window_mask`` [n_pairs, 64]: True where U_i[w] is on file and finite;
+* ``donor_mean`` [n_pairs]: the separately pinned mean_w U_i before centring (the donor effect);
+* donor rows {id, component, family, norm, eligible, audit[3], audit_evidence[3]} with audit in
+  [rotation, ladder .25, ladder .5] order and evidence 'computed' or 'unavailable'.
+
+The three simulated contrasts of a slot are built from that one donor block (``contrasts``):
+contrast c has scale a_c in (1, .25, .5); under the null it is a_c * sigma * (mean + noise) with
+one fair-coin sigma per simulated component per replicate shared by all three contrasts; under the
+registered alternative it is a_c * (|mean| * sign(prediction_c) * B + noise) with one B per
+component (P(B=+1) = .75). No observed rotation column exists or is used. Inventory rows keep the
+A5.3.1 selection schema {id, component, family, norm, eligible (default true)}. NPZ stores the same
+JSON object as a scalar Unicode ``payload``. Fields JSON maps donor row IDs to three finite
+predictions in [rotation, ladder .25, ladder .5] order.
 `--inputs-spec SPEC` only validates INPUT against the registered NULL-SIZE input
 specification (docs/prereg/a5_manifests/nullsize_inputs.json) and writes the
 report to --output; it exits non-zero unless the status is "valid".
@@ -21,6 +37,17 @@ from pathlib import Path
 import numpy as np
 
 QUOTAS = {"LoRA": (10, 10, 10), "chain": (4, 3, 3)}
+WINDOWS, BLOCKS = 64, 32
+SCALES = (1.0, 0.25, 0.5)  # rotation contrast, ladder s = .25, ladder s = .5 (proxy mapping)
+PROXY_SOURCE = "tf_v1_edit_minus_actual_predecessor"
+AUDIT_EVIDENCE = ("computed", "unavailable")
+AUDIT_POLICIES = ("assume_pass", "assume_fail")  # for 'unavailable' audit evidence
+CENTRING_TOLERANCE = 1e-9
+SCENARIOS = {  # registered run and its frozen sensitivity scenarios (A5 freeze-prep amendments)
+    "registered": {"noise_scale": 1.0, "unavailable_audit": "assume_pass"},
+    "variance_x2": {"noise_scale": 2.0, "unavailable_audit": "assume_pass"},
+    "unavailable_audit_fails": {"noise_scale": 1.0, "unavailable_audit": "assume_fail"},
+}
 
 
 def cp_interval(k, n, alpha=0.05):
@@ -97,19 +124,71 @@ def donor_cells(donors, boundaries):
     return result
 
 
-def contrasts(row):
-    residuals = np.asarray(row["residuals"], dtype=float)
-    if residuals.shape != (64, 3):
-        raise ValueError("residuals must have shape [64,3]")
-    centred = residuals[:, :2] - residuals[:, 2, None]
-    return (
-        np.stack(
-            (centred[:, 0] - centred[:, 1], 0.25 * centred[:, 0], 0.5 * centred[:, 0]),
-            axis=-1,
+def as_float(values):
+    """JSON arrays with null for missing values -> float array with NaN."""
+    if isinstance(values, np.ndarray):
+        return values.astype(float)
+
+    def convert(v):
+        return (
+            [convert(x) for x in v] if isinstance(v, list | tuple) else np.nan if v is None else v
         )
-        .reshape(32, 2, 3)
-        .mean(axis=1)
-    )
+
+    try:
+        return np.asarray(convert(values), dtype=float)
+    except (TypeError, ValueError):
+        return np.zeros(0)
+
+
+def donor_block(noise, mask, scale=1.0):
+    """Two-window block means [32] of one donor's centred noise; a missing window makes its block NaN."""
+    noise = np.asarray(noise, dtype=float)
+    mask = np.asarray(mask, dtype=bool)
+    if noise.shape != (WINDOWS,) or mask.shape != (WINDOWS,):
+        raise ValueError("centred noise and window mask must have shape [64]")
+    values = np.where(mask & np.isfinite(noise), noise, np.nan) * scale
+    return values.reshape(BLOCKS, 2).mean(axis=1)
+
+
+def contrasts(noise_block, means, noise_sign=1):
+    """Proxy-to-three-contrast mapping: [32, 3] = SCALES * (means + noise_sign * noise_block).
+
+    ``means`` holds the three signed contrast centres before scaling: sigma * donor mean under the
+    null (with noise_sign = sigma), |donor mean| * sign(prediction_c) * B under the alternative
+    (noise_sign = 1). One donor noise block is shared by all three contrasts; it is never an
+    observed rotation column.
+    """
+    noise_block = np.asarray(noise_block, dtype=float)
+    means = np.broadcast_to(np.asarray(means, dtype=float), (3,))
+    if noise_block.shape != (BLOCKS,):
+        raise ValueError("noise block must have shape [32]")
+    return np.asarray(SCALES)[None, :] * (means[None, :] + noise_sign * noise_block[:, None])
+
+
+def donor_inputs(payload, noise_scale=1.0, unavailable_audit="assume_pass"):
+    """Per eligible donor id: (noise block [32], donor mean, effective audit [3])."""
+    if unavailable_audit not in AUDIT_POLICIES:
+        raise ValueError(f"unavailable_audit must be one of {AUDIT_POLICIES}")
+    donors = payload["donors"]
+    noise = as_float(payload["centred_noise"])
+    mask = np.asarray(payload["window_mask"], dtype=bool)
+    means = as_float(payload["donor_mean"])
+    if noise.shape != (len(donors), WINDOWS) or mask.shape != noise.shape:
+        raise ValueError("centred_noise and window_mask must have shape [n_pairs, 64]")
+    if means.shape != (len(donors),):
+        raise ValueError("donor_mean must have shape [n_pairs]")
+    out = {}
+    for j, row in enumerate(donors):
+        if not row.get("eligible", True):
+            continue
+        audit = np.asarray(row.get("audit", [True] * 3), dtype=bool)
+        evidence = row.get("audit_evidence", ["computed"] * 3)
+        if audit.shape != (3,) or len(evidence) != 3:
+            raise ValueError("audit and audit_evidence must have three contrast entries")
+        unavailable = np.asarray([e == "unavailable" for e in evidence])
+        audit = np.where(unavailable, unavailable_audit == "assume_pass", audit)
+        out[row["id"]] = (donor_block(noise[j], mask[j], noise_scale), float(means[j]), audit)
+    return out
 
 
 def resolution(blocks, rng, draws=4000):
@@ -137,9 +216,22 @@ def ordered_decision(agreements, resolved, minimum=15, *, intervals=None):
     return "unresolved"
 
 
-def simulate(payload, fields=None, *, replicates=10000, draws=4000, quotas=None, minimum=15):
+def simulate(
+    payload,
+    fields=None,
+    *,
+    replicates=10000,
+    draws=4000,
+    quotas=None,
+    minimum=15,
+    noise_scale=1.0,
+    unavailable_audit="assume_pass",
+):
     """Null without fields; optional power at the registered .75 sign alternative.
 
+    Registered run: noise_scale 1 and unavailable_audit 'assume_pass' (unavailable audit evidence
+    counts as a pass, which keeps more pairs and is conservative for size). Registered sensitivity
+    scenarios: noise_scale 2 (variance inflation, means unchanged) and 'assume_fail'.
     Controls/Part B are outside this Part A calibration and cannot be inferred here.
     Replicate/draw/quota overrides are for synthetic tests, never registered runs.
     """
@@ -149,7 +241,8 @@ def simulate(payload, fields=None, *, replicates=10000, draws=4000, quotas=None,
     panels, signs, res_rng = [np.random.Generator(np.random.PCG64(s)) for s in streams]
     slots = [key for key, rows in selected.items() for _ in rows]
     donors = payload["donors"]
-    blocks = {r["id"]: contrasts(r) for r in donors if r.get("eligible", True)}
+    inputs = donor_inputs(payload, noise_scale, unavailable_audit)
+    scales = np.asarray(SCALES)
     cp = {(k, n): cp_interval(k, n) for n in range(len(slots) + 1) for k in range(n + 1)}
     reports = {}
     for mode in ["null_size", "power_yield"] if fields is not None else ["null_size"]:
@@ -168,17 +261,19 @@ def simulate(payload, fields=None, *, replicates=10000, draws=4000, quotas=None,
             # Re-run the frozen metadata selection; no outcome replacement.
             selection_cells(payload["inventory"], quotas)
             chosen = [cells[key][panels.integers(len(cells[key]))] for key in slots]
-            x = np.stack([blocks[r["id"]] for r in chosen], axis=1)
-            truth = x.mean(axis=0)
-            x = x[panels.integers(0, 32, 32)]  # common outer window-block panel
-            audit = np.asarray([r.get("audit", [True] * 3) for r in chosen], dtype=bool)
-            if audit.shape != (len(slots), 3):
-                raise ValueError("audit must have three contrast flags")
+            noise = np.stack([inputs[r["id"]][0] for r in chosen], axis=1)  # [32, slots]
+            mean = np.asarray([inputs[r["id"]][1] for r in chosen])
+            audit = np.stack([inputs[r["id"]][2] for r in chosen])  # [slots, 3]
+            # A pair with any missing window or nonfinite donor mean is missing in all three
+            # contrasts, whether or not the outer panel redraws that block.
+            complete = np.isfinite(noise).all(axis=0) & np.isfinite(mean)
+            noise = noise[panels.integers(0, BLOCKS, BLOCKS)]  # common outer window-block panel
             if mode == "null_size":
                 prediction = np.ones((len(slots), 3))
+                # One fair sign per simulated component, shared by mean and noise of all 3 contrasts.
                 flip = signs.choice([-1, 1], size=(len(slots), 1))
-                x = x * flip[None, :, :]
-                truth = truth * flip
+                centre = flip * mean[:, None] * np.ones(3)
+                noise_sign = flip[:, 0]
             else:
                 prediction = np.asarray([fields[r["id"]] for r in chosen], float)
                 if prediction.shape != (len(slots), 3) or not np.isfinite(prediction).all():
@@ -186,10 +281,13 @@ def simulate(payload, fields=None, *, replicates=10000, draws=4000, quotas=None,
                 prediction = np.sign(prediction)
                 # One Bernoulli per slot, shared across all three prediction signs.
                 flip = np.where(signs.random((len(slots), 1)) < 0.75, 1, -1)
-                mean = truth.copy()
-                truth = np.abs(mean) * prediction * flip
-                x = x - mean + truth
-            finite = np.isfinite(x).all(axis=0)
+                centre = np.abs(mean)[:, None] * prediction * flip
+                noise_sign = np.ones(len(slots))
+            truth = scales[None, :] * centre  # generating means [slots, 3]
+            x = scales[None, None, :] * (
+                centre[None, :, :] + (noise_sign[None, :] * noise)[:, :, None]
+            )  # [32, slots, 3]; per slot equal to contrasts(noise[:, s], centre[s], noise_sign[s])
+            finite = np.isfinite(x).all(axis=0) & complete[:, None]
             ci = resolution(np.where(np.isfinite(x), x, 0), res_rng, draws)
             resolved = audit & finite & ((ci[0] > 0) | (ci[1] < 0))
             n = resolved.sum(axis=0)
@@ -252,6 +350,15 @@ def simulate(payload, fields=None, *, replicates=10000, draws=4000, quotas=None,
         "seed": 20261107,
         "stream_order": ["panels", "signs", "resolution"],
         "registered_alternative": 0.75,
+        "proxy": {
+            "source": PROXY_SOURCE,
+            "donor": "U_i[w] = y(W_i + D_i)[w] - y(W_i)[w], centred within pair over windows",
+            "contrast_scales": list(SCALES),
+            "null": "a_c * sigma * (donor_mean + centred noise); one sigma per component, all contrasts",
+            "alternative": "a_c * (|donor_mean| * sign(prediction_c) * B + centred noise); one B per component",
+        },
+        "noise_scale": noise_scale,
+        "unavailable_audit": unavailable_audit,
         "reports": reports,
     }
 
@@ -284,8 +391,46 @@ def validate_inputs(payload, spec):
             errors.append(f"inventory row {r.get('id')!r}: eligible must be boolean")
         if eligible and not (isinstance(r.get("norm"), int | float) and math.isfinite(r["norm"])):
             errors.append(f"inventory row {r.get('id')!r}: eligible rows need a finite norm")
-    shape = tuple(schema["residual_shape"])
-    nonfinite = 0
+    n_pairs, n_windows = len(donors), len(schema["window_item_ids"])
+    noise = as_float(payload.get("centred_noise", []))
+    try:
+        mask = np.asarray(payload.get("window_mask", []))
+    except ValueError:
+        mask = np.zeros(0)
+    means = as_float(payload.get("donor_mean", []))
+    shapes_ok = True
+    for name, arr, want in (
+        ("centred_noise", noise, (n_pairs, n_windows)),
+        ("window_mask", mask, (n_pairs, n_windows)),
+        ("donor_mean", means, (n_pairs,)),
+    ):
+        if arr.shape != want:
+            errors.append(f"{name} shape {arr.shape} != {want} ([n_pairs, 64] aligned with donors)")
+            shapes_ok = False
+    if shapes_ok and mask.dtype != bool:
+        errors.append("window_mask must hold booleans")
+        shapes_ok = False
+    masked_windows = incomplete_pairs = 0
+    if shapes_ok:
+        for j, r in enumerate(donors):
+            rid, m, u = r.get("id"), mask[j], noise[j]
+            masked_windows += int((~m).sum())
+            incomplete_pairs += int(not m.all())
+            if not np.isfinite(u[m]).all():
+                errors.append(f"donor {rid!r}: valid windows must have finite centred noise")
+            if not np.isnan(u[~m]).all():
+                errors.append(f"donor {rid!r}: missing windows must be NaN/null, never imputed")
+            if m.any():
+                scale = max(1.0, float(np.abs(u[m]).max())) if np.isfinite(u[m]).all() else 1.0
+                if abs(float(np.mean(u[m]))) > CENTRING_TOLERANCE * scale:
+                    errors.append(
+                        f"donor {rid!r}: centred_noise is not centred over its valid windows"
+                    )
+                if not math.isfinite(means[j]):
+                    errors.append(
+                        f"donor {rid!r}: donor_mean must be finite when a window is valid"
+                    )
+    order = schema["audit_order"]
     for r in donors:
         rid = r.get("id")
         base = by_id.get(rid)
@@ -293,27 +438,36 @@ def validate_inputs(payload, spec):
             errors.append(f"donor {rid!r} is not an inventory row")
         elif any(base.get(k) != r.get(k) for k in ("component", "family", "norm", "eligible")):
             errors.append(f"donor {rid!r} metadata differs from its inventory row")
-        try:
-            res = np.asarray(r.get("residuals"), dtype=float)
-        except (TypeError, ValueError):
-            res = np.zeros(0)
-        if res.shape != shape:
-            errors.append(f"donor {rid!r}: residuals shape {res.shape} != {shape}")
-        else:
-            nonfinite += int((~np.isfinite(res)).sum())
-        audit = r.get("audit", [True] * len(schema["audit_order"]))
-        if len(audit) != len(schema["audit_order"]) or not all(isinstance(a, bool) for a in audit):
-            errors.append(f"donor {rid!r}: audit must be {len(schema['audit_order'])} booleans")
+        if "residuals" in r:
+            errors.append(
+                f"donor {rid!r}: 'residuals' (observed rotation column) is not a proxy input"
+            )
+        audit, evidence = r.get("audit"), r.get("audit_evidence")
+        if (
+            not isinstance(audit, list)
+            or len(audit) != len(order)
+            or not all(isinstance(a, bool) for a in audit)
+        ):
+            errors.append(f"donor {rid!r}: audit must list {len(order)} explicit booleans")
+        allowed = schema["audit_evidence_values"]
+        if (
+            not isinstance(evidence, list)
+            or len(evidence) != len(order)
+            or any(e not in allowed for e in evidence)
+        ):
+            errors.append(
+                f"donor {rid!r}: audit_evidence must list {len(order)} values in {allowed}"
+            )
         prov = payload.get("provenance", {}).get("donors", {}).get(rid)
         if prov is None or any(k not in prov for k in spec["provenance_per_donor"]):
             errors.append(f"donor {rid!r}: provenance needs {spec['provenance_per_donor']}")
     if "window_ids" in payload and payload["window_ids"] != schema["window_item_ids"]:
         errors.append("window_ids differ from the registered development window order")
-    rotation = spec["rotation_column"]
-    if not rotation["allowed_sources"]:
-        blockers.append(f"rotation column: {rotation['status']}: {rotation['issue']}")
-    elif payload.get("rotation_source") not in rotation["allowed_sources"]:
-        errors.append(f"rotation_source {payload.get('rotation_source')!r} is not registered")
+    proxy = spec["proxy"]
+    if not proxy["allowed_sources"]:
+        blockers.append(f"proxy source: {proxy['status']}")
+    elif payload.get("donor_source") not in proxy["allowed_sources"]:
+        errors.append(f"donor_source {payload.get('donor_source')!r} is not registered")
     if not errors:
         try:
             _, boundaries = selection_cells(inventory)
@@ -328,7 +482,11 @@ def validate_inputs(payload, spec):
             "inventory": len(inventory),
             "eligible": sum(bool(r.get("eligible", True)) for r in inventory),
             "donors": len(donors),
-            "nonfinite_residuals": nonfinite,
+            "masked_windows": masked_windows,
+            "incomplete_pairs": incomplete_pairs,
+            "unavailable_audit_entries": sum(
+                e == "unavailable" for r in donors for e in (r.get("audit_evidence") or [])
+            ),
         },
     }
 
@@ -342,6 +500,12 @@ def main():
         "--inputs-spec",
         type=Path,
         help="validate INPUT against this NULL-SIZE spec (nullsize_inputs.json) and exit; no simulation",
+    )
+    parser.add_argument(
+        "--scenario",
+        choices=sorted(SCENARIOS),
+        default="registered",
+        help="registered run or a separately labelled frozen sensitivity scenario",
     )
     args = parser.parse_args()
     if args.inputs.suffix == ".npz":
@@ -358,7 +522,8 @@ def main():
         args.output.write_text(json.dumps(report, indent=2) + "\n")
         return 0 if report["status"] == "valid" else 1
     fields = json.loads(args.fields.read_text()) if args.fields else None
-    result = simulate(payload, fields)
+    result = simulate(payload, fields, **SCENARIOS[args.scenario])
+    result["scenario"] = args.scenario
     result["input_provenance"] = {
         str(path): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in [args.inputs, *([args.fields] if args.fields else [])]

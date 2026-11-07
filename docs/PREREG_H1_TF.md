@@ -975,3 +975,135 @@ fixed before their own exposure. The procedural freeze pins code/schema before G
 package, including post-closure residual hashes and null-size results, must be committed, listed by sha256 in A5.1 and accepted
 by Board A before G2. Post-G2 field values/hashes and power/yield results complete the pre-G3 evidence gate.
 This clause is a blocking draft milestone, not fulfillment of the missing identity/reference evidence or authority to compute. No hashes, selected IDs or completed certifications are asserted here.
+
+#### A5 freeze-prep amendments (7 Nov 2026)
+
+Dated prospective amendment after Board A's A5 package review, ACCEPT WITH REQUIRED EDITS
+([BA-PKG](reviews/council/board-a-a5-package-2026-11-07.md)); it executes that review's §8 checklist items 1 and 2 only.
+It was written without reading any G3 outcome (none exists). Earlier A5 text is not rewritten; where it conflicts with
+this block, this block governs prospectively. It authorises no compute and asserts no calibration, power or audit pass.
+
+**F1 — registered adoptions (BA-PKG items 1–3, 5).**
+(a) *Selection.* The forty picks recorded in `docs/prereg/a5_manifests/selection.json` (formerly labelled `conditional`)
+are the registered Part A selection: 30 lora_sft 10/10/10 and 10 chain 4/3/3 by tertile, forty distinct components,
+from 60 LoRA and 39 chain globally deduplicated representatives. The frozen `(effective_norm, canonical_edit_id)`
+cutpoint keys are LoRA `(1.0580346482037204, f4b10903b8e09e24)`, `(2.2141261523655484, f8c2cf0c6b9ffa8c)` and chain
+`(0.7725259468377004, 7af5977862ec021f)`, `(1.3049782925751559, 14cdaabee246493b)`. The exclusion of `1952501f1b2bae55`
+(actual predecessor `c60bc6ef765e5e84`) is a prospective availability exclusion and requires a positive proof: the
+predecessor has an inventory and artefact-status sidecar row, no stored bytes, sidecar `delta_present` false, empty
+`alias_of`, and no alias-ledger holder with bytes (`scripts/a5_build_manifests.py:lost_predecessor_proof`; no error
+string is inspected). It licenses no other drop: a missing norm of an otherwise eligible, reconstructible edit still
+blocks. The re-trained chain picks `057dcfbedea3251f`, `0bc0a0c4ad0520e0` and `05531ce1db4df63f` are retained without
+replacement; their estimand concerns the actual current successor and predecessor bytes, not bitwise replay of the
+lost history; they and their connected relatives remain development-exposed and ineligible for fresh G7 use. The
+later rebuild against the closed snapshot must reproduce exactly these forty IDs, forty distinct components and these
+cutpoints (`check_procedural_freeze`); if G6 closure changes independence, selection or ranks, stop and amend
+prospectively, never rerank silently.
+(b) *Harmful refusal panel.* The 20-prompt harmful panel (the whole unexposed pool) is registered and overrides
+A5.8.1's generic 64-group clause for `refusal_margin_harmful` only. The exception is enforced in the schema
+(`panels.json` `registered_size` 20) and by the consumer (`src/wsp/features/response_field.py:registered_field_items`,
+which refuses 64 or any other count). Prompt weights are equal separately within the harmful and harmless roles; the
+two roles are never pooled as 84 observations. The objective stays descriptive and cannot become decisive or be
+promoted after outcomes; any gate applied per objective still applies.
+(c) *Extraction fill rejected.* The 44 direction-extraction prompts entered the construction of the abliteration edits.
+Their full normalized-text groups are excluded; generated outputs list them only as `extraction_fill_rejected`.
+(d) *Ranked panels.* The 500 ranked MMLU-Pro and HellaSwag groups are frozen and the field uses exactly the first 64 in
+rank order, never another prefix. All reserved members are G2 exposure even where only the prefix is used: 512
+reserved MMLU-Pro item IDs (500 groups) and 589 reserved HellaSwag IDs.
+(e) *WikiText.* The whole-article rule is registered: whole held-out articles in rank order until 64 windows, i.e. 11
+of the 60 test articles, all 11 exposed including unused tails; 12 further articles are development-touched and 37
+remain an upper candidate pool, not a freshness certificate. Windows can share or straddle articles, so 64 windows are
+not 64 independent text groups; article membership, tokenization, join and boundary rules are preserved, and any
+item-level inference must respect the article grouping.
+
+**F2 — executable NULL-SIZE proxy (BA-PKG item 4; supersedes A5.3.2's "(edit, rotation and predecessor reference)"
+residual sentence, the `residuals[64,3]` payload and the `U_edit − U_rotation` construction).**
+*Donor.* For each eligible development pair i whose edit and actual predecessor (base for roots) both have TF-v1
+primary records with the same scoring identity (config hash, model revision, source hash, device) on the same 64
+registered windows, U_i[w] = y(W_i + D_i)[w] − y(W_i)[w], with y the per-window mean NLL (`extra.mean_nll`).
+*Masks and missingness.* `window_mask[i,w]` is false where either record lacks window w or its value is nonfinite; the
+entry is then NaN/null and is never imputed. A pair with any masked window has all three simulated contrasts missing in
+every replicate (counted as failures, removed from the resolved denominators, no replacement), whether or not the
+outer panel redraws that block. A row lacking either record is not a donor and is listed in `provenance.missing`.
+*Centring versus predecessor subtraction.* Predecessor subtraction defines U_i; centring is a separate step within the
+pair over its valid windows: `centred_noise[i,w]` = U_i[w] − m_i with m_i the mean of the valid U_i[w]. The nonzero
+donor effect m_i is pinned separately as `donor_mean[i]`. The payload holds `centred_noise` and `window_mask` as
+[n_pairs, 64] arrays and `donor_mean` as [n_pairs], row-aligned with the donor rows; blocks are the 32 two-window
+means (2k, 2k+1) of the centred noise.
+*Three contrasts.* With scales a = (1, 0.25, 0.5) for (rotation, ladder 0.25, ladder 0.5), slot k drawing donor i:
+null x_c = a_c · σ_k · (m_i + noise block_i), with one fair-coin σ_k per simulated component per replicate shared by the
+mean and noise of all three contrasts; registered alternative x_c = a_c · (|m_i| · sign(prediction_c) · B_k + noise
+block_i), with one B_k per component, P(B_k = +1) = 0.75, and noise not sign-flipped. This registers the alternative
+scale: |m_i| for the rotation contrast and a_c|m_i| for the ladders. The resolution step (32 blocks, 4,000 paired
+draws, A5.3.2 seeds/streams) is applied to each contrast separately.
+*What is shared.* One donor block, mean and noise, per slot is shared by the three contrasts; the outer 32-block panel
+draw and the [4000, 32] resolution draws are common to all slots and contrasts. Because the ladder blocks are
+rescalings of the rotation block, under this proxy their null resolution and agreement coincide with the rotation
+contrast; the proxy carries no strength-specific or rotation-specific noise.
+*Audits.* Each donor carries explicit `audit[3]` in (rotation, 0.25, 0.5) order and `audit_evidence[3]` in {computed,
+unavailable}; neither is defaulted. The rotation audit is the A5.3.3 outcome-free audit of the donor's bytes; the ladder
+audit is the scaled-edit construction. Unavailable evidence, including the eight alias reuse proofs and G3 staging
+audits, is never a default pass. The registered run counts it as a pass (more pairs, conservative for size) and the
+frozen scenario `unavailable_audit_fails` counts it as a failure; both are reported. `variance_x2` (centred noise
+doubled, means unchanged) is the frozen variance-inflation scenario; A5.3.2's constant-positive-mean and
+cell-specific mask/noise sensitivities stand.
+*Timing.* The payload (inventory, donor rows, noise, masks, means, audits and evidence, provenance) is materialised once
+from the closed G0/G1 snapshot, validated with `scripts/a5_simulation.py --inputs-spec`, hashed and committed before
+NULL-SIZE. Masks and audit flags are never updated from G2 or G3 outcomes; POWER-AND-YIELD uses the identical file.
+*Scope.* The proxy is not an observed rotation contrast: in the real comparison the predecessor cancels and the proxy
+misses rotation-specific heteroskedasticity, edit/rotation covariance, orientation-dependent resolution, rounding and
+nonlinear ladder response; its variance can err in either direction. NULL-SIZE and POWER-AND-YIELD are conditional on
+this surrogate and the sign-flip DGP, are not an empirical certification of the rotation null, and are not tuned after
+G3. No rotation record is fabricated and predecessor data is never relabelled as a rotation. The ≤0.07 gates stand.
+Implementation: `scripts/a5_simulation.py` (`donor_block`, `contrasts`, `donor_inputs`, `simulate`, `validate_inputs`)
+and `docs/prereg/a5_manifests/nullsize_inputs.json` (schema `a5-nullsize-inputs-spec-v2`, `proxy.allowed_sources` =
+`tf_v1_edit_minus_actual_predecessor`).
+
+**F3 — A5.11 and A5.3.1 staging reconciliation (BA-PKG item 7).** The eight alias reuse proofs and the realised
+tensor-coverage, single-matrix and rotation audits are G3 staging outputs, not pre-G2 package items; A5.11's list and
+A5.3.1's "commit … closure proofs, tensor coverage" are read accordingly. Frozen now:
+(i) *Alias/reference reuse proof.* Algorithm: a record is reused only if the holder's current entry content hash equals
+the record's `entry_hashes`, the record is complete and primary, its scoring identity matches (effective config hash,
+model revision, benchmark counts), and its 64 window token hashes equal `text_groups.json`
+(`a5_build_manifests.reference_status`). Inputs: `references.json` rows, holder bytes, `eval.json`/`records.jsonl`.
+Output per proof: alias and holder IDs, holder content hash, recorded and current entry hashes, identity fields, window
+check, failed checks, verdict. Gate: G3 staging, before the affected reuse. Fail-closed: a failed or missing proof
+forbids reuse; the reference is scored new and charged under n_D/n_P with stop-and-reprice, or, if the bytes cannot be
+identified, the pair is excluded with its reason and no replacement. Any reuse already relied on by G0/G1 or by pre-G2
+donors needs its proof before that use.
+(ii) *Tensor coverage, single-matrix and rotation audits.* Algorithm: A5.3.3 on the pinned stored bf16 states of the
+selected edit and its actual predecessor, seeds per `control_seeds.json`, code `src/wsp/features/rotation.py` at its
+pinned hash. Output per edit: edit and predecessor IDs, seed, per-tensor name/shape/role, block rows and columns,
+numerical rank, norm and spectrum mismatch, rank change, support identity, reconstruction residual, reason code
+(`non_2d`, `non_finite`, `zero_block`, `rank_degenerate`, `not_single_matrix`, unsupported) or pass, coverage counts,
+unrotated-tensor count and pair verdict. Gate: G3 staging, before any rotation of that edit is scored. Fail-closed: any
+tensor failure or a missing audit excludes the whole rotation pair from the rotation denominator with its reason; the
+pair stays in the forty-ID ledger and is not replaced.
+Metadata-level closure, the selected IDs, actual predecessor availability and the outcome-independent coverage rules
+remain freeze blockers; realised G3 reports do not.
+
+**F4 — future sealed builder obligation (BA-PKG item 6).** Any future sealed builder (the `TF-v1:item:` MMLU-Pro panel,
+any sealed HellaSwag or prompt panel, the A4.5/A5.6 sealed WikiText panel and any G7 panel) must, before G7
+qualification opens any outcome: load the frozen A5 manifests by their A5.1 sha256 and the complete exposure ledger
+(A5.2); exclude all 500 reserved MMLU-Pro groups (all 512 reserved item IDs) and every legacy, development, pilot,
+calibration and later-exposed group before ranking (a different hash domain is not enough); exclude all 589 reserved
+HellaSwag IDs; exclude the 12 development-touched and the 11 auxiliary WikiText articles whole, not only used windows or
+identical token hashes, plus later calibration/pilot exposures; exclude every exposed prompt group (gradient, factor,
+probe, scored refusal/harmless) and every direction-extraction group; reject any group or article intersection,
+fail-closed; and write and commit a certificate (inputs by sha256, exclusion counts, zero-overlap checks per excluded
+set). Until such a builder runs, future-seal statements in `panels.json` are obligations (`future_seal_obligations`),
+not computed certificates.
+
+**F5 — procedural freeze (BA-PKG checklist item 2).** The procedural freeze is dated 7 Nov 2026 and is distinct from, and
+earlier than, the pre-G2 evidence freeze (checklist items 3–7); no evidence hash existed at this date and none is
+claimed. `selection.json:procedural_freeze` records the inventory hash, the cutpoints above, the forty IDs and their
+hash, the re-trained picks and the sha256 of `code_hashes.json`. `code_hashes.json` (schema `a5-code-hashes-v2`) pins
+the bytes committed with this amendment (its `git_sha` is their parent) of both builders, the simulation/validator,
+the A5 tests, the imported selection/grouping/reference modules and `configs/eval_tf_v1.yaml`, together with that
+config's effective hash as the TF-v1 records store it, the model and tokenizer revision from
+`configs/editor_qwen3.5-0.8b.yaml`, and the Python, numpy, torch and transformers versions. Not pinned at this freeze:
+feature-file and donor/record contents and the closed G0/G1/G6 snapshot; `selection.json:inputs` remains a partial input
+index, not a full immutable snapshot. Existing G0/G1/G6 observations keep their actual dates and exposure history.
+Generated labels now read "registered" where the rulings register them and "rejected" for the extraction fill (the
+pre-ruling literal selection run is kept as a superseded audit record); components, references, text groups and panel
+IDs were not rebuilt against live data, which remains checklist items 4–5 after the census.

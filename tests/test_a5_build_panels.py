@@ -5,10 +5,14 @@ import itertools
 import json
 import math
 
+import numpy as np
+import pytest
+
 from scripts import a5_build_manifests as bm
 from scripts import a5_build_panels as bp
-from scripts.a5_simulation import validate_inputs
+from scripts.a5_simulation import PROXY_SOURCE, validate_inputs
 from wsp.eval.response_intervention import rotation_seed
+from wsp.features.response_field import registered_field_items
 
 
 def toy_tokenizer():
@@ -166,8 +170,15 @@ def test_build_panels_toy_end_to_end():
         *(f"test:{i}" for i in range(100, 103)),
         *(f"train:{i}" for i in range(400, 405)),
     ]
-    assert harm["conditional_fill_not_registered"]["item_ids"]
-    assert all(i.startswith("train:") for i in harm["conditional_fill_not_registered"]["item_ids"])
+    # Chair ruling (i), registered: the size exception, and the extraction fill is rejected (listed only).
+    assert "conditional_fill_not_registered" not in harm
+    fill = harm["extraction_fill_rejected"]
+    assert fill["status"].startswith("REJECTED") and fill["item_ids"]
+    assert all(i.startswith("train:") for i in fill["item_ids"])
+    assert set(fill["item_ids"]).isdisjoint(harm["reserved_item_ids"])
+    assert (harm["registered_size"], harm["n_requested"], harm["n_generic_clause"]) == (20, 20, 64)
+    assert harm["size_rule"].startswith("REGISTERED")
+    assert mm["registered_rule"].startswith("REGISTERED") and mm["field_prefix"] == 64
     harmless = p["refusal_margin_harmless"]
     # test ids 0..4 have texts 'ok 395'..'ok 399', equal to direction-extraction prompts: excluded.
     assert all(int(i) >= 5 for i in harmless["reserved_item_ids"])
@@ -175,7 +186,69 @@ def test_build_panels_toy_end_to_end():
     assert set(probe["reserved_item_ids"]).isdisjoint(harmless["reserved_item_ids"])
     assert probe["n_produced"] == 64 and harmless["n_produced"] == 64
     wt = p["wikitext_nll"]
-    assert wt["n_produced"] == 2 and wt["certificate"]["by_construction"]
+    assert wt["n_produced"] == 2 and wt["certificate"]["future_seal_obligations"]
+    assert "deviation_from_a5_8_1" not in wt and wt["registered_rule"].startswith("REGISTERED")
+    for v in p.values():  # future sealed panels are an obligation, never a computed certificate
+        assert "by_construction" not in v["certificate"]
+        assert v["certificate"]["future_seal_status"].startswith("OBLIGATION, NOT A CERTIFICATE")
+    assert bp.apply_rulings(json.loads(json.dumps(out))) == out  # idempotent re-labelling
+
+
+def registered_doc():
+    """A panels.json shaped like the registered package (sizes only; ids are synthetic)."""
+    cert = {"certificate": {"computed_disjoint": True}}
+    ranked = {"item_ids": [str(i) for i in range(500)], "field_prefix": 64, "n_requested": 500}
+    return {
+        "panels": {
+            "mmlu_gold_log_prob": ranked | cert,
+            "hellaswag_gold_char_log_likelihood": dict(ranked) | cert,
+            "refusal_margin_harmful": {
+                "item_ids": [f"test:{i}" for i in range(20)],
+                "n_requested": 64,
+                "n_produced": 20,
+                "conditional_fill_not_registered": {
+                    "item_ids": ["train:9"],
+                    "item_ids_sorted_sha256": "x",
+                },
+            }
+            | cert,
+            "refusal_margin_harmless": {"item_ids": [str(i) for i in range(64)]} | cert,
+            "probe_response": {"item_ids": [str(i) for i in range(100, 164)]} | cert,
+            "wikitext_nll": {"window_ids": [f"w{i}" for i in range(64)]} | cert,
+        }
+    }
+
+
+def test_harmful_panel_size_exception_is_checked_by_consumer():
+    doc = registered_doc()
+    # Before the ruling labels the 20-prompt panel fails the consumer check (and the fill is active).
+    with pytest.raises(ValueError, match="size exception"):
+        registered_field_items(doc, "refusal_margin_harmful")
+    for name in ("mmlu_gold_log_prob", "hellaswag_gold_char_log_likelihood", "wikitext_nll"):
+        doc["panels"][name]["certificate"] |= {"by_construction": ["future"]}
+    doc["panels"]["wikitext_nll"] |= {"document_ids": ["article:1"], "deviation_from_a5_8_1": "x"}
+    bp.apply_rulings(doc)
+    assert bp.validate_panels(doc) == []
+    assert registered_field_items(doc, "refusal_margin_harmful") == [f"test:{i}" for i in range(20)]
+    assert registered_field_items(doc, "mmlu_gold_log_prob") == [str(i) for i in range(64)]
+    assert len(registered_field_items(doc, "wikitext_nll")) == 64
+    # 64 harmful prompts, an active fill, a shifted prefix or a failed certificate all fail closed.
+    bad = json.loads(json.dumps(doc))
+    bad["panels"]["refusal_margin_harmful"]["item_ids"] += [f"train:{i}" for i in range(44)]
+    with pytest.raises(ValueError, match="registered 20"):
+        registered_field_items(bad, "refusal_margin_harmful")
+    bad = json.loads(json.dumps(doc))
+    bad["panels"]["refusal_margin_harmful"]["conditional_fill_not_registered"] = {}
+    with pytest.raises(ValueError, match="rejected extraction fill"):
+        registered_field_items(bad, "refusal_margin_harmful")
+    bad = json.loads(json.dumps(doc))
+    bad["panels"]["mmlu_gold_log_prob"]["field_prefix"] = 100
+    with pytest.raises(ValueError, match="first 64 of 500"):
+        registered_field_items(bad, "mmlu_gold_log_prob")
+    bad["panels"]["refusal_margin_harmless"]["certificate"]["computed_disjoint"] = False
+    assert any("certificate" in e for e in bp.validate_panels(bad))
+    with pytest.raises(ValueError, match="not a registered"):
+        registered_field_items(doc, "refusal_margin")
 
 
 def test_control_seed_functions():
@@ -218,7 +291,8 @@ def toy_payload():
                     "norm": float(i),
                 }
             )
-    donors = [r | {"residuals": [[2.0, 1.0, 0.0]] * 64, "audit": [True] * 3} for r in rows]
+    donors = [r | {"audit": [True] * 3, "audit_evidence": ["computed"] * 3} for r in rows]
+    raw = np.random.default_rng(0).normal(size=(len(rows), 64))
     prov = {
         r["id"]: {
             "edit_record_sha256": "e",
@@ -232,7 +306,10 @@ def toy_payload():
         "inventory": rows,
         "donors": donors,
         "window_ids": [str(i) for i in range(64)],
-        "rotation_source": "registered-source",
+        "donor_source": PROXY_SOURCE,
+        "centred_noise": (raw - raw.mean(axis=1, keepdims=True)).tolist(),
+        "window_mask": [[True] * 64 for _ in rows],
+        "donor_mean": raw.mean(axis=1).tolist(),
         "provenance": {"donors": prov, "missing": {}},
     }
 
@@ -243,18 +320,49 @@ def test_inputs_spec_validation():
         "window_ids_sorted_sha256": bp.sorted_sha([f"w{i}" for i in range(64)]),
     }
     spec = json.loads(json.dumps(bp.build_nullsize_spec(tg)))
+    # The registered proxy source is accepted: no blocker, no fabricated rotation column.
+    assert spec["proxy"]["allowed_sources"] == [PROXY_SOURCE]
+    assert "rotation_column" not in spec and "residual_shape" not in spec["payload_schema"]
     payload = toy_payload()
     report = validate_inputs(payload, spec)
-    # The registered spec has no rotation source yet: blocked, not invalid.
-    assert report["status"] == "blocked" and not report["errors"]
-    spec["rotation_column"]["allowed_sources"] = ["registered-source"]
-    assert validate_inputs(payload, spec)["status"] == "valid"
-    payload["donors"][0]["residuals"] = [[0.0, 0.0, math.nan]] * 64
-    assert validate_inputs(payload, spec)["counts"]["nonfinite_residuals"] == 64
-    payload["donors"][1]["residuals"] = [[0.0, 0.0]] * 64
-    payload["inventory"][2]["family"] = "lora_sft"
-    payload["window_ids"] = payload["window_ids"][::-1]
-    bad = validate_inputs(payload, spec)
-    assert bad["status"] == "invalid"
-    text = " ".join(bad["errors"])
-    assert "shape" in text and "family" in text and "window_ids" in text
+    assert report["status"] == "valid" and not report["errors"] and not report["blockers"]
+    # Masked windows are NaN/null, never imputed; masked pairs are counted.
+    payload["window_mask"][0][3] = False
+    payload["centred_noise"][0][3] = None
+    u = np.asarray([math.nan if v is None else v for v in payload["centred_noise"][0]])
+    payload["centred_noise"][0] = (u - np.nanmean(u)).tolist()
+    payload["centred_noise"][0][3] = None
+    ok = validate_inputs(payload, spec)
+    assert ok["status"] == "valid" and ok["counts"]["incomplete_pairs"] == 1
+    bad = json.loads(json.dumps(payload))
+    bad["centred_noise"][1][0] += 1.0  # no longer centred within the pair
+    bad["centred_noise"][2][5] = None  # missing value without a mask
+    bad["donors"][3]["residuals"] = [[2.0, 1.0, 0.0]] * 64  # an observed rotation column
+    bad["donors"][4]["audit_evidence"] = ["assumed", "computed", "computed"]
+    del bad["donors"][5]["audit"]  # audit must be explicit, never a default pass
+    bad["donor_mean"] = bad["donor_mean"][:-1]
+    bad["donor_source"] = "rotation"
+    bad["inventory"][2]["family"] = "lora_sft"
+    bad["window_ids"] = bad["window_ids"][::-1]
+    report = validate_inputs(bad, spec)
+    assert report["status"] == "invalid"
+    text = " ".join(report["errors"])
+    for needle in (
+        "donor_mean shape",
+        "residuals",
+        "audit_evidence",
+        "explicit booleans",
+        "donor_source",
+        "family",
+        "window_ids",
+    ):
+        assert needle in text, needle
+    bad = json.loads(json.dumps(payload))
+    bad["centred_noise"][1][0] += 1.0
+    bad["centred_noise"][2][5] = None
+    text = " ".join(validate_inputs(bad, spec)["errors"])
+    assert "not centred" in text and "finite centred noise" in text
+    bad["centred_noise"] = [row[:63] for row in bad["centred_noise"]]
+    assert "centred_noise shape" in " ".join(validate_inputs(bad, spec)["errors"])
+    spec["proxy"]["allowed_sources"] = []
+    assert validate_inputs(payload, spec)["status"] == "blocked"

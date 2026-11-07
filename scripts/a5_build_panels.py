@@ -18,7 +18,12 @@ marked section of its README:
 Datasets are read from the local Hugging Face cache only (offline). If a dataset, revision or tokenizer is not
 cached, the script reports what is missing and stops without writing anything: no id is ever invented.
 
-    python scripts/a5_build_panels.py [--out docs/prereg/a5_manifests] [--check]
+    python scripts/a5_build_panels.py [--out docs/prereg/a5_manifests] [--check] [--from-committed]
+
+Chair rulings A5.3.2/A5.8.1 (i)-(iii) are applied as registered labels (:func:`apply_rulings`): the
+20-prompt harmful panel, the rejected extraction fill, the 500-ranked/first-64 prefix and the whole-article
+WikiText rule. Every registered objective is checked with
+``wsp.features.response_field.registered_field_items`` before anything is written.
 """
 
 from __future__ import annotations
@@ -34,6 +39,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))
+
+from scripts.a5_simulation import AUDIT_EVIDENCE, PROXY_SOURCE
+from wsp.features.response_field import REGISTERED_FIELD_ITEMS, registered_field_items
 
 FIELD_DOMAIN = "20261107:field:"  # A5.8.1 auxiliary sampling domain
 PROBE_DOMAIN = "20261107:probe:"  # chair default proposed here; A5.8.3 names no probe domain
@@ -373,8 +382,13 @@ def file_entry(path: Path):
 # ------------------------------------------------------------------------------------------------ panels
 
 
-def build_panels(data, tf_cfg, text_groups, inputs):
-    """``data``: dict with loaded columns (see :func:`load_all`). Pure function for tests."""
+def build_panels(
+    data, tf_cfg, text_groups, inputs, harmful_size=REGISTERED_FIELD_ITEMS["refusal_margin_harmful"]
+):
+    """``data``: dict with loaded columns (see :func:`load_all`). Pure function for tests.
+
+    ``harmful_size`` is the registered harmful panel size (20; toy tests pass their own pool size).
+    """
     out = {"schema": "a5-panels-v1", "inputs": inputs, "panels": {}, "checked_sets": {}}
     off = tf_cfg["tf_v1"]["over_refusal_offset"]
     b = tf_cfg["benchmarks"]
@@ -466,7 +480,7 @@ def build_panels(data, tf_cfg, text_groups, inputs):
         pool_counts=counts,
         role="harmful",
     )
-    # Not registered: the extraction prompts are exposure (edit-construction inputs), not scored items.
+    # Rejected (chair ruling A5.3.2(i)): extraction prompts are edit-construction exposure; listed only.
     cond, _ = select_groups(
         rep,
         set(scored["harmful_tf_v1_refusal_rate"])
@@ -597,7 +611,7 @@ def build_panels(data, tf_cfg, text_groups, inputs):
     }
     out["not_existing_scored_sets"] = NOT_EXISTING
     out["conventions"] = CONVENTIONS
-    return out
+    return apply_rulings(out, harmful_size)
 
 
 SEALED_MMLU = (
@@ -855,39 +869,77 @@ def build_control_seeds():
 def build_nullsize_spec(text_groups):
     window_ids = [w["window_id"] for w in text_groups["windows"]]
     return {
-        "schema": "a5-nullsize-inputs-spec-v1",
-        "status": "specification only; not run on real data; inputs exist only after G0/G1 closure (A5.3.2, A5.11)",
-        "consumer": "scripts/a5_simulation.py (validate: --inputs-spec this file; run: INPUT --output SIZE.json)",
+        "schema": "a5-nullsize-inputs-spec-v2",
+        "status": "specification only; not run on real data; inputs exist only after G0/G1 closure (A5.3.2, "
+        "A5.11). Registered proxy: chair ruling A5.3.2(ii) and the A5 freeze-prep amendments (7 Nov 2026)",
+        "consumer": "scripts/a5_simulation.py (validate: --inputs-spec this file; run: INPUT --output SIZE.json "
+        "[--scenario registered|variance_x2|unavailable_audit_fails])",
         "input_file": {
             "path": "data/runs/a5/nullsize/inputs.json",
             "format": "JSON object (or NPZ with the same JSON as scalar Unicode 'payload', no pickle)",
             "commit": "its sha256, inventory and provenance enter docs/prereg/a5_manifests/ before NULL-SIZE",
         },
+        "proxy": {
+            "status": "REGISTERED (chair ruling A5.3.2(ii), 7 Nov 2026; Board A accepted with caveats, "
+            "docs/reviews/council/board-a-a5-package-2026-11-07.md item 4)",
+            "allowed_sources": [PROXY_SOURCE],
+            "definition": "U_i[w] = y(W_i + D_i)[w] - y(W_i)[w]: per-window difference between the TF-v1 "
+            "primary record of development edit i and the record of its actual predecessor (base for roots), "
+            "same scoring identity and the same 64 windows",
+            "centring": "within pair over its valid windows: centred_noise_i[w] = U_i[w] - mean_valid(U_i); "
+            "donor_mean_i = mean_valid(U_i) is pinned separately (the donor effect)",
+            "contrasts": "scripts/a5_simulation.py:contrasts; scales a = (1, 0.25, 0.5) for (rotation, ladder "
+            "0.25, ladder 0.5). Null: a_c * sigma_k * (donor_mean + block noise), one fair-coin sigma_k per "
+            "simulated component per replicate shared by mean and noise of all three contrasts. Registered "
+            "alternative: a_c * (|donor_mean| * sign(prediction_c) * B_k + block noise), one B_k per "
+            "component, P(B=+1)=0.75. The resolution step (32 two-window blocks, 4,000 common paired draws) "
+            "is applied to each contrast separately",
+            "shared": "one donor block (mean and centred noise) per slot is shared by all three contrasts; the "
+            "outer 32-block panel draw and the resolution draws are common to all slots and contrasts",
+            "not_an_observed_rotation": "no rotation record exists before G3; no rotation column is fabricated "
+            "and predecessor data is never relabelled as a rotation. Null size and power are conditional on "
+            "this surrogate and the sign-flip DGP; it is not an empirical certification of the rotation null",
+            "post_g2": "POWER-AND-YIELD uses the identical payload file (same sha256), never G3 contrasts",
+        },
         "payload_schema": {
-            "required_keys": ["inventory", "donors", "window_ids", "rotation_source", "provenance"],
+            "required_keys": [
+                "inventory",
+                "donors",
+                "window_ids",
+                "donor_source",
+                "centred_noise",
+                "window_mask",
+                "donor_mean",
+                "provenance",
+            ],
             "inventory_row": {
                 "id": "canonical edit id (components.jsonl id)",
                 "component": "components.jsonl component_id",
                 "family": "components.jsonl family mapped by family_map",
                 "norm": "components.jsonl effective_norm (finite for eligible rows; may be null otherwise)",
-                "eligible": "components.jsonl eligibility == 'eligible' (chair ruling A5.3.1: predecessor-lost "
-                "rows are ineligible)",
+                "eligible": "components.jsonl eligibility == 'eligible' (chair ruling A5.3.1, registered: "
+                "predecessor-lost rows are ineligible)",
             },
-            "donor_row": "an inventory row plus residuals [64,3] and audit [3]",
+            "donor_row": "an inventory row plus audit [3] (explicit booleans) and audit_evidence [3] "
+            "('computed' | 'unavailable'); no residuals key",
             "family_map": {"lora_sft": "LoRA", "chain": "chain"},
-            "residual_shape": [64, 3],
-            "residual_columns": ["edit", "rotation", "predecessor"],
+            "centred_noise_shape": ["n_pairs", 64],
+            "window_mask_shape": ["n_pairs", 64],
+            "donor_mean_shape": ["n_pairs"],
+            "pair_order": "row j of centred_noise/window_mask/donor_mean is donors[j]",
             "audit_order": ["rotation", "ladder_0.25", "ladder_0.5"],
+            "audit_evidence_values": list(AUDIT_EVIDENCE),
             "window_item_ids": [str(i) for i in range(64)],
         },
         "inventory": {
             "source": "docs/prereg/a5_manifests/components.jsonl rows with family in family_map (frozen "
             "selection inventory, A5.3.1); every such row is listed, eligible or not",
-            "cutpoints": "frozen from this inventory by scripts/a5_simulation.py:selection_cells",
+            "cutpoints": "frozen from this inventory by scripts/a5_simulation.py:selection_cells; they must "
+            "equal selection.json:procedural_freeze.cutpoints",
         },
         "donors": {
             "rows": "eligible inventory rows that are D3 development members with a TF-v1 primary record "
-            "and a matched predecessor-reference record on file after G0/G1 closure",
+            "and a matched actual-predecessor record on file after G0/G1 closure",
             "records": "data/evals/qwen3.5-0.8b/tf_v1/<id>/records.jsonl, primary run (repeat_id null); the "
             "reference is 'base' for roots and the actual predecessor (parent_id) for chain steps; both must "
             "pass src/wsp/eval/response_intervention.py:_reference_on_file with the same scoring identity "
@@ -902,27 +954,25 @@ def build_nullsize_spec(text_groups):
             "over windows is token-weighted)",
             "window_order": "item_id '0'..'63' = text_groups.json windows in order; the simulation forms the "
             "32 two-window blocks (2k, 2k+1)",
-            "columns": "E_edit[w], E_rotation[w], E_predecessor[w]: raw per-window values, NOT centred; the "
-            "simulation centres U_x = E_x - E_predecessor (A5.3.2)",
-            "nonfinite": "a missing/nonfinite window value is written as NaN (JSON NaN) and becomes an "
-            "audit/nonfinite failure of that contrast in the simulation; never replaced",
-        },
-        "rotation_column": {
-            "status": "UNRESOLVED (blocking)",
-            "issue": "A5.3.2 says G1 TF-v1 development records supply (edit, rotation, predecessor) residuals, "
-            "but rotation variants are first scored at G3 (A5.3.4, S31 §3 G3): no TF-v1 rotation record "
-            "exists for any development row. The NULL-SIZE payload cannot be formed as specified.",
-            "allowed_sources": [],
-            "options_for_ruling": [
-                "score development rotations at G0/G1 (priced under A5.2.2) and use their records",
-                "an amended null model that uses only the edit and predecessor columns",
-            ],
-            "validator": "--inputs-spec reports 'blocked' while allowed_sources is empty",
+            "masks": "window_mask[j, w] is False where either record lacks window w or its value is "
+            "nonfinite; centred_noise[j, w] is then NaN/null. A pair with any masked window has all three "
+            "simulated contrasts missing (counted as audit/nonfinite failures, removed from the resolved "
+            "denominators, never imputed or replaced)",
         },
         "audit": {
-            "rotation": "A5.3.3 outcome-free rotation audit of the donor edit (pass = true)",
+            "rotation": "A5.3.3 outcome-free rotation audit of the donor edit's bytes (pass = true)",
             "ladder": "true unless the scaled-edit construction fails (A5.3.1 'audit-excluded')",
-            "status": "computed at G0/G1 closure from metadata/bytes, never from outcomes",
+            "evidence": "'computed' when the audit ran on the pinned bytes; 'unavailable' when its evidence "
+            "does not exist pre-G2 (e.g. G3 staging outputs). Unavailable is never a default pass: the "
+            "registered run treats it as pass (more pairs, conservative for size) and the frozen "
+            "'unavailable_audit_fails' scenario treats it as fail; both are reported",
+            "timing": "masks, audit flags and evidence are fixed when the payload is materialised after G0/G1 "
+            "closure and before NULL-SIZE; they are never updated from G2 or G3 outcomes",
+        },
+        "scenarios": {
+            "registered": "noise_scale 1, unavailable audit assumed pass",
+            "variance_x2": "centred noise doubled, donor means unchanged (variance inflation)",
+            "unavailable_audit_fails": "unavailable audit evidence counted as failure",
         },
         "window_ids_sorted_sha256": text_groups["window_ids_sorted_sha256"],
         "window_ids_sha256_check": sorted_sha(window_ids)
@@ -936,10 +986,88 @@ def build_nullsize_spec(text_groups):
         "provenance_layout": "provenance = {'donors': {donor id: {edit_record_sha256, reference_id, "
         "reference_record_sha256, run_ids}}, 'missing': {inventory id: reason}}; record hashes are sha256 of "
         "the records.jsonl bytes",
-        "rotation_source": "string naming the registered rotation_column source; must be in allowed_sources",
+        "donor_source": f"must be in proxy.allowed_sources ({PROXY_SOURCE!r})",
         "window_ids": "the list window_item_ids, in order",
         "resolution": {"blocks": 32, "draws": 4000, "replicates": 10000, "seed": 20261107},
     }
+
+
+# ------------------------------------------------------------------------------------------------ rulings
+
+RULING_SOURCE = (
+    "chair rulings A5.3.2/A5.8.1 (i)-(iii), 7 Nov 2026; Board A ACCEPT WITH REQUIRED EDITS "
+    "(docs/reviews/council/board-a-a5-package-2026-11-07.md items 3, 5, 6); PREREG_H1_TF A5 "
+    "freeze-prep amendments (7 Nov 2026)"
+)
+FUTURE_SEAL_STATUS = (
+    "OBLIGATION, NOT A CERTIFICATE: a future sealed builder must load the frozen A5 manifests and the "
+    "complete exposure ledger, reject every reserved group/article and exposed prompt/extraction group, "
+    "and write its own certificate before G7 qualification opens (A5 freeze-prep amendments)"
+)
+
+
+def apply_rulings(doc, harmful_size=REGISTERED_FIELD_ITEMS["refusal_margin_harmful"]):
+    """Registered/rejected labels of the chair rulings; ids are unchanged. Idempotent."""
+    panels = doc["panels"]
+    for name in ("mmlu_gold_log_prob", "hellaswag_gold_char_log_likelihood"):
+        if name in panels:
+            panels[name]["registered_rule"] = (
+                f"REGISTERED ({RULING_SOURCE}): all {panels[name]['n_requested']} ranked groups "
+                "(every reserved_item_id) are G2 exposure; the field uses exactly the first "
+                f"{panels[name]['field_prefix']} in rank order, never another prefix"
+            )
+    harm = panels.get("refusal_margin_harmful")
+    if harm is not None:
+        harm.setdefault("n_generic_clause", harm["n_requested"])
+        harm["n_requested"] = harmful_size
+        harm["registered_size"] = harmful_size
+        harm["short_by"] = max(0, harmful_size - harm["n_produced"])
+        harm["size_rule"] = (
+            f"REGISTERED ({RULING_SOURCE}): the whole unexposed harmful pool ({harmful_size} prompts) "
+            f"overrides the generic {harm['n_generic_clause']}-group clause of A5.8.1 for this objective "
+            "only; equal prompt weights within the harmful role, never pooled with the harmless role; "
+            "descriptive, never decisive. Checked by src/wsp/features/response_field.py:"
+            "registered_field_items"
+        )
+        fill = harm.pop("conditional_fill_not_registered", None) or harm.get(
+            "extraction_fill_rejected"
+        )
+        if fill is not None:
+            harm["extraction_fill_rejected"] = {
+                "status": f"REJECTED ({RULING_SOURCE}): direction-extraction prompts entered the "
+                "construction of the abliteration edits; their full normalized-text groups are excluded "
+                "and never used to fill this panel",
+                "item_ids": fill["item_ids"],
+                "item_ids_sorted_sha256": fill["item_ids_sorted_sha256"],
+            }
+    wt = panels.get("wikitext_nll")
+    if wt is not None:
+        wt.pop("deviation_from_a5_8_1", None)
+        wt["registered_rule"] = (
+            f"REGISTERED ({RULING_SOURCE}): whole held-out articles in rank order until 64 windows; all "
+            f"{len(wt['document_ids'])} articles (including unused tails) are G2 exposure. Windows may "
+            "share or straddle articles: 64 windows are not 64 independent text groups; article "
+            "membership is listed per window and any item-level inference must respect it"
+        )
+    for p in panels.values():
+        cert = p["certificate"]
+        if "by_construction" in cert:
+            cert["future_seal_obligations"] = cert.pop("by_construction")
+        cert["future_seal_status"] = FUTURE_SEAL_STATUS
+    doc["schema"] = "a5-panels-v2"
+    doc["rulings"] = RULING_SOURCE
+    return doc
+
+
+def validate_panels(doc):
+    """Consumer/schema check of every registered objective; returns error strings."""
+    errors = []
+    for objective in REGISTERED_FIELD_ITEMS:
+        try:
+            registered_field_items(doc, objective)
+        except ValueError as exc:
+            errors.append(str(exc))
+    return errors
 
 
 # ------------------------------------------------------------------------------------------------ readme
@@ -954,7 +1082,7 @@ def readme_section(files, panels):
             f"| `{name}` | {p['n_produced']} / {p['n_requested']} | "
             f"`{p.get('item_ids_sorted_sha256') or p.get('window_ids_sorted_sha256')}` | "
             f"{'yes' if cert['computed_disjoint'] else '**NO**'} | "
-            f"{'yes' if cert['by_construction'] else '—'} |"
+            f"{'obligation, not certified' if cert.get('future_seal_obligations') else '—'} |"
         )
     return "\n".join(
         [
@@ -963,8 +1091,10 @@ def readme_section(files, panels):
             "",
             "Generated by `python scripts/a5_build_panels.py` from the local Hugging Face cache (offline) and the",
             "committed rankings/configs; rerunning it reproduces every byte. Inputs and their sha256 are in",
-            "`panels.json:inputs`. This section supersedes the 'outstanding' wording above for panels, control",
-            "seeds and the NULL-SIZE input specification only.",
+            "`panels.json:inputs`. `--from-committed` re-applies the registered/rejected ruling labels to the",
+            "committed `panels.json` ids (no dataset access) and regenerates the two rule-only files. This",
+            "section supersedes the 'outstanding' wording above for panels, control seeds and the NULL-SIZE",
+            "input specification only.",
             "",
             "| file | sha256 | produced from |",
             "|---|---|---|",
@@ -976,21 +1106,37 @@ def readme_section(files, panels):
                 f"| `control_seeds.json` | `{shas['control_seeds.json']}` | A5.3.2/A5.3.3/A5.8.3 rules; "
                 "test vectors generated by the reference functions |"
             ),
-            f"| `nullsize_inputs.json` | `{shas['nullsize_inputs.json']}` | A5.3.2 input rule + `text_groups.json` |",
+            (
+                f"| `nullsize_inputs.json` | `{shas['nullsize_inputs.json']}` | registered edit-minus-"
+                "predecessor proxy (A5.3.2(ii), freeze-prep amendments) + `text_groups.json` |"
+            ),
             "",
-            "| panel | produced / requested | sha256 of sorted ids | computed disjoint | sealed: by construction |",
+            "| panel | produced / registered | sha256 of sorted ids | computed disjoint | future sealed panels |",
             "|---|---|---|---|---|",
             *rows,
             "",
+            "Registered by the chair rulings (A5.3.2/A5.8.1 (i)-(iii), 7 Nov 2026) and Board A's acceptance",
+            "(`docs/reviews/council/board-a-a5-package-2026-11-07.md`):",
+            "",
+            "- `refusal_margin_harmful` has the **registered** size 20 (the whole unexposed harmful pool); it",
+            "  overrides A5.8.1's generic 64-group clause for this objective only, and",
+            "  `wsp.features.response_field.registered_field_items` enforces 20, not 64. Descriptive only.",
+            "- The direction-extraction fill is **rejected**: its prompts entered the abliteration edits; it is",
+            "  listed under `extraction_fill_rejected` as exposure and never used.",
+            "- MMLU-Pro/HellaSwag: the 500 ranked groups are **registered** G2 exposure and the field uses",
+            "  exactly their first 64. WikiText: the **registered** whole-article rule (11 articles, all",
+            "  exposed); its 64 windows are not 64 independent text groups.",
+            "- NULL-SIZE: the edit-minus-predecessor proxy is **registered** (`nullsize_inputs.json:proxy`);",
+            "  the payload exists only after G0/G1 closure and the NULL-SIZE report is outstanding.",
+            "",
             "Open items (not certified here):",
             "",
-            "- No sealed MMLU-Pro, WikiText or other item panel exists; disjointness from future sealed panels",
-            "  holds only by construction (the reserved ids/articles are G2 exposure and must be excluded).",
-            "- `refusal_margin_harmful` is short: the harmful pool left after the scored prompts and the",
-            "  direction-extraction prompts is smaller than 64; a conditional fill is listed, not registered.",
-            "- WikiText cannot give one window per article (A5.8.1) in the test split; ruling required.",
-            "- NULL-SIZE inputs are blocked: no TF-v1 rotation record exists before G3 (`rotation_column`).",
-            "- Control key formats and the probe domain are chair-default proposals for Board A acceptance.",
+            "- Future sealed panels: no sealed MMLU-Pro, WikiText or other item panel exists. Their exclusion of",
+            "  the reserved groups/articles is an obligation of a future sealed builder (load the frozen",
+            "  manifests and exposure ledger, write a certificate before G7 qualification), not a computed",
+            "  certificate of this package.",
+            "- Control key formats and the probe domain: accepted by Board A as prospective deterministic",
+            "  defaults (review item 5); test vectors are not measured destruction-eligibility passes.",
             README_END,
             "",
         ]
@@ -1005,15 +1151,27 @@ def merge_readme(existing: str, section: str) -> str:
     return existing.rstrip("\n") + "\n\n" + section
 
 
-def build(cache, tok_cache):
-    data, cfg, text_groups, inputs = load_all(cache, tok_cache)
-    panels = build_panels(data, cfg, text_groups, inputs)
+def package(panels, text_groups):
+    errors = validate_panels(panels)
+    if errors:
+        raise ValueError("registered panel check failed: " + "; ".join(errors))
     files = {
         "panels.json": dumps(panels),
         "control_seeds.json": dumps(build_control_seeds()),
         "nullsize_inputs.json": dumps(build_nullsize_spec(text_groups)),
     }
     return files, panels
+
+
+def build(cache, tok_cache):
+    data, cfg, text_groups, inputs = load_all(cache, tok_cache)
+    return package(build_panels(data, cfg, text_groups, inputs), text_groups)
+
+
+def build_from_committed(out: Path):
+    """Ruling labels on the committed panels.json ids; no dataset or tokenizer access."""
+    panels = apply_rulings(json.loads((out / "panels.json").read_text()))
+    return package(panels, json.loads((out / "text_groups.json").read_text()))
 
 
 def main(argv=None):
@@ -1028,6 +1186,12 @@ def main(argv=None):
     p.add_argument(
         "--check", action="store_true", help="compare with the files on disk; write nothing"
     )
+    p.add_argument(
+        "--from-committed",
+        action="store_true",
+        help="re-label the committed panels.json (same ids) and regenerate the rule-only files; "
+        "reads no dataset",
+    )
     a = p.parse_args(argv)
     out = a.out.resolve()
     if out.is_relative_to((ROOT / "data").resolve()) or out.is_relative_to(
@@ -1035,7 +1199,10 @@ def main(argv=None):
     ):
         p.error("refusing to write under data/ (read-only)")
     try:
-        files, panels = build(a.datasets_cache, a.tokenizer_cache)
+        if a.from_committed:
+            files, panels = build_from_committed(out)
+        else:
+            files, panels = build(a.datasets_cache, a.tokenizer_cache)
     except NotCached as exc:
         print(
             json.dumps({"status": "stopped", "reason": "not cached", "detail": str(exc)}),

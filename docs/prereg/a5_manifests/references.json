@@ -2230,7 +2230,7 @@
   }
  ],
  "schema": "a5-references-v1",
- "selection_basis": "conditional (see selection.json)",
+ "selection_basis": "registered (A5.3.1 with the registered chair ruling; see selection.json)",
  "selection_status": "selected",
  "total_minutes": 156.0
 }

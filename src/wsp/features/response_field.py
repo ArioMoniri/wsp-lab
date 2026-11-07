@@ -34,6 +34,55 @@ OBJECTIVES = {
     "refusal_margin_harmful": "higher",
     "refusal_margin_harmless": "higher",
 }
+# Registered field sample sizes (items, prompts or windows) per docs/prereg/a5_manifests/panels.json
+# objective. A5.8.1's generic clause is 64 groups per objective; chair ruling A5.3.2(i) (7 Nov 2026,
+# Board A 7 Nov 2026) registers the whole unexposed 20-prompt harmful pool, overriding the generic
+# clause for that objective only. MMLU-Pro/HellaSwag use exactly the first 64 of their 500 ranked
+# groups (A5.3.2(iii)); WikiText uses its 64 windows from whole held-out articles.
+REGISTERED_FIELD_ITEMS = {
+    "wikitext_nll": 64,
+    "mmlu_gold_log_prob": 64,
+    "hellaswag_gold_char_log_likelihood": 64,
+    "refusal_margin_harmful": 20,
+    "refusal_margin_harmless": 64,
+    "probe_response": 64,
+}
+RANKED_RESERVE = 500  # MMLU-Pro and HellaSwag reserved ranking length (all G2 exposure)
+
+
+def registered_field_items(panels_doc, objective):
+    """Field item/window ids of a registered objective from panels.json; fails closed.
+
+    The size check uses REGISTERED_FIELD_ITEMS (20 for refusal_margin_harmful, never 64), takes
+    the first 64 of a 500-group ranking without choosing another prefix, refuses a panel whose
+    computed certificate is not disjoint, and refuses a harmful panel without the registered
+    size exception or with the rejected extraction fill active.
+    """
+    if objective not in REGISTERED_FIELD_ITEMS:
+        raise ValueError(f"{objective!r} is not a registered field objective")
+    want = REGISTERED_FIELD_ITEMS[objective]
+    try:
+        panel = panels_doc["panels"][objective]
+    except (KeyError, TypeError):
+        raise ValueError(f"{objective!r}: no panel in the manifest") from None
+    if not panel.get("certificate", {}).get("computed_disjoint"):
+        raise ValueError(f"{objective!r}: computed disjointness certificate missing or failed")
+    if objective == "wikitext_nll":
+        ids = list(panel.get("window_ids", []))
+    elif "field_prefix" in panel:
+        if panel["field_prefix"] != want or len(panel.get("item_ids", [])) != RANKED_RESERVE:
+            raise ValueError(f"{objective!r}: field must be the first {want} of {RANKED_RESERVE}")
+        ids = list(panel["item_ids"][:want])
+    else:
+        ids = list(panel.get("item_ids", []))
+    if objective == "refusal_margin_harmful":
+        if panel.get("registered_size") != want or panel.get("n_requested") != want:
+            raise ValueError("refusal_margin_harmful: registered 20-prompt size exception missing")
+        if "conditional_fill_not_registered" in panel:
+            raise ValueError("refusal_margin_harmful: the rejected extraction fill is still active")
+    if len(ids) != want or len(set(ids)) != len(ids):
+        raise ValueError(f"{objective!r}: {len(ids)} unique field items, registered {want}")
+    return ids
 
 
 def _hash(value):
