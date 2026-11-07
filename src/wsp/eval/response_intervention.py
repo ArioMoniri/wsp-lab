@@ -1,0 +1,820 @@
+"""Part A intervention runner (PREREG_H1_TF A5.3; SYNTHESIS 7 Nov §4.1, gate G3).
+
+1. :func:`select_edits` — A5.3.1 selection: one representative per certified source component (its
+   lexicographically smallest eligible canonical id), effective-norm tertiles per family with rank cutpoints
+   b1 = floor(N/3), b2 = floor(2N/3) on the (effective_norm, id) order, quotas n // 3 per tertile with the
+   remainder given to the lowest tertiles first (chair: 10/10/10 LoRA, 4/3/3 chain); a shortage stops.
+2. :func:`build_variants` — for one edit, the rotation R at s = 1 and the scaled edits s·Δ, each applied at
+   the actual predecessor and rounded to bf16 (A5.3.3), staged as a zoo entry outside the canonical zoo.
+3. :func:`manifest_for` — the A5.11 pieces computable from the staged zoo.
+4. :func:`plan_scoring` / :func:`scoring_summary` — which predecessor and original references are on file
+   with the same scoring identity (A5.3.4), and the priced count at 1.04 min per entry.
+
+Staged delta convention. ``wsp.eval.batch`` scores an entry as bf16(base + delta). For a root edit
+(predecessor = base) the staged ``delta.safetensors`` is the realised increment bf16(W + X) − W over the
+edited tensors. For a chain step (predecessor ≠ base, stored ``dense_cumulative``) the scorer still applies
+onto the base, so ``delta.safetensors`` is the realised cumulative state minus base (edited tensors plus the
+predecessor's own changed tensors) and the realised increment bf16(W + X) − W over the edited tensors is
+written next to it as ``increment.safetensors``. Every written tensor is checked to reproduce the intended
+bf16 state bitwise under the scorer's arithmetic.
+
+CLI::
+
+    python -m wsp.eval.response_intervention prepare --zoo Z --features F --sidecar S --out O --manifest-out M
+    python -m wsp.eval.response_intervention score --stage O/<zoo name> [--dry-run]
+
+``prepare`` stages under ``O/<zoo name>`` so the TF-v1 output directory of ``wsp.eval.batch``
+(``data/evals/<zoo name>/tf_v1``) is shared with the canonical references. ``score`` only runs the existing
+batch CLI on the staged variants; run it inside ``agent-tmux``.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import shutil
+import subprocess
+import sys
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+
+import torch
+from safetensors.torch import save_file
+
+from wsp.features import rotation
+
+FAMILIES = ("lora_sft", "chain")
+MINUTES_PER_ENTRY = 1.04
+ROTATION_DOMAIN = "20261107:rotation:"
+NUMERIC_TOL = 1e-5  # A5.3.3 orthogonality / reconstruction residual (chair default)
+DEFAULT_CONFIG = "configs/eval_tf_v1.yaml"
+
+
+class SelectionUnresolved(RuntimeError):
+    """A tertile cell is short of its quota: selection stops, no cross-cell replacement (A5.3.1)."""
+
+
+class SelectionBlocked(RuntimeError):
+    """Nonfinite/missing norms or uncertified sources block selection rather than being dropped."""
+
+
+@dataclass(frozen=True)
+class Selection:
+    edit_id: str
+    component_id: str
+    family: str
+    tertile: int
+    rank: int
+    effective_norm: float
+    predecessor_id: str
+
+
+@dataclass
+class Variant:
+    variant_id: str
+    kind: str
+    strength: float
+    seed: int
+    source_id: str
+    predecessor_id: str
+    entry_dir: Path
+    excluded: bool = False
+    exclusions: list = field(default_factory=list)
+
+
+# ------------------------------------------------------------------------------------------- selection
+
+
+def tertile_quotas(n):
+    """n // 3 per tertile, remainder to the lowest tertiles first (chair decision)."""
+    base, rem = divmod(n, 3)
+    return [base + (t < rem) for t in range(3)]
+
+
+def _finite(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+
+
+def select_with_ledger(manifest_rows, feature_norms, sidecar, n_lora=30, n_chain=10):
+    """A5.3.1 selection plus its ledger (ordered ids, cutpoints, cells, rejected rows).
+
+    ``manifest_rows``: zoo manifest rows (``id``, ``family``, ``parent_id``, ``eligibility``); rows without an
+    ``id`` (headers) are ignored. ``feature_norms``: id → effective norm of the full realised incremental edit
+    from the pre-outcome feature manifest; an id absent from it has no feature manifest (ineligible), an id
+    present with a missing or nonfinite value blocks. ``sidecar``: rows ``{id, component_id,
+    closure_certified, exclusion_reason?, canonical_id?}`` from the frozen inventory and exclusion ledger.
+    """
+    side = {r["id"]: r for r in sidecar}
+    rows = [r for r in manifest_rows if "id" in r]
+    ids = [r["id"] for r in rows]
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate ids in manifest rows")
+    rejected, eligible, blocked = [], [], []
+    for row in sorted(rows, key=lambda r: r["id"]):
+        i, fam, s = row["id"], row.get("family"), side.get(row["id"], {})
+        reason = None
+        if fam not in FAMILIES:
+            reason = f"unsupported_family:{fam}"
+        elif row.get("eligibility", "production") != "production":
+            reason = f"eligibility:{row.get('eligibility')}"
+        elif s.get("exclusion_reason"):
+            reason = s["exclusion_reason"]
+        elif s.get("canonical_id") not in (None, i):
+            reason = f"alias_of:{s['canonical_id']}"
+        elif i not in feature_norms:
+            reason = "no_feature_manifest"
+        if reason:
+            rejected.append({"id": i, "reason": reason})
+            continue
+        if s.get("closure_certified") is not True or not s.get("component_id"):
+            blocked.append(f"{i}: source closure not certified")
+        elif not _finite(feature_norms[i]):
+            blocked.append(f"{i}: missing or nonfinite effective norm {feature_norms[i]!r}")
+        else:
+            eligible.append(
+                {
+                    "id": i,
+                    "family": fam,
+                    "component": s["component_id"],
+                    "norm": float(feature_norms[i]),
+                    "predecessor": row.get("parent_id") or "base",
+                }
+            )
+    if blocked:
+        raise SelectionBlocked("; ".join(blocked))
+
+    representatives, seen = [], {}
+    for r in eligible:  # already sorted by canonical id
+        if r["component"] in seen:
+            rejected.append(
+                {"id": r["id"], "reason": f"component_represented_by:{seen[r['component']]}"}
+            )
+        else:
+            seen[r["component"]] = r["id"]
+            representatives.append(r)
+    rejected.sort(key=lambda r: r["id"])
+
+    ledger = {"rejected": rejected, "families": {}, "n_eligible": len(eligible)}
+    selected = []
+    for fam, n in (("lora_sft", n_lora), ("chain", n_chain)):
+        ordered = sorted(
+            (r for r in representatives if r["family"] == fam), key=lambda r: (r["norm"], r["id"])
+        )
+        N = len(ordered)
+        b1, b2 = N // 3, 2 * N // 3
+        cells = [ordered[0:b1], ordered[b1:b2], ordered[b2:N]]
+        quotas = tertile_quotas(n)
+        ledger["families"][fam] = {
+            "N": N,
+            "b1": b1,
+            "b2": b2,
+            "cutpoints": [
+                [ordered[b]["norm"], ordered[b]["id"]] if b < N else None for b in (b1, b2)
+            ],
+            "ordered": [r["id"] for r in ordered],
+            "cells": [[r["id"] for r in c] for c in cells],
+            "quotas": quotas,
+        }
+        rank = {r["id"]: k for k, r in enumerate(ordered)}
+        for t, (cell, quota) in enumerate(zip(cells, quotas)):
+            if len(cell) < quota:
+                err = SelectionUnresolved(
+                    f"{fam} tertile {t}: {len(cell)} representatives < quota {quota}"
+                )
+                err.ledger = ledger
+                raise err
+            for r in sorted(cell, key=lambda r: r["id"])[:quota]:
+                selected.append(
+                    Selection(
+                        r["id"], r["component"], fam, t, rank[r["id"]], r["norm"], r["predecessor"]
+                    )
+                )
+    if len(selected) != n_lora + n_chain or len({s.component_id for s in selected}) != len(
+        selected
+    ):
+        raise AssertionError("selection does not have one edit per component")
+    ledger["selected"] = [asdict(s) for s in selected]
+    return selected, ledger
+
+
+def select_edits(manifest_rows, feature_norms, sidecar, n_lora=30, n_chain=10):
+    """A5.3.1 selection; see :func:`select_with_ledger`."""
+    return select_with_ledger(manifest_rows, feature_norms, sidecar, n_lora, n_chain)[0]
+
+
+# -------------------------------------------------------------------------------------------- variants
+
+
+def rotation_seed(edit_id):
+    """A5.3.3: SHA256 of ``20261107:rotation:<id>``, first eight bytes big-endian, mod 2^63."""
+    digest = hashlib.sha256(f"{ROTATION_DOMAIN}{edit_id}".encode()).digest()
+    return int.from_bytes(digest[:8], "big") % (1 << 63)
+
+
+def variant_id(source_id, kind, strength, seed):
+    return hashlib.sha256(
+        f"a5-part-a:{source_id}:{kind}:{float(strength)!r}:{seed}".encode()
+    ).hexdigest()[:16]
+
+
+def _sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 22), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _norm(x):
+    return float(torch.linalg.vector_norm(x.double()))
+
+
+def _moments(x, w):
+    """Logged, not preserved (S31 §4.1): coordinate moments, sign fractions, cosine to the predecessor."""
+    x64, w64 = x.double().flatten(), w.double().flatten()
+    denom = float(torch.linalg.vector_norm(x64) * torch.linalg.vector_norm(w64))
+    return {
+        "mean": float(x64.mean()),
+        "std": float(x64.std()) if x64.numel() > 1 else 0.0,
+        "frac_pos": float((x64 > 0).double().mean()),
+        "frac_nonzero": float((x64 != 0).double().mean()),
+        "cos_to_predecessor": float(x64 @ w64) / denom if denom > 0 else 0.0,
+    }
+
+
+def _rotation_diagnostics(D, R_raw, R_eff, W, rows, cols, generator):
+    audit = rotation.audit(D, R_eff, rows, cols)
+    u, s, vh, rank = rotation.block_svd(D, rows, cols)
+    block = D.float()[rows[:, None], cols]
+    recon = _norm(u @ torch.diag(s) @ vh - block) / _norm(block)
+    replay = torch.Generator()
+    replay.set_state(
+        generator.get_state()
+    )  # rotate_block's draws, replayed for the orthogonality audit
+    orth = 0.0
+    for n in (len(rows), len(cols)):
+        q = rotation.haar_orthogonal(n, replay).double()
+        orth = max(orth, _norm(q.T @ q - torch.eye(n, dtype=torch.float64)) / math.sqrt(n))
+    d_norm = _norm(D)
+    audit.update(
+        {
+            "orthogonality_error": orth,
+            "reconstruction_residual": recon,
+            "block_rank": rank,
+            "block_shape": [len(rows), len(cols)],
+            "prerounding_norm_mismatch": abs(_norm(R_raw) - d_norm) / d_norm,
+            "rounding_error_rel": _norm(R_eff - R_raw) / d_norm,
+            "nonzero_d": int((D != 0).sum()),
+            "nonzero_r": int((R_eff != 0).sum()),
+            "logged_d": _moments(D, W),
+            "logged_r": _moments(R_eff, W),
+        }
+    )
+    audit["s31_passes"] = audit["passes"]
+    audit["passes"] = bool(audit["passes"] and orth <= NUMERIC_TOL and recon <= NUMERIC_TOL)
+    return audit
+
+
+def _edit_audit(audits, D, R):
+    if not audits:
+        return {"passes": False, "n_tensors": 0}
+    d = math.sqrt(sum(_norm(D[k]) ** 2 for k in audits))
+    r = math.sqrt(sum(_norm(R[k]) ** 2 for k in audits))
+    return {
+        "passes": all(a["passes"] for a in audits.values()),
+        "n_tensors": len(audits),
+        "n_failing": sum(not a["passes"] for a in audits.values()),
+        "max_norm_mismatch": max(a["norm_mismatch"] for a in audits.values()),
+        "max_spectrum_mismatch": max(a["spectrum_mismatch"] for a in audits.values()),
+        "max_abs_rank_difference": max(abs(a["rank_difference"]) for a in audits.values()),
+        "max_orthogonality_error": max(a["orthogonality_error"] for a in audits.values()),
+        "max_reconstruction_residual": max(a["reconstruction_residual"] for a in audits.values()),
+        "pooled_norm_mismatch": abs(r - d) / d,
+        "all_support_identical": all(a["support_identical"] for a in audits.values()),
+    }
+
+
+def _stage_header(canonical, edit):
+    manifest = canonical / "manifest.jsonl"
+    if manifest.exists():
+        for line in reversed(manifest.read_text().splitlines()):
+            if line.strip() and json.loads(line).get("type") == "header":
+                return json.loads(line)
+    return {
+        "type": "header",
+        "base_model": edit.get("base_model"),
+        "base_revision": edit["base_revision"],
+    }
+
+
+def _upsert_stage_rows(stage_root, header, rows):
+    path = stage_root / "manifest.jsonl"
+    existing = (
+        [json.loads(x) for x in path.read_text().splitlines() if x.strip()] if path.exists() else []
+    )
+    keyed = {r["id"]: r for r in existing if "id" in r}
+    keyed.update({r["id"]: r for r in rows})
+    lines = [header] + [keyed[k] for k in sorted(keyed)]
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in lines))
+    tmp.replace(path)
+
+
+def build_variants(
+    entry_dir,
+    predecessor_state,
+    seed,
+    strengths=(0.25, 0.5),
+    *,
+    stage_root,
+    base_state=None,
+    predecessor_id=None,
+):
+    """Rotation (s = 1) and scaled variants of one edit, staged under ``stage_root/<variant id>``.
+
+    ``predecessor_state`` is the full bf16 state W of the actual predecessor. For a chain step whose stored
+    delta is cumulative from the base, ``base_state`` is required (the scorer applies deltas onto the base).
+    Root edits scale the raw stored delta (Δ); chain steps scale their realised increment, the only per-step
+    object stored. One torch Generator per edit, seeded with ``seed``, is shared across the edited tensors in
+    sorted-name order through :func:`rotation.rotate_block` (each tensor starts from its cloned state).
+    A tensor with an exclusion reason, or a failed audit, excludes the whole rotation pair: its entry holds
+    only ``variant.json`` and is not added to the staged manifest. Never writes into the canonical zoo.
+    """
+    from wsp.zoo.apply import load_entry_delta
+
+    entry_dir, stage_root = Path(entry_dir), Path(stage_root)
+    canonical = entry_dir.resolve().parent
+    staged = stage_root.resolve()
+    if staged == canonical or canonical in staged.parents:
+        raise ValueError(f"refusing to stage variants inside the canonical zoo {canonical}")
+    edit_text = (entry_dir / "edit.json").read_text()
+    edit = json.loads(edit_text)
+    source_id = edit.get("id", entry_dir.name)
+    parent = edit.get("parent_id")
+    cumulative = bool((edit.get("provenance") or {}).get("cumulative_snapshot"))
+    if predecessor_id is None:
+        predecessor_id = parent or "base"
+    elif predecessor_id != (parent or "base"):
+        raise ValueError(
+            f"{source_id}: predecessor {predecessor_id} differs from parent_id {parent}"
+        )
+    root = base_state is None
+    if root and parent is not None:
+        raise ValueError(
+            f"{source_id}: a step with a predecessor needs base_state (stored delta is from base)"
+        )
+    base = predecessor_state if root else base_state
+    W = predecessor_state
+
+    stored = load_entry_delta(entry_dir, base)
+    keys = set(stored)
+    pred_changed = set() if root else {k for k in W if not torch.equal(W[k], base[k])}
+    D, S = {}, {}
+    for k in sorted(keys | pred_changed):
+        S[k] = (base[k].float() + stored[k].float()).to(base[k].dtype) if k in stored else base[k]
+        D[k] = rotation.realised_increment(W[k], S[k])
+    if root:
+        edited = sorted(keys)
+        raw = {k: stored[k].float() for k in edited}
+        scale_source, convention = "raw_stored_delta", "realised_increment_at_base"
+    else:
+        edited = sorted(k for k in D if torch.any(D[k] != 0))
+        raw = {k: D[k] for k in edited}
+        scale_source, convention = "realised_increment", "realised_cumulative_from_base"
+    if not edited:
+        raise ValueError(f"{source_id}: no edited tensors at the predecessor")
+
+    stage_root.mkdir(parents=True, exist_ok=True)
+    stage_meta = stage_root / "stage.json"
+    if stage_meta.exists():
+        if json.loads(stage_meta.read_text())["source_zoo"] != str(canonical):
+            raise ValueError(f"{stage_root} stages a different source zoo")
+    else:
+        stage_meta.write_text(json.dumps({"source_zoo": str(canonical)}, indent=1, sort_keys=True))
+    header = _stage_header(canonical, edit)
+
+    common = {
+        "source_id": source_id,
+        "predecessor_id": predecessor_id,
+        "family": edit.get("family"),
+        "seed": seed,
+        "stored_cumulative_snapshot": cumulative,
+        "edited_tensors": edited,
+        "delta_convention": convention,
+        "scale_source": scale_source,
+        "edited_tensor_rule": "stored delta keys"
+        if root
+        else "nonzero realised increment at the predecessor",
+    }
+
+    def write(kind, strength, states, meta, excluded, exclusions):
+        vid = variant_id(source_id, kind, strength, seed)
+        d = stage_root / vid
+        d.mkdir(exist_ok=True)
+        for name in ("delta.safetensors", "increment.safetensors", "edit.json"):
+            (d / name).unlink(missing_ok=True)
+        info = (
+            common
+            | meta
+            | {"kind": kind, "strength": float(strength), "variant_id": vid, "excluded": excluded}
+        )
+        info["exclusions"] = exclusions
+        rows = []
+        if not excluded:
+            delta = {k: (states[k].float() - base[k].float()) for k in edited}
+            if not root:
+                for k in sorted(pred_changed - set(edited)):
+                    delta[k] = W[k].float() - base[k].float()
+                    states = states | {k: W[k]}
+                increment = {k: (states[k].float() - W[k].float()).contiguous() for k in edited}
+                save_file(dict(sorted(increment.items())), str(d / "increment.safetensors"))
+            for (
+                k,
+                x,
+            ) in delta.items():  # the scorer's arithmetic must reproduce the intended state bitwise
+                if not torch.equal((base[k].float() + x).to(base[k].dtype), states[k]):
+                    raise RuntimeError(f"{vid}: {k} does not round-trip through bf16(base + delta)")
+            save_file(
+                {k: delta[k].contiguous() for k in sorted(delta)}, str(d / "delta.safetensors")
+            )
+            shutil.copyfile(entry_dir / "edit.json", d / "edit.json")
+            info["delta_sha256"] = _sha256(d / "delta.safetensors")
+            rows.append(
+                {
+                    "id": vid,
+                    "family": edit.get("family"),
+                    "eligibility": "production",
+                    "parent_id": None if predecessor_id == "base" else predecessor_id,
+                    "base_revision": edit["base_revision"],
+                    "variant_of": source_id,
+                    "variant_kind": kind,
+                    "strength": float(strength),
+                    "seed": seed,
+                    "reuse_key": info["delta_sha256"],
+                    "stored_delta_format": "dense" if root else "dense_cumulative",
+                }
+            )
+        (d / "variant.json").write_text(json.dumps(info, indent=1, sort_keys=True))
+        _upsert_stage_rows(stage_root, header, rows)
+        return Variant(
+            vid, kind, float(strength), seed, source_id, predecessor_id, d, excluded, exclusions
+        )
+
+    # rotation at s = 1
+    exclusions, blocks = [], {}
+    for k in edited:
+        if not isinstance(D[k], torch.Tensor):
+            reason = "not_single_matrix"
+        elif D[k].ndim != 2:
+            reason = "non_2d"
+        else:
+            blocks[k] = rotation.changed_block(D[k])
+            reason = rotation.exclusion_reason(D[k], *blocks[k])
+        if reason:
+            exclusions.append({"tensor": k, "reason": reason})
+    audits, states, R = {}, {}, {}
+    if not exclusions:
+        generator = torch.Generator()
+        generator.manual_seed(seed)
+        for k in edited:
+            rows_k, cols_k = blocks[k]
+            R_raw = rotation.rotate_block(D[k], rows_k, cols_k, seed, shared_generator=generator)
+            states[k], R[k] = rotation.apply_and_round(W[k], R_raw)
+            audits[k] = _rotation_diagnostics(D[k], R_raw, R[k], W[k], rows_k, cols_k, generator)
+        exclusions = [
+            {"tensor": k, "reason": "audit_failed"} for k, a in audits.items() if not a["passes"]
+        ]
+    meta = {
+        "tensor_audits": audits,
+        "edit_audit": _edit_audit(audits, D, R) if audits else {"passes": False, "n_tensors": 0},
+        "coverage": {
+            "n_edited": len(edited),
+            "n_rotated": len(audits) if not exclusions else 0,
+            "n_excluded": len(exclusions),
+            "fraction": (len(audits) / len(edited)) if not exclusions else 0.0,
+        },
+        "rotation_generator": "one torch.Generator per edit seeded with `seed`, shared across tensors in "
+        "sorted-name order via rotation.rotate_block(shared_generator=...)",
+    }
+    variants = [write("rotation", 1.0, states, meta, bool(exclusions), exclusions)]
+
+    for s in strengths:
+        states, stats = {}, {}
+        for k in edited:
+            states[k], X = rotation.scaled_variant(W[k], raw[k], s)
+            target = s * raw[k]
+            nonzero = target != 0
+            stats[k] = {
+                "realised_norm": _norm(X),
+                "intended_norm": _norm(target),
+                "fraction_nonzero_lost": float((nonzero & (X == 0)).sum())
+                / max(int(nonzero.sum()), 1),
+            }
+        variants.append(write("scale", s, states, {"tensor_stats": stats}, False, []))
+    return variants
+
+
+# -------------------------------------------------------------------------------------------- manifest
+
+
+def _entry_files(d):
+    return {
+        n: _sha256(d / n)
+        for n in ("delta.safetensors", "increment.safetensors")
+        if (d / n).exists()
+    }
+
+
+def manifest_for(selections, variants, code_sha):
+    """A5.11 pieces computable from the staged zoo (no paths, no timestamps: deterministic)."""
+    edit_ids = sorted(s.edit_id for s in selections)
+    predecessors = sorted(
+        {s.predecessor_id for s in selections} | {v.predecessor_id for v in variants}
+    )
+    by_id = sorted(variants, key=lambda v: v.variant_id)
+    return {
+        "schema": "a5-part-a-launch-v1",
+        "code_sha": code_sha,
+        "edit_ids": edit_ids,
+        "component_ids": sorted(s.component_id for s in selections),
+        "predecessor_ids": predecessors,
+        "selections": [asdict(s) for s in selections],
+        "variant_ids": [v.variant_id for v in by_id if not v.excluded],
+        "excluded_variant_ids": [v.variant_id for v in by_id if v.excluded],
+        "variants": [
+            {
+                "variant_id": v.variant_id,
+                "kind": v.kind,
+                "strength": v.strength,
+                "seed": v.seed,
+                "source_id": v.source_id,
+                "predecessor_id": v.predecessor_id,
+                "excluded": v.excluded,
+                "exclusions": v.exclusions,
+            }
+            for v in by_id
+        ],
+        "delta_sha256": {v.variant_id: _entry_files(v.entry_dir) for v in by_id if not v.excluded},
+        "reference_ids_needed": {"predecessors": predecessors, "originals": edit_ids},
+        "selected_without_variants": sorted(set(edit_ids) - {v.source_id for v in variants}),
+        "variants_without_selection": sorted({v.source_id for v in variants} - set(edit_ids)),
+        "minutes_per_entry": MINUTES_PER_ENTRY,
+    }
+
+
+# ---------------------------------------------------------------------------------------- scoring plan
+
+
+def _load_config(config):
+    if isinstance(config, dict):
+        return config
+    import yaml
+
+    return yaml.safe_load(Path(config).read_bytes())
+
+
+def _source_hashes(source):
+    """The ``entry_hashes`` that wsp.eval.batch records for a zoo entry."""
+    if (source / "delta.safetensors").exists():
+        return {"delta.safetensors": _sha256(source / "delta.safetensors")}
+    return {
+        str(p.relative_to(source)): _sha256(p)
+        for p in sorted((source / "lora").glob("*"))
+        if p.is_file()
+    }
+
+
+def _reference_on_file(evals_dir, ref_id, source, identity):
+    """Same scoring identity (A5.3.4): complete, same config hash, revision, counts and entry bytes."""
+    path = Path(evals_dir) / ref_id / "eval.json"
+    if not path.exists():
+        return False
+    p = json.loads(path.read_text())
+    ok = (
+        p.get("eval_status") == "complete"
+        and p.get("config_hash") == identity["config_hash"]
+        and p.get("model_revision") == identity["model_revision"]
+        and all(p.get("counts", {}).get(k) == n for k, n in identity["counts"].items())
+    )
+    if ok and source is not None:
+        hashes = p.get("entry_hashes") or {}
+        ok = bool(hashes) and source.exists() and hashes == _source_hashes(source)
+    return bool(ok)
+
+
+def _stage(staged_zoo, evals_dir, config):
+    from wsp.eval.batch import effective_config_hash
+
+    staged_zoo = Path(staged_zoo)
+    cfg = _load_config(config)
+    source_zoo = Path(json.loads((staged_zoo / "stage.json").read_text())["source_zoo"])
+    rows = [
+        json.loads(x) for x in (staged_zoo / "manifest.jsonl").read_text().splitlines() if x.strip()
+    ]
+    variants = sorted((r for r in rows if "id" in r), key=lambda r: r["id"])
+    counts = {k: v.get("n", v.get("n_windows")) for k, v in cfg["benchmarks"].items()}
+    status = {}
+
+    def on_file(ref_id, revision):
+        key = (ref_id, revision)
+        if key not in status:
+            identity = {
+                "config_hash": effective_config_hash(cfg),
+                "model_revision": revision,
+                "counts": counts,
+            }
+            source = None if ref_id == "base" else source_zoo / ref_id
+            status[key] = _reference_on_file(evals_dir, ref_id, source, identity)
+        return status[key]
+
+    return variants, on_file
+
+
+def plan_scoring(staged_zoo, evals_dir, config):
+    """[(variant id, needs_reference)] — whether the variant's predecessor reference lacks an on-file
+    record with the same scoring identity (absent identity proof counts as needed)."""
+    variants, on_file = _stage(staged_zoo, evals_dir, config)
+    return [
+        (r["id"], not on_file(r.get("parent_id") or "base", r["base_revision"])) for r in variants
+    ]
+
+
+def scoring_summary(staged_zoo, evals_dir, config):
+    """Plan plus A5.3.4 counts: n_P unique missing predecessors, n_D missing originals, priced minutes."""
+    variants, on_file = _stage(staged_zoo, evals_dir, config)
+    plan = [
+        (r["id"], not on_file(r.get("parent_id") or "base", r["base_revision"])) for r in variants
+    ]
+    preds = sorted({(r.get("parent_id") or "base", r["base_revision"]) for r in variants})
+    origs = sorted({(r["variant_of"], r["base_revision"]) for r in variants})
+    missing_p = sorted({p for p, rev in preds if not on_file(p, rev)})
+    missing_d = sorted({o for o, rev in origs if not on_file(o, rev)})
+    excluded = sorted(
+        json.loads(p.read_text())["variant_id"]
+        for p in Path(staged_zoo).glob("*/variant.json")
+        if json.loads(p.read_text()).get("excluded")
+    )
+    n = len(variants) + len(missing_p) + len(missing_d)
+    return {
+        "plan": plan,
+        "n_variants": len(variants),
+        "excluded_variants": excluded,
+        "missing_predecessors": missing_p,
+        "missing_originals": missing_d,
+        "n_P": len(missing_p),
+        "n_D": len(missing_d),
+        "minutes_per_entry": MINUTES_PER_ENTRY,
+        "minutes": n * MINUTES_PER_ENTRY,
+    }
+
+
+def score_commands(staged_zoo, config=DEFAULT_CONFIG):
+    """The existing batch CLI on the staged variants (scoring is never reimplemented here)."""
+    staged_zoo = Path(staged_zoo)
+    rows = [
+        json.loads(x) for x in (staged_zoo / "manifest.jsonl").read_text().splitlines() if x.strip()
+    ]
+    ids = sorted(r["id"] for r in rows if "id" in r)
+    return [
+        [
+            sys.executable,
+            "-m",
+            "wsp.eval.batch",
+            "--zoo",
+            str(staged_zoo),
+            "--config",
+            str(config),
+            "--ids",
+            ",".join(ids),
+        ]
+    ]
+
+
+# ------------------------------------------------------------------------------------------------- CLI
+
+
+def load_feature_norms(path, rows):
+    """id → effective incremental norm. ``path`` is a JSON object, a JSONL of ``{id, effective_norm}``, or a
+    features directory of ``<id>/features.json``; there a norm counts only if it is relative to the actual
+    predecessor (``delta_relative_to`` base for root edits), otherwise the value is None and blocks."""
+    path = Path(path)
+    if path.is_file():
+        text = path.read_text()
+        try:
+            data = json.loads(text)
+            return {k: v for k, v in data.items()}
+        except json.JSONDecodeError:
+            return {
+                r["id"]: r.get("effective_norm") for r in map(json.loads, text.splitlines()) if r
+            }
+    norms = {}
+    for row in rows:
+        if "id" not in row or row.get("family") not in FAMILIES:
+            continue
+        f = path / row["id"] / "features.json"
+        if not f.exists():
+            continue
+        meta = json.loads(f.read_text())
+        rel, parent = meta.get("delta_relative_to"), row.get("parent_id")
+        incremental = (rel == "base" and parent is None) or (
+            rel in ("parent", "predecessor") and meta.get("parent_id") == parent
+        )
+        norms[row["id"]] = (meta.get("norms") or {}).get("fro_effective") if incremental else None
+    return norms
+
+
+def prepare(args):
+    from wsp.eval.batch import REPO, provenance
+    from wsp.features.extract import load_base_state
+    from wsp.zoo.apply import load_edited_model
+
+    zoo = Path(args.zoo)
+    rows = [json.loads(x) for x in (zoo / "manifest.jsonl").read_text().splitlines() if x.strip()]
+    sidecar = [json.loads(x) for x in Path(args.sidecar).read_text().splitlines() if x.strip()]
+    norms = load_feature_norms(args.features, rows)
+    try:
+        selections, ledger = select_with_ledger(rows, norms, sidecar, args.n_lora, args.n_chain)
+    except (SelectionBlocked, SelectionUnresolved) as e:
+        print(f"selection {type(e).__name__}: {e}", file=sys.stderr)
+        return 2
+    header = next(r for r in reversed(rows) if r.get("type") == "header")
+    revisions = {
+        json.loads((zoo / s.edit_id / "edit.json").read_text())["base_revision"] for s in selections
+    }
+    if len(revisions) != 1:
+        raise ValueError(f"selected edits span base revisions {sorted(revisions)}")
+    base, _ = load_base_state(header["base_model"], revisions.pop())
+    stage = Path(args.out) / zoo.name
+    variants = []
+    for s in selections:
+        kw = {"stage_root": stage, "predecessor_id": s.predecessor_id}
+        if s.predecessor_id == "base":
+            pred = base
+        else:
+            pred, kw["base_state"] = load_edited_model(base, zoo / s.predecessor_id), base
+        variants += build_variants(
+            zoo / s.edit_id, pred, rotation_seed(s.edit_id), tuple(args.strengths), **kw
+        )
+        print(
+            f"staged {s.edit_id}: {[v.variant_id for v in variants[-1 - len(args.strengths) :]]}",
+            flush=True,
+        )
+    origin = provenance()
+    manifest = manifest_for(selections, variants, origin["git_sha"])
+    evals = Path(args.evals) if args.evals else REPO / "data/evals" / zoo.name / "tf_v1"
+    summary = scoring_summary(stage, evals, args.config)
+    manifest |= {
+        "provenance": origin,
+        "selection_ledger": ledger,
+        "scoring": summary | {"config": str(args.config), "evals_dir": str(evals)},
+        "staged_zoo": str(stage),
+    }
+    Path(args.manifest_out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.manifest_out).write_text(json.dumps(manifest, indent=1, sort_keys=True))
+    print(json.dumps({k: v for k, v in summary.items() if k != "plan"}, indent=1))
+    for vid, need in summary["plan"]:
+        print(vid, "needs_reference" if need else "reference_on_file")
+    return 0
+
+
+def score(args):
+    cmds = score_commands(args.stage, args.config)
+    for cmd in cmds:
+        print(" ".join(cmd), flush=True)
+        if not args.dry_run:
+            subprocess.run(cmd, check=True)
+    return 0
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        prog="python -m wsp.eval.response_intervention", description=__doc__
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+    p = sub.add_parser(
+        "prepare", help="select, build variants, write manifest, print the scoring plan"
+    )
+    p.add_argument("--zoo", required=True, help="canonical zoo (read only)")
+    p.add_argument("--features", required=True, help="features dir, JSON {id: norm} or JSONL")
+    p.add_argument(
+        "--sidecar", required=True, help="JSONL {id, component_id, closure_certified, ...}"
+    )
+    p.add_argument("--out", required=True, help="staging root; variants go to OUT/<zoo name>")
+    p.add_argument("--manifest-out", required=True)
+    p.add_argument("--config", default=DEFAULT_CONFIG)
+    p.add_argument("--evals", help="TF-v1 evals dir (default data/evals/<zoo name>/tf_v1)")
+    p.add_argument("--n-lora", type=int, default=30)
+    p.add_argument("--n-chain", type=int, default=10)
+    p.add_argument("--strengths", type=float, nargs="+", default=[0.25, 0.5])
+    s = sub.add_parser("score", help="run wsp.eval.batch on the staged zoo (inside agent-tmux)")
+    s.add_argument("--stage", required=True, help="staged zoo directory (OUT/<zoo name>)")
+    s.add_argument("--config", default=DEFAULT_CONFIG)
+    s.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args(argv)
+    return {"prepare": prepare, "score": score}[args.command](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
