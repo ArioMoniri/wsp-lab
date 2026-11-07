@@ -1,8 +1,8 @@
-# Council decision — 7 November 2026 (chair synthesis, version 3)
+# Council decision — 7 November 2026 (chair synthesis, version 3.1)
 
 Branch `council/2026-11-07`. Reviews: version 1 and version 2 by Boards A, B and C
-(`docs/reviews/council/board-{a,b,c}-synthesis-2026-11-07.md`, `board-{a,b,c}-synthesis-v2-2026-11-07.md`). Version 3 answers the
-second-pass edits. Inputs, read in order: [BRIEF](BRIEF.md); round 1 [world-model](round1-world-model.md),
+(`docs/reviews/council/board-{a,b,c}-synthesis-2026-11-07.md`, `board-{a,b,c}-synthesis-v2-2026-11-07.md`); version 3 by Board A
+(`board-a-synthesis-v3-2026-11-07.md`, ACCEPT WITH REQUIRED EDITS as a programme proposal). Version 3.1 applies those four edits. Inputs, read in order: [BRIEF](BRIEF.md); round 1 [world-model](round1-world-model.md),
 [representation](round1-representation.md), [metrology](round1-metrology.md), [editor](round1-editor.md); round 2
 [world-model](round2-world-model.md), [representation](round2-representation.md), [metrology](round2-metrology.md),
 [editor](round2-editor.md); the 5 Nov [SYNTHESIS](../2026-11-05/SYNTHESIS.md).
@@ -134,7 +134,7 @@ identities precede the affected computation. No rerun or regeneration restores f
 |---|---|---|---|
 | **G0** chain regeneration (running) | 358 snapshots replayed from edit.json; install; features; full-set P4 rerun (target 345 matched rows) as the X1 fingerprint; TF-v1 G1 for the 2 lost predecessors and the 14 missing (y, h) rows | random_dir and abliteration steps must be bitwise. A re-trained LoRA step is accepted within a matrix relative Frobenius error ‖D_replayed − D_stored‖_F / ‖D_stored‖_F ≤ 5e-3 on the verification chains, and is labelled "re-trained"; its descendants carry the label and are excluded from fingerprint claims. Pilot evidence (`docs/reviews/P5/d8-regeneration-2026-11-06/chain_replay_pilot.json`, branch `feat/d8-chain-replay`, commit ae7548a): 8 of 11 steps bitwise; for the three LoRA steps only the **norm** differences were recorded (≤ 9.1e-4 relative), which bound the matrix error from below, not above. The matrix metric was added to the comparator afterwards and will be measured on the same chains before any fingerprint claim | LoRA re-training *allocation* ≈ 3 GPU-h; extraction 358 × 54.3 s = 5.4 CPU-h; P4 rerun 26.6 run-wall-h (historical sum of run wall-clock, up to 4 workers × 2 threads; core-hours not established) |
 | **G1** P6d rescoring | TF-v1 D3 stratum panel at the frozen source. Scoring entries: 316 recoverable (239 non-chain + 77 chain; 167 stratum rows + 157 controls = 324 logical rows, 8 reused alias records) priced at ≈ 5.5 GPU-h in `docs/reviews/P5/board-a-incident-d8-2026-11-06.md`, plus 62 chain rows that depend on G0 at ≈ 1.05 GPU-h: 378 scoring entries, 386 logical rows. A canonical mapping delta → logical row → alias → actual reference is a launch artefact | records bitwise with the surviving fingerprints (G1/G2 rule of the incident review) | 5.5 + 1.05 |
-| **G2** fields, chart features, probe cache | A5 frozen first. Then g_k and K-FAC factors (schema, section 6); chart projectors; probe cache; exact-gradient audit at 20 chain predecessors: relative error of ⟨g, D⟩ against the base-plus-cross-term approximation ≤ 0.1, with an absolute floor of 1e-3 nats on the denominator, on ≥ 16 of 20; otherwise the base approximation is not used for chains. Peak VRAM, throughput, CPU/disk bytes and reference-score costs recorded | hard caps; exceeding one stops the gate and triggers repricing, never a silent cut in coverage; a supported module without hooks fails the gate | *allocation* ≤ 2 GPU-h fields and cache, ≤ 1 GPU-h audit |
+| **G2** fields, chart features, probe cache | A5 frozen first. Then g_k and K-FAC factors (schema, section 6); chart projectors; probe cache; exact-gradient audit at 20 chain predecessors: relative error of ⟨g, D⟩ against the base-plus-cross-term approximation ≤ 0.1, with an absolute floor of 1e-3 nats on the denominator, on ≥ 16 of 20; fewer is a hard stop of G2 pending a new amendment (section 4.0). Peak VRAM, throughput, CPU/disk bytes and reference-score costs recorded | hard caps; exceeding one stops the gate and triggers repricing, never a silent cut in coverage; a supported module without hooks fails the gate | *allocation* ≤ 2 GPU-h fields and cache, ≤ 1 GPU-h audit |
 | **G3 Part A** rotation and ladder | 30 lora_sft and 10 chain D3 edits, one per certified source component, chosen by sorted id within effective-norm tertiles (ties by id) before any new variant outcome. Per edit: one rotation R at s = 1 and the edit at s ∈ {0.25, 0.5}, each applied at the actual predecessor and rounded. 120 new TF-v1 WikiText scores on the registered 64 windows, plus the predecessor references that are not already on file (enumerated in A5) | section 4.1 | 120 × 1.04 min ≈ 2.1 GPU-h plus references (priced in A5) |
 | **G4 Part B** retrospective (exploratory) | registered H1w folds, nuisance and intervals on the G1 panel (386 logical rows if G0 lands, else 324) | section 4.2; go / screen / no-go / unresolved for buying sealed rows; no kill (PREREG A4.4) | CPU |
 | **G5** editor harness pilot | `ScriptedEditor` only, production disabled; 10 source/support blocks × 6 arms (D, same-support gradient step, orientation randomisation, −D, D/2, D/4) = 60 proposals; whole connected episode/source/direction/prompt groups split 6/2/2; arms: full critic, field-only, chart-only, StatNN, augmented StatNN, descriptors, norm, activation-only, correspondence-shuffled | feasibility and calibration variance only; no rejection, no H5 claim; an exhausted allocation is a feasibility failure, not evidence about prediction | *allocation* ≤ 10 GPU-h: 1.0 scoring, 0.9 reserve for extraction (CPU in practice), 2 fields/cache, 2 generation/probes, 2 references/repeats, 2.1 contingency |
@@ -148,14 +148,29 @@ CPU work is listed per gate and not summed, because the P4 figure is a run-wall 
 
 ## 4. Decision rules (content of PREREG appendix A5)
 
-### 4.0 Precedence (applies to every gate)
+### 4.0 Decision function (one ordered evaluation; the first matching branch decides)
 
-1. **Validity first.** Missing manifests or hashes, a failed qualification, a failed G2 audit, an exhausted allocation, or a
-   development null-size simulation that is not acceptable (section 4.1) make the gate **unresolved**. Nothing downstream runs.
-2. **Part A disposition** (go / unresolved / alternative), section 4.1.
-3. **Primary contrast** of Part B with its two destruction controls, section 4.2.
-4. **Funding decision**, mutually exclusive: go, screen, no-go, unresolved. Boundary equality counts as not meeting the
-   threshold. Scientific consequences are stated separately from funding consequences in every report.
+Equality conventions are stated per rule below: point thresholds written with ≥ or ≤ are inclusive; "lower bound > 0" and
+"lower bound > 0.5" are strict. There is no blanket rule.
+
+1. **Validity.** Missing manifests or hashes, a failed qualification, an exhausted allocation, or a development null-size
+   simulation above 0.07 at nominal 0.05 → the gate is **unresolved**; nothing downstream runs. The G2 predecessor audit has one
+   action: fewer than 16 of 20 passing predecessors is a **hard stop** of G2 pending a new amendment (exact-predecessor
+   gradients may be registered there with their cost); it does not silently disable the approximation.
+2. **Ladder alternative.** At s = 0.25, ≥ 15 resolved pairs and agreement upper bound ≤ 0.6 → **alternative**: the field is not
+   pursued, no sealed purchase on the field arm, the probe-response comparator becomes development work only (it has no
+   purchase criterion until a new amendment gives it one). This branch overrides a rotation go.
+3. **Part A evidence.** Fewer than 15 resolved rotation pairs → **Part A unresolved**. Interval includes 0.5 → **Part A
+   unresolved**. Interval entirely below 0.5 → **Part A unresolved**, with the observed disagreement reported (no scientific
+   kill). Otherwise (≥ 15 pairs, lower bound > 0.5) → **Part A go**.
+4. **Part B eligibility.** Part B is always computed and reported. It can fund only if Part A went and both destruction
+   controls are beaten (lower bound > 0 on both); otherwise the funding decision is **unresolved** regardless of C, and the
+   extension-only exception below does not apply.
+5. **Funding (if eligible), evaluated in this order:** if C ≥ 0.15 and lower 95 % > 0 → **go**; else if C ≥ 0.05 → **screen**
+   (Part A extension only, never sealed rows); else if upper 95 % < 0.05 and simulated power at C = 0.15 ≥ 0.80 → **no-go**
+   (funding stops; not a scientific falsifier); else → **unresolved**. Intervals are never assumed to contain their point
+   estimate; the branches are evaluated as written.
+Scientific consequences are stated separately from funding consequences in every report.
 
 ### 4.1 Part A
 
@@ -181,14 +196,14 @@ outcomes are read; if the simulated size exceeds 0.07 at nominal 0.05, the rule 
 resolution probability of 0.375 the chance of ≥ 15 resolved among 40 is ≈ 0.56. Yield and agreement power are simulated from
 development contrast and noise assumptions before this purchase is called decisive.
 
-*Go.* Part A **goes** when the rotation contrast has ≥ 15 resolved pairs and its lower bound exceeds 0.5. Otherwise it is
-unresolved (too few pairs or an interval that includes 0.5) or sends the programme to the alternative (below).
+*Go.* Part A **goes** when the rotation contrast has ≥ 15 resolved pairs and its lower bound exceeds 0.5; every other outcome is
+listed in section 4.0, step 3.
 
 *Ladder.* The contrast is y(W_i + s·Δ_i) − y(W_i) at s = 0.25 and s = 0.5, predicted sign from ⟨g, bf16(W_i + s·Δ_i) − W_i⟩,
-same resolution rule, same interval, separate denominators per strength, reported as descriptive. **Alternative rule:** if at
-s = 0.25 there are ≥ 15 resolved pairs and the **upper** bound of the agreement is ≤ 0.6, the field is not pursued and the
-probe-response comparator (section 4.2) becomes the development arm. A lower bound below 0.5 alone is uninformative and
-triggers nothing. A pass at s = 0.25 with a fail at s ≥ 1 is a pattern to investigate, not a conclusion.
+same resolution rule, same interval, separate denominators per strength, reported as descriptive except for the alternative rule
+of section 4.0, step 2 (upper bound ≤ 0.6 at s = 0.25 on ≥ 15 resolved pairs), which overrides a rotation go. A lower bound
+below 0.5 alone is uninformative and triggers nothing. A pass at s = 0.25 with a fail at s ≥ 1 is a pattern to investigate, not a
+conclusion.
 
 *Rotation.* Per edited tensor t, the incremental effective edit is the realised bf16 difference D_t = bf16(W_t + Δ_t) − W_t at the
 actual predecessor, subtracted in fp32 from the two stored bf16 states. Take the rectangular coordinate block of changed rows and
@@ -219,13 +234,18 @@ loss, outer-held-out predictions audited for nested out-of-fold construction.
 training-only nuisance fit and seed averaging; cand = **StatNN + field tokens**; aug = **augmented StatNN**, the same tree with
 the same settings, tuning budget and folds on identical inputs: v4 pooled statistics plus the deterministic per-tensor
 transformation of section 6 (ordered exact-layer and role scalar columns of the chart and of the field, padded by a fixed rule),
-so that the comparator receives every scalar the candidate receives. A gain of StatNN + field over augmented StatNN is therefore
-a field-information gain, not an encoder claim. Interval: paired ancestry-cluster bootstrap-t on log(A_cand / A_aug), fixed
+so that the comparator receives every scalar the candidate receives. C therefore measures the candidate pipeline's performance
+relative to a **same-information comparator**; it does not by itself identify the information the field adds. A5 must name the
+actual difference between the two pipelines. **Field-information contrast (registered, decision-relevant):** C_abl = 1 −
+A_cand / A_no-field, where the no-field arm is the identical pipeline (architecture, chart and predecessor access, rows, folds,
+tuning opportunity) with the field columns removed; same interval. "Both destruction controls beaten" in section 4.0 is read as:
+C_rand, C_perm **and** C_abl all have lower bound > 0. The random-field and permuted-field controls test particular destruction
+hypotheses; the intact no-field ablation is what identifies the field's contribution. Interval: paired ancestry-cluster bootstrap-t on log(A_cand / A_aug), fixed
 seed and draws, resampling whole components; conditional and joint item procedures as in PREREG A2.3, adapted to the A_aug
 denominator; denominator failure (A_aug = 0 in a resample) is recorded and the draw dropped, with the count reported.
 
-*Destruction controls.* C_rand = 1 − A_cand / A_rand-field and C_perm = 1 − A_cand / A_perm-field, same interval; "beats" means
-lower bound > 0 on both. *Secondary arms* (descriptive, no decision): zero-shot field (sign from ⟨g, ΔW⟩ only), ≤ 3-coefficient
+*Destruction controls.* C_rand = 1 − A_cand / A_rand-field and C_perm = 1 − A_cand / A_perm-field, same interval, alongside
+C_abl above; "beaten" means lower bound > 0 on all three. *Secondary arms* (descriptive, no decision): zero-shot field (sign from ⟨g, ΔW⟩ only), ≤ 3-coefficient
 field calibration, chart with its own destruction controls (permuted projectors; random-frame chart), A1-lite, descriptor-only,
 delta-norm, original StatNN, the existing M1 and canonical LoRA tokens on the LoRA-only rows of the same folds (with their own
 intervals and an inconclusive region), and the probe-response comparator (linear ΔW·x on a fixed scoring-disjoint 64-prompt
@@ -235,14 +255,8 @@ panel plus a regularised head; probe-only and probe-plus-descriptor controls; pr
 known. Their reuse for C is a chair choice made before any new outcome; A5 records it as such. The MMLU θ̂ of 0.129
 (`docs/reviews/P5/h1a-companions-2026-11-06.md`) was known when this programme was designed; A5 discloses it.
 
-*Decision (after precedence steps 1–2).*
-**Go**: Part A goes; C ≥ 0.15 with lower 95 % > 0; both destruction controls beaten.
-**Screen**: C ≥ 0.05 and not go. Funds a Part A extension only; never sealed rows.
-**No-go**: upper 95 % of C < 0.05 **and** the development-only simulated power at C = 0.15 is ≥ 0.80. A no-go stops funding; it is
-not a scientific falsifier, because Part B reuses examined outcomes and PREREG A4.4 forbids pass/kill language on this endpoint.
-**Unresolved**: everything else, including Part A unresolved, controls not beaten with C ≥ 0.15, or power < 0.80 with an upper
-bound < 0.05.
-There is no chart fallback in this programme. A chart-primary programme needs a new amendment written before new outcomes.
+*Decision.* Section 4.0, steps 4–5. A no-go stops funding and is not a scientific falsifier, because Part B reuses examined
+outcomes and PREREG A4.4 forbids pass/kill language on this endpoint. There is no chart fallback in this programme. A chart-primary programme needs a new amendment written before new outcomes.
 
 *Disclosure.* The D3 WikiText θ̂ and MMLU θ̂ were known before this design. The field and chart code, the arm list and the
 thresholds are frozen by hash in A5 before G2 computes the first field.
@@ -268,8 +282,9 @@ episode clustering, denominator = all rejected candidates including failed attem
 diagnostics, gradients, probes, failed attempts and amortised training. Episode count and budget are set from G5 variance to
 ≥ 0.80 simulated joint power before any episode runs. **Kill** critic deployment only if a powered test shows a savings upper
 bound < 30 % or demonstrated inferiority (upper bound of the score difference < −1 point); an interval too wide to show
-non-inferiority is unresolved. **Kill** the structural mechanism only if its powered incremental residual-MAE gain has an upper
-bound < 0.05 against augmented StatNN **and** field-only, on the contrast fixed in A5 before any episode. Calibration, power or
+non-inferiority is unresolved. A powered incremental residual-MAE gain with upper bound < 0.05 against augmented StatNN **and** field-only, on the contrast
+fixed in A5 before any episode, **rejects the registered structural representation's incremental predictive benefit on that
+population**; it does not kill the structural mechanism in general, and deployment kill is a separate decision. Calibration, power or
 budget failure leaves H5 unresolved.
 
 ## 5. What this changes in the record
