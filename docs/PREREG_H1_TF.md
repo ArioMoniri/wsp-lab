@@ -869,6 +869,7 @@ The Fisher approximation is not a Hessian and the weight contraction is not a lo
 Projector dimension is 32 per side, seed 20261107, Gaussian then QR with positive diagonal convention.
 For smaller dimensions use min(32,dimension); pad unused coordinates with zero and a presence mask.
 P_out has shape 32×out and P_in has shape in×32 after padding; active columns/rows are orthonormal.
+Revision 7 Nov 2026 (chair, after the implementation in commit 8ee91f3, before freeze): the default projector dimension is **4** per side, not 32. With 32 the augmented-StatNN layout of A5.8.3 has 318 slots and 571,836 columns, unusable for a tree on a few hundred rows; with 4 each matrix slot carries 3 × 16 contraction columns (≈ 9,000 over 186 matrix slots). Every "32" in this clause reads 4; "min(32, dimension)" reads min(4, dimension). Board A may change before freeze.
 For each matrix X∈{W,E,D}, store P_out X P_in, plus signed 〈P_out D P_in,P_out W P_in〉 and displacement contractions.
 Also store raw 〈D,W〉, 〈D,E〉, norms, rounding loss, support, role, layer and spectral/tail features.
 Use epsilon 1e-12 for dimensionless normalisations; zero denominators produce explicit zero/presence flags, never hidden imputations.

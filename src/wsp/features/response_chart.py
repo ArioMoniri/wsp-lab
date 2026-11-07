@@ -18,7 +18,7 @@ presence 0, and a coordinate mask marks which entries were observed. Columns dep
 schema and the set of tokens, never on token order.
 
 Chair defaults, each **chair default, Board A may change before freeze** (PREREG A5.8.2-3):
-projector dimension 32 per side; per-tensor projector seed
+projector dimension 4 per side (revised 7 Nov from 32: the 32-wide layout had 571,836 columns); per-tensor projector seed
 ``SeedSequence([20261107, crc32(tensor_name)])`` (first uint64 state); Gaussian frames
 orthonormalised by QR with a positive-diagonal sign convention; slots from the registry ordered by
 layer then role, absent slots zero with presence 0; the reduced non-matrix token; the
@@ -43,7 +43,7 @@ import torch
 from wsp.zoo.apply import load_entry_delta
 from wsp.zoo.arch import ARCHS, split_key
 
-CHART_SCHEMA_VERSION = 1
+CHART_SCHEMA_VERSION = 2  # 2: default projector_dim 4 (was 32)
 
 
 def schema_hash(schema):
@@ -135,7 +135,7 @@ def tensor_slot(name):
 def chart_tokens(entry_dir, predecessor_state, base_state, schema):
     """Construct tokens from cumulative base-relative entry and stored predecessor states."""
     delta = load_entry_delta(entry_dir, base_state)
-    k = schema.get("projector_dim", 32)
+    k = schema.get("projector_dim", 4)
     tokens = []
     for name in delta:
         layer, role = tensor_slot(name)
@@ -173,7 +173,7 @@ VECTOR_SCALARS = ("edit_norm", "displacement_norm")
 
 def to_columns(tokens, schema):
     """Flatten fixed registered slots with coordinate and tensor presence masks."""
-    k = schema.get("projector_dim", 32)
+    k = schema.get("projector_dim", 4)
     layout = slot_layout(schema["architecture"], schema["layer_types"])
     by_slot = {(t["layer"], t["role"]): t for t in tokens}
     kinds = {(layer, role): is_matrix for layer, role, is_matrix in layout}
