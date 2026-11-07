@@ -456,3 +456,18 @@ repository/manifest protections are installed and verified; the incident is not 
 before that evidence is recorded. Outstanding from the plan: the `historical-item-identities.json` reconstruction is
 not evidenced.
 
+
+## D9 (7 Nov 2026) — GPU approval, chain replay exactness classes, council programme
+
+- User decisions (7 Nov): GPU time approved for the follow-up programme (local H0 and Lambda beyond the earlier $150 cap); the data
+  lost in D8 is to be recreated; the council re-examines every negative and neutral result to find a world-model structure, including
+  models editing models. The backup policy of D8 is still undecided; no AWS resource is created.
+- Chain replay (regeneration report §7): lost chain snapshots are replayed from their edit descriptors. Exactness classes recorded in
+  the artefact sidecar: **bitwise** (random_dir/abliteration lineages; byte-identical to the original kernels), **re-trained** (a LoRA
+  step re-trained with the recorded seed and hyper-parameters; matrix relative Frobenius error 3–15 % against the original in the
+  pilot, norms within 1e-3), **lost** (7 entries: 4 pre-production `c744719` entries and 3 LoRA steps beyond the 5e-3 norm
+  acceptance, plus their descendants). Re-trained lineages are re-instantiations of the same descriptor and are never used in a
+  fingerprint claim; the full-set P4 rerun labels them.
+- The critic of H5 and every G2 structure consume the effective bf16 delta Δ_eff = bf16(W + Δ) − W (council synthesis §1.6).
+- Council programme adopted as a proposal (docs/council/2026-11-07/SYNTHESIS.md v3.1; Boards A, B, C) with PREREG appendix A5 as the
+  registration (Board A: ACCEPT as a draft pending the A5.11 manifests). G6 repriced on 7 Nov from 296 to 635 TF-v1 entries (≈ 11 GPU-h).

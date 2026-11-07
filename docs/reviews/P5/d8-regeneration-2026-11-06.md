@@ -110,6 +110,23 @@ Table and row-by-row comparison: [`docs/reviews/P4/d3v2r-summary-2026-11-06.md`]
 
 The ordering of the 5 Nov suite holds: StatNN is at or above every neural predictor on both targets, descriptor-only is within 0.07 of StatNN, delta-norm alone is weak (0.16 / 0.21), and no model transfers across families. The P4/X1 fingerprint check Board A asked for is impossible (no original fold table or feature file survives); the recovered-set table is reported next to the retained 5 Nov table in the paper, never mixed with it.
 
+## 7. Chain snapshot replay (7 Nov 2026, step 7; branch `feat/d8-chain-replay`, merged 5989602)
+
+The 358 lost chain snapshots were rebuilt by **replaying their surviving `edit.json` descriptors** (`scripts/d8_chain_replay.py`), not by re-running the zoo sampler: the sampler code at the chain build commit `f7d3d4a` is not in the repository, and the current sampler reproduces only 51 of the 675 chain ids. The replay calls the builder's own family functions with the samplers patched to return the recorded `inner_params`, so kernels, dtype casts and the `lora_vs_base` chain semantics are the production code paths. Three shards, device H0, 06:09–08:22 UTC, 629 steps (358 computed, 271 stored steps recomputed for comparison).
+
+| | Result |
+|---|---|
+| Pilot on three fully stored chains (`chain_replay_pilot.json`, re-run 08:25 with the matrix metric) | 8 of 11 steps **bitwise** (all random_dir and abliteration steps; the refusal-direction cache was rebuilt from scratch and its fingerprint `0b6e272d…` equals the manifest's). The 3 re-trained LoRA steps are **not** within rounding at the matrix level: ‖D_replayed − D_stored‖_F / ‖D_stored‖_F = 2.8e-2, 9.9e-2 and 1.5e-1 (1 bf16 ulp on 6–61 % of elements), although their Frobenius norms differ by ≤ 9.1e-4 relative. The norm difference is a lower bound on the matrix error and must not be quoted as the error. |
+| Full restore (`chain_replay_restore.json`) | 358 written; 354 with the touched-tensor set of `edit.json`; stored steps compared 271, bitwise 117, re-anchored 154 (every stored step downstream of a re-trained LoRA step is re-anchored to its stored bytes, so drift never propagates past a stored snapshot). |
+| Install (`chain_replay_install.json`, `scripts/d8_chain_install.py`) | **351 installed**, 7 rejected and still lost: 4 entries of the pre-production commit `c744719` (chains `69d1f20f…`, `ab471184…`; no eligibility, no reuse key, older kernel; touched-tensor sets differ) and 3 re-trained LoRA steps whose norm error exceeds the 5e-3 acceptance (`c08e70a0…` 1.0e-2, `c36475af…` 5.6e-3 and its child `c60bc6ef…` 5.3e-3). Sidecar now: 1,189 stored, 63 aliased, 7 lost. |
+| Exactness classes (sidecar `regenerated.exactness`; `runs/d8/a5_incremental_norms.jsonl`) | **bitwise** lineage: 156 of the 351 (random_dir/abliteration steps whose ancestry since the last stored snapshot has no re-trained step); **re-trained** lineage: 195 installed (306 zoo entries in total carry the label through their ancestry); lost lineage: 18 entries (7 lost + descendants). |
+| Acceptance rule actually applied | norm rtol 1e-6 for bitwise lineages, **norm** rtol 5e-3 for re-trained lineages (the "matrix relative error ≤ 5e-3" wording of the council synthesis G0 was not the applied rule; corrected there). Re-trained lineages are re-instantiations of the same edit descriptor, not recovered bytes, and are excluded from every fingerprint claim. |
+| TF-v1 (y, h) audit after install (`scripts/d8_tf_yh.sh`, run 08:32–09:03 UTC, 51 entries, 0.52 GPU-h) | 41 of the 42 listed rows are now reproducible (the 42nd depends on a still-lost entry). **All 27 bitwise-lineage rows reproduce to the printed 4 digits; 13 of the 14 re-trained-lineage rows do not** (e.g. `f1d7ab49…` y −0.3899 printed vs −0.3885 regenerated; `fbe56a7d…` −0.8136 vs −0.7874), as expected for re-instantiated LoRA steps. |
+| Features | `scripts/d8_extract_features_resume.sh`: the extractor's resume identity accepted the existing manifest; 351 new entries (log `d8-features-resume-*.log`). |
+| G1 repeats of the two lost predecessors, G6 census | `scripts/d8_g6_census.sh` (launched 10:28 UTC): G1 repeat for `b7edbb9f…` and `86ea1fe0…` (primaries scored in the (y, h) run), then TF-v1 scoring of the 635 stored chain entries without a TF-v1 record (the synthesis priced 296 fast-tier-unevaluated entries; a lineage census needs every node, hence the repricing to ≈ 11 GPU-h under the stop-and-reprice rule). |
+
+Cost: 20.3 run-wall-h over three GPU shards (6,572 + 5,792 + 7,944 s; GPU utilisation 40–70 %, CPU-bound); pilot re-run 0.1 GPU-h; (y, h) audit 0.52 GPU-h; incremental norms ≈ 1 CPU-h.
+
 ## Deviations and findings that change the record
 
 1. Entries with delta bytes: 901 (838 + 63 aliases), not ≈ 1,095.
@@ -134,4 +151,6 @@ The ordering of the 5 Nov suite holds: StatNN is at or above every neural predic
 | 5b H0 controls (deviation) | 1.42 | — |
 | 5d 28-row audit (deviation) | 0.59 | — |
 | 6 P4 | 0 | 26.6 (run-wall sum, ≤ 4 parallel x 2 threads) |
-| **Total so far** | **4.69** (planned 3.15 for these steps) | |
+| 7 chain replay (3 shards, run-wall) | 20.3 run-wall-h (LoRA re-training; GPU 40–70 % busy) | ≈ 1 (norms) |
+| 7 (y, h) audit after install | 0.52 | — |
+| **Total so far** | **4.69** + step 7 (planned 3.15 for steps 1–6) | |
