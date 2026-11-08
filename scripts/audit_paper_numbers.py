@@ -3129,11 +3129,24 @@ def build_d8() -> None:
     assertion("experiments", "49 finite neural pairs, 21 above 0.10", len(differences) == 49 and sum(d > 0.10 for d in differences) == 21, source_diff)
     claim("experiments", "across the 49 comparable run-by-target pairs they moved by a median of 0.09 and by up to 0.41", [len(differences), statistics.median(differences), max(differences)], source_diff)
     claim("experiments", "Of the 49 pairs, 21 moved by more than 0.10", [len(differences), sum(d > 0.10 for d in differences), 0.10], source_diff)
-    # This is Board B's requested wording, quoted only, not a recomputed bound:
-    # the displayed original/rerun baseline cells differ by up to 0.04.
-    quoted("experiments", "seed-0 baselines moved by at most 0.01",
-           [re.escape("seed-0 baselines moved by at most 0.01")], full,
-           "D3V2F header (Board B wording; presence only)")
+    # Recomputed bound over the seed-0 baseline cells of the two summary tables (seed and trajectory splits).
+    def _base_cells(path, run):
+        for line in read(path).splitlines():
+            if line.startswith(f"| {run} |"):
+                cells = [c.strip() for c in line.strip().strip("|").split("|")]
+                return {k: [float(x) for x in cells[i].split("/")] for k, i in (("statnn", 5), ("descr", 6), ("dnorm", 7))}
+        raise KeyError(run)
+    _orig = ROOT / "docs/reviews/P4/d3v2-summary-2026-11-05.md"
+    _full = ROOT / "docs/reviews/P4/d3v2f-summary-2026-11-08.md"
+    _drift = {}
+    for run in ("m1-seed", "m1-trajectory"):
+        a, b = _base_cells(_orig, run), _base_cells(_full, run)
+        for k in a:
+            _drift[k] = max(_drift.get(k, 0.0), max(abs(x - y) for x, y in zip(a[k], b[k])))
+    assertion("experiments", "seed-0 baselines moved by at most 0.04 (StatNN 0.02)",
+              round(max(_drift.values()), 2) <= 0.04 and round(_drift["statnn"], 2) <= 0.02 and round(max(_drift["descr"], _drift["dnorm"]), 2) == 0.04,
+              "D3V2 vs D3V2F seed-0 baseline cells, seed and trajectory splits")
+    claim("experiments", "seed-0 baselines moved by at most 0.04 (StatNN by at most 0.02 on the seed and trajectory splits; descriptor-only and delta-norm by at most 0.04)", [0.04, 0.02, 0.04], "recomputed from the two summary tables")
     q7("experiments", "306 zoo entries", "306 zoo entries")
     q7("experiments", "the three re-trained LoRA steps", "The 3 re-trained LoRA steps")
     q7("experiments", "the eight other steps were bitwise", "8 of 11 steps **bitwise**")
