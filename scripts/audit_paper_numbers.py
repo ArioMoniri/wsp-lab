@@ -2675,6 +2675,8 @@ H1A_JSON = DOCS / "reviews" / "P5" / "h1a-companions-2026-11-06.json"
 H1W_JSON = DOCS / "reviews" / "P5" / "h1w-gate-2026-11-06.json"
 INCIDENT = DOCS / "reviews" / "P5" / "board-a-incident-d8-2026-11-06.md"
 REGEN = DOCS / "reviews" / "P5" / "d8-regeneration-2026-11-06.md"
+REGEN7 = REGEN  # Section 7 is isolated below; earlier restore checks stay historical.
+D3V2F = DOCS / "reviews" / "P4" / "d3v2f-summary-2026-11-08.md"
 D3V2R = DOCS / "reviews" / "P4" / "d3v2r-summary-2026-11-06.md"
 D8_BLOCK = re.compile(r"% D8-BEGIN\n(.*?)% D8-END", re.DOTALL)
 LEGACY = [0]  # legacy tokens not checked because their sources are absent
@@ -2806,7 +2808,6 @@ def build_d8() -> None:
     lw = wc["strata"]["family"]["lora_sft"]
     tw = wc["strata"]["family"]["task_vector"]
     lows_w = [x["theta_interval"][0] for x in iv]
-    highs_w = [x["theta_interval"][1] for x in iv]
     h1w = [
         (r"WikiText met the A2.1 qualification, with a maximum item half-width of 0.013 against $\delta = 0.049$",
          [wc["half_width_summary"]["max_h"], math.log(1.05)]),
@@ -2859,19 +2860,16 @@ def build_d8() -> None:
 
     # ---- zoo: artefact-loss footnote and the feature-manifest sentence
     declare("zoo", "6 November 2026", "incident date (D8)")
-    quoted("zoo", "Delta bytes are missing for 358 of the 675 chain rows",
+    quoted("zoo", "delta bytes were missing for 358 of the 675 chain rows",
            [r"358 truly missing", r"317/675 chain deltas usable"], dec, "docs/DECISIONS.md D8 addendum")
-    quoted("zoo", "The other 317 chain rows keep bytes (254 stored and 63 byte-identical duplicates)",
+    quoted("zoo", "The other 317 chain rows kept bytes (254 stored and 63 byte-identical duplicates)",
            [r"317 of the 675 chain steps \(254 stored, 63 byte-identical duplicates"], inc,
            "incident review section 1.1")
     quoted("zoo", "all 584 non-chain rows keep bytes", [r"all 584 non-chain entries"], inc,
            "incident review section 1.1")
-    quoted("zoo", "901 of the 1,259 rows have feature files (the 838 rows with stored delta bytes and the 63 chain rows",
-           [r"at most 901 \(838 \+ 63 aliases\)"], inc, "incident review section 0 (Z3)")
     quoted("experiments", "These checks do not regenerate the registered 229-row A2.1 analysis", [r"229-row panel"], inc, "incident review section 3")
     quoted("experiments", "the 229-row analysis was not regenerated", [r"229-row panel"], inc, "incident review section 3")
     quoted("appendix", "The registered 229-row TF-v1 analysis was not regenerated", [r"229-row panel"], inc, "incident review section 3")
-    quoted("appendix", "by the measured 901-entry extraction result", [r"at most 901 \(838 \+ 63 aliases\)"], inc, "incident review section 0 (Z3)")
 
     # ---- appendix: verbatim paragraph, chain status, classification
     app = read(SEC / "appendix.tex")
@@ -2882,21 +2880,14 @@ def build_d8() -> None:
     claim("appendix", para, None, "verbatim: incident review section 1.1")
     assertion("appendix", "verbatim paragraph equals incident review section 1.1",
               tex2md(para) == md_para, "docs/reviews/P5/board-a-incident-d8-2026-11-06.md")
-    quoted("appendix", "Of the 675 chain steps, 317 keep delta bytes and 358 do not.",
-           [r"317 of the 675 chain steps", r"358 need replay"], inc, "incident review section 1.1")
-    quoted("appendix", "Of the 99 lineages of length four or more, six keep their first four steps, and three of those six are evaluated.",
-           [r"99 lineages of length ≥ 4", r"only \*\*6\*\* have ≥ 4 leading steps recovered, \*\*3\*\* of those evaluated"],
-           inc, "incident review section 3")
-    quoted("appendix", "The registered 229-row TF-v1 panel", [r"229-row panel"], inc, "incident review section 3")
     claim("appendix", "recomputable from surviving raw records & 12", [12], "incident review section 1 counts")
     claim("appendix", "regenerable under the recorded source hash & 21", [21], "incident review section 1 counts")
-    claim("appendix", "not recoverable as originally stated; retained descriptive results are reported from logs & 4", [4], "incident review section 1 counts")
     claim("appendix", "Total & & 37", [37], "incident review section 1 counts")
 
     # ---- regeneration outcome (appendix, experiments, reliability): docs/reviews/P5/d8-regeneration-2026-11-06.md
     reg = read(REGEN)
     rs = "regeneration report"
-    quoted("appendix", "Of the 1,259 manifest rows, 838 have delta bytes, 63 are byte-identical to a stored delta and 358 are lost",
+    quoted("appendix", "of the 1,259 manifest rows, 838 had delta bytes, 63 were byte-identical to a stored delta and 358 were lost",
            [r"1,259 manifest rows: \*\*838 with bytes, 63 aliased, 358 lost\*\*"], reg, f"{rs} summary row 1")
     quoted("appendix", "the 838 stored deltas show no hash, header or norm mismatch",
            [r"0 hash, header or norm misses over the 838 stored deltas"], reg, f"{rs} summary row 1")
@@ -2917,7 +2908,6 @@ def build_d8() -> None:
     claim("reliability", "whose maximum seed-to-seed difference is $3.3472\\times10^{-4}$ nats", None, "seed1_compare.json")
     fr = jload(RJ / "feature_root.json")
     assertion("zoo", "feature_root.json: 901 entries, 63 aliases, 358 without artefacts", fr["entries"] == 901 and fr["alias_entries_extracted"] == 63 and fr["no_artifacts"] == 358, "feature_root.json")
-    claim("zoo", "901 of the 1,259 rows have feature files (the 838 rows with stored delta bytes and the 63 chain rows that are byte-identical to a stored delta), 0 entries failed extraction, and the 358 rows without delta bytes have no features", None, "feature_root.json")
     rsum = jload(DOCS / "prereg" / "artefact_restore_summary.json")["counts"]
     assertion("appendix", "artefact_restore_summary.json: 838 / 63 / 358", rsum["delta_present"] == 838 and rsum["alias"] == 63 and rsum["lost"] == 358, "artefact_restore_summary.json")
     g1 = jload(RJ / "g1_report.json")
@@ -2931,15 +2921,9 @@ def build_d8() -> None:
     assertion("appendix", "base_compare.json: first pair 458/458 identical per benchmark", first["n_a"] == 458 and all(v["identical"] == v["n"] for v in first["per_benchmark"].values()), "base_compare.json")
     for h in ("d7cece35fad9", "6f274a830401", "e871923e1e18"):
         assertion("appendix", f"regeneration report names source {h}", h in reg, f"{rs} step table")
-    quoted("experiments", "12 of 12 repeatable G1 entries were bitwise identical, 11 of 11 G2 bridge rows and 28 of 28 recoverable requalification $(y, h)$ rows reproduced",
-           [r"G1 \*\*12 of 12\*\*", r"G2 \*\*11 of 11 table rows\*\*", r"\*\*28 of 28\*\* recoverable"], reg, f"{rs} summary row 5")
-    quoted("experiments", "After the artefact loss, 12 of the 14 entries could be repeated, and all 12 were bitwise identical",
-           [r"12 repeats, all bitwise identical to their primaries", r"2 of the original 14 cannot be repeated"], reg, f"{rs} step 5")
-    quoted("appendix", "12 of 12 repeatable G1 entries were bitwise identical (2 of the original 14 are chain predecessors whose deltas are lost)",
-           [r"G1 \*\*12 of 12\*\* repeats bitwise \(14 of 14 originally; 2 chain predecessors lost\)"], reg, f"{rs} summary row 5")
     quoted("appendix", "all 11 rows of the G2 bridge reproduced",
            [r"G2 \*\*11 of 11 table rows\*\* reproduce"], reg, f"{rs} summary row 5")
-    quoted("appendix", "all 28 recoverable rows of the requalification audit reproduced to the printed four digits",
+    quoted("appendix", "the initial 28 recoverable rows of the requalification audit reproduced to the printed four digits",
            [r"\*\*28 of 28\*\* recoverable \(y, h\) rows reproduce to the printed 4 digits"], reg, f"{rs} summary row 5")
     quoted("experiments", "regenerated on 6 November 2026 under source hash \\texttt{a224779bf873} (run \\texttt{20261106-062239-29d865d2})",
            [r"Run `20261106-062239-29d865d2`", r"`source_hash a224779bf873"], reg, f"{rs} step 5")
@@ -2980,6 +2964,189 @@ def build_d8() -> None:
     claim("experiments", "where the StatNN baseline is $-$0.18 and 0.06 while neural runs reach 0.18 and 0.16", None, rd)
     quoted("experiments", "does not establish the ordering of Table~\\ref{tab:v2-suite} on the original 345-row set", [r"\*\*This is a different experiment from the 5 Nov suite, not a reproduction of it\*\*"], r, f"{rd} header")
     assertion("experiments", f"{rd}: m3-family no metrics", "| m3-family | no metrics |" in r, rd)
+
+    # ---- chain replay step 7: committed report, G1b records and full-set summary
+    regen7 = read(REGEN7).split("## 7. Chain snapshot replay", 1)[1].split("## Deviations", 1)[0]
+    source7 = f"{REGEN7.relative_to(ROOT)} section 7"
+
+    def q7(file, snippet, *source_text):
+        quoted(file, snippet, [re.escape(x) for x in source_text], regen7, source7)
+
+    q7("appendix", "Regeneration through step 7 is complete", "step 7")
+    q7(
+        "appendix",
+        "Step 7 replayed 358 chain snapshots and installed 351",
+        "358 written",
+        "351 installed",
+    )
+    q7(
+        "appendix",
+        "The sidecar now records 1,189 stored, 63 aliased and 7 lost entries",
+        "1,189 stored, 63 aliased, 7 lost",
+    )
+    q7(
+        "appendix",
+        r"4 pre-production entries and 3 LoRA steps beyond the $5\times10^{-3}$ norm acceptance threshold",
+        "4 entries of the pre-production",
+        "3 re-trained LoRA steps whose norm error exceeds the 5e-3 acceptance",
+    )
+    q7("appendix", "Features were extracted for the 351 installed entries", "351 new entries")
+    q7(
+        "appendix",
+        "The G6 census added TF-v1 records for 618 chain entries",
+        "618",
+        "stored chain entries that had none",
+    )
+    q7(
+        "appendix",
+        "Of 99 root-to-leaf lineages with at least 4 nodes, 95 are fully scored, up from 16",
+        "95 of the 99 root-to-leaf lineages with ≥ 4 nodes are fully scored",
+        "up from 16",
+    )
+    claim(
+        "appendix",
+        "The registered 229-row TF-v1 analysis remains reported from logs",
+        [229],
+        "incident review section 3 (registered panel; census is not requalification)",
+    )
+    q7("experiments", "14 of 14 G1 entries were bitwise identical", "14 of 14 entries")
+    q7(
+        "appendix",
+        "14 of 14 G1 entries were bitwise identical after step 7",
+        "14 of 14 entries",
+        "step 5",
+    )
+    claim(
+        "experiments",
+        "11 of 11 G2 bridge rows reproduced",
+        [len(g2["rows"]), len(g2["rows"])],
+        "g2_compare.json",
+    )
+    # G2 is unchanged by replay; check its own committed comparison, not a G1 quote.
+    assertion(
+        "experiments",
+        "G2 bridge still 11/11",
+        len(g2["rows"]) == 11 and g2["all_rows_match"],
+        "g2_compare.json",
+    )
+    q7(
+        "experiments",
+        "41 of 42 requalification $(y, h)$ rows are reproducible",
+        "41 of the 42 listed rows are now reproducible",
+    )
+    q7(
+        "experiments",
+        "All 27 bitwise-lineage rows reproduce to four digits; 13 of 14 re-trained-lineage rows differ as expected",
+        "All 27 bitwise-lineage rows reproduce to the printed 4 digits; 13 of the 14 re-trained-lineage rows do not",
+    )
+    q7(
+        "experiments",
+        "G1 now closes at 14 of 14 entries, all bitwise: 12 on 6 November, then the two regenerated predecessors and the base on 7--8 November",
+        "14 of 14 entries",
+        "12 of 12 of step 5",
+        "and the base, 3 of 3 bitwise identical",
+    )
+    declare(
+        "experiments",
+        "7--8 November",
+        "G1b completion dates (7 Nov census; 8 Nov primary follow-up)",
+    )
+    g1b = jload(REGEN.parent / "d8-regeneration-2026-11-06" / "g1b_report.json")
+    assertion(
+        "experiments",
+        "G1b: two predecessors and base all bitwise",
+        g1b["n_entries"] == 3
+        and g1b["all_records_identical"] is True
+        and set(g1b["entries"]) == {"base", "b7edbb9f8b339f52", "86ea1fe0ec777cf8"}
+        and all(
+            e["records_identical"]
+            and e["provenance"]["repeat_id"] == "g1b"
+            and all(v == 0 for v in e["max_abs"].values())
+            for e in g1b["entries"].values()
+        ),
+        "g1b_report.json",
+    )
+    q7(
+        "zoo",
+        "Feature files now cover 1,252 of the 1,259 rows (901 on 6 November, 351 on 7 November); the 7 lost rows have none",
+        "351 new entries",
+        "1,189 stored, 63 aliased, 7 lost",
+    )
+    assertion(
+        "zoo",
+        "post-replay feature coverage: 901 + 351 = 1252 = 1259 - 7",
+        fr["entries"] + 351 == 1252 == 1259 - 7,
+        "feature_root.json + regeneration section 7",
+    )
+    quoted(
+        "experiments",
+        r"matrix relative Frobenius error was 3--15\%",
+        [re.escape("matrix relative Frobenius error 3–15 %")],
+        dec,
+        "docs/DECISIONS.md D9 (rounded pilot range)",
+    )
+    declare("experiments", "5 November suite", "original suite date")
+    full = read(D3V2F)
+
+    def frow(name):
+        return [
+            c.strip()
+            for c in next(l for l in full.splitlines() if l.startswith(f"| {name} |"))
+            .strip("|")
+            .split("|")
+        ]
+
+    fs, ft = frow("m1_matched-seed"), frow("m1_matched-trajectory")
+
+    def pair(cell):
+        return [float(v.strip()) for v in cell.split("/")]
+
+    for label, rowdata in (("Seed", fs), ("Trajectory", ft)):
+        shown = f"{label} & {rowdata[5]} & {rowdata[6]} & {rowdata[1].split()[0]} / {rowdata[2].split()[0]}"
+        claim(
+            "experiments",
+            shown,
+            pair(rowdata[5]) + pair(rowdata[6]) + [float(rowdata[i].split()[0]) for i in (1, 2)],
+            "D3V2F table",
+        )
+    q7(
+        "experiments",
+        "Logged seed & 0.57 / 0.65 & 0.52 / 0.61",
+        "logged 0.57 / 0.65",
+        "against 0.52 / 0.61",
+    )
+    claim(
+        "experiments",
+        "342 matched rows in 278 ancestry clusters",
+        pair(fs[8]),
+        "D3V2F rows / clusters",
+    )
+    declare(
+        "experiments",
+        "seed 0, neural cells are means over three seeds",
+        "D3V2F header: baselines seed 0; 3 full seeds",
+    )
+    fam = [frow(f"{m}-family") for m in ("m1", "m1_matched", "m2", "m2_matched", "m5", "m6")]
+    family_values = [float(row[i].split()[0]) for row in fam for i in (1, 2)]
+    claim(
+        "experiments",
+        "[$-$0.29, 0.23]",
+        [min(family_values), max(family_values)],
+        "D3V2F family mean extrema",
+    )
+    q7(
+        "appendix",
+        "not recoverable as originally stated; the original 345-row suite was re-instantiated at 342 rows and reported next to the logged values & 4",
+        "342 matched rows in 278 clusters",
+        "original 345 / 278",
+    )
+    assertion(
+        "appendix",
+        "class C still four result groups",
+        "**C = 4 results" in inc,
+        "incident review section 1 counts",
+    )
+
     # ---- access paragraph (appendix) and compute statement (experiments)
     quoted("appendix", "runs the 26 configurations with the recorded flags (CPU, three seeds, 1,000 bootstrap draws)",
            [r"ran the 26 runs of the 5 Nov list \(CPU, 3 seeds, 1,000 bootstrap draws"], reg, f"{rs} step 6")
@@ -3081,7 +3248,6 @@ def run() -> int:
         masked_full = mask_nonprose(raw)
         spans = d8_spans(raw)
         envs = list(table_envs(raw))
-        table_spans = [(e0, e1) for _, _, _, e0, e1 in envs]
         body_spans = [(b0, b1) for _, b0, b1, _, _ in envs]
         # tables: each body must be fully accounted for by its checker, in-table claims and declarations
         for lab, b0, b1, e0, _ in envs:
