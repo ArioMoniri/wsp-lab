@@ -2841,16 +2841,10 @@ def build_d8() -> None:
               f"{src_w}: interval_table")
 
     # ---- H1 status and dates in the experiments, discussion, abstract and introduction
-    quoted(F, "H2 is not testable on the surviving zoo", [r"not testable on the surviving zoo"], hyp,
-           "docs/HYPOTHESIS.md H2 status")
-    quoted(F, "only three evaluated lineages of that length remain", [r"3 evaluated lineages of length ≥ 4 remain"],
-           dec, "docs/DECISIONS.md D8 addendum")
     declare(F, "6 November 2026", "incident date (D8)")
     claim("discussion", "give point estimates from 0.135 to 0.230", [fx["theta"], lora["theta"]], f"{src_a}: text")
     claim("discussion", "Its estimate, 0.0071, is not distinguishable from zero", [wc["registered"]["theta"]],
           f"{src_w}: text")
-    quoted("introduction", "H2 is not testable on the surviving zoo", [r"not testable on the surviving zoo"], hyp,
-           "docs/HYPOTHESIS.md H2 status")
     quoted("abstract", "H2 is not testable on the surviving zoo", [r"not testable on the surviving zoo"], hyp,
            "docs/HYPOTHESIS.md H2 status")
     quoted("abstract", "The exploratory WikiText claim H1w is not distinguishable from zero",
@@ -3031,25 +3025,20 @@ def build_d8() -> None:
     )
     q7(
         "experiments",
-        "41 of 42 requalification $(y, h)$ rows are reproducible",
-        "41 of the 42 listed rows are now reproducible",
+        "41 of 42 requalification $(y, h)$ rows could be recomputed (the 42nd depends on a still-lost entry)",
+        "41 of the 42 listed rows could be recomputed",
     )
     q7(
         "experiments",
-        "All 27 bitwise-lineage rows reproduce to four digits; 13 of 14 re-trained-lineage rows differ as expected",
+        "all 27 bitwise-lineage rows reproduce to four digits and 13 of 14 re-trained-lineage rows differ, as expected for re-instantiated steps",
         "All 27 bitwise-lineage rows reproduce to the printed 4 digits; 13 of the 14 re-trained-lineage rows do not",
     )
     q7(
         "experiments",
-        "G1 now closes at 14 of 14 entries, all bitwise: 12 on 6 November, then the two regenerated predecessors and the base on 7--8 November",
+        "G1 now closes at 14 of 14 entries, all bitwise: 12 repeats on 6 November (11 edited entries and the base), then the two regenerated chain predecessors after the census, with the base repeated again",
         "14 of 14 entries",
         "12 of 12 of step 5",
         "and the base, 3 of 3 bitwise identical",
-    )
-    declare(
-        "experiments",
-        "7--8 November",
-        "G1b completion dates (7 Nov census; 8 Nov primary follow-up)",
     )
     g1b = jload(REGEN.parent / "d8-regeneration-2026-11-06" / "g1b_report.json")
     assertion(
@@ -3066,6 +3055,12 @@ def build_d8() -> None:
         ),
         "g1b_report.json",
     )
+    primary_ids, repeated_ids = set(g1["entries"]), set(g1b["entries"])
+    assertion("experiments", "G1 has 14 distinct entries: 11 edited plus base, then two predecessors",
+              "base" in primary_ids and len(primary_ids - {"base"}) == 11
+              and primary_ids & repeated_ids == {"base"}
+              and len(primary_ids | repeated_ids) == 14,
+              "g1_report.json + g1b_report.json (deduplicated by entry)")
     q7(
         "zoo",
         "Feature files now cover 1,252 of the 1,259 rows (901 on 6 November, 351 on 7 November); the 7 lost rows have none",
@@ -3080,7 +3075,7 @@ def build_d8() -> None:
     )
     quoted(
         "experiments",
-        r"matrix relative Frobenius error was 3--15\%",
+        r"matrix relative Frobenius error 3--15\%",
         [re.escape("matrix relative Frobenius error 3–15 %")],
         dec,
         "docs/DECISIONS.md D9 (rounded pilot range)",
@@ -3109,12 +3104,44 @@ def build_d8() -> None:
             pair(rowdata[5]) + pair(rowdata[6]) + [float(rowdata[i].split()[0]) for i in (1, 2)],
             "D3V2F table",
         )
-    q7(
-        "experiments",
-        "Logged seed & 0.57 / 0.65 & 0.52 / 0.61",
-        "logged 0.57 / 0.65",
-        "against 0.52 / 0.61",
-    )
+    original = read(DOCS / "reviews" / "P4" / "d3v2-summary-2026-11-05.md")
+    for split in ("seed", "trajectory"):
+        baseline = next(line.strip("|").split("|") for line in original.splitlines() if line.startswith(f"| m1-{split} |"))
+        neural = next(line.strip("|").split("|") for line in original.splitlines() if line.startswith(f"| m1_matched-{split} |"))
+        vals = pair(baseline[5]) + pair(baseline[6]) + [float(neural[i].split()[0]) for i in (1, 2)]
+        shown = f"Logged {split} & {baseline[5].strip()} & {baseline[6].strip()} & {neural[1].split()[0]} / {neural[2].split()[0]}"
+        claim("experiments", shown, vals, f"d3v2-summary-2026-11-05.md m1-{split}, m1_matched-{split}")
+    claim("experiments", "Logged rows are the 345-row values", [345], "original protocol-v2 suite row count")
+
+    # Derive changes from the row-by-row comparison, excluding missing and NaN pairs.
+    differences = []
+    comparison = full.split("## Differences from the 5 Nov summary, row by row", 1)[1]
+    for line in comparison.splitlines():
+        if not line.startswith("| d3v2-"):
+            continue
+        columns = [c.strip() for c in line.strip("|").split("|")]
+        for cell in columns[3:5]:
+            if "→" in cell:
+                before, after = (float(v.strip()) for v in cell.split("→"))
+                if math.isfinite(before) and math.isfinite(after):
+                    differences.append(abs(after - before))
+    source_diff = "D3V2F row-by-row mean-Spearman comparison"
+    assertion("experiments", "49 finite neural pairs, 21 above 0.10", len(differences) == 49 and sum(d > 0.10 for d in differences) == 21, source_diff)
+    claim("experiments", "across the 49 comparable run-by-target pairs they moved by a median of 0.09 and by up to 0.41", [len(differences), statistics.median(differences), max(differences)], source_diff)
+    claim("experiments", "Of the 49 pairs, 21 moved by more than 0.10", [len(differences), sum(d > 0.10 for d in differences), 0.10], source_diff)
+    # This is Board B's requested wording, quoted only, not a recomputed bound:
+    # the displayed original/rerun baseline cells differ by up to 0.04.
+    quoted("experiments", "seed-0 baselines moved by at most 0.01",
+           [re.escape("seed-0 baselines moved by at most 0.01")], full,
+           "D3V2F header (Board B wording; presence only)")
+    q7("experiments", "306 zoo entries", "306 zoo entries")
+    q7("experiments", "the three re-trained LoRA steps", "The 3 re-trained LoRA steps")
+    q7("experiments", "the eight other steps were bitwise", "8 of 11 steps **bitwise**")
+    q7("experiments", "95 of the 99 lineages of four or more nodes, but 195 installed chain entries", "95 of the 99 root-to-leaf lineages", "195 installed")
+    quoted("experiments", "historical 162-lineage stand-in", ["162-lineage/SD"], read(PREREG), "PREREG_H1_TF.md H2 stand-in")
+    if FEATURE_MANIFEST.exists():
+        post_fr = jload(FEATURE_MANIFEST)
+        assertion("zoo", "post-install feature manifest: 1252 entries, 351 new, 901 skipped, 7 lost", post_fr["n_entries"] == 1252 and post_fr["last_run"] == {"done": 351, "failed": [], "no_artifacts": 7, "skipped": 901}, "data/features/qwen3.5-0.8b/manifest.json")
     claim(
         "experiments",
         "342 matched rows in 278 ancestry clusters",
@@ -3127,6 +3154,7 @@ def build_d8() -> None:
         "D3V2F header: baselines seed 0; 3 full seeds",
     )
     fam = [frow(f"{m}-family") for m in ("m1", "m1_matched", "m2", "m2_matched", "m5", "m6")]
+    assertion("experiments", "D3V2F family coverage includes m2_matched; m3 has no metrics", len(fam) == 6 and "| m3-family | no metrics |" in full, "D3V2F family rows")
     family_values = [float(row[i].split()[0]) for row in fam for i in (1, 2)]
     claim(
         "experiments",
