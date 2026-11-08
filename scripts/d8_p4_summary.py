@@ -59,34 +59,56 @@ def original_table():
     return rows
 
 
+PREFIX = "d3v2r"
+
+
 def run_dirs():
-    return sorted(p for p in P4.glob("d3v2r-*") if p.is_dir())
+    return sorted(p for p in P4.glob(f"{PREFIX}-*") if p.is_dir())
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
     ap.add_argument("--out", type=Path)
+    ap.add_argument(
+        "--prefix",
+        default="d3v2r",
+        help="run-name prefix: d3v2r (recovered set) or d3v2f (full set after the chain replay)",
+    )
     a = ap.parse_args()
-    out_path = a.out or ROOT / f"docs/reviews/P4/d3v2r-summary-{a.date}.md"
+    global PREFIX
+    PREFIX = a.prefix
+    out_path = a.out or ROOT / f"docs/reviews/P4/{PREFIX}-summary-{a.date}.md"
     orig_vals, orig_tab = original_values(), original_table()
     lines = [
-        f"# P4 suite, protocol v2, recovered set (runs data/runs/p4/d3v2r-*; regenerated {a.date}; 3 full seeds: mean [min,max]; baselines from seed 0)",
+        (
+            f"# P4 suite, protocol v2, full set after the chain replay (runs data/runs/p4/d3v2f-*; {a.date}; 3 full seeds: mean [min,max]; baselines from seed 0)"
+            if PREFIX == "d3v2f"
+            else f"# P4 suite, protocol v2, recovered set (runs data/runs/p4/d3v2r-*; regenerated {a.date}; 3 full seeds: mean [min,max]; baselines from seed 0)"
+        ),
         "",
-        "Recovered-set rerun after the D8 data loss: same code, protocol and run list as `d3v2-summary-2026-11-05.md`, features re-extracted from the restored and aliased deltas, "
-        + "and only the rows whose whole history (chain predecessors back to the root, task-vector sources) has features. **This is a different experiment from the 5 Nov suite, not a reproduction of it**: "
-        + "48 matched chain rows are missing because their deltas are lost (see the regeneration report, step 6). Do not mix the two tables.",
+        (
+            "Full-set rerun after the chain replay (regeneration report §7): same code, protocol and run list as `d3v2-summary-2026-11-05.md`; "
+            + "features of the 351 regenerated chain snapshots added to the recovered set; complete-ancestry rule. 342 matched rows in 278 ancestry "
+            + "clusters against the original 345 / 278: the 3 missing rows depend on the 7 entries that stay lost. **This is the closest available "
+            + "re-instantiation of the 5 Nov suite, not a bitwise reproduction**: lineages through a re-trained LoRA step carry re-instantiated bytes "
+            + "(306 zoo entries), so values are expected to be close to, not equal to, the logged ones."
+            if PREFIX == "d3v2f"
+            else "Recovered-set rerun after the D8 data loss: same code, protocol and run list as `d3v2-summary-2026-11-05.md`, features re-extracted from the restored and aliased deltas, "
+            + "and only the rows whose whole history (chain predecessors back to the root, task-vector sources) has features. **This is a different experiment from the 5 Nov suite, not a reproduction of it**: "
+            + "48 matched chain rows are missing because their deltas are lost (see the regeneration report, step 6). Do not mix the two tables."
+        ),
         "",
         "| model-split | mmlu_pro ρ | hellaswag ρ | KL ρ | wikitext ρ | StatNN mmlu/hs | descriptor-only mmlu/hs | delta-norm mmlu/hs | rows / clusters |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
     compare = [
-        "| run | rows orig → recovered | clusters orig → recovered | mmlu_pro ρ mean orig → recovered | hellaswag ρ mean orig → recovered | reason it differs |",
+        "| run | rows orig → rerun | clusters orig → rerun | mmlu_pro ρ mean orig → rerun | hellaswag ρ mean orig → rerun | reason it differs |",
         "|---|---|---|---|---|---|",
     ]
     status = []
     for d in run_dirs():
-        name = d.name.removeprefix("d3v2r-")
+        name = d.name.removeprefix(f"{PREFIX}-")
         mfile = d / "metrics.json"
         if not mfile.exists():
             lines.append(f"| {name} | no metrics | | | | | | | |")
@@ -126,13 +148,22 @@ def main():
         )
         o = orig_vals.get(f"d3v2-{name}", {})
         ob = orig_tab.get(name)
-        reasons = [
-            "row set: 48 chain rows with a lost ancestor delta removed from every fold"
-            if o.get("rows")
-            else "no original rows in the audit log"
-        ]
-        if "holdout-chain" in name:
-            reasons.append("the chain holdout's test rows fall from 98 to 50")
+        if PREFIX == "d3v2f":
+            reasons = [
+                "row set: 3 rows depend on the 7 entries that stay lost; lineages through a re-trained LoRA step are re-instantiated, not identical"
+                if o.get("rows")
+                else "no original rows in the audit log"
+            ]
+            if "holdout-chain" in name:
+                reasons.append("the chain holdout's test rows fall from 98 to 95")
+        else:
+            reasons = [
+                "row set: 48 chain rows with a lost ancestor delta removed from every fold"
+                if o.get("rows")
+                else "no original rows in the audit log"
+            ]
+            if "holdout-chain" in name:
+                reasons.append("the chain holdout's test rows fall from 98 to 50")
         if name.startswith("m3"):
             reasons.append("successor pairs with both ends' features: 98 of 521, 25 evaluated")
         compare.append(

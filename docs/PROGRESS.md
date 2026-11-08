@@ -268,3 +268,9 @@ rebuild, null-size run, hash freeze) wait for the G6 census to close.
 the 17 legacy-revision rows). H2 census: 95 of the 99 root-to-leaf lineages with ≥ 4 nodes are now fully TF-v1-scored (512
 nodes), up from 16 lineages; still below the historical 162-lineage stand-in, so H2 stays parked per the synthesis. Full-set P4
 suite: 24 of 26 runs done, no errors. G1 primaries for the two regenerated predecessors queued behind the census.
+
+**8 Nov 2026, 00:30 UTC.** Full-set P4 suite finished (26 runs, `docs/reviews/P4/d3v2f-summary-2026-11-08.md`): 342 rows / 278
+clusters; StatNN 0.56/0.66 and 0.55/0.64 against the logged 0.57/0.65, descriptor-only 0.51/0.61 against 0.52/0.61; ordering of
+the 5 Nov suite holds. G1 closed at 14 of 14 (the two regenerated predecessors and the base bitwise, label g1b). Regeneration
+report §7 updated. Next: Board A checklist items 3–6 (snapshot closure, manifest and panel rebuild, null-size run), then the hash
+freeze and G2.
