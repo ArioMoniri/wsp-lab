@@ -274,3 +274,9 @@ clusters; StatNN 0.56/0.66 and 0.55/0.64 against the logged 0.57/0.65, descripto
 the 5 Nov suite holds. G1 closed at 14 of 14 (the two regenerated predecessors and the base bitwise, label g1b). Regeneration
 report §7 updated. Next: Board A checklist items 3–6 (snapshot closure, manifest and panel rebuild, null-size run), then the hash
 freeze and G2.
+
+**8 Nov 2026, 01:00 UTC.** Paper updated for the chain replay (merged d6209ec, 21 pages, number audit PASS in both modes; Board B
+accept-with-edits applied, `docs/reviews/docs/board-b-d8-step7-2026-11-08.md`): full-set rerun paragraph and table (seed-0 baselines
+within 0.04 of the logged values, neural means drifted by a median of 0.09, so the rerun is a re-instantiation and not a close numerical
+reproduction), G1 closed at 14 of 14, the (y, h) audit split by exactness class, H2 "stays parked" wording. Waiting on Board A
+checklist items 3–6 (branch `prereg/a5-freeze-evidence`).
