@@ -492,3 +492,11 @@ archived in `docs/council/2026-11-11/MEMBERS.md`. F9a (adopting amendment) follo
 (byte-identical copy of the registered null-size inputs, sha256 67da223c…) is committed under `docs/prereg/f8_manifests/floor_payload/`
 so the floor can be recomputed independently from a clone. Board A review of F8a and the F9a draft (Board A's eight F9 conditions)
 are in flight. Round-5 record merged (e46c825; 53 references verified). Part A staging 30/40.
+
+**11 Nov 2026, 15:30 UTC.** Board A accepted F8a with six conditions (`docs/reviews/council/board-a-f8a-2026-11-11.md`): before the F8
+freeze commits (C1/C2) commit the floor payload, code and output and reproduce the floor from a fresh clone; freeze representatives
+and counting rules for merged dependency groups; supply the CPU identity verifier, separate shared scoring identity from edit-specific
+hashes and record the effective config hash; enforce cumulative caps alongside the per-entry watchdog; scoring requires verified
+C1/C2, a passing gate, qualified identities, a funded purchase and a sealed Part A ledger; H5-only items (document reconciliation,
+Sol pin, bounded timing measurements, repricing) before the pilot. The floor payload is already committed (11543d3); the verifier,
+floor code and freeze manifests are built after the Part A ledger is sealed. F9a draft in flight. Part A staging 30/40.
