@@ -72,6 +72,29 @@ def forced_audit(monkeypatch, errors):
     return calls
 
 
+def pin_field_walls(monkeypatch, walls):
+    """Fixed field wall seconds (and the GPU seconds read from them) after the real fields stage, so
+    the audit's ascending objective order does not depend on the toy machine's timings."""
+    original = g2.run_fields
+
+    def pinned(ctx, out, manifest, *args, **kwargs):
+        result = original(ctx, out, manifest, *args, **kwargs)
+        for name, seconds in walls.items():
+            res = (manifest.get("fields") or {}).get(name, {}).get("resources")
+            if res is not None:
+                res |= {
+                    "wall_seconds": seconds,
+                    "gpu_seconds": seconds,
+                    "gpu_hours": seconds / 3600,
+                }
+        return result
+
+    monkeypatch.setattr(g2, "run_fields", pinned)
+
+
+REGISTERED_ORDER_WALLS = {"wikitext_nll": 1.0, "hellaswag_gold_char_log_likelihood": 2.0}
+
+
 def run_main(tmp_path, ctx, *extra):
     out = tmp_path / "out"
     code = g2.main(["--toy", "--out", str(out), *extra], context_builder=lambda o, limit: ctx)
@@ -489,9 +512,11 @@ def test_pipeline_manifest_schema_and_short_audit_hard_stop(toy_ctx, tmp_path):
 def test_per_objective_audit_rows_verdicts_and_manifest_schema(toy_ctx, tmp_path, monkeypatch):
     ctx = with_objectives(toy_ctx, TWO)
     assert len(ctx.pairs) == g2.AUDIT_N == 20
+    pin_field_walls(monkeypatch, REGISTERED_ORDER_WALLS)
     calls = forced_audit(monkeypatch, {n: (lambda i: 0.09 if i < 16 else 0.9) for n in TWO})
     code, out, manifest = run_main(tmp_path, ctx)
     assert calls == [TWO[0]] * 20 + [TWO[1]] * 20  # one objective gradient per predecessor each
+    assert [o["objective"] for o in manifest["audit"]["order"]] == list(TWO)
     assert code == g2.EXIT["complete"] and manifest["status"] == "complete" and manifest["complete"]
     assert g2.validate_manifest(manifest) == []
     audit = manifest["audit"]
@@ -564,6 +589,7 @@ def test_any_objective_failure_is_hard_stop(toy_ctx, tmp_path, monkeypatch):
 
 def test_audit_resumes_per_objective_without_rerunning_completed(toy_ctx, tmp_path, monkeypatch):
     ctx = with_objectives(toy_ctx, TWO)
+    pin_field_walls(monkeypatch, REGISTERED_ORDER_WALLS)
     calls = forced_audit(monkeypatch, {n: (lambda i: 0.0) for n in TWO})
     original = g2._audit_objective
     state = {"stopped": False}
@@ -686,6 +712,7 @@ def test_cost_checks_follow_each_objectives_first_row_within_cap(toy_ctx, tmp_pa
 
 def test_cost_guard_aborts_an_objective_without_running_it(toy_ctx, tmp_path, monkeypatch):
     ctx = with_objectives(toy_ctx, TWO)
+    pin_field_walls(monkeypatch, REGISTERED_ORDER_WALLS)
     calls = forced_audit(monkeypatch, {n: (lambda i: 0.0) for n in TWO})
     code, _, manifest = run_main(tmp_path, ctx, "--max-audit-gpu-hours", "1e-9")
     assert code == g2.EXIT["incomplete"] and calls == []
@@ -723,6 +750,105 @@ def test_cost_guard_skips_one_objective_and_audits_the_next(toy_ctx, tmp_path, m
     argv = ["--toy", "--out", str(out), "--resume", "--stages", "audit"]
     assert g2.main(argv, context_builder=lambda o, n: ctx) == g2.EXIT["complete"]
     assert calls == [TWO[1]] * 20 + [TWO[0]] * 20
+
+
+# A5.8.1 note (10 Nov 2026): per-row estimates of the G2 run (0.5 x field wall seconds)
+G2_ROW_SECONDS = {
+    "refusal_margin_harmful": 262.53534637595294,
+    "mmlu_gold_log_prob": 306.70895340299467,
+    "refusal_margin_harmless": 344.7181081150193,
+    "hellaswag_gold_char_log_likelihood": 367.5022726369789,
+    "wikitext_nll": 824.299542083987,
+}
+
+
+def test_audit_order_is_ascending_field_based_row_estimate():
+    fields = fields_with_wall({n: 2 * s for n, s in G2_ROW_SECONDS.items()})
+    assert g2.audit_order(fields, list(g2.AUDIT_OBJECTIVES)) == list(G2_ROW_SECONDS)
+    # ties keep the registered order
+    tied = fields_with_wall({"a": 10.0, "b": 4.0, "c": 10.0})
+    assert g2.audit_order(tied, ["c", "a", "b"]) == ["b", "c", "a"]
+
+
+def test_audit_processes_the_cheapest_objective_first(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    pin_field_walls(monkeypatch, {TWO[0]: 4.0, TWO[1]: 2.0})  # registered order is not ascending
+    calls = clocked_audit(monkeypatch, lambda name, i: 1.0)
+    code, _, manifest = run_main(tmp_path, ctx)
+    assert code == g2.EXIT["complete"] and calls == [TWO[1]] * 20 + [TWO[0]] * 20
+    audit = manifest["audit"]
+    assert audit["order"] == [
+        {"objective": TWO[1], "field_based_row_seconds": 1.0},
+        {"objective": TWO[0], "field_based_row_seconds": 2.0},
+    ]
+    assert [c["after_first_row_of"] for c in audit["cost_checks"]] == [TWO[1], TWO[0]]
+    assert set(audit["cost_checks"][0]["later_objectives_seconds"]) == {TWO[0]}
+    decisions = audit["guard_decisions"]
+    assert [(d["phase"], d["objective"], d["within_guard"]) for d in decisions] == [
+        ("in order", TWO[1], True),
+        ("in order", TWO[0], True),
+    ]
+    assert decisions[1]["calibration_ratio"] == pytest.approx(1.0)  # 1 s measured / 1 s estimated
+    assert manifest["config"]["audit"]["objective_order"].startswith("ascending field-based")
+    assert g2.validate_manifest(manifest) == []
+
+
+def test_cost_guarded_objective_is_rechecked_and_run_after_calibration(
+    toy_ctx, tmp_path, monkeypatch
+):
+    ctx = with_objectives(toy_ctx, TWO)
+    # Under the ascending order the in-order guard already sees every calibration, so the end-of-run
+    # re-check is exercised with the order reversed: WikiText (824.3 s row estimate > 360 s) comes
+    # first and is guarded uncalibrated; HellaSwag (100 s estimate, 10 s measured, ratio 0.1) runs;
+    # the re-check then estimates WikiText at 82.4 s and audits it in the same run.
+    pin_field_walls(monkeypatch, {TWO[0]: 1648.599084167974, TWO[1]: 200.0})
+    monkeypatch.setattr(g2, "audit_order", lambda fields, names: sorted(names, key=TWO.index))
+    calls = clocked_audit(monkeypatch, lambda name, i: 10.0)
+    code, out, manifest = run_main(tmp_path, ctx)
+    assert code == g2.EXIT["complete"] and manifest["status"] == "complete"
+    assert calls == [TWO[1]] * 20 + [TWO[0]] * 20  # one run, no resume
+    audit = manifest["audit"]
+    decisions = [(d["phase"], d["objective"], d["within_guard"]) for d in audit["guard_decisions"]]
+    assert decisions == [
+        ("in order", TWO[0], False),
+        ("in order", TWO[1], True),
+        ("end-of-run re-check", TWO[0], True),
+    ]
+    first, recheck = audit["guard_decisions"][0], audit["guard_decisions"][2]
+    assert first["calibration_ratio"] == 1.0 and first["estimated_row_seconds"] > 360.0
+    assert recheck["calibration_ratio"] == pytest.approx(0.1)
+    assert recheck["estimated_row_seconds"] == pytest.approx(82.4299542, rel=1e-6)
+    entry = audit["objectives"][TWO[0]]
+    assert entry["status"] == "complete" and len(entry["rows"]) == 20
+    assert entry["cost_guard"] == {k: v for k, v in recheck.items() if k != "phase"}
+    assert [c["after_first_row_of"] for c in audit["cost_checks"]] == [TWO[1], TWO[0]]
+    assert audit["verdict"]["passed"] and g2.validate_manifest(manifest) == []
+    assert (out / "predecessor_audit" / f"{TWO[0]}.json").exists()
+
+
+def test_still_failing_recheck_leaves_cost_guard_and_run_incomplete(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    # the G2 numbers with the cheapest objective guarded: nothing calibrates, both stay guarded
+    pin_field_walls(monkeypatch, {TWO[0]: 1648.599084167974, TWO[1]: 735.0045452739578})
+    calls = clocked_audit(monkeypatch, lambda name, i: 1.0)
+    code, out, manifest = run_main(tmp_path, ctx)
+    assert code == g2.EXIT["incomplete"] and calls == []
+    assert manifest["status"] == "incomplete" and manifest["stages"]["audit"] == "stopped"
+    reason = manifest["incomplete_reason"]
+    assert reason["cap"] == "audit_cost_guard" and reason["objectives"] == [TWO[1], TWO[0]]
+    audit = manifest["audit"]
+    assert [o["objective"] for o in audit["order"]] == [TWO[1], TWO[0]]
+    decisions = [(d["phase"], d["objective"], d["within_guard"]) for d in audit["guard_decisions"]]
+    assert decisions == [
+        ("in order", TWO[1], False),
+        ("in order", TWO[0], False),
+        ("end-of-run re-check", TWO[1], False),
+        ("end-of-run re-check", TWO[0], False),
+    ]
+    for name in TWO:
+        entry = audit["objectives"][name]
+        assert entry["status"] == "cost_guard" and entry["rows"] == []
+    assert not (out / "predecessor_audit.json").exists() and g2.validate_manifest(manifest) == []
 
 
 def test_measured_overrun_stops_incomplete_before_the_next_row(toy_ctx, tmp_path, monkeypatch):

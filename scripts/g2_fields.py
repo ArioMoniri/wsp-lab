@@ -27,7 +27,11 @@ Runs only after Board A's A5 freeze. Stages, in order, each recorded in ``<out>/
   fields): a field-based estimate of 5 objectives x 20 predecessors is recorded before the first row,
   but the stop decision is measured. Before an objective's first row, a field-based one-row estimate
   (x the largest measured/estimated ratio of objectives already audited) above 0.1 x the audit cap
-  aborts that objective as ``cost guard`` (not run). The first registered row is computed as
+  aborts that objective as ``cost guard`` (not run). Objectives are processed in ascending order of
+  that field-based one-row estimate, so the cheapest is measured first and calibrates the others; an
+  objective skipped by the guard is re-checked at the end of the same run with the largest
+  measured/estimated ratio and audited then if it passes (the manifest records the order and every
+  guard decision). The first registered row is computed as
   registered (it is row 1, not a pilot); then the audit is checked against the registered 1 GPU-h cap
   with that measured row time for the objective's remaining rows and the largest measured/estimated
   ratio for later objectives. Before every later row, used + mean measured row time x remaining rows
@@ -1419,6 +1423,12 @@ def row_cost_guard(fields, name, ratio, cap_hours):
     }
 
 
+def audit_order(fields, names):
+    """Processing order of the audit objectives (A5.8.1 note, 10 Nov 2026): ascending field-based
+    one-row estimate, ties in registered order, so the cheapest objective is measured first."""
+    return sorted(names, key=lambda n: field_row_seconds(fields, n))
+
+
 def first_row_cost_check(fields, name, measured, n_rows, later, ratios, used_hours, cap_hours):
     """After an objective's first registered row: measured row time x its remaining rows, plus every
     later objective at n_rows x field-based row estimate x the largest measured/estimated ratio (this
@@ -1541,10 +1551,13 @@ def _audit_rows(ctx, manifest, budget, mpath, impl, objective, field_artifact, b
     return row_seconds
 
 
-def _audit_objective(ctx, out, manifest, budget, mpath, impl, objective, base, later=()):
+def _audit_objective(
+    ctx, out, manifest, budget, mpath, impl, objective, base, later=(), phase="in order"
+):
     """Twenty rows of one objective, one exact objective gradient per predecessor; its own verdict.
 
     Returns the verdict, or None when the cost guard aborts the objective before its first row.
+    ``phase`` ("in order" or "end-of-run re-check") labels the guard decision in the manifest.
     """
     name, audit = objective.spec.name, manifest["audit"]
     rec = manifest["fields"].get(name, {})
@@ -1554,11 +1567,12 @@ def _audit_objective(ctx, out, manifest, budget, mpath, impl, objective, base, l
     guard = row_cost_guard(
         manifest["fields"], name, max(ratios.values()) if ratios else 1.0, budget.hours
     )
+    audit.setdefault("guard_decisions", []).append({"phase": phase} | guard)
     if not guard["within_guard"]:
         audit["objectives"][name] = {"status": "cost_guard", "cost_guard": guard, "rows": []}
         log(
             f"audit {name}: cost guard, one row estimated at {guard['estimated_row_seconds']:.1f}s "
-            f"> {guard['limit_seconds']:.1f}s; objective not run"
+            f"> {guard['limit_seconds']:.1f}s; objective not run ({phase})"
         )
         write_manifest(mpath, manifest)
         return None
@@ -1697,10 +1711,44 @@ def run_audit(ctx, out: Path, manifest, budget, mpath, impl):
             "role": "recorded field-based estimate; not the stop criterion (A5.8.1 note, 10 Nov 2026)"
         }
         write_manifest(mpath, manifest)
+        # A5.8.1 note (10 Nov 2026): ascending field-based one-row estimate, cheapest first
+        order = audit_order(manifest["fields"], todo)
+        audit["order"] = [
+            {"objective": n, "field_based_row_seconds": field_row_seconds(manifest["fields"], n)}
+            for n in order
+        ]
+        audit["guard_decisions"] = []
+        write_manifest(mpath, manifest)
         base, guarded = {}, []
-        for k, name in enumerate(todo):
+        for k, name in enumerate(order):
             verdict = _audit_objective(
-                ctx, out, manifest, budget, mpath, impl, objectives[name], base, later=todo[k + 1 :]
+                ctx,
+                out,
+                manifest,
+                budget,
+                mpath,
+                impl,
+                objectives[name],
+                base,
+                later=order[k + 1 :],
+            )
+            if verdict is None:
+                guarded.append(name)
+        # end of the run: every guarded objective is re-checked with the largest measured/estimated
+        # ratio of the objectives now audited, and audited now if it passes (A5.8.1 note)
+        rechecked, guarded = guarded, []
+        for k, name in enumerate(rechecked):
+            verdict = _audit_objective(
+                ctx,
+                out,
+                manifest,
+                budget,
+                mpath,
+                impl,
+                objectives[name],
+                base,
+                later=rechecked[k + 1 :],
+                phase="end-of-run re-check",
             )
             if verdict is None:
                 guarded.append(name)
@@ -1992,6 +2040,10 @@ def new_manifest(args, ctx, panels_sha, code, attempts, attempt):
             "10 Nov 2026)",
             "row_guard_fraction_of_cap": AUDIT_ROW_GUARD_FRACTION_OF_CAP,
             "per_row_guard": "used + mean measured row seconds x remaining rows <= audit cap",
+            "objective_order": "ascending field-based one-row estimate, ties in registered order "
+            "(A5.8.1 note, 10 Nov 2026)",
+            "guard_recheck": "objectives skipped by the cost guard are re-checked at the end of the "
+            "same run with the largest measured/estimated ratio and audited if they pass",
         },
         "objectives": list(FIELD_OBJECTIVES),
         "microbatch": "one item per forward (one sequence, or the scorer's padded rows)",

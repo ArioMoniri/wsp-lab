@@ -1982,3 +1982,29 @@ This commit changes only `docs/PREREG_H1_TF.md`, the two package files, `scripts
 | `docs/prereg/a5_manifests/code_hashes.json` | `5be50667fd728332954a4b1add9640860a9495ce74bc34c70ac01c10a9e30c25` | changed 2026-11-10 (A5.8.1 note re-pin, after G2 fields); old `e1ac62fde2c1928ad660eb833df2884c100b11db5884d537df527fb2251f4075` (audit-repair re-pin; G2 attempt 1) |
 | `scripts/g2_fields.py` | `6125b519381da53a6064da81bc108aedeb2bd7a1a9b5a2b6e9460dfb1c2100e9` | changed 2026-11-10 (this note); old `16a2ee79ea86fb87ef138deac9839395915a69b854f19c43a3db3ae14a503726` (audit repair; G2 attempt 1) |
 | `tests/test_g2_fields.py` | `a0ba30033ed10f6dfb89cbf3d133ccb547fba183670dbbb0ef9fc6b644ede510` | changed 2026-11-10 (this note; not a code-map member); old `25724b715edcadcaa92f19cba03cf3c4e223125b1c39e02d2a460a3e81aed593` |
+| `scripts/g2_fields.py` | `cb1835181ae0d8202edcaa72586e38dcc3a8822ce6127f104e5c123a86838723` | changed 2026-11-10 (ascending order and end-of-run guard re-check, paragraph below); old `6125b519381da53a6064da81bc108aedeb2bd7a1a9b5a2b6e9460dfb1c2100e9` (this note) |
+| `tests/test_g2_fields.py` | `f7be4d4aeb83fe0741a7890005480376514aa2394234f9239894980397a8adaa` | changed 2026-11-10 (paragraph below; not a code-map member); old `a0ba30033ed10f6dfb89cbf3d133ccb547fba183670dbbb0ef9fc6b644ede510` (this note) |
+| `docs/prereg/a5_manifests/code_hashes.json` | `d3b11bab664e0822ec63b4f059703d6418ff09847c49681fdd7f710617e6a5c7` | changed 2026-11-10 (re-pin (xii), paragraph below); old `5be50667fd728332954a4b1add9640860a9495ce74bc34c70ac01c10a9e30c25` (re-pin (xi)) |
+| `docs/prereg/a5_manifests/README.md` | `0454be009511b5761991e7ef27bd351ee1f25f772ca0fcc7d2d01b19997549f5` | changed 2026-11-10 (re-pin (xii), paragraph below); old `5467fac25399a36e7828b610b3f7a381c30ede8007bdfcafa727af117b36a4a3` (re-pin (xi)) |
+
+*Addendum (10 Nov 2026, chair decision on the cost guard).* This paragraph is appended; the text above is not rewritten. It
+was written without GPU work, and G2 data were read only. It changes the driver only. (1) The audit stage now processes the
+required objectives in ascending order of the field-based one-row estimate (0.5 × field wall time), with ties kept in
+registered order. With attempt 1's field wall times the order is `refusal_margin_harmful` (262.5 s),
+`mmlu_gold_log_prob` (306.7 s), `refusal_margin_harmless` (344.7 s), `hellaswag_gold_char_log_likelihood` (367.5 s),
+`wikitext_nll` (824.3 s). The cheapest objective is therefore measured first, and its measured/estimated ratio calibrates
+the guard and cost checks of the others. (2) An objective skipped by the 0.1 × cap guard is re-checked at the end of the
+same run, after every other objective has been processed. The re-check uses the largest measured/estimated ratio of the
+objectives audited by then, and the objective is audited at that point if it passes. If it still fails, it stays
+`cost_guard` and the run ends `incomplete` (`audit_cost_guard`). This way a single resume can complete all five objectives.
+The manifest records the processing order (`audit.order`, with each objective's field-based row estimate) and every guard
+decision (`audit.guard_decisions`, phase `in order` or `end-of-run re-check`). The two rules are named in
+`config.audit.objective_order` and `config.audit.guard_recheck`. Nothing else changes: row 1 then the measured check, the
+per-row guard, the resource records, resume and the verdict rules are as above. The registered order assumed under
+*Expected effect* above no longer applies. Tests in `tests/test_g2_fields.py` cover the ascending order, a guarded
+objective that is re-checked and audited after calibration within one run, and a still-failing re-check that leaves the
+objective `cost_guard` and the run incomplete. *Re-pin (xii).* `scripts/a5_build_manifests.py --pin-worktree` was re-run
+into a copy of the package from parent `8f81ab0`. Only `code_hashes.json` and `README.md` differed, and only those two
+were copied into the package. `code_hashes.json` still pins 64 files and differs from `5be50667…30c25` only in `git_sha`
+and the `scripts/g2_fields.py` pin. The last four rows of the table above record this re-pin. This commit changes only
+`docs/PREREG_H1_TF.md`, the two package files, `scripts/g2_fields.py` and `tests/test_g2_fields.py`.
