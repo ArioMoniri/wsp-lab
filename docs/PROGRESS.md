@@ -378,3 +378,12 @@ resume the audit on the GPU.
 
 **11 Nov 2026, 00:00 UTC.** Audit reprice and ordering fix merged (1a238ee; 46 driver tests; pins verified on main). G2 audit stage
 resumed on the exclusive GPU (`--resume --stages audit`; completed fields, projectors and probe cache hash-checked first).
+
+**11 Nov 2026, 00:30 UTC.** G2 audit stage, resumed with the measured cost check: the first registered row (refusal_margin_harmful,
+cheapest objective) took 394 s wall (0.17 GPU-h) and its relative error against the base-plus-cross-term approximation was 0.336
+(rule: ≤ 0.1); the measured projection for the registered 100 rows is about 11 GPU-h against the 1 GPU-h cap, so the run stopped
+incomplete with 0.17 GPU-h spent and no further row. Two findings for Board A: the registered audit is infeasible at its cap, and the
+first measurement fails the approximation rule. Per A5.8.1's own fallback the base approximation is not used for chains; chair
+amendment F6 (exact predecessor gradients for the ten chain picks on WikiText and MMLU, ≈ 20 rows, new 2.2 GPU-h cap; HellaSwag and
+refusal tokens masked for those rows; a Part B sensitivity arm excluding unvalidated chain rows) is being drafted for Board A.
+G2 run-1 manifest and audit file copied with hashes to `docs/prereg/a5_manifests/g2/`. The H0 half of the 4B pairing is running.
