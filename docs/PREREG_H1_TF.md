@@ -2350,3 +2350,269 @@ program calling a frozen LLM, calibrated by online bias plus conditional MSE; ar
 exposure cutoff, gate, cluster rule and scoring configuration (the Part A default `configs/eval_tf_v1.yaml`, per Board A's F8-spec
 ruling). Re-anchoring: after any accepted edit in H5, the incumbent's exact gradient is recomputed (measured ≈ 43 s per row in the F6
 audit) and factors are flagged `base-factor`; no learned transition is registered.
+
+#### A5 amendment F8a (11 Nov 2026, before any G3 outcome): F8 execution rules
+
+This block is appended; earlier text is not rewritten. It adopts the F8 execution specification
+`docs/design/F8_EXECUTION_SPEC.md` (added by commit `158e92cf036b24191fd1f6570f37afae9b8e3076`, file sha256
+`d2b981f07258b947f476c774013b4bfd8085a3745ffd28d196406128ce9433d0`; "the spec") as binding F8 execution rules, with the
+overrides required by Board A's review of the spec (`docs/reviews/council/board-a-f8-spec-2026-11-11.md`, commit
+`8e8e63550c64253a42ff8f9569bd0ae029e6dfba`, sha256 `f6f967d007a067ae62db8fa6bc394d157e3425a390bde7708f9a713fc50b62a1`;
+"Board A") and with Board A's earlier F8 review (`docs/reviews/council/board-a-f8-2026-11-11.md`, sha256
+`4de06af0e5da86f93ddc0fc516a65bbd209523bccd977ea05b6a6e75e48cb0b7`). The spec is incorporated by that immutable reference; where
+a clause below differs from the spec, the clause governs. It was written at main `f181f0a`, before any G3, rotation, ladder,
+sealed or F8 outcome had been read; no Part A score exists to be read. It changes no registered arm (A5.4), Part A selection
+(A5.1.2), decision rule (A5.5), line-stop rule (F5.5), H5 success criterion (A5.7), seed, cap or pin; the frozen A5, F5, F6 and F7
+decisions stand, and Part A keeps priority and does not wait on F8. F8a adds F8's own scoring caps (F8a.8), which borrow from no
+registered allocation. Like F8, it has no decision authority (F8.6). Adoption is design acceptance only: no replay is certified,
+no manifest is frozen, and no F8 score or H5 episode is authorised by this block. Numbered clauses F8a.1–F8a.8 discharge Board A's
+conditions 1–8 of the spec review in the same order.
+
+**F8a.1 — freeze, hash chain and exposure (condition 1).** Spec §1 is adopted (one freeze of both panels before exposure; C1
+before any F8 delta is contracted with the field; C2 before the first F8 TF-v1 score; disjoint development inputs, §1.4; no
+scored-endpoint feedback; score order Part A → F8-E → F8-F) with these repairs. (a) *Acyclic chain.* C1 and C2 write disjoint
+file sets under `docs/prereg/f8_manifests/`; no C1 file is rewritten after the C1 commit and no file contains its own commit's sha
+or commit time. C1 files, in this order: 1 `exposure_c1.json`, 2 `construction_inputs.json`, 3 `candidates.json`, 4 the floor
+payload copy (F8a.2), 5 `floor.json`, 6 `astra_qualification.json`, 7 `code_hashes_c1.json`. C2 supplements, in this order:
+8 `floor_reproduction.json`, 9 `exposure_c2.json`, 10 `code_hashes_c2.json`, 11 `deltas.json`, 12 `predictions.jsonl`,
+13 `gate.json`. `H_0 = sha256(utf8("f8-manifest-v1:" + S))`, where S is the full git sha of the commit that first adds this F8a
+heading to `docs/PREREG_H1_TF.md` (`git log --reverse --format=%H -S '#### A5 amendment F8a' main -- docs/PREREG_H1_TF.md`,
+first line); `H_k = sha256(H_{k-1} || sha256(file_k))` over raw 32-byte digests. `MANIFEST_C1.sha256` (C1) holds H_0–H_7;
+`MANIFEST_C2.sha256` (C2) holds H_8–H_13, starting from H_7. The final chain head is H_13. The verifier recomputes both
+manifests and checks that every C1 file's git blob at C2 equals its blob at the C1 commit; any mismatch refuses scoring. Actual
+commit times are attested externally by git commit metadata on the merged branch, not by file contents. (b) *Code pinned for C2.*
+`code_hashes_c1.json` pins every source file C2 will execute (construction, prediction, gate, verifier, identity verifier of
+F8a.4). `code_hashes_c2.json` must equal it. If such code must change after C1 and before any F8 delta has been contracted, the
+change is an auditable pre-exposure restart: C1's bytes are kept; a new file set is written in a dated restart subdirectory with
+its own chain anchored to the previous chain head, the diff's sha256 and the reason; an attestation states that no contraction,
+gate quantity or outcome existed. After any contraction value exists, no code change is allowed without a new dated amendment that
+discloses that the contraction values were visible. (c) *Exposure attestations cover every decision-maker.* Spec §1.3's
+definition of exposure is kept and includes summaries (any message, document or log line conveying a G3, rotation, ladder or F8
+outcome). Validity condition 1 of spec §1.3 is replaced: C1 and C2 are pre-outcome only if no person, agent session or process
+that makes or approves an F8 choice (the chair, every builder session, every recipe or parameter selector, every reviewer approving
+an F8 parameter) has been exposed. `exposure_c1.json` and `exposure_c2.json` carry one attestation line per decision-maker, with
+role, session id and the time through which it holds; `exposure_c2.json` covers the whole interval from F8a adoption to its own
+generation. The F8 scoring record (written after C2, spec §1.3) adds an attestation that no exposure occurred between
+`exposure_c2.json`'s generation time and the C2 commit time recorded by git. Command-log hashes and the mechanical grep of spec
+§1.3 are retained as support for the attestations; they do not prove absence of exposure. (d) *After exposure.* If any attestation
+cannot be given or the grep hits, the panel is exploratory and an explicitly exploratory amendment is required before anything is
+scored (spec §1.3). (e) *Links.* The scoring record links the final chain head, the sealed Part A ledger hash (A5.3 "Analysis
+time") and the F8-E then F8-F scoring run ids. No F8 score precedes the complete C1/C2 freeze, the gate and the sealed Part A
+ledger.
+
+**F8a.2 — combined gate and floor (condition 2).** *Gate.* One gate across one fixed E+F candidate set (spec §2.1, combined
+reading adopted; the per-panel fallback is not adopted), over the six planned source-component slots C1–C6 of spec §2.2, with
+the recipe defaults of spec §2.2 frozen as stated (C3: layer 11 o_proj, ρ = 0.05; C4: layer 12 down_proj, ρ = 0.05, labelled an
+own-definition contrast, never a Concept Country reproduction; C5: ⌊0.0004·out·in⌋ lowest-Wanda entries of each of the 24
+`mlp.gate_proj`; C6: count-matched random mask; 64 construction prompts/windows per recipe; ladder {0.25, 0.5, 1} plus the
+registered rotation). `gate_pass ⇔ #{qualifying components} ≥ 4 ∧ f_surv ≥ 0.75` (spec §2.6), with `qualifies_c ⇔ Q_c finite ∧
+Q_c > h*` strictly, `Q_c = |a_rep| + q_rep` (spec §2.4). Each representative is the first available entry in spec §2.2's
+availability hierarchy, at s = 1 unrotated, versus the base; never chosen by field magnitude or by later resolution. Missing
+components do not lower the four. The loop family (Astra, aiXiv, LP and descendants) is one component; F8-E alone can supply at
+most two, so an F8-E purchase supported by F8-F components is disclosed and never reported as "E passed the gate". Passing the
+screen neither measures resolvability nor certifies an effect: a negative a and positive q can cancel (spec §2.4); selection on the
+screen is prediction-conditioned and disclosed. *Dependency graph.* `candidates.json` freezes, in C1, a dependency graph over
+C1–C6 with typed edges: shared construction items (any overlap of the sorted item IDs in `construction_inputs.json`), shared
+direction or activation statistic, shared generator or seed stream, and matched support or counts (C6 ← C5). Components joined by
+a shared-item, shared-direction or shared-generator edge are merged into one component before the gate counts. A matched-count
+edge alone does not merge C6 into C5; the stated rationale is that, conditional on the fixed tensors and per-tensor counts, C6's
+positions come from an independent stream and use no C5 activation statistic. That is an assumption, not a certified independence
+of outcome signs, and it is reported as such. *Survival.* Spec §2.5 is adopted, with: N_e includes every A5.3.3-excluded
+rotation as non-surviving even though no rotation bytes exist; an entry whose intended norm is zero fails; a no-op entry is
+non-surviving and stays a disagreement (F8a.3); N_e = 0 makes f_surv undefined and the gate fails. *Edge rules for the gate.*
+Unsupported curvature contributes 0 to q_rep with `q_partial = true` (spec §2.4); such a component is labelled partial and is not
+complete quadratic support. Only a gradient-field abstention (missing gradient for an edited tensor or nonfinite a) disqualifies a
+representative; the mandatory chart abstention (F8a.3) never does. *Floor h\*.* Exactly spec §2.3: file
+`data/runs/a5/nullsize/inputs.json`, sha256 `67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de` (pinned in
+`docs/prereg/a5_manifests/nullsize/report.json` → `inputs.sha256` and `inputs_provenance.json` → `payload_sha256`); fields
+`centred_noise` [141, 64], `window_mask` [141, 64], `donors[j].{id, component, family, eligible}`, row j of the arrays being
+`donors[j]`; units WikiText `extra.mean_nll`, nats per valid next token, 1,023 tokens per window, scale 1.0; pairing into the 32
+two-window blocks (2k, 2k+1) by `scripts/a5_simulation.py:donor_block(noise, mask, 1.0)`; donor set every `eligible` row with
+all 64 windows masked-in and finite (expected 141 pairs in 63 components, `report.json` → `sufficiency`); missingness: a donor
+with any masked or nonfinite window is excluded and counted, never imputed (0 at this payload, `validation.json`); interval:
+percentile bootstrap of the block mean, 4,000 draws, one common [4000, 32] index array across all donors (one call of
+`a5_simulation.resolution` on the [32, n_donor] block matrix in payload row order), linear .025/.975 quantiles; RNG
+`numpy.random.Generator(numpy.random.PCG64(1731840362851662234))`, the `domain_seed` of ("20261111:f8-floor:", "resolution");
+per-pair h_j = (q.975 − q.025)/2; donor weighting by component: h_c = `numpy.median` of h_j within component c, h\* =
+`numpy.median` of the h_c over components. h\* is a historical noise screen, not a calibrated resolution probability. No fresh
+Part A or F8 outcome and no rewritten null calibration enters it. *Committed data and independent reproduction.* The payload is
+not in git (`git ls-files` lists nothing under `data/`); the committed NULL-SIZE files hold provenance, aggregate counts and
+traces, not the residual values or interval endpoints. Therefore, as C1 file 4 of F8a.1, a byte-identical copy of the raw output
+`data/runs/a5/nullsize/inputs.json` (651,039 bytes; written 8 Nov 2026 by `python scripts/a5_nullsize_inputs.py materialise`,
+whose log `data/runs/a5/nullsize/materialise.log` records the same sha256) is committed as
+`docs/prereg/f8_manifests/floor_payload/nullsize_inputs.json`, with the floor code pinned in `code_hashes_c1.json`; the builder verifies the sha256 before
+use and `floor.json` records the value, the payload and code sha256, numpy/Python versions, every h_c and the sensitivities. The
+spec's 0.0049397 nats/token is an unreproduced design preview until recomputed. Before any F8 delta is contracted, a second run
+by someone other than the builder, from a fresh clone of the C1 commit with no access to `data/`, recomputes h\* and every h_c from
+the committed payload copy and committed code and writes `floor_reproduction.json`; any difference from `floor.json`, or from
+0.0049397 in any printed digit, stops the build and is reported; the preview is never silently replaced. Pair-weighted and family
+sensitivities (spec §2.3: 0.0011513 over 141 pairs; 0.0091528 LoRA, 0.0006664 chain) are published beside h\* and are never
+selected among.
+
+**F8a.3 — predictions, scaling and edge values (condition 3).** Spec §3 is adopted (schema §3.2, order §3.3, realised-bf16
+contraction, rank/support audits, missing/no-op ledger, no refit), with these overrides. (a) *Scaling.* Each row's a_s and q_s are
+contracted on that row's own realised increment D_eff(s), so they already carry the scale: under exact scaling D_eff(s) = s·D_eff(1)
+one would have a_s = s·a_1 (linear in s) and q_s = s²·q_1 (quadratic in s), but bf16 rounding breaks exact scaling and only the
+realised values are used. The row's quadratic-sign forecast is **sign(a_s + q_s)**, replacing spec §3.2's sign(a + s·q), which
+applied the scale twice to curvature. A row-relative forecast for a further multiplier t of that row's realised direction is
+t·a_s + t²·q_s, with flip point t\* = |a_s|/q_s defined only for a_s < 0 and q_s > 0. The absolute s\* = |a_1|/q_1 from the
+s = 1 representative is a nominal full-strength-direction forecast; it is not a forecast for the bf16-rounded ladder points, and is
+labelled so. This reading replaces F8.3's "sign flip at s\* = |a|/q". (b) *Edge rules (spec §3.4, completed).* a_s = 0: first-order
+prediction 0, and a resolved zero prediction is a disagreement (A5.3). q_s = 0 with a_s ≠ 0: κ = 0, no t\*, forecast sign(a_s).
+a_s = 0 and q_s > 0: κ is the computed edge value +∞, stored as JSON null with `kappa_status = "edge:a_zero_q_positive"`.
+a_s = 0 and q_s = 0: κ null with `kappa_status = "undefined:a_zero_q_zero"`. A nonfinite field input or contraction: the field
+abstains for that row (`field_status = "abstain:nonfinite"`), all derived values null with reason, and a representative so marked
+does not qualify. t\*/s\* null with reason outside a < 0 < q; at t = t\* the forecast is 0 (reported, not counted). No-op entry
+(realised change exactly zero): a = 0, q = 0, status `no_op`, counted as a disagreement, not scored. q stays an unsigned Fisher
+magnitude, never a signed Hessian term (A5.8.1); the quadratic forecast is descriptive and never enters Part A, A5.5 or F5.5. Every
+non-finite or undefined value is a JSON null or a defined status string, never NaN or Infinity. (c) *Partial q.* When
+`q_partial` is true, a, a_per_tensor, the first-order sign and the partial q sum are reported, labelled partial; κ, t\*, s\* and the
+quadratic-sign forecast abstain with `abstain:q_partial`. (d) *Field identities.* Both fields are pinned in full: `wikitext_nll`
+identity `6fab5b29c1fb70f5b08e1ae09f098088467b3bc649a234a5b12f4bc91223a87e` (decisive, descriptively) and `mmlu_gold_log_prob`
+identity `00c76046a3bdd27ed111a5b6a6aaa7177809d713e5931399a9cecbf2a535d581` (descriptive only), with
+`g2_manifest_final.json` sha256 `c4ec7390aaf118ed785c390ce337a4077936a31204f97da54341bcfa54fd09ff` and the sha256 of each field's
+`manifest.json` and `tensors.pt`, loaded through `FieldArtifact.load(..., expected_identity=...)`. (e) *Construction
+degeneracies, fixed before C1.* A zero or nonfinite normalising norm (ŝ, û, v̂ or the C3 v) makes the construction fail:
+the entry is `missing: construction_degenerate`, retried only with the same inputs and seed (spec §1.4). In C3's
+v = Σᵢ sign(μᵀvᵢ) σᵢ vᵢ, sign(0) = 0, so a singular vector with exactly zero projection contributes nothing; this makes v independent
+of the SVD's sign convention. Activation pooling for C3, C4 and C5: plain text without a chat template, each item truncated to
+256 tokens (spec §2.2's C4 truncation applied to C3 as well), base-model forward in bf16 with fp32 accumulation; C3's μ and ŝ and
+C4's means are means over all valid tokens within each item, then over items with equal item weight; C5's ‖X_j‖₂ is taken over all
+valid token rows of the 64 windows. (f) *Chart.* Every F8 entry carries `chart_status = "abstain:no_frozen_chart_predictor"`
+(spec §3.5); chart columns are hashed descriptively; no chart model is fitted for F8 and no Part B output is substituted later.
+
+**F8a.4 — Astra replay qualification (condition 4).** Spec §4 steps A1–A11 are adopted unchanged as preconditions for including
+the Astra entry: provenance (A1), form (A2), tokenizer/config allowlist (A3), complete tensor-name set (A4), shapes and dtypes
+(A5), exactly the two claimed changed tensors (A6), byte-identical complement with complement hash (A7), changed coordinates with
+prose mismatches recorded rather than failing (A8), dense zoo entry with bitwise round-trip (A9), full-state identity (A10) and
+fresh-process reload determinism (A11). Spec A12 is replaced, because `wsp.eval.batch` has no dry-run option and the scorer's
+`--dry-run` only emits commands: inclusion additionally requires a committed **CPU identity verifier**, added prospectively and
+pinned in `code_hashes_c1.json`, that (i) loads the staged entry through the production apply path (`wsp.zoo.apply`, as the scorer
+does) on CPU; (ii) computes, with the production functions, the full-state hash, `effective_config_hash` of
+`configs/eval_tf_v1.yaml`, the model and tokenizer revisions, the tokenizer file hashes, the per-benchmark item counts of that
+config and `entry_hashes` {`delta.safetensors`: sha256}; and (iii) compares them with the expected values and with the base
+reference's recorded identity. No endpoint is run to obtain this evidence before C2. Reuse of an existing base reference requires
+every identity field to match, not the config filename alone. *Provenance.* The target model and tokenizer revision
+`2fc06364715b967f1860aea9cf38778875588b17` is taken from `docs/prereg/a5_manifests/g2/g2_manifest_final.json` → `model`.
+`docs/prereg/a5_manifests/snapshot.json` (sha256 `1b2af25cde1bd7ad0427fec2d0ee22d34f75651ba3fb979176464f8fad701da3`, closed
+2026-11-08T00:59:56Z) is linked as the immutable pre-G2 artefact/record hash index; its `base_ref`
+`19f5cbf781cb0955fdfe482c12ec523cc2873dc6` is a repository revision, not a model pin, and the snapshot does not contain the HF
+revision string. Any failure makes C1(i) `missing: replay not qualified` with the failing step; nothing is repaired into an exact
+replay. This block certifies nothing; only `astra_qualification.json` built by committed code can. aiXiv stays a
+reconstruction; unreleased or incomplete LP and Scope artefacts stay missing; loop descendants stay one component.
+
+**F8a.5 — cluster rule and binomial wording (condition 5).** *Rule (spec §5.1 adopted).* Unit: one frozen component slot
+C1–C6 (after any merge of F8a.2). Primary contrast: the representative's s = 1 ladder contrast y(W₀+D_eff(1)) − y(W₀) on WikiText,
+against sign(a_rep). Rotation and s = 0.25/0.5 contrasts and mixed signs across scales are reported per entry and never change the
+cluster outcome. *Status precedence*, applied in this order, first match wins: (1) `missing` (no bytes, failed replay, unfunded,
+including `missing: unfunded (cap)` under F8a.8, or failed construction); (2) `disagree` if the representative is a no-op, whether or not the gate
+passed; (3) `abstain:field` if the gradient field abstained (a chart abstention never applies here); (4) `unscored` if the gate
+failed or the cap stop of F8a.8 left it unscored; (5) `unresolved` if the score is missing or nonfinite (with reason) or the
+interval contains 0; (6) `agree` if resolved, pred ≠ 0 and the signs match; otherwise `disagree`. *Ledger.* All six slots are
+reported every time, with their status and reason; N_c = 6 does not shrink when a slot is missing. k = #agree, n = #agree +
+#disagree. n = 0 is no test and no scientific conclusion. *Independence.* `candidates.json` records in C1 whether the frozen
+dependency graph (F8a.2) supports independent cluster Bernoulli signs, with the rationale; if not, only descriptive entry and
+cluster counts are reported and no binomial inference is made. Conditional independence and fair-coin signs, and selection by
+resolution, are assumptions, not certified by the gate. *Wording.* F8.5's sentence "the report states that a panel of this size
+cannot reject chance agreement" and spec §5.2's replacement sentence are both replaced by: "Agreement is summarised over the n
+resolved source clusters of N_c = 6 frozen slots, with the exact two-sided binomial test of p = ½ and the exact 95 %
+Clopper–Pearson interval. At the 5 % level, evidence of above-chance agreement requires 6/6 (p = 0.03125, CP lower bound 0.541);
+two-sided rejection also occurs at 0/6, which is evidence of anti-agreement, never of transfer; with n ≤ 5 neither tail rejects
+(5/5 or 0/5: p = 0.0625; CP lower bound 0.478 at 5/5). The interval is a descriptive precision statement." The report always
+states the actual k, n, p, interval and direction. If a slot is missing so that n ≤ 5, it says the test cannot reject at this n.
+No result satisfies, fails or unresolves any A5.5 step or F5.5 predicate or becomes a G8 condition; a resolved agreement is a
+transfer precondition only, a resolved disagreement is prediction failure on that fixed endpoint without identifying locality versus
+K-FAC error, and an unresolved cluster says nothing (F8.6).
+
+**F8a.6 — H5 reconciliation (condition 6).** Spec §6 (difference-of-means inputs, LP objective, deterministic selection and
+ties, α grid, S-loc/S-field, treatments, Sol pin, per-stream contract, drop order) is adopted as the H5 scripted-arm contract and
+must be appended verbatim with the overrides below to `docs/H5_DESIGN.md` and `docs/H5_PROTOCOL.md`, with `docs/HYPOTHESIS.md`
+reconciled, before the H5 pilot. (a) *Access wording.* "run by a pinned script with no model calls … and nothing else the editor
+does not" (`docs/H5_PROTOCOL.md` 11 Nov section; same text in `docs/H5_DESIGN.md`) is replaced by: "makes no LLM editor or provider
+calls; it makes metered diagnostic model forwards (base generations and hidden activations, spec §6.1) through the same
+forward-request meter, charged to the arm; S-field additionally receives the frozen G2 field as setup access". The actual access
+flags of every arm (spec §6.3 table, plus F9.4's `field_localisation_access`) are pinned in the G5 manifest before the pilot.
+Comparisons at unequal access are labelled and descriptive; they do not meet the matched-information requirement for an
+editor-superiority claim. A T0 script given |L| and B is conditional on that prior, not unrestricted discovery. (b) *Retained arms.*
+Astra stays the registered primary (A5.7 primary comparison: Astra with versus without the critic); Haiku, sham reload, random
+ranking and the F5.4/FP5 nested 1/8/32 best-of-N are retained with every other A5.7/G5 comparator; arms are dropped only
+prospectively for funding, never by observed performance. (c) *Complete A5.7 estimator per stream*, unchanged: ratio of total real
+calls including failed calls and rejected-proposal audits; both totals finite and positive at the point and in every draw;
+connected episodes clustered beyond the goal × seed × budget tuple when source-, direction- or prompt-connected; paired
+episode-cluster bootstrap-t with 4,000 common draws, PCG64 seed 20261107, and its failure rules; bounded score endpoint with equal
+episode weighting; missed-proposal denominator of all rejected candidates including failed attempts, unauditable rejected
+attempts counted as missed, zero rejected attempts undefined; net GPU saving charging diagnostics, gradients, probes, failed
+attempts and amortised preparation (including the G2 fields' 1.62 GPU-h, `g2_manifest_final.json` → `caps.fields.used_hours`);
+prospective joint power ≥ 0.80; unresolved versus kill distinctions. Critic and no-critic share seeds and opportunity budgets
+within a stream; realised calls are observed, not forced equal. A zero or nonfinite denominator makes a stream's savings undefined,
+never a success. (d) *Frozen choices.* The α-selection metric is FP5's development-winner objective (mean paired improvement on
+development support relative to the actual incumbent under A5.7's feasibility/safety predicates), ties within 1e-12 relative to
+the smaller α; the proposal-training, support-validation, acceptance-slice, calibration and sealed splits (spec §6.1; F5.4; FP5;
+A5.7) and the actual-incumbent comparisons are frozen in the G5 manifest before calibration. (e) *F9.4.* The F9.4 paired set
+(scripted with field localisation, scripted on the LLM's layers, LLM with and without the field ranking, shuffled-localisation
+control) uses the same estimator and access pinning; the LLM is credited with localisation value only under F9.4's paired rule.
+(f) *Cost and drop order.* Every H5 stream here is unpriced (F8a.8). The pilot is repriced inside the existing G5 caps (≤ 10 GPU-h
+plus ≤ 6 for best-of-N) before launch; if it does not fit, streams are dropped in this fixed order: the F9.4 paired set as one unit
+(registered last), then spec §6.6's order (S-field; T1 as one unit; Sol T0). Astra, Haiku, sham and random best-of-N are never
+dropped; dropped streams are reported as unfunded. G5 stays shadow-only, G8 keeps its existing eligibility (G5 feasibility plus
+G3/G4 go), and every A5.7 rejection and acceptance safeguard is retained. No episode is authorised by this block.
+
+**F8a.7 — scoring configuration (condition 7).** F8.5's `configs/eval_tf_v1_wikitext.yaml` is replaced by
+`configs/eval_tf_v1.yaml` (file sha256 `5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317`), the Part A default
+(`response_intervention.DEFAULT_CONFIG`) and the configuration F9.9 already names. Reason: the restricted file is the F5.3 4B
+WikiText diagnostic whose header states that its config hash differs and its records never pool with full TF-v1 records; under it
+(a) the descriptive MMLU endpoint of F8.5 would not be scored, (b) the common base reference could not be reused from records
+with the full scoring identity, (c) the floor noise (F8a.2) comes from full-config records, and (d) the measured per-entry rates of
+F8a.8 were measured on the full config, while no WikiText-only H0 rate exists in `docs/RESULTS.md` (spec §2.8; Board A §7). C1
+records the effective scoring identity (`effective_config_hash`, model and tokenizer revision, and the item counts MMLU-Pro 1,000,
+HellaSwag 250, KL 200, WikiText 64 windows of 1,024 tokens at revision `b08601e04326c79dfdd32d625aee71d232d685c3`, refusal 50,
+over-refusal 50). WikiText decides for the panel descriptively; MMLU stays descriptive. Base reuse requires the complete identity
+match of F8a.4. A WikiText-only redesign would need a separate endpoint and pricing amendment.
+
+**F8a.8 — funding, pruning and provenance (condition 8).** *Caps.* F8-E scoring ≤ 0.3 GPU-h and F8-F scoring ≤ 0.6 GPU-h
+(synthesis estimates, Board A F8 review condition 2), each inclusive of loads, base reference, retries and overhead; F8-F
+construction ≤ 0.5 GPU-h (F8.2). Pricing uses 1.04 min per entry, 47.1 s per process cache load and 1.751 min for a cold base
+entry (`docs/RESULTS.md` TF-v1 pilot rounds 2 and 3; spec §2.7). These are reference-rate estimates, not measured F8 runtimes.
+*Pruning rule, fixed in C1 before any contraction.* The purchase population and the gating population are frozen together in
+`candidates.json`. Entries are bought in whole members of four ({0.25, 0.5, 1, R}). Within each panel, members are added in this
+order while the projected panel cost, charging one cache load and always a cold base reference, stays within the cap: first every
+component's representative member (spec §2.2 order), then the remaining loop-family members in hierarchy order. For F8-E this
+admits at most three members (12 entries, 0.25027 GPU-h; 16 entries would be 0.31960 > 0.3, Board A §8); F8-F's 16 entries
+project to 0.29042, or 0.31960 if the base reference falls to F8-F. A member not admitted is listed `unscored: cap`, and a component
+whose representative is not admitted is `missing: unfunded (cap)` for the gate and for F8a.5; no unbought entry supports the gate.
+If the gate passes, every constructed, non-no-op, non-excluded entry of the purchase population is scored; "buys every frozen
+entry" in spec §2.1 and §2.6 means every entry of this purchase population. *Stops.* Scoring of a panel stops before projected
+overspend at 1.04 min per remaining entry; a wall-time watchdog stops it if any entry exceeds 2 × 1.04 min wall excluding the
+process's single cache load, which is charged separately (the round-2 new-process entry measured 2.60 min including its load,
+`docs/RESULTS.md`); construction stops at 0.5 GPU-h. Retries, new loads and cold references are charged inside the same cap.
+Recovery: scored entries are kept and reported; unscored entries are listed `unscored: stopped`; continuation requires a dated
+repricing amendment computed from timing and cost logs only, never score values, which may change funding but never the purchase
+population, gate, floor or predictions. No Part A, G5 or G7 allocation is borrowed. *Status of every item in spec §7:*
+
+| Spec §7 item | Price (GPU-h, H0) | Status under F8a |
+|---|---|---|
+| F8 floor, Astra qualification, field contraction, gate | 0 GPU-h (CPU; wall time, memory and storage are not zero) | funded (needs no GPU allocation) |
+| F8-E scoring | 0.069–0.277 entries (+0.013 load, +0.029 cold base) | funded within ≤ 0.3, pruned to the purchase population above |
+| F8-F scoring | 0.277 + 0.013 | funded within ≤ 0.6 |
+| F8-F construction (activation statistics for C3–C5) | unmeasured | funded up to the 0.5 GPU-h cap; unpriced until measured; stop and reprice at the cap |
+| F8-E aiXiv reconstruction | unmeasured (needs thinking-on generations) | **unfunded** as priced: C1(ii) is `missing: unfunded` unless a later amendment allocates it before C1 |
+| H5 scripted/Sol streams (and F9.4 streams) | unmeasured: the 4096-token tier and diagnostic-forward latency are not measured; the 12.4 and 6.1 min/entry fast-tier references are not H5 rates | **unpriced** until the 4096-token tier is measured; repriced inside G5 ≤ 10 + ≤ 6 before the pilot; drop order F8a.6(f) |
+
+Unpriced is not permission to spend to discover a price outside a bounded allocation. *Provenance.* Condition 7 of Board A's F8
+review is carried forward as discharged through the retained-evidence README `docs/council/2026-11-11/evidence/README.md`
+(sha256 `efb29eb199523764926e9810a800e1dc8e5942461996ab43cb916a165f17f4ce`) and is not reopened as a blocker. URL, version, access
+date and file hashes of every recipe and download actually used go into `astra_qualification.json` and
+`construction_inputs.json`. C4 is an own-definition contrast, not a certified reproduction; C1(iii) enters only with retrievable
+bytes or a complete recipe; no number from a page that returned HTTP 403 to Board A is used as a threshold, funding predicate,
+expected effect, component count or success claim.
+
+| Board A condition | F8a clause |
+|---|---|
+| 1 Authority and freeze: named, dated, immutable spec reference; frozen A5/F5/F6/F7 and Part A priority; acyclic C1/C2 chain with separate C2 supplements; attestations for every decision-maker through C2; disjoint inputs; exploratory after exposure; sealed Part A ledger and score order | preamble; F8a.1 (a)–(e) |
+| 2 Gate and floor: combined six-slot E+F gate, representative hierarchy, ≥ 4 independent components, strict floor, ≥ 0.75 survival with complete denominators; dependency map, construction parameters, seeds and purchase population frozen; exact committed payload and floor code/output; preview unreproduced until recomputed; sensitivities without choice | F8a.2 (gate, dependency graph, survival, edge rules, floor, committed data and independent reproduction); purchase population in F8a.8 |
+| 3 Predictions: full schema and identities for both fields; realised bf16; row-wise quadratic scaling; relative versus absolute s\*; JSON-safe edge statuses; construction degeneracies and pooling; partial q; chart abstention; no refit | F8a.3 (a)–(f) |
+| 4 Replay: A1–A11, real CPU A12 identity verifier, HF/G2/snapshot provenance, fail closed, reconstruction/missing labels | F8a.4 |
+| 5 Cluster reporting: s = 1 representative rule, status precedence, six-slot ledger, independence justification, both binomial tails, n = 0, descriptive authority only | F8a.5 |
+| 6 H5 reconciliation: §6 contract into H5 documents; access wording; matched information; complete A5.7 estimator; frozen splits and α metric; repricing and drop order; shadow-only G5 and G8 eligibility | F8a.6 (a)–(f) |
+| 7 Configuration: `configs/eval_tf_v1.yaml` replaces F8.5's file; scoring identity and counts pinned; WikiText decisive descriptively, MMLU descriptive; reuse only on complete match | F8a.7 |
+| 8 Funding and provenance: all-entry versus cap pruning resolved before the purchase freeze; caps with overhead; stop, retry and reprice policy; aiXiv status; H5 repricing and drop order; condition 7 carried forward; C4 labelling; no blocked-page numbers | F8a.8 (and F8a.6(f) for the H5 drop order) |
