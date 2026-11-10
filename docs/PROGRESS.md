@@ -487,3 +487,8 @@ retrospective refits; 30/100 are reporting conventions, not precision evidence);
 H5 reconciliation with F8a overrides and incumbent-relative forecasts; shadow-stream limits (no ≤ 5 % safety certification or
 realised-savings claim from 32 adapters); generation qualification and bounded pilot funding; evidence wording. Member identities
 archived in `docs/council/2026-11-11/MEMBERS.md`. F9a (adopting amendment) follows F8a, which is being drafted. Part A staging 29/40.
+
+**11 Nov 2026, 15:00 UTC.** F8a (adopting amendment for the F8 execution rules) merged at 097b106; pins match. The F8a floor payload
+(byte-identical copy of the registered null-size inputs, sha256 67da223c…) is committed under `docs/prereg/f8_manifests/floor_payload/`
+so the floor can be recomputed independently from a clone. Board A review of F8a and the F9a draft (Board A's eight F9 conditions)
+are in flight. Round-5 record merged (e46c825; 53 references verified). Part A staging 30/40.
