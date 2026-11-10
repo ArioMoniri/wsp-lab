@@ -195,3 +195,44 @@ a Concept-Country-style rank-one). They cannot satisfy, fail or unresolve any F5
 F8.8: the access-ladder report states Rane's ordering (weights 42 %, activations 61 %, outputs 64 % domain recovery on
 Qwen3.5-0.8B LoRAs, arXiv 2611.07610) as a prior in one sentence; it is not an effect-size revision, and the field is described
 as weights plus frozen receiver sensitivity, never data-free. No historical hypothesis status changes.
+
+## 11 Nov 2026 (council round 5) prospective note — H5 and H1-OR (before any G3 outcome)
+
+The [round-5 synthesis](council/2026-11-11/SYNTHESIS-r5.md) is recorded as [PREREG A5 amendment F9](PREREG_H1_TF.md), written while
+Part A staging stood at 27 of 40 edits and before any G3, rotation, ladder or sealed outcome existed. The registered arms, the
+Part A selection, F5.5 and the H5 success criterion (A5.7) are unchanged; nothing is rewritten above. Board A reviews F9 with the F8a
+adopting amendment; Part A does not wait.
+
+**H5 gains, inside the G5 caps:**
+
+- **Field localisation (F9.4).** A fifth access flag, `field_localisation_access`, records whether the editor receives the field's
+  per-tensor ranking (gradient saliency g⊙W, candidate-specific g⊙D, cached down-projection input norms). The editor's own verbal site
+  ranking is logged **before** it sees that ranking. Paired localisation variants: scripted estimator with field localisation;
+  scripted estimator on the LLM's chosen layers; LLM editor with and without the field ranking; a shuffled-localisation control at
+  matched information and opportunity. The LLM is credited with localisation value only if the LLM-localised variant beats the
+  field-localised variant on held-out gain per real evaluation, paired, under A5.7 accounting. Attribution patching is a new metered
+  artefact and is not registered.
+- **Test-time LoRA shadow sub-stream (F9.5).** 32 frozen development queries, one isolated base-relative LoRA each, the critic
+  forecasting collateral change only, every forecast logged under F9.1 before scoring and all 32 scored on TF-v1. Shadow replay can
+  reject an uneconomic gate; it cannot demonstrate realised savings, which remain A5.7's prospective paired G8 claim. It is not a G8
+  arm.
+- **Generation-endpoint prerequisite (F9.6).** No H5 math-editor claim may be made until the F8-E MATH-500 generation endpoint
+  (natural-completion rate and strict correctness together, thinking-off baseline) is qualified. Until then it is not an H5 endpoint,
+  and it never alters F5.5.
+
+**H1-OR gains:**
+
+- **Forecast-before-modify log (F9.1) and calibration statistics (F9.2).** An append-only, hash-committed JSONL row is written before
+  scoring for every edit outside Part A (F8 entries, F9 panels, every H5 proposal including rejected ones, test-time adapters),
+  holding a, q, κ, the anchor type, the selection status, the chart output or abstention and the G2 hashes. The primary statistic is
+  E₀ = 1 − Σ(Δy − s·a)² / ΣΔy², with sign agreement, calibration intercept and slope, coverage and the predicted-resolvable × resolved
+  2×2 as mandatory secondaries, clustered by independent source component. Below 30 independent clusters per family the log is
+  entries only; 30–99 is exploratory; a precision statement needs ≥ 100.
+- **Pruning ladder (F9.3, F9-P) as a descriptive family.** Unstructured deletion at 10, 20 and 50 % from Wanda, transplanted
+  SparseGPT and count-matched random masks (18 entries), three native SparseGPT entries with compensation as a separately labelled
+  family, and a 24-mask ranking panel (Kendall τ of realised WikiText change against a + q, q_A and −‖W⊙M‖²), within sparsity only.
+  It runs after Part A and F8-F.
+
+**F9.7: no decision authority.** F9 panels and statistics cannot satisfy, fail or unresolve any F5.5 predicate or A5.5 step, cannot
+change A5.7, and fund nothing. A JEPAWG-style latent model is not registered; it may be proposed by a later amendment only if the
+F9.1 log shows structured residuals the first-order terms cannot represent. No historical hypothesis status changes.
