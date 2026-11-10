@@ -22,10 +22,14 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-SCHEMA_VERSION = 1
+# Schema 2 (A5.8.1 amendment, 10 Nov 2026): fp64 symmetrisation/eigendecomposition, lambda_max-relative
+# negative-eigenvalue tolerance with clamp counts in the coverage block.
+SCHEMA_VERSION = 2
 SEED = 20261107
 DAMPING = 1e-3
 ENERGY = 0.99
+NEGATIVE_TOLERANCE = 1e-6  # eigenvalues in [-1e-6 x lambda_max, 0) are clamped to 0 and counted
+SYMMETRY_TOLERANCE = 1e-6  # max|F - F^T| <= 1e-6 x max|F|
 # Harmful and harmless refusal panels remain distinct objectives/roles.
 OBJECTIVES = {
     "wikitext_nll": "lower",
@@ -177,21 +181,40 @@ class MissingHookError(RuntimeError):
 
 
 def spectral_factor(factor):
-    """Audit, trace-relative damping, then 99% energy truncation in fp32.
+    """Audit, trace-relative damping, then 99% energy truncation; fp64 eigendecomposition.
 
-    Tail trace is measured on the damped spectrum. Raw and damped traces are
-    retained separately; zero-trace factors remain exactly zero with a flag.
+    A5.8.1 amendment (10 Nov 2026): the stored fp32 factor is symmetrised and decomposed in float64.
+    Symmetry: max|F - F^T| <= SYMMETRY_TOLERANCE x max|F|. Eigenvalues in
+    [-NEGATIVE_TOLERANCE x lambda_max, 0) are clamped to 0 and counted (``n_clamped`` and
+    ``most_negative_ratio`` = lambda_min / lambda_max, 0.0 when nothing is clamped); anything below
+    that, or any negative eigenvalue when lambda_max <= 0, raises. Damping (DAMPING x clamped
+    trace / dim) and the 99% energy truncation of the damped spectrum are unchanged. Raw and damped
+    traces are retained separately; zero-trace factors remain exactly zero with a flag. The kept
+    factor is returned in fp32 (storage dtype).
     """
     f = factor.detach().float().cpu()
     if f.ndim != 2 or f.shape[0] != f.shape[1] or not torch.isfinite(f).all():
         raise ValueError("invalid finite square factor")
-    scale = max(f.trace().item() / f.shape[0], 1e-12)
-    if not torch.allclose(f, f.T, atol=1e-6 * scale, rtol=1e-6):
-        raise ValueError("factor symmetry audit failed")
+    f = f.double()
+    largest_entry = f.abs().max().item() if f.numel() else 0.0
+    asymmetry = (f - f.T).abs().max().item() if f.numel() else 0.0
+    if asymmetry > SYMMETRY_TOLERANCE * largest_entry:
+        raise ValueError(
+            f"factor symmetry audit failed: max|F-F^T| = {asymmetry:.3e} > "
+            f"{SYMMETRY_TOLERANCE:g} x max|F| = {largest_entry:.3e}"
+        )
     f = (f + f.T) * 0.5
     values, vectors = torch.linalg.eigh(f)
-    if values.min().item() < -1e-6 * scale:
-        raise ValueError("materially negative factor eigenvalue")
+    lambda_max = values.max().item()
+    lambda_min = values.min().item()
+    if lambda_min < 0 and (lambda_max <= 0 or lambda_min < -NEGATIVE_TOLERANCE * lambda_max):
+        ratio = lambda_min / lambda_max if lambda_max > 0 else float("-inf")
+        raise ValueError(
+            f"materially negative factor eigenvalue: lambda_min/lambda_max = {ratio:.3e} "
+            f"< -{NEGATIVE_TOLERANCE:g}"
+        )
+    n_clamped = int((values < 0).sum().item())
+    most_negative_ratio = lambda_min / lambda_max if n_clamped else 0.0
     values = values.clamp_min(0)
     raw_trace = values.sum().item()
     damping = DAMPING * raw_trace / f.shape[0]
@@ -199,7 +222,7 @@ def spectral_factor(factor):
     vectors = vectors.flip(1)
     total = values.sum()
     rank = int(torch.searchsorted(values.cumsum(0), ENERGY * total).item()) + 1 if total > 0 else 0
-    kept = (vectors[:, :rank] * values[:rank]) @ vectors[:, :rank].T
+    kept = ((vectors[:, :rank] * values[:rank]) @ vectors[:, :rank].T).float()
     tail = values[rank:].sum().item()
     return kept, {
         "raw_trace": raw_trace,
@@ -209,6 +232,20 @@ def spectral_factor(factor):
         "omitted_energy": tail / total.item() if total > 0 else 0.0,
         "zero_trace": raw_trace == 0,
         "dimension": f.shape[0],
+        "lambda_max": lambda_max,
+        "n_clamped": n_clamped,
+        "most_negative_ratio": most_negative_ratio,
+    }
+
+
+def _clamp_record(pair):
+    """Per-factor clamp statistics (A5.8.1 amendment) for the coverage block."""
+    return {
+        key: {
+            "n_clamped": pair[f"{key}_audit"]["n_clamped"],
+            "most_negative_ratio": pair[f"{key}_audit"]["most_negative_ratio"],
+        }
+        for key in ("A", "G")
     }
 
 
@@ -400,6 +437,11 @@ def collect_field(
         "damping": DAMPING,
         "energy": ENERGY,
         "precision": "fp32",
+        "spectral": {
+            "eigendecomposition": "float64 (symmetrised 0.5(F + F^T)); kept factor stored in fp32",
+            "negative_tolerance": f"clamp [-{NEGATIVE_TOLERANCE:g} x lambda_max, 0) to 0; lower fails",
+            "symmetry_tolerance": f"max|F - F^T| <= {SYMMETRY_TOLERANCE:g} x max|F|",
+        },
         "anchor": "base",
         "fisher": "model-sampled per-valid-token NLL sum; one target/token",
         "objectives": [o.identity() for o in objectives],
@@ -430,6 +472,7 @@ def collect_field(
                     "factors": n in factored,
                     "module": factored.get(n),
                     "shape": list(t.shape),
+                    "eigen_clamps": _clamp_record(pairs[factored[n]]) if n in factored else None,
                 }
                 for n, t in model.named_parameters()
             }

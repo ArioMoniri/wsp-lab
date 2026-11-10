@@ -316,6 +316,22 @@ trace files are new. `scripts/a5_snapshot.py --evidence` then rewrote only `snap
 block is untouched, including code-map digest `2b93ec10b728c981aaee126d9f4d5e5ded70210b08f842bf8906a454ac900a95`. Both
 READMEs were regenerated.
 (vii) The SHA256s below were computed from the committed bytes.
+(viii) **Re-pin for the A5.8.1 amendment (10 Nov 2026, before audit; "A5.8.1 amendment (10 Nov 2026, before audit):
+eigenvalue tolerance" at the end of this document).** `scripts/a5_build_manifests.py --pin-worktree` was re-run against
+the closed snapshot, into a copy of the package, from parent `b7f10a1`. It reproduced `components.jsonl`,
+`selection.json`, `references.json` and `text_groups.json` byte for byte; only `code_hashes.json` and `README.md` (which
+lists the former's sha256) changed, and only those two were copied into the package. Nothing else was regenerated:
+`panels.json`, `nullsize_inputs.json`, `control_seeds.json`, `linestop_power_spec.json`, `snapshot.json` and every
+`nullsize/` report and trace are untouched. `code_hashes.json` (schema `a5-code-hashes-v2`, sha256
+`701ae646eff3a00713140b8100ac28c83a81973c7f296909f9ce18984a130744`, `git_sha` = parent `b7f10a1`) now pins 64 files: the
+new `src/wsp/features/response_field.py` bytes, the builder itself (its pin list grew), and seven newly pinned paths,
+`scripts/g2_fields.py`, `scripts/g2_fields.sh`, `scripts/scale4b_build_edits.py`, `scripts/lambda_job_scale4b.sh`,
+`scripts/scale4b_h0_pair.sh`, `scripts/scale4b_report.py` and `configs/eval_tf_v1_wikitext.yaml`. Its environment block
+now also records the fitting libraries lightgbm 4.7.0, scikit-learn 1.9.1 and scipy 1.18.1. This code map supersedes
+`708c6fab…abfe2c9` as the current one; that digest and the 7 Nov and 8 Nov digests remain historical identities. The
+amendment commit changes only `docs/PREREG_H1_TF.md`, these two package files, `src/wsp/features/response_field.py`,
+`scripts/g2_fields.py`, `scripts/a5_build_manifests.py`, `tests/test_response_field.py` and `tests/test_g2_fields.py`
+(the last two are not code-map members). The table rows below carry the new literal hashes with old/new identity.
 
 *Identities.* Historical: 7 Nov procedural-freeze code map `2b93ec10…900a95` and 8 Nov evidence code map
 `05a2d244a0d15bb8ef70cb62e89611c783447737b724f755ad98ed9b08ffeabe`. This freeze's code map is `708c6fabd8fcbcfe4d0d8f4d38ed19eddae2797ffa8c5a89411d75053abfe2c9`. Content
@@ -349,8 +365,8 @@ baseline `docs/PROGRESS.md` difference (`e3c577f` → `6f3d571`) predates this c
 
 | Path | SHA256 | Identity |
 |---|---|---|
-| `docs/prereg/a5_manifests/README.md` | `46996d88e854362314fff1df4e6cfe56aa0399ae308f43b8e88638e3c0890018` | changed 2026-11-10; old `3bc5132b717a35b4cde20fa723a9a9d68f9e4f04c01dbcd603eb884295d8a5bc` |
-| `docs/prereg/a5_manifests/code_hashes.json` | `708c6fabd8fcbcfe4d0d8f4d38ed19eddae2797ffa8c5a89411d75053abfe2c9` | changed 2026-11-10; old `05a2d244a0d15bb8ef70cb62e89611c783447737b724f755ad98ed9b08ffeabe` |
+| `docs/prereg/a5_manifests/README.md` | `a6adac9a57858dc43c1bed7da27afab6ef9bda5b5713b961950e2e2968d3d373` | changed 2026-11-10 (A5.8.1 amendment re-pin); old `46996d88e854362314fff1df4e6cfe56aa0399ae308f43b8e88638e3c0890018` (freeze pass), earlier `3bc5132b717a35b4cde20fa723a9a9d68f9e4f04c01dbcd603eb884295d8a5bc` |
+| `docs/prereg/a5_manifests/code_hashes.json` | `701ae646eff3a00713140b8100ac28c83a81973c7f296909f9ce18984a130744` | changed 2026-11-10 (A5.8.1 amendment re-pin); old `708c6fabd8fcbcfe4d0d8f4d38ed19eddae2797ffa8c5a89411d75053abfe2c9` (freeze pass), earlier `05a2d244a0d15bb8ef70cb62e89611c783447737b724f755ad98ed9b08ffeabe` |
 | `docs/prereg/a5_manifests/components.jsonl` | `6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec` | unchanged |
 | `docs/prereg/a5_manifests/control_seeds.json` | `d357ed51031877f817baeb4204cf93b38c66fdfcfd95bd41803d93d5160c12d5` | changed 2026-11-10; old `8e2cbae160e8e8448b60545b0f79c0680f1fdd9ccf005f30d1c04907fe4bd28b` |
 | `docs/prereg/a5_manifests/linestop_power_spec.json` | `7bfff5203133bc3481ac34808454297ce9fa090e2dd9ff11fd742af7e214cae9` | new (2026-11-10) |
@@ -396,6 +412,7 @@ baseline `docs/PROGRESS.md` difference (`e3c577f` → `6f3d571`) predates this c
 | `configs/eval_subsets/mmlu_pro.txt` | `45aa5c72467f0cbbee7df5deb5c104fde3a4c880d3a60eea533e709dabce62ac` | unchanged |
 | `configs/eval_subsets/mmlu_pro_tf_v1.txt` | `a7bef4f45d9c888673868999a5a611a8d31d9c8e956347bc43cf4e0ebfaddbea` | unchanged |
 | `configs/eval_tf_v1.yaml` | `5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317` | unchanged |
+| `configs/eval_tf_v1_wikitext.yaml` | `5fd90d015b206d10780e791a710563ee41fbbd3e00deeb53ec4b65abd617ac0c` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
 | `configs/p4_predictors.json` | `c217b5a5b012689475609782bfb68d862cbfb4864b1233093be7d355a7e04cfe` | unchanged |
 | `docs/prereg/panel_manifest.json` | `7c72bfd3280954a82de1161e640a870da5f3a876c03b22247656701ed6af2c67` | unchanged |
 | `docs/reviews/P5/d8-regeneration-2026-11-06/chain_replay_install.json` | `b5f5b713690142b4c700f28886006c870ffdbed86baeb499c70125fee976a6dd` | unchanged |
@@ -403,12 +420,18 @@ baseline `docs/PROGRESS.md` difference (`e3c577f` → `6f3d571`) predates this c
 | `docs/reviews/P5/d8-regeneration-2026-11-06/chain_replay_restore.json` | `78f59f514be22fa0315953ea26814610ce2a5301ed04cda7b7063965f41264ea` | unchanged |
 | `docs/reviews/P5/d8-regeneration-2026-11-06/g1_report.json` | `356f4fa15ef961a6ab001d1ef284dc8ba2d1b13b1a62786d16e2cf839f480f2e` | unchanged |
 | `docs/reviews/P5/d8-regeneration-2026-11-06/g1b_report.json` | `45f152b2614348d4038a49f8aaaccc6cce46840202fe1ec90bc0e18f97bd30ff` | unchanged |
-| `scripts/a5_build_manifests.py` | `e9f0e6faf3096e50f3977c030e74b49f61dc4800d2ba501c2de408beef3bd769` | changed 2026-11-10; old `2f994d7bf2f32110f909732b3cdb430abeaae89be411e636cfb1c99b8a3fbcab` |
+| `scripts/a5_build_manifests.py` | `c7dfedb1201307314059c03249905eeabbb4cbe4262a6370c3e84f1103ac0e05` | changed 2026-11-10 (A5.8.1 amendment: pin list and environment packages); old `e9f0e6faf3096e50f3977c030e74b49f61dc4800d2ba501c2de408beef3bd769` (freeze pass), earlier `2f994d7bf2f32110f909732b3cdb430abeaae89be411e636cfb1c99b8a3fbcab` |
 | `scripts/a5_build_panels.py` | `cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534` | changed 2026-11-10; old `f218b72e927a620fa4b1b1a5bc72e6543bb43846a96c5be12377eaae8a2b29f4` |
 | `scripts/a5_incremental_norms.py` | `fbea8c8e9ee147e18f6ca0d6f8d8232866ebc417dd1b5acabda7f2105bc26c3b` | unchanged |
 | `scripts/a5_nullsize_inputs.py` | `d3f6718ec5b8ec0fe47ce515e738fa692c8c469fd87efccc0e7ab5deb9de9a42` | changed 2026-11-10; old `b09c07a15d9965874e22228477c948a29c359e7b09da560432d663e485229169` |
 | `scripts/a5_simulation.py` | `3b86668657273b188abdaa2e5d19eec832abe0fdb21f19b002fc5c0504da8fe6` | changed 2026-11-10; old `ecde1dd7cb99e2b6dc450da5bcbc229e417e21c75b2b94a2a9db61f6b3870668` |
 | `scripts/a5_snapshot.py` | `a0e68302e1256ab55594e12223677d527bc4fa830451194d61e28aebaecaed72` | changed 2026-11-10; old `a7518b416ca21259cef584db28492298de8aa2146ee3c58e0ea165664e6653b3` |
+| `scripts/g2_fields.py` | `4856f9938633b94138fabc3a592962ea93b2e274045aa71cc30bedf64b5e52f9` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes changed in that commit (clamp statistics), old blob at `b7f10a1` `c1366df579a02d060ec9081fe0e77e6ff51e3cb92826ffd6259add8769b37e39` |
+| `scripts/g2_fields.sh` | `13b761dac0a0682ed7f12f521ef0e1cfd31eeb613489aac68155f08b66f4c133` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
+| `scripts/lambda_job_scale4b.sh` | `2cd984f19ae78447aed0f79757486a18963c96379acf94e37f2f93ea32cc88f8` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
+| `scripts/scale4b_build_edits.py` | `55669ed20f1f502cd3567b35d5bb444b0994de8a5ab0dae54db1b81df7f9fa0d` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
+| `scripts/scale4b_h0_pair.sh` | `317da12dac9324afb12becb2dfdc56d4573c220ea019477c4be5090cac45fda1` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
+| `scripts/scale4b_report.py` | `27b15f45ada44f61855c51e1914a2f3262c2f8a89647100122122d55718f1440` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
 | `src/wsp/__init__.py` | `69d834204c661b1dd2cecf98720126c72e3bade7e235eeb82541dcc983e9cff9` | unchanged |
 | `src/wsp/eval/__init__.py` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | unchanged |
 | `src/wsp/eval/batch.py` | `122b0fbac62e3b94d7a5c356bd2f45692a18f96ea1a7811c45763b0863e789c6` | unchanged |
@@ -429,7 +452,7 @@ baseline `docs/PROGRESS.md` difference (`e3c577f` → `6f3d571`) predates this c
 | `src/wsp/features/extract.py` | `11de545c5ba8b4186df91ff218992a595fdbc8dcd343fd4b6b3a8e6278626906` | unchanged |
 | `src/wsp/features/pool.py` | `85a6341a446f32761531e0f0a193101114201d9eb08b0e05e6a6d1d42ee94390` | unchanged |
 | `src/wsp/features/response_chart.py` | `f23397779c13d2d63cb9db79f126886612eb3deb67d1d97b433ead7ec5bcc0c6` | unchanged |
-| `src/wsp/features/response_field.py` | `94bbe9b89ee51b8a444ca9859cb3415182c38dca61ce90133df8beef5bb3bd4d` | unchanged |
+| `src/wsp/features/response_field.py` | `98d81bbc300e715fe27a02e04711c0d036ae7ef9342d6bddbcaa227d91f725bc` | changed 2026-11-10 (A5.8.1 amendment: fp64 eigendecomposition, λ_max-relative tolerance, schema 2); old `94bbe9b89ee51b8a444ca9859cb3415182c38dca61ce90133df8beef5bb3bd4d` |
 | `src/wsp/features/rotation.py` | `f3ff12426ad89dac69073b2d06ca034f83de7257edd248d2a8063a194b1897e3` | unchanged |
 | `src/wsp/features/stats.py` | `f1d4df606fd49ac789a6a7e64c34c93ee0bbc543bac9faf5bf57db03bd04911b` | unchanged |
 | `src/wsp/features/svd.py` | `48a56004747da7a217850acae1f9e98c8a64adf5c57e6b51c71357fafe14c3fc` | unchanged |
@@ -1702,3 +1725,53 @@ is retained and reported separately. The specification is **not run**: its code 
 before Part B fitting, otherwise (b) is unresolved. (a) and (c) keep their own validity rules and are not powered by it.
 No scientific negative claim is contemplated, so the conjunction is a **bounded programme/resource retirement on examined
 data**, not a universal or fresh falsifier. There is no .5 ladder substitution and no secondary funding fallback.
+
+#### A5.8.1 amendment (10 Nov 2026, before audit): eigenvalue tolerance
+
+*Finding.* The CPU dry run of the G2 driver (`scripts/g2_fields.py --toy`, commit `604129b`) ran on toy panels: a tiny
+random Qwen3.5 and synthetic panels with the registered sizes. The A5.8.1 rule as implemented in
+`src/wsp/features/response_field.py` (schema 1) symmetrised and decomposed each factor in fp32, required
+max|F − Fᵀ| ≤ 1e-6 × trace/dim (plus 1e-6 relative), and failed the gate when the smallest eigenvalue was below
+−1e-6 × trace/dim. That rule fails on rank-deficient K-FAC factors. MMLU has 64 rows against 1,024–6,144 factor
+dimensions, and the refusal factors are also rank-deficient. fp32 rounding leaves their null-space eigenvalues near
+−1e-7 × λ_max, which is far below −1e-6 × trace/dim because trace/dim is small when most eigenvalues are zero.
+WikiText and HellaSwag passed. The failure is numerical; it is not a materially indefinite factor. The rule below was
+decided after this dry run on toy panels. No real field was computed under either rule, and no G2 outcome exists.
+
+*New rule (supersedes the "Precision" and "Negative-eigenvalue tolerance" rows of the A5.8.1 table; the F5 schema
+pins' eigen conventions use this tolerance).*
+(a) Each stored fp32 factor is cast to float64. The symmetry audit requires max|F − Fᵀ| ≤ 1e-6 × max|F|, relative to
+the largest absolute entry. The factor is then symmetrised ½(F + Fᵀ) and decomposed with `torch.linalg.eigh`, all in
+float64. Storage stays fp32: gradients, factors and the kept (damped, truncated) factor.
+(b) The tolerance is relative to the largest eigenvalue λ_max. Eigenvalues in [−1e-6 × λ_max, 0) are clamped to 0 and
+counted. An eigenvalue below −1e-6 × λ_max fails the gate as before, and so does any negative eigenvalue when
+λ_max ≤ 0.
+(c) The field artifact records the count of clamped eigenvalues and the most negative ratio λ_min/λ_max (0 if none).
+These go in each factor's audit (`n_clamped`, `most_negative_ratio`, `lambda_max`) and in each factored tensor's row
+of the coverage block (`eigen_clamps`). The G2 manifest records them per objective (`fields.<objective>.eigen_clamps`:
+factors and eigenvalues clamped, the most negative ratio and its factor).
+(d) Damping (1e-3 × trace/dim of the clamped spectrum) and the 99% energy truncation of the damped spectrum are
+unchanged.
+(e) The `FieldArtifact` schema version is 2, and schema-1 artifacts are refused on load.
+On a well-conditioned factor, the float64 path reproduces the schema-1 kept factor and contractions to 1e-6 relative
+(test). A 64 × 1,024 fp32 factor that schema 1 rejected now passes with its clamps recorded (test). A materially
+negative factor still raises (test).
+In the same toy dry run under the new rule, all five objectives pass. The toy MMLU field clamped 541 of 1,948
+eigenvalues in 41 of its 62 factors, with most negative ratio −3.78e-7 (`model.layers.1.mlp.up_proj` A). These are toy
+values, not G2 measurements.
+
+*Re-pin.* `response_field.py` is re-pinned, and `code_hashes.json` now also pins the G2 driver and launcher and the
+4B scripts and config. The new literal hashes and the old/new identities are in A5.1.2 (viii).
+
+*F5.3 confirmations (chair, 10 Nov 2026, before any 4B scoring).*
+(i) "Attention output projection" means each layer's attention writer: `self_attn.o_proj` on full-attention layers
+and `linear_attn.out_proj` on GatedDeltaNet layers, as `wsp.zoo.arch` resolves the `attn_out` role alias. Each 4B edit
+therefore has 12 tensors, `mlp.down_proj` plus the attention writer on each of layers [11, 16, 20, 23, 25, 28]
+(`scripts/scale4b_build_edits.py`, default `--support role`).
+(ii) The edit that is recorded and applied is the realised bf16 edit, bf16(W + stored) − W, whose radius is about
+0.82e-3 for the intended 1e-3. Every edit records its realised radius, changed-element fraction and cosine to the
+intended Gaussian, per tensor and pooled.
+*Noted, not resolved here.* F5.3's text above states a planned radius ρ = 0.005, and the pinned builder's
+`RADIUS = 1e-3`. The builder seeds edits as 20261110 + i, while F5.3 and FP4 state a SHA256-of-`20261110:4b-gaussian:`
+rule. Its A3 pairing set is the first five by sha256 rank, while FP4 states draw indices 0, 4, 8, 12 and 16. These
+differences are flagged for the chair and Board A before any 4B scoring.
