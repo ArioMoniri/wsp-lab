@@ -1915,3 +1915,96 @@ A5.1.2's tables.
 | `docs/prereg/a5_manifests/README.md` | `3766416ce2e3e61465c72d6b42f84dc569188cde7bae79033b65e17c39002296` | changed 2026-11-10 (audit-repair re-pin); old `225f0caeff23bc7f5bf58115f63f4f08294729484979d8912c947e6662766120` (4B builder alignment re-pin) |
 | `docs/prereg/a5_manifests/code_hashes.json` | `e1ac62fde2c1928ad660eb833df2884c100b11db5884d537df527fb2251f4075` | changed 2026-11-10 (audit-repair re-pin); old `ce07f3b5464457ff96356e58d57279de93cf5392a52bf31d7ce1c8068cc6f8af` (4B builder alignment re-pin) |
 | `scripts/g2_fields.py` | `16a2ee79ea86fb87ef138deac9839395915a69b854f19c43a3db3ae14a503726` | changed 2026-11-10 (this repair); old `4856f9938633b94138fabc3a592962ea93b2e274045aa71cc30bedf64b5e52f9` |
+
+#### A5.8.1 note (10 Nov 2026, after G2 fields): audit cost check uses the measured first row
+
+This block is appended; earlier text is not rewritten. It was written without GPU work. G2 data were read only. It
+repairs the audit stage's cost check under the stop-and-reprice rule of A5.8.1 (S31 §3) and nothing else. It is not
+Board A's acceptance.
+
+*The stopped run.* G2 attempt 1 (`data/runs/g2/g2_manifest.json`, 13:49:48Z-15:16:43Z, driver `scripts/g2_fields.py`
+`16a2ee79…a503726` under code map `e1ac62fd…f4075`) ended `incomplete`. The `fields`, `projectors` and `probe` stages
+are `complete`. All five fields passed their factor audits and have recorded file hashes. Field wall time was 525-1,649 s
+per objective, and fields plus probe cache used 1.448 of the 2.0 GPU-h cap. The `audit` stage stopped before its first
+row (`incomplete_reason`: `audit_gpu_hours_estimate` at `audit:wikitext_nll`), because the pre-audit estimate was
+11.70 GPU-h against the registered 1.0 GPU-h audit cap. That estimate was 100 rows × 0.5 × the objective's field wall
+time. **Zero audit rows were run.** The fields, projectors and probe cache are valid and are kept. The 0.5 × field-wall
+row cost was a guess, not a measurement. Most of the field wall time is CPU K-FAC accumulation, which an exact-gradient
+pass over the same items does not do.
+
+*New rule (driver only).* (1) The field-based estimate is still computed and recorded (`audit.cost_estimate`), but it is
+no longer the stop criterion. The cost check runs after the first registered row of each objective. That row is computed
+exactly as registered and is row 1 of 20, not a separate pilot. The check is: audit hours used + the measured first-row
+time × the objective's 19 remaining rows + each later objective at 20 × 0.5 × its field wall time × the largest
+measured/estimated row-time ratio so far (this objective's included) must be ≤ the 1 GPU-h audit cap. Otherwise the run
+stops `incomplete` (`audit_gpu_hours_estimate`). Each check is recorded in `audit.cost_checks`. (2) Before an objective's
+first row, its one-row estimate (0.5 × field wall time × the largest measured/estimated ratio of objectives already
+audited, 1.0 before any) must be ≤ 0.1 × the audit cap (360 s at 1 GPU-h). Otherwise the objective is not run in this
+attempt. It is recorded as `cost_guard` and the run ends `incomplete` (`audit_cost_guard`); it is not dropped. The other
+objectives continue, and a resume re-evaluates the guarded objective with the ratios measured by then. Before every later
+row, audit hours used + the objective's mean measured row time × its remaining rows must be ≤ the cap. Otherwise the run
+stops `incomplete` (`audit_gpu_hours_row_guard`) before that row. Rows already computed stay in the manifest, and in the
+attempt history on resume; no row is dropped and the budget is never multiplied. (3) Every audit row records its wall
+seconds, GPU seconds (wall time on the exclusive GPU) and `torch.cuda.max_memory_allocated`. Field, projector and probe
+records now also carry GPU seconds and peak memory. A quantity a run did not record is reported as "not captured in this
+run" and never estimated (`resource_summary`). In attempt 1, the field and probe records do contain peak memory and GPU
+hours; the projector record has only wall seconds and bytes written. (4) `--resume --stages audit` first verifies the
+file hashes of the completed fields, projectors and probe cache, and refuses on any mismatch. It never re-runs them, and
+it then runs only the audit stage.
+
+*Expected effect on the resume (from attempt 1's field wall times, not an outcome).* The uncalibrated one-row estimates
+are 824 s for `wikitext_nll` and 368 s for `hellaswag_gold_char_log_likelihood`, both above 360 s; the other three
+objectives are 263-345 s. `wikitext_nll` is first in the registered order, so with no measured ratio yet it is
+cost-guarded on the first resume. `hellaswag_gold_char_log_likelihood` is evaluated after `mmlu_gold_log_prob` has been
+measured. A second identical resume evaluates `wikitext_nll` with the measured ratios. Every audited row is still
+checked against the same cap.
+
+*Unchanged.* No registered quantity, threshold, panel or predecessor set changes. That includes: the five objectives; the
+twenty identified predecessors and their selection rule; exact contraction versus base contraction plus cross term;
+relative error ≤ 0.1 with the 1e-3-nat floor; ≥16 of 20 per objective; the short-audit and any-failure hard stops; the
+1.0 GPU-h audit and 2.0 GPU-h fields-and-cache caps; the field configuration; and the 0.5 field-fraction constant used
+by the estimate. Regression tests in `tests/test_g2_fields.py` cover the first-row-then-estimate order, the 0.1 × cap
+guard, the incomplete stop after a measured overrun, peak memory and GPU seconds in field and row resources, the
+not-captured reader, and an audit-only resume on hash-verified artefacts.
+
+*Re-pin (xi) (10 Nov 2026, after G2 fields).* `scripts/a5_build_manifests.py --pin-worktree` was re-run into a copy of
+the package from parent `31400a0`. Every regenerated or copied package file was byte for byte identical except
+`code_hashes.json` and `README.md`, and only those two were copied into the package. `code_hashes.json` (schema
+`a5-code-hashes-v2`, `git_sha` = parent `31400a0`) still pins 64 files. It differs from `e1ac62fd…f4075` only in
+`git_sha` and the `scripts/g2_fields.py` pin. It is now the current code map, and `e1ac62fd…f4075` is a historical
+identity (the code map of G2 attempt 1). These rows supersede the corresponding current-hash entries of A5.1.2's tables.
+This commit changes only `docs/PREREG_H1_TF.md`, the two package files, `scripts/g2_fields.py` and
+`tests/test_g2_fields.py`.
+
+| Path | SHA256 | Identity |
+|---|---|---|
+| `docs/prereg/a5_manifests/README.md` | `5467fac25399a36e7828b610b3f7a381c30ede8007bdfcafa727af117b36a4a3` | changed 2026-11-10 (A5.8.1 note re-pin, after G2 fields); old `3766416ce2e3e61465c72d6b42f84dc569188cde7bae79033b65e17c39002296` (audit-repair re-pin) |
+| `docs/prereg/a5_manifests/code_hashes.json` | `5be50667fd728332954a4b1add9640860a9495ce74bc34c70ac01c10a9e30c25` | changed 2026-11-10 (A5.8.1 note re-pin, after G2 fields); old `e1ac62fde2c1928ad660eb833df2884c100b11db5884d537df527fb2251f4075` (audit-repair re-pin; G2 attempt 1) |
+| `scripts/g2_fields.py` | `6125b519381da53a6064da81bc108aedeb2bd7a1a9b5a2b6e9460dfb1c2100e9` | changed 2026-11-10 (this note); old `16a2ee79ea86fb87ef138deac9839395915a69b854f19c43a3db3ae14a503726` (audit repair; G2 attempt 1) |
+| `tests/test_g2_fields.py` | `a0ba30033ed10f6dfb89cbf3d133ccb547fba183670dbbb0ef9fc6b644ede510` | changed 2026-11-10 (this note; not a code-map member); old `25724b715edcadcaa92f19cba03cf3c4e223125b1c39e02d2a460a3e81aed593` |
+| `scripts/g2_fields.py` | `cb1835181ae0d8202edcaa72586e38dcc3a8822ce6127f104e5c123a86838723` | changed 2026-11-10 (ascending order and end-of-run guard re-check, paragraph below); old `6125b519381da53a6064da81bc108aedeb2bd7a1a9b5a2b6e9460dfb1c2100e9` (this note) |
+| `tests/test_g2_fields.py` | `f7be4d4aeb83fe0741a7890005480376514aa2394234f9239894980397a8adaa` | changed 2026-11-10 (paragraph below; not a code-map member); old `a0ba30033ed10f6dfb89cbf3d133ccb547fba183670dbbb0ef9fc6b644ede510` (this note) |
+| `docs/prereg/a5_manifests/code_hashes.json` | `d3b11bab664e0822ec63b4f059703d6418ff09847c49681fdd7f710617e6a5c7` | changed 2026-11-10 (re-pin (xii), paragraph below); old `5be50667fd728332954a4b1add9640860a9495ce74bc34c70ac01c10a9e30c25` (re-pin (xi)) |
+| `docs/prereg/a5_manifests/README.md` | `0454be009511b5761991e7ef27bd351ee1f25f772ca0fcc7d2d01b19997549f5` | changed 2026-11-10 (re-pin (xii), paragraph below); old `5467fac25399a36e7828b610b3f7a381c30ede8007bdfcafa727af117b36a4a3` (re-pin (xi)) |
+
+*Addendum (10 Nov 2026, chair decision on the cost guard).* This paragraph is appended; the text above is not rewritten. It
+was written without GPU work, and G2 data were read only. It changes the driver only. (1) The audit stage now processes the
+required objectives in ascending order of the field-based one-row estimate (0.5 × field wall time), with ties kept in
+registered order. With attempt 1's field wall times the order is `refusal_margin_harmful` (262.5 s),
+`mmlu_gold_log_prob` (306.7 s), `refusal_margin_harmless` (344.7 s), `hellaswag_gold_char_log_likelihood` (367.5 s),
+`wikitext_nll` (824.3 s). The cheapest objective is therefore measured first, and its measured/estimated ratio calibrates
+the guard and cost checks of the others. (2) An objective skipped by the 0.1 × cap guard is re-checked at the end of the
+same run, after every other objective has been processed. The re-check uses the largest measured/estimated ratio of the
+objectives audited by then, and the objective is audited at that point if it passes. If it still fails, it stays
+`cost_guard` and the run ends `incomplete` (`audit_cost_guard`). This way a single resume can complete all five objectives.
+The manifest records the processing order (`audit.order`, with each objective's field-based row estimate) and every guard
+decision (`audit.guard_decisions`, phase `in order` or `end-of-run re-check`). The two rules are named in
+`config.audit.objective_order` and `config.audit.guard_recheck`. Nothing else changes: row 1 then the measured check, the
+per-row guard, the resource records, resume and the verdict rules are as above. The registered order assumed under
+*Expected effect* above no longer applies. Tests in `tests/test_g2_fields.py` cover the ascending order, a guarded
+objective that is re-checked and audited after calibration within one run, and a still-failing re-check that leaves the
+objective `cost_guard` and the run incomplete. *Re-pin (xii).* `scripts/a5_build_manifests.py --pin-worktree` was re-run
+into a copy of the package from parent `8f81ab0`. Only `code_hashes.json` and `README.md` differed, and only those two
+were copied into the package. `code_hashes.json` still pins 64 files and differs from `5be50667…30c25` only in `git_sha`
+and the `scripts/g2_fields.py` pin. The last four rows of the table above record this re-pin. This commit changes only
+`docs/PREREG_H1_TF.md`, the two package files, `scripts/g2_fields.py` and `tests/test_g2_fields.py`.
