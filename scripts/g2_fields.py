@@ -17,9 +17,16 @@ Runs only after Board A's A5 freeze. Stages, in order, each recorded in ``<out>/
   ``tensor_seed(<state-dict tensor name>)``, projector dimension 4 (A5.8.2 as revised 7 Nov).
 * ``probe``: post-gating MLP-writer inputs (``mlp.down_proj`` input, A5.8.3) of the 64 probe prompts on
   the base model, one safetensors file per prompt.
-* ``audit``: the 20 chain predecessors (A5.8.1; S31 §3 G2), exact WikiText gradient contraction at the
-  predecessor state against base field plus cross term; relative error <= 0.1 with a 1e-3 nats
-  denominator floor on >= 16 of 20, else ``HARD_STOP``.
+* ``audit``: the registered multi-objective predecessor audit (A5.8.1; A5.5.1 validity table; F1(b);
+  S31 §3 G2). For EACH of the five objectives separately, the 20 identified chain predecessors (with
+  their successors and alias holders): exact gradient contraction at the predecessor state (one
+  objective gradient at a time, no graph retention) against the base field plus cross term; relative
+  error = |exact - approximate| / max(|exact|, 1e-3 nats) <= 0.1 on >= 16 of 20, a separate verdict per
+  objective. Any failed objective, and any short audit (fewer than 20 rows for an objective), is
+  ``HARD_STOP``; no objective's pass stands for another. The cost is estimated before the first row as
+  5 objectives x 20 predecessors and checked against the registered 1 GPU-h audit cap (stop and
+  reprice, never multiply the budget). The stage resumes per objective: a completed objective is
+  verified by hash and never re-run.
 
 Panels are rebuilt from ``docs/prereg/a5_manifests/panels.json`` with the TF-v1 scorer's tokenisation and
 checked against every recorded hash (file sha256, sorted-id hashes, dataset fingerprints, WikiText window
@@ -69,8 +76,14 @@ VRAM_CAP_BYTES = 28 * 2**30
 PROJECTOR_DIM = 4  # A5.8.2 revision of 7 Nov 2026 (response_chart default)
 FIELD_OBJECTIVES = tuple(rf.OBJECTIVES)  # A5.8.1 table order
 PROBE = "probe_response"
-AUDIT_OBJECTIVE = "wikitext_nll"
+# A5.8.1 / A5.5.1: the predecessor audit is required separately for every field objective (F1(b): the
+# refusal objectives are descriptive, but "any gate applied per objective still applies").
+AUDIT_OBJECTIVES = FIELD_OBJECTIVES
 AUDIT_N, AUDIT_MIN_PASS, AUDIT_MAX_ERROR, AUDIT_FLOOR = 20, 16, 0.1, 1e-3  # S31 §3 G2, A5.8.1
+AUDIT_SCHEMA = "g2-predecessor-audit-v2"
+# Pre-audit cost estimate per (objective, predecessor) row: the exact gradient is one gradient pass over
+# the objective's field panel, which collect_field makes once per item next to the (heavier) Fisher pass.
+AUDIT_ROW_FRACTION_OF_FIELD = 0.5
 STAGES = ("fields", "projectors", "probe", "audit")
 EXIT = {"complete": 0, "HARD_STOP": 2, "GATE_FAILURE": 3, "incomplete": 4, "refused": 5}
 STATUSES = ("running", "complete", "incomplete", "HARD_STOP", "GATE_FAILURE")
@@ -551,23 +564,52 @@ def relative_error(exact, approximate, floor=AUDIT_FLOOR):
     return abs(exact - approximate) / max(abs(exact), floor)
 
 
-def audit_verdict(rows, n_required=AUDIT_N, min_pass=AUDIT_MIN_PASS, max_error=AUDIT_MAX_ERROR):
-    """>= 16 passing of the audited predecessors; a row passes iff finite and error <= 0.1."""
+def audit_verdict(
+    rows,
+    objective=None,
+    n_required=AUDIT_N,
+    min_pass=AUDIT_MIN_PASS,
+    max_error=AUDIT_MAX_ERROR,
+):
+    """One objective's verdict: >= 16 passing of exactly 20 identified predecessors (A5.8.1).
+
+    A row passes iff exact, approximate and the relative error are finite and the error is <= 0.1
+    (inclusive). Fewer than 20 rows is a short audit and never passes, whatever the pass count.
+    """
     passed = 0
     for row in rows:
         ok = "relative_error" in row and math.isfinite(row["relative_error"])
         ok = ok and math.isfinite(row["exact"]) and math.isfinite(row["approximate"])
         row["passed"] = bool(ok and row["relative_error"] <= max_error)
         passed += row["passed"]
+    short = len(rows) < n_required
     return {
+        "objective": objective,
         "n_audited": len(rows),
         "n_required": n_required,
-        "short": len(rows) < n_required,
+        "short": short,
         "n_passed": passed,
+        "n_failed": len(rows) - passed,
         "min_pass": min_pass,
         "max_relative_error": max_error,
         "denominator_floor_nats": AUDIT_FLOOR,
-        "passed": passed >= min_pass,
+        "passed": bool(not short and passed >= min_pass),
+    }
+
+
+def overall_verdict(per_objective, required):
+    """The audit passes iff every required objective has its own passing, non-short verdict."""
+    missing = [o for o in required if o not in per_objective]
+    failed = [o for o in required if o in per_objective and not per_objective[o]["passed"]]
+    short = [o for o in required if o in per_objective and per_objective[o]["short"]]
+    return {
+        "required_objectives": list(required),
+        "missing_objectives": missing,
+        "failed_objectives": failed,
+        "short_objectives": short,
+        "passed": not missing and not failed,
+        "rule": ">= 16 of 20 within relative error 0.1 separately for every required objective; any "
+        "failed or short objective hard-stops G2 (A5.8.1, A5.5.1)",
     }
 
 
@@ -1136,7 +1178,27 @@ def _stored(base, delta):
     return (base.float() + delta.to(torch.float32)).to(base.dtype)
 
 
+PAIR_KEYS = (
+    "predecessor_id",
+    "successor_id",
+    "pick_id",
+    "alternate_successors",
+    "predecessor_bytes",
+    "successor_bytes",
+)
+
+
+def pair_identity(pair):
+    """Identified predecessor/successor and the alias holders whose bytes are actually loaded."""
+    row = {k: pair[k] for k in PAIR_KEYS}
+    row["predecessor_via_alias"] = pair["predecessor_bytes"] != pair["predecessor_id"]
+    row["successor_via_alias"] = pair["successor_bytes"] != pair["successor_id"]
+    return row
+
+
 def audit_one(ctx, field_artifact, objective, pair, base, budget, impl):
+    """One (objective, predecessor) row; the model is left at the predecessor state (caller restores)."""
+    name = objective.spec.name
     params = dict(ctx.model.named_parameters())
     d_pred, d_succ = ctx.load_delta(pair["predecessor_dir"]), ctx.load_delta(pair["successor_dir"])
     names = sorted(set(d_pred) | set(d_succ))
@@ -1155,7 +1217,7 @@ def audit_one(ctx, field_artifact, objective, pair, base, budget, impl):
         for n in names:
             params[n].copy_(w_pred[n].to(params[n].device))
     t0 = now()
-    panel = capped(objective.panel, budget, f"audit:{pair['predecessor_id']}")
+    panel = capped(objective.panel, budget, f"audit:{name}:{pair['predecessor_id']}")
     if impl == "pinned":
         row = rf.predecessor_audit(
             ctx.model,
@@ -1167,27 +1229,24 @@ def audit_one(ctx, field_artifact, objective, pair, base, budget, impl):
             field_artifact,
             displacement,
             increment,
-        )[objective.spec.name]
-        exact, approx, base_part, cross_part = row["exact"], row["approximate"], None, None
+        )[name]
+        exact = row["exact"]
     else:
         grads, content = exact_gradient(
             ctx.model, ctx.tokenizer, objective.spec, panel, ctx.device, list(increment)
         )
-        if content != field_artifact.identity["panels"][objective.spec.name]["content_hash"]:
+        if content != field_artifact.identity["panels"][name]["content_hash"]:
             raise ValueError("audit panel content differs from the base field's panel")
         exact = sum((grads[n] * d).sum().item() for n, d in increment.items())
-        contracted = rf.contract(field_artifact, increment)[objective.spec.name]
-        cross = rf.cross_term(field_artifact, displacement, increment)[objective.spec.name]
-        base_part = sum(contracted[n]["signed"] for n in increment)
-        cross_part = sum(cross[n] for n in increment)
-        approx = base_part + cross_part
+        del grads
+    contracted = rf.contract(field_artifact, increment)[name]
+    cross = rf.cross_term(field_artifact, displacement, increment)[name]
+    base_part = sum(contracted[n]["signed"] for n in increment)
+    cross_part = sum(cross[n] for n in increment)
+    approx = base_part + cross_part
     return {
-        **{
-            k: pair[k]
-            for k in ("predecessor_id", "successor_id", "pick_id", "alternate_successors")
-        },
-        "predecessor_bytes": pair["predecessor_bytes"],
-        "successor_bytes": pair["successor_bytes"],
+        "objective": name,
+        **pair_identity(pair),
         "exact": exact,
         "approximate": approx,
         "base_contraction": base_part,
@@ -1199,47 +1258,93 @@ def audit_one(ctx, field_artifact, objective, pair, base, budget, impl):
         "increment_norm": math.sqrt(sum(d.square().sum().item() for d in increment.values())),
         "displacement_norm": math.sqrt(sum(e.square().sum().item() for e in displacement.values())),
         "increment_sha256": rf._hash({n: rf._tensor_hash(d) for n, d in increment.items()}),
+        "displacement_sha256": rf._hash({n: rf._tensor_hash(e) for n, e in displacement.items()}),
         "wall_seconds": now() - t0,
     }
 
 
-def run_audit(ctx, out: Path, manifest, budget, mpath, impl):
-    done = manifest.get("audit", {})
-    if done.get("status") == "complete":  # never re-run a completed audit (no retry to a pass)
-        if sha256_file(done["file"]) != done["sha256"]:
-            raise ValueError("completed audit file no longer matches its hash")
-        return done["verdict"]["passed"]
-    old = manifest.get("fields", {}).get(AUDIT_OBJECTIVE, {})
-    if old.get("status") != "complete":
-        raise ValueError("audit needs the completed base WikiText field")
-    objective = next(o for o in ctx.objectives if o.spec.name == AUDIT_OBJECTIVE)
-    root = out / "fields" / AUDIT_OBJECTIVE
+def required_audit_objectives(ctx):
+    """All five registered objectives; a toy run may restrict itself to the objectives it built."""
+    present = [o.spec.name for o in ctx.objectives]
+    if ctx.toy:
+        return [o for o in AUDIT_OBJECTIVES if o in present]
+    missing = [o for o in AUDIT_OBJECTIVES if o not in present]
+    if missing:
+        raise ValueError(f"audit objectives missing from the run: {missing}")
+    return list(AUDIT_OBJECTIVES)
+
+
+def audit_cost_estimate(fields, required, cap_hours, prior_hours, n_rows=AUDIT_N, ratio=1.0):
+    """Estimated audit GPU-hours, n_objectives x 20 predecessors, checked against the audit cap.
+
+    Per row: AUDIT_ROW_FRACTION_OF_FIELD x the objective's measured field wall time (one exact
+    gradient pass versus the field's gradient plus Fisher passes over the same items), times
+    ``ratio`` (measured/estimated row time of the objectives already audited; 1.0 before any).
+    """
+    per_row = {
+        o: AUDIT_ROW_FRACTION_OF_FIELD * fields[o]["resources"]["wall_seconds"] * ratio
+        for o in required
+    }
+    per_objective = {o: n_rows * per_row[o] / 3600.0 for o in required}
+    total = sum(per_objective.values())
+    return {
+        "formula": f"{len(required)} objectives x {n_rows} predecessors x "
+        f"{AUDIT_ROW_FRACTION_OF_FIELD} x field wall seconds of the objective x calibration ratio",
+        "n_objectives": len(required),
+        "n_predecessors": n_rows,
+        "n_rows": len(required) * n_rows,
+        "calibration_ratio": ratio,
+        "per_row_seconds": per_row,
+        "per_objective_gpu_hours": per_objective,
+        "estimated_gpu_hours": total,
+        "prior_hours": prior_hours,
+        "cap_hours": cap_hours,
+        "within_cap": prior_hours + total <= cap_hours,
+    }
+
+
+class AuditEstimateExceeded(CapExceeded):
+    """The audit's estimated cost exceeds its registered cap: stop and reprice before spending it."""
+
+
+def _write_json(path: Path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    return sha256_file(path)
+
+
+def _audit_objective(ctx, out, manifest, budget, mpath, impl, objective, base):
+    """Twenty rows of one objective, one exact objective gradient per predecessor; its own verdict."""
+    name, audit = objective.spec.name, manifest["audit"]
+    rec = manifest["fields"].get(name, {})
+    if rec.get("status") != "complete":
+        raise ValueError(f"audit needs the completed base field of {name}")
+    root = out / "fields" / name
+    if not _verify_files(root, rec["files"]):
+        raise ValueError(f"{name}: completed field files no longer match their hashes")
     field_artifact = rf.FieldArtifact.load(root)
     if field_artifact.identity["objectives"] != [objective.spec.identity()]:
-        raise ValueError("base field objective identity differs from the audit objective")
-    audit = manifest["audit"] = {
+        raise ValueError(f"{name}: base field objective identity differs from the audit objective")
+    entry = audit["objectives"][name] = {
         "status": "running",
-        "impl": impl,
-        "selection": ctx.pairs_record,
-        "objective": AUDIT_OBJECTIVE,
+        "started_at": utc(),
         "base_field_identity_sha256": rf._hash(field_artifact.identity),
         "rows": [],
     }
     write_manifest(mpath, manifest)
-    base, params = {}, dict(ctx.model.named_parameters())
-    _reset_peak(ctx.device)
+    params = dict(ctx.model.named_parameters())
     t0 = now()
-    with memoized_spectral_factor(field_artifact.factors[AUDIT_OBJECTIVE]):
+    with memoized_spectral_factor(field_artifact.factors[name]):
         for pair in ctx.pairs:
-            budget.check(f"audit:{pair['predecessor_id']}")
+            budget.check(f"audit:{name}:{pair['predecessor_id']}")
             try:
                 row = audit_one(ctx, field_artifact, objective, pair, base, budget, impl)
             except CapExceeded:
                 raise
             except Exception as exc:  # noqa: BLE001 - a failed row counts as not passing
                 row = {
-                    "predecessor_id": pair["predecessor_id"],
-                    "successor_id": pair["successor_id"],
+                    "objective": name,
+                    **pair_identity(pair),
                     "error": f"{type(exc).__name__}: {exc}",
                     "exact": float("nan"),
                     "approximate": float("nan"),
@@ -1249,36 +1354,192 @@ def run_audit(ctx, out: Path, manifest, budget, mpath, impl):
                 with torch.no_grad():
                     for n, t in base.items():
                         params[n].copy_(t.to(params[n].device))
-            audit["rows"].append(row)
-            log(f"audit {row['predecessor_id']}: relative error {row['relative_error']}")
+            entry["rows"].append(row)
+            log(f"audit {name} {row['predecessor_id']}: relative error {row['relative_error']}")
             manifest["caps"]["audit"] = budget.record()
             write_manifest(mpath, manifest)
-    _check_vram(ctx.device, "audit")
-    verdict = audit_verdict(audit["rows"])
+    wall = now() - t0
+    verdict = audit_verdict(entry["rows"], name)
     payload = {
-        "schema": "g2-predecessor-audit-v1",
-        "rule": "relative error |exact - (base + cross)| / max(|exact|, 1e-3 nats) <= 0.1 on >= 16 of 20 "
-        "(A5.8.1; S31 §3 G2); fewer is a hard stop of G2 pending amendment",
-        "objective": AUDIT_OBJECTIVE,
+        "schema": AUDIT_SCHEMA,
+        "objective": name,
+        "objective_identity": objective.spec.identity(),
+        "rule": "relative error |exact - (base + cross)| / max(|exact|, 1e-3 nats) <= 0.1 on >= 16 of "
+        "20 identified predecessors, separately for this objective (A5.8.1; A5.5.1; S31 §3 G2)",
         "impl": impl,
         "selection": ctx.pairs_record,
-        "base_field_identity_sha256": audit["base_field_identity_sha256"],
+        "base_field_identity_sha256": entry["base_field_identity_sha256"],
         "verdict": verdict,
-        "rows": audit["rows"],
+        "rows": entry["rows"],
+    }
+    path = out / "predecessor_audit" / f"{name}.json"
+    entry |= {
+        "status": "complete",
+        "verdict": verdict,
+        "file": str(path),
+        "sha256": _write_json(path, payload),
+        "resources": {
+            "wall_seconds": wall,
+            "gpu_hours": wall / 3600.0,
+            "row_seconds_mean": wall / max(len(entry["rows"]), 1),
+        },
+    }
+    log(
+        f"audit {name}: {verdict['n_passed']}/{verdict['n_audited']} pass, passed={verdict['passed']}"
+    )
+    manifest["caps"]["audit"] = budget.record()
+    write_manifest(mpath, manifest)
+    return verdict
+
+
+def _short_objective(ctx, out, manifest, objective, impl):
+    """A short selection (< 20 identified predecessors) hard-stops without spending audit compute."""
+    name = objective.spec.name
+    verdict = audit_verdict([], name)
+    payload = {
+        "schema": AUDIT_SCHEMA,
+        "objective": name,
+        "objective_identity": objective.spec.identity(),
+        "impl": impl,
+        "selection": ctx.pairs_record,
+        "short_selection": [pair_identity(p) for p in ctx.pairs],
+        "verdict": verdict,
+        "rows": [],
+    }
+    path = out / "predecessor_audit" / f"{name}.json"
+    manifest["audit"]["objectives"][name] = {
+        "status": "complete",
+        "verdict": verdict,
+        "rows": [],
+        "file": str(path),
+        "sha256": _write_json(path, payload),
+    }
+    return verdict
+
+
+def run_audit(ctx, out: Path, manifest, budget, mpath, impl):
+    """Per-objective predecessor audit (A5.8.1); resumable per objective, never re-run to a pass."""
+    done = manifest.get("audit", {})
+    if done.get("status") == "complete":  # never re-run a completed audit (no retry to a pass)
+        if sha256_file(done["file"]) != done["sha256"]:
+            raise ValueError("completed audit file no longer matches its hash")
+        return done["verdict"]["passed"]
+    required = required_audit_objectives(ctx)
+    objectives = {o.spec.name: o for o in ctx.objectives}
+    previous = done.get("objectives", {})
+    if done.get("impl", impl) != impl and any(
+        e.get("status") == "complete" for e in previous.values()
+    ):
+        raise ValueError("resume with a different audit implementation after a completed objective")
+    audit = manifest["audit"] = {
+        "status": "running",
+        "schema": AUDIT_SCHEMA,
+        "impl": impl,
+        "selection": ctx.pairs_record,
+        "pairs": [pair_identity(p) for p in ctx.pairs],
+        "required_objectives": required,
+        "objectives": {},
+    }
+    for name in required:  # completed objectives of an earlier attempt: verified, kept, not re-run
+        old = previous.get(name, {})
+        if old.get("status") == "complete":
+            if sha256_file(old["file"]) != old["sha256"]:
+                raise ValueError(f"{name}: completed audit file no longer matches its hash")
+            audit["objectives"][name] = old | {"reused_in_attempt": manifest["attempt"]}
+    short = len(ctx.pairs) < AUDIT_N or ctx.pairs_record.get("short", False)
+    audit["short_selection"] = short
+    _reset_peak(ctx.device)
+    t0 = now()
+    if short:
+        log(f"audit: short selection, {len(ctx.pairs)} < {AUDIT_N} predecessors: HARD_STOP")
+        for name in required:
+            if name not in audit["objectives"]:
+                _short_objective(ctx, out, manifest, objectives[name], impl)
+    else:
+        todo = [n for n in required if n not in audit["objectives"]]
+        audit["cost_estimate"] = audit_cost_estimate(
+            manifest["fields"], todo, budget.hours, budget.used()
+        )
+        write_manifest(mpath, manifest)
+        base = {}
+        for name in todo:
+            ratios = [
+                audit["objectives"][o]["resources"]["row_seconds_mean"]
+                / audit["cost_estimate"]["per_row_seconds"][o]
+                for o in audit["objectives"]
+                if o in audit["cost_estimate"]["per_row_seconds"]
+                and audit["cost_estimate"]["per_row_seconds"][o] > 0
+            ]
+            ratio = max(ratios) if ratios else 1.0
+            remaining = [n for n in todo if n not in audit["objectives"]]
+            estimate = audit_cost_estimate(
+                manifest["fields"], remaining, budget.hours, budget.used(), ratio=ratio
+            )
+            audit.setdefault("cost_checks", []).append({"before": name, **estimate})
+            if not estimate["within_cap"]:
+                write_manifest(mpath, manifest)
+                raise AuditEstimateExceeded(
+                    "audit_gpu_hours_estimate",
+                    f"audit:{name}",
+                    estimate["prior_hours"] + estimate["estimated_gpu_hours"],
+                    budget.hours,
+                )
+            _audit_objective(ctx, out, manifest, budget, mpath, impl, objectives[name], base)
+    _check_vram(ctx.device, "audit")
+    per_objective = {n: audit["objectives"][n]["verdict"] for n in required}
+    verdict = overall_verdict(per_objective, required)
+    payload = {
+        "schema": AUDIT_SCHEMA,
+        "rule": verdict["rule"],
+        "impl": impl,
+        "selection": ctx.pairs_record,
+        "pairs": audit["pairs"],
+        "cost_estimate": audit.get("cost_estimate"),
+        "verdict": verdict,
+        "objectives": {
+            n: {
+                "verdict": audit["objectives"][n]["verdict"],
+                "file": Path(audit["objectives"][n]["file"]).name,
+                "sha256": audit["objectives"][n]["sha256"],
+            }
+            for n in required
+        },
     }
     path = out / "predecessor_audit.json"
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True))
     wall = now() - t0
     audit |= {
         "status": "complete",
         "verdict": verdict,
         "file": str(path),
-        "sha256": sha256_file(path),
+        "sha256": _write_json(path, payload),
         "resources": {"wall_seconds": wall, "gpu_hours": wall / 3600.0, **_peak(ctx.device)},
     }
     manifest["caps"]["audit"] = budget.record()
     write_manifest(mpath, manifest)
     return verdict["passed"]
+
+
+def audit_hard_stop(audit):
+    """HARD_STOP record if any completed objective failed or is short (regardless of ``complete``)."""
+    objectives = audit.get("objectives") or {}
+    bad = {
+        n: e["verdict"]
+        for n, e in objectives.items()
+        if e.get("status") == "complete" and not e["verdict"]["passed"]
+    }
+    overall = audit.get("verdict")
+    if not bad and not (audit.get("status") == "complete" and overall and not overall["passed"]):
+        return None
+    return {
+        "HARD_STOP": True,
+        "reason": "predecessor audit: an objective has fewer than 16 of 20 identified predecessors "
+        "within relative error 0.1, or fewer than 20 audited rows (A5.8.1; A5.5.1; S31 §3 G2); G2 "
+        "stops pending a new amendment",
+        "failed_objectives": sorted(n for n, v in bad.items() if not v["short"]),
+        "short_objectives": sorted(n for n, v in bad.items() if v["short"]),
+        "verdicts": bad,
+        "verdict": overall,
+    }
 
 
 # ------------------------------------------------------------------------------- manifest
@@ -1339,6 +1600,81 @@ def validate_manifest(m):
     for k in ("fields", "audit"):
         if k not in (m.get("caps") or {}):
             errors.append(f"caps.{k} missing")
+    errors += validate_audit(m)
+    return errors
+
+
+AUDIT_ROW_KEYS = (
+    "objective",
+    *PAIR_KEYS,
+    "predecessor_via_alias",
+    "successor_via_alias",
+    "exact",
+    "approximate",
+    "base_contraction",
+    "cross_term",
+    "denominator",
+    "relative_error",
+    "increment_sha256",
+    "displacement_sha256",
+    "passed",
+)
+
+
+def validate_audit(m):
+    """Schema errors of the manifest's predecessor audit (A5.8.1 per-objective audit)."""
+    audit, errors = m.get("audit"), []
+    if audit is None:
+        if m.get("complete"):
+            errors.append("complete without a predecessor audit")
+        return errors
+    required = audit.get("required_objectives")
+    if not isinstance(required, list) or not required:
+        return errors + ["audit.required_objectives missing"]
+    if not m.get("toy") and required != list(AUDIT_OBJECTIVES):
+        errors.append("audit.required_objectives must be all five field objectives")
+    for name, entry in (audit.get("objectives") or {}).items():
+        if name not in required:
+            errors.append(f"audit.objectives.{name}: not a required objective")
+        if entry.get("status") != "complete":
+            continue
+        verdict = entry.get("verdict") or {}
+        for k in ("n_audited", "n_passed", "short", "passed", "objective"):
+            if k not in verdict:
+                errors.append(f"audit.objectives.{name}.verdict.{k} missing")
+        rows = entry.get("rows", [])
+        if verdict.get("n_audited") != len(rows):
+            errors.append(f"audit.objectives.{name}: n_audited differs from its rows")
+        if verdict.get("passed") and (len(rows) < AUDIT_N or verdict.get("short")):
+            errors.append(f"audit.objectives.{name}: a short audit cannot pass")
+        for i, row in enumerate(rows):
+            if "error" in row:
+                continue
+            missing = [k for k in AUDIT_ROW_KEYS if k not in row]
+            if missing:
+                errors.append(f"audit.objectives.{name}.rows[{i}] missing {missing}")
+        for k in ("file", "sha256"):
+            if k not in entry:
+                errors.append(f"audit.objectives.{name}.{k} missing")
+    if audit.get("status") == "complete":
+        verdict = audit.get("verdict") or {}
+        if sorted(audit.get("objectives") or {}) != sorted(required):
+            errors.append("complete audit without every required objective")
+        if "passed" not in verdict:
+            errors.append("audit.verdict.passed missing")
+        if "short_selection" not in audit:
+            errors.append("audit.short_selection missing")
+        elif not audit["short_selection"]:
+            if len(audit.get("pairs") or []) < AUDIT_N:
+                errors.append("audit.pairs: fewer than twenty identified predecessors")
+            if "cost_estimate" not in audit:
+                errors.append("audit.cost_estimate missing")
+    if m.get("complete"):
+        verdict = audit.get("verdict") or {}
+        if audit.get("status") != "complete" or not verdict.get("passed"):
+            errors.append("complete without a passing per-objective audit")
+    if audit_hard_stop(audit) is not None and m.get("status") not in ("HARD_STOP", "running"):
+        errors.append("failed or short audit objective without HARD_STOP status")
     return errors
 
 
@@ -1406,10 +1742,15 @@ def new_manifest(args, ctx, panels_sha, code, attempts, attempt):
             "fisher": "model-sampled, one target per valid scoring position",
         },
         "audit": {
+            "schema": AUDIT_SCHEMA,
+            "objectives": list(AUDIT_OBJECTIVES),
+            "per_objective": True,
             "n": AUDIT_N,
             "min_pass": AUDIT_MIN_PASS,
             "max_relative_error": AUDIT_MAX_ERROR,
             "floor_nats": AUDIT_FLOOR,
+            "short_audit": "hard stop",
+            "row_cost_fraction_of_field": AUDIT_ROW_FRACTION_OF_FIELD,
         },
         "objectives": list(FIELD_OBJECTIVES),
         "microbatch": "one item per forward (one sequence, or the scorer's padded rows)",
@@ -1474,17 +1815,8 @@ def run_pipeline(ctx, out: Path, args, manifest):
                 audit_budget = Budget("audit_gpu_hours", args.max_audit_gpu_hours, prior["audit"])
                 run_audit(ctx, out, manifest, audit_budget, mpath, args.audit_impl)
             manifest["stages"][stage] = "complete"
-        audit = manifest.get("audit", {})
         pending = [s for s in STAGES if manifest["stages"][s] != "complete"]
-        if audit.get("status") == "complete" and not audit["verdict"]["passed"]:
-            status = "HARD_STOP"
-            manifest["hard_stop"] = {
-                "HARD_STOP": True,
-                "reason": "predecessor audit: fewer than 16 of 20 within relative error 0.1 "
-                "(A5.8.1; S31 §3 G2); G2 stops pending a new amendment",
-                "verdict": audit["verdict"],
-            }
-        elif pending:
+        if pending:
             status = "incomplete"
             manifest["incomplete_reason"] = {"pending_stages": pending}
     except CapExceeded as exc:
@@ -1512,6 +1844,10 @@ def run_pipeline(ctx, out: Path, args, manifest):
         for stage, state in manifest["stages"].items():
             if state == "running":
                 manifest["stages"][stage] = "stopped"
+        hard_stop = audit_hard_stop(manifest.get("audit", {}))
+        if hard_stop is not None and status in ("complete", "incomplete"):
+            # a failed or short objective is a hard stop whatever else completed or stopped
+            status, manifest["hard_stop"] = "HARD_STOP", hard_stop
         manifest["caps"]["fields"] = budget.record()
         if audit_budget is not None:
             manifest["caps"]["audit"] = audit_budget.record()
