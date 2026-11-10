@@ -417,3 +417,19 @@ verified; no new conditions). Downstream may consume: the base WikiText field fo
 actual predecessor for the ten chain picks, and nothing from any other objective in the registered Part A predictor. In flight: the
 per-donor sign predictions for the power/yield simulation (`feat/a5-power-fields`) and Part A staging without scoring
 (`feat/part-a-prepare`: 40 edits × rotation + two ladder variants, audits, reference plan).
+
+**11 Nov 2026, 06:30 UTC. Power/yield gate PASSED; Board A accepted F7.** Sign predictions merged (`data/runs/a5/power/fields.json`,
+sha256 85843ed2…; 141 donors: 10 chain_exact, 51 base-exact roots, 80 flagged base-approximation-unvalidated). Chair ruling F7 (A5
+amendment, before any G3 outcome): the registered POWER-AND-YIELD run uses only the 61 exact-gradient donors; the 141-donor run is a
+labelled sensitivity run; the null-size pass is unchanged and reproduces the registered null (go 180 / alternative 1939 / unresolved
+7881 of 10,000). Registered ordered power 0.8540 [0.8469, 0.8609] (gate ≥ 0.80), alternative 0, unresolved 0.146, yield 1.0 on every
+contrast; sensitivity 0.8501. Part A is decisive under A5.3.2 (`docs/prereg/a5_manifests/power/report.json`, README). Board A: ACCEPT WITH
+CONDITIONS (`docs/reviews/council/board-a-f7-2026-11-11.md`): keep the 61-donor run as the registered reading; qualify decisiveness by the
+F2 proxy, the .75 alternative and the single-donor LoRA low tertile; carry the shared-block dependence of the three contrasts and the
+funding-only reading of the alternative branch; yield 1.0 assumes unavailable audits pass, so the actual audits remain required; all F6
+and pre-G3 requirements stand. Part A staging (`feat/part-a-prepare`) at 19 of 40 edits; `score` starts only after staging completes.
+
+**11 Nov 2026, 06:30 UTC. Council round 4 (branch `council/2026-11-11`)** on the weight-space editing papers and replications that
+appeared since round 3 (arXiv 2611.09382, 2611.07610, 2611.10866, 2611.06598, 2611.08647, 2611.08070, 2611.09376, 2611.10974,
+2609.09054; the Concept Country, aiXiv, LP and scripted-baseline replications). Brief `docs/council/2026-11-11/BRIEF.md`; member
+reports in progress; chair synthesis and any amendment F8 to follow before any G3 outcome is read.
