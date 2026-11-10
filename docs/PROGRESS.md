@@ -478,3 +478,12 @@ flag for measured localisation with verbal localisation as a logged treatment (F
 inside G5 (F9.5); an F8-E-only MATH-500 generation endpoint, unpriced until a throughput pilot, prerequisite for any math-editor claim
 (F9.6). F5.5 and A5.7 unchanged. Board A's F8-spec review accepted the execution spec with eight conditions; F8a (adopting amendment)
 and the F9 review are in flight. Part A staging 27/40. Main at f181f0a; pins match.
+
+**11 Nov 2026, 14:00 UTC.** Board A accepted F9 with eight conditions (`docs/reviews/council/board-a-f9-2026-11-11.md`): authority
+and provenance (archive member identities, logging-vs-panel order, F8a overrides, F9's own gate population); executable forecast
+and statistics conventions (realised scale, rotation reference, κ notation, degenerate values, MSE decomposition, cluster
+representatives; P5 half-widths are not a new floor); leakage control (frozen train / swap-validation / evaluation splits, no
+retrospective refits; 30/100 are reporting conventions, not precision evidence); pruning execution and overhead-inclusive funding;
+H5 reconciliation with F8a overrides and incumbent-relative forecasts; shadow-stream limits (no ≤ 5 % safety certification or
+realised-savings claim from 32 adapters); generation qualification and bounded pilot funding; evidence wording. Member identities
+archived in `docs/council/2026-11-11/MEMBERS.md`. F9a (adopting amendment) follows F8a, which is being drafted. Part A staging 29/40.
