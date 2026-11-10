@@ -1,24 +1,28 @@
 #!/usr/bin/env bash
 # Runs ON a Lambda H100 instance: F5.3 4B scale diagnostic (diagnostic, not a gate). Launch only after Board A has frozen A5
-# with amendment F5. Builds the 20 Gaussian edits of Qwen3.5-4B on the box with scripts/scale4b_build_edits.py, scores the
-# base + 20 entries with TF-v1 restricted to its WikiText stage (configs/eval_tf_v1_wikitext.yaml; wsp.eval.tf_v1 runs
-# only the stages listed under `benchmarks`), then the immutable same-device repeat `r1` of the base + the 5 A3-paired
-# entries, uploads entries, records, log and a ledger line to the HF zoo dataset, and terminates itself.
-# Hard wall-clock cap: CAP_H GPU-h (default 3.0) from LAUNCH_EPOCH; a detached watchdog terminates the instance at the cap
-# whatever the job is doing.
+# with amendment F5. Builds the 20 Gaussian edits of Qwen3.5-4B on the box with scripts/scale4b_build_edits.py and scores
+# them with TF-v1 restricted to its WikiText stage (configs/eval_tf_v1_wikitext.yaml; wsp.eval.tf_v1 runs only the stages
+# listed under `benchmarks`). Order (F5.3 "first time and qualify", FP4): the FP4 panel first, i.e. the base + draw
+# indices 0, 4, 8, 12, 16 (manifest `paired_ids`), then its two independent repeats `q4b-r1` and `q4b-r2`, each a fresh
+# process with a fresh model load and its own immutable run id, then the remaining 15 entries. Writes the device identity
+# (GPU model, driver, CUDA, torch), uploads entries, records, log and a ledger line to the HF zoo dataset, and terminates
+# itself. Hard wall-clock cap: CAP_H GPU-h (default and maximum 2.0, the F5.3/FP4 Lambda cap including qualification)
+# from LAUNCH_EPOCH; a detached watchdog terminates the instance at the cap whatever the job is doing. The FP4 expansion
+# (draw indices 1, 5, 9, 13, 17) is not run here; it needs a separate decision under FP4's fail-closed rule.
 #
 # Env: WSP_REV (full SHA, required)  DEVICE_ID (opaque H<n>, not H0, allocated privately; required)
 #      MODEL_REV (default: the checkpoint-verified Qwen3.5-4B commit)  LAUNCH_EPOCH (launcher's launch time, default now)
-#      CAP_H (3.0)  KEEP_ON_FAILURE (0; 1 keeps a failed instance until the watchdog)  ~/.config/wsp/env: HF_TOKEN, LAMBDA_API_KEY
+#      CAP_H (2.0, at most 2.0)  KEEP_ON_FAILURE (0; 1 keeps a failed instance until the watchdog)  ~/.config/wsp/env: HF_TOKEN, LAMBDA_API_KEY
 # Usage (from the launcher): ssh ubuntu@<ip> "WSP_REV=… DEVICE_ID=H<n> LAUNCH_EPOCH=… nohup bash ~/lambda_job_scale4b.sh &"
 set -euo pipefail
 WSP_REV="${WSP_REV:?set WSP_REV to the reviewed git revision (full SHA) to run}"
 DEVICE_ID="${DEVICE_ID:?set DEVICE_ID to the opaque H<number> (not H0)}"
 MODEL_REV="${MODEL_REV:-851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a}"
-LAUNCH_EPOCH="${LAUNCH_EPOCH:-$(date +%s)}"; CAP_H="${CAP_H:-3.0}"; KEEP_ON_FAILURE="${KEEP_ON_FAILURE:-0}"
+LAUNCH_EPOCH="${LAUNCH_EPOCH:-$(date +%s)}"; CAP_H="${CAP_H:-2.0}"; KEEP_ON_FAILURE="${KEEP_ON_FAILURE:-0}"
 UPLOAD_RESERVE_S=900   # scoring stops this long before the cap so results and the log still upload
 [[ "$DEVICE_ID" =~ ^H[0-9]+$ && "$DEVICE_ID" != H0 ]] || { echo "DEVICE_ID must be H<number> and not H0"; exit 2; }
 [[ "$WSP_REV" =~ ^[0-9a-f]{40}$ && "$MODEL_REV" =~ ^[0-9a-f]{40}$ ]] || { echo "WSP_REV and MODEL_REV must be full SHAs"; exit 2; }
+python3 -c "import sys; c = float(sys.argv[1]); sys.exit(0 if 0 < c <= 2.0 else 1)" "$CAP_H" || { echo "CAP_H must be in (0, 2.0] (F5.3/FP4 cap)"; exit 2; }
 LOG=~/scale4b.log; exec > >(tee -a "$LOG") 2>&1
 ZOO=data/zoo/qwen3.5-4b-scale; EVALS=data/evals/qwen3.5-4b-scale/tf_v1; CFG=configs/eval_tf_v1_wikitext.yaml
 TAG="scale4b-$DEVICE_ID-$(date -u +%Y%m%dT%H%MZ)"; HF_REPO=Aralario/wsp-lab-zoo
@@ -82,7 +86,7 @@ setsid nohup bash -c "
 finish() {
   local rc=$?; set +e
   echo "SCALE4B end $(date -u +%FT%TZ) rc=$rc"
-  local job="F5.3 4B scale diagnostic: build 20 Gaussian edits + TF-v1 WikiText base+20 and repeat r1 (base+5 paired), rev ${WSP_REV:0:12}, rc=$rc"
+  local job="F5.3 4B scale diagnostic: build 20 Gaussian edits + TF-v1 WikiText FP4 panel (base+5, repeats q4b-r1/q4b-r2) then 15 more, rev ${WSP_REV:0:12}, rc=$rc"
   echo "LEDGER $(ledger_line "$job")"
   sleep 2   # let tee flush the log before it is uploaded
   [ -n "${HF_TOKEN:-}" ] && upload
@@ -121,20 +125,42 @@ hf download Qwen/Qwen3.5-4B --revision "$MODEL_REV" >/dev/null
 echo "model Qwen/Qwen3.5-4B pinned at $MODEL_REV"
 
 # ---- build the 20 entries on the box (same script as everywhere; the dry run prints the plan first) ----
-python scripts/scale4b_build_edits.py --dry-run --revision "$MODEL_REV" | python -c "import json,sys;h=json.load(sys.stdin)['header'];print('plan layers',h['layers'],'tensors',len(h['support']),'paired',h['paired_ids'])"
+python scripts/scale4b_build_edits.py --dry-run --revision "$MODEL_REV" | python -c "import json,sys;h=json.load(sys.stdin)['header'];print('plan radius',h['radius'],'layers',h['layers'],'tensors',len(h['support']),'panel draws',h['paired_draw_indices'],'ids',h['paired_ids'])"
 t0=$(date +%s)
 python scripts/scale4b_build_edits.py --revision "$MODEL_REV" --out "$ZOO"
 echo "BUILD seconds=$(( $(date +%s) - t0 )) entries=$(ls -d $ZOO/*/edit.json | wc -l)"
 PAIRED=$(python -c "import json;print(','.join(json.loads(open('$ZOO/manifest.jsonl').readline())['paired_ids']))")
+REST=$(python -c "
+import json
+lines = [json.loads(x) for x in open('$ZOO/manifest.jsonl')]
+paired = set(lines[0]['paired_ids'])
+print(','.join(r['id'] for r in sorted(lines[1:], key=lambda r: r['draw_index']) if r['id'] not in paired))")
 
-# ---- score: base + 20, then the immutable same-device repeat r1 of base + 5 paired ----
+# ---- FP4 device identity (GPU model, driver, CUDA, torch), pinned per run in the uploaded records ----
+mkdir -p "$EVALS"
+python - "$EVALS/device_identity.json" "$DEVICE_ID" <<'PY'
+import json, subprocess, sys, torch
+name, driver = subprocess.check_output(
+    ["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader"], text=True
+).splitlines()[0].split(", ")
+ident = {"eval_device_id": sys.argv[2], "gpu_model": name, "driver": driver, "cuda": torch.version.cuda,
+         "torch": torch.__version__, "dtype": "bfloat16"}
+open(sys.argv[1], "w").write(json.dumps(ident, indent=2, sort_keys=True) + "\n")
+print("DEVICE_IDENTITY", json.dumps(ident, sort_keys=True))
+PY
+
+# ---- score: FP4 panel (base + 5) primary, its repeats q4b-r1 and q4b-r2 (fresh process each), then the other 15 ----
 remaining() { echo $(( DEADLINE - UPLOAD_RESERVE_S - $(date +%s) )); }
-t0=$(date +%s)
-timeout "$(remaining)" python -m wsp.eval.batch --zoo "$ZOO" --config "$CFG" 2>&1 | { grep -E '^\{|entry=|TF wikitext|Traceback|Error|error' || true; } | cut -c1-400
-echo "SCORE seconds=$(( $(date +%s) - t0 )) done=$(ls $EVALS/*/eval.json 2>/dev/null | wc -l)"
-t0=$(date +%s)
-timeout "$(remaining)" python -m wsp.eval.batch --zoo "$ZOO" --config "$CFG" --ids "$PAIRED" --repeat r1 2>&1 | { grep -E 'entry=|TF wikitext|Traceback|Error|error' || true; } | cut -c1-400
-echo "REPEAT seconds=$(( $(date +%s) - t0 ))"
+score() {  # label, then wsp.eval.batch arguments; one fresh process (fresh model load, own run id) per call
+  local label=$1 t0; shift; t0=$(date +%s)
+  timeout "$(remaining)" python -m wsp.eval.batch --zoo "$ZOO" --config "$CFG" "$@" 2>&1 | { grep -E '^\{|entry=|TF wikitext|Traceback|Error|error' || true; } | cut -c1-400
+  echo "$label seconds=$(( $(date +%s) - t0 ))"
+}
+score PANEL --ids "$PAIRED"
+score REPEAT_q4b-r1 --ids "$PAIRED" --repeat q4b-r1
+score REPEAT_q4b-r2 --ids "$PAIRED" --repeat q4b-r2
+score REST --ids "$REST"
+echo "SCORE done=$(ls $EVALS/*/eval.json 2>/dev/null | wc -l)"
 
 # ---- timing per entry (from each eval.json) ----
 python - "$EVALS" <<'PY'

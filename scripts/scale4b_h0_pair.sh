@@ -3,10 +3,12 @@
 # (scripts/lambda_job_scale4b.sh) has uploaded its entries and records; run it under agent-tmux, e.g.
 #   SCALE4B_AFTER_G2=1 WSP_REV=<sha the H100 job ran> H100_ID=H<n> agent-tmux scale4b-h0 bash scripts/scale4b_h0_pair.sh
 # Exclusive-GPU pattern of scripts/d8_tf_yh.sh: clean checkout at the same revision as the H100 job, no other compute
-# process on the GPU. Steps: pull the manifest + the 5 paired entries (exact H100 bytes, sha256 checked against the
-# manifest) and the H100 records from the HF zoo dataset; check that this host rebuilds the same 5 deltas (logged,
-# descriptive); score base + the 5 paired entries with configs/eval_tf_v1_wikitext.yaml on H0, then the immutable
-# repeat r1 of the same six; write the report with scripts/scale4b_report.py (the report is committed by hand).
+# process on the GPU. Steps: pull the manifest + the FP4 panel entries (draw indices 0, 4, 8, 12, 16; exact H100 bytes,
+# sha256 checked against the manifest) and the H100 records from the HF zoo dataset; check that this host rebuilds the
+# same 5 deltas (logged, descriptive); write the H0 device identity (GPU model, driver, CUDA, torch); score base + the 5
+# panel entries with configs/eval_tf_v1_wikitext.yaml on H0, then the two independent repeats `q4b-r1` and `q4b-r2` of
+# the same six, each a fresh process with a fresh model load and its own immutable run id (FP4); write the report with
+# scripts/scale4b_report.py (the report is committed by hand).
 set -euo pipefail
 [ "${SCALE4B_AFTER_G2:-0}" = 1 ] || { echo "run only after G2 (set SCALE4B_AFTER_G2=1 to confirm)" >&2; exit 2; }
 WSP_REV="${WSP_REV:?set WSP_REV to the full SHA the H100 job ran}"
@@ -53,11 +55,26 @@ REV=$(python -c "import json;print(json.loads(open('$ZOO/manifest.jsonl').readli
 python scripts/scale4b_build_edits.py --revision "$MODEL_REV" --verify "$ZOO" --ids $PAIRED \
   && echo "H0 rebuild: identical deltas" || echo "H0 rebuild: deltas differ from the H100 build (descriptive; scoring uses the H100 bytes)"
 
-# ---- score on H0: base + 5 paired, then the immutable repeat r1 of the same six ----
+# ---- FP4 device identity of H0 ----
+mkdir -p "$EVALS/tf_v1"
+python - "$EVALS/tf_v1/device_identity.json" <<'PY'
+import json, subprocess, sys, torch
+name, driver = subprocess.check_output(
+    ["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader"], text=True
+).splitlines()[0].split(", ")
+ident = {"eval_device_id": "H0", "gpu_model": name, "driver": driver, "cuda": torch.version.cuda,
+         "torch": torch.__version__, "dtype": "bfloat16"}
+open(sys.argv[1], "w").write(json.dumps(ident, indent=2, sort_keys=True) + "\n")
+print("DEVICE_IDENTITY", json.dumps(ident, sort_keys=True))
+PY
+
+# ---- score on H0: base + 5 panel entries, then the repeats q4b-r1 and q4b-r2 (one fresh process each) ----
 # shellcheck disable=SC2086
 python -m wsp.eval.batch --zoo "$ZOO" --config "$CFG" --ids $PAIRED
-# shellcheck disable=SC2086
-python -m wsp.eval.batch --zoo "$ZOO" --config "$CFG" --ids $PAIRED --repeat r1
+for rep in q4b-r1 q4b-r2; do
+  # shellcheck disable=SC2086
+  python -m wsp.eval.batch --zoo "$ZOO" --config "$CFG" --ids $PAIRED --repeat "$rep"
+done
 date -u +"end %FT%TZ"
 
 # ---- report (written to docs/reviews/scale/; review and commit it by hand) ----
