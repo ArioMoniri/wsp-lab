@@ -140,3 +140,49 @@ def test_resolution_matches_direct_paired_bootstrap():
     indices = np.random.default_rng(9).integers(0, 32, size=(4000, 32))
     expected = np.quantile(blocks[indices].mean(axis=1), [0.025, 0.975], axis=0)
     np.testing.assert_allclose(actual, expected, atol=1e-14)
+
+
+def test_constant_positive_mean_scenario_replaces_means_only():
+    from scripts.a5_simulation import SCENARIOS, family_constants
+
+    payload, _ = toy(40, noise_sd=0.3, mean_range=(-1.0, 1.0), seed=4)
+    kwargs = {"replicates": 50, "draws": 200, "quotas": {"LoRA": (13, 13, 14)}}
+    base = simulate(payload, **kwargs)
+    const = simulate(payload, **kwargs, **SCENARIOS["constant_positive_mean"])
+    expected = float(np.mean(np.abs(payload["donor_mean"])))
+    assert const["sensitivity"]["family_constant_means"]["LoRA"] == pytest.approx(expected)
+    assert "sensitivity" not in base  # earlier raw outputs keep their exact schema
+    # Same streams: identical donor draws and component signs; only the means differ.
+    for a, b in zip(
+        base["reports"]["null_size"]["traces"], const["reports"]["null_size"]["traces"]
+    ):
+        assert a["donor_representatives"] == b["donor_representatives"]
+        assert a["component_signs"] == b["component_signs"]
+    _, edges = selection_cells(payload["inventory"], {"LoRA": (13, 13, 14)})
+    cells = donor_cells(payload["donors"], edges)
+    zero = {r["id"]: (None, 0.0, None) for r in payload["donors"]}
+    with pytest.raises(ValueError, match="positive donor mean"):
+        family_constants(cells, zero)
+    with pytest.raises(ValueError, match="mean_mode"):
+        simulate(payload, mean_mode="median", **kwargs)
+
+
+def test_cell_mask_noise_scenario_masks_extra_slots_and_scales_cell_noise():
+    payload, _ = toy(40, noise_sd=0.3, mean_range=(0.2, 0.4), seed=5)
+    quotas = {"LoRA": (13, 13, 14)}
+    kwargs = {"replicates": 40, "draws": 200, "quotas": quotas}
+    override = {("LoRA", 0): {"active_slots": 1, "noise_scale": 2.0}}
+    base = simulate(payload, **kwargs)
+    cell = simulate(payload, cell_overrides=override, **kwargs)
+    params = cell["sensitivity"]["cell_overrides"][0]
+    assert params["slots"] == 13 and params["active_slots"] == 1
+    assert cell["sensitivity"]["active_slots"] == 40 - 12
+    for a, b in zip(base["reports"]["null_size"]["traces"], cell["reports"]["null_size"]["traces"]):
+        assert a["donor_representatives"] == b["donor_representatives"]
+        assert a["component_signs"] == b["component_signs"]
+        ok = np.asarray(b["audit_finite"])
+        assert ok[0].all() and not ok[1:13].any() and ok[13:].all()
+        assert np.asarray(a["resolved"])[13:].tolist() == np.asarray(b["resolved"])[13:].tolist()
+    assert cell["reports"]["null_size"]["audit_or_nonfinite_counts"] == [12 * 40] * 3
+    with pytest.raises(ValueError, match="not a selection cell"):
+        simulate(payload, cell_overrides={("chain", 0): {"active_slots": 1}}, **kwargs)

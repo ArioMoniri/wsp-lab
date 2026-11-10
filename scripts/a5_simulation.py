@@ -47,7 +47,37 @@ SCENARIOS = {  # registered run and its frozen sensitivity scenarios (A5 freeze-
     "registered": {"noise_scale": 1.0, "unavailable_audit": "assume_pass"},
     "variance_x2": {"noise_scale": 2.0, "unavailable_audit": "assume_pass"},
     "unavailable_audit_fails": {"noise_scale": 1.0, "unavailable_audit": "assume_fail"},
+    # A5.3.2 planned sensitivities, frozen 10 Nov 2026 (Board A freeze review edit 2), outcome-independent:
+    # constant positive donor means (constant-sign family effect) ...
+    "constant_positive_mean": {
+        "noise_scale": 1.0,
+        "unavailable_audit": "assume_pass",
+        "mean_mode": "family_constant",
+    },
+    # ... and cell-specific masks/noise (norm-dependent resolution) in the single-donor LoRA-low cell.
+    "cell_mask_noise": {
+        "noise_scale": 1.0,
+        "unavailable_audit": "assume_pass",
+        "cell_overrides": {("LoRA", 0): {"active_slots": 1, "noise_scale": 2.0}},
+    },
 }
+MEAN_MODES = ("donor", "family_constant")
+
+
+def family_constants(cells, inputs):
+    """Per family: mean |donor_mean| over its unique donor-cell representatives (``constant_positive_mean``).
+
+    This is the registered alternative's scale (|m_i|, F2) averaged within family into one positive constant;
+    it reads only the frozen NULL-SIZE payload (development edit-minus-predecessor means), never G2/G3.
+    """
+    out = {}
+    for family in sorted({f for f, _ in cells}):
+        ids = sorted({r["id"] for (f, _), rows in cells.items() if f == family for r in rows})
+        values = [abs(inputs[i][1]) for i in ids if i in inputs and np.isfinite(inputs[i][1])]
+        if not values or not math.fsum(values) > 0:
+            raise ValueError(f"{family}: no positive donor mean for the family constant")
+        out[family] = math.fsum(values) / len(values)
+    return out
 
 
 def cp_interval(k, n, alpha=0.05):
@@ -226,15 +256,25 @@ def simulate(
     minimum=15,
     noise_scale=1.0,
     unavailable_audit="assume_pass",
+    mean_mode="donor",
+    cell_overrides=None,
 ):
     """Null without fields; optional power at the registered .75 sign alternative.
 
     Registered run: noise_scale 1 and unavailable_audit 'assume_pass' (unavailable audit evidence
     counts as a pass, which keeps more pairs and is conservative for size). Registered sensitivity
-    scenarios: noise_scale 2 (variance inflation, means unchanged) and 'assume_fail'.
+    scenarios: noise_scale 2 (variance inflation, means unchanged), 'assume_fail',
+    ``mean_mode='family_constant'`` (every donor mean replaced by its family's positive constant,
+    :func:`family_constants`; noise unchanged) and ``cell_overrides`` {(family, tertile):
+    {"active_slots": k, "noise_scale": s}} (cell-specific masks/noise: only the first k slots of the
+    cell in slot order stay active, the others are masked as missing in all three contrasts with no
+    replacement; the cell's donor noise is multiplied by s). Overrides only change values: every
+    random stream is consumed exactly as in the registered run.
     Controls/Part B are outside this Part A calibration and cannot be inferred here.
     Replicate/draw/quota overrides are for synthetic tests, never registered runs.
     """
+    if mean_mode not in MEAN_MODES:
+        raise ValueError(f"mean_mode must be one of {MEAN_MODES}")
     selected, boundaries = selection_cells(payload["inventory"], quotas)
     cells = donor_cells(payload["donors"], boundaries)
     streams = np.random.SeedSequence(20261107).spawn(3)
@@ -242,6 +282,33 @@ def simulate(
     slots = [key for key, rows in selected.items() for _ in rows]
     donors = payload["donors"]
     inputs = donor_inputs(payload, noise_scale, unavailable_audit)
+    sensitivity = {}
+    if mean_mode == "family_constant":
+        constants = family_constants(cells, inputs)
+        family_of = {r["id"]: r["family"] for r in donors}
+        inputs = {
+            i: (block, constants[family_of[i]], audit) for i, (block, _, audit) in inputs.items()
+        }
+        sensitivity["family_constant_means"] = constants
+    slot_noise = np.ones(len(slots))
+    slot_active = np.ones(len(slots), dtype=bool)
+    if cell_overrides:
+        for key, override in cell_overrides.items():
+            if key not in cells:
+                raise ValueError(f"cell override {key} is not a selection cell")
+            positions = [s for s, k in enumerate(slots) if k == key]
+            slot_noise[positions] = override.get("noise_scale", 1.0)
+            slot_active[positions[override.get("active_slots", len(positions)) :]] = False
+        sensitivity["cell_overrides"] = [
+            {
+                "cell": list(key),
+                "donor_components": len(cells[key]),
+                "slots": sum(k == key for k in slots),
+                **override,
+            }
+            for key, override in cell_overrides.items()
+        ]
+        sensitivity["active_slots"] = int(slot_active.sum())
     scales = np.asarray(SCALES)
     cp = {(k, n): cp_interval(k, n) for n in range(len(slots) + 1) for k in range(n + 1)}
     reports = {}
@@ -266,8 +333,8 @@ def simulate(
             audit = np.stack([inputs[r["id"]][2] for r in chosen])  # [slots, 3]
             # A pair with any missing window or nonfinite donor mean is missing in all three
             # contrasts, whether or not the outer panel redraws that block.
-            complete = np.isfinite(noise).all(axis=0) & np.isfinite(mean)
-            noise = noise[panels.integers(0, BLOCKS, BLOCKS)]  # common outer window-block panel
+            complete = np.isfinite(noise).all(axis=0) & np.isfinite(mean) & slot_active
+            noise = noise[panels.integers(0, BLOCKS, BLOCKS)] * slot_noise  # common outer panel
             if mode == "null_size":
                 prediction = np.ones((len(slots), 3))
                 # One fair sign per simulated component, shared by mean and noise of all 3 contrasts.
@@ -359,6 +426,8 @@ def simulate(
         },
         "noise_scale": noise_scale,
         "unavailable_audit": unavailable_audit,
+        # Present only for the 10 Nov sensitivity scenarios, so earlier raw outputs stay reproducible.
+        **({"sensitivity": sensitivity} if sensitivity else {}),
         "reports": reports,
     }
 

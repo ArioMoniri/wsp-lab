@@ -53,6 +53,44 @@ from wsp.eval.batch import effective_config_hash
 N_LORA, N_CHAIN = 30, 10
 VARIANTS_PER_EDIT = 3  # rotation at s = 1 and the edit at s = 0.25, 0.5 (S31 §3 G3)
 TERTILES = ("low", "middle", "high")
+TRANSITIVE_FILES = {
+    "src/wsp/__init__.py": "package marker (imported)",
+    "src/wsp/eval/__init__.py": "package marker (imported)",
+    "src/wsp/features/__init__.py": "package marker (imported)",
+    "src/wsp/predictor/__init__.py": "package marker (imported)",
+    "src/wsp/zoo/__init__.py": "package marker (imported)",
+    "src/wsp/eval/ifeval/__init__.py": "transitive wsp import of a pinned module",
+    "src/wsp/eval/ifeval/instructions.py": "transitive wsp import of a pinned module",
+    "src/wsp/eval/ifeval/instructions_registry.py": "transitive wsp import of a pinned module",
+    "src/wsp/eval/ifeval/instructions_util.py": "transitive wsp import of a pinned module",
+    "src/wsp/eval/ifeval/utils.py": "transitive wsp import of a pinned module",
+    "src/wsp/eval/metadata.py": "transitive wsp import of a pinned module",
+    "src/wsp/eval/refusal.py": "transitive wsp import of a pinned module",
+    "src/wsp/eval/repeats.py": "transitive wsp import of a pinned module",
+    "src/wsp/eval/zoo_compat.py": "transitive wsp import of a pinned module",
+    "src/wsp/features/extract.py": "transitive wsp import of a pinned module",
+    "src/wsp/features/pool.py": "transitive wsp import of a pinned module",
+    "src/wsp/features/stats.py": "transitive wsp import of a pinned module",
+    "src/wsp/features/svd.py": "transitive wsp import of a pinned module",
+    "src/wsp/predictor/splits.py": "transitive wsp import of a pinned module",
+    "src/wsp/schema.py": "transitive wsp import of a pinned module",
+    "src/wsp/zoo/apply.py": "transitive wsp import of a pinned module",
+    "src/wsp/zoo/arch.py": "transitive wsp import of a pinned module",
+    "src/wsp/zoo/common.py": "transitive wsp import of a pinned module",
+    "src/wsp/predictor/baselines.py": "primary tree/isotonic fitting and feature table (A5.8.4, section 3)",
+    "configs/p4_predictors.json": "fitting settings (A5.8.4: n_splits, seed, scaling, neural settings)",
+    "configs/eval_subsets/harmless_alpaca_tf_v1.txt": "fixed panel input (TF-v1 subset)",
+    "configs/eval_subsets/hellaswag.txt": "fixed panel input (subset)",
+    "configs/eval_subsets/hellaswag_tf_v1.txt": "fixed panel input (TF-v1 subset)",
+    "configs/eval_subsets/mmlu_pro.txt": "fixed panel input (subset)",
+    "configs/eval_subsets/mmlu_pro_tf_v1.txt": "fixed panel input (TF-v1 subset)",
+    "docs/prereg/panel_manifest.json": "certified source closure / panel components (selection input)",
+    "docs/reviews/P5/d8-regeneration-2026-11-06/chain_replay_install.json": "G0 closure evidence",
+    "docs/reviews/P5/d8-regeneration-2026-11-06/chain_replay_pilot.json": "G0 closure evidence",
+    "docs/reviews/P5/d8-regeneration-2026-11-06/chain_replay_restore.json": "G0 closure evidence",
+    "docs/reviews/P5/d8-regeneration-2026-11-06/g1_report.json": "G1 qualification evidence",
+    "docs/reviews/P5/d8-regeneration-2026-11-06/g1b_report.json": "G1 qualification evidence",
+}
 # Pinned source (A5.11; Board A A5 package review item 7): builders, validators/tests, the imported
 # selection/grouping/reference logic and the resolved configs. Role is descriptive only.
 CODE_FILES = {
@@ -77,6 +115,9 @@ CODE_FILES = {
     "src/wsp/features/response_chart.py": "A5.8.2 chart",
     "configs/eval_tf_v1.yaml": "resolved TF-v1 config",
     "configs/editor_qwen3.5-0.8b.yaml": "model and revision",
+    # Expanded 10 Nov 2026 (Board A freeze review item 7): transitive wsp imports of the pinned modules,
+    # the primary fitting code/config (A5.8.4) and the fixed selection/panel/qualification inputs in git.
+    **TRANSITIVE_FILES,
 }
 ENV_PACKAGES = ("numpy", "torch", "transformers", "tokenizers", "datasets", "safetensors", "pyyaml")
 PROCEDURAL_FREEZE_DATE = "2026-11-07"
@@ -1319,6 +1360,7 @@ def readme(files, inventory, selection, references, text_groups):
         *(BLOCKED_NOTE if registered["status"] != "selected" else []),
         *(NOT_CERTIFIED_CLOSED if snap else NOT_CERTIFIED),
         "",
+        *(CLOSURE_RECONCILIATION if snap else []),
     ]
     return "\n".join(out).encode()
 
@@ -1375,7 +1417,31 @@ NOT_CERTIFIED_CLOSED = [
     "  specification are in the companion section below (scripts/a5_build_panels.py); the NULL-SIZE",
     "  reports are in `nullsize/`. Board A acceptance of the pre-G2 evidence is outstanding.",
 ]
-
+# Board A freeze review (docs/reviews/council/board-a-freeze-2026-11-10.md) edit 1: dated, appended; the
+# historical wording above and in PREREG A5.9 is kept as historical.
+CLOSURE_RECONCILIATION = [
+    "## Closure reconciliation (10 Nov 2026; Board A freeze review edit 1)",
+    "",
+    "Appended after the closed snapshot (2026-11-08T00:59:56Z); the snapshot content itself is unchanged.",
+    "",
+    "- Old seal: the G6 census scored **187 members of 37 old-confirmatory components**",
+    "  (`snapshot.json:old_seal`, `exposure_ledger`). They are G6-exposed; their old status label cannot restore",
+    '  freshness. PREREG A5.9\'s "unspent ... stays sealed" is historical (7 Nov) wording, not a current',
+    "  certificate; the partition is not reused for G7 in any case (A5.9).",
+    "- Predecessor chronology: the primaries of the two regenerated predecessors `b7edbb9f8b339f52` and",
+    "  `86ea1fe0ec777cf8` carry census run id `20261107-105825-56ef1597` (log d8-g6-census-20261107-105822.log),",
+    "  not a later separate run of `scripts/d8_g1_predecessors.sh` (its three logs are empty). Their",
+    "  `repeats/g1b` records were written earlier (log d8-g6-census-20261107-102943.log) and equal the",
+    "  primary files byte for byte (`snapshot.json:g1_scoring`).",
+    "- Availability: all forty registered edits and their forty actual predecessors have current bytes",
+    "  (`snapshot.json:forty_picks`); two predecessors, `983bb1066d0fd006` and `bc6edb1e3c913a10`, are held",
+    "  only through alias holders, which G3 staging must load and prove (F3(i)). The three re-trained picks and",
+    "  their predecessors are flagged, development-exposed and not historical bitwise replays.",
+    "- Costs: `snapshot.json:cost_ledger` rows overlap and mix units (run-wall-h, GPU-h, approximate GPU-h,",
+    "  CPU-h, summed run-wall-h). The 0.05 GPU-h predecessor-primary row is inside the 11.2 h census row.",
+    "  The rows are not additive GPU-hours and are not a reconciled cash spend.",
+    "",
+]
 
 COMPANION_BEGIN, COMPANION_END = b"<!-- a5_build_panels:begin -->", b"<!-- a5_build_panels:end -->"
 

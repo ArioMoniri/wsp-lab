@@ -249,15 +249,38 @@ def test_observations_flag_identical_contrasts_vacuous_scenarios_and_single_cell
     }
     assert stats["registered"]["contrasts_identical"] and stats["registered"]["max_resolved"] == 3
     summary = {
-        "registered": {"decisions": {"go": 0, "alternative": 2, "unresolved": 8}, "replicates": 10},
-        "unavailable_audit_fails": {"decisions": {"alternative": 0}, "replicates": 1},
+        "registered": {
+            "decisions": {"go": 0, "alternative": 2, "unresolved": 8},
+            "replicates": 10,
+            "unavailable_audit": "assume_pass",
+            "alternative_cp95": list(ni.sim.cp_interval(2, 10)),
+        },
+        "unavailable_audit_fails": {
+            "decisions": {"alternative": 0},
+            "replicates": 1,
+            "unavailable_audit": "assume_fail",
+        },
+        "cell_mask_noise": {
+            "decisions": {"alternative": 0},
+            "replicates": 10,
+            "unavailable_audit": "assume_pass",
+            "sensitivity_parameters": {
+                "cell_overrides": [
+                    {"cell": ["LoRA", 0], "slots": 10, "active_slots": 1, "donor_components": 1}
+                ]
+            },
+        },
     }
     suff = {"donor_cluster_representatives_per_cell": {"LoRA:0": 1, "LoRA:1": 4}}
     obs = ni.observations(summary, stats, suff)
     assert any("one test" in o for o in obs)
-    assert any("`unavailable_audit_fails`: no pair resolved" in o for o in obs)
-    assert any("'alternative'" in o and "2 of 10" in o for o in obs)
+    assert any(
+        "`unavailable_audit_fails`: no pair resolved" in o and "counted as a failure" in o
+        for o in obs
+    )
+    assert any("'alternative'" in o and "2 of 10" in o and "funding-only" in o for o in obs)
     assert any("LoRA:0 hold a single donor" in o for o in obs)
+    assert any("keeps 1 of 10 slots" in o and "90 of its" in o for o in obs)
     stats["registered"] = ni.trace_statistics(
         [{"resolved_counts": [3, 2, 3], "agreement_counts": [2, 2, 2]}]
     )

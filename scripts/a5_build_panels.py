@@ -49,13 +49,21 @@ PROBE_DOMAIN = "20261107:probe:"  # chair default proposed here; A5.8.3 names no
 RANDOM_FIELD_DOMAIN = "20261107:random-field:"  # A5.8.3
 PERMUTED_FIELD_DOMAIN = "20261107:permuted-field:"  # A5.8.3
 ROTATION_DOMAIN = "20261107:rotation:"  # A5.3.3
+# A5.8.3 chart destruction controls; domains registered 10 Nov 2026 (Board A freeze review edit 6).
+CHART_RANDOM_DOMAIN = "20261110:chart-random-frame:"
+CHART_PERMUTED_DOMAIN = "20261110:chart-permuted-projector:"
 FIELD_GROUPS = 64  # A5.8.1: 64 groups per objective
 WINDOW = 1024
 DEV_WINDOWS = 64
 TEST_KEY = "synthetic-test-vector"  # not a tensor, role or edit id
 README_BEGIN = "<!-- a5_build_panels:begin -->"
 README_END = "<!-- a5_build_panels:end -->"
-OUT_FILES = ("panels.json", "control_seeds.json", "nullsize_inputs.json")
+OUT_FILES = (
+    "panels.json",
+    "control_seeds.json",
+    "nullsize_inputs.json",
+    "linestop_power_spec.json",
+)
 
 MODEL = ("Qwen/Qwen3.5-0.8B", "2fc06364715b967f1860aea9cf38778875588b17")
 WIKITEXT = ("Salesforce/wikitext", "wikitext-2-raw-v1", "test")
@@ -94,6 +102,18 @@ def normalize(text: str) -> str:
 
 def rank_key(domain: str, fingerprint: str) -> str:
     return sha256_bytes(f"{domain}{fingerprint}".encode())
+
+
+def chart_tensor_seed(name: str) -> int:
+    """src/wsp/features/response_chart.py:tensor_seed, re-derived without importing torch."""
+    import zlib
+
+    import numpy as np
+
+    state = np.random.SeedSequence([20261107, zlib.crc32(name.encode())]).generate_state(
+        1, dtype=np.uint64
+    )
+    return int(state[0])
 
 
 def domain_seed(domain: str, key: str) -> int:
@@ -827,8 +847,43 @@ def build_control_seeds():
         "chart_projectors": {
             "rule_reference": "A5.8.2 (seed 20261107); src/wsp/features/response_chart.py:tensor_seed = "
             "SeedSequence([20261107, crc32(tensor name)]) first uint64",
-            "destruction_controls": "A5.8.3 asks for permuted projector identities and independently seeded "
-            "random frames but names no domain; not registered here (secondary/descriptive arm)",
+            "intact": {
+                "seed": "src/wsp/features/response_chart.py:tensor_seed(<exact tensor name>)",
+                "frames": "block_projectors(out, in, k=4, seed): torch.Generator('cpu').manual_seed(seed); "
+                "P_out = QR(randn(out, min(4, out))) then P_in = QR(randn(in, min(4, in))) from the same "
+                "generator, positive-diagonal sign convention",
+                "test_vectors": {f"tensor_seed('{TEST_KEY}')": chart_tensor_seed(TEST_KEY)},
+            },
+            "registered_by": "A5.8.3; domains and keys registered 10 Nov 2026 (PREREG A5 freeze-pass "
+            "amendments, Board A freeze review edit 6), before any chart or field exists",
+            "random_frame": {
+                "domain": CHART_RANDOM_DOMAIN,
+                "key": "<exact tensor name>",
+                "construction": "independently seeded random frames: block_projectors(out, in, k=4, "
+                "seed(domain, key)) replaces the intact frames of that tensor; every chart-derived scalar "
+                "is recomputed; nothing else changes",
+                "test_vectors": {f"seed('{TEST_KEY}')": domain_seed(CHART_RANDOM_DOMAIN, TEST_KEY)},
+            },
+            "permuted_projector": {
+                "domain": CHART_PERMUTED_DOMAIN,
+                "key": "<exact role string>:<shape as 'outxin'>",
+                "construction": "within each compatibility group (exact role string AND exact tensor shape) the "
+                "intact projector identities (tensor_seed of the tensor name), listed by ascending layer, are "
+                "moved by the seeded derangement: the tensor at position j uses the intact frames of the tensor "
+                "at position derangement[j]; singleton groups stay fixed and are disclosed, never reshaped",
+                "derangement": "scripts/a5_build_panels.py:derangement (as permuted_field)",
+                "test_vectors": {
+                    f"seed('{TEST_KEY}')": domain_seed(CHART_PERMUTED_DOMAIN, TEST_KEY),
+                    f"derangement(5, seed('{TEST_KEY}'))": derangement(
+                        5, domain_seed(CHART_PERMUTED_DOMAIN, TEST_KEY)
+                    ),
+                },
+            },
+            "eligibility": "A5.8.3 destruction-eligibility rule applied to chart projector frames: per arm, "
+            "coverage >= 0.90 and weighted absolute cosine <= 0.20 computed on the projected-edit blocks "
+            "P_out^T D P_in (intact versus control), over the full frozen edited-token inventory; written to "
+            "the destruction-audit artefact; no seed search after a failure",
+            "status": "secondary/descriptive chart arm; registered controls, not measured destruction passes",
         },
         "fisher_sampling": {
             "rule_reference": "A5.8.1 'one model-sampled target per valid token, fixed RNG'; "
@@ -860,6 +915,135 @@ def build_control_seeds():
             "probe_domain": PROBE_DOMAIN,
             "panels": "panels.json",
         },
+    }
+
+
+# ------------------------------------------------------------------------------ F5.5 line-stop power spec
+
+LINESTOP_ROW_SETS = {
+    "h1w_386": "the 386 logical G1 rows on the registered H1w source-closed folds (eligibility exclusions listed "
+    "before fitting; not 386 independent examples)",
+    "lora_only": "the eligible LoRA-only rows on the inherited H1w folds (A5.4.3, F5.1)",
+}
+
+
+def _contrast(name, numerator, denominator, rows, eligibility, family):
+    return {
+        "name": name,
+        "family": family,
+        "ratio": f"1 - A_{numerator} / A_{denominator}",
+        "numerator_arm": numerator,
+        "denominator_arm": denominator,
+        "row_set": rows,
+        "control_eligibility": eligibility,
+    }
+
+
+def linestop_contrasts():
+    """F5.5(b) members: every registered orientation contrast by name, denominator and control eligibility."""
+    abl = "intact ablation: no destruction check; A5.4.1 information contract and A5.4.2 validity"
+    field = "A5.8.3 destruction eligibility of the {} field (coverage >= 0.90, weighted |cos| <= 0.20, audits)"
+    chart = (
+        "control_seeds.json:chart_projectors eligibility for the {} (coverage >= 0.90, weighted |cos| <= 0.20 "
+        "on P_out^T D P_in; bijection/role-shape audits for the permutation)"
+    )
+    frame = "F5 schema pins: {} (input-mask audit, frame orthonormality <= 1e-6, gauge audit within tolerance)"
+    out = [
+        _contrast("C_abl", "cand", "no_field", "h1w_386", abl, "primary"),
+        _contrast("C_rand", "cand", "random_field", "h1w_386", field.format("random"), "primary"),
+        _contrast(
+            "C_perm", "cand", "permuted_field", "h1w_386", field.format("permuted"), "primary"
+        ),
+        _contrast(
+            "C_chart_rand",
+            "chart",
+            "chart_random_frame",
+            "h1w_386",
+            chart.format("random-frame arm"),
+            "chart (A5.8.2 secondary chart arm)",
+        ),
+        _contrast(
+            "C_chart_perm",
+            "chart",
+            "chart_permuted_projector",
+            "h1w_386",
+            chart.format("permuted-projector arm"),
+            "chart (A5.8.2 secondary chart arm)",
+        ),
+    ]
+    pairs = [
+        (
+            "K:R",
+            "K",
+            "R",
+            "R frames generated from 20261110:lol-random: and orthonormal; K frame audits",
+        ),
+        ("L:S", "L", "S", "S directional inputs identically zero (mask audit); L gauge audit"),
+        ("K+F:F", "KF", "F", "F carries no K-derived input; K+F and F masks audited"),
+        ("K+F:K", "KF", "K", "K carries no field-derived input; K+F and K masks audited"),
+    ]
+    for rows in LINESTOP_ROW_SETS:
+        for name, num, den, elig in pairs:
+            out.append(
+                _contrast(
+                    f"{name}@{rows}", num, den, rows, frame.format(elig), "secondary (F5.1/F5.2)"
+                )
+            )
+    return out
+
+
+def build_linestop_power_spec():
+    return {
+        "schema": "a5-linestop-power-spec-v1",
+        "registered": "PREREG A5 freeze-pass amendments (10 Nov 2026), Board A freeze review edit 6; before "
+        "any G2 field, chart or Part B fit exists",
+        "status": "frozen simulation specification; NOT RUN. Its implementation and settings must be hashed "
+        "(A5.1) and the report committed before any Part B fitting (G4); a missing report leaves F5.5(b) "
+        "unresolved",
+        "claim": "F5.5(b) upper-bound exclusion: the A5.4.2 conditional AND joint bootstrap-t 95% upper bounds "
+        "of C are both < 0.05 for every member below",
+        "members": linestop_contrasts(),
+        "row_sets": LINESTOP_ROW_SETS,
+        "retained": "the registered superiority power at true C = 0.15 (section 5 / A5.4.2) is unchanged and is "
+        "reported separately; it is not power for this exclusion claim",
+        "scenarios": {
+            "C_true": [0.0, 0.025, 0.05, 0.15],
+            "boundary": 0.05,
+            "small_effect_alternative": 0.0,
+        },
+        "gates": {
+            "power_at_C_0": "P(both procedures' upper bounds < 0.05 | true C = 0) >= 0.80 for each member and "
+            "each procedure separately (simulated rate itself; exact CP 95% interval reported)",
+            "boundary_false_exclusion_at_C_0.05": "P(upper bound < 0.05 | true C = 0.05) <= 0.035 for each "
+            "member and procedure (the A2.3 one-sided null-rejection limit applied at the boundary)",
+            "failure": "any member failing either gate, or with invalid/undefined simulation, leaves F5.5(b) "
+            "unresolved; there is no substitution of a .5 ladder rule or any other member",
+        },
+        "construction": {
+            "comparator_loss": "B_i: the development D3 WikiText H1w out-of-fold absolute residuals of the "
+            "registered tree (section 3 / A4), resampled by whole ancestry components; per-item-block "
+            "components as the A2.3 joint procedure uses them",
+            "candidate_loss": "A_i = B_i * m_i, m_i = (1 - C) * exp(s * z_i - s^2 / 2), z_i = sqrt(rho) * g_c + "
+            "sqrt(1 - rho) * e_i (g_c per component, e_i per row, both N(0, 1)); E[m_i] = 1 - C, losses stay "
+            "nonnegative (scripts/tf_v1_power.py construction)",
+            "registered_cell": {"s": 0.5, "rho": 0.5},
+            "sensitivity_grid": {"s": [0.25, 0.5, 1.0], "rho": [0.0, 0.5]},
+            "sizes": "the registered row sets' actual component counts and component sizes (metadata only), "
+            "fixed when the eligible rows are listed before fitting",
+            "procedures": "A5.4.2 exactly: L = log(A_cand / A_comparator), component influences, conditional and "
+            "joint (V_comp + V_item - V_both) studentisation, 4,000 draws, linear .025/.975 quantiles, guard "
+            "A_x / n > 1e-12, at least two components; any invalid draw makes that simulated panel "
+            "non-excluding (counted, never replaced)",
+        },
+        "simulation": {
+            "panels_per_scenario": 4000,
+            "bootstrap_draws": 4000,
+            "seed": "numpy.random.SeedSequence(20261110).spawn(n) in the order members x row-set x C_true x grid "
+            "cell listed here; PCG64",
+        },
+        "report": "per member, procedure, C_true and grid cell: P(upper < 0.05) with exact CP 95% interval, "
+        "invalid-draw and invalid-panel counts, and the gate verdicts; the (a) and (c) predicates of F5.5 "
+        "keep their own validity rules and are not powered by this specification",
     }
 
 
@@ -1113,6 +1297,11 @@ def readme_section(files, panels):
                 f"| `nullsize_inputs.json` | `{shas['nullsize_inputs.json']}` | registered edit-minus-"
                 "predecessor proxy (A5.3.2(ii), freeze-prep amendments) + `text_groups.json` |"
             ),
+            (
+                f"| `linestop_power_spec.json` | `{shas['linestop_power_spec.json']}` | F5.5(b) contrast "
+                "enumeration and upper-bound exclusion power specification (freeze-pass amendments, 10 Nov "
+                "2026); rules only, not run |"
+            ),
             "",
             "| panel | produced / registered | sha256 of sorted ids | computed disjoint | future sealed panels |",
             "|---|---|---|---|---|",
@@ -1141,6 +1330,10 @@ def readme_section(files, panels):
             "  certificate of this package.",
             "- Control key formats and the probe domain: accepted by Board A as prospective deterministic",
             "  defaults (review item 5); test vectors are not measured destruction-eligibility passes.",
+            "- Chart projector controls (random frame, permuted projector) are registered in",
+            "  `control_seeds.json:chart_projectors` (10 Nov 2026, Board A freeze review edit 6); the line-stop",
+            "  power specification `linestop_power_spec.json` is a frozen rule, not a run: its implementation",
+            "  must be hashed and run before Part B fitting, otherwise F5.5(b) stays unresolved.",
             README_END,
             "",
         ]
@@ -1163,6 +1356,7 @@ def package(panels, text_groups):
         "panels.json": dumps(panels),
         "control_seeds.json": dumps(build_control_seeds()),
         "nullsize_inputs.json": dumps(build_nullsize_spec(text_groups)),
+        "linestop_power_spec.json": dumps(build_linestop_power_spec()),
     }
     return files, panels
 

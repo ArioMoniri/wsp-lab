@@ -1,0 +1,172 @@
+{
+ "claim": "F5.5(b) upper-bound exclusion: the A5.4.2 conditional AND joint bootstrap-t 95% upper bounds of C are both < 0.05 for every member below",
+ "construction": {
+  "candidate_loss": "A_i = B_i * m_i, m_i = (1 - C) * exp(s * z_i - s^2 / 2), z_i = sqrt(rho) * g_c + sqrt(1 - rho) * e_i (g_c per component, e_i per row, both N(0, 1)); E[m_i] = 1 - C, losses stay nonnegative (scripts/tf_v1_power.py construction)",
+  "comparator_loss": "B_i: the development D3 WikiText H1w out-of-fold absolute residuals of the registered tree (section 3 / A4), resampled by whole ancestry components; per-item-block components as the A2.3 joint procedure uses them",
+  "procedures": "A5.4.2 exactly: L = log(A_cand / A_comparator), component influences, conditional and joint (V_comp + V_item - V_both) studentisation, 4,000 draws, linear .025/.975 quantiles, guard A_x / n > 1e-12, at least two components; any invalid draw makes that simulated panel non-excluding (counted, never replaced)",
+  "registered_cell": {
+   "rho": 0.5,
+   "s": 0.5
+  },
+  "sensitivity_grid": {
+   "rho": [
+    0.0,
+    0.5
+   ],
+   "s": [
+    0.25,
+    0.5,
+    1.0
+   ]
+  },
+  "sizes": "the registered row sets' actual component counts and component sizes (metadata only), fixed when the eligible rows are listed before fitting"
+ },
+ "gates": {
+  "boundary_false_exclusion_at_C_0.05": "P(upper bound < 0.05 | true C = 0.05) <= 0.035 for each member and procedure (the A2.3 one-sided null-rejection limit applied at the boundary)",
+  "failure": "any member failing either gate, or with invalid/undefined simulation, leaves F5.5(b) unresolved; there is no substitution of a .5 ladder rule or any other member",
+  "power_at_C_0": "P(both procedures' upper bounds < 0.05 | true C = 0) >= 0.80 for each member and each procedure separately (simulated rate itself; exact CP 95% interval reported)"
+ },
+ "members": [
+  {
+   "control_eligibility": "intact ablation: no destruction check; A5.4.1 information contract and A5.4.2 validity",
+   "denominator_arm": "no_field",
+   "family": "primary",
+   "name": "C_abl",
+   "numerator_arm": "cand",
+   "ratio": "1 - A_cand / A_no_field",
+   "row_set": "h1w_386"
+  },
+  {
+   "control_eligibility": "A5.8.3 destruction eligibility of the random field (coverage >= 0.90, weighted |cos| <= 0.20, audits)",
+   "denominator_arm": "random_field",
+   "family": "primary",
+   "name": "C_rand",
+   "numerator_arm": "cand",
+   "ratio": "1 - A_cand / A_random_field",
+   "row_set": "h1w_386"
+  },
+  {
+   "control_eligibility": "A5.8.3 destruction eligibility of the permuted field (coverage >= 0.90, weighted |cos| <= 0.20, audits)",
+   "denominator_arm": "permuted_field",
+   "family": "primary",
+   "name": "C_perm",
+   "numerator_arm": "cand",
+   "ratio": "1 - A_cand / A_permuted_field",
+   "row_set": "h1w_386"
+  },
+  {
+   "control_eligibility": "control_seeds.json:chart_projectors eligibility for the random-frame arm (coverage >= 0.90, weighted |cos| <= 0.20 on P_out^T D P_in; bijection/role-shape audits for the permutation)",
+   "denominator_arm": "chart_random_frame",
+   "family": "chart (A5.8.2 secondary chart arm)",
+   "name": "C_chart_rand",
+   "numerator_arm": "chart",
+   "ratio": "1 - A_chart / A_chart_random_frame",
+   "row_set": "h1w_386"
+  },
+  {
+   "control_eligibility": "control_seeds.json:chart_projectors eligibility for the permuted-projector arm (coverage >= 0.90, weighted |cos| <= 0.20 on P_out^T D P_in; bijection/role-shape audits for the permutation)",
+   "denominator_arm": "chart_permuted_projector",
+   "family": "chart (A5.8.2 secondary chart arm)",
+   "name": "C_chart_perm",
+   "numerator_arm": "chart",
+   "ratio": "1 - A_chart / A_chart_permuted_projector",
+   "row_set": "h1w_386"
+  },
+  {
+   "control_eligibility": "F5 schema pins: R frames generated from 20261110:lol-random: and orthonormal; K frame audits (input-mask audit, frame orthonormality <= 1e-6, gauge audit within tolerance)",
+   "denominator_arm": "R",
+   "family": "secondary (F5.1/F5.2)",
+   "name": "K:R@h1w_386",
+   "numerator_arm": "K",
+   "ratio": "1 - A_K / A_R",
+   "row_set": "h1w_386"
+  },
+  {
+   "control_eligibility": "F5 schema pins: S directional inputs identically zero (mask audit); L gauge audit (input-mask audit, frame orthonormality <= 1e-6, gauge audit within tolerance)",
+   "denominator_arm": "S",
+   "family": "secondary (F5.1/F5.2)",
+   "name": "L:S@h1w_386",
+   "numerator_arm": "L",
+   "ratio": "1 - A_L / A_S",
+   "row_set": "h1w_386"
+  },
+  {
+   "control_eligibility": "F5 schema pins: F carries no K-derived input; K+F and F masks audited (input-mask audit, frame orthonormality <= 1e-6, gauge audit within tolerance)",
+   "denominator_arm": "F",
+   "family": "secondary (F5.1/F5.2)",
+   "name": "K+F:F@h1w_386",
+   "numerator_arm": "KF",
+   "ratio": "1 - A_KF / A_F",
+   "row_set": "h1w_386"
+  },
+  {
+   "control_eligibility": "F5 schema pins: K carries no field-derived input; K+F and K masks audited (input-mask audit, frame orthonormality <= 1e-6, gauge audit within tolerance)",
+   "denominator_arm": "K",
+   "family": "secondary (F5.1/F5.2)",
+   "name": "K+F:K@h1w_386",
+   "numerator_arm": "KF",
+   "ratio": "1 - A_KF / A_K",
+   "row_set": "h1w_386"
+  },
+  {
+   "control_eligibility": "F5 schema pins: R frames generated from 20261110:lol-random: and orthonormal; K frame audits (input-mask audit, frame orthonormality <= 1e-6, gauge audit within tolerance)",
+   "denominator_arm": "R",
+   "family": "secondary (F5.1/F5.2)",
+   "name": "K:R@lora_only",
+   "numerator_arm": "K",
+   "ratio": "1 - A_K / A_R",
+   "row_set": "lora_only"
+  },
+  {
+   "control_eligibility": "F5 schema pins: S directional inputs identically zero (mask audit); L gauge audit (input-mask audit, frame orthonormality <= 1e-6, gauge audit within tolerance)",
+   "denominator_arm": "S",
+   "family": "secondary (F5.1/F5.2)",
+   "name": "L:S@lora_only",
+   "numerator_arm": "L",
+   "ratio": "1 - A_L / A_S",
+   "row_set": "lora_only"
+  },
+  {
+   "control_eligibility": "F5 schema pins: F carries no K-derived input; K+F and F masks audited (input-mask audit, frame orthonormality <= 1e-6, gauge audit within tolerance)",
+   "denominator_arm": "F",
+   "family": "secondary (F5.1/F5.2)",
+   "name": "K+F:F@lora_only",
+   "numerator_arm": "KF",
+   "ratio": "1 - A_KF / A_F",
+   "row_set": "lora_only"
+  },
+  {
+   "control_eligibility": "F5 schema pins: K carries no field-derived input; K+F and K masks audited (input-mask audit, frame orthonormality <= 1e-6, gauge audit within tolerance)",
+   "denominator_arm": "K",
+   "family": "secondary (F5.1/F5.2)",
+   "name": "K+F:K@lora_only",
+   "numerator_arm": "KF",
+   "ratio": "1 - A_KF / A_K",
+   "row_set": "lora_only"
+  }
+ ],
+ "registered": "PREREG A5 freeze-pass amendments (10 Nov 2026), Board A freeze review edit 6; before any G2 field, chart or Part B fit exists",
+ "report": "per member, procedure, C_true and grid cell: P(upper < 0.05) with exact CP 95% interval, invalid-draw and invalid-panel counts, and the gate verdicts; the (a) and (c) predicates of F5.5 keep their own validity rules and are not powered by this specification",
+ "retained": "the registered superiority power at true C = 0.15 (section 5 / A5.4.2) is unchanged and is reported separately; it is not power for this exclusion claim",
+ "row_sets": {
+  "h1w_386": "the 386 logical G1 rows on the registered H1w source-closed folds (eligibility exclusions listed before fitting; not 386 independent examples)",
+  "lora_only": "the eligible LoRA-only rows on the inherited H1w folds (A5.4.3, F5.1)"
+ },
+ "scenarios": {
+  "C_true": [
+   0.0,
+   0.025,
+   0.05,
+   0.15
+  ],
+  "boundary": 0.05,
+  "small_effect_alternative": 0.0
+ },
+ "schema": "a5-linestop-power-spec-v1",
+ "simulation": {
+  "bootstrap_draws": 4000,
+  "panels_per_scenario": 4000,
+  "seed": "numpy.random.SeedSequence(20261110).spawn(n) in the order members x row-set x C_true x grid cell listed here; PCG64"
+ },
+ "status": "frozen simulation specification; NOT RUN. Its implementation and settings must be hashed (A5.1) and the report committed before any Part B fitting (G4); a missing report leaves F5.5(b) unresolved"
+}

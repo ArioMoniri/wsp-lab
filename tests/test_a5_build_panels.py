@@ -266,6 +266,19 @@ def test_control_seed_functions():
     assert seeds["random_field"]["domain"] == "20261107:random-field:"
 
 
+def test_chart_projector_seeds_are_registered():
+    from wsp.features.response_chart import tensor_seed
+
+    chart = bp.build_control_seeds()["chart_projectors"]
+    for name in (bp.TEST_KEY, "model.language_model.layers.3.mlp.down_proj.weight"):
+        assert bp.chart_tensor_seed(name) == tensor_seed(name)
+    assert chart["random_frame"]["domain"] == "20261110:chart-random-frame:"
+    assert chart["permuted_projector"]["domain"] == "20261110:chart-permuted-projector:"
+    assert "destruction_controls" not in chart  # no longer 'not registered'
+    perm = chart["permuted_projector"]["test_vectors"][f"derangement(5, seed('{bp.TEST_KEY}'))"]
+    assert sorted(perm) == list(range(5)) and all(perm[i] != i for i in range(5))
+
+
 def test_readme_section_roundtrip():
     first = bp.merge_readme(
         "# head\n", "<!-- a5_build_panels:begin -->\nA\n<!-- a5_build_panels:end -->\n"
@@ -366,3 +379,15 @@ def test_inputs_spec_validation():
     assert "centred_noise shape" in " ".join(validate_inputs(bad, spec)["errors"])
     spec["proxy"]["allowed_sources"] = []
     assert validate_inputs(payload, spec)["status"] == "blocked"
+
+
+def test_linestop_power_spec_enumerates_every_member():
+    spec = bp.build_linestop_power_spec()
+    names = [m["name"] for m in spec["members"]]
+    assert len(names) == len(set(names)) == 13
+    assert {"C_abl", "C_rand", "C_perm", "C_chart_rand", "C_chart_perm"} <= set(names)
+    for rows in ("h1w_386", "lora_only"):
+        assert {f"{c}@{rows}" for c in ("K:R", "L:S", "K+F:F", "K+F:K")} <= set(names)
+    assert all(m["denominator_arm"] and m["control_eligibility"] for m in spec["members"])
+    assert spec["scenarios"]["C_true"] == [0.0, 0.025, 0.05, 0.15]
+    assert "NOT RUN" in spec["status"]

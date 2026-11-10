@@ -1,4 +1,5 @@
 {
+ "alternative_branch": "the ordered decision's 'alternative' branch (>= 15 resolved at ladder 0.25 and CP upper <= 0.6) is reported per scenario with its exact two-sided 95% Clopper-Pearson interval. It is a funding-only stop for the field (F5.7), not a wrong-sign rejection: under this fair-coin null (p = .5) agreement lies inside the region that rule stops funding, so its null rate is not a type-I error and the registered <= 0.07 gates (ordered go rate and each individual two-sided size) do not apply to it. No decisive negative (exclusion of useful agreement) inference is registered; it would need its own boundary-null p = .60 calibration (false-alternative rate <= 0.07) and power before outcomes (Board A freeze review edit 2)",
  "gate": "A5.3.2 / A5.5.1 step 1: development null size <= 0.07 at nominal 0.05 for the ordered Part A decision and each individual two-sided test; applied to the registered run. Sensitivity scenarios are separately labelled and are not substitutes",
  "inputs": {
   "path": "data/runs/a5/nullsize/inputs.json",
@@ -14,16 +15,309 @@
   },
   "validation_sha256": "7a9f72876e73f5ffba2852f925a8aa3ae52a5c9261d55af942b322b1e0606136"
  },
- "not_run": "A5.3.2's constant-positive-mean and cell-specific mask/noise sensitivities have no frozen scenario in scripts/a5_simulation.py and were not run",
  "observations": [
   "in every replicate of every scenario the three contrasts have identical resolved and agreement counts: under the proxy they are rescalings (a = 1, 0.25, 0.5) of one donor block, so the three individual sizes are one test, not three separate checks",
   "`unavailable_audit_fails`: no pair resolved in any of 10000 replicates (every audit evidence is 'unavailable' and counted as a failure), so its size 0 and gate value are vacuous: under that assumption Part A cannot resolve at all",
-  "`registered`: under the null the ordered decision returned 'alternative' (ladder 0.25 CP upper <= 0.6) in 1939 of 10000 replicates (0.1939); the registered <= 0.07 gate covers 'go' and the individual two-sided tests, not this route",
-  "`variance_x2`: under the null the ordered decision returned 'alternative' (ladder 0.25 CP upper <= 0.6) in 1884 of 10000 replicates (0.1884); the registered <= 0.07 gate covers 'go' and the individual two-sided tests, not this route",
+  "`registered`: under the null the ordered decision returned 'alternative' (ladder 0.25 CP upper <= 0.6) in 1939 of 10000 replicates (0.1939, exact CP 95% [0.18619, 0.20179]); this is the funding-only branch, not a wrong-sign rejection, and the registered <= 0.07 gate covers 'go' and the individual two-sided tests, not this route",
+  "`variance_x2`: under the null the ordered decision returned 'alternative' (ladder 0.25 CP upper <= 0.6) in 1884 of 10000 replicates (0.1884, exact CP 95% [0.18078, 0.19620]); this is the funding-only branch, not a wrong-sign rejection, and the registered <= 0.07 gate covers 'go' and the individual two-sided tests, not this route",
+  "`constant_positive_mean`: under the null the ordered decision returned 'alternative' (ladder 0.25 CP upper <= 0.6) in 2177 of 10000 replicates (0.2177, exact CP 95% [0.20964, 0.22592]); this is the funding-only branch, not a wrong-sign rejection, and the registered <= 0.07 gate covers 'go' and the individual two-sided tests, not this route",
+  "`cell_mask_noise`: under the null the ordered decision returned 'alternative' (ladder 0.25 CP upper <= 0.6) in 1544 of 10000 replicates (0.1544, exact CP 95% [0.14737, 0.16163]); this is the funding-only branch, not a wrong-sign rejection, and the registered <= 0.07 gate covers 'go' and the individual two-sided tests, not this route",
+  "`cell_mask_noise`: cell LoRA:0 keeps 1 of 10 slots (1 donor component); the other 9 are masked in every replicate, so 90,000 of its audit/nonfinite failures per contrast are these masks, not audit outcomes",
   "donor cell(s) LoRA:0 hold a single donor component: every simulated slot of that cell redraws the same donor block (with independent signs); the registered rule requires a non-empty cell only"
  ],
  "scenarios": {
+  "cell_mask_noise": {
+   "alternative_count": 1544,
+   "alternative_cp95": [
+    0.1473694252145275,
+    0.16163246748610455
+   ],
+   "alternative_rate": 0.1544,
+   "audit_or_nonfinite_counts": [
+    90000,
+    90000,
+    90000
+   ],
+   "conditional_coverage": [
+    0.9374508052930858,
+    0.9374508052930858,
+    0.9374508052930858
+   ],
+   "contrast_order": [
+    "rotation",
+    "ladder_0.25",
+    "ladder_0.5"
+   ],
+   "decisions": {
+    "alternative": 1544,
+    "go": 155,
+    "unresolved": 8301
+   },
+   "definition": "A5.3.2 cell-specific masks/noise (norm-dependent resolution), frozen 10 Nov 2026 for the single-donor LoRA low-tertile cell: its ten slots are cut to the registered minimum of one active slot per donor component (a non-empty cell, i.e. 1; the first slot in slot order), the other nine are masked as missing in all three contrasts with no replacement, and that cell's centred noise is doubled. Board A's freeze review names no cell-specific noise scale, so the chair's fallback (noise x2 in that cell only) is used. All other cells, means, audits and random streams are unchanged",
+   "frozen_cell_cutpoints": {
+    "LoRA": [
+     [
+      1.0580346482037204,
+      "f4b10903b8e09e24"
+     ],
+     [
+      2.2141261523655484,
+      "f8c2cf0c6b9ffa8c"
+     ]
+    ],
+    "chain": [
+     [
+      0.7725259468377004,
+      "7af5977862ec021f"
+     ],
+     [
+      1.3049782925751559,
+      "14cdaabee246493b"
+     ]
+    ]
+   },
+   "gate_le_0_07": true,
+   "input_provenance": {
+    "data/runs/a5/nullsize/inputs.json": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
+   },
+   "noise_scale": 1.0,
+   "nominal": 0.05,
+   "ordered_go_cp95": [
+    0.013170746823626678,
+    0.018117262571585996
+   ],
+   "ordered_go_rate": 0.0155,
+   "positive_rejection": [
+    0.0155,
+    0.0155,
+    0.0155
+   ],
+   "positive_rejection_cp95": [
+    [
+     0.013170746823626678,
+     0.018117262571585996
+    ],
+    [
+     0.013170746823626678,
+     0.018117262571585996
+    ],
+    [
+     0.013170746823626678,
+     0.018117262571585996
+    ]
+   ],
+   "raw_output_sha256": "b2da17e774b5bcd65a518dff21e9bdb3a5fe67d1395ab8abc95e49c8ddca1fe5",
+   "replicates": 10000,
+   "resolution_draws": 4000,
+   "scenario": "cell_mask_noise",
+   "seed": 20261107,
+   "sensitivity_parameters": {
+    "active_slots": 31,
+    "cell_overrides": [
+     {
+      "active_slots": 1,
+      "cell": [
+       "LoRA",
+       0
+      ],
+      "donor_components": 1,
+      "noise_scale": 2.0,
+      "slots": 10
+     }
+    ]
+   },
+   "size_two_sided": [
+    0.0307,
+    0.0307,
+    0.0307
+   ],
+   "size_two_sided_cp95": [
+    [
+     0.027406244125727404,
+     0.034270661929838686
+    ],
+    [
+     0.027406244125727404,
+     0.034270661929838686
+    ],
+    [
+     0.027406244125727404,
+     0.034270661929838686
+    ]
+   ],
+   "stream_order": [
+    "panels",
+    "signs",
+    "resolution"
+   ],
+   "traces_gz": "cell_mask_noise_traces.jsonl.gz",
+   "traces_jsonl_sha256": "7f27f2be5e1f53c7c4ad2645a02e0aeb8bf26ccdc16533bf53270e2c4e6882c4",
+   "unavailable_audit": "assume_pass",
+   "yield_cp95": [
+    [
+     0.9996311800853812,
+     1.0
+    ],
+    [
+     0.9996311800853812,
+     1.0
+    ],
+    [
+     0.9996311800853812,
+     1.0
+    ]
+   ],
+   "yield_rates_ge15": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "constant_positive_mean": {
+   "alternative_count": 2177,
+   "alternative_cp95": [
+    0.20964468516251944,
+    0.22592003986107562
+   ],
+   "alternative_rate": 0.2177,
+   "audit_or_nonfinite_counts": [
+    0,
+    0,
+    0
+   ],
+   "conditional_coverage": [
+    0.9393958333854181,
+    0.9393958333854181,
+    0.9393958333854181
+   ],
+   "contrast_order": [
+    "rotation",
+    "ladder_0.25",
+    "ladder_0.5"
+   ],
+   "decisions": {
+    "alternative": 2177,
+    "go": 191,
+    "unresolved": 7632
+   },
+   "definition": "A5.3.2 constant positive donor means (constant-sign family effect), frozen 10 Nov 2026: every donor mean is replaced by its family's positive constant, the mean |donor_mean| over that family's unique donor-cell representatives (the registered alternative's |m_i| scale averaged within family; payload values only); centred noise, masks, audits, selection, slots and every random stream are unchanged. Under the fair-coin null a constant positive mean is equivalent to a fixed positive truth with independent fair-coin prediction signs",
+   "frozen_cell_cutpoints": {
+    "LoRA": [
+     [
+      1.0580346482037204,
+      "f4b10903b8e09e24"
+     ],
+     [
+      2.2141261523655484,
+      "f8c2cf0c6b9ffa8c"
+     ]
+    ],
+    "chain": [
+     [
+      0.7725259468377004,
+      "7af5977862ec021f"
+     ],
+     [
+      1.3049782925751559,
+      "14cdaabee246493b"
+     ]
+    ]
+   },
+   "gate_le_0_07": true,
+   "input_provenance": {
+    "data/runs/a5/nullsize/inputs.json": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
+   },
+   "noise_scale": 1.0,
+   "nominal": 0.05,
+   "ordered_go_cp95": [
+    0.016508032459238563,
+    0.02197711113848093
+   ],
+   "ordered_go_rate": 0.0191,
+   "positive_rejection": [
+    0.0191,
+    0.0191,
+    0.0191
+   ],
+   "positive_rejection_cp95": [
+    [
+     0.016508032459238563,
+     0.02197711113848093
+    ],
+    [
+     0.016508032459238563,
+     0.02197711113848093
+    ],
+    [
+     0.016508032459238563,
+     0.02197711113848093
+    ]
+   ],
+   "raw_output_sha256": "d64ce74bd0e29d000264ac6edde8ac53ad981fdcc1c4dc20265017a76f7173d2",
+   "replicates": 10000,
+   "resolution_draws": 4000,
+   "scenario": "constant_positive_mean",
+   "seed": 20261107,
+   "sensitivity_parameters": {
+    "family_constant_means": {
+     "LoRA": 0.08095652446150779,
+     "chain": 0.02378677870606033
+    }
+   },
+   "size_two_sided": [
+    0.0406,
+    0.0406,
+    0.0406
+   ],
+   "size_two_sided_cp95": [
+    [
+     0.03681611393108189,
+     0.044654304284576785
+    ],
+    [
+     0.03681611393108189,
+     0.044654304284576785
+    ],
+    [
+     0.03681611393108189,
+     0.044654304284576785
+    ]
+   ],
+   "stream_order": [
+    "panels",
+    "signs",
+    "resolution"
+   ],
+   "traces_gz": "constant_positive_mean_traces.jsonl.gz",
+   "traces_jsonl_sha256": "2eea0bb402bdbb141e76b60a3dbc3a50af143ff729774d2ff96f7331dde93a3e",
+   "unavailable_audit": "assume_pass",
+   "yield_cp95": [
+    [
+     0.9996311800853812,
+     1.0
+    ],
+    [
+     0.9996311800853812,
+     1.0
+    ],
+    [
+     0.9996311800853812,
+     1.0
+    ]
+   ],
+   "yield_rates_ge15": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
   "registered": {
+   "alternative_count": 1939,
+   "alternative_cp95": [
+    0.1861912422385863,
+    0.20178743359457152
+   ],
+   "alternative_rate": 0.1939,
    "audit_or_nonfinite_counts": [
     0,
     0,
@@ -149,6 +443,12 @@
    ]
   },
   "unavailable_audit_fails": {
+   "alternative_count": 0,
+   "alternative_cp95": [
+    0.0,
+    0.0003688199146187625
+   ],
+   "alternative_rate": 0.0,
    "audit_or_nonfinite_counts": [
     400000,
     400000,
@@ -169,6 +469,7 @@
     "go": 0,
     "unresolved": 10000
    },
+   "definition": "'unavailable' audit evidence counted as a failure (F2, 7 Nov 2026)",
    "frozen_cell_cutpoints": {
     "LoRA": [
      [
@@ -274,6 +575,12 @@
    ]
   },
   "variance_x2": {
+   "alternative_count": 1884,
+   "alternative_cp95": [
+    0.18077750614920635,
+    0.1962043970663374
+   ],
+   "alternative_rate": 0.1884,
    "audit_or_nonfinite_counts": [
     0,
     0,
@@ -294,6 +601,7 @@
     "go": 162,
     "unresolved": 7954
    },
+   "definition": "centred donor noise doubled, means unchanged (variance inflation; F2, 7 Nov 2026)",
    "frozen_cell_cutpoints": {
     "LoRA": [
      [
@@ -401,6 +709,7 @@
  },
  "schema": "a5-nullsize-report-v1",
  "scope": "conditional on the registered edit-minus-predecessor proxy and the sign-flip DGP; not an empirical certification of the rotation null (F2). No G3 outcome was read; no field was computed",
+ "sensitivities_run": "all A5.3.2/F2 sensitivities are frozen scenarios of scripts/a5_simulation.py and were run at registered scale (10,000 replicates, 4,000 resolution draws, SeedSequence 20261107): variance_x2 and unavailable_audit_fails (8 Nov 2026), constant_positive_mean and cell_mask_noise (10 Nov 2026, Board A freeze review edit 2). Earlier raw outputs are kept unchanged",
  "sufficiency": {
   "donor_cluster_representatives_per_cell": {
    "LoRA:0": 1,

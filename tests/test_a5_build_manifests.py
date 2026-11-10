@@ -500,3 +500,18 @@ def test_selection_diff_reports_changed_ids_and_cutpoints(tmp_path):
     assert diff["ids_added"] == [reg["edit_ids"][0]] and diff["ids_removed"] == ["Zz"]
     assert diff["cutpoints_rebuilt"]["chain"] == reg["ledger"]["families"]["chain"]["cutpoints"]
     assert diff["n_distinct_components"] == len(reg["edit_ids"])
+
+
+def test_code_map_is_transitive_and_closure_reconciliation_is_dated():
+    root = bm.ROOT
+    for path in (
+        "src/wsp/predictor/baselines.py",
+        "configs/p4_predictors.json",
+        "src/wsp/zoo/arch.py",
+    ):
+        assert path in bm.CODE_FILES
+    missing = [p for p in bm.CODE_FILES if not (root / p).is_file()]
+    assert not missing, missing
+    text = "\n".join(bm.CLOSURE_RECONCILIATION)
+    assert "10 Nov 2026" in text and "187 members of 37" in text
+    assert "983bb1066d0fd006" in text and "bc6edb1e3c913a10" in text
