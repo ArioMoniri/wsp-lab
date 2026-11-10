@@ -433,3 +433,12 @@ and pre-G3 requirements stand. Part A staging (`feat/part-a-prepare`) at 19 of 4
 appeared since round 3 (arXiv 2611.09382, 2611.07610, 2611.10866, 2611.06598, 2611.08647, 2611.08070, 2611.09376, 2611.10974,
 2609.09054; the Concept Country, aiXiv, LP and scripted-baseline replications). Brief `docs/council/2026-11-11/BRIEF.md`; member
 reports in progress; chair synthesis and any amendment F8 to follow before any G3 outcome is read.
+
+**11 Nov 2026, 08:00 UTC. Council round 4 closed; amendment F8 appended.** All four members (`docs/council/2026-11-11/round4-*.md`)
+and the chair (`SYNTHESIS.md`) find that nothing published since 10 Nov touches the registered arms, Part A controls or F5.5. F8
+(end of `docs/PREREG_H1_TF.md`) adds two descriptive, decision-free panels scored only after the Part A ledger is sealed: F8-E
+external edits of the pinned base (Astra patch exact replay; LP and difference-of-means reconstructions; the loop family counts as
+one component; arXiv 2611.09382 excluded until its direction is released) and F8-F family transfer (Wanda and random gate deletions,
+TFTV rank-one, Concept-Country-style rank-one; SWEET deferred), each with frozen field/chart predictions, κ = q/|a|, a CPU pre-check
+floor from the null-size payload, and ≤ 0.9 GPU-h scoring. H5 gains a scripted-estimator arm and GPT-6.1 Sol as practical editor;
+the ≥ 30 % savings criterion stands. Board A review of F8 requested; Part A does not wait on it. Main at b627cc8; pins match.
