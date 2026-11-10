@@ -500,3 +500,6 @@ hashes and record the effective config hash; enforce cumulative caps alongside t
 C1/C2, a passing gate, qualified identities, a funded purchase and a sealed Part A ledger; H5-only items (document reconciliation,
 Sol pin, bounded timing measurements, repricing) before the pilot. The floor payload is already committed (11543d3); the verifier,
 floor code and freeze manifests are built after the Part A ledger is sealed. F9a draft in flight. Part A staging 30/40.
+
+**11 Nov 2026, 16:00 UTC.** F9a (adopting amendment for the F9 execution rules; Board A's eight F9 conditions) merged; pins match.
+Board A review of F9a requested. F8 tooling (floor script, replay identity verifier) in flight. Part A staging 31/40.
