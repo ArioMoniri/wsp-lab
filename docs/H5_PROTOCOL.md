@@ -328,3 +328,150 @@ plus ≤ 6 for best-of-N) before launch; if it does not fit, streams are dropped
 dropped; dropped streams are reported as unfunded. G5 stays shadow-only, G8 keeps its existing eligibility (G5 feasibility plus
 G3/G4 go), and every A5.7 rejection and acceptance safeguard is retained. No episode is authorised by this block.
 
+
+## 11 Nov 2026 (F8 execution spec §6, verbatim, with F8a.6 overrides)
+
+F8a.6 (A5, `docs/PREREG_H1_TF.md`) requires spec §6 to be appended verbatim, with the overrides it lists, to the H5 documents. Source: `docs/design/F8_EXECUTION_SPEC.md` §6.1–§6.6 (subsections copied unchanged below, headings included), read at main `67642ab`. The earlier "11 Nov 2026 (F9a reconciliation)" and "11 Nov 2026 (F8a.6 verbatim append)" sections are not repeated here. Nothing here authorises an episode.
+
+### 6.1 Difference-of-means inputs
+
+- **Items.** The episode's *proposal-training split* of the visible pool (200 GSM8K-train + 200 MATH-train, seed 0;
+  `docs/H5_PROTOCOL.md` "Adopted decisions" 4). Never support-validation, calibration, acceptance-slice or sealed items
+  (F5.4; FP5 "Acceptance slices").
+- **Generations.** Base completions under the pinned G5 decode settings and token cap T, thinking on, metered through the same
+  forward-request meter as the editor and charged to the arm.
+- **Labels.** loop = the harness's truncation flag is true (the completion reached T without terminating). non-loop =
+  terminated. Labels come from the evaluator's validity/truncation fields (`docs/H5_PROTOCOL.md` "Adopted decisions" 2),
+  never from correctness.
+- **Minimum counts.** ≥ 8 completions per class. Otherwise the attempt is recorded as `no_direction` (a failed, charged
+  attempt), the incumbent is retained, and nothing is substituted.
+- **Activations.** For each layer l in scope:
+  - r_l = residual stream after block l, over the last 256 generated tokens of each completion (all tokens if shorter);
+  - mean within each completion, then mean over completions (equal completion weight);
+  - u_l = normalize(mean_loop r_l − mean_nonloop r_l), in fp32.
+- **Neuron statistics.** x_{l,j} = post-gating input of `mlp.down_proj` at neuron j over the same tokens. For column j of
+  W_l = `model.layers.l.mlp.down_proj.weight`, its contribution to the u-projection at a token is p_j = (u_lᵀ W_l[:, j])·x_{l,j}.
+  The column score is s_{l,j} = E_loop[p_j] − E_nonloop[p_j].
+
+### 6.2 LP: objective, constraints, tie-breaking, edit and scale
+
+```text
+maximise    Σ_{l∈L} Σ_j s_{l,j} z_{l,j}
+subject to  Σ_j z_{l,j} ≤ B_l   for each layer l ∈ L        (column budget per layer)
+            0 ≤ z_{l,j} ≤ 1
+solver      scipy.optimize.linprog(c = −s, A_ub, b_ub, bounds=(0,1), method="highs"), version pinned
+```
+
+- **Selection, deterministic.** For each l, take columns sorted by (−s_{l,j}, j) and keep the first min(B_l, #{s_{l,j} > 0}).
+  This is an optimal vertex of the LP. Assert that its objective equals the solver's optimum within 1e-9 relative. On a
+  mismatch the attempt fails closed (`lp_mismatch`). Columns with s ≤ 0 are never selected.
+- **Edit.** For selected columns S_l: W'_l[:, j] = W_l[:, j] − α (u_lᵀ W_l[:, j]) u_l. Equivalently D_l = −α u_l u_lᵀ W_l S_l,
+  rank one per tensor. Rebuilt from the pinned base, stored as Δ_eff = bf16(W + Δ) − W (`docs/H5_DESIGN.md` "Delta capture").
+- **Scale α.** Either supplied (when the treatment supplies it), or chosen from the fixed grid (0.5, 1.0, 1.5, 2.0):
+  - each grid point is one development-support evaluation, charged;
+  - the winner is the argmax of measured development improvement, with ties within 1e-12 relative going to the smaller α;
+  - acceptance follows F5.4/FP5 (held-out support, rebuild, untouched acceptance slice if the bytes changed).
+- **Variants.**
+  - **S-loc (supplied localisation):** L, matrix, B_l and α (if supplied) are exactly what the paired LLM treatment
+    receives, logged as prior information.
+  - **S-field (field-localised):** compute the candidate D_l for every l ∈ 0..23 at budget B and α = 1. Rank layers with the
+    frozen G2 fields by r_l = a_l^{mmlu} − q_l^{mmlu}: the first-order predicted gain of the `mmlu_gold_log_prob` field
+    (higher is better) minus its own curvature magnitude, both in nats per item. Take the top |L| by (−r_l, l). This ranking
+    rule is a design default, chosen because MMLU is the only G2 objective tied to the reasoning task. The amendment may
+    replace it before any episode, never after. |L| and B are supplied counts, logged as prior information.
+
+### 6.3 Treatments, pairing and access flags
+
+Each connected episode cluster k = (goal formulation × seed × budget) runs every funded arm from the same start state (the
+base), the same proposal/validation/acceptance split and the same sealed panel, with frozen seeds. Critic and no-critic are
+paired **within each stream**: same proposals, seeds and budget; the critic only schedules or abstains (A5.7, F5.4).
+
+| Treatment | Arm (stream) | Information supplied (prior information) | python / forward / hidden / feedback |
+|---|---|---|---|
+| T0 discovery (blog protocol) | **Astra** (registered primary, reproduction; protocol unchanged) | goal + weights only | as pinned in the G5 manifest for LLM editors; identical across critic/no-critic |
+| T0 | **Sol** (GPT-6.1 Sol, medium) | same prompt, tool schema and budgets as Astra | same as Astra |
+| T0 | **Haiku** (cheap control, retained) | same as Astra | same as Astra |
+| T0 | **S-field** | \|L\|, B (counts only) + G2 field artefact | 1 / 1 / 1 / 1 if α is tuned, else 1 / 1 / 1 / 0 |
+| T0 | **Random best-of-N** (retained; FP5, nested N = 1/8/32, matched to each LLM editor's realised proposal blocks) | support/norm of the paired editor proposal | 1 / 0 / 0 / 1 (development-winner selection) |
+| T0 | **Sham reload** (retained) | — | 0 / 0 / 0 / 0 |
+| T1 supplied localisation | **Sol + loc** | layers 15, 19; `mlp.down_proj`; 64 columns per layer; source = published Astra edit. Exact names only if §4 PASS; otherwise the blog prose (`docs/H5_RESEARCH.md` line 10), labelled an inference | as Sol |
+| T1 | **S-loc** | identical to Sol + loc | 1 / 1 / 1 / 1 (α tuned; α is not given in the prose) |
+| T1 | **Random best-of-N** on the supplied support | same support | 1 / 0 / 0 / 1 |
+
+- **Astra's reproduction treatment stays unchanged.** Astra does not run in T1 unless separately funded.
+- **When access differs, the comparison is labelled.** If the LLM editors' pinned `hidden_state_access` is 0, every
+  editor-versus-scripted comparison is labelled "scripted arm has hidden-state access". An editor advantage over a
+  better-informed script remains reportable. An editor deficit is not attributed to the editor.
+- **The G2 field is setup access.** It is logged with its measured G2 cost (fields 1.62 GPU-h,
+  `g2_manifest_final.json` → `caps.fields.used_hours`) as amortised preparation, and is not charged per episode as forward
+  access.
+
+### 6.4 Sol pin
+
+Recorded in the G5 manifest before the first episode, hashed and logged per episode:
+- provider;
+- model identifier exactly as the provider reports it;
+- version or snapshot string;
+- reasoning effort = "medium";
+- decode settings;
+- system prompt sha256;
+- tool schema sha256;
+- the provider's per-call reported model field.
+
+If the provider offers no immutable snapshot id, the pin is the alias plus the pin date, and any per-call model field that
+differs from the pinned one ends the Sol arm. The arm is reported as stopped and not replaced (`docs/H5_PROTOCOL.md` 11 Nov
+"Second editor"). Voluntary early stops are logged with their reason and the requests used.
+
+### 6.5 Per-stream savings and claims
+
+For each stream x ∈ {Astra, Sol, Haiku, S-field, S-loc, Sol + loc, random best-of-N}, compute A5.7's contract on that stream's
+own critic/no-critic pairs:
+- S_x = 1 − Σ_e E_c,e / Σ_e E_0,e, with episode-cluster bootstrap-t;
+- the ≥ 30 % point estimate and paired lower bound;
+- the score noninferiority lower bound ≥ −1 point;
+- the missed-qualifying-proposal upper bound ≤ 5 %;
+- net GPU saving > 0;
+- prospective joint power ≥ 0.80.
+
+Further rules:
+- **Zero denominators:** a zero or nonfinite denominator (e.g. S-loc with α supplied makes no search evaluations) makes S_x
+  **undefined**, never a success. Absolute real-evaluation counts and GPU-h are reported for every stream.
+- **Primary stream:** the A5.7 primary comparison stays **Astra with versus without the critic**. Other streams are
+  reported. A stream's result is only called powered if its own prospective power simulation met the 0.80 bound. There is no
+  retrospective best-stream selection: every funded stream is reported.
+- **Editor-advantage claims** (F8.7; Board A condition 6) need, at matched treatment (T0 or T1) and labelled access: an
+  episode-paired final-score difference with lower bound > 0 points against **both** the scripted stream and random
+  best-of-N, with total charged cost (GPU-h, editor tokens and provider charge, reported separately) not higher.
+
+**Retained unchanged:** G5 shadow-only status (production rejection disabled), G8 eligibility (G5 feasibility plus G3/G4
+go), and all A5.7 rejection and acceptance safeguards.
+
+### 6.6 Price
+
+The H5 sealed scoring tier (4096 tokens) and the diagnostic-forward latency are **unmeasured**. `docs/H5_PROTOCOL.md`
+"Staged plan" says they are measured before Stage 1. So every H5 item here is **unpriced**. The only measured reference rates
+are the fast tier at 12.4 min/entry and the engine trial at 6.1 min/entry (`docs/RESULTS.md` "P2 — Clean fast-tier timing").
+These are not the H5 tier.
+
+The streams added here multiply the arm count. The pilot must be repriced inside the existing G5 caps (≤ 10 GPU-h + ≤ 6 for
+best-of-N; `docs/council/2026-11-10/SYNTHESIS.md` §3) before launch. If the repriced plan exceeds the caps, streams are
+dropped in this fixed order until it fits:
+1. S-field;
+2. T1 (Sol + loc together with S-loc and its random best-of-N, so T1 stays matched);
+3. Sol T0.
+
+Astra, Haiku, sham and random best-of-N are never dropped. Dropped streams are reported as unfunded.
+
+**F8a.6 overrides of the spec §6 text above.** Quoted verbatim from F8a.6 (`docs/PREREG_H1_TF.md`); where an override and the spec text differ, the override governs.
+
+| F8a.6 override | replaces spec text |
+|---|---|
+| (a) "makes no LLM editor or provider calls; it makes metered diagnostic model forwards (base generations and hidden activations, spec §6.1) through the same forward-request meter, charged to the arm; S-field additionally receives the frozen G2 field as setup access" | the earlier H5 wording "run by a pinned script with no model calls … and nothing else the editor does not" (not spec §6 text; §6.1, §6.3 already describe the metered forwards and the G2 field as setup access) |
+| (a) "The actual access flags of every arm (spec §6.3 table, plus F9.4's `field_localisation_access`) are pinned in the G5 manifest before the pilot." | the fixed python / forward / hidden / feedback values of the §6.3 table, which are defaults until pinned and gain the `field_localisation_access` flag |
+| (a) "Comparisons at unequal access are labelled and descriptive; they do not meet the matched-information requirement for an editor-superiority claim. A T0 script given \|L\| and B is conditional on that prior, not unrestricted discovery." | §6.3 "An editor advantage over a better-informed script remains reportable" and the §6.5 editor-advantage condition, as to matched information |
+| (d) "The α-selection metric is FP5's development-winner objective (mean paired improvement on development support relative to the actual incumbent under A5.7's feasibility/safety predicates), ties within 1e-12 relative to the smaller α" | §6.2 "the winner is the argmax of measured development improvement, with ties within 1e-12 relative going to the smaller α" |
+| (d) "the proposal-training, support-validation, acceptance-slice, calibration and sealed splits (spec §6.1; F5.4; FP5; A5.7) and the actual-incumbent comparisons are frozen in the G5 manifest before calibration" | §6.1 and §6.3 split statements, which are now frozen in the G5 manifest before calibration |
+| (e) "The F9.4 paired set (scripted with field localisation, scripted on the LLM's layers, LLM with and without the field ranking, shuffled-localisation control) uses the same estimator and access pinning; the LLM is credited with localisation value only under F9.4's paired rule." | adds the F9.4 streams to §6.5's per-stream list; localisation value is credited only under F9.4's paired rule |
+| (f) "the F9.4 paired set as one unit (registered last), then spec §6.6's order (S-field; T1 as one unit; Sol T0). Astra, Haiku, sham and random best-of-N are never dropped; dropped streams are reported as unfunded." | §6.6 "dropped in this fixed order until it fits: 1. S-field; 2. T1 …; 3. Sol T0": the F9.4 paired set goes first, then the §6.6 order |
+
+**F9a precedence.** Where F9a.5–F9a.6 and the "11 Nov 2026 (F9a reconciliation)" section supersede a spec §6 sentence, F9a governs. One found: the §6.6 sentence "streams are dropped in this fixed order until it fits: 1. S-field; 2. T1 …; 3. Sol T0" is superseded as to order by F9a.5(g) ("F8a.6(f)'s drop order gains, first, `lora_shadow` as one unit, then the F9.4 paired set, then spec §6.6's order"); no other §6 sentence is superseded.
