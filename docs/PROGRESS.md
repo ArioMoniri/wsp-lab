@@ -387,3 +387,9 @@ first measurement fails the approximation rule. Per A5.8.1's own fallback the ba
 amendment F6 (exact predecessor gradients for the ten chain picks on WikiText and MMLU, ≈ 20 rows, new 2.2 GPU-h cap; HellaSwag and
 refusal tokens masked for those rows; a Part B sensitivity arm excluding unvalidated chain rows) is being drafted for Board A.
 G2 run-1 manifest and audit file copied with hashes to `docs/prereg/a5_manifests/g2/`. The H0 half of the 4B pairing is running.
+
+**11 Nov 2026, 01:30 UTC.** A5 amendment F6 merged (918e656; pins verified): the registered predecessor audit is recorded as run and
+infeasible at its cap with its single row failing the rule; the base approximation is not used for chains; the ten chain picks get exact
+predecessor gradients for WikiText and MMLU through the new `chain_exact` stage (20 rows, 2.2 GPU-h cap), HellaSwag and refusal tokens
+masked for those rows, a Part B sensitivity arm excludes unvalidated chain rows. Board A reviews F6 before the rows run. The H0 half of
+the 4B pairing was relaunched with the H100 job's revision and device id.
