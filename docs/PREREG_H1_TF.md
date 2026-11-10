@@ -2008,3 +2008,135 @@ into a copy of the package from parent `8f81ab0`. Only `code_hashes.json` and `R
 were copied into the package. `code_hashes.json` still pins 64 files and differs from `5be50667…30c25` only in `git_sha`
 and the `scripts/g2_fields.py` pin. The last four rows of the table above record this re-pin. This commit changes only
 `docs/PREREG_H1_TF.md`, the two package files, `scripts/g2_fields.py` and `tests/test_g2_fields.py`.
+
+#### A5 amendment F6 (11 Nov 2026, after the G2 audit measurement; before any G3 outcome)
+
+This block is appended; earlier text is not rewritten. It records chair decisions F6.1–F6.6, taken after the G2
+predecessor audit's one measured row and before any G3 outcome. It was written without GPU work, and G2 data were read
+only. It starts no compute. It is not Board A's acceptance: Board A reviews F6 before any exact-gradient row runs (F6.6).
+
+*Facts (read from the files named here).* G2 attempt 2 resumed the audit stage alone (`--resume --stages audit`,
+15:46:07Z–16:05:59Z on 10 Nov 2026) under code map `d3b11bab…a6e5c7` (re-pin (xii)), after hash verification of the
+completed fields, projectors and probe cache. Its manifest is `data/runs/g2/g2_manifest.json`, sha256
+`636a967466cfcc3c728c6828f145f2474e04e658625701ab6f505ff00809c022`. The committed copy
+`docs/prereg/a5_manifests/g2/g2_manifest_run1.json` has the same sha256, which is the hash listed in
+`docs/prereg/a5_manifests/g2/README.md`. In the ascending order of the A5.8.1 note's addendum, the audit started with
+`refusal_margin_harmful`, the cheapest objective (field-based one-row estimate 262.5 s, within the 360 s guard). It ran
+exactly one registered row: pick `00f8111cbad8218f`, predecessor `072b2a3ba72e828c`, successor `34ee195e55227908`,
+neither through an alias. Exact contraction −0.021217 nats, approximation −0.014085 (base contraction −0.014070 plus
+cross term −1.45e−5), relative error **0.336**, above the 0.1 rule. The row took 394.0 s wall inside the row computation
+(`wall_seconds`), and its resource record is 400.8 s wall and GPU seconds, including the restore of the model to base.
+Peak allocated memory was 2.77 GB, and the audit used 0.17 GPU-h (`caps.audit.used_hours` 0.1715). The measured
+first-row check then projected 17.92 GPU-h with the driver's formula (19 remaining rows at the measured time, and the
+other four objectives at their field-based estimates × 1.5268) against the registered 1.0 GPU-h audit cap. The run stopped
+`incomplete` (`audit_gpu_hours_estimate`, "audit:refusal_margin_harmful (after row 1)"). At the measured row time, the
+registered 100 rows (5 objectives × 20 predecessors) need about 11 GPU-h (100 × 394–401 s = 10.9–11.1 h), eleven times
+the cap. The row is recorded in the manifest (`audit.objectives.refusal_margin_harmful.rows[0]` and
+`resources_summary.audit_rows`). **No per-objective audit file exists:** the driver writes
+`data/runs/g2/predecessor_audit/<objective>.json` only when an objective completes, so
+`data/runs/g2/predecessor_audit/refusal_margin_harmful.json` was never written. The G2 README's mention of "the audit
+file" therefore has no separate file behind it; the manifest copy is the audit record. Fields, projectors and probe cache
+are complete and valid (1.45 GPU-h of the 2.0 GPU-h fields-and-cache cap).
+
+**F6.1 — the registered audit is recorded as run and infeasible at its cap.** The A5.8.1 audit (twenty predecessors per
+objective, five objectives) ran under its registered rules and stopped at its registered 1.0 GPU-h cap after one measured
+row (facts above). Its single measured row fails the rule (0.336 > 0.1). A5.8.1 makes the approximation conditional on
+the audit ("otherwise the base approximation is not used for chains"). By that fallback the base-plus-cross-term
+approximation g(W) ≈ g₀ + G E A is **not used for any chain row**. The audit is not resumed and not re-run. A5.5.1's
+validity row ("≥16/20 predecessor passes per objective") is answered by this disposition and F6.2, which register the
+exact-predecessor gradients and their cost as A5.5.1 step 1 provides. The approximation is not silently disabled: it
+is withdrawn here, by amendment, for chains.
+
+**F6.2 — exact predecessor gradients for the ten registered chain picks.** For the ten chain picks of `selection.json`,
+the Part A field tokens are computed at the actual predecessor state by exact gradient for two objectives only:
+`wikitext_nll` (the mechanism endpoint) and `mmlu_gold_log_prob` (descriptive). That is 10 predecessors × 2 objectives =
+**20 exact-gradient rows**. The new registered cap is **2.2 GPU-h** (measured 394 s per row × 20 = 2.19 h) under stop
+and reprice. K-FAC factors are not computed at predecessors: the q_t magnitude term of these rows is taken from the base
+factors and flagged `base-factor`. The HellaSwag and both refusal field tokens of these ten picks are masked (presence 0).
+The thirty LoRA picks are unaffected, because their predecessor is the base and their tokens are the base field's.
+*Noted, not changed.* (i) Two of the ten picks, `014f8a9ec78db2be` and `0559051354691a70`, are root chain edits whose
+actual predecessor is the base. For them the exact gradient at the predecessor is the base gradient, recomputed by the
+same exact-gradient path. Their four rows are still among the twenty. (ii) Two predecessor states load through alias
+holders, `bc6edb1e3c913a10` via `4b84f551adaf52ba` and `983bb1066d0fd006` via `345a7db356689c69`. The alias reuse
+proofs remain the G3 staging blockers they were (F3(i)). (iii) The audit row's GPU-seconds record (400.8 s) × 20 is
+2.23 h, just above the cap. The measured checks of the stage below decide whether the twenty rows fit; an overrun stops
+the stage and is repriced, and the cap is not raised.
+
+**F6.3 — Part A sign predictor.** Part A's registered sign predictor stays ⟨g_wikitext, D − R⟩. For chain picks, g is the
+exact WikiText gradient at the actual predecessor (F6.2). For LoRA picks it is the base field's gradient, as before.
+Resolution, intervals, yield and the decision function are those of A5.3 and A5.5.1.
+
+**F6.4 — Part B.** Chain rows other than the ten picks keep their base-anchored field tokens, flagged
+`approximation unvalidated`. A registered sensitivity arm repeats the primary contrast with those rows excluded. It is
+reported next to the primary contrast and does not replace it.
+
+**F6.5 — the audit's cost constant.** The audit's cost-estimate constant, a row at 0.5 × the objective's field wall time,
+underestimated the measured row. The measured/estimated ratio is **1.53** (400.8 s measured / 262.5 s estimated; the
+driver's recorded `calibration_ratio` is 1.5268). This is recorded. The constant is not used to size F6.2, whose cap
+comes from the measured row.
+
+**F6.6 — unchanged.** No threshold, panel, selection or decision rule changes. That includes the panels and their
+hashes, the forty picks and their predecessors, the field configuration and base fields, the rotation, ladder and
+resolution rules, the intervals, the A5.5.1 decision order and every funding threshold. Board A reviews F6 before any
+exact-gradient row runs.
+
+*Implementation (driver only; `scripts/g2_fields.py`, stage `chain_exact`).* The stage is requested explicitly. It is not
+in the default stages. For each registered chain pick, sorted by edit id, it sets the model once to the actual
+predecessor: base plus the predecessor's cumulative delta, loaded through the alias holder when needed, or the base for a
+root pick. The selection's predecessor must equal the lineage parent in `components.jsonl`. With the model there, it
+computes the exact WikiText and then MMLU gradient. It uses the audit's gradient-only path (`exact_gradient`: same scorer,
+item order, fp32 CPU accumulation, division by the total weight; no Fisher pass, no K-FAC). The gradient is taken on the
+tensors of the pick's realised increment D = stored(pick) − stored(predecessor). These are the support of D, of its
+rotation R and of the ladder edits (A5.3); D_t = 0 elsewhere. Each streamed panel must reproduce the verified panel's
+content hash. Before the first row, the loaded model's state hash must equal the base fields' recorded state hash. Each
+row is written as a FieldArtifact-like directory `data/runs/g2/chain_exact/<pick_id>/<objective>/`, with
+`manifest.json` (identity and content hashes) and `tensors.pt` (gradients, no factors). It is written through a
+temporary directory and renamed, and it loads with `FieldArtifact.load`. Its identity records anchor `actual
+predecessor`, q_t `base-factor`, the objective and panel identities, the pick, predecessor and alias identities, the base
+state hash, the predecessor-state, increment and displacement hashes, the support and the code hashes. Each manifest row
+also records file hashes, the exact contraction ⟨g, D⟩, the gradient norm, wall and GPU seconds, state-load seconds and
+peak CUDA memory. *Cap:* `--max-chain-exact-gpu-hours`, default 2.2; a real run refuses any higher value. After the
+first row of each objective, a measured check projects used hours + each objective's remaining rows × its measured mean
+row time. An objective not yet measured uses its field-based row estimate × the largest measured/field-based ratio. The
+check must stay ≤ the cap, or the run stops `incomplete` (`chain_exact_gpu_hours_estimate`). Before every later row, the
+same projection is the per-row guard (`chain_exact_gpu_hours_row_guard`). The audit's 0.1 × cap pre-objective guard is
+not part of this stage. Computed rows stay on record and the budget is never multiplied. *Resume:* `--resume --stages
+chain_exact` keeps completed rows, verified by hash and never re-run. A row directory left by an interrupted attempt
+without a manifest row is moved aside (`<objective>.stale-attempt<N>`), never deleted, and recomputed. A row whose
+gradient fails is recorded with its error, masked (presence 0) and not retried. A completed stage is verified and not
+re-run. *Manifest:* block `chain_exact` (schema `g2-chain-exact-v1`: status, objectives, masked objectives, picks and
+`picks_record`, per-pick `masks` for all five objectives, `policy`, `order`, `rows`, `cost_basis`, `cost_checks`,
+`stale_dirs`, resources and the summary file `chain_exact/chain_exact.json` with its sha256), `caps.chain_exact` and
+`config.chain_exact`. The first chain_exact run writes `audit_disposition` (F6.1): the audit's status, rows on record,
+relative errors, the stop record and `approximation_used_for_chains: false`. From then on, a complete G2 needs fields,
+projectors, probe cache and chain_exact, and the audit stage is refused. A real run refuses the audit stage in any case.
+Regression tests in `tests/test_g2_fields.py`, on the toy (three chain picks with predecessors and one root pick, 8
+rows), cover: the stage's rows, artefacts, identities and masks for the configured picks; equality of the stage's
+gradient with `collect_field` at the predecessor; pick resolution, including the registered selection (10 picks, 2 with
+base predecessors, 2 via alias); the stop after the measured first-row check; the per-row guard stop; resume without
+re-running completed rows, with stale directories kept aside and a tampered completed row refused; a failed row masked and
+not retried; F6 completion semantics and the audit refusal; the cost projection; and the CLI cap guard.
+*Two accounting repairs in the same driver.* (1) The fields-and-cache budget clock ran for the whole attempt. G2 attempt
+2 ran only the audit stage, yet its `caps.fields.used_hours` reads 1.620 h: 1.448 h of fields and probe cache plus the
+0.172 h audit stage. Only attempts that run the fields or probe stage now record that budget, so chain_exact time is
+charged to `caps.chain_exact` alone. The 1.620 h on record is not rewritten; the 1.448 h of fields and probe cache is the
+measured quantity. (2) On resume, the attempt-history entry shared the `caps` object with the new attempt. Attempt 1's
+history entry in the attempt-2 manifest therefore shows attempt 2's caps (`audit.used_hours` 0.1715, although attempt 1
+ran no audit row). History entries are now copies. Both repairs have tests (`caps.fields` unchanged by a chain_exact-only
+attempt; attempt 1's chain_exact hours kept in its history entry).
+
+*A5.1.2 re-pin (xiii) (11 Nov 2026, F6).* `scripts/a5_build_manifests.py --pin-worktree` was re-run into a copy of the
+package from parent `10ac9c5`. Every regenerated or copied package file was byte for byte identical except
+`code_hashes.json` and `README.md`, and only those two were copied into the package. `code_hashes.json` (schema
+`a5-code-hashes-v2`, `git_sha` = parent `10ac9c5`) still pins 64 files. It differs from `d3b11bab…a6e5c7` only in
+`git_sha` and the `scripts/g2_fields.py` pin. It is now the current code map, and `d3b11bab…a6e5c7` is a historical
+identity (the code map of G2 attempt 2). These rows supersede the corresponding current-hash entries of A5.1.2's tables.
+This commit changes only `docs/PREREG_H1_TF.md`, the two package files, `scripts/g2_fields.py` and
+`tests/test_g2_fields.py`.
+
+| Path | SHA256 | Identity |
+|---|---|---|
+| `docs/prereg/a5_manifests/README.md` | `2fab2a1cd6c95301812f8760d36dc02f9cfef24a6eab50f93b35b16c3d013629` | changed 2026-11-11 (F6 re-pin (xiii)); old `0454be009511b5761991e7ef27bd351ee1f25f772ca0fcc7d2d01b19997549f5` (re-pin (xii)) |
+| `docs/prereg/a5_manifests/code_hashes.json` | `6dd2615f9e8ea12544716f1cc585adf902c5f751fa1ed6fee0eb4494cd28d346` | changed 2026-11-11 (F6 re-pin (xiii)); old `d3b11bab664e0822ec63b4f059703d6418ff09847c49681fdd7f710617e6a5c7` (re-pin (xii); G2 attempt 2) |
+| `scripts/g2_fields.py` | `6f14a2ac4c0dd9b2dc6b2ba2e022ec6cbe98a75e840dd414804d1febf3fb9f93` | changed 2026-11-11 (F6: stage `chain_exact`); old `cb1835181ae0d8202edcaa72586e38dcc3a8822ce6127f104e5c123a86838723` (re-pin (xii); G2 attempt 2) |
+| `tests/test_g2_fields.py` | `67be8c51375fef4a3536fc1b4ed54843bbf83ab222c49a43941ff0966949a42d` | changed 2026-11-11 (F6; not a code-map member); old `f7be4d4aeb83fe0741a7890005480376514aa2394234f9239894980397a8adaa` |
