@@ -1,6 +1,7 @@
 """F5.3 scale diagnostic: build 20 outcome-blind Gaussian edits of Qwen3.5-4B as dense bf16 zoo entries.
 
-Design (chair defaults, F5.3 confirms them at the A5 freeze; nothing here is fitted to an outcome):
+Design (the registered F5.3/FP4 text governs; aligned 10 Nov 2026, "A5 note (10 Nov 2026): 4B builder aligned
+to F5.3/FP4" in docs/PREREG_H1_TF.md; nothing here is fitted to an outcome):
 
 * support: the writer tensors of the 0.8B ``random_dir`` family at the same relative depths. The 0.8B
   layer list [8, 12, 15, 17, 19, 21] of 24 scales to round(l * 32 / 24) = [11, 16, 20, 23, 25, 28] of 32
@@ -9,17 +10,24 @@ Design (chair defaults, F5.3 confirms them at the A5 freeze; nothing here is fit
   (``mlp_out``, ``attn_out``): ``self_attn.o_proj`` on the full-attention layers (11, 23) and
   ``linear_attn.out_proj`` on the GatedDeltaNet layers, exactly as ``random_dir`` does at 0.8B.
   ``--support literal`` keeps only modules literally named ``o_proj`` (8 tensors instead of 12).
-* kernel: for every support tensor W, an independent Gaussian direction Z (CPU generator, seed derived
-  from the entry seed and the tensor's (layer, module path)), scaled to ||delta||_F = r * ||W||_F with
-  r = 1e-3; the stored delta is the bf16 **effective** delta bf16(bf16(W + delta) - W) (DECISIONS D1).
+* kernel: for every support tensor W, an independent iid standard Gaussian direction Z (numpy PCG64,
+  float64, seed derived per tensor from the draw seed, below), scaled to ||delta||_F = rho * ||W||_F with
+  rho = 0.005 (F5.3; per touched tensor, so the pooled intended radius over the support is also rho); the
+  stored delta is the bf16 **effective** delta bf16(bf16(W + delta) - W) (DECISIONS D1).
   bf16 rounding changes the edit: the *realised* delta is what the evaluator applies,
   bf16(W + stored) - W, and its radius ||delta_real||_F / ||W||_F per tensor and pooled, the fraction
   of changed elements, the cosine to the intended Gaussian and the fraction of elements where the
   applied weight differs from bf16(W + delta) are recorded in every edit.json and manifest row.
-* seeds 20261110 + i for i in 0..19; ids follow ``EditDescriptor.id`` (family ``gaussian``, not in the
-  shared schema's family list on purpose: adding it would change ``source_hash`` for every TF-v1 run).
-* A3 pairing set: the first 5 entries in sha256 rank of ``20261110:scale4b:pair:<id>``, fixed in the
-  manifest header before any outcome exists.
+* seeds (F5.3): draw i in 0..19 has seed = int.from_bytes(sha256("20261110:4b-gaussian:" + str(i))[:8],
+  "big") mod 2^63 (``draw_seed``). Per tensor (``tensor_seed``): int.from_bytes(sha256(f"{draw seed}:{layer}:
+  {module path}")[:8], "big") mod 2^63, where (layer, module path) is the namespace-free key from
+  ``wsp.zoo.arch.split_key``; Z = numpy.random.Generator(PCG64(tensor seed)).standard_normal(shape, float64).
+  A tensor's draw therefore depends only on the draw index and its own key, never on the other support
+  tensors or the checkpoint's key namespace. ids follow ``EditDescriptor.id`` (family ``gaussian``, not in
+  the shared schema's family list on purpose: adding it would change ``source_hash`` for every TF-v1 run).
+* FP4 paired qualification panel: draw indices 0, 4, 8, 12, 16 (``PAIRED_DRAWS``), fixed in the manifest
+  header before any outcome exists; the one registered expansion is draw indices 1, 5, 9, 13, 17
+  (``EXPANSION_DRAWS``), recorded in the header and used only under FP4's fail-closed rule.
 
 Usage:
     python scripts/scale4b_build_edits.py --dry-run            # plan only; writes nothing
@@ -41,6 +49,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
 
 REPO = Path(__file__).resolve().parents[1]
@@ -53,12 +62,15 @@ BASE_MODEL = "Qwen/Qwen3.5-4B"
 # Config revision checked against the checkpoint headers (tests/fixtures/arch/qwen3.5-4b.json).
 DEFAULT_REVISION = "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
 FAMILY = "gaussian"
-KERNEL = "gaussian_relative_frobenius_per_tensor_bf16_effective_v1"
-RADIUS = 1e-3
-SEED0 = 20261110
+KERNEL = "gaussian_relative_frobenius_per_tensor_pcg64_bf16_effective_v2"
+RADIUS = 0.005  # F5.3 planned chair default rho (the 1e-3 default is withdrawn)
+SEED_DOMAIN = (
+    "20261110:4b-gaussian:"  # F5.3: seed = sha256(domain + str(draw index))[:8] big-endian mod 2^63
+)
+GENERATOR = "numpy.random.PCG64"
 N_EDITS = 20
-N_PAIRED = 5
-PAIR_DOMAIN = "20261110:scale4b:pair:"
+PAIRED_DRAWS = (0, 4, 8, 12, 16)  # FP4 panel
+EXPANSION_DRAWS = (1, 5, 9, 13, 17)  # FP4 one-time fail-closed expansion
 SOURCE_LAYERS = (8, 12, 15, 17, 19, 21)  # configs/zoo_qwen3.5-0.8b.yaml random_dir.layers
 SOURCE_DEPTH = 24
 TARGET_DEPTH = 32
@@ -97,13 +109,30 @@ def support_keys(state_keys, layers, mode="role"):
     return sorted(keys)
 
 
+def _sha_seed(text: str) -> int:
+    """First eight sha256 bytes of the UTF-8 text, big-endian, modulo 2^63 (F5.3)."""
+    return int.from_bytes(hashlib.sha256(text.encode()).digest()[:8], "big") % 2**63
+
+
+def draw_seed(index: int) -> int:
+    """F5.3 draw seed for draw index 0-19: sha256('20261110:4b-gaussian:' + str(index))."""
+    if not isinstance(index, int) or isinstance(index, bool) or index < 0:
+        raise ValueError("draw index must be a nonnegative int")
+    return _sha_seed(SEED_DOMAIN + str(index))
+
+
 def tensor_seed(seed: int, key: str) -> int:
-    """Per-tensor generator seed from the entry seed and the namespace-free (layer, path)."""
+    """Per-tensor PCG64 seed from the draw seed and the namespace-free (layer, module path)."""
     parsed = _arch.split_key(key)
     if parsed is None:
         raise ValueError(f"{key} is not a layer weight")
-    tag = f"{seed}:{parsed[0]}:{parsed[1]}".encode()
-    return int.from_bytes(hashlib.sha256(tag).digest()[:8], "big") >> 1
+    return _sha_seed(f"{seed}:{parsed[0]}:{parsed[1]}")
+
+
+def gaussian_direction(seed: int, key: str, shape) -> torch.Tensor:
+    """Z for one tensor: iid standard normal, float64, PCG64 seeded by ``tensor_seed``."""
+    rng = np.random.Generator(np.random.PCG64(tensor_seed(seed, key)))
+    return torch.from_numpy(rng.standard_normal(tuple(shape), dtype=np.float64))
 
 
 def entry_params(index: int, layers, support_mode: str) -> dict[str, Any]:
@@ -111,6 +140,8 @@ def entry_params(index: int, layers, support_mode: str) -> dict[str, Any]:
         "kernel": KERNEL,
         "radius": RADIUS,
         "radius_scope": "per_tensor_frobenius",
+        "seed_rule": f"sha256('{SEED_DOMAIN}' + str(index))[:8] big-endian mod 2^63",
+        "generator": GENERATOR,
         "layers": list(layers),
         "tensors": list(TENSOR_SPECS),
         "support_mode": support_mode,
@@ -127,18 +158,31 @@ def entry_id(params, seed, revision, base_model=BASE_MODEL) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
-def paired_ids(ids, k=N_PAIRED):
-    """Outcome-blind A3 pairing set: first k ids in sha256 rank of the pairing domain."""
-    return sorted(ids, key=lambda i: hashlib.sha256((PAIR_DOMAIN + i).encode()).hexdigest())[:k]
+def ids_at(ids, draws):
+    """ids of the given draw indices (``ids`` in draw-index order); every index must exist."""
+    if any(d >= len(ids) for d in draws):
+        raise ValueError(f"draw indices {list(draws)} need at least {max(draws) + 1} draws")
+    return [ids[d] for d in draws]
 
 
-def plan(revision, n=N_EDITS, seed0=SEED0, support_mode="role"):
+def paired_ids(ids, draws=PAIRED_DRAWS):
+    """FP4 paired qualification panel: the ids of draw indices 0, 4, 8, 12, 16."""
+    return ids_at(ids, draws)
+
+
+def plan(revision, n=N_EDITS, support_mode="role"):
     layers = scale_layers()
     rows = []
     for i in range(n):
         params = entry_params(i, layers, support_mode)
+        seed = draw_seed(i)
         rows.append(
-            {"id": entry_id(params, seed0 + i, revision), "seed": seed0 + i, "params": params}
+            {
+                "id": entry_id(params, seed, revision),
+                "draw_index": i,
+                "seed": seed,
+                "params": params,
+            }
         )
     return layers, rows
 
@@ -170,9 +214,8 @@ def gaussian_delta(base: dict[str, torch.Tensor], seed: int, radius: float = RAD
         w_norm = _norm(w)
         if not math.isfinite(w_norm) or w_norm == 0:
             raise ValueError(f"{key}: base norm must be finite and nonzero")
-        gen = torch.Generator(device="cpu").manual_seed(tensor_seed(seed, key))
-        z = torch.randn(original.shape, generator=gen, dtype=torch.float32)
-        intended = z * (radius * w_norm / _norm(z))
+        z = gaussian_direction(seed, key, original.shape)
+        intended = (z * (radius * w_norm / _norm(z))).to(torch.float32)
         target = (w + intended).to(DTYPE)
         d = (target.float() - w).to(DTYPE)
         applied = (w + d.float()).to(DTYPE)  # wsp.eval.run.apply_delta: fp32 add, cast to bf16
@@ -236,14 +279,16 @@ def script_sha256() -> str:
     return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 
-def spec_hash(revision, n, seed0, support_mode, keys) -> str:
+def spec_hash(revision, n, support_mode, keys) -> str:
     spec = {
         "base_model": BASE_MODEL,
         "base_revision": revision,
         "kernel": KERNEL,
         "radius": RADIUS,
         "n": n,
-        "seed0": seed0,
+        "seed_domain": SEED_DOMAIN,
+        "generator": GENERATOR,
+        "paired_draws": list(PAIRED_DRAWS),
         "layers": scale_layers(),
         "tensors": list(TENSOR_SPECS),
         "support_mode": support_mode,
@@ -252,7 +297,7 @@ def spec_hash(revision, n, seed0, support_mode, keys) -> str:
     return hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()
 
 
-def header_row(revision, n, seed0, support_mode, keys, ids, sha, dry_run=False):
+def header_row(revision, n, support_mode, keys, ids, sha, dry_run=False):
     return {
         "type": "header",
         "dry_run": dry_run,
@@ -262,7 +307,12 @@ def header_row(revision, n, seed0, support_mode, keys, ids, sha, dry_run=False):
         "family": FAMILY,
         "kernel": KERNEL,
         "radius": RADIUS,
-        "seed": seed0,
+        "radius_scope": "per_tensor_frobenius",
+        "seed_domain": SEED_DOMAIN,
+        "seed_rule": f"sha256('{SEED_DOMAIN}' + str(draw index))[:8] big-endian mod 2^63",
+        "tensor_seed_rule": "sha256(f'{draw seed}:{layer}:{module path}')[:8] big-endian mod 2^63",
+        "generator": GENERATOR,
+        "seeds": [draw_seed(i) for i in range(n)],
         "n": n,
         "source_layers": list(SOURCE_LAYERS),
         "source_depth": SOURCE_DEPTH,
@@ -271,9 +321,12 @@ def header_row(revision, n, seed0, support_mode, keys, ids, sha, dry_run=False):
         "tensors": list(TENSOR_SPECS),
         "support_mode": support_mode,
         "support": list(keys),
+        "paired_draw_indices": list(PAIRED_DRAWS),
         "paired_ids": paired_ids(ids),
-        "pairing_rule": f"first {N_PAIRED} ids by sha256('{PAIR_DOMAIN}' + id)",
-        "config_hash": spec_hash(revision, n, seed0, support_mode, keys),
+        "expansion_draw_indices": list(EXPANSION_DRAWS),
+        "expansion_ids": ids_at(ids, EXPANSION_DRAWS),
+        "pairing_rule": "FP4: draw indices 0, 4, 8, 12, 16 (expansion once: 1, 5, 9, 13, 17)",
+        "config_hash": spec_hash(revision, n, support_mode, keys),
         "git_sha": sha,
         "script_sha256": script_sha256(),
         "dtype": "bfloat16",
@@ -322,6 +375,7 @@ def make_entry(base_state, keys, row, revision, sha, cfg_hash):
         "id": row["id"],
         "family": FAMILY,
         "parent_id": None,
+        "draw_index": row["draw_index"],
         "seed": row["seed"],
         "config_hash": cfg_hash,
         "git_sha": sha,
@@ -362,7 +416,6 @@ def build(
     out_dir: Path,
     revision: str,
     n=N_EDITS,
-    seed0=SEED0,
     support_mode="role",
     dry_run=False,
     sha=None,
@@ -373,14 +426,16 @@ def build(
     if len(revision) != 40:
         raise ValueError("pin the base model to a full 40-character commit")
     sha = sha or git_sha()
-    layers, planned = plan(revision, n, seed0, support_mode)
+    layers, planned = plan(revision, n, support_mode)
     keys = support_keys(base_state, layers, support_mode)
     if expected_support is not None and keys != list(expected_support):
         raise ValueError("support differs from the checkpoint-verified fixture")
-    header = header_row(revision, n, seed0, support_mode, keys, [r["id"] for r in planned], sha)
+    header = header_row(revision, n, support_mode, keys, [r["id"] for r in planned], sha)
     if dry_run:
         header["dry_run"] = True
-        return header, [{"id": r["id"], "seed": r["seed"]} for r in planned]
+        return header, [
+            {"id": r["id"], "draw_index": r["draw_index"], "seed": r["seed"]} for r in planned
+        ]
     out_dir = Path(out_dir)
     manifest = out_dir / "manifest.jsonl"
     if manifest.exists():
@@ -397,7 +452,7 @@ def build(
         line["paired"] = row["id"] in header["paired_ids"]
         rows.append(line)
         log(
-            f"entry {row['id']} seed={row['seed']} realised_radius={line['realised_radius']:.6g} "
+            f"entry {row['id']} draw={row['draw_index']} seed={row['seed']} realised_radius={line['realised_radius']:.6g} "
             f"changed={line['changed_fraction']:.3f}"
         )
     tmp = manifest.with_suffix(".tmp")
@@ -415,10 +470,11 @@ def verify(base_state, zoo_dir: Path, ids=None):
     out = {}
     for i in ids or sorted(rows):
         row = rows[i]
-        params = entry_params(
-            row["seed"] - header["seed"], header["layers"], header["support_mode"]
-        )
-        plan_row = {"id": i, "seed": row["seed"], "params": params}
+        index = row["draw_index"]
+        if row["seed"] != draw_seed(index):
+            raise ValueError(f"{i}: seed does not follow from draw index {index}")
+        params = entry_params(index, header["layers"], header["support_mode"])
+        plan_row = {"id": i, "draw_index": index, "seed": row["seed"], "params": params}
         if entry_id(params, row["seed"], header["base_revision"]) != i:
             raise ValueError(f"{i}: id does not follow from the recorded design")
         _, payload, _ = make_entry(
@@ -459,7 +515,7 @@ def main(argv=None) -> int:
     if args.dry_run:
         # Key names from the checkpoint-verified fixture: no weights, no network, no files written.
         names = {k: None for k in fixture_keys()}
-        header, rows = build(names, args.out, args.revision, args.n, SEED0, args.support, True)
+        header, rows = build(names, args.out, args.revision, args.n, args.support, True)
         print(json.dumps({"header": header, "entries": rows}, indent=2))
         return 0
     state = load_base_state(args.revision)
@@ -469,7 +525,7 @@ def main(argv=None) -> int:
         return 0 if all(result.values()) else 1
     expected = support_keys(fixture_keys(), scale_layers(), args.support)
     header, rows = build(
-        state, args.out, args.revision, args.n, SEED0, args.support, expected_support=expected
+        state, args.out, args.revision, args.n, args.support, expected_support=expected
     )
     print(json.dumps({"config_hash": header["config_hash"], "paired_ids": header["paired_ids"]}))
     return 0

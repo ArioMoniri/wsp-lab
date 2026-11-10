@@ -107,19 +107,19 @@
   },
   "scripts/lambda_job_scale4b.sh": {
    "role": "F5.3/FP4 4B Lambda H100 job",
-   "sha256": "2cd984f19ae78447aed0f79757486a18963c96379acf94e37f2f93ea32cc88f8"
+   "sha256": "45a59075ecbc986706a660839e0e4ab25e13c712b2c6072288512d98624b41a2"
   },
   "scripts/scale4b_build_edits.py": {
    "role": "F5.3 4B Gaussian edit builder (support, radius, bf16 diagnostics)",
-   "sha256": "55669ed20f1f502cd3567b35d5bb444b0994de8a5ab0dae54db1b81df7f9fa0d"
+   "sha256": "e520377a5ee7244b5d787e51ff9718a4bb4cb3a798f5bf743374612bd8114ea1"
   },
   "scripts/scale4b_h0_pair.sh": {
    "role": "FP4 4B paired H0 scoring",
-   "sha256": "317da12dac9324afb12becb2dfdc56d4573c220ea019477c4be5090cac45fda1"
+   "sha256": "0bfe4819ae1eae4584f2aa0ba2227813023810cb46b78075fada5b0276446be5"
   },
   "scripts/scale4b_report.py": {
    "role": "F5.3/FP4 4B report",
-   "sha256": "27b15f45ada44f61855c51e1914a2f3262c2f8a89647100122122d55718f1440"
+   "sha256": "90279c5ebfe8e6a67713cc19d0f7057ba9ffcb11e8c5f0306f3f91a2662f4a5e"
   },
   "src/wsp/__init__.py": {
    "role": "package marker (imported)",
@@ -270,7 +270,7 @@
    "sha256": "85d27f488d489934e703bc77336614ef7882120f39c0de6ec346264a99ac5dcc"
   }
  },
- "git_sha": "b7f10a1522c8fa193fdcad8162e04764851770d2",
+ "git_sha": "43283ec7cdcf73d6ea83539e8746b2bf4bdd2f21",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

@@ -332,6 +332,15 @@ now also records the fitting libraries lightgbm 4.7.0, scikit-learn 1.9.1 and sc
 amendment commit changes only `docs/PREREG_H1_TF.md`, these two package files, `src/wsp/features/response_field.py`,
 `scripts/g2_fields.py`, `scripts/a5_build_manifests.py`, `tests/test_response_field.py` and `tests/test_g2_fields.py`
 (the last two are not code-map members). The table rows below carry the new literal hashes with old/new identity.
+(ix) **Re-pin for the 4B builder alignment (10 Nov 2026, before any 4B scoring; "A5 note (10 Nov 2026): 4B builder
+aligned to F5.3/FP4" at the end of this document).** `scripts/a5_build_manifests.py --pin-worktree` was re-run against
+the closed snapshot, into a copy of the package, from parent `43283ec`. It reproduced `components.jsonl`,
+`selection.json`, `references.json` and `text_groups.json` byte for byte; only `code_hashes.json` and `README.md`
+changed, and only those two were copied into the package. `code_hashes.json` (schema `a5-code-hashes-v2`, sha256
+`ce07f3b5464457ff96356e58d57279de93cf5392a52bf31d7ce1c8068cc6f8af`, `git_sha` = parent `43283ec`) still pins 64 files;
+it differs from `701ae646…130744` only in `git_sha` and the four changed 4B scripts, `scripts/scale4b_build_edits.py`,
+`scripts/scale4b_report.py`, `scripts/lambda_job_scale4b.sh` and `scripts/scale4b_h0_pair.sh`. `701ae646…130744`
+remains a historical identity. The table rows below carry the new literal hashes with old/new identity.
 
 *Identities.* Historical: 7 Nov procedural-freeze code map `2b93ec10…900a95` and 8 Nov evidence code map
 `05a2d244a0d15bb8ef70cb62e89611c783447737b724f755ad98ed9b08ffeabe`. This freeze's code map is `708c6fabd8fcbcfe4d0d8f4d38ed19eddae2797ffa8c5a89411d75053abfe2c9`. Content
@@ -365,8 +374,8 @@ baseline `docs/PROGRESS.md` difference (`e3c577f` → `6f3d571`) predates this c
 
 | Path | SHA256 | Identity |
 |---|---|---|
-| `docs/prereg/a5_manifests/README.md` | `a6adac9a57858dc43c1bed7da27afab6ef9bda5b5713b961950e2e2968d3d373` | changed 2026-11-10 (A5.8.1 amendment re-pin); old `46996d88e854362314fff1df4e6cfe56aa0399ae308f43b8e88638e3c0890018` (freeze pass), earlier `3bc5132b717a35b4cde20fa723a9a9d68f9e4f04c01dbcd603eb884295d8a5bc` |
-| `docs/prereg/a5_manifests/code_hashes.json` | `701ae646eff3a00713140b8100ac28c83a81973c7f296909f9ce18984a130744` | changed 2026-11-10 (A5.8.1 amendment re-pin); old `708c6fabd8fcbcfe4d0d8f4d38ed19eddae2797ffa8c5a89411d75053abfe2c9` (freeze pass), earlier `05a2d244a0d15bb8ef70cb62e89611c783447737b724f755ad98ed9b08ffeabe` |
+| `docs/prereg/a5_manifests/README.md` | `225f0caeff23bc7f5bf58115f63f4f08294729484979d8912c947e6662766120` | changed 2026-11-10 (4B builder alignment re-pin); old `a6adac9a57858dc43c1bed7da27afab6ef9bda5b5713b961950e2e2968d3d373` (A5.8.1 amendment re-pin), before that `46996d88e854362314fff1df4e6cfe56aa0399ae308f43b8e88638e3c0890018` (freeze pass), earlier `3bc5132b717a35b4cde20fa723a9a9d68f9e4f04c01dbcd603eb884295d8a5bc` |
+| `docs/prereg/a5_manifests/code_hashes.json` | `ce07f3b5464457ff96356e58d57279de93cf5392a52bf31d7ce1c8068cc6f8af` | changed 2026-11-10 (4B builder alignment re-pin); old `701ae646eff3a00713140b8100ac28c83a81973c7f296909f9ce18984a130744` (A5.8.1 amendment re-pin), before that `708c6fabd8fcbcfe4d0d8f4d38ed19eddae2797ffa8c5a89411d75053abfe2c9` (freeze pass), earlier `05a2d244a0d15bb8ef70cb62e89611c783447737b724f755ad98ed9b08ffeabe` |
 | `docs/prereg/a5_manifests/components.jsonl` | `6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec` | unchanged |
 | `docs/prereg/a5_manifests/control_seeds.json` | `d357ed51031877f817baeb4204cf93b38c66fdfcfd95bd41803d93d5160c12d5` | changed 2026-11-10; old `8e2cbae160e8e8448b60545b0f79c0680f1fdd9ccf005f30d1c04907fe4bd28b` |
 | `docs/prereg/a5_manifests/linestop_power_spec.json` | `7bfff5203133bc3481ac34808454297ce9fa090e2dd9ff11fd742af7e214cae9` | new (2026-11-10) |
@@ -428,10 +437,10 @@ baseline `docs/PROGRESS.md` difference (`e3c577f` → `6f3d571`) predates this c
 | `scripts/a5_snapshot.py` | `a0e68302e1256ab55594e12223677d527bc4fa830451194d61e28aebaecaed72` | changed 2026-11-10; old `a7518b416ca21259cef584db28492298de8aa2146ee3c58e0ea165664e6653b3` |
 | `scripts/g2_fields.py` | `4856f9938633b94138fabc3a592962ea93b2e274045aa71cc30bedf64b5e52f9` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes changed in that commit (clamp statistics), old blob at `b7f10a1` `c1366df579a02d060ec9081fe0e77e6ff51e3cb92826ffd6259add8769b37e39` |
 | `scripts/g2_fields.sh` | `13b761dac0a0682ed7f12f521ef0e1cfd31eeb613489aac68155f08b66f4c133` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
-| `scripts/lambda_job_scale4b.sh` | `2cd984f19ae78447aed0f79757486a18963c96379acf94e37f2f93ea32cc88f8` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
-| `scripts/scale4b_build_edits.py` | `55669ed20f1f502cd3567b35d5bb444b0994de8a5ab0dae54db1b81df7f9fa0d` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
-| `scripts/scale4b_h0_pair.sh` | `317da12dac9324afb12becb2dfdc56d4573c220ea019477c4be5090cac45fda1` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
-| `scripts/scale4b_report.py` | `27b15f45ada44f61855c51e1914a2f3262c2f8a89647100122122d55718f1440` | newly pinned 2026-11-10 (A5.8.1 amendment); bytes unchanged since `b7f10a1` |
+| `scripts/lambda_job_scale4b.sh` | `45a59075ecbc986706a660839e0e4ab25e13c712b2c6072288512d98624b41a2` | changed 2026-11-10 (4B builder alignment to F5.3/FP4); old `2cd984f19ae78447aed0f79757486a18963c96379acf94e37f2f93ea32cc88f8` (newly pinned at the A5.8.1 amendment; bytes unchanged since `b7f10a1`) |
+| `scripts/scale4b_build_edits.py` | `e520377a5ee7244b5d787e51ff9718a4bb4cb3a798f5bf743374612bd8114ea1` | changed 2026-11-10 (4B builder alignment to F5.3/FP4); old `55669ed20f1f502cd3567b35d5bb444b0994de8a5ab0dae54db1b81df7f9fa0d` (newly pinned at the A5.8.1 amendment; bytes unchanged since `b7f10a1`) |
+| `scripts/scale4b_h0_pair.sh` | `0bfe4819ae1eae4584f2aa0ba2227813023810cb46b78075fada5b0276446be5` | changed 2026-11-10 (4B builder alignment to F5.3/FP4); old `317da12dac9324afb12becb2dfdc56d4573c220ea019477c4be5090cac45fda1` (newly pinned at the A5.8.1 amendment; bytes unchanged since `b7f10a1`) |
+| `scripts/scale4b_report.py` | `90279c5ebfe8e6a67713cc19d0f7057ba9ffcb11e8c5f0306f3f91a2662f4a5e` | changed 2026-11-10 (4B builder alignment to F5.3/FP4); old `27b15f45ada44f61855c51e1914a2f3262c2f8a89647100122122d55718f1440` (newly pinned at the A5.8.1 amendment; bytes unchanged since `b7f10a1`) |
 | `src/wsp/__init__.py` | `69d834204c661b1dd2cecf98720126c72e3bade7e235eeb82541dcc983e9cff9` | unchanged |
 | `src/wsp/eval/__init__.py` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | unchanged |
 | `src/wsp/eval/batch.py` | `122b0fbac62e3b94d7a5c356bd2f45692a18f96ea1a7811c45763b0863e789c6` | unchanged |
@@ -1775,3 +1784,31 @@ intended Gaussian, per tensor and pooled.
 `RADIUS = 1e-3`. The builder seeds edits as 20261110 + i, while F5.3 and FP4 state a SHA256-of-`20261110:4b-gaussian:`
 rule. Its A3 pairing set is the first five by sha256 rank, while FP4 states draw indices 0, 4, 8, 12 and 16. These
 differences are flagged for the chair and Board A before any 4B scoring.
+
+#### A5 note (10 Nov 2026): 4B builder aligned to F5.3/FP4
+
+*Ruling (chair, 10 Nov 2026, before any 4B scoring).* The registered text governs the code. The three discrepancies
+noted at the end of "A5.8.1 amendment (10 Nov 2026, before audit)" are resolved in favour of F5.3 and FP4; the chair's
+1e-3 radius default is withdrawn. No 4B edit has been built or scored, so no outcome informed this note.
+*Changes* (`scripts/scale4b_build_edits.py`, kernel `gaussian_relative_frobenius_per_tensor_pcg64_bf16_effective_v2`):
+(1) **Radius.** ρ = 0.005 of each touched tensor's Frobenius norm, so the pooled intended radius over the support is
+also ρ. The realised bf16 edit is recorded as before: realised radius, changed-element fraction and cosine to the
+intended Gaussian, per tensor and pooled. On a CPU toy tensor (not the 4B model), ρ = 0.005 gives realised radius
+about 0.0052, changed fraction about 0.68 and cosine about 0.95.
+(2) **Seeds.** Draw i (0–19) has seed int.from_bytes(sha256(`20261110:4b-gaussian:` + str(i))[:8], big-endian) mod
+2^63, as F5.3 states. Draw 0's seed is 3916065655914066609; draw 2's unsigned value 14737898880838895577 reduces to
+5514526843984119769. Per tensor, the seed is the same rule applied to `<draw seed>:<layer>:<module path>`, with the
+namespace-free key from `wsp.zoo.arch.split_key`. Z is `numpy.random.Generator(PCG64(seed)).standard_normal` in float64
+over the tensor shape. A tensor's draw depends only on the draw index and its own key.
+(3) **Pairing.** The FP4 panel is draw indices 0, 4, 8, 12 and 16. The single expansion, 1, 5, 9, 13 and 17, is
+recorded in the manifest header and used only under FP4's fail-closed rule. The sha256-rank pairing set is withdrawn.
+*FP4 fields also aligned.* The two same-device repeats are labelled `q4b-r1` and `q4b-r2`. Each runs in a fresh
+process with a fresh model load and its own immutable run id (`YYYYMMDD-HHMMSS-<8 hex>`); the earlier `r1` repeat is
+withdrawn. On the H100 the panel (base + 5) and both repeats run before the remaining 15 edits. The Lambda cap
+defaults to 2 GPU-h and cannot be set higher (it was 3.0). Each device writes `device_identity.json` (GPU model,
+driver, CUDA, torch). `scripts/scale4b_report.py` checks, per run: the device id; dtype bf16; batch size; the effective
+config hash recomputed by `wsp.eval.batch.effective_config_hash`; model repo and revision; window order; and per-window
+token-id hashes equal to `text_groups.json` or to a separate pin given before scoring. The FP4 1e-4-nat repeat
+discrepancy is added beside the bitwise A2.4/A3 check. The report does not compute FP4's half-width or reliability
+bounds, and states that it alone never establishes qualification.
+*Re-pin.* A5.1.2 (ix).
