@@ -242,3 +242,44 @@ Sol, cheap control), the scripted estimator (both variants) and random best-of-N
 matched information and charged cost. The ≥ 30 % paired realised-savings criterion (A5.7, F5.4) concerns the critic and is
 unchanged, as are the noninferiority, missed-winner, net-cost and power conditions. Any editor-advantage claim must beat both
 the scripted and the random best-of-N baselines at matched information and charged cost.
+
+## 11 Nov 2026 (council round 5) amendment — localisation flag, shadow LoRA sub-stream, re-anchoring (before any G3 outcome)
+
+Source: [synthesis](council/2026-11-11/SYNTHESIS-r5.md) Q4, Q5 and §4; PREREG A5 amendment F9.4, F9.5, F9.9. Everything above stays; this
+section adds interface and logging requirements inside the G5 caps and changes no registered arm, cap or criterion.
+
+**Fifth access flag.** The per-episode access record gains `field_localisation_access` beside the Python, forward, hidden-state and
+feedback flags. When 1, the editor receives the field's per-tensor ranking: gradient saliency g⊙W, the candidate-specific g⊙D, and
+cached down-projection input norms (‖Dx‖). The ranking comes from the frozen G2 artefacts and the pinned base. The flag is logged per episode, hashed with the ranking payload, and counted as prior information (the 11 Nov
+prior-information rule), never as discovery.
+
+**Verbal-localisation logging order.** Before the editor is shown the field ranking, its own verbal site ranking (tensors or layers it
+says it would edit, in order, with its stated reason) is requested and written to the episode log with a timestamp and hash. Only
+then is the field ranking released. The order is enforced by the harness, not by the prompt. Verbal localisation is a logged treatment; it is not
+used to gate anything. Attribution patching (clean/corrupted pairs, intermediate activations, patch sites) would be a new metered
+artefact and is not part of this design.
+
+**Shuffled-localisation control.** The control supplies a field ranking permuted across tensors with matched ranking length,
+matched information content and the same number of opportunities, so that any benefit of real field localisation is separated from
+the benefit of receiving some ranking.
+
+**Test-time LoRA shadow sub-stream (G5).** An additional `lora_shadow` sub-stream, not a G8 arm. The harness trains one isolated
+base-relative LoRA per frozen development query (32 queries) with next-token loss on the query context; no generation and no sealed
+item text. Per-episode record: the four registered access flags (python 1, forward 1, hidden-state 0, feedback 1) plus
+`backward_enabled` and `gradient_exposed_to_editor`; optimiser, step count, rank and target-module allowlists; training-data
+provenance. The critic forecasts **collateral** change on the registered objectives
+relative to the actual incumbent. It cannot forecast on-query gain and is not asked to. Each forecast is appended to the F9.1
+forecast-before-modify log before scoring, and all 32 adapters are scored on TF-v1 under the Part A default configuration.
+Forecast wall time is measured, because the only measured contraction (about 94 s CPU per donor) is slower than a TF-v1 entry and a
+factored ⟨g, BA⟩ route is expected to be cheaper but is unmeasured.
+
+**Accounting.** Training cost is charged in both arms (gated and ungated). Only verification evaluations count as savings. Savings
+are computed only from evaluating adapters whose forecast is above the floor, with a missed-harm upper bound ≤ 5 % (A5.7). Shadow
+replay may reject an uneconomic gate; it cannot demonstrate realised savings, which stay with A5.7's prospective paired G8 design.
+Price: about 0.55 GPU-h scoring plus training capped at 0.5 GPU-h (F9.5).
+
+**Re-anchoring after an accepted edit (F9.9).** When an H5 edit is accepted, the incumbent changes, so the base-anchored field no
+longer describes the receiver. The harness recomputes the incumbent's exact gradient (measured about 43 s per row in the F6 audit,
+`docs/reviews/council/board-a-g2-2026-11-11.md`) and flags the factors `base-factor` in the forecast log; no learned transition is
+registered. Forecast rows record the anchor type (`base-exact`, `incumbent-exact`, `base-factor`) so that predecessor-displacement
+effects are visible rather than modelled.

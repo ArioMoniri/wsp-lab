@@ -127,3 +127,42 @@ Sol, cheap control), the scripted estimator (both variants) and random best-of-N
 matched information and charged cost. The ≥ 30 % paired realised-savings criterion (A5.7, F5.4) concerns the critic and is
 unchanged, as are the noninferiority, missed-winner, net-cost and power conditions. Any editor-advantage claim must beat both
 the scripted and the random best-of-N baselines at matched information and charged cost.
+
+## 11 Nov 2026 (council round 5) amendment — paired localisation episodes, shadow LoRA stream, re-anchoring (before any G3 outcome)
+
+Source: [synthesis](council/2026-11-11/SYNTHESIS-r5.md) Q4, Q5; PREREG A5 amendment F9.4, F9.5, F9.9; the harness requirements are in
+the [H5_DESIGN section of the same date](H5_DESIGN.md). Registered arms, caps, the A5.7 criterion and F5.5 are unchanged.
+
+**Fifth access flag and logging order.** `field_localisation_access` is logged with the Python, forward, hidden-state and feedback
+flags. In every localisation episode the editor's own verbal site ranking is requested and logged **before** it sees the field's
+per-tensor ranking (g⊙W, g⊙D, ‖Dx‖ from the frozen G2 artefacts). Verbal localisation is a treatment flag, compared against the
+field's ranking; it never gates acceptance.
+
+**Paired episode design (inside the G5 ≤ 10 and ≤ 6 caps).** Four paired variants share the development/held-out split, the
+rebuild-from-pinned-base and rollback rules, the forward-request meter and the charged-cost accounting of every other arm:
+
+1. scripted estimator with field localisation (the field's layers and matrices);
+2. scripted estimator on the LLM's chosen layers (taken from the logged verbal ranking);
+3. LLM editor with the field ranking, and the same editor without it;
+4. a shuffled-localisation control: a permuted field ranking at matched ranking length, information and opportunity.
+
+The LLM is credited with localisation value only if the LLM-localised variant beats the field-localised variant on held-out gain per
+real evaluation, paired, under A5.7 accounting. Beating the shuffled control shows only that real field localisation carries
+information. Results are reported per proposal stream and conditional on the information supplied; an editor-advantage claim still
+has to beat the scripted and random best-of-N baselines at matched information and charged cost. Attribution patching is not run.
+
+**Test-time LoRA shadow sub-stream.** Scope: 32 frozen development queries, one isolated base-relative LoRA each (next-token loss on
+the query context; no generation; no sealed item text). Access flags: python 1, forward 1, hidden-state 0, feedback 1, plus
+`backward_enabled`, `gradient_exposed_to_editor`, and the optimiser, steps, rank and module allowlists and synthesis provenance.
+The critic forecasts collateral change on the registered objectives only; each forecast is logged under F9.1 before scoring; all 32
+are scored on TF-v1. Read-outs: E₀ and sign agreement; savings from evaluating only above-floor forecasts, with a missed-harm upper
+bound ≤ 5 % (A5.7); forecast wall time against evaluation time. Training cost is paid in both arms and only verification
+evaluations count as savings. The sub-stream may reject an uneconomic gate; it cannot show realised savings, which remain the
+prospective paired G8 claim. It is not a G8 arm.
+
+**Re-anchoring after an accepted edit.** After any accepted H5 edit the incumbent's exact gradient is recomputed (about 43 s per row,
+F6 audit) and the factors are flagged `base-factor`; the forecast log records the anchor type on every row. No learned transition
+from the base field to the incumbent is registered.
+
+**Generation endpoint.** No H5 math-editor claim is made from teacher-forced results; it waits for the qualified F8-E MATH-500
+generation endpoint (F9.6). H5's success criterion is unchanged.

@@ -180,3 +180,112 @@ the chair read both on 11 Nov).
 activations. TFTV's edit is s̄ vᵀ with v built from W's singular vectors and the expected input, rank one and norm-matched.
 Deletion Tuning tests no Qwen3.5 backbone. The aiXiv 93 % figure is conditional on Astra's layers, budget and scale. Fetch-time
 check, 11 Nov: arXiv lists IWIBench (2611.08647) as submitted 5 Nov, not 4 Nov as in the brief.
+
+## 11 Nov 2026 (council round 5)
+
+Source: round-5 [brief](council/2026-11-11/BRIEF-r5.md) (five user threads) and the [chair synthesis](council/2026-11-11/SYNTHESIS-r5.md) §1;
+the decisions are PREREG A5 amendment F9. Earlier notes stay archival. Headline: nothing found in the sweep changes Part A, F5.5 or the
+H5 success criterion; the round adds descriptive extensions with no decision authority (F9.7): a forecast-before-modify log, a pruning
+ladder, H5 field-localisation and test-time-LoRA shadow items, and a generation endpoint for F8-E. Items marked **(fetched)** were
+read in full from arXiv on 11 Nov for this record and are in `paper/refs/verified.yaml`; every other item is the brief's reading of the
+cited page and has not been re-fetched for this record. "Not itemised" means the synthesis draws no programme consequence from it.
+
+**Thread 1: edits that improve mathematics.** Reading: every small-model math gain so far is a termination or robustness repair
+(loops, overthinking, distractor reliance), generation-side and invisible to teacher-forced endpoints.
+
+1. [ThinkEdit](https://arxiv.org/abs/2503.22048): weight edits against overly short thinking. Takeaway: not itemised.
+2. [CoT Vectors](https://arxiv.org/abs/2510.00579): reasoning mechanisms transferred as vectors. Takeaway: not itemised.
+3. [Weight-of-Thought](https://arxiv.org/abs/2504.10646). Takeaway: not itemised.
+4. [Das replication](https://dev.to/krishanu_das/before-trusting-a-weight-edit-i-measured-the-bug-it-fixes-401f) (dev.to, 7 Nov; blog,
+   not peer-reviewed): the published Astra edit makes thinking finish about five times as often at an 8,192-token budget (10/30 vs
+   2/30), yet thinking-off on the unedited model (16/30) beats the edited model with thinking on (9/30); McNemar p = 0.021 raw, 0.107
+   after his pre-committed Holm correction. Takeaway: completion must be measured separately from correctness; this motivates the
+   F8-E generation endpoint (F9.6; MATH-500, three arms, 8,192-token cap, unpriced until a timed pilot) and paper sentence 5.
+5. Carried from round 4, not repeated: Astra / WSP-Scope [2611.09382](https://arxiv.org/abs/2611.09382), SWEET
+   [2611.10974](https://arxiv.org/abs/2611.10974).
+
+**Thread 2: models editing their own weights while working.** Reading: runtime self-editing in 2026 is gradient-based and
+adapter-isolated, governed by a policy that decides whether to edit; none of these systems predicts the edit's effect first.
+
+6. [Agentic-TTT](https://arxiv.org/abs/2610.12002) (Lu, Kankanhalli; 8 Oct) **(fetched)**: a learned policy decides when to invoke
+   test-time training, which method, or whether to reuse a stored LoRA skill; each invocation yields an isolated LoRA over the frozen
+   backbone; the evaluation stream was deliberately enriched for TTT benefit. Takeaway: isolated adapters are root edits of the base,
+   so the field is exact for them; the critic is tested on them only in shadow (F9.5, 32 queries; paper sentence 3).
+7. [QueST](https://arxiv.org/abs/2605.13369) (Song et al.) **(fetched)**: query-conditioned test-time self-training, a LoRA per query,
+   gains on seven math benchmarks and GPQA-Diamond. Takeaway: same as item 6; evaluated after application, never forecast.
+8. [Search over Self-Edit Strategies](https://arxiv.org/abs/2601.14532): model-generated SEAL templates; the archive variant does not
+   beat the best human template. Takeaway: not itemised.
+9. [RSI-Env](https://arxiv.org/abs/2611.01736) (1 Nov): persistent environment for model-harness self-improvement from Qwen3.8-27B;
+   gains across capabilities are hard to preserve. Takeaway: not itemised.
+10. Harness-side or taxonomy, not itemised: [Recursa 2611.04035](https://arxiv.org/abs/2611.04035),
+    [Evo2 2610.13025](https://arxiv.org/abs/2610.13025), [Exo 2611.00463](https://arxiv.org/abs/2611.00463),
+    [MetaRSI 2609.06396](https://arxiv.org/abs/2609.06396), [SpecRSI 2610.16491](https://arxiv.org/abs/2610.16491),
+    [RSI-Opt 2610.32026](https://arxiv.org/abs/2610.32026), [Harness RSI survey 2610.18813](https://arxiv.org/abs/2610.18813),
+    [RSI taxonomy 2610.14625](https://arxiv.org/abs/2610.14625),
+    [test-time self-improvement survey 2609.01679](https://arxiv.org/abs/2609.01679). Round-4 WeightLoop
+    ([2611.07319](https://arxiv.org/abs/2611.07319)) is carried, not repeated.
+
+**Thread 3: models reporting which parts they use.** Reading: a model cannot verbally report which weights it uses; probes and
+attribution patching can. "Which part am I using" is the per-tensor breakdown of the forecast, not a self-report.
+
+11. [OWMI](https://arxiv.org/abs/2608.20569) (Ferrara, Aug) **(fetched)**: eight open-weight models asked whether their computation was
+    altered sit at chance (AUROC about 0.5007 over 78,000 measurements), while a linear probe on the same activations recovers the
+    intervention at 75 % to 95.8 % accuracy. Takeaway: the strongest new evidence for supplying measured localisation (fifth access
+    flag, F9.4) and logging verbal localisation as a treatment; paper sentence 2.
+12. [Mechanistic study of LM introspection](https://arxiv.org/abs/2609.35108): gate and router heads decide whether and where a change
+    is reported. Takeaway: not itemised.
+13. [Mechanisms of Introspective Awareness](https://arxiv.org/abs/2603.21396); [Identifying Introspection From the
+    Inside](https://arxiv.org/abs/2610.07186) (COLM 2026); [Training LMs to Explain Their Own
+    Computations](https://arxiv.org/abs/2511.08579); [Introspect-Bench](https://arxiv.org/abs/2603.20276); [Multi-component causal
+    tracing](https://arxiv.org/abs/2606.03085); [self-interpretation adapters](https://arxiv.org/abs/2602.10352). Takeaway: not itemised.
+    Attribution patching would be a new metered artefact and is not registered (F9.4).
+14. Round-4 reading audit [2611.08070](https://arxiv.org/abs/2611.08070): zero-shot weight reading is local arithmetic plus priors.
+    Carried, not repeated.
+
+**Thread 4: fewer parameters, same performance.** Reading: the active frontier is which weights to delete, decided by gradients,
+router sensitivity or causal importance, the same object as the field term a = ⟨g, D⟩ for D = −W⊙M.
+
+15. [Revisiting LLM pruning for test-time scaling](https://arxiv.org/abs/2604.25098) (Monjur et al.) **(fetched)**: unstructured
+    Magnitude and Wanda pruning of s1.1-7B and Qwen3-8B at 10 % and 20 % sparsity matches or at times beats the unpruned model;
+    structured pruning degrades. Takeaway: the 10 and 20 % rungs of the F9-P ladder sit where performance is reported to hold;
+    paper sentence 4. No SparseGPT in this paper.
+16. [OBC-Prune](https://arxiv.org/abs/2609.17890) (Nguyen et al.) **(fetched)**: outcome-based calibration weights rescale the
+    calibration activations of SparseGPT, Wanda and ALPS on R1-Distill-Qwen 1.5B–14B at 40–50 % sparsity. Takeaway: the 50 % rung
+    sits where this line works on calibrated methods; a rollout-anchored field (a gradient for p(end-of-thinking)) would be new,
+    unpriced G2 work, recorded as a later hypothesis.
+17. [Deletion Tuning](https://arxiv.org/abs/2611.10866) (round 4): under 0.05 % zeroed matches full fine-tuning. Carried; gate
+    deletion is F8-F.
+18. Not itemised: [Router sensitivity 2608.07890](https://arxiv.org/abs/2608.07890),
+    [Pruning laws 2504.04342](https://arxiv.org/abs/2504.04342) (collapse past about 70–80 %),
+    [LLMs can compress LLMs 2601.09694](https://arxiv.org/abs/2601.09694),
+    [multi-objective structured pruning 2607.22583](https://arxiv.org/abs/2607.22583),
+    [pruning vs training from scratch 2606.14150](https://arxiv.org/abs/2606.14150),
+    [GradPruner 2601.19503](https://arxiv.org/abs/2601.19503), and ModHiFi (NeurIPS 2025; no arXiv id in the brief).
+
+**Thread 5: predicting the effect of a modification before making it.** Reading: published modification world models are first-order
+forecasts fixed before the run, which work, and learned surrogates over low-dimensional modification spaces, which work while they keep
+learning; none predicts benchmark change from an arbitrary dense weight delta on a held-out split.
+
+19. [Predict Before You Modify / IDM](https://arxiv.org/abs/2610.13991) (Xie et al.) **(fetched)**: an editable program that invokes a
+    frozen LLM forecasts task-level outcomes of a proposed agent modification before evaluation, with online bias calibration.
+    Takeaway: agent programs, not weights; its swap rule (accept a recalibration only if held-out loss falls and conditional MSE does
+    not rise) is adopted for the F9.2 readout; paper sentence 1.
+20. [PPF, predictive pruning](https://arxiv.org/abs/2508.02381) (Ma et al.) **(fetched)**: a predictor evaluates a structured pruning
+    policy in 1.52 s against 1 min 38 s; built from 775 collected mask samples. Takeaway: a learned surrogate over a structured space;
+    the F9-P ranking panel asks the same question with zero fitted parameters; paper sentence 1.
+21. [Forecasting how RLHF responds to reward-model edits](https://arxiv.org/abs/2611.03244) (Wang et al., 2 Nov) **(fetched)**: a
+    first-order covariance forecast fixed before 54 RL runs explains 82 % of standardised change in the factorial design and 66 % out
+    of sample on real reward-model upgrades. Takeaway: the closest published analogue of F9-L; paper sentence 1.
+22. RankAdaptor (NAACL 2025 findings; the brief gives no URL or arXiv id): an MLP over per-layer LoRA
+    ranks for pruned LLMs. [TuneAhead 2606.17660](https://arxiv.org/abs/2606.17660) (round 3) and the risk-decomposition theory of
+    pre-hoc prediction (PMLR v306, Luo et al.; no URL in the brief). Takeaway: not itemised.
+
+**Not found.** No paper in which a model decides which of its own weights to change from a self-report of which parts it uses,
+applies the change during inference without gradients, and predicts the effect first. This limited search does not establish absence.
+
+**Brief corrections (F9.8).** PPF predicts a divergence to the dense model, covers structured channel pruning, and was built from 775
+evaluated masks; arXiv 2611.03244's 82 % is in-sample and 66 % out of sample; IDM is an editable program calling a frozen LLM,
+calibrated by online bias plus conditional MSE; arXiv 2604.25098 tests unstructured pruning at 10 % and 20 % only, without SparseGPT;
+Agentic-TTT's evaluation stream was deliberately enriched for TTT benefit. Fetch-time checks, 11 Nov: arXiv lists 2610.13991 as
+submitted 26 Sep 2026 (the brief says 15 Oct); the PPF source describes 775 collected mask samples with 20 % held out for testing, so
+"trained on 775 masks" in the brief and F9.8 is read as "built from 775 collected samples".

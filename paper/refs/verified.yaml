@@ -1047,3 +1047,131 @@
   location: Abstract
   status: verified
   source_file: paper/refs/sources/2609.09054.txt
+- key: xie2026idm
+  arxiv_id: '2610.13991'
+  title: 'Predict Before You Modify: Learning Improvement Dynamics for Self-Evolving Agents'
+  authors:
+  - Zixuan Xie
+  - Chang Xu
+  - Yuhua Jiang
+  - Li Zhao
+  year: 2026
+  venue: arXiv:2610.13991
+  claim_we_make: 'An editable Improvement Dynamics Model (an editable program calling a frozen LLM) predicts task-level outcomes of a proposed agent modification before evaluation; it targets agent programs, not weights.'
+  supporting_excerpt: 'Before evaluation, the IDM predicts task-level outcomes of a proposed modification and guides an optional revision.'
+  supporting_excerpt_2: 'an editable program that invokes a frozen LLM to forecast task-level outcomes from the current agent, a proposed code change, and historical experience.'
+  supporting_excerpt_3: 'Frozen Selective IDM retains selective revision and online bias calibration but fixes the IDM to its initial implementation.'
+  location: 'Abstract; Section 1 (introduction); Baselines (Polyglot variants)'
+  status: verified
+  source_file: paper/refs/sources/2610.13991.txt
+- key: ma2026ppf
+  arxiv_id: '2508.02381'
+  title: 'Beyond Manually Designed Pruning Policies with Second-Level Performance Prediction: A Pruning Framework for LLMs'
+  authors:
+  - Zuxin Ma
+  - Yunhe Cui
+  - Yongbin Qin
+  year: 2025
+  venue: arXiv:2508.02381
+  claim_we_make: 'PPF is a predictor of the performance of a structured (channel or layer) pruning policy that takes 1.52 s against 1 min 38 s for test-set evaluation; it was built on 775 collected pruning-mask samples, 20 % held out for testing.'
+  supporting_excerpt: 'It reduces the mean evaluation latency from minute-level (1 minute and 38.02 seconds of test-set evaluation methods) to second-level (1.52 seconds)'
+  supporting_excerpt_2: 'Non-uniform structured network pruning methods can effectively reduce Large Language Model (LLM) size by eliminating redundant channels or layers'
+  supporting_excerpt_3: 'we collected 775 samples and used 20% of them for testing.'
+  location: 'Abstract; Generalization of the predictor (Q3)'
+  status: verified
+  source_file: paper/refs/sources/2508.02381.txt
+- key: wang2026rlhfforecast
+  arxiv_id: '2611.03244'
+  title: 'Forecasting How RLHF Responds to Reward-Model Edits Before Training'
+  authors:
+  - Zixiao Wang
+  - Duzhen Zhang
+  - Xingbo Du
+  - Dongxia Wu
+  - Le Song
+  year: 2026
+  venue: arXiv:2611.03244
+  claim_we_make: 'A first-order covariance forecast, fixed before the RL runs, explains 82 % of standardised change in the factorial experiment and 66 % out of sample on real reward-model upgrades.'
+  supporting_excerpt: 'the first-order theory of KL-regularized RL implies that each feature moves in proportion to its within-prompt covariance with the change in reward.'
+  supporting_excerpt_2: 'and fix every forecast before the runs.'
+  supporting_excerpt_3: 'we predict the direction of all 20 changes in supply whose forecast has the same sign at every parent and explain 82% of the standardized change.'
+  supporting_excerpt_4: 'for real RM upgrades, where we explain 66% out of sample with a coefficient frozen from the factorial runs.'
+  location: 'Abstract'
+  status: verified
+  source_file: paper/refs/sources/2611.03244.txt
+- key: lu2026agentictt
+  arxiv_id: '2610.12002'
+  title: 'Agentic-TTT: Training test-time policy for test-time training'
+  authors:
+  - Jiahao Lu
+  - Mohan Kankanhalli
+  year: 2026
+  venue: arXiv:2610.12002
+  claim_we_make: 'A learned policy decides whether and how to invoke test-time training, each invocation producing an isolated LoRA skill over a frozen backbone; the evaluation stream was deliberately enriched for test-time-training benefit.'
+  supporting_excerpt: 'Each TTT invocation produces an isolated LoRA skill over the frozen backbone'
+  supporting_excerpt_2: 'We deliberately enrich the benchmark so that most queries exhibit TTT benefits during screening,'
+  supporting_excerpt_3: 'On our benchmark, Agentic-TTT nearly doubles the utility over the backbone model,'
+  location: 'Section 1 (introduction); Abstract'
+  status: verified
+  source_file: paper/refs/sources/2610.12002.txt
+- key: song2026quest
+  arxiv_id: '2605.13369'
+  title: 'Query-Conditioned Test-Time Self-Training for Large Language Models'
+  authors:
+  - Chaehee Song
+  - Minseok Seo
+  - Yeeun Seong
+  - Doyi Kim
+  - Changick Kim
+  year: 2026
+  venue: arXiv:2605.13369
+  claim_we_make: 'QueST generates query-conditioned problem-solution pairs and fine-tunes a PEFT (LoRA) adapter per query at test time; it outperforms test-time-optimisation baselines on seven math benchmarks and GPQA-Diamond.'
+  supporting_excerpt: 'QueST generates such query-conditioned pairs and uses them as supervision for parameter-efficient fine-tuning at test time.'
+  supporting_excerpt_2: 'Across seven mathematical reasoning benchmarks and the GPQA-Diamond scientific reasoning benchmark, QueST consistently outperforms strong test-time optimization baselines.'
+  location: 'Abstract'
+  status: verified
+  source_file: paper/refs/sources/2605.13369.txt
+- key: ferrara2026owmi
+  arxiv_id: '2608.20569'
+  title: 'Open-Weight Masked Introspection: Measuring What Language Models Can Report About Their Own Computation'
+  authors:
+  - Emilio Ferrara
+  year: 2026
+  venue: arXiv:2608.20569
+  claim_we_make: 'Eight open-weight models'' verbal reports of an intervention on their own computation sit at chance (AUROC about 0.5007), while a linear probe on the same activations recovers it at 75 to 95.8 % accuracy.'
+  supporting_excerpt: 'Over 78,000 measurements, no model’s report discriminates a real intervention from a sham beyond chance'
+  supporting_excerpt_2: 'a linear probe recovers intervention presence from the same activations at between 75% and 95.8% accuracy'
+  location: 'Abstract'
+  status: verified
+  source_file: paper/refs/sources/2608.20569.txt
+- key: monjur2026pruningtts
+  arxiv_id: '2604.25098'
+  title: 'Revisiting the Effectiveness of LLM Pruning for Test-Time Scaling'
+  authors:
+  - Ocean Monjur
+  - Shahriar Kabir Nahin
+  - Anshuman Chhabra
+  year: 2026
+  venue: arXiv:2604.25098
+  claim_we_make: 'Unstructured pruning of s1.1-7B and Qwen3-8B at 10 % and 20 % sparsity (Magnitude, Wanda; no SparseGPT) retains and at times exceeds unpruned test-time-scaling performance, unlike structured pruning.'
+  supporting_excerpt: 'Unstructured pruning is employed uniformly at both 10% and 20% sparsity rates, while structured pruning removes 1 and 2 layer blocks.'
+  supporting_excerpt_2: 'consistently show that unstructured pruning augments TTS performance compared to structured pruning, and at times can even outperform the unpruned full-weight LLMs.'
+  location: 'Results (pruning strategies); Abstract'
+  status: verified
+  source_file: paper/refs/sources/2604.25098.txt
+- key: nguyen2026obcprune
+  arxiv_id: '2609.17890'
+  title: 'OBC-Prune: Outcome-Based Calibration for Large Reasoning Model Pruning'
+  authors:
+  - Ha Lan Nguyen
+  - Huy Hoang Tran
+  - Trac-Duy Tran
+  - Dung D. Le
+  year: 2026
+  venue: arXiv:2609.17890
+  claim_we_make: 'Outcome-based calibration weights rescale the calibration activations of one-shot pruning methods (SparseGPT, Wanda, ALPS) and improve R1-Distill-Qwen 1.5B-14B at 40 % and 50 % sparsity.'
+  supporting_excerpt: 'These causal importance scores are converted into per-token weights that rescale the calibration activations used by one-shot pruning methods (SparseGPT, Wanda, ALPS), without modifying the underlying pruning algorithms.'
+  supporting_excerpt_2: 'Experiments on DeepSeek-R1-Distill-Qwen 1.5B, 7B, and 14B models at 40% and 50% sparsity demonstrate consistent improvements over state-of-the-art calibration baselines'
+  location: 'Abstract'
+  status: verified
+  source_file: paper/refs/sources/2609.17890.txt
