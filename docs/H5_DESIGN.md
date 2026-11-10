@@ -395,3 +395,41 @@ measured in the pilot and repriced under F8a.6(f). Every second of re-anchoring 
 `docs/HYPOTHESIS.md`; if any wording elsewhere in the three documents differs from the quoted clauses, the quoted clauses govern. Nothing here registers a new arm, cap,
 threshold or access value, authorises an episode, or changes A5.7, F5.4, F8.7 or the H5 success criterion. This section does not itself append F8a.6; F8a.6(a)'s replacement
 sentence is quoted under S1 only because F9a.5(a) cites it. G5 stays shadow-only.
+
+## 11 Nov 2026 (F8a.6 verbatim append)
+
+F8a.6 (A5, `docs/PREREG_H1_TF.md`) requires its own text to be appended to the H5 documents. It follows verbatim; the F9a reconciliation section above supersedes nothing in it.
+
+**F8a.6 — H5 reconciliation (condition 6).** Spec §6 (difference-of-means inputs, LP objective, deterministic selection and
+ties, α grid, S-loc/S-field, treatments, Sol pin, per-stream contract, drop order) is adopted as the H5 scripted-arm contract and
+must be appended verbatim with the overrides below to `docs/H5_DESIGN.md` and `docs/H5_PROTOCOL.md`, with `docs/HYPOTHESIS.md`
+reconciled, before the H5 pilot. (a) *Access wording.* "run by a pinned script with no model calls … and nothing else the editor
+does not" (`docs/H5_PROTOCOL.md` 11 Nov section; same text in `docs/H5_DESIGN.md`) is replaced by: "makes no LLM editor or provider
+calls; it makes metered diagnostic model forwards (base generations and hidden activations, spec §6.1) through the same
+forward-request meter, charged to the arm; S-field additionally receives the frozen G2 field as setup access". The actual access
+flags of every arm (spec §6.3 table, plus F9.4's `field_localisation_access`) are pinned in the G5 manifest before the pilot.
+Comparisons at unequal access are labelled and descriptive; they do not meet the matched-information requirement for an
+editor-superiority claim. A T0 script given |L| and B is conditional on that prior, not unrestricted discovery. (b) *Retained arms.*
+Astra stays the registered primary (A5.7 primary comparison: Astra with versus without the critic); Haiku, sham reload, random
+ranking and the F5.4/FP5 nested 1/8/32 best-of-N are retained with every other A5.7/G5 comparator; arms are dropped only
+prospectively for funding, never by observed performance. (c) *Complete A5.7 estimator per stream*, unchanged: ratio of total real
+calls including failed calls and rejected-proposal audits; both totals finite and positive at the point and in every draw;
+connected episodes clustered beyond the goal × seed × budget tuple when source-, direction- or prompt-connected; paired
+episode-cluster bootstrap-t with 4,000 common draws, PCG64 seed 20261107, and its failure rules; bounded score endpoint with equal
+episode weighting; missed-proposal denominator of all rejected candidates including failed attempts, unauditable rejected
+attempts counted as missed, zero rejected attempts undefined; net GPU saving charging diagnostics, gradients, probes, failed
+attempts and amortised preparation (including the G2 fields' 1.62 GPU-h, `g2_manifest_final.json` → `caps.fields.used_hours`);
+prospective joint power ≥ 0.80; unresolved versus kill distinctions. Critic and no-critic share seeds and opportunity budgets
+within a stream; realised calls are observed, not forced equal. A zero or nonfinite denominator makes a stream's savings undefined,
+never a success. (d) *Frozen choices.* The α-selection metric is FP5's development-winner objective (mean paired improvement on
+development support relative to the actual incumbent under A5.7's feasibility/safety predicates), ties within 1e-12 relative to
+the smaller α; the proposal-training, support-validation, acceptance-slice, calibration and sealed splits (spec §6.1; F5.4; FP5;
+A5.7) and the actual-incumbent comparisons are frozen in the G5 manifest before calibration. (e) *F9.4.* The F9.4 paired set
+(scripted with field localisation, scripted on the LLM's layers, LLM with and without the field ranking, shuffled-localisation
+control) uses the same estimator and access pinning; the LLM is credited with localisation value only under F9.4's paired rule.
+(f) *Cost and drop order.* Every H5 stream here is unpriced (F8a.8). The pilot is repriced inside the existing G5 caps (≤ 10 GPU-h
+plus ≤ 6 for best-of-N) before launch; if it does not fit, streams are dropped in this fixed order: the F9.4 paired set as one unit
+(registered last), then spec §6.6's order (S-field; T1 as one unit; Sol T0). Astra, Haiku, sham and random best-of-N are never
+dropped; dropped streams are reported as unfunded. G5 stays shadow-only, G8 keeps its existing eligibility (G5 feasibility plus
+G3/G4 go), and every A5.7 rejection and acceptance safeguard is retained. No episode is authorised by this block.
+
