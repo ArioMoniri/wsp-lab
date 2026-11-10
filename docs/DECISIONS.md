@@ -484,3 +484,5 @@ User approval on 10 Nov 2026 ("I approve all you need") covers the backup policy
 Still open, needing account-level IAM that the instance role does not have: a deny-delete bucket policy or object lock, and a working
 lifecycle policy for the root volume. With the off-host versioned copy in place, D8 is **operationally closed for data loss**; the two
 IAM items are recorded as residual risk.
+
+Addendum 3 note (10 Nov 2026, 13:05 UTC): the first sync followed symlinks and duplicated the evals and runs views (449 GB uploaded for a 288 GB source); the script now passes `--no-follow-symlinks`, a one-off `--delete` pass removed the duplicates while no local deletion existed, and a bucket lifecycle rule expires non-current versions under `wsp-lab/` after 30 days. The nightly job still never deletes.
