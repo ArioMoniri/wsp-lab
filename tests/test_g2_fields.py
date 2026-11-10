@@ -568,11 +568,11 @@ def test_audit_resumes_per_objective_without_rerunning_completed(toy_ctx, tmp_pa
     original = g2._audit_objective
     state = {"stopped": False}
 
-    def stop_second(ctx_, out_, manifest_, budget, mpath, impl, objective, base):
+    def stop_second(ctx_, out_, manifest_, budget, mpath, impl, objective, base, **kw):
         if objective.spec.name == TWO[1] and not state["stopped"]:
             state["stopped"] = True
             raise g2.CapExceeded("audit_gpu_hours", f"audit:{TWO[1]}", 1.01, 1.0)
-        return original(ctx_, out_, manifest_, budget, mpath, impl, objective, base)
+        return original(ctx_, out_, manifest_, budget, mpath, impl, objective, base, **kw)
 
     monkeypatch.setattr(g2, "_audit_objective", stop_second)
     code, out, first = run_main(tmp_path, ctx)
@@ -591,16 +591,262 @@ def test_audit_resumes_per_objective_without_rerunning_completed(toy_ctx, tmp_pa
     assert manifest["attempts"][0]["audit"]["objectives"][TWO[0]]["sha256"] == done["sha256"]
 
 
-def test_audit_estimate_above_cap_stops_before_any_row(toy_ctx, tmp_path, monkeypatch):
+def fields_with_wall(seconds):
+    return {o: {"resources": {"wall_seconds": w}} for o, w in seconds.items()}
+
+
+def test_row_cost_guard_is_one_tenth_of_the_audit_cap():
+    # the G2 field wall times of 10 Nov 2026 (data/runs/g2/g2_manifest.json), cap 1 GPU-h -> 360 s
+    fields = fields_with_wall(
+        {"wikitext_nll": 1648.599084167974, "mmlu_gold_log_prob": 613.4179068059893}
+    )
+    guard = g2.row_cost_guard(fields, "wikitext_nll", 1.0, 1.0)
+    assert guard["limit_seconds"] == pytest.approx(360.0)
+    assert guard["estimated_row_seconds"] == pytest.approx(824.2995, rel=1e-6)
+    assert not guard["within_guard"]
+    assert g2.row_cost_guard(fields, "mmlu_gold_log_prob", 1.0, 1.0)["within_guard"]
+    # a measured ratio from an objective already audited calibrates the one-row estimate
+    calibrated = g2.row_cost_guard(fields, "wikitext_nll", 0.1, 1.0)
+    assert calibrated["field_based_row_seconds"] == pytest.approx(824.2995, rel=1e-6)
+    assert calibrated["estimated_row_seconds"] == pytest.approx(82.42995, rel=1e-6)
+    assert calibrated["within_guard"]
+
+
+def test_first_row_cost_check_uses_measured_row_and_max_ratio_for_later():
+    fields = fields_with_wall({"a": 100.0, "b": 200.0, "c": 40.0})  # rows estimated 50, 100, 20 s
+    check = g2.first_row_cost_check(fields, "a", 5.0, 20, ["b", "c"], {"z": 0.3}, 0.01, 1.0)
+    assert check["ratios"] == {"z": 0.3, "a": pytest.approx(0.1)}
+    assert check["calibration_ratio"] == pytest.approx(0.3)  # the largest measured/estimated ratio
+    assert check["remaining_rows"] == 19 and check["remaining_seconds"] == pytest.approx(95.0)
+    assert check["later_objectives_seconds"] == {
+        "b": pytest.approx(20 * 100 * 0.3),
+        "c": pytest.approx(20 * 20 * 0.3),
+    }
+    total = 0.01 + (95.0 + 600.0 + 120.0) / 3600.0
+    assert check["estimated_total_hours"] == pytest.approx(total) and check["within_cap"]
+    over = g2.first_row_cost_check(fields, "a", 200.0, 20, [], {}, 0.0, 1.0)
+    assert over["calibration_ratio"] == pytest.approx(4.0)
+    assert (
+        over["estimated_total_hours"] == pytest.approx(19 * 200 / 3600) and not over["within_cap"]
+    )
+
+
+def clocked_audit(monkeypatch, row_seconds):
+    """Forced audit rows on a fake clock that only advances inside a row by row_seconds(name, i)."""
+    clock, calls = {"t": 0.0}, []
+    original = g2.audit_one
+    monkeypatch.setattr(g2, "now", lambda: clock["t"])
+
+    def patched(ctx, field, objective, pair, base, budget, impl):
+        row = original(ctx, field, objective, pair, base, budget, impl)
+        name = objective.spec.name
+        clock["t"] += row_seconds(name, sum(1 for c in calls if c == name))
+        calls.append(name)
+        row["approximate"] = row["exact"]
+        row["relative_error"] = 0.0
+        return row
+
+    monkeypatch.setattr(g2, "audit_one", patched)
+    return calls
+
+
+def test_cost_check_runs_after_the_first_registered_row(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    # 30 s rows: 19 x 30 s after the first row exceeds a 0.1 GPU-h cap; row 1 alone does not
+    calls = clocked_audit(monkeypatch, lambda name, i: 30.0)
+    code, out, manifest = run_main(tmp_path, ctx, "--max-audit-gpu-hours", "0.1")
+    assert code == g2.EXIT["incomplete"] and calls == [TWO[0]]  # exactly the first registered row
+    reason = manifest["incomplete_reason"]
+    assert reason["cap"] == "audit_gpu_hours_estimate" and "after row 1" in reason["where"]
+    (check,) = manifest["audit"]["cost_checks"]
+    assert check["after_first_row_of"] == TWO[0] and check["rows_done"] == 1
+    assert check["measured_first_row_seconds"] == pytest.approx(30.0)
+    assert check["remaining_rows"] == 19 and set(check["later_objectives_seconds"]) == {TWO[1]}
+    assert check["estimated_total_hours"] > 0.1 and not check["within_cap"]
+    entry = manifest["audit"]["objectives"][TWO[0]]
+    assert entry["status"] == "stopped" and len(entry["rows"]) == 1  # row 1 counts and is kept
+    assert entry["rows"][0]["resources"]["wall_seconds"] == pytest.approx(30.0)
+    assert entry["cost_guard"]["within_guard"]  # the guard ran before row 1
+    assert TWO[1] not in manifest["audit"]["objectives"] and g2.validate_manifest(manifest) == []
+    assert not (out / "predecessor_audit" / f"{TWO[0]}.json").exists()
+
+
+def test_cost_checks_follow_each_objectives_first_row_within_cap(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    calls = clocked_audit(monkeypatch, lambda name, i: 1.0)
+    code, _, manifest = run_main(tmp_path, ctx)
+    assert code == g2.EXIT["complete"] and calls == [TWO[0]] * 20 + [TWO[1]] * 20
+    checks = manifest["audit"]["cost_checks"]
+    assert [c["after_first_row_of"] for c in checks] == list(TWO)
+    assert all(c["within_cap"] and c["measured_first_row_seconds"] == 1.0 for c in checks)
+    assert checks[1]["later_objectives_seconds"] == {}
+    assert manifest["audit"]["cost_estimate"]["role"].startswith("recorded field-based estimate")
+    assert g2.validate_manifest(manifest) == []
+
+
+def test_cost_guard_aborts_an_objective_without_running_it(toy_ctx, tmp_path, monkeypatch):
     ctx = with_objectives(toy_ctx, TWO)
     calls = forced_audit(monkeypatch, {n: (lambda i: 0.0) for n in TWO})
     code, _, manifest = run_main(tmp_path, ctx, "--max-audit-gpu-hours", "1e-9")
     assert code == g2.EXIT["incomplete"] and calls == []
     reason = manifest["incomplete_reason"]
-    assert reason["cap"] == "audit_gpu_hours_estimate" and reason["limit"] == 1e-9
+    assert reason["cap"] == "audit_cost_guard" and reason["objectives"] == list(TWO)
+    assert reason["limit"] == pytest.approx(0.1 * 1e-9)
+    for name in TWO:
+        entry = manifest["audit"]["objectives"][name]
+        assert entry["status"] == "cost_guard" and entry["rows"] == []
+        assert not entry["cost_guard"]["within_guard"]
+        assert entry["cost_guard"]["limit_seconds"] == pytest.approx(0.1 * 1e-9 * 3600)
     est = manifest["audit"]["cost_estimate"]
-    assert est["n_rows"] == 40 and not est["within_cap"]
-    assert manifest["audit"]["objectives"] == {} and g2.validate_manifest(manifest) == []
+    assert est["n_rows"] == 40 and not est["within_cap"]  # recorded, not the stop criterion
+    assert manifest["stages"]["audit"] == "stopped" and manifest["status"] == "incomplete"
+    assert g2.validate_manifest(manifest) == []
+
+
+def test_cost_guard_skips_one_objective_and_audits_the_next(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    calls = forced_audit(monkeypatch, {n: (lambda i: 0.0) for n in TWO})
+    original = g2.row_cost_guard
+
+    def guard(fields, name, ratio, cap_hours):
+        g = original(fields, name, ratio, cap_hours)
+        return g | {"within_guard": name != TWO[0]}
+
+    monkeypatch.setattr(g2, "row_cost_guard", guard)
+    code, out, manifest = run_main(tmp_path, ctx)
+    assert code == g2.EXIT["incomplete"] and calls == [TWO[1]] * 20
+    assert manifest["incomplete_reason"]["objectives"] == [TWO[0]]
+    assert manifest["audit"]["objectives"][TWO[0]]["status"] == "cost_guard"
+    assert manifest["audit"]["objectives"][TWO[1]]["status"] == "complete"
+    # the guarded objective is not dropped: a resume audits it, the completed one is kept
+    monkeypatch.setattr(g2, "row_cost_guard", original)
+    argv = ["--toy", "--out", str(out), "--resume", "--stages", "audit"]
+    assert g2.main(argv, context_builder=lambda o, n: ctx) == g2.EXIT["complete"]
+    assert calls == [TWO[1]] * 20 + [TWO[0]] * 20
+
+
+def test_measured_overrun_stops_incomplete_before_the_next_row(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    # rows of 10 s pass the first-row check (10 + 19 x 10 + later 0 s <= 360 s); the 4th row takes
+    # 100 s: used 130 s, mean 32.5 s x 16 remaining rows > 360 s -> stop before row 5
+    calls = clocked_audit(monkeypatch, lambda name, i: 10.0 if i < 3 else 100.0)
+    code, _, manifest = run_main(tmp_path, ctx, "--max-audit-gpu-hours", "0.1")
+    assert code == g2.EXIT["incomplete"] and calls == [TWO[0]] * 4
+    reason = manifest["incomplete_reason"]
+    assert reason["cap"] == "audit_gpu_hours_row_guard" and "(row 5)" in reason["where"]
+    assert reason["used"] == pytest.approx((130 + 32.5 * 16) / 3600)
+    assert manifest["caps"]["audit"]["used_hours"] < 0.1  # stopped before the cap was spent
+    entry = manifest["audit"]["objectives"][TWO[0]]
+    assert entry["status"] == "stopped" and len(entry["rows"]) == 4  # no row dropped
+    seconds = [r["resources"]["wall_seconds"] for r in entry["rows"]]
+    assert seconds == [10.0, 10.0, 10.0, 100.0]
+    assert g2.validate_manifest(manifest) == []
+
+
+def test_peak_memory_and_gpu_seconds_in_field_and_row_resources(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    forced_audit(monkeypatch, {n: (lambda i: 0.0) for n in TWO})
+    peak = {"max_memory_allocated": 1234, "max_memory_reserved": 5678}
+    monkeypatch.setattr(g2, "_peak", lambda device: dict(peak))
+    code, out, manifest = run_main(tmp_path, ctx)
+    assert code == g2.EXIT["complete"]
+    for name in TWO:
+        res = manifest["fields"][name]["resources"]
+        assert res["max_memory_allocated"] == 1234 and res["max_memory_reserved"] == 5678
+        assert res["gpu_seconds"] == res["wall_seconds"] >= 0
+        entry = manifest["audit"]["objectives"][name]
+        assert entry["resources"]["max_memory_allocated"] == 1234
+        for row in entry["rows"]:
+            assert row["resources"]["max_memory_allocated"] == 1234
+            assert row["resources"]["gpu_seconds"] == row["resources"]["wall_seconds"] >= 0
+        per = json.loads((out / "predecessor_audit" / f"{name}.json").read_text())
+        assert all(r["resources"]["max_memory_allocated"] == 1234 for r in per["rows"])
+    for key in ("projectors", "probe_cache"):
+        assert manifest[key]["resources"]["max_memory_allocated"] == 1234
+        assert "gpu_seconds" in manifest[key]["resources"]
+    summary = manifest["resources_summary"]
+    assert summary["fields"][TWO[0]]["max_memory_allocated"] == 1234
+    assert (
+        summary["projectors"]["gpu_seconds"] == manifest["projectors"]["resources"]["wall_seconds"]
+    )
+    assert len(summary["audit_rows"][TWO[1]]) == 20
+    assert g2.NOT_CAPTURED not in json.dumps(summary)
+
+
+def test_resource_reader_never_fabricates_uncaptured_peaks():
+    # the 10 Nov 2026 G2 run recorded projector resources as wall seconds and bytes only, and field
+    # GPU time only as gpu_hours
+    manifest = {
+        "fields": {
+            "wikitext_nll": {
+                "status": "complete",
+                "resources": {
+                    "wall_seconds": 1648.599084167974,
+                    "gpu_hours": 0.4579441900466595,
+                    "max_memory_allocated": 10932988928,
+                    "max_memory_reserved": 11911823360,
+                },
+            }
+        },
+        "projectors": {
+            "status": "complete",
+            "resources": {"bytes_written": 10992053, "wall_seconds": 0.12582707998808473},
+        },
+        "audit": {"objectives": {}},
+    }
+    summary = g2.resource_summary(manifest)
+    field = summary["fields"]["wikitext_nll"]
+    assert field["max_memory_allocated"] == 10932988928
+    assert field["gpu_seconds"] == pytest.approx(1648.599084167974)
+    proj = summary["projectors"]
+    assert proj["wall_seconds"] == pytest.approx(0.12582707998808473)
+    for k in ("gpu_seconds", "max_memory_allocated", "max_memory_reserved"):
+        assert proj[k] == g2.NOT_CAPTURED == "not captured in this run"
+    assert "probe_cache" not in summary and summary["audit_rows"] == {}
+
+
+def test_resume_runs_only_the_audit_stage_on_verified_artefacts(toy_ctx, tmp_path, monkeypatch):
+    ctx = wikitext_only(toy_ctx, n_pairs=20)
+    code, out, first = run_main(tmp_path, ctx, "--stages", "fields,projectors,probe")
+    assert code == g2.EXIT["incomplete"] and first["incomplete_reason"]["pending_stages"] == [
+        "audit"
+    ]
+    files = {
+        p.relative_to(out): g2.sha256_file(p)
+        for d in ("fields", "projectors", "probe_cache")
+        for p in sorted((out / d).rglob("*"))
+        if p.is_file()
+    }
+    mtimes = {p: (out / p).stat().st_mtime_ns for p in files}
+    calls = forced_audit(monkeypatch, {"wikitext_nll": lambda i: 0.0})
+    monkeypatch.setattr(g2, "run_fields", lambda *a, **k: pytest.fail("fields re-run"))
+    monkeypatch.setattr(g2, "run_projectors", lambda *a, **k: pytest.fail("projectors re-run"))
+    monkeypatch.setattr(g2, "run_probe", lambda *a, **k: pytest.fail("probe re-run"))
+    code, out, manifest = run_main(tmp_path, ctx, "--resume", "--stages", "audit")
+    assert code == g2.EXIT["complete"] and calls == ["wikitext_nll"] * 20
+    assert manifest["attempt"] == 2 and manifest["stages"] == dict.fromkeys(g2.STAGES, "complete")
+    for key in ("fields", "projectors", "probe_cache"):
+        assert manifest[key] == first[key]
+    assert manifest["resume_verified"]["artefacts"] == [
+        "fields/wikitext_nll",
+        "projectors",
+        "probe_cache",
+    ]
+    assert {p: g2.sha256_file(out / p) for p in files} == files
+    assert {p: (out / p).stat().st_mtime_ns for p in files} == mtimes
+    assert manifest["audit"]["verdict"]["passed"] and g2.validate_manifest(manifest) == []
+
+
+def test_audit_resume_refuses_changed_completed_artefacts(toy_ctx, tmp_path):
+    ctx = wikitext_only(toy_ctx, n_pairs=20)
+    code, out, first = run_main(tmp_path, ctx, "--stages", "fields,projectors,probe")
+    assert code == g2.EXIT["incomplete"]
+    path = out / "projectors" / "projectors.json"
+    path.write_text(path.read_text() + " ")
+    resume = ["--toy", "--out", str(out), "--resume", "--stages", "audit"]
+    assert g2.main(resume, context_builder=lambda o, n: ctx) == g2.EXIT["refused"]
+    after = json.loads((out / "g2_manifest.json").read_text())
+    assert after == first  # refused before anything was written
 
 
 def test_wall_clock_cap_stops_cleanly_with_incomplete_manifest(toy_ctx, tmp_path, monkeypatch):

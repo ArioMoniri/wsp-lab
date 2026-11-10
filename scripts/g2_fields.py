@@ -23,10 +23,18 @@ Runs only after Board A's A5 freeze. Stages, in order, each recorded in ``<out>/
   objective gradient at a time, no graph retention) against the base field plus cross term; relative
   error = |exact - approximate| / max(|exact|, 1e-3 nats) <= 0.1 on >= 16 of 20, a separate verdict per
   objective. Any failed objective, and any short audit (fewer than 20 rows for an objective), is
-  ``HARD_STOP``; no objective's pass stands for another. The cost is estimated before the first row as
-  5 objectives x 20 predecessors and checked against the registered 1 GPU-h audit cap (stop and
-  reprice, never multiply the budget). The stage resumes per objective: a completed objective is
-  verified by hash and never re-run.
+  ``HARD_STOP``; no objective's pass stands for another. Cost (A5.8.1 note, 10 Nov 2026, after G2
+  fields): a field-based estimate of 5 objectives x 20 predecessors is recorded before the first row,
+  but the stop decision is measured. Before an objective's first row, a field-based one-row estimate
+  (x the largest measured/estimated ratio of objectives already audited) above 0.1 x the audit cap
+  aborts that objective as ``cost guard`` (not run). The first registered row is computed as
+  registered (it is row 1, not a pilot); then the audit is checked against the registered 1 GPU-h cap
+  with that measured row time for the objective's remaining rows and the largest measured/estimated
+  ratio for later objectives. Before every later row, used + mean measured row time x remaining rows
+  must stay within the cap. Any overrun stops the run as incomplete (stop and reprice, never multiply
+  the budget, never drop rows). Every row records its wall seconds and peak CUDA memory. The stage
+  resumes per objective: a completed objective is verified by hash and never re-run; ``--resume
+  --stages audit`` first verifies the completed fields, projectors and probe cache by hash.
 
 Panels are rebuilt from ``docs/prereg/a5_manifests/panels.json`` with the TF-v1 scorer's tokenisation and
 checked against every recorded hash (file sha256, sorted-id hashes, dataset fingerprints, WikiText window
@@ -84,6 +92,10 @@ AUDIT_SCHEMA = "g2-predecessor-audit-v2"
 # Pre-audit cost estimate per (objective, predecessor) row: the exact gradient is one gradient pass over
 # the objective's field panel, which collect_field makes once per item next to the (heavier) Fisher pass.
 AUDIT_ROW_FRACTION_OF_FIELD = 0.5
+# A5.8.1 note (10 Nov 2026, after G2 fields): before an objective's first row, a field-based one-row
+# estimate above this fraction of the audit cap aborts the objective as "cost guard" without running it.
+AUDIT_ROW_GUARD_FRACTION_OF_CAP = 0.1
+NOT_CAPTURED = "not captured in this run"
 STAGES = ("fields", "projectors", "probe", "audit")
 EXIT = {"complete": 0, "HARD_STOP": 2, "GATE_FAILURE": 3, "incomplete": 4, "refused": 5}
 STATUSES = ("running", "complete", "incomplete", "HARD_STOP", "GATE_FAILURE")
@@ -951,6 +963,66 @@ def _verify_files(root: Path, files: dict):
     return all((root / k).exists() and sha256_file(root / k) == v for k, v in files.items())
 
 
+def verify_completed_stages(out: Path, manifest, requested):
+    """Resume: hash check of every completed stage that this attempt does not run again.
+
+    Returns (verified, mismatched) lists of artefact labels; requested stages verify themselves.
+    """
+    verified, bad = [], []
+    if manifest["stages"].get("fields") == "complete" and "fields" not in requested:
+        for name, rec in sorted(manifest.get("fields", {}).items()):
+            ok = rec.get("status") == "complete" and _verify_files(
+                out / "fields" / name, rec["files"]
+            )
+            (verified if ok else bad).append(f"fields/{name}")
+    for stage, key in (("projectors", "projectors"), ("probe", "probe_cache")):
+        if manifest["stages"].get(stage) == "complete" and stage not in requested:
+            rec = manifest.get(key) or {}
+            ok = rec.get("status") == "complete" and _verify_files(out / key, rec["files"])
+            (verified if ok else bad).append(key)
+    return verified, bad
+
+
+RESOURCE_KEYS = ("wall_seconds", "gpu_seconds", "max_memory_allocated", "max_memory_reserved")
+
+
+def read_resources(resources):
+    """Measured resources of one manifest record. A quantity the run did not capture is reported as
+    NOT_CAPTURED, never estimated; gpu_seconds is read from gpu_hours (same measurement) if needed.
+    ``None`` peaks mean a CPU (toy) run."""
+    res, view = resources or {}, {}
+    for k in RESOURCE_KEYS:
+        if k in res:
+            view[k] = res[k]
+        elif k == "gpu_seconds" and "gpu_hours" in res:
+            view[k] = res["gpu_hours"] * 3600.0
+        else:
+            view[k] = NOT_CAPTURED
+    return view
+
+
+def resource_summary(manifest):
+    """Per-stage resource view of a manifest (G2 run of 10 Nov 2026: projector peak memory and GPU
+    seconds were not recorded, so they read NOT_CAPTURED)."""
+    summary = {
+        "fields": {
+            n: read_resources(r.get("resources"))
+            for n, r in sorted((manifest.get("fields") or {}).items())
+            if r.get("status") == "complete"
+        }
+    }
+    for key in ("projectors", "probe_cache"):
+        rec = manifest.get(key) or {}
+        if rec.get("status") == "complete":
+            summary[key] = read_resources(rec.get("resources"))
+    objectives = (manifest.get("audit") or {}).get("objectives") or {}
+    summary["audit_rows"] = {
+        n: [read_resources(r.get("resources")) for r in e.get("rows", [])]
+        for n, e in sorted(objectives.items())
+    }
+    return summary
+
+
 def run_fields(ctx, out: Path, manifest, budget, mpath):
     fields = manifest.setdefault("fields", {})
     for obj in ctx.objectives:
@@ -1009,6 +1081,7 @@ def run_fields(ctx, out: Path, manifest, budget, mpath):
             "resources": {
                 "wall_seconds": wall,
                 "save_seconds": now() - t1,
+                "gpu_seconds": wall,  # wall clock on the single exclusive GPU
                 "gpu_hours": wall / 3600.0,
                 **_peak(ctx.device),
                 "cpu_max_rss_bytes": _rss_bytes(),
@@ -1055,6 +1128,7 @@ def run_projectors(ctx, out: Path, manifest, mpath):
     if old.get("status") == "complete" and _verify_files(root, old["files"]):
         return
     _fresh_dir(root)
+    _reset_peak(ctx.device)
     t0 = now()
     tensors, rows = {}, []
     for s in ctx.slots:
@@ -1079,6 +1153,7 @@ def run_projectors(ctx, out: Path, manifest, mpath):
         rows.append(row)
     save_file(tensors, root / "projectors.safetensors")
     (root / "projectors.json").write_text(json.dumps(rows, indent=1, sort_keys=True))
+    wall = now() - t0
     schema = {"architecture": ARCHITECTURE, "layer_types": list(layer_types_of(ctx.model))}
     schema["projector_dim"] = PROJECTOR_DIM
     manifest["projectors"] = {
@@ -1092,7 +1167,12 @@ def run_projectors(ctx, out: Path, manifest, mpath):
         "n_matrix_slots": sum(r["matrix"] for r in rows),
         "n_vector_slots": sum(not r["matrix"] for r in rows),
         "content_hash": rf._hash([r.get("P_out_sha256", r["tensor"]) for r in rows]),
-        "resources": {"wall_seconds": now() - t0, "bytes_written": tree_bytes(root)},
+        "resources": {
+            "wall_seconds": wall,
+            "gpu_seconds": wall,
+            **_peak(ctx.device),
+            "bytes_written": tree_bytes(root),
+        },
     }
     write_manifest(mpath, manifest)
 
@@ -1160,6 +1240,7 @@ def run_probe(ctx, out: Path, manifest, budget, mpath):
         },
         "resources": {
             "wall_seconds": wall,
+            "gpu_seconds": wall,
             "gpu_hours": wall / 3600.0,
             **_peak(ctx.device),
             "bytes_written": tree_bytes(root),
@@ -1303,8 +1384,82 @@ def audit_cost_estimate(fields, required, cap_hours, prior_hours, n_rows=AUDIT_N
     }
 
 
+def field_row_seconds(fields, name):
+    """Field-based estimate of one audit row of ``name``: AUDIT_ROW_FRACTION_OF_FIELD x field wall."""
+    return AUDIT_ROW_FRACTION_OF_FIELD * fields[name]["resources"]["wall_seconds"]
+
+
+def measured_ratios(fields, objectives):
+    """Measured/estimated row-time ratio of every completed audit objective (any attempt)."""
+    ratios = {}
+    for name, entry in objectives.items():
+        mean = (entry.get("resources") or {}).get("row_seconds_mean")
+        estimate = field_row_seconds(fields, name) if name in fields else 0.0
+        if entry.get("status") == "complete" and mean is not None and estimate > 0:
+            ratios[name] = mean / estimate
+    return ratios
+
+
+def row_cost_guard(fields, name, ratio, cap_hours):
+    """Before an objective's first row: its field-based one-row estimate (x the largest measured ratio
+    of objectives already audited, 1.0 before any) must not exceed 0.1 x the audit cap."""
+    raw = field_row_seconds(fields, name)
+    estimate = raw * ratio
+    limit = AUDIT_ROW_GUARD_FRACTION_OF_CAP * cap_hours * 3600.0
+    return {
+        "objective": name,
+        "rule": f"field-based one-row estimate <= {AUDIT_ROW_GUARD_FRACTION_OF_CAP} x audit cap "
+        "before the objective's first row; otherwise the objective is not run (cost guard)",
+        "field_based_row_seconds": raw,
+        "calibration_ratio": ratio,
+        "estimated_row_seconds": estimate,
+        "limit_seconds": limit,
+        "cap_hours": cap_hours,
+        "within_guard": estimate <= limit,
+    }
+
+
+def first_row_cost_check(fields, name, measured, n_rows, later, ratios, used_hours, cap_hours):
+    """After an objective's first registered row: measured row time x its remaining rows, plus every
+    later objective at n_rows x field-based row estimate x the largest measured/estimated ratio (this
+    objective's included), plus the audit hours already used, must stay within the audit cap."""
+    estimate = field_row_seconds(fields, name)
+    ratios = dict(ratios)
+    if estimate > 0:
+        ratios[name] = measured / estimate
+    ratio = max(ratios.values()) if ratios else 1.0
+    remaining = (n_rows - 1) * measured
+    later_seconds = {o: n_rows * field_row_seconds(fields, o) * ratio for o in later}
+    total = used_hours + (remaining + sum(later_seconds.values())) / 3600.0
+    return {
+        "after_first_row_of": name,
+        "rows_done": 1,
+        "formula": "used audit hours + measured first-row seconds x remaining rows of the objective + "
+        "later objectives x n rows x field-based row estimate x max measured/estimated ratio",
+        "measured_first_row_seconds": measured,
+        "field_based_row_seconds": estimate,
+        "ratios": ratios,
+        "calibration_ratio": ratio,
+        "remaining_rows": n_rows - 1,
+        "remaining_seconds": remaining,
+        "later_objectives_seconds": later_seconds,
+        "used_hours": used_hours,
+        "estimated_total_hours": total,
+        "cap_hours": cap_hours,
+        "within_cap": total <= cap_hours,
+    }
+
+
 class AuditEstimateExceeded(CapExceeded):
-    """The audit's estimated cost exceeds its registered cap: stop and reprice before spending it."""
+    """The audit's measured-cost projection exceeds its registered cap: stop and reprice."""
+
+
+class AuditCostGuard(CapExceeded):
+    """One or more objectives were not run: their one-row estimate exceeds 0.1 x the audit cap."""
+
+    def __init__(self, objectives, used, limit):
+        super().__init__("audit_cost_guard", "audit:" + ",".join(objectives), used, limit)
+        self.objectives = list(objectives)
 
 
 def _write_json(path: Path, payload):
@@ -1313,30 +1468,28 @@ def _write_json(path: Path, payload):
     return sha256_file(path)
 
 
-def _audit_objective(ctx, out, manifest, budget, mpath, impl, objective, base):
-    """Twenty rows of one objective, one exact objective gradient per predecessor; its own verdict."""
+def _audit_rows(ctx, manifest, budget, mpath, impl, objective, field_artifact, base, later, ratios):
+    """The registered rows of one objective, with the measured first-row check and per-row guard."""
     name, audit = objective.spec.name, manifest["audit"]
-    rec = manifest["fields"].get(name, {})
-    if rec.get("status") != "complete":
-        raise ValueError(f"audit needs the completed base field of {name}")
-    root = out / "fields" / name
-    if not _verify_files(root, rec["files"]):
-        raise ValueError(f"{name}: completed field files no longer match their hashes")
-    field_artifact = rf.FieldArtifact.load(root)
-    if field_artifact.identity["objectives"] != [objective.spec.identity()]:
-        raise ValueError(f"{name}: base field objective identity differs from the audit objective")
-    entry = audit["objectives"][name] = {
-        "status": "running",
-        "started_at": utc(),
-        "base_field_identity_sha256": rf._hash(field_artifact.identity),
-        "rows": [],
-    }
-    write_manifest(mpath, manifest)
+    entry = audit["objectives"][name]
     params = dict(ctx.model.named_parameters())
-    t0 = now()
+    n_rows, row_seconds = len(ctx.pairs), []
     with memoized_spectral_factor(field_artifact.factors[name]):
-        for pair in ctx.pairs:
-            budget.check(f"audit:{name}:{pair['predecessor_id']}")
+        for i, pair in enumerate(ctx.pairs):
+            where = f"audit:{name}:{pair['predecessor_id']}"
+            budget.check(where)
+            if row_seconds:  # per-row guard: never start a row the measured pace cannot finish
+                mean = sum(row_seconds) / len(row_seconds)
+                projected = budget.used() + mean * (n_rows - i) / 3600.0
+                if projected > budget.hours:
+                    raise AuditEstimateExceeded(
+                        "audit_gpu_hours_row_guard",
+                        f"{where} (row {i + 1})",
+                        projected,
+                        budget.hours,
+                    )
+            _reset_peak(ctx.device)
+            r0 = now()
             try:
                 row = audit_one(ctx, field_artifact, objective, pair, base, budget, impl)
             except CapExceeded:
@@ -1354,10 +1507,85 @@ def _audit_objective(ctx, out, manifest, budget, mpath, impl, objective, base):
                 with torch.no_grad():
                     for n, t in base.items():
                         params[n].copy_(t.to(params[n].device))
+            seconds = now() - r0
+            row_seconds.append(seconds)
+            row["resources"] = {
+                "wall_seconds": seconds,
+                "gpu_seconds": seconds,  # wall clock on the single exclusive GPU
+                **_peak(ctx.device),
+            }
             entry["rows"].append(row)
+            _check_vram(ctx.device, where)
             log(f"audit {name} {row['predecessor_id']}: relative error {row['relative_error']}")
             manifest["caps"]["audit"] = budget.record()
+            if i == 0:  # the cost check uses the measured first registered row (A5.8.1 note)
+                check = first_row_cost_check(
+                    manifest["fields"],
+                    name,
+                    seconds,
+                    n_rows,
+                    later,
+                    ratios,
+                    budget.used(),
+                    budget.hours,
+                )
+                audit.setdefault("cost_checks", []).append(check)
+                if not check["within_cap"]:
+                    raise AuditEstimateExceeded(
+                        "audit_gpu_hours_estimate",
+                        f"audit:{name} (after row 1)",
+                        check["estimated_total_hours"],
+                        budget.hours,
+                    )
             write_manifest(mpath, manifest)
+    return row_seconds
+
+
+def _audit_objective(ctx, out, manifest, budget, mpath, impl, objective, base, later=()):
+    """Twenty rows of one objective, one exact objective gradient per predecessor; its own verdict.
+
+    Returns the verdict, or None when the cost guard aborts the objective before its first row.
+    """
+    name, audit = objective.spec.name, manifest["audit"]
+    rec = manifest["fields"].get(name, {})
+    if rec.get("status") != "complete":
+        raise ValueError(f"audit needs the completed base field of {name}")
+    ratios = measured_ratios(manifest["fields"], audit["objectives"])
+    guard = row_cost_guard(
+        manifest["fields"], name, max(ratios.values()) if ratios else 1.0, budget.hours
+    )
+    if not guard["within_guard"]:
+        audit["objectives"][name] = {"status": "cost_guard", "cost_guard": guard, "rows": []}
+        log(
+            f"audit {name}: cost guard, one row estimated at {guard['estimated_row_seconds']:.1f}s "
+            f"> {guard['limit_seconds']:.1f}s; objective not run"
+        )
+        write_manifest(mpath, manifest)
+        return None
+    root = out / "fields" / name
+    if not _verify_files(root, rec["files"]):
+        raise ValueError(f"{name}: completed field files no longer match their hashes")
+    field_artifact = rf.FieldArtifact.load(root)
+    if field_artifact.identity["objectives"] != [objective.spec.identity()]:
+        raise ValueError(f"{name}: base field objective identity differs from the audit objective")
+    entry = audit["objectives"][name] = {
+        "status": "running",
+        "started_at": utc(),
+        "base_field_identity_sha256": rf._hash(field_artifact.identity),
+        "cost_guard": guard,
+        "rows": [],
+    }
+    write_manifest(mpath, manifest)
+    t0 = now()
+    try:
+        row_seconds = _audit_rows(
+            ctx, manifest, budget, mpath, impl, objective, field_artifact, base, later, ratios
+        )
+    except CapExceeded:  # stop and reprice: the rows already computed stay on record
+        entry["status"] = "stopped"
+        manifest["caps"]["audit"] = budget.record()
+        write_manifest(mpath, manifest)
+        raise
     wall = now() - t0
     verdict = audit_verdict(entry["rows"], name)
     payload = {
@@ -1373,6 +1601,8 @@ def _audit_objective(ctx, out, manifest, budget, mpath, impl, objective, base):
         "rows": entry["rows"],
     }
     path = out / "predecessor_audit" / f"{name}.json"
+    peaks = [r["resources"]["max_memory_allocated"] for r in entry["rows"]]
+    peaks = [p for p in peaks if p is not None]
     entry |= {
         "status": "complete",
         "verdict": verdict,
@@ -1380,8 +1610,11 @@ def _audit_objective(ctx, out, manifest, budget, mpath, impl, objective, base):
         "sha256": _write_json(path, payload),
         "resources": {
             "wall_seconds": wall,
+            "gpu_seconds": wall,
             "gpu_hours": wall / 3600.0,
-            "row_seconds_mean": wall / max(len(entry["rows"]), 1),
+            "row_seconds_mean": sum(row_seconds) / max(len(row_seconds), 1),
+            "row_seconds_max": max(row_seconds, default=None),
+            "max_memory_allocated": max(peaks) if peaks else None,
         },
     }
     log(
@@ -1448,7 +1681,6 @@ def run_audit(ctx, out: Path, manifest, budget, mpath, impl):
             audit["objectives"][name] = old | {"reused_in_attempt": manifest["attempt"]}
     short = len(ctx.pairs) < AUDIT_N or ctx.pairs_record.get("short", False)
     audit["short_selection"] = short
-    _reset_peak(ctx.device)
     t0 = now()
     if short:
         log(f"audit: short selection, {len(ctx.pairs)} < {AUDIT_N} predecessors: HARD_STOP")
@@ -1457,35 +1689,28 @@ def run_audit(ctx, out: Path, manifest, budget, mpath, impl):
                 _short_objective(ctx, out, manifest, objectives[name], impl)
     else:
         todo = [n for n in required if n not in audit["objectives"]]
+        # field-based estimate, recorded for the record; the stop decisions are the cost guard before
+        # each objective and the measured check after its first registered row (A5.8.1 note)
         audit["cost_estimate"] = audit_cost_estimate(
             manifest["fields"], todo, budget.hours, budget.used()
-        )
+        ) | {
+            "role": "recorded field-based estimate; not the stop criterion (A5.8.1 note, 10 Nov 2026)"
+        }
         write_manifest(mpath, manifest)
-        base = {}
-        for name in todo:
-            ratios = [
-                audit["objectives"][o]["resources"]["row_seconds_mean"]
-                / audit["cost_estimate"]["per_row_seconds"][o]
-                for o in audit["objectives"]
-                if o in audit["cost_estimate"]["per_row_seconds"]
-                and audit["cost_estimate"]["per_row_seconds"][o] > 0
-            ]
-            ratio = max(ratios) if ratios else 1.0
-            remaining = [n for n in todo if n not in audit["objectives"]]
-            estimate = audit_cost_estimate(
-                manifest["fields"], remaining, budget.hours, budget.used(), ratio=ratio
+        base, guarded = {}, []
+        for k, name in enumerate(todo):
+            verdict = _audit_objective(
+                ctx, out, manifest, budget, mpath, impl, objectives[name], base, later=todo[k + 1 :]
             )
-            audit.setdefault("cost_checks", []).append({"before": name, **estimate})
-            if not estimate["within_cap"]:
-                write_manifest(mpath, manifest)
-                raise AuditEstimateExceeded(
-                    "audit_gpu_hours_estimate",
-                    f"audit:{name}",
-                    estimate["prior_hours"] + estimate["estimated_gpu_hours"],
-                    budget.hours,
-                )
-            _audit_objective(ctx, out, manifest, budget, mpath, impl, objectives[name], base)
-    _check_vram(ctx.device, "audit")
+            if verdict is None:
+                guarded.append(name)
+        if guarded:
+            worst = max(
+                audit["objectives"][n]["cost_guard"]["estimated_row_seconds"] for n in guarded
+            )
+            raise AuditCostGuard(
+                guarded, worst / 3600.0, AUDIT_ROW_GUARD_FRACTION_OF_CAP * budget.hours
+            )
     per_objective = {n: audit["objectives"][n]["verdict"] for n in required}
     verdict = overall_verdict(per_objective, required)
     payload = {
@@ -1507,12 +1732,21 @@ def run_audit(ctx, out: Path, manifest, budget, mpath, impl):
     }
     path = out / "predecessor_audit.json"
     wall = now() - t0
+    peaks = [
+        (e.get("resources") or {}).get("max_memory_allocated") for e in audit["objectives"].values()
+    ]
+    peaks = [p for p in peaks if isinstance(p, int)]
     audit |= {
         "status": "complete",
         "verdict": verdict,
         "file": str(path),
         "sha256": _write_json(path, payload),
-        "resources": {"wall_seconds": wall, "gpu_hours": wall / 3600.0, **_peak(ctx.device)},
+        "resources": {
+            "wall_seconds": wall,
+            "gpu_seconds": wall,
+            "gpu_hours": wall / 3600.0,
+            "max_memory_allocated": max(peaks) if peaks else None,
+        },
     }
     manifest["caps"]["audit"] = budget.record()
     write_manifest(mpath, manifest)
@@ -1594,9 +1828,12 @@ def validate_manifest(m):
             ):
                 if k not in rec:
                     errors.append(f"fields.{name}.{k} missing")
+            res = rec.get("resources", {})
             for k in ("wall_seconds", "max_memory_allocated", "bytes_written"):
-                if k not in rec.get("resources", {}):
+                if k not in res:
                     errors.append(f"fields.{name}.resources.{k} missing")
+            if "gpu_seconds" not in res and "gpu_hours" not in res:
+                errors.append(f"fields.{name}.resources.gpu_seconds missing")
     for k in ("fields", "audit"):
         if k not in (m.get("caps") or {}):
             errors.append(f"caps.{k} missing")
@@ -1751,6 +1988,10 @@ def new_manifest(args, ctx, panels_sha, code, attempts, attempt):
             "floor_nats": AUDIT_FLOOR,
             "short_audit": "hard stop",
             "row_cost_fraction_of_field": AUDIT_ROW_FRACTION_OF_FIELD,
+            "cost_check": "measured: after the first registered row of each objective (A5.8.1 note, "
+            "10 Nov 2026)",
+            "row_guard_fraction_of_cap": AUDIT_ROW_GUARD_FRACTION_OF_CAP,
+            "per_row_guard": "used + mean measured row seconds x remaining rows <= audit cap",
         },
         "objectives": list(FIELD_OBJECTIVES),
         "microbatch": "one item per forward (one sequence, or the scorer's padded rows)",
@@ -1828,6 +2069,8 @@ def run_pipeline(ctx, out: Path, args, manifest):
             "limit": exc.limit,
             "action": "stop and reprice; no silent coverage cut (S31 §3)",
         }
+        if isinstance(exc, AuditCostGuard):
+            manifest["incomplete_reason"]["objectives"] = exc.objectives
     except torch.OutOfMemoryError as exc:
         status = "incomplete"
         manifest["incomplete_reason"] = {"cap": "vram_bytes", "error": str(exc)[:500]}
@@ -1852,6 +2095,7 @@ def run_pipeline(ctx, out: Path, args, manifest):
         if audit_budget is not None:
             manifest["caps"]["audit"] = audit_budget.record()
         manifest["status"], manifest["complete"] = status, status == "complete"
+        manifest["resources_summary"] = resource_summary(manifest)
         manifest["run"]["finished_at"] = utc()
         write_manifest(mpath, manifest)
         log(f"status {status}")
@@ -2240,6 +2484,12 @@ def main(argv=None, context_builder=None):
             if key in previous:
                 manifest[key] = previous[key]
         manifest["caps"] = previous["caps"]
+        verified, bad = verify_completed_stages(out, manifest, args.stages)
+        if bad:
+            reason = f"completed artefacts no longer match their hashes: {bad}"
+            print(json.dumps({"status": "refused", "reason": reason}), file=sys.stderr)
+            return EXIT["refused"]
+        manifest["resume_verified"] = {"artefacts": verified, "at": utc()}
     out.mkdir(parents=True, exist_ok=True)
     return run_pipeline(ctx, out, args, manifest)
 
