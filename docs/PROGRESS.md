@@ -368,3 +368,10 @@ re-pin); the audit stage is then resumed. No registered quantity changes. 4B dia
 rest unresolved. Realised radius 5.19e-3 per tensor, 68 % of elements changed. Reading: at this radius a 4B Gaussian edit is at the
 64-window resolution floor, so the diagnostic cannot yet separate density from noise; the H0 pairing half runs after the G2 audit.
 Diagnostic, not a gate; exposure recorded. Entries under `data/zoo/qwen3.5-4b-scale/`, records under `data/evals/qwen3.5-4b-scale/lambda-H3/`.
+
+**10 Nov 2026, 23:30 UTC.** G2 audit reprice committed on `feat/g2-audit-reprice` (8f81ab0; 46 driver tests): the cap check now uses the
+measured first registered row per objective, a per-row guard stops an overrun as incomplete, every audit row and stage records wall,
+GPU seconds and peak memory (the fields of the first run already had peak memory 4.8–10.9 GB and GPU hours), and the audit stage
+resumes alone after hash-checking the completed stages. Follow-up in progress: objectives processed in ascending estimated row cost and
+cost-guarded objectives re-checked at the end of the same run, so one resume can complete all five; then merge, re-verify pins and
+resume the audit on the GPU.
