@@ -450,3 +450,10 @@ the F8.3 prediction contract; qualify the Astra replay against the pinned base; 
 pin Sol, specify the LP). Part A does not wait. Condition 7 discharged for the two blocked pages by retained excerpts
 (`docs/council/2026-11-11/evidence/README.md`); the H5 reconciliation is in flight (`docs/council-r4-record`); the F8 execution
 manifest spec (conditions 1–5) is scheduled after the Part A ledger is sealed and before any F8 construction.
+
+**11 Nov 2026, 10:30 UTC.** Round 4 recorded (`docs/council-r4-record` merged): H5 scripted-estimator arm, second editor and per-stream
+savings in `docs/HYPOTHESIS.md`, `docs/H5_DESIGN.md`, `docs/H5_PROTOCOL.md` (Board A F8 condition 6, document part); the eighteen
+round-4 items in `docs/RESEARCH_NOTES.md`; seven new verified references (2609.09054, 2611.06598, 2611.07610, 2611.08647,
+2611.09382, 2611.10866, 2611.10974) with source texts under `paper/refs/sources/`. Known pre-existing failure: `scripts/verify_refs.py`
+exits 1 on `fastprobing2026` (YAML/BibTeX author mismatch), present on main before this merge; it blocks paper review and is queued
+for repair. Part A staging at 21 of 40.
