@@ -328,3 +328,7 @@ objectives now pass), field-module schema v2, G2 driver and 4B scripts pinned (6
 on the three 4B discrepancies the amendment surfaced: the registered F5.3/FP4 text governs (ρ = 0.005, SHA-derived seeds, pairing
 indices 0/4/8/12/16); the builder is being aligned and re-pinned on `prereg/a5-4b-align`. Backup corrected: symlinks no longer followed,
 duplicates removed, lifecycle rule for non-current versions (30 days) set.
+
+**10 Nov 2026, 17:30 UTC.** 4B builder aligned to the registered F5.3/FP4 text and re-pinned (7ecd186; `--verify-pins HEAD`: all pins
+match). Board A's post-commit freeze audit requested on main at 7ecd186 (`docs/reviews/council/board-a-freeze-audit-2026-11-10.md`).
+G2 launches only on FREEZE ACCEPTED, with `PANELS_SHA256` equal to the A5.1.2 hash and the registered caps.
