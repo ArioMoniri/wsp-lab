@@ -446,3 +446,57 @@ def test_code_hashes_pin_blob_bytes(tmp_path):
 def test_refuses_to_write_under_data():
     with pytest.raises(SystemExit):
         bm.main(["--out", str(Path(bm.ROOT) / "data" / "a5_manifests")])
+
+
+def _snapshot_for(files):
+    """A closed-snapshot stub whose pins equal the build's live inputs."""
+    inputs = json.loads(files["selection.json"])["inputs"]
+    content = {sk: {f: inputs[k]["sha256"]} for k, (sk, f) in bm.SNAPSHOT_PINS.items()}
+    content["tf_v1_records"] = {
+        "index_sha256": inputs["tf_v1_records"]["index_sha256"],
+        "content_index_sha256": inputs["tf_v1_records"]["content_index_sha256"],
+    }
+    content["feature_manifest"] = {
+        "sha256": inputs["feature_manifests"]["manifest_sha256"],
+        "content_index_sha256": inputs["feature_manifests"]["content_index_sha256"],
+    }
+    return {"content": content, "closed_at": "2026-11-08T00:00:00Z", "base_ref": "0" * 40}
+
+
+def test_closed_snapshot_pins_contents_and_must_match(tmp_path):
+    paths = toy(tmp_path)
+    files = build(paths)
+    inputs = json.loads(files["selection.json"])["inputs"]
+    assert "content_index_sha256" in inputs["feature_manifests"]
+    assert "content_index_sha256" in inputs["tf_v1_records"]
+    snap = bm.dumps(_snapshot_for(files))
+    pinned = bm.build(paths, 3, 3, git_sha="0" * 40, read_blob=lambda p: p.encode(), snapshot=snap)
+    sel = json.loads(pinned["selection.json"])
+    assert sel["inputs"]["snapshot"]["sha256"] == hashlib.sha256(snap).hexdigest()
+    assert sel["inputs_scope"].startswith("closed pre-G2 snapshot")
+    assert "snapshot.json" in pinned["README.md"].decode()
+    # Feature-file CONTENT (not only the id set) is pinned: changing bytes breaks the snapshot.
+    (paths["features"] / "L1" / "features.json").write_text("{}")
+    with pytest.raises(ValueError, match="feature_manifests.content_index_sha256"):
+        bm.build(paths, 3, 3, git_sha="0" * 40, read_blob=lambda p: p.encode(), snapshot=snap)
+    # Record contents too.
+    paths = toy(tmp_path / "b")
+    snap = bm.dumps(_snapshot_for(build(paths)))
+    with open(paths["evals"] / "L1" / "records.jsonl", "a") as f:
+        f.write("\n")
+    with pytest.raises(ValueError, match="tf_v1_records.content_index_sha256"):
+        bm.build(paths, 3, 3, git_sha="0" * 40, read_blob=lambda p: p.encode(), snapshot=snap)
+
+
+def test_selection_diff_reports_changed_ids_and_cutpoints(tmp_path):
+    paths = toy(tmp_path, LOST_ROWS)
+    sel = json.loads(build(paths)["selection.json"])
+    reg = sel["registered"]
+    freeze = {
+        "registered_edit_ids": [*reg["edit_ids"][1:], "Zz"],
+        "cutpoints": {f: {"keys": [[0.0, "x"], [1.0, "y"]]} for f in reg["ledger"]["families"]},
+    }
+    diff = bm.selection_diff(freeze, sel)
+    assert diff["ids_added"] == [reg["edit_ids"][0]] and diff["ids_removed"] == ["Zz"]
+    assert diff["cutpoints_rebuilt"]["chain"] == reg["ledger"]["families"]["chain"]["cutpoints"]
+    assert diff["n_distinct_components"] == len(reg["edit_ids"])

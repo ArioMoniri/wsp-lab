@@ -870,14 +870,17 @@ def build_nullsize_spec(text_groups):
     window_ids = [w["window_id"] for w in text_groups["windows"]]
     return {
         "schema": "a5-nullsize-inputs-spec-v2",
-        "status": "specification only; not run on real data; inputs exist only after G0/G1 closure (A5.3.2, "
-        "A5.11). Registered proxy: chair ruling A5.3.2(ii) and the A5 freeze-prep amendments (7 Nov 2026)",
+        "status": "specification; this file holds no data. The payload is materialised after G0/G1 closure "
+        "from the closed snapshot (snapshot.json) by scripts/a5_nullsize_inputs.py; its validation and the "
+        "NULL-SIZE reports are in nullsize/ (A5.3.2, A5.11). Registered proxy: chair ruling A5.3.2(ii) and "
+        "the A5 freeze-prep amendments (7 Nov 2026)",
         "consumer": "scripts/a5_simulation.py (validate: --inputs-spec this file; run: INPUT --output SIZE.json "
         "[--scenario registered|variance_x2|unavailable_audit_fails])",
         "input_file": {
             "path": "data/runs/a5/nullsize/inputs.json",
             "format": "JSON object (or NPZ with the same JSON as scalar Unicode 'payload', no pickle)",
-            "commit": "its sha256, inventory and provenance enter docs/prereg/a5_manifests/ before NULL-SIZE",
+            "commit": "its sha256, inventory and provenance enter docs/prereg/a5_manifests/nullsize/ "
+            "(inputs_provenance.json) with the NULL-SIZE reports",
         },
         "proxy": {
             "status": "REGISTERED (chair ruling A5.3.2(ii), 7 Nov 2026; Board A accepted with caveats, "
@@ -1127,7 +1130,8 @@ def readme_section(files, panels):
             "  exactly their first 64. WikiText: the **registered** whole-article rule (11 articles, all",
             "  exposed); its 64 windows are not 64 independent text groups.",
             "- NULL-SIZE: the edit-minus-predecessor proxy is **registered** (`nullsize_inputs.json:proxy`);",
-            "  the payload exists only after G0/G1 closure and the NULL-SIZE report is outstanding.",
+            "  the payload is materialised from the closed snapshot by `scripts/a5_nullsize_inputs.py` and its",
+            "  validation and reports are listed in `nullsize/README.md` (verdict there, not here).",
             "",
             "Open items (not certified here):",
             "",

@@ -60,9 +60,13 @@ CODE_FILES = {
     "scripts/a5_build_panels.py": "builder",
     "scripts/a5_simulation.py": "simulation and NULL-SIZE input validator",
     "scripts/a5_incremental_norms.py": "producer of the incremental-norm input",
+    "scripts/a5_snapshot.py": "closed pre-G2 snapshot (checklist item 3)",
+    "scripts/a5_nullsize_inputs.py": "NULL-SIZE payload materialisation and reports (checklist item 6)",
     "tests/test_a5_simulation.py": "test",
     "tests/test_a5_build_manifests.py": "test",
     "tests/test_a5_build_panels.py": "test",
+    "tests/test_a5_snapshot.py": "test",
+    "tests/test_a5_nullsize_inputs.py": "test",
     "src/wsp/eval/response_intervention.py": "selection, tertiles, reference identity (imported)",
     "src/wsp/eval/batch.py": "effective_config_hash (imported)",
     "src/wsp/eval/tf_v1.py": "TF-v1 rankings and panels (imported by the panel builder)",
@@ -132,6 +136,73 @@ def entry_delta_hash(files: list[Path]) -> str | None:
     if not files:
         return None
     return sha256_bytes("".join(f"{p.name}:{sha256_file(p)}\n" for p in files).encode())
+
+
+FEATURE_FILES = ("features.json", "features.safetensors", "pooled.safetensors")
+
+
+def feature_content_index(features: Path):
+    """[[id, sha256 of each FEATURE_FILES member]] over every feature directory (content, not ids)."""
+    ids = sorted(d.name for d in Path(features).iterdir() if d.is_dir())
+    return [
+        [
+            i,
+            *(
+                sha256_file(Path(features) / i / n) if (Path(features) / i / n).exists() else None
+                for n in FEATURE_FILES
+            ),
+        ]
+        for i in ids
+    ]
+
+
+def record_content_index(dirs) -> list:
+    """[[dir, sha256(eval.json), sha256(records.jsonl)]] over the TF-v1 primary record directories."""
+    return [[d.name, sha256_file(d / "eval.json"), sha256_file(d / "records.jsonl")] for d in dirs]
+
+
+SNAPSHOT_PINS = {  # selection.json:inputs key -> (snapshot.json content key, field)
+    "artefact_status": ("artefact_status_sidecar", "sha256"),
+    "zoo_manifest": ("zoo_manifest", "sha256"),
+    "incremental_norms": ("incremental_norms", "sha256"),
+    "panel_manifest": ("panel_manifest", "sha256"),
+}
+
+
+def check_snapshot(inputs, snapshot):
+    """Live inputs must equal the closed snapshot's pins (checklist items 3-4); returns mismatches."""
+    c = snapshot["content"]
+    bad = [k for k, (sk, f) in SNAPSHOT_PINS.items() if inputs[k]["sha256"] != c[sk][f]]
+    tf, fm = inputs["tf_v1_records"], inputs["feature_manifests"]
+    if tf["index_sha256"] != c["tf_v1_records"]["index_sha256"]:
+        bad.append("tf_v1_records.index_sha256")
+    if tf["content_index_sha256"] != c["tf_v1_records"]["content_index_sha256"]:
+        bad.append("tf_v1_records.content_index_sha256")
+    if fm["manifest_sha256"] != c["feature_manifest"]["sha256"]:
+        bad.append("feature_manifests.manifest_sha256")
+    if fm["content_index_sha256"] != c["feature_manifest"]["content_index_sha256"]:
+        bad.append("feature_manifests.content_index_sha256")
+    return bad
+
+
+def selection_diff(frozen, selection):
+    """What a rebuild changed relative to the procedural freeze (written to snapshot.json on a stop)."""
+    reg = selection["registered"]
+    ids = reg.get("edit_ids", [])
+    cut = {
+        f: [list(k) for k in reg["ledger"]["families"][f]["cutpoints"]]
+        for f in frozen["cutpoints"]
+        if reg.get("status") == "selected"
+    }
+    return {
+        "status": reg.get("status"),
+        "error": reg.get("error"),
+        "ids_added": sorted(set(ids) - set(frozen["registered_edit_ids"])),
+        "ids_removed": sorted(set(frozen["registered_edit_ids"]) - set(ids)),
+        "cutpoints_frozen": {f: c["keys"] for f, c in frozen["cutpoints"].items()},
+        "cutpoints_rebuilt": cut,
+        "n_distinct_components": len(set(reg.get("component_ids", []))),
+    }
 
 
 # -------------------------------------------------------------------------------------------- inventory
@@ -503,7 +574,8 @@ def build_references(selection, manifest_rows, inventory, zoo, evals, cfg, panel
         "references_to_score": n_d + n_p,
         "additional_minutes": round((n_d + n_p) * ri.MINUTES_PER_ENTRY, 4),
         "total_minutes": round((n_var + n_d + n_p) * ri.MINUTES_PER_ENTRY, 4),
-        "not_priced": "preprocessing and retries are charged separately (A5.3.4 stop-and-reprice)",
+        "not_priced": "preprocessing and retries are charged separately (A5.3.4 stop-and-reprice); the "
+        "closure work's measured costs are in snapshot.json:cost_ledger",
     }
 
 
@@ -691,7 +763,10 @@ def assemble_selection(inputs, components_sha, literal, registered, freeze=None)
         "schema": "a5-selection-v2",
         "algorithm": "wsp.eval.response_intervention.select_with_ledger / select_edits (A5.3.1)",
         "inputs": inputs,
-        "inputs_scope": "partial input index, not a full immutable snapshot: feature-file contents and "
+        "inputs_scope": "closed pre-G2 snapshot (inputs.snapshot, checklist items 3-4): feature-file and "
+        "TF-v1 record contents are pinned by content index; per-file hashes are in snapshot.json"
+        if "snapshot" in inputs
+        else "partial input index, not a full immutable snapshot: feature-file contents and "
         "donor/record contents are not hashed here (Board A A5 package review item 1; checklist item 4)",
         "components_jsonl_sha256": components_sha,
         "registered": registered,
@@ -828,10 +903,13 @@ def build(
     pin_worktree=False,
     environment=None,
     procedural_freeze=None,
+    snapshot=None,
 ):
     """Return {filename: bytes} for the package. ``paths``: zoo, norms, features, evals, panel, config, root.
 
     ``procedural_freeze``: the committed freeze block; the build must reproduce its ids and cutpoints.
+    ``snapshot``: the closed pre-G2 snapshot (snapshot.json bytes); live inputs must equal its pins, and
+    feature-file and record contents are pinned by content index, not only by ids.
     """
     import yaml
 
@@ -907,6 +985,15 @@ def build(
             "path": rel(features),
             "n_available": len(feature_ids),
             "ids_sha256": sha256_bytes(json.dumps(sorted(feature_ids)).encode()),
+            "manifest_sha256": sha256_file(features / "manifest.json")
+            if (features / "manifest.json").exists()
+            else None,
+            "content_index_sha256": sha256_bytes(
+                json.dumps(feature_content_index(features)).encode()
+            ),
+            "content_index_convention": "sha256 of json.dumps(sorted [[id, sha256 of "
+            + ", ".join(FEATURE_FILES)
+            + "]]) over every feature directory",
         },
         "tf_v1_records": {
             "path": rel(evals),
@@ -914,8 +1001,23 @@ def build(
             "index_sha256": sha256_bytes(json.dumps(record_index).encode()),
             "index_convention": "sha256 of json.dumps(sorted [[dir, sha256(eval.json)]]) over dirs "
             "with eval.json and records.jsonl, listed once per build",
+            "content_index_sha256": sha256_bytes(json.dumps(record_content_index(dirs)).encode()),
+            "content_index_convention": "sha256 of json.dumps(sorted [[dir, sha256(eval.json), "
+            "sha256(records.jsonl)]]) over the same dirs (record contents, not only metadata)",
         },
     }
+    if snapshot is not None:
+        snap = json.loads(snapshot)
+        bad = check_snapshot(inputs, snap)
+        if bad:
+            raise ValueError(f"live inputs differ from the closed snapshot: {bad}")
+        inputs["snapshot"] = {
+            "path": "docs/prereg/a5_manifests/snapshot.json",
+            "sha256": sha256_bytes(snapshot),
+            "closed_at": snap["closed_at"],
+            "base_ref": snap["base_ref"],
+            "pins_match": True,
+        }
     if git_sha is None or read_blob is None:
         git_sha, read_blob = worktree_reader(root) if pin_worktree else git_blob_reader(root, ref)
     code = build_code_hashes(
@@ -1062,14 +1164,26 @@ def readme(files, inventory, selection, references, text_groups):
     flagged = Counter(
         (r["family"], r["exactness"]) for r in supported if r["eligibility"] == "eligible"
     )
+    snap = selection["inputs"].get("snapshot")
     out = [
         "# A5.11 manifest package — Part A selection",
         "",
         "Generated by `python scripts/a5_build_manifests.py` (CPU, read-only on `data/`); rerunning it on the same",
         "inputs and git ref reproduces every byte. Do not edit by hand. Inputs and their sha256 are in",
-        "`selection.json:inputs` (a partial input index, not a full immutable snapshot); code, config, model and",
-        "environment identities are in `code_hashes.json`. `--procedural-freeze` regenerates only the labels,",
-        "pins and the dated procedural freeze from the committed files (no rebuild against live data).",
+        *(
+            [
+                "`selection.json:inputs`, checked against the closed pre-G2 snapshot `snapshot.json` (sha256",
+                f"`{snap['sha256']}`, closed {snap['closed_at']}, base ref `{snap['base_ref'][:12]}`; written by",
+                "`scripts/a5_snapshot.py`): feature-file and TF-v1 record contents are pinned by content index.",
+            ]
+            if snap
+            else [
+                "`selection.json:inputs` (a partial input index, not a full immutable snapshot).",
+            ]
+        ),
+        "Code, config, model and environment identities are in `code_hashes.json`. `--procedural-freeze`",
+        "regenerates only the labels, pins and the dated procedural freeze from the committed files (no rebuild",
+        "against live data).",
         "",
         "| file | sha256 | produced from |",
         "|---|---|---|",
@@ -1176,7 +1290,13 @@ def readme(files, inventory, selection, references, text_groups):
                 f"unique predecessors: {references['references_to_score']} references to score, "
                 f"{references['additional_minutes']} min at {references['minutes_per_entry']} min/entry; "
                 f"total with the {references['n_variants']} variants {references['total_minutes']} min. "
-                "Preprocessing and retries are not included. Stale-build estimate, not a final cost."
+                "Preprocessing and retries are not included. "
+                + (
+                    "Estimate against the closed snapshot (current records and bytes), not a measured "
+                    "cost; the closure work's measured costs are in `snapshot.json:cost_ledger`."
+                    if snap
+                    else "Stale-build estimate, not a final cost."
+                )
             ),
             "",
             "Predecessors without their own bytes in the zoo (G3 staging must load the alias holder): "
@@ -1197,7 +1317,7 @@ def readme(files, inventory, selection, references, text_groups):
         "## Not certified by this package",
         "",
         *(BLOCKED_NOTE if registered["status"] != "selected" else []),
-        *NOT_CERTIFIED,
+        *(NOT_CERTIFIED_CLOSED if snap else NOT_CERTIFIED),
         "",
     ]
     return "\n".join(out).encode()
@@ -1237,6 +1357,23 @@ NOT_CERTIFIED = [
     "- Gradient/factor/probe panels, disjointness certificates, control seeds and the NULL-SIZE input",
     "  specification are in the companion section below (scripts/a5_build_panels.py); the NULL-SIZE payload,",
     "  its report and Board A acceptance of the pre-G2 evidence are outstanding.",
+]
+NOT_CERTIFIED_CLOSED = [
+    "- Closure is component membership in `docs/prereg/panel_manifest.json`. `snapshot.json:closure_reconciliation`",
+    "  recomputes the registered joins (parent, generator identity, equal stored bytes) on the current zoo after",
+    "  the G6 census, including the 12 heretic_ara entries, and checks that the forty selected components stay",
+    "  distinct; `hash_in_source_identities` in references.json shows whether current bytes match a registered",
+    "  source identity (re-trained chain bytes cannot). This is metadata-level closure, not a byte-replay proof.",
+    "- references.json and text_groups.json reflect the closed snapshot's TF-v1 records",
+    "  (`selection.json:inputs.snapshot`).",
+    "- The eight alias reuse proofs and the tensor-coverage / single-matrix chain eligibility / rotation audits",
+    "  (A5.3.3) are G3 staging outputs. Their algorithms, inputs, output schemas, responsible gate and",
+    "  fail-closed policy are frozen in A5 (freeze-prep amendments, 7 Nov 2026); the outputs are not here.",
+    "- Exposure and cost ledgers of the G0/G1/G6 closure work are in `snapshot.json`; G3 retries and",
+    "  preprocessing (A5.2.2) are charged when they occur.",
+    "- Gradient/factor/probe panels, disjointness certificates, control seeds and the NULL-SIZE input",
+    "  specification are in the companion section below (scripts/a5_build_panels.py); the NULL-SIZE",
+    "  reports are in `nullsize/`. Board A acceptance of the pre-G2 evidence is outstanding.",
 ]
 
 
@@ -1279,6 +1416,12 @@ def main(argv=None):
         "committed package; reads only the artefact_status sidecar; no live rebuild",
     )
     p.add_argument(
+        "--snapshot",
+        type=Path,
+        help="closed pre-G2 snapshot (default: snapshot.json in --out when present); live inputs must "
+        "equal its pins, and a changed selection writes its diff there and stops (checklist item 4)",
+    )
+    p.add_argument(
         "--verify-pins",
         metavar="REF",
         help="compare code_hashes.json in --out with the file bytes at REF and exit",
@@ -1312,9 +1455,33 @@ def main(argv=None):
         frozen = (
             json.loads(sel_path.read_text()).get("procedural_freeze") if sel_path.exists() else None
         )
-        files = build(
-            paths, a.n_lora, a.n_chain, a.ref, pin_worktree=a.pin_worktree, procedural_freeze=frozen
-        )
+        snap_path = a.snapshot or (out / "snapshot.json")
+        snapshot = snap_path.read_bytes() if snap_path.exists() else None
+        try:
+            files = build(
+                paths,
+                a.n_lora,
+                a.n_chain,
+                a.ref,
+                pin_worktree=a.pin_worktree,
+                procedural_freeze=frozen,
+                snapshot=snapshot,
+            )
+        except AssertionError as exc:
+            if frozen is None or snapshot is None:
+                raise
+            # Checklist item 4: the closed snapshot changed the selection: record the diff and stop.
+            again = build(paths, a.n_lora, a.n_chain, a.ref, pin_worktree=a.pin_worktree)
+            snap = json.loads(snapshot)
+            snap["rebuild_check"] = {
+                "result": "STOP: the rebuild against the closed snapshot does not reproduce the "
+                "procedural freeze; amend prospectively, never rerank silently",
+                "error": str(exc),
+                "diff": selection_diff(frozen, json.loads(again["selection.json"])),
+            }
+            snap_path.write_bytes(dumps(snap))
+            print(f"STOP: {exc}; diff written to {snap_path}", file=sys.stderr)
+            return 3
     out.mkdir(parents=True, exist_ok=True)
     old_readme = out / "README.md"
     if old_readme.exists():

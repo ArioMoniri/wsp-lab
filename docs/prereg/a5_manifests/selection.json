@@ -11,7 +11,10 @@
    "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317"
   },
   "feature_manifests": {
+   "content_index_convention": "sha256 of json.dumps(sorted [[id, sha256 of features.json, features.safetensors, pooled.safetensors]]) over every feature directory",
+   "content_index_sha256": "af893deab180568858487f4aac9481f249eda1f9acc86b9d8652d563d95ee3fc",
    "ids_sha256": "2e3cbcbecc1bdd5822881129feaa01d00b5336c7f693f753ca3f5b6aeb72a67d",
+   "manifest_sha256": "1d681ca4ec37fd4e2bb1a4d03b479cee223941977f09d257f4c501a43f3e1ac3",
    "n_available": 1252,
    "path": "data/features/qwen3.5-0.8b"
   },
@@ -23,10 +26,19 @@
    "path": "docs/prereg/panel_manifest.json",
    "sha256": "7c72bfd3280954a82de1161e640a870da5f3a876c03b22247656701ed6af2c67"
   },
+  "snapshot": {
+   "base_ref": "19f5cbf781cb0955fdfe482c12ec523cc2873dc6",
+   "closed_at": "2026-11-08T00:59:56Z",
+   "path": "docs/prereg/a5_manifests/snapshot.json",
+   "pins_match": true,
+   "sha256": "030517947267287875ee55847d24732c0e30f0140a83bfd3fdbd9a58264a71c1"
+  },
   "tf_v1_records": {
+   "content_index_convention": "sha256 of json.dumps(sorted [[dir, sha256(eval.json), sha256(records.jsonl)]]) over the same dirs (record contents, not only metadata)",
+   "content_index_sha256": "124e9b9245b78ff480f145a8dd89086e7dae21822e5d46bad06a5d46a8c66064",
    "index_convention": "sha256 of json.dumps(sorted [[dir, sha256(eval.json)]]) over dirs with eval.json and records.jsonl, listed once per build",
-   "index_sha256": "f2c25ef337302cc158928a5b2471b044dbbe36745822eff3c84076c4e97583b5",
-   "n_primary_eval_json": 99,
+   "index_sha256": "c8c5dff72d88b8fdd9b7240b80cc75ab5becebb3bea89dc1c5f5e2e68a320750",
+   "n_primary_eval_json": 689,
    "path": "data/evals/qwen3.5-0.8b/tf_v1"
   },
   "zoo_manifest": {
@@ -34,7 +46,7 @@
    "sha256": "71a396e5bab2e53f8f74b0a8a0c646e1a791ef92bb3cf3f3df5c51c8010140e7"
   }
  },
- "inputs_scope": "partial input index, not a full immutable snapshot: feature-file contents and donor/record contents are not hashed here (Board A A5 package review item 1; checklist item 4)",
+ "inputs_scope": "closed pre-G2 snapshot (inputs.snapshot, checklist items 3-4): feature-file and TF-v1 record contents are pinned by content index; per-file hashes are in snapshot.json",
  "pre_ruling_literal": {
   "action": "A5.3.1: missing/nonfinite norms or uncertified sources block selection; no row is dropped and no selection is made until resolved by amendment/ruling",
   "blocking_ids": [

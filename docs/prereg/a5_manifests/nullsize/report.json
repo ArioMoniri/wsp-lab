@@ -1,0 +1,426 @@
+{
+ "gate": "A5.3.2 / A5.5.1 step 1: development null size <= 0.07 at nominal 0.05 for the ordered Part A decision and each individual two-sided test; applied to the registered run. Sensitivity scenarios are separately labelled and are not substitutes",
+ "inputs": {
+  "path": "data/runs/a5/nullsize/inputs.json",
+  "sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+  "validation": "valid",
+  "validation_counts": {
+   "donors": 141,
+   "eligible": 179,
+   "incomplete_pairs": 0,
+   "inventory": 796,
+   "masked_windows": 0,
+   "unavailable_audit_entries": 423
+  },
+  "validation_sha256": "7a9f72876e73f5ffba2852f925a8aa3ae52a5c9261d55af942b322b1e0606136"
+ },
+ "not_run": "A5.3.2's constant-positive-mean and cell-specific mask/noise sensitivities have no frozen scenario in scripts/a5_simulation.py and were not run",
+ "observations": [
+  "in every replicate of every scenario the three contrasts have identical resolved and agreement counts: under the proxy they are rescalings (a = 1, 0.25, 0.5) of one donor block, so the three individual sizes are one test, not three separate checks",
+  "`unavailable_audit_fails`: no pair resolved in any of 10000 replicates (every audit evidence is 'unavailable' and counted as a failure), so its size 0 and gate value are vacuous: under that assumption Part A cannot resolve at all",
+  "`registered`: under the null the ordered decision returned 'alternative' (ladder 0.25 CP upper <= 0.6) in 1939 of 10000 replicates (0.1939); the registered <= 0.07 gate covers 'go' and the individual two-sided tests, not this route",
+  "`variance_x2`: under the null the ordered decision returned 'alternative' (ladder 0.25 CP upper <= 0.6) in 1884 of 10000 replicates (0.1884); the registered <= 0.07 gate covers 'go' and the individual two-sided tests, not this route",
+  "donor cell(s) LoRA:0 hold a single donor component: every simulated slot of that cell redraws the same donor block (with independent signs); the registered rule requires a non-empty cell only"
+ ],
+ "scenarios": {
+  "registered": {
+   "audit_or_nonfinite_counts": [
+    0,
+    0,
+    0
+   ],
+   "conditional_coverage": [
+    0.9382823528781479,
+    0.9382823528781479,
+    0.9382823528781479
+   ],
+   "contrast_order": [
+    "rotation",
+    "ladder_0.25",
+    "ladder_0.5"
+   ],
+   "decisions": {
+    "alternative": 1939,
+    "go": 180,
+    "unresolved": 7881
+   },
+   "frozen_cell_cutpoints": {
+    "LoRA": [
+     [
+      1.0580346482037204,
+      "f4b10903b8e09e24"
+     ],
+     [
+      2.2141261523655484,
+      "f8c2cf0c6b9ffa8c"
+     ]
+    ],
+    "chain": [
+     [
+      0.7725259468377004,
+      "7af5977862ec021f"
+     ],
+     [
+      1.3049782925751559,
+      "14cdaabee246493b"
+     ]
+    ]
+   },
+   "gate_le_0_07": true,
+   "input_provenance": {
+    "data/runs/a5/nullsize/inputs.json": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
+   },
+   "noise_scale": 1.0,
+   "nominal": 0.05,
+   "ordered_go_cp95": [
+    0.015485312370216893,
+    0.02080068246302666
+   ],
+   "ordered_go_rate": 0.018,
+   "positive_rejection": [
+    0.018,
+    0.018,
+    0.018
+   ],
+   "positive_rejection_cp95": [
+    [
+     0.015485312370216893,
+     0.02080068246302666
+    ],
+    [
+     0.015485312370216893,
+     0.02080068246302666
+    ],
+    [
+     0.015485312370216893,
+     0.02080068246302666
+    ]
+   ],
+   "raw_output_sha256": "452c078aae520dfedbcf25a44a9390305612d32ade3793840f3118043e4239e8",
+   "replicates": 10000,
+   "resolution_draws": 4000,
+   "scenario": "registered",
+   "seed": 20261107,
+   "size_two_sided": [
+    0.0372,
+    0.0372,
+    0.0372
+   ],
+   "size_two_sided_cp95": [
+    [
+     0.033576068427335695,
+     0.04109654497237181
+    ],
+    [
+     0.033576068427335695,
+     0.04109654497237181
+    ],
+    [
+     0.033576068427335695,
+     0.04109654497237181
+    ]
+   ],
+   "stream_order": [
+    "panels",
+    "signs",
+    "resolution"
+   ],
+   "traces_gz": "registered_traces.jsonl.gz",
+   "traces_jsonl_sha256": "784cd18db11701ea5a54121b32daf98c5ee07abc823ca384687a5b84f45d25b0",
+   "unavailable_audit": "assume_pass",
+   "yield_cp95": [
+    [
+     0.9996311800853812,
+     1.0
+    ],
+    [
+     0.9996311800853812,
+     1.0
+    ],
+    [
+     0.9996311800853812,
+     1.0
+    ]
+   ],
+   "yield_rates_ge15": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  },
+  "unavailable_audit_fails": {
+   "audit_or_nonfinite_counts": [
+    400000,
+    400000,
+    400000
+   ],
+   "conditional_coverage": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "contrast_order": [
+    "rotation",
+    "ladder_0.25",
+    "ladder_0.5"
+   ],
+   "decisions": {
+    "alternative": 0,
+    "go": 0,
+    "unresolved": 10000
+   },
+   "frozen_cell_cutpoints": {
+    "LoRA": [
+     [
+      1.0580346482037204,
+      "f4b10903b8e09e24"
+     ],
+     [
+      2.2141261523655484,
+      "f8c2cf0c6b9ffa8c"
+     ]
+    ],
+    "chain": [
+     [
+      0.7725259468377004,
+      "7af5977862ec021f"
+     ],
+     [
+      1.3049782925751559,
+      "14cdaabee246493b"
+     ]
+    ]
+   },
+   "gate_le_0_07": true,
+   "input_provenance": {
+    "data/runs/a5/nullsize/inputs.json": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
+   },
+   "noise_scale": 1.0,
+   "nominal": 0.05,
+   "ordered_go_cp95": [
+    0.0,
+    0.0003688199146187625
+   ],
+   "ordered_go_rate": 0.0,
+   "positive_rejection": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "positive_rejection_cp95": [
+    [
+     0.0,
+     0.0003688199146187625
+    ],
+    [
+     0.0,
+     0.0003688199146187625
+    ],
+    [
+     0.0,
+     0.0003688199146187625
+    ]
+   ],
+   "raw_output_sha256": "279c31f8eda4ffef535802befab261ec018bcf363ce9c4dd128e5fb38305790d",
+   "replicates": 10000,
+   "resolution_draws": 4000,
+   "scenario": "unavailable_audit_fails",
+   "seed": 20261107,
+   "size_two_sided": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "size_two_sided_cp95": [
+    [
+     0.0,
+     0.0003688199146187625
+    ],
+    [
+     0.0,
+     0.0003688199146187625
+    ],
+    [
+     0.0,
+     0.0003688199146187625
+    ]
+   ],
+   "stream_order": [
+    "panels",
+    "signs",
+    "resolution"
+   ],
+   "traces_gz": "unavailable_audit_fails_traces.jsonl.gz",
+   "traces_jsonl_sha256": "4ec57979e74cd7c48d9d04a2338351d163edfa5389904057f1c253b7dae19b47",
+   "unavailable_audit": "assume_fail",
+   "yield_cp95": [
+    [
+     0.0,
+     0.0003688199146187625
+    ],
+    [
+     0.0,
+     0.0003688199146187625
+    ],
+    [
+     0.0,
+     0.0003688199146187625
+    ]
+   ],
+   "yield_rates_ge15": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "variance_x2": {
+   "audit_or_nonfinite_counts": [
+    0,
+    0,
+    0
+   ],
+   "conditional_coverage": [
+    0.9378427992567553,
+    0.9378427992567553,
+    0.9378427992567553
+   ],
+   "contrast_order": [
+    "rotation",
+    "ladder_0.25",
+    "ladder_0.5"
+   ],
+   "decisions": {
+    "alternative": 1884,
+    "go": 162,
+    "unresolved": 7954
+   },
+   "frozen_cell_cutpoints": {
+    "LoRA": [
+     [
+      1.0580346482037204,
+      "f4b10903b8e09e24"
+     ],
+     [
+      2.2141261523655484,
+      "f8c2cf0c6b9ffa8c"
+     ]
+    ],
+    "chain": [
+     [
+      0.7725259468377004,
+      "7af5977862ec021f"
+     ],
+     [
+      1.3049782925751559,
+      "14cdaabee246493b"
+     ]
+    ]
+   },
+   "gate_le_0_07": true,
+   "input_provenance": {
+    "data/runs/a5/nullsize/inputs.json": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
+   },
+   "noise_scale": 2.0,
+   "nominal": 0.05,
+   "ordered_go_cp95": [
+    0.013817336133530214,
+    0.018870096358635895
+   ],
+   "ordered_go_rate": 0.0162,
+   "positive_rejection": [
+    0.0162,
+    0.0162,
+    0.0162
+   ],
+   "positive_rejection_cp95": [
+    [
+     0.013817336133530214,
+     0.018870096358635895
+    ],
+    [
+     0.013817336133530214,
+     0.018870096358635895
+    ],
+    [
+     0.013817336133530214,
+     0.018870096358635895
+    ]
+   ],
+   "raw_output_sha256": "c8d9b0783127d7cba31edeccd3befaaf56df0ad92ee3e776e9191870b8e8745b",
+   "replicates": 10000,
+   "resolution_draws": 4000,
+   "scenario": "variance_x2",
+   "seed": 20261107,
+   "size_two_sided": [
+    0.0347,
+    0.0347,
+    0.0347
+   ],
+   "size_two_sided_cp95": [
+    [
+     0.03119896424586488,
+     0.03847528317922874
+    ],
+    [
+     0.03119896424586488,
+     0.03847528317922874
+    ],
+    [
+     0.03119896424586488,
+     0.03847528317922874
+    ]
+   ],
+   "stream_order": [
+    "panels",
+    "signs",
+    "resolution"
+   ],
+   "traces_gz": "variance_x2_traces.jsonl.gz",
+   "traces_jsonl_sha256": "051fbd2ffafc8ac455e45e3de8dd8eedbc87f9d05d868a354c0ac03a30419253",
+   "unavailable_audit": "assume_pass",
+   "yield_cp95": [
+    [
+     0.9996311800853812,
+     1.0
+    ],
+    [
+     0.9996311800853812,
+     1.0
+    ],
+    [
+     0.9996311800853812,
+     1.0
+    ]
+   ],
+   "yield_rates_ge15": [
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ },
+ "schema": "a5-nullsize-report-v1",
+ "scope": "conditional on the registered edit-minus-predecessor proxy and the sign-flip DGP; not an empirical certification of the rotation null (F2). No G3 outcome was read; no field was computed",
+ "sufficiency": {
+  "donor_cluster_representatives_per_cell": {
+   "LoRA:0": 1,
+   "LoRA:1": 9,
+   "LoRA:2": 15,
+   "chain:0": 26,
+   "chain:1": 20,
+   "chain:2": 25
+  },
+  "missing_reasons": {
+   "edit:no_primary_record": 35,
+   "reference:no_primary_record": 3
+  },
+  "missing_rows": 38,
+  "n_donor_components": 63,
+  "n_donor_pairs": 141,
+  "pairs_with_missing_windows": 0,
+  "problems": [],
+  "sufficient": true
+ },
+ "verdict": "PASS",
+ "verdict_reason": "registered run: ordered go rate and every individual two-sided size <= 0.07"
+}
