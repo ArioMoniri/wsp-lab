@@ -9,7 +9,7 @@ DST=s3://t3-dr-235229001983-eu-central-1/wsp-lab/wsp-data
 LOG=/home/ubuntu/agent-logs/backup-sync-$(date -u +%Y%m%d-%H%M%S).log
 {
   date -u +"start %FT%TZ"
-  aws s3 sync "$SRC" "$DST" --only-show-errors --no-progress --exclude "runs/d8/stage_zoo/*" --exclude "runs/d8/staging_zoo/*" --exclude "hf/*"
+  aws s3 sync "$SRC" "$DST" --no-follow-symlinks --only-show-errors --no-progress --exclude "runs/d8/stage_zoo/*" --exclude "runs/d8/staging_zoo/*" --exclude "hf/*"
   rc=$?
   date -u +"end %FT%TZ rc=$rc"
   aws s3 ls --summarize --recursive "$DST" 2>/dev/null | tail -2
