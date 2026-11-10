@@ -298,3 +298,8 @@ permutation controls, four logged access flags, matched random best-of-N 32 draw
 Brief corrections: LoL's speed claim withdrawn; WeightLoop 8 of 8 vs random and 7 of 8 vs original; no stored chain LoRA factors.
 Three delegates running: A5 amendment F5 with record changes (`prereg/a5-f5`), the G2 driver code (`feat/g2-driver`), the 4B
 Lambda job code (`feat/scale-4b-diagnostic`). Board A's single freeze pass follows F5.
+
+**10 Nov 2026, 13:00 UTC.** A5 amendment F5 merged (e3c577f; append-only; F5.1–F5.7 with HYPOTHESIS, H5_DESIGN, H5_PROTOCOL, ROADMAP,
+RESEARCH_NOTES and verified refs updated; WeightLoop, Neural Thickets and LoL added to `paper/refs`). Board A's single freeze pass is
+under review (`docs/reviews/council/board-a-freeze-2026-11-10.md` when it lands): checklist item 7, the null-size caveats and F5.
+G2 driver and the 4B Lambda job are being written as code only; neither runs before the freeze.
