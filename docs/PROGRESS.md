@@ -519,3 +519,13 @@ three-component declaration is rejected; components must come from the dependenc
 before any learned readout update; reconcile H5 documents and freeze/reprice G5 prerequisites before H5 execution (reconciliation in
 flight); confirm generation thresholds before sampling and reprice before qualification. All 15 drafter choices dispositioned in the
 review. Applied at the F8/F9 freeze, after the Part A ledger is sealed.
+
+**10 Nov 2026, 23:50 UTC. Part A staging complete; rotation yield failure found before any scoring.** The `prepare` run
+(branch `feat/part-a-prepare`, 4 h 58 min CPU, 73 GB under `data/runs/a5/part_a/`) staged all 80 ladder variants but the registered
+A5.3.3 rotation audit excludes 39 of 40 rotation pairs (30/30 lora_sft, 9/10 chain; 535 of 2,534 edited tensors pass): where D_eff
+is small relative to the bf16 spacing of W, the spectrum-matched rotation's entries fall below half an ulp and are rounded away, and
+bf16 noise lifts the numerical rank beyond the ±1 tolerance. Under A5.3 the rotation contrast needs ≥ 15 resolved pairs, so it is
+**unresolved by yield** before any outcome exists; the null-size and power simulations assumed yield 1.0 with audits unavailable
+(Board A F7 condition 4). Nothing has been scored and no outcome has been read. Decision: hold all Part A scoring, including the
+ladder, until a pre-outcome analysis and amendment proposal (F10, `docs/design/ROTATION_YIELD_2026-11-11.md`, in flight) and
+Board A's review settle the rotation construction and whether ladder scoring may precede F10. GPU idle.
