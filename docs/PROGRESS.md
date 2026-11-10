@@ -393,3 +393,9 @@ infeasible at its cap with its single row failing the rule; the base approximati
 predecessor gradients for WikiText and MMLU through the new `chain_exact` stage (20 rows, 2.2 GPU-h cap), HellaSwag and refusal tokens
 masked for those rows, a Part B sensitivity arm excludes unvalidated chain rows. Board A reviews F6 before the rows run. The H0 half of
 the 4B pairing was relaunched with the H100 job's revision and device id.
+
+**11 Nov 2026, 02:15 UTC.** Board A accepted F6 and the reuse of the G2 fields stage (`docs/reviews/council/board-a-f6-2026-11-11.md`;
+conditions: frozen identities and outcome-access order preserved, all predecessor, alias-holder, support and gradient identities recorded,
+objective masks enforced, base-factor q_t flagged, failed rows retained, every attempt charged against the 2.2 GPU-h cap, the accepted
+exact WikiText chain predictions used for the power/yield simulation). The `chain_exact` stage is queued on the local GPU behind the
+4B H0 pairing job.
