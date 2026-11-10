@@ -98,6 +98,14 @@ evaluations than (a) the same editor without the critic and (b) Adam/Muon with e
 Falsified if the critic does not reduce evaluations by ≥ 30 % at equal final score. Board C assesses the
 design before any run (docs/MODEL_CANDIDATES.md §LLM-in-the-loop).
 
+*Note, 11 Nov 2026 (council round 4, [F8.7](PREREG_H1_TF.md); [synthesis](council/2026-11-11/SYNTHESIS.md) §§1, 4).*
+The pilot gains a scripted-estimator arm: a difference-of-means direction plus linear-programme column/scale
+selection, no LLM, given the same localisation the editor receives; a second variant chooses layers by field
+ranking. Information supplied to any arm (layers, budget, scale) is logged as prior information, not discovery.
+GPT-6.1 Sol (medium) is registered as the practical editor beside Astra, which is kept for reproduction; no silent
+substitution. Evaluation savings are reported per proposal stream (LLM, scripted, random best-of-N). The ≥ 30 %
+paired-savings criterion concerns the critic and is unchanged. Nothing here authorises an episode.
+
 ## P4 measurement qualification
 
 P3 currently supplies cumulative-from-base delta features. H2 therefore measures
@@ -176,3 +184,14 @@ storage remain distinct. A5.7's ≥30% realised savings and conjunctive deployme
 gates remain binding; G5 is shadow feasibility and production stays disabled.
 The 4B pilot is a parallel Lambda diagnostic under F5.3, never a gate or H6 result.
 No compute is started and no historical hypothesis status is repaired.
+
+## 11 Nov 2026 prospective note — H1-OR (council round 4, before any G3 outcome)
+
+The [11 Nov synthesis](council/2026-11-11/SYNTHESIS.md) is recorded as [PREREG A5 amendment F8](PREREG_H1_TF.md); Board A reviews F8
+before any F8 entry is scored, and Part A does not wait. The registered arms, Part A selection and F5.5 are unchanged.
+F8 adds two descriptive panels with **no decision authority** (F8.6): an external-edit panel (F8-E; the released Astra patch,
+published LP edits, the aiXiv difference-of-means reconstruction) and a family-transfer panel (F8-F; gate deletion, TFTV rank-one,
+a Concept-Country-style rank-one). They cannot satisfy, fail or unresolve any F5.5 predicate or A5.5 step and fund nothing.
+F8.8: the access-ladder report states Rane's ordering (weights 42 %, activations 61 %, outputs 64 % domain recovery on
+Qwen3.5-0.8B LoRAs, arXiv 2611.07610) as a prior in one sentence; it is not an effect-size revision, and the field is described
+as weights plus frozen receiver sensitivity, never data-free. No historical hypothesis status changes.

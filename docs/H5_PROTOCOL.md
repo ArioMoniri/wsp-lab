@@ -96,3 +96,34 @@ claim is allowed without this comparator. Single-model selection (K=1) is separa
 from top-K ensembles and their multi-pass inference costs; any ensemble is separately
 registered. A5.7's ≥30% realised savings, noninferiority, missed-winner, net-cost and
 prospective power conditions remain unchanged. This amendment authorises no episode.
+
+## 11 Nov 2026 amendment — scripted-estimator arm, second editor, prior information (before any G3 outcome)
+
+Authority: PREREG A5 F8.7, [11 Nov synthesis](council/2026-11-11/SYNTHESIS.md) §§1, 4.
+This prospective section supplements the 10 Nov amendment; it reports no execution, authorises no episode, and
+G5 stays shadow feasibility with production disabled. Inside the existing G5 ≤ 10 + ≤ 6 GPU-h caps; reprice before launch.
+
+**Scripted-estimator arm.** A non-LLM proposal stream: a difference-of-means direction plus linear-programme column and
+scale selection (the published replications' recipe: aiXiv 261103.000004; Barry 2026), run by a pinned script with no
+model calls. It receives the same localisation (layers, matrix, column budget) that the editor receives, and nothing else
+the editor does not. A second variant picks layers by field ranking (the base-anchored sensitivity field, not the editor's
+choice). Both variants use the same forward-request meter, development/held-out split, rebuild-from-pinned-base and
+rollback rules as every other arm, and are charged for every direction estimate, LP solve, forward request and failed attempt.
+
+**Second editor.** GPT-6.1 Sol (medium reasoning) is registered as the practical editor beside Astra, which is retained
+for reproduction of the blog protocol. Pin, before the first episode: provider, model identifier and version string,
+reasoning-effort setting, system prompt, tool schema and decode settings, each hashed and logged per episode. No silent
+substitution or provider fallback: an unavailable, renamed or changed model ends that arm and is reported, not replaced.
+Voluntary early stops (an editor ending its episode before the forward-request budget) are logged with the stop reason and
+the requests used, and are not discarded or imputed.
+
+**Prior-information logging.** Whatever an arm is told beyond the weights and the goal is recorded per attempt as
+prior information, not discovery: layers or matrices supplied, column budget, edit scale, direction source, and
+whether it came from a published edit or from the field ranking. An arm's recovery is reported conditional on the
+information supplied; the aiXiv ≈ 93 % recovery is conditional on Astra's layers, budget and scale and is not carried over.
+
+**Per-stream savings reporting.** Evaluation savings are reported separately for each proposal stream: LLM editors (Astra,
+Sol, cheap control), the scripted estimator (both variants) and random best-of-N, each with and without the critic, at
+matched information and charged cost. The ≥ 30 % paired realised-savings criterion (A5.7, F5.4) concerns the critic and is
+unchanged, as are the noninferiority, missed-winner, net-cost and power conditions. Any editor-advantage claim must beat both
+the scripted and the random best-of-N baselines at matched information and charged cost.
