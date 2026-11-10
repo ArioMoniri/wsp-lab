@@ -428,3 +428,260 @@ def test_score_invokes_batch_on_staged_zoo(tmp_path):
     assert cmds[0][1:5] == ["-m", "wsp.eval.batch", "--zoo", str(tmp_path / "stage")]
     assert cmds[0][5:7] == ["--config", "configs/eval_tf_v1.yaml"]
     assert cmds[0][cmds[0].index("--ids") + 1].split(",") == sorted(v.variant_id for v in built)
+
+
+# ------------------------------------------------------ registered selection, alias holders, reuse proofs
+
+
+def _selection_doc(rows, n_lora, n_chain):
+    ids = sorted(r["edit_id"] for r in rows)
+    return {
+        "registered": {
+            "status": "selected",
+            "edit_ids": ids,
+            "selected": rows,
+            "counts": {},
+            "quotas": {},
+            "registered_exclusions": {},
+        },
+        "procedural_freeze": {
+            "registered_edit_ids_sorted_sha256": hashlib.sha256(
+                json.dumps(ids).encode()
+            ).hexdigest()
+        },
+    }
+
+
+def _sel_row(i, fam, comp, pred="base", tertile=0):
+    return {
+        "edit_id": i,
+        "component_id": comp,
+        "family": fam,
+        "tertile": tertile,
+        "tertile_label": ("low", "middle", "high")[tertile],
+        "rank": 0,
+        "effective_norm": 1.0,
+        "predecessor_id": pred,
+    }
+
+
+def test_registered_selection_is_loaded_and_checked_not_rerun(tmp_path):
+    rows = [_sel_row("r1", "lora_sft", "K1"), _sel_row("c1", "chain", "K2", pred="p1")]
+    path = tmp_path / "selection.json"
+    path.write_text(json.dumps(_selection_doc(rows, 1, 1)))
+    sel, ledger = ri.load_registered_selection(path, n_lora=1, n_chain=1)
+    assert [s.edit_id for s in sel] == ["c1", "r1"]
+    assert sel[0].predecessor_id == "p1" and sel[1].predecessor_id == "base"
+    assert ledger["selection_json_sha256"] == _sha(path)
+    with pytest.raises(ri.SelectionBlocked, match="family counts"):
+        ri.load_registered_selection(path, n_lora=2, n_chain=1)
+    doc = _selection_doc(rows, 1, 1)
+    doc["procedural_freeze"]["registered_edit_ids_sorted_sha256"] = "0" * 64
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ri.SelectionBlocked, match="procedural freeze"):
+        ri.load_registered_selection(path, n_lora=1, n_chain=1)
+    doc = _selection_doc(rows + [_sel_row("r2", "lora_sft", "K1")], 2, 1)
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ri.SelectionBlocked, match="components not distinct"):
+        ri.load_registered_selection(path, n_lora=2, n_chain=1)
+
+
+def _alias_zoo(tmp_path):
+    """Base, a holder H with bytes, its alias A (edit.json only) and chain step c1 with parent A."""
+    base = _base()
+    zoo = tmp_path / "zoo"
+    zoo.mkdir()
+    (zoo / "manifest.jsonl").write_text(
+        json.dumps({"type": "header", "base_model": "m", "base_revision": REV}) + "\n"
+    )
+    cum_p = {"layers.1.o.weight": _lowrank((6, 6), [0, 1], [2, 3], 1, 20)}
+    holder = _entry(zoo, "H", cum_p, family="random_dir")
+    edit = json.loads((holder / "edit.json").read_text()) | {
+        "params": {},
+        "seed": 0,
+        "base_model": "m",
+    }  # a full descriptor: prepare loads the predecessor state through wsp.zoo.apply
+    (holder / "edit.json").write_text(json.dumps(edit))
+    (zoo / "A").mkdir()
+    (zoo / "A" / "edit.json").write_text(
+        json.dumps({"id": "A", "family": "chain", "parent_id": None, "base_revision": REV})
+    )
+    pred = dict(base)
+    pred["layers.1.o.weight"] = (base["layers.1.o.weight"].float() + cum_p["layers.1.o.weight"]).to(
+        torch.bfloat16
+    )
+    step = _lowrank((8, 6), [1, 2, 3], [0, 1, 2], 2, 21)
+    cum_e = {
+        "layers.1.o.weight": pred["layers.1.o.weight"].float() - base["layers.1.o.weight"].float(),
+        "layers.0.q.weight": (pred["layers.0.q.weight"].float() + step).to(torch.bfloat16).float()
+        - base["layers.0.q.weight"].float(),
+    }
+    entry = _entry(zoo, "c1", cum_e, family="chain", parent="A", cumulative=True)
+    return base, pred, zoo, holder, entry
+
+
+def test_alias_predecessor_uses_holder_bytes_in_the_plan(tmp_path):
+    base, pred, _zoo, holder, entry = _alias_zoo(tmp_path)
+    stage, evals = tmp_path / "stage", tmp_path / "evals"
+    built = ri.build_variants(
+        entry,
+        pred,
+        seed=3,
+        stage_root=stage,
+        base_state=base,
+        predecessor_id="A",
+        predecessor_holder="H",
+    )
+    rows = [json.loads(x) for x in (stage / "manifest.jsonl").read_text().splitlines()]
+    assert {r.get("predecessor_bytes_holder") for r in rows if "id" in r} == {"H"}
+    meta = json.loads((built[0].entry_dir / "variant.json").read_text())
+    assert meta["predecessor_bytes_holder"] == "H"
+    assert meta["lineage"]["n_predecessor_changed"] == 1
+    assert meta["lineage"]["n_predecessor_changed_carried_bitwise"] == 1
+    # the alias's record was scored on the holder's bytes: reuse is proven against the holder
+    _record(evals, "A", hashes={"delta.safetensors": _sha(holder / "delta.safetensors")})
+    summary = ri.scoring_summary(stage, evals, CFG)
+    assert summary["missing_predecessors"] == [] and summary["missing_originals"] == ["c1"]
+    assert summary["predecessor_bytes_holders"] == {"A": "H"}
+    proof = next(p for p in summary["reuse_proofs"] if p["id"] == "A")
+    assert proof["verdict"] and proof["bytes_holder"] == "H"
+    assert (summary["n_priced"], summary["references_to_score"]) == (4, 1)
+    # stale holder bytes forbid reuse (fail closed)
+    (evals / "A" / "eval.json").write_text(
+        json.dumps(
+            json.loads((evals / "A/eval.json").read_text())
+            | {"entry_hashes": {"delta.safetensors": "0" * 64}}
+        )
+    )
+    assert ri.scoring_summary(stage, evals, CFG)["missing_predecessors"] == ["A"]
+
+
+def _records(evals, i, windows, repeat_id=None):
+    d = evals / i
+    p = json.loads((d / "eval.json").read_text()) | {"repeat_id": repeat_id}
+    (d / "eval.json").write_text(json.dumps(p))
+    (d / "records.jsonl").write_text(
+        "".join(
+            json.dumps({"benchmark": "wikitext_ppl", "item_id": w, "extra": {"token_ids_hash": h}})
+            + "\n"
+            for w, h in windows
+        )
+    )
+
+
+def test_reuse_proof_window_and_primary_checks(tmp_path):
+    entry = _entry(tmp_path / "zoo", "r1", _root_delta())
+    stage, evals = tmp_path / "stage", tmp_path / "evals"
+    ri.build_variants(entry, _base(), seed=1, stage_root=stage)
+    windows = [("0", "h0"), ("1", "h1")]
+    tg = tmp_path / "text_groups.json"
+    tg.write_text(
+        json.dumps({"windows": [{"item_id": w, "token_ids_hash": h} for w, h in windows]})
+    )
+    assert ri.registered_windows(tg) == windows
+    _record(evals, "base")
+    _record(evals, "r1", hashes={"delta.safetensors": _sha(entry / "delta.safetensors")})
+    for i in ("base", "r1"):
+        _records(evals, i, windows)
+    summary = ri.scoring_summary(stage, evals, CFG, windows)
+    assert (summary["n_P"], summary["n_D"], summary["window_check"]) == (0, 0, True)
+    _records(evals, "r1", [("0", "h0"), ("1", "other")])
+    proof = next(
+        p for p in ri.scoring_summary(stage, evals, CFG, windows)["reuse_proofs"] if p["id"] == "r1"
+    )
+    assert not proof["verdict"] and proof["failed_checks"] == ["windows"]
+    _records(evals, "r1", windows, repeat_id="g1")
+    assert ri.scoring_summary(stage, evals, CFG, windows)["missing_originals"] == ["r1"]
+    assert ri.scoring_summary(stage, evals, CFG)["missing_originals"] == []  # no window check
+
+
+def test_score_also_runs_missing_references_on_the_source_zoo(tmp_path):
+    base, pred, zoo, _holder, entry = _alias_zoo(tmp_path)
+    stage = tmp_path / "stage"
+    ri.build_variants(
+        entry,
+        pred,
+        seed=3,
+        stage_root=stage,
+        base_state=base,
+        predecessor_id="A",
+        predecessor_holder="H",
+    )
+    cmds = ri.score_commands(stage, "cfg.yaml", references=["c1"])
+    assert len(cmds) == 2 and cmds[1][3:] == [
+        "--zoo",
+        str(zoo.resolve()),
+        "--config",
+        "cfg.yaml",
+        "--ids",
+        "c1",
+    ]
+    with pytest.raises(ValueError, match="without own bytes"):
+        ri.score_commands(stage, "cfg.yaml", references=["A"])
+    assert len(ri.score_commands(stage, "cfg.yaml")) == 1
+
+
+def test_prepare_cli_stages_registered_selection_with_alias_predecessor(tmp_path, monkeypatch):
+    from wsp.eval import batch
+    from wsp.features import extract
+
+    base, _pred, zoo, holder, _chain = _alias_zoo(tmp_path)
+    _entry(zoo, "r1", _root_delta())
+    sel = tmp_path / "selection.json"
+    sel.write_text(
+        json.dumps(
+            _selection_doc(
+                [_sel_row("r1", "lora_sft", "K1"), _sel_row("c1", "chain", "K2", pred="A")], 1, 1
+            )
+        )
+    )
+    refs = tmp_path / "references.json"
+    refs.write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {
+                        "edit_id": "r1",
+                        "predecessor_id": "base",
+                        "original": {"id": "r1", "bytes_holder": "r1"},
+                        "predecessor": {"id": "base", "bytes_holder": None},
+                    },
+                    {
+                        "edit_id": "c1",
+                        "predecessor_id": "A",
+                        "original": {"id": "c1", "bytes_holder": "c1"},
+                        "predecessor": {"id": "A", "bytes_holder": "H"},
+                    },
+                ]
+            }
+        )
+    )
+    evals = tmp_path / "evals"
+    _record(evals, "base")
+    _record(evals, "A", hashes={"delta.safetensors": _sha(holder / "delta.safetensors")})
+    cfg = tmp_path / "cfg.yaml"
+    cfg.write_text(json.dumps(CFG))
+    monkeypatch.setattr(extract, "load_base_state", lambda m, r: (dict(base), r))
+    monkeypatch.setattr(batch, "provenance", lambda: {"git_sha": "g", "source_hash": "s"})
+    out, man = tmp_path / "out", tmp_path / "pkg" / "manifest.json"
+    argv = ["prepare", "--zoo", str(zoo), "--selection", str(sel), "--references", str(refs),
+            "--out", str(out), "--manifest-out", str(man), "--config", str(cfg),
+            "--evals", str(evals), "--n-lora", "1", "--n-chain", "1"]  # fmt: skip
+    assert ri.main(argv) == 0
+    m = json.loads(man.read_text())
+    assert m["edit_ids"] == ["c1", "r1"] and len(m["variant_ids"]) == 6
+    assert m["predecessor_bytes_holders"] == {"A": "H"}
+    assert m["rotation_seeds"] == {i: ri.rotation_seed(i) for i in ("c1", "r1")}
+    assert m["scoring"]["missing_predecessors"] == []
+    assert m["scoring"]["missing_originals"] == ["c1", "r1"]
+    assert m["scoring"]["n_priced"] == 8 and m["scored"] is False
+    assert m["coverage"]["n_rotation_pairs_staged"] == 2
+    assert {e["pair_verdict"] for e in m["edit_audits"].values()} == {"pass"}
+    audits = [
+        json.loads(x) for x in (man.parent / "rotation_audits.jsonl").read_text().splitlines()
+    ]
+    assert len(audits) == m["rotation_audits"]["n_tensors"] == 3  # q in c1; q, v in r1
+    assert all(a["verdict"] == "pass" for a in audits)
+    for vid, files in m["delta_sha256"].items():
+        assert files["delta.safetensors"] == _sha(out / "zoo" / vid / "delta.safetensors")
+    assert not (zoo / "A" / "delta.safetensors").exists()  # canonical zoo untouched

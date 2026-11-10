@@ -21,7 +21,15 @@ bf16 state bitwise under the scorer's arithmetic.
 CLI::
 
     python -m wsp.eval.response_intervention prepare --zoo Z --features F --sidecar S --out O --manifest-out M
-    python -m wsp.eval.response_intervention score --stage O/<zoo name> [--dry-run]
+    python -m wsp.eval.response_intervention prepare --zoo Z --selection selection.json \
+        --references references.json --text-groups text_groups.json --out O --manifest-out M
+    python -m wsp.eval.response_intervention score --stage O/<zoo name> [--manifest M] [--dry-run]
+
+``--selection`` stages the registered picks of a committed ``selection.json`` instead of re-running the
+selection; ``--references`` names the bytes holder of every alias-only predecessor (its state is loaded from
+the holder's stored bytes and the scoring plan checks the holder's bytes against the alias's record);
+``--text-groups`` adds the primary-record and 64-window checks of the A5 F3(i) reuse proof to every reused
+reference. ``score --manifest`` also scores the references the plan lists as missing, on the source zoo.
 
 ``prepare`` stages under ``O/<zoo name>`` so the TF-v1 output directory of ``wsp.eval.batch``
 (``data/evals/<zoo name>/tf_v1``) is shared with the canonical references. ``score`` only runs the existing
@@ -331,6 +339,7 @@ def build_variants(
     stage_root,
     base_state=None,
     predecessor_id=None,
+    predecessor_holder=None,
 ):
     """Rotation (s = 1) and scaled variants of one edit, staged under ``stage_root/<variant id>``.
 
@@ -341,6 +350,8 @@ def build_variants(
     sorted-name order through :func:`rotation.rotate_block` (each tensor starts from its cloned state).
     A tensor with an exclusion reason, or a failed audit, excludes the whole rotation pair: its entry holds
     only ``variant.json`` and is not added to the staged manifest. Never writes into the canonical zoo.
+    ``predecessor_holder`` records the zoo entry whose stored bytes gave ``predecessor_state`` when the
+    predecessor is an alias without bytes of its own; the scoring plan checks the holder's bytes.
     """
     from wsp.zoo.apply import load_entry_delta
 
@@ -407,6 +418,12 @@ def build_variants(
         "edited_tensor_rule": "stored delta keys"
         if root
         else "nonzero realised increment at the predecessor",
+        "predecessor_bytes_holder": predecessor_holder,
+        "lineage": {
+            "n_predecessor_changed": len(pred_changed),
+            "n_predecessor_changed_carried_bitwise": len(pred_changed - set(edited)),
+            "n_stored_tensors": len(keys),
+        },
     }
 
     def write(kind, strength, states, meta, excluded, exclusions):
@@ -455,6 +472,7 @@ def build_variants(
                     "reuse_key": info["delta_sha256"],
                     "stored_delta_format": "dense" if root else "dense_cumulative",
                 }
+                | ({"predecessor_bytes_holder": predecessor_holder} if predecessor_holder else {})
             )
         (d / "variant.json").write_text(json.dumps(info, indent=1, sort_keys=True))
         _upsert_stage_rows(stage_root, header, rows)
@@ -604,7 +622,68 @@ def _reference_on_file(evals_dir, ref_id, source, identity):
     return bool(ok)
 
 
-def _stage(staged_zoo, evals_dir, config):
+def record_windows(records_path):
+    """[(item id, token_ids_hash)] of a TF-v1 record's WikiText windows, in item order."""
+    rows = []
+    for line in Path(records_path).read_text().splitlines():
+        if '"wikitext_ppl"' not in line:
+            continue
+        r = json.loads(line)
+        if r.get("benchmark") == "wikitext_ppl":
+            rows.append((str(r["item_id"]), (r.get("extra") or {}).get("token_ids_hash")))
+    return sorted(rows, key=lambda x: int(x[0]))
+
+
+def registered_windows(text_groups):
+    """The registered 64 windows of ``text_groups.json`` in the :func:`record_windows` form."""
+    doc = json.loads(Path(text_groups).read_text())
+    return sorted(
+        ((str(w["item_id"]), w["token_ids_hash"]) for w in doc["windows"]), key=lambda x: int(x[0])
+    )
+
+
+def reuse_proof(evals_dir, ref_id, source, identity, windows=None, holder=None):
+    """A5 F3(i) reuse proof of one reference record. ``source`` is the zoo entry holding the bytes (the
+    alias holder for an alias; None for the base). The verdict needs :func:`_reference_on_file`'s identity
+    and entry-bytes checks and, with ``windows``, a primary record whose WikiText windows equal them."""
+    d = Path(evals_dir) / ref_id
+    out = {"id": ref_id, "bytes_holder": holder, "record": f"{ref_id}/eval.json"}
+    if not (d / "eval.json").exists():
+        return out | {"verdict": False, "failed_checks": ["no_record"]}
+    p = json.loads((d / "eval.json").read_text())
+    current = _source_hashes(source) if source is not None and source.exists() else None
+    checks = {
+        "complete": p.get("eval_status") == "complete",
+        "config_hash": p.get("config_hash") == identity["config_hash"],
+        "model_revision": p.get("model_revision") == identity["model_revision"],
+        "counts": all(p.get("counts", {}).get(k) == n for k, n in identity["counts"].items()),
+        "entry_hashes": source is None
+        or (bool(p.get("entry_hashes")) and p.get("entry_hashes") == current),
+    }
+    if windows is not None:
+        checks["primary"] = p.get("repeat_id") is None
+        checks["windows"] = (d / "records.jsonl").exists() and record_windows(
+            d / "records.jsonl"
+        ) == list(windows)
+    tool = _reference_on_file(evals_dir, ref_id, source, identity)
+    core = all(v for k, v in checks.items() if k not in ("primary", "windows"))
+    if tool != core:
+        raise AssertionError(f"{ref_id}: _reference_on_file={tool} disagrees with checks {checks}")
+    return out | {
+        "verdict": all(checks.values()),
+        "failed_checks": sorted(k for k, v in checks.items() if not v),
+        "window_check": windows is not None,
+        "run_id": p.get("run_id"),
+        "config_hash": p.get("config_hash"),
+        "model_revision": p.get("model_revision"),
+        "counts": p.get("counts"),
+        "recorded_entry_hashes": p.get("entry_hashes"),
+        "current_entry_hashes": current,
+        "eval_json_sha256": _sha256(d / "eval.json"),
+    }
+
+
+def _stage(staged_zoo, evals_dir, config, windows=None):
     from wsp.eval.batch import effective_config_hash
 
     staged_zoo = Path(staged_zoo)
@@ -615,41 +694,45 @@ def _stage(staged_zoo, evals_dir, config):
     ]
     variants = sorted((r for r in rows if "id" in r), key=lambda r: r["id"])
     counts = {k: v.get("n", v.get("n_windows")) for k, v in cfg["benchmarks"].items()}
-    status = {}
+    proofs = {}
 
-    def on_file(ref_id, revision):
+    def on_file(ref_id, revision, holder=None):
+        """Reuse needs the record to match the bytes actually held: an alias's holder's bytes."""
         key = (ref_id, revision)
-        if key not in status:
+        if key not in proofs:
             identity = {
                 "config_hash": effective_config_hash(cfg),
                 "model_revision": revision,
                 "counts": counts,
             }
-            source = None if ref_id == "base" else source_zoo / ref_id
-            status[key] = _reference_on_file(evals_dir, ref_id, source, identity)
-        return status[key]
+            source = None if ref_id == "base" else source_zoo / (holder or ref_id)
+            proofs[key] = reuse_proof(evals_dir, ref_id, source, identity, windows, holder)
+        elif proofs[key]["bytes_holder"] != holder:
+            raise ValueError(f"{ref_id}: inconsistent bytes holders in the staged manifest")
+        return proofs[key]["verdict"]
 
+    on_file.proofs = proofs
     return variants, on_file
 
 
-def plan_scoring(staged_zoo, evals_dir, config):
+def _pred(r):
+    return r.get("parent_id") or "base", r["base_revision"], r.get("predecessor_bytes_holder")
+
+
+def plan_scoring(staged_zoo, evals_dir, config, windows=None):
     """[(variant id, needs_reference)] — whether the variant's predecessor reference lacks an on-file
     record with the same scoring identity (absent identity proof counts as needed)."""
-    variants, on_file = _stage(staged_zoo, evals_dir, config)
-    return [
-        (r["id"], not on_file(r.get("parent_id") or "base", r["base_revision"])) for r in variants
-    ]
+    variants, on_file = _stage(staged_zoo, evals_dir, config, windows)
+    return [(r["id"], not on_file(*_pred(r))) for r in variants]
 
 
-def scoring_summary(staged_zoo, evals_dir, config):
+def scoring_summary(staged_zoo, evals_dir, config, windows=None):
     """Plan plus A5.3.4 counts: n_P unique missing predecessors, n_D missing originals, priced minutes."""
-    variants, on_file = _stage(staged_zoo, evals_dir, config)
-    plan = [
-        (r["id"], not on_file(r.get("parent_id") or "base", r["base_revision"])) for r in variants
-    ]
-    preds = sorted({(r.get("parent_id") or "base", r["base_revision"]) for r in variants})
+    variants, on_file = _stage(staged_zoo, evals_dir, config, windows)
+    plan = [(r["id"], not on_file(*_pred(r))) for r in variants]
+    preds = sorted({_pred(r) for r in variants}, key=lambda x: (x[0], x[1]))
     origs = sorted({(r["variant_of"], r["base_revision"]) for r in variants})
-    missing_p = sorted({p for p, rev in preds if not on_file(p, rev)})
+    missing_p = sorted({p for p, rev, h in preds if not on_file(p, rev, h)})
     missing_d = sorted({o for o, rev in origs if not on_file(o, rev)})
     excluded = sorted(
         json.loads(p.read_text())["variant_id"]
@@ -661,35 +744,61 @@ def scoring_summary(staged_zoo, evals_dir, config):
         "plan": plan,
         "n_variants": len(variants),
         "excluded_variants": excluded,
+        "predecessors": sorted({p for p, _, _ in preds}),
+        "originals": sorted({o for o, _ in origs}),
+        "predecessor_bytes_holders": {p: h for p, _, h in preds if h},
         "missing_predecessors": missing_p,
         "missing_originals": missing_d,
         "n_P": len(missing_p),
         "n_D": len(missing_d),
+        "references_to_score": len(missing_p) + len(missing_d),
+        "n_priced": n,
         "minutes_per_entry": MINUTES_PER_ENTRY,
-        "minutes": n * MINUTES_PER_ENTRY,
+        "minutes": round(n * MINUTES_PER_ENTRY, 4),
+        "reuse_proofs": sorted(on_file.proofs.values(), key=lambda x: x["id"]),
+        "window_check": windows is not None,
     }
 
 
-def score_commands(staged_zoo, config=DEFAULT_CONFIG):
-    """The existing batch CLI on the staged variants (scoring is never reimplemented here)."""
+def _batch_cmd(zoo, config, ids):
+    return [
+        sys.executable,
+        "-m",
+        "wsp.eval.batch",
+        "--zoo",
+        str(zoo),
+        "--config",
+        str(config),
+        "--ids",
+        ",".join(ids),
+    ]
+
+
+def score_commands(staged_zoo, config=DEFAULT_CONFIG, references=()):
+    """The existing batch CLI on the staged variants (scoring is never reimplemented here), then, if
+    ``references`` are given, on those missing reference entries of the source zoo. A reference without
+    bytes of its own (an alias) cannot be scored under its id here: that stops for a repriced plan."""
     staged_zoo = Path(staged_zoo)
     rows = [
         json.loads(x) for x in (staged_zoo / "manifest.jsonl").read_text().splitlines() if x.strip()
     ]
     ids = sorted(r["id"] for r in rows if "id" in r)
-    return [
-        [
-            sys.executable,
-            "-m",
-            "wsp.eval.batch",
-            "--zoo",
-            str(staged_zoo),
-            "--config",
-            str(config),
-            "--ids",
-            ",".join(ids),
+    cmds = [_batch_cmd(staged_zoo, config, ids)]
+    refs = sorted(set(references) - {"base"})
+    if "base" in references:
+        raise ValueError("the base reference is missing: score it separately and reprice")
+    if refs:
+        source_zoo = Path(json.loads((staged_zoo / "stage.json").read_text())["source_zoo"])
+        no_bytes = [
+            i
+            for i in refs
+            if not (source_zoo / i / "delta.safetensors").exists()
+            and not (source_zoo / i / "lora").is_dir()
         ]
-    ]
+        if no_bytes:
+            raise ValueError(f"missing references without own bytes (alias; reprice): {no_bytes}")
+        cmds.append(_batch_cmd(source_zoo, config, refs))
+    return cmds
 
 
 # ------------------------------------------------------------------------------------------------- CLI
@@ -725,6 +834,159 @@ def load_feature_norms(path, rows):
     return norms
 
 
+def load_registered_selection(path, n_lora=30, n_chain=10):
+    """The registered picks of a committed ``selection.json`` (``registered`` block), checked, never re-run.
+
+    Returns (selections sorted by edit id, ledger). The ids must equal ``registered.edit_ids`` and, when
+    present, the procedural freeze's sorted-id sha256; families, counts and components must be complete.
+    """
+    path = Path(path)
+    doc = json.loads(path.read_text())
+    reg = doc["registered"]
+    if reg.get("status") != "selected":
+        raise SelectionBlocked(f"{path}: registered selection status {reg.get('status')!r}")
+    rows = sorted(reg["selected"], key=lambda r: r["edit_id"])
+    sel = [
+        Selection(
+            r["edit_id"],
+            r["component_id"],
+            r["family"],
+            int(r["tertile"]),
+            int(r["rank"]),
+            float(r["effective_norm"]),
+            r.get("predecessor_id") or "base",
+        )
+        for r in rows
+    ]
+    ids = [s.edit_id for s in sel]
+    problems = []
+    if ids != sorted(reg["edit_ids"]) or len(set(ids)) != len(ids):
+        problems.append("selected rows differ from registered.edit_ids")
+    if len({s.component_id for s in sel}) != len(sel):
+        problems.append("components not distinct")
+    fams = {f: sum(s.family == f for s in sel) for f in FAMILIES}
+    if fams != {"lora_sft": n_lora, "chain": n_chain} or len(sel) != n_lora + n_chain:
+        problems.append(f"family counts {fams}")
+    for r in rows:
+        if (
+            r.get("tertile_label")
+            and ("low", "middle", "high")[int(r["tertile"])] != r["tertile_label"]
+        ):
+            problems.append(f"{r['edit_id']}: tertile label")
+    freeze = doc.get("procedural_freeze") or {}
+    ids_sha = hashlib.sha256(json.dumps(ids).encode()).hexdigest()
+    if freeze.get("registered_edit_ids_sorted_sha256") not in (None, ids_sha):
+        problems.append("sorted-id sha256 differs from the procedural freeze")
+    if problems:
+        raise SelectionBlocked(f"{path}: " + "; ".join(problems))
+    ledger = {
+        "source": "registered selection (selection.json:registered); selection not re-run",
+        "selection_json_sha256": _sha256(path),
+        "edit_ids_sorted_sha256": ids_sha,
+        "status": reg["status"],
+        "counts": reg.get("counts"),
+        "quotas": reg.get("quotas"),
+        "registered_exclusions": reg.get("registered_exclusions"),
+        "ruling": reg.get("ruling"),
+    }
+    return sel, ledger
+
+
+def load_bytes_holders(references, selections):
+    """alias id -> bytes holder for the selected edits and their predecessors, from ``references.json``.
+
+    Every selected edit must have a row whose predecessor equals the selection's; an id whose holder is
+    itself is not an alias and is omitted."""
+    doc = json.loads(Path(references).read_text())
+    by_edit = {r["edit_id"]: r for r in doc["rows"]}
+    holders = {}
+    for s in selections:
+        row = by_edit.get(s.edit_id)
+        if row is None or (row.get("predecessor_id") or "base") != s.predecessor_id:
+            raise ValueError(f"{s.edit_id}: references row missing or predecessor differs")
+        for key in ("original", "predecessor"):
+            ref = row.get(key) or {}
+            h = ref.get("bytes_holder")
+            if h and h != ref["id"]:
+                if holders.get(ref["id"], h) != h:
+                    raise ValueError(f"{ref['id']}: two bytes holders")
+                holders[ref["id"]] = h
+    return holders
+
+
+AUDIT_FIELDS = (
+    "block_shape",
+    "block_rank",
+    "rank_d",
+    "rank_r",
+    "rank_difference",
+    "norm_mismatch",
+    "spectrum_mismatch",
+    "support_identical",
+    "orthogonality_error",
+    "reconstruction_residual",
+    "prerounding_norm_mismatch",
+    "rounding_error_rel",
+    "nonzero_d",
+    "nonzero_r",
+    "s31_passes",
+    "passes",
+)
+
+
+def audit_rows(variants, shapes):
+    """One compact row per edited tensor of every rotation variant (A5 F3(ii) per-tensor output), sorted."""
+    out = []
+    for v in sorted(variants, key=lambda v: v.source_id):
+        if v.kind != "rotation":
+            continue
+        meta = json.loads((v.entry_dir / "variant.json").read_text())
+        reasons = {e["tensor"]: e["reason"] for e in meta["exclusions"]}
+        for t in meta["edited_tensors"]:
+            a = meta["tensor_audits"].get(t, {})
+            out.append(
+                {
+                    "edit_id": v.source_id,
+                    "predecessor_id": v.predecessor_id,
+                    "variant_id": v.variant_id,
+                    "seed": v.seed,
+                    "tensor": t,
+                    "shape": list(shapes[t]),
+                    "verdict": reasons.get(t, "pass" if a.get("passes") else "not_audited"),
+                }
+                | {k: a[k] for k in AUDIT_FIELDS if k in a}
+            )
+    return out
+
+
+def edit_audit_summary(variants):
+    """Per edit: rotation verdict, exclusions, coverage, edit-level audit, unrotated-tensor count."""
+    out = {}
+    for v in sorted(variants, key=lambda v: v.source_id):
+        if v.kind != "rotation":
+            continue
+        meta = json.loads((v.entry_dir / "variant.json").read_text())
+        cov = meta["coverage"]
+        out[v.source_id] = {
+            "rotation_variant_id": v.variant_id,
+            "predecessor_id": v.predecessor_id,
+            "predecessor_bytes_holder": meta.get("predecessor_bytes_holder"),
+            "seed": v.seed,
+            "pair_verdict": "excluded" if v.excluded else "pass",
+            "exclusions": v.exclusions,
+            "coverage": cov,
+            "unrotated_tensors": cov["n_edited"] - cov["n_rotated"],
+            "edit_audit": meta["edit_audit"],
+            "delta_convention": meta["delta_convention"],
+            "lineage": meta.get("lineage"),
+        }
+    return out
+
+
+def _du(path):
+    return sum(p.stat().st_size for p in Path(path).rglob("*") if p.is_file())
+
+
 def prepare(args):
     from wsp.eval.batch import REPO, provenance
     from wsp.features.extract import load_base_state
@@ -732,13 +994,26 @@ def prepare(args):
 
     zoo = Path(args.zoo)
     rows = [json.loads(x) for x in (zoo / "manifest.jsonl").read_text().splitlines() if x.strip()]
-    sidecar = [json.loads(x) for x in Path(args.sidecar).read_text().splitlines() if x.strip()]
-    norms = load_feature_norms(args.features, rows)
     try:
-        selections, ledger = select_with_ledger(rows, norms, sidecar, args.n_lora, args.n_chain)
+        if args.selection:
+            selections, ledger = load_registered_selection(
+                args.selection, args.n_lora, args.n_chain
+            )
+        else:
+            if not (args.features and args.sidecar):
+                raise SelectionBlocked("--features and --sidecar are required without --selection")
+            sidecar = [
+                json.loads(x) for x in Path(args.sidecar).read_text().splitlines() if x.strip()
+            ]
+            norms = load_feature_norms(args.features, rows)
+            selections, ledger = select_with_ledger(rows, norms, sidecar, args.n_lora, args.n_chain)
     except (SelectionBlocked, SelectionUnresolved) as e:
         print(f"selection {type(e).__name__}: {e}", file=sys.stderr)
         return 2
+    holders = load_bytes_holders(args.references, selections) if args.references else {}
+    if any(s.edit_id in holders for s in selections):
+        raise ValueError("a selected edit without its own bytes is not supported")
+    windows = registered_windows(args.text_groups) if args.text_groups else None
     header = next(r for r in reversed(rows) if r.get("type") == "header")
     revisions = {
         json.loads((zoo / s.edit_id / "edit.json").read_text())["base_revision"] for s in selections
@@ -746,6 +1021,7 @@ def prepare(args):
     if len(revisions) != 1:
         raise ValueError(f"selected edits span base revisions {sorted(revisions)}")
     base, _ = load_base_state(header["base_model"], revisions.pop())
+    shapes = {k: tuple(v.shape) for k, v in base.items()}
     stage = Path(args.out) / zoo.name
     variants = []
     for s in selections:
@@ -753,7 +1029,10 @@ def prepare(args):
         if s.predecessor_id == "base":
             pred = base
         else:
-            pred, kw["base_state"] = load_edited_model(base, zoo / s.predecessor_id), base
+            holder = holders.get(s.predecessor_id)
+            entry = zoo / (holder or s.predecessor_id)
+            pred, kw["base_state"] = load_edited_model(base, entry), base
+            kw["predecessor_holder"] = holder
         variants += build_variants(
             zoo / s.edit_id, pred, rotation_seed(s.edit_id), tuple(args.strengths), **kw
         )
@@ -764,23 +1043,75 @@ def prepare(args):
     origin = provenance()
     manifest = manifest_for(selections, variants, origin["git_sha"])
     evals = Path(args.evals) if args.evals else REPO / "data/evals" / zoo.name / "tf_v1"
-    summary = scoring_summary(stage, evals, args.config)
+    summary = scoring_summary(stage, evals, args.config, windows)
+    audits = audit_rows(variants, shapes)
+    out = Path(args.manifest_out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    audit_path = out.with_name("rotation_audits.jsonl")
+    audit_path.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in audits))
+    per_edit = edit_audit_summary(variants)
     manifest |= {
         "provenance": origin,
         "selection_ledger": ledger,
         "scoring": summary | {"config": str(args.config), "evals_dir": str(evals)},
         "staged_zoo": str(stage),
+        "rotation_seeds": {s.edit_id: rotation_seed(s.edit_id) for s in selections},
+        "predecessor_bytes_holders": {
+            s.predecessor_id: holders[s.predecessor_id]
+            for s in selections
+            if s.predecessor_id in holders
+        },
+        "edit_audits": per_edit,
+        "rotation_audits": {
+            "file": audit_path.name,
+            "sha256": _sha256(audit_path),
+            "n_tensors": len(audits),
+            "n_pass": sum(r["verdict"] == "pass" for r in audits),
+        },
+        "coverage": {
+            "n_edits": len(per_edit),
+            "n_rotation_pairs_staged": sum(e["pair_verdict"] == "pass" for e in per_edit.values()),
+            "n_rotation_pairs_excluded": sum(
+                e["pair_verdict"] == "excluded" for e in per_edit.values()
+            ),
+            "n_tensors_edited": sum(e["coverage"]["n_edited"] for e in per_edit.values()),
+            "n_tensors_rotated": sum(e["coverage"]["n_rotated"] for e in per_edit.values()),
+            "by_family": {
+                f: {
+                    "edits": sum(s.family == f for s in selections),
+                    "pairs_excluded": sum(
+                        per_edit[s.edit_id]["pair_verdict"] == "excluded"
+                        for s in selections
+                        if s.family == f
+                    ),
+                }
+                for f in FAMILIES
+            },
+        },
+        "variant_json_sha256": {
+            v.variant_id: _sha256(v.entry_dir / "variant.json")
+            for v in sorted(variants, key=lambda v: v.variant_id)
+        },
+        "disk_bytes": _du(stage),
+        "scored": False,
     }
-    Path(args.manifest_out).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.manifest_out).write_text(json.dumps(manifest, indent=1, sort_keys=True))
-    print(json.dumps({k: v for k, v in summary.items() if k != "plan"}, indent=1))
+    out.write_text(json.dumps(manifest, indent=1, sort_keys=True) + "\n")
+    print(
+        json.dumps(
+            {k: v for k, v in summary.items() if k not in ("plan", "reuse_proofs")}, indent=1
+        )
+    )
     for vid, need in summary["plan"]:
         print(vid, "needs_reference" if need else "reference_on_file")
     return 0
 
 
 def score(args):
-    cmds = score_commands(args.stage, args.config)
+    refs = ()
+    if args.manifest:
+        sc = json.loads(Path(args.manifest).read_text())["scoring"]
+        refs = tuple(sc["missing_originals"]) + tuple(sc["missing_predecessors"])
+    cmds = score_commands(args.stage, args.config, refs)
     for cmd in cmds:
         print(" ".join(cmd), flush=True)
         if not args.dry_run:
@@ -797,9 +1128,14 @@ def main(argv=None):
         "prepare", help="select, build variants, write manifest, print the scoring plan"
     )
     p.add_argument("--zoo", required=True, help="canonical zoo (read only)")
-    p.add_argument("--features", required=True, help="features dir, JSON {id: norm} or JSONL")
+    p.add_argument("--features", help="features dir, JSON {id: norm} or JSONL")
+    p.add_argument("--sidecar", help="JSONL {id, component_id, closure_certified, ...}")
     p.add_argument(
-        "--sidecar", required=True, help="JSONL {id, component_id, closure_certified, ...}"
+        "--selection", help="registered selection.json: stage its picks (selection not re-run)"
+    )
+    p.add_argument("--references", help="references.json: bytes holders of alias predecessors")
+    p.add_argument(
+        "--text-groups", help="text_groups.json: add primary/window checks to the reuse proofs"
     )
     p.add_argument("--out", required=True, help="staging root; variants go to OUT/<zoo name>")
     p.add_argument("--manifest-out", required=True)
@@ -811,6 +1147,9 @@ def main(argv=None):
     s = sub.add_parser("score", help="run wsp.eval.batch on the staged zoo (inside agent-tmux)")
     s.add_argument("--stage", required=True, help="staged zoo directory (OUT/<zoo name>)")
     s.add_argument("--config", default=DEFAULT_CONFIG)
+    s.add_argument(
+        "--manifest", help="prepare's manifest: also score its missing references (source zoo)"
+    )
     s.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     return {"prepare": prepare, "score": score}[args.command](args)
