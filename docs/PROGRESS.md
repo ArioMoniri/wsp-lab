@@ -467,3 +467,14 @@ default `configs/eval_tf_v1.yaml`, not the WikiText-only file named in F8.5 (to 
 reconstruction needs thinking-on generations and is unfunded as priced; H5 scripted-arm costs unpriced until the 4096-token tier is
 measured. Remaining for F8: manifest build and freeze after the Part A ledger is sealed, Astra replay checks, builder script, two new
 edit families. Council round 5 (self-editing, self-localisation, pruning, predict-before-modify) in progress; Part A staging 26/40.
+
+**11 Nov 2026, 13:00 UTC. Council round 5 closed; amendment F9 appended.** Five user threads (math-improving edits, runtime
+self-editing, self-localisation, parameter reduction, predict-before-modify) reduce to one receiver-anchored first-order forecast the
+programme already has, plus three things it does not yet measure. F9 (end of `docs/PREREG_H1_TF.md`; `docs/council/2026-11-11/SYNTHESIS-r5.md`)
+registers, descriptively and after Part A and F8: a hash-before-score forecast log for every non-Part-A edit with E₀ calibration and
+30/100-cluster claim thresholds (F9.1–F9.2); a 10/20/50 % Wanda / SparseGPT-transplant / random pruning ladder with rotations, three
+native SparseGPT entries and a 24-mask zero-parameter ranking panel (≈ 0.78 GPU-h scoring, construction cap 0.5); a fifth H5 access
+flag for measured localisation with verbal localisation as a logged treatment (F9.4); a 32-query test-time LoRA shadow sub-stream
+inside G5 (F9.5); an F8-E-only MATH-500 generation endpoint, unpriced until a throughput pilot, prerequisite for any math-editor claim
+(F9.6). F5.5 and A5.7 unchanged. Board A's F8-spec review accepted the execution spec with eight conditions; F8a (adopting amendment)
+and the F9 review are in flight. Part A staging 27/40. Main at f181f0a; pins match.
