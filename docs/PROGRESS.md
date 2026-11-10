@@ -280,3 +280,12 @@ accept-with-edits applied, `docs/reviews/docs/board-b-d8-step7-2026-11-08.md`): 
 within 0.04 of the logged values, neural means drifted by a median of 0.09, so the rerun is a re-instantiation and not a close numerical
 reproduction), G1 closed at 14 of 14, the (y, h) audit split by exactness class, H2 "stays parked" wording. Waiting on Board A
 checklist items 3–6 (branch `prereg/a5-freeze-evidence`).
+
+**10 Nov 2026, 11:00–11:30 UTC.** User approval ("all you need") received. Board A checklist items 3–6 merged (944febc): closed
+snapshot, rebuilt manifests (forty ids and cutpoints unchanged; 19 references to score), rebuilt panels (82 certificate checks
+pass), null-size simulation PASS for the registered run (two-sided size 0.037, ordered go rate 0.018 at nominal 0.05, yield 1.0) with
+caveats for Board A: the three contrasts are rescalings of one donor block, the null reaches the "alternative" branch in 19.4 % of
+replicates, one donor in the LoRA low tertile. Backup controls live (D8 addendum 3): nightly versioned S3 copy (initial 270 GB sync
+running), EBS snapshot `snap-0e72f033cb0002355`. Literature check done (WeightLoop 2611.07319, Neural Thickets 2603.12228, LoL
+2410.04207, blog critiques); council round 3 convened (`docs/council/2026-11-10/BRIEF.md`) on the best predictor now, a LoL-style
+arm, a 4B scale check and kill criteria. Item 7 (freeze) waits for the round-3 synthesis so one Board A pass covers both.
