@@ -411,3 +411,9 @@ the spread between edits (rule ≤ 0.1), so the H100 records stay "not counted" 
 at ρ = 0.005, 3 of 20 Gaussian edits of Qwen3.5-4B improve WikiText (none resolved; 2 resolved worsening); the edits sit at the
 64-window resolution floor, so beneficial-edit density at 4B is not measurable at this radius. Diagnostic, not a gate; scale expansion
 stops here unless a larger-radius or larger-panel diagnostic is registered. Cost $0.54 Lambda plus 0.2 local GPU-h.
+
+**11 Nov 2026, 03:30 UTC.** Board A accepted the completed G2 run (`docs/reviews/council/board-a-g2-2026-11-11.md`; 117 artefact hashes
+verified; no new conditions). Downstream may consume: the base WikiText field for LoRA donors, the chain_exact WikiText gradient at the
+actual predecessor for the ten chain picks, and nothing from any other objective in the registered Part A predictor. In flight: the
+per-donor sign predictions for the power/yield simulation (`feat/a5-power-fields`) and Part A staging without scoring
+(`feat/part-a-prepare`: 40 edits × rotation + two ladder variants, audits, reference plan).
