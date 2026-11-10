@@ -321,3 +321,10 @@ spec, best-of-N executable rules, chart contrasts enumerated and chart seeds reg
 inventory (90 hashes). 4B diagnostic code merged (f252d68). Pre-audit follow-up running on `prereg/a5-eig`: A5.8.1 eigenvalue
 tolerance amendment (fp64, relative to the largest eigenvalue) with the field module, G2 driver and 4B scripts re-pinned. Then Board A's
 post-commit audit, then G2.
+
+**10 Nov 2026, 17:00 UTC.** A5.8.1 eigenvalue amendment merged (43283ec): fp64 eigendecomposition, negativity tolerance relative to the
+largest eigenvalue with clamp counts recorded (toy MMLU factor: 541 of 1,948 eigenvalues clamped, worst ratio −3.8e-7; all five toy
+objectives now pass), field-module schema v2, G2 driver and 4B scripts pinned (64 files), fitting-library versions recorded. Chair ruling
+on the three 4B discrepancies the amendment surfaced: the registered F5.3/FP4 text governs (ρ = 0.005, SHA-derived seeds, pairing
+indices 0/4/8/12/16); the builder is being aligned and re-pinned on `prereg/a5-4b-align`. Backup corrected: symlinks no longer followed,
+duplicates removed, lifecycle rule for non-current versions (30 days) set.
