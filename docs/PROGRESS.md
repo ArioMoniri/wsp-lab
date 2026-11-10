@@ -361,3 +361,10 @@ stage stopped before any row: the driver's cost estimate (0.5 × field wall per 
 although a gradient-only pass should take a small fraction of the field time. Under the stop-and-reprice rule the driver is being
 amended to measure the first registered row per objective before checking the cap (`feat/g2-audit-reprice`, with an A5.8.1 note and
 re-pin); the audit stage is then resumed. No registered quantity changes. 4B diagnostic running on Lambda.
+
+**10 Nov 2026, 22:30 UTC.** 4B scale diagnostic done on Lambda (0.16 GPU-h, $0.54; instance self-terminated). H100 half of the report
+(`docs/reviews/scale/scale4b-diagnostic-2026-11-10.md`, status "not counted: A3 pairing pending"): base WikiText log-PPL 2.379 nats;
+3 of 20 Gaussian edits at ρ = 0.005 improve the base (0.15, Clopper–Pearson [0.03, 0.38]), none resolved; 2 resolved worsening; the
+rest unresolved. Realised radius 5.19e-3 per tensor, 68 % of elements changed. Reading: at this radius a 4B Gaussian edit is at the
+64-window resolution floor, so the diagnostic cannot yet separate density from noise; the H0 pairing half runs after the G2 audit.
+Diagnostic, not a gate; exposure recorded. Entries under `data/zoo/qwen3.5-4b-scale/`, records under `data/evals/qwen3.5-4b-scale/lambda-H3/`.
