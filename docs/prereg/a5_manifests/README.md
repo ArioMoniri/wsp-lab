@@ -15,7 +15,7 @@ against live data).
 | `selection.json` | `393530365f87f981d5da3ecb2779c89b8e7bf98105b6c45d1824bf290e908c63` | `select_with_ledger`/`select_edits` on components.jsonl (n_lora=30, n_chain=10) with the registered lost-predecessor exclusion; procedural freeze |
 | `references.json` | `5b6991f299c1eee049de51bc1e4f00c71c1dfc58114cdf6549fb5d246850564e` | TF-v1 records (`data/evals/qwen3.5-0.8b/tf_v1`) checked with `response_intervention._reference_on_file` + primary/window checks; current zoo bytes |
 | `text_groups.json` | `f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1` | `configs/eval_tf_v1.yaml` wikitext_ppl spec + every TF-v1 records.jsonl |
-| `code_hashes.json` | `6dd2615f9e8ea12544716f1cc585adf902c5f751fa1ed6fee0eb4494cd28d346` | pinned file bytes (`pinned_from`), resolved config, model/tokenizer revision, Python and dependency versions |
+| `code_hashes.json` | `90a28ef7f43580a33af0d2c5ea11d8168c07e7baf5a5e73918f4d40c66b91ba0` | pinned file bytes (`pinned_from`), resolved config, model/tokenizer revision, Python and dependency versions |
 
 ## Eligibility (A5.3.1; lora_sft and chain rows only — other families are `unsupported_family`)
 
