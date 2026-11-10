@@ -14,17 +14,65 @@
    "role": "model and revision",
    "sha256": "cd53d67beb2cb231351b3e2dcc8bdc76ad2278d0da0cd6f720e08ae749f41ed4"
   },
+  "configs/eval_subsets/harmless_alpaca_tf_v1.txt": {
+   "role": "fixed panel input (TF-v1 subset)",
+   "sha256": "026ce60174fb8f227c6dc433d85c0574c06a1caf62e5b7228ad153f4de4f169c"
+  },
+  "configs/eval_subsets/hellaswag.txt": {
+   "role": "fixed panel input (subset)",
+   "sha256": "938f0b691e5d90e705da6ac88586a766c1f5ab00ffa77fe129a0ce546c8ab507"
+  },
+  "configs/eval_subsets/hellaswag_tf_v1.txt": {
+   "role": "fixed panel input (TF-v1 subset)",
+   "sha256": "a48427f88a2ff5dcb02d0f3c02ccb8fc472455ebb336fbe40b48206c45cc706e"
+  },
+  "configs/eval_subsets/mmlu_pro.txt": {
+   "role": "fixed panel input (subset)",
+   "sha256": "45aa5c72467f0cbbee7df5deb5c104fde3a4c880d3a60eea533e709dabce62ac"
+  },
+  "configs/eval_subsets/mmlu_pro_tf_v1.txt": {
+   "role": "fixed panel input (TF-v1 subset)",
+   "sha256": "a7bef4f45d9c888673868999a5a611a8d31d9c8e956347bc43cf4e0ebfaddbea"
+  },
   "configs/eval_tf_v1.yaml": {
    "role": "resolved TF-v1 config",
    "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317"
   },
+  "configs/p4_predictors.json": {
+   "role": "fitting settings (A5.8.4: n_splits, seed, scaling, neural settings)",
+   "sha256": "c217b5a5b012689475609782bfb68d862cbfb4864b1233093be7d355a7e04cfe"
+  },
+  "docs/prereg/panel_manifest.json": {
+   "role": "certified source closure / panel components (selection input)",
+   "sha256": "7c72bfd3280954a82de1161e640a870da5f3a876c03b22247656701ed6af2c67"
+  },
+  "docs/reviews/P5/d8-regeneration-2026-11-06/chain_replay_install.json": {
+   "role": "G0 closure evidence",
+   "sha256": "b5f5b713690142b4c700f28886006c870ffdbed86baeb499c70125fee976a6dd"
+  },
+  "docs/reviews/P5/d8-regeneration-2026-11-06/chain_replay_pilot.json": {
+   "role": "G0 closure evidence",
+   "sha256": "30e672b4b81c7b52b96fe78d9bdb10d47d38e1065339551a87777a235a5f4621"
+  },
+  "docs/reviews/P5/d8-regeneration-2026-11-06/chain_replay_restore.json": {
+   "role": "G0 closure evidence",
+   "sha256": "78f59f514be22fa0315953ea26814610ce2a5301ed04cda7b7063965f41264ea"
+  },
+  "docs/reviews/P5/d8-regeneration-2026-11-06/g1_report.json": {
+   "role": "G1 qualification evidence",
+   "sha256": "356f4fa15ef961a6ab001d1ef284dc8ba2d1b13b1a62786d16e2cf839f480f2e"
+  },
+  "docs/reviews/P5/d8-regeneration-2026-11-06/g1b_report.json": {
+   "role": "G1 qualification evidence",
+   "sha256": "45f152b2614348d4038a49f8aaaccc6cce46840202fe1ec90bc0e18f97bd30ff"
+  },
   "scripts/a5_build_manifests.py": {
    "role": "builder",
-   "sha256": "2f994d7bf2f32110f909732b3cdb430abeaae89be411e636cfb1c99b8a3fbcab"
+   "sha256": "e9f0e6faf3096e50f3977c030e74b49f61dc4800d2ba501c2de408beef3bd769"
   },
   "scripts/a5_build_panels.py": {
    "role": "builder",
-   "sha256": "f218b72e927a620fa4b1b1a5bc72e6543bb43846a96c5be12377eaae8a2b29f4"
+   "sha256": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534"
   },
   "scripts/a5_incremental_norms.py": {
    "role": "producer of the incremental-norm input",
@@ -32,19 +80,59 @@
   },
   "scripts/a5_nullsize_inputs.py": {
    "role": "NULL-SIZE payload materialisation and reports (checklist item 6)",
-   "sha256": "b09c07a15d9965874e22228477c948a29c359e7b09da560432d663e485229169"
+   "sha256": "d3f6718ec5b8ec0fe47ce515e738fa692c8c469fd87efccc0e7ab5deb9de9a42"
   },
   "scripts/a5_simulation.py": {
    "role": "simulation and NULL-SIZE input validator",
-   "sha256": "ecde1dd7cb99e2b6dc450da5bcbc229e417e21c75b2b94a2a9db61f6b3870668"
+   "sha256": "3b86668657273b188abdaa2e5d19eec832abe0fdb21f19b002fc5c0504da8fe6"
   },
   "scripts/a5_snapshot.py": {
    "role": "closed pre-G2 snapshot (checklist item 3)",
-   "sha256": "a7518b416ca21259cef584db28492298de8aa2146ee3c58e0ea165664e6653b3"
+   "sha256": "a0e68302e1256ab55594e12223677d527bc4fa830451194d61e28aebaecaed72"
+  },
+  "src/wsp/__init__.py": {
+   "role": "package marker (imported)",
+   "sha256": "69d834204c661b1dd2cecf98720126c72e3bade7e235eeb82541dcc983e9cff9"
+  },
+  "src/wsp/eval/__init__.py": {
+   "role": "package marker (imported)",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "src/wsp/eval/batch.py": {
    "role": "effective_config_hash (imported)",
    "sha256": "122b0fbac62e3b94d7a5c356bd2f45692a18f96ea1a7811c45763b0863e789c6"
+  },
+  "src/wsp/eval/ifeval/__init__.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "0f203c7c20602839e1964adbb9a78ca513ce77384e011191d23e9513c8c9e776"
+  },
+  "src/wsp/eval/ifeval/instructions.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "fb84b3187977399b26e83b87e78da1d9567878b11b98d8777de0b8e55a58efa3"
+  },
+  "src/wsp/eval/ifeval/instructions_registry.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "7548ab8ad441c942826976b5188c3bb604da62bea272b82b82327dd60c2fc925"
+  },
+  "src/wsp/eval/ifeval/instructions_util.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "0f57e19fe72273d501d14ddb74c94b345533497132ae53f32e61cac1a40fadce"
+  },
+  "src/wsp/eval/ifeval/utils.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "3557c87b0d6bb290e34c49fc0cf88320421f9251109d70ced87ea8fef341032b"
+  },
+  "src/wsp/eval/metadata.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "d6f97b9317d394e8f4c19dc6f098021cbfc4ff27aa5f2b2cf380b5afcde313c7"
+  },
+  "src/wsp/eval/refusal.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "b416b0f816117dfedd4b826572eef2c87c1761e98dac145581052fecd2354db0"
+  },
+  "src/wsp/eval/repeats.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "cd6e4c04502bffb979d248a0c7b8ef255dbd191b964875a10a6fa02728d26e64"
   },
   "src/wsp/eval/response_intervention.py": {
    "role": "selection, tertiles, reference identity (imported)",
@@ -62,6 +150,22 @@
    "role": "TF-v1 rankings and panels (imported by the panel builder)",
    "sha256": "29125dac45ddf7ffa7a490c0daead1ea06236835f09a0f34f7b38579043caef9"
   },
+  "src/wsp/eval/zoo_compat.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "28763035e98344b5ef1cca24a6f20c25b38e6d74ef9596ef913bb1258f87c969"
+  },
+  "src/wsp/features/__init__.py": {
+   "role": "package marker (imported)",
+   "sha256": "9e0306865c2d23f151673293aa577718b7771b085d15fdb6378c29890b5600a0"
+  },
+  "src/wsp/features/extract.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "11de545c5ba8b4186df91ff218992a595fdbc8dcd343fd4b6b3a8e6278626906"
+  },
+  "src/wsp/features/pool.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "85a6341a446f32761531e0f0a193101114201d9eb08b0e05e6a6d1d42ee94390"
+  },
   "src/wsp/features/response_chart.py": {
    "role": "A5.8.2 chart",
    "sha256": "f23397779c13d2d63cb9db79f126886612eb3deb67d1d97b433ead7ec5bcc0c6"
@@ -74,28 +178,68 @@
    "role": "A5.3.3 rotation (imported)",
    "sha256": "f3ff12426ad89dac69073b2d06ca034f83de7257edd248d2a8063a194b1897e3"
   },
+  "src/wsp/features/stats.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "f1d4df606fd49ac789a6a7e64c34c93ee0bbc543bac9faf5bf57db03bd04911b"
+  },
+  "src/wsp/features/svd.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "48a56004747da7a217850acae1f9e98c8a64adf5c57e6b51c71357fafe14c3fc"
+  },
+  "src/wsp/predictor/__init__.py": {
+   "role": "package marker (imported)",
+   "sha256": "1aa5fc9caf7a4504032f9896cb4b4d56ce037b4df4990cc4e1462f92356a46f7"
+  },
+  "src/wsp/predictor/baselines.py": {
+   "role": "primary tree/isotonic fitting and feature table (A5.8.4, section 3)",
+   "sha256": "c1602d20db9b5e3fdb6558a769b98b495cdb0e256228f745751ebe197c9aa6bc"
+  },
+  "src/wsp/predictor/splits.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "1eeec3071c26e73bbb9e4ae8abb42ba0a271e82c3540e442772e83bed6dc868f"
+  },
+  "src/wsp/schema.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "2c8be072934e002bf17e3ae80ab167e65f3c2b9c827a963a25d4b2d76376b996"
+  },
+  "src/wsp/zoo/__init__.py": {
+   "role": "package marker (imported)",
+   "sha256": "682c6a58968670c8692f2219a206263c37a65c2ec7c6fca9fd27a4a690ac0e53"
+  },
+  "src/wsp/zoo/apply.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "4dbeb10e9d7024508baa376b915a90072170428f87663b32865ff4543cd72005"
+  },
+  "src/wsp/zoo/arch.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "1cb721530a05a0bc33c7dc9cd41667805b10e65c4dc7dcb71fa3558ce8c304f2"
+  },
+  "src/wsp/zoo/common.py": {
+   "role": "transitive wsp import of a pinned module",
+   "sha256": "738e7f4edea6e880fe0a076d2a7592033e7bf809bf277fbda2cc2804ecea4318"
+  },
   "tests/test_a5_build_manifests.py": {
    "role": "test",
-   "sha256": "ad5ef44bb3549500b0b2588f1ca3497fdc9a5052f5a4a1557a2af76379547683"
+   "sha256": "946e63d451baeaaec2393db3fb53f923005641a44c6557e954f47fb074851902"
   },
   "tests/test_a5_build_panels.py": {
    "role": "test",
-   "sha256": "84f734f3dcdfb97d10087d76ff9787e6a8064119f02843166cbd186d66f800f4"
+   "sha256": "95ba2f3073ecc3c6f5e89fcc039f02d1d20952ba6266b727460ca976343736e2"
   },
   "tests/test_a5_nullsize_inputs.py": {
    "role": "test",
-   "sha256": "dadddb13bebaa28ac1c50a63e6e59e425a53c992fea500e123f4d833e0940125"
+   "sha256": "dfa40c03abbbce67f790fa2d96032a9862683e5ef63213c825eef9505ea11208"
   },
   "tests/test_a5_simulation.py": {
    "role": "test",
-   "sha256": "c1bae99ae8565143c688bc5dabbee8a979904ae4a8ff7b14318d5128948a4709"
+   "sha256": "721a92c21adaf39d0b5c317ee5ba8e6c60a2b4f63ba1b837fc3f21272cf65072"
   },
   "tests/test_a5_snapshot.py": {
    "role": "test",
    "sha256": "85d27f488d489934e703bc77336614ef7882120f39c0de6ec346264a99ac5dcc"
   }
  },
- "git_sha": "19f5cbf781cb0955fdfe482c12ec523cc2873dc6",
+ "git_sha": "4fd1e2ac12bcfc46918ee5d6d0a47486d44a8dcc",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

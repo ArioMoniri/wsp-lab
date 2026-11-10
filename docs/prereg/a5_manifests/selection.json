@@ -31,7 +31,7 @@
    "closed_at": "2026-11-08T00:59:56Z",
    "path": "docs/prereg/a5_manifests/snapshot.json",
    "pins_match": true,
-   "sha256": "030517947267287875ee55847d24732c0e30f0140a83bfd3fdbd9a58264a71c1"
+   "sha256": "1b2af25cde1bd7ad0427fec2d0ee22d34f75651ba3fb979176464f8fad701da3"
   },
   "tf_v1_records": {
    "content_index_convention": "sha256 of json.dumps(sorted [[dir, sha256(eval.json), sha256(records.jsonl)]]) over the same dirs (record contents, not only metadata)",

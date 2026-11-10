@@ -769,6 +769,7 @@ EVIDENCE_MANIFESTS = (  # package files that do not embed the snapshot's own sha
     "panels.json",
     "control_seeds.json",
     "nullsize_inputs.json",
+    "linestop_power_spec.json",  # added 10 Nov 2026 (Board A freeze review edit 6)
 )
 
 

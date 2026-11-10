@@ -50,7 +50,30 @@ import a5_simulation as sim
 
 DATA_ROOT = Path("/home/ubuntu/wsp-data")
 ALLOWED_OUT = DATA_ROOT / "runs/a5"  # the one writable directory under data/ for this work
-SCENARIOS = ("registered", "variance_x2", "unavailable_audit_fails")
+SCENARIOS = (
+    "registered",
+    "variance_x2",
+    "unavailable_audit_fails",
+    "constant_positive_mean",
+    "cell_mask_noise",
+)
+# A5.3.2 planned sensitivities frozen and run 10 Nov 2026 (Board A freeze review edit 2).
+SENSITIVITY_DEFINITIONS = {
+    "variance_x2": "centred donor noise doubled, means unchanged (variance inflation; F2, 7 Nov 2026)",
+    "unavailable_audit_fails": "'unavailable' audit evidence counted as a failure (F2, 7 Nov 2026)",
+    "constant_positive_mean": "A5.3.2 constant positive donor means (constant-sign family effect), frozen "
+    "10 Nov 2026: every donor mean is replaced by its family's positive constant, the mean |donor_mean| over "
+    "that family's unique donor-cell representatives (the registered alternative's |m_i| scale averaged "
+    "within family; payload values only); centred noise, masks, audits, selection, slots and every random "
+    "stream are unchanged. Under the fair-coin null a constant positive mean is equivalent to a fixed "
+    "positive truth with independent fair-coin prediction signs",
+    "cell_mask_noise": "A5.3.2 cell-specific masks/noise (norm-dependent resolution), frozen 10 Nov 2026 for "
+    "the single-donor LoRA low-tertile cell: its ten slots are cut to the registered minimum of one "
+    "active slot per donor component (a non-empty cell, i.e. 1; the first slot in slot order), the other "
+    "nine are masked as missing in all three contrasts with no replacement, and that cell's centred noise "
+    "is doubled. Board A's freeze review names no cell-specific noise scale, so the chair's fallback "
+    "(noise x2 in that cell only) is used. All other cells, means, audits and random streams are unchanged",
+}
 REGISTERED_DONOR_FLOOR = (
     40  # the forty registered pairs (A5.3.1); fewer donors leaves calibration unresolved
 )
@@ -328,6 +351,7 @@ def report(runs: Path, dest: Path, validation: Path):
         res = json.loads(raw)
         rep = res["reports"]["null_size"]
         traces = rep.pop("traces")
+        alt = rep["decisions"]["alternative"]
         trace_stats[name] = trace_statistics(traces)
         trace_bytes = "".join(json.dumps(t, sort_keys=True) + "\n" for t in traces).encode()
         files[f"{name}_traces.jsonl.gz"] = gzip_bytes(trace_bytes)
@@ -348,6 +372,9 @@ def report(runs: Path, dest: Path, validation: Path):
             "positive_rejection_cp95": rep["positive_rejection_cp95"],
             "ordered_go_rate": rep["ordered_go_rate"],
             "ordered_go_cp95": rep["ordered_go_cp95"],
+            "alternative_count": alt,
+            "alternative_rate": alt / res["replicates"],
+            "alternative_cp95": list(sim.cp_interval(alt, res["replicates"])),
             "decisions": rep["decisions"],
             "yield_rates_ge15": rep["yield_rates"],
             "yield_cp95": rep["yield_cp95"],
@@ -359,6 +386,10 @@ def report(runs: Path, dest: Path, validation: Path):
             "traces_gz": f"{name}_traces.jsonl.gz",
             "input_provenance": res["input_provenance"],
         }
+        if name != "registered":
+            summary[name]["definition"] = SENSITIVITY_DEFINITIONS[name]
+        if "sensitivity" in res:
+            summary[name]["sensitivity_parameters"] = res["sensitivity"]
     reg = summary["registered"]
     if not suff["sufficient"] or val["status"] != "valid":
         verdict = "UNRESOLVED"
@@ -388,8 +419,18 @@ def report(runs: Path, dest: Path, validation: Path):
             "validation_sha256": bm.sha256_file(validation),
         },
         "sufficiency": suff,
-        "not_run": "A5.3.2's constant-positive-mean and cell-specific mask/noise sensitivities have no "
-        "frozen scenario in scripts/a5_simulation.py and were not run",
+        "sensitivities_run": "all A5.3.2/F2 sensitivities are frozen scenarios of scripts/a5_simulation.py "
+        "and were run at registered scale (10,000 replicates, 4,000 resolution draws, SeedSequence "
+        "20261107): variance_x2 and unavailable_audit_fails (8 Nov 2026), constant_positive_mean and "
+        "cell_mask_noise (10 Nov 2026, Board A freeze review edit 2). Earlier raw outputs are kept unchanged",
+        "alternative_branch": "the ordered decision's 'alternative' branch (>= 15 resolved at ladder 0.25 and "
+        "CP upper <= 0.6) is reported per scenario with its exact two-sided 95% Clopper-Pearson interval. It "
+        "is a funding-only stop for the field (F5.7), not a wrong-sign rejection: under this fair-coin null "
+        "(p = .5) agreement lies inside the region that rule stops funding, so its null rate is not a type-I "
+        "error and the registered <= 0.07 gates (ordered go rate and each individual two-sided size) do not "
+        "apply to it. No decisive negative (exclusion of useful agreement) inference is registered; it would "
+        "need its own boundary-null p = .60 calibration (false-alternative rate <= 0.07) and power before "
+        "outcomes (Board A freeze review edit 2)",
         "scenarios": summary,
         "observations": observations(summary, trace_stats, suff),
     }
@@ -431,18 +472,33 @@ def observations(summary, trace_stats, suff):
         )
     for name, st in trace_stats.items():
         if st["max_resolved"] == 0:
+            why = (
+                "every audit evidence is 'unavailable' and counted as a failure"
+                if summary[name]["unavailable_audit"] == "assume_fail"
+                else "see the scenario definition"
+            )
             out.append(
-                f"`{name}`: no pair resolved in any of {st['replicates']} replicates (every audit evidence is "
-                "'unavailable' and counted as a failure), so its size 0 and gate value are vacuous: under "
-                "that assumption Part A cannot resolve at all"
+                f"`{name}`: no pair resolved in any of {st['replicates']} replicates ({why}), so its size 0 "
+                "and gate value are vacuous: under that assumption Part A cannot resolve at all"
             )
     for name, s in summary.items():
         alt = s["decisions"]["alternative"]
         if alt:
+            lo, hi = s["alternative_cp95"]
             out.append(
                 f"`{name}`: under the null the ordered decision returned 'alternative' (ladder 0.25 CP upper "
-                f"<= 0.6) in {alt} of {s['replicates']} replicates ({alt / s['replicates']:.4f}); the "
+                f"<= 0.6) in {alt} of {s['replicates']} replicates ({alt / s['replicates']:.4f}, exact CP 95% "
+                f"[{lo:.5f}, {hi:.5f}]); this is the funding-only branch, not a wrong-sign rejection, and the "
                 "registered <= 0.07 gate covers 'go' and the individual two-sided tests, not this route"
+            )
+    for name, s in summary.items():
+        for cell in s.get("sensitivity_parameters", {}).get("cell_overrides", []):
+            masked = cell["slots"] - cell["active_slots"]
+            out.append(
+                f"`{name}`: cell {cell['cell'][0]}:{cell['cell'][1]} keeps {cell['active_slots']} of "
+                f"{cell['slots']} slots ({cell['donor_components']} donor component); the other {masked} are "
+                f"masked in every replicate, so {masked * s['replicates']:,} of its audit/nonfinite failures "
+                "per contrast are these masks, not audit outcomes"
             )
     single = sorted(c for c, n in suff["donor_cluster_representatives_per_cell"].items() if n == 1)
     if single:
@@ -493,8 +549,8 @@ def report_md(doc, shas):
             "SeedSequence(20261107).spawn(3) [panels, signs, resolution]. Exact CP 95% intervals in brackets."
         ),
         "",
-        "| scenario | two-sided size per contrast | ordered go rate | yield (>= 15 resolved) | decisions | gate <= 0.07 |",
-        "|---|---|---|---|---|---|",
+        "| scenario | two-sided size per contrast | ordered go rate | alternative (funding-only) | yield (>= 15 resolved) | decisions | gate <= 0.07 |",
+        "|---|---|---|---|---|---|---|",
     ]
     for name, s in doc["scenarios"].items():
         size = "; ".join(
@@ -506,13 +562,32 @@ def report_md(doc, shas):
             for v, c in zip(s["yield_rates_ge15"], s["yield_cp95"])
         )
         go = f"{_fmt(s['ordered_go_rate'])} [{_fmt(s['ordered_go_cp95'][0])}, {_fmt(s['ordered_go_cp95'][1])}]"
+        alt = (
+            f"{s['alternative_count']} / {s['replicates']} = {_fmt(s['alternative_rate'])} "
+            f"[{s['alternative_cp95'][0]:.5f}, {s['alternative_cp95'][1]:.5f}]"
+        )
         lines.append(
             f"| `{name}`{' (registered)' if name == 'registered' else ' (sensitivity)'} | {size} | {go} | "
-            f"{yld} | {s['decisions']} | {s['gate_le_0_07']} |"
+            f"{alt} | {yld} | {s['decisions']} | {s['gate_le_0_07']} |"
         )
     lines += [
         "",
-        doc["not_run"] + ".",
+        doc["sensitivities_run"] + ".",
+        "",
+        "Scenario definitions:",
+        "",
+        *(
+            f"- `{name}`: {s['definition']}."
+            + (
+                f" Parameters: `{json.dumps(s['sensitivity_parameters'], sort_keys=True)}`."
+                if "sensitivity_parameters" in s
+                else ""
+            )
+            for name, s in doc["scenarios"].items()
+            if "definition" in s
+        ),
+        "",
+        "Alternative branch: " + doc["alternative_branch"] + ".",
         "",
         "Observations (computed from the runs and traces; they do not change the registered verdict):",
         "",

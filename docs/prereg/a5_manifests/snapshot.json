@@ -149,7 +149,8 @@
    "label": "final hashes of the pre-G2 evidence built on this closed snapshot (Board A checklist items 5-6); written after closure by `scripts/a5_snapshot.py --evidence`; the content pins above are unchanged",
    "manifests": {
     "components.jsonl": "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec",
-    "control_seeds.json": "8e2cbae160e8e8448b60545b0f79c0680f1fdd9ccf005f30d1c04907fe4bd28b",
+    "control_seeds.json": "d357ed51031877f817baeb4204cf93b38c66fdfcfd95bd41803d93d5160c12d5",
+    "linestop_power_spec.json": "7bfff5203133bc3481ac34808454297ce9fa090e2dd9ff11fd742af7e214cae9",
     "nullsize_inputs.json": "6e58b589e32491b36fd70e679b20242538ea8e958b9b9072ce0e30b444508885",
     "panels.json": "c291b68516952c4f342bfc7f36843a83f0482df7d721a00e46287597bad108cd",
     "references.json": "5b6991f299c1eee049de51bc1e4f00c71c1dfc58114cdf6549fb5d246850564e",
@@ -157,15 +158,19 @@
    },
    "not_listed": "selection.json, README.md (both pin this file's sha256) and code_hashes.json; see docs/prereg/a5_manifests/README.md",
    "nullsize_reports": {
-    "docs/prereg/a5_manifests/nullsize/README.md": "a63534e6b16ae7c9167959113594e68266e02f56027c5e4a20ece952d0025174",
+    "docs/prereg/a5_manifests/nullsize/README.md": "727dfc07fa7fe57e2a06b21682e1430f26809cc828f8875436253e0ea676e812",
+    "docs/prereg/a5_manifests/nullsize/cell_mask_noise_traces.jsonl.gz": "ea79b0c563ff2b0f949a2c608821815e04c980ab331a56b8242c56a1b831d90d",
+    "docs/prereg/a5_manifests/nullsize/constant_positive_mean_traces.jsonl.gz": "2c691cfdcb09e9698eef771b5e4de292253d3c8f299bf3cbcba46182cba8801d",
     "docs/prereg/a5_manifests/nullsize/inputs_provenance.json": "ea160aa4088c56db0aa27046daf3e21eb5865b3950b98e70b4eff9242e1eb1a3",
     "docs/prereg/a5_manifests/nullsize/registered_traces.jsonl.gz": "34079bb88397386542261bb311720a1509bca76bb53ca3e93f71cabd05582aab",
-    "docs/prereg/a5_manifests/nullsize/report.json": "b6ea5d134790090afeec9ad080531965d3f1b4682df3eb88bc6875d589bf9228",
+    "docs/prereg/a5_manifests/nullsize/report.json": "1bed2c9531e4230864a1ebbe7e4023e0ffafcf704a59c40e93f9a75bd469dfa6",
     "docs/prereg/a5_manifests/nullsize/unavailable_audit_fails_traces.jsonl.gz": "105ec8aab49b7bb5e9dba5d8034d4c724b62c870252efcd3d9e4a2af2849d95b",
     "docs/prereg/a5_manifests/nullsize/validation.json": "7a9f72876e73f5ffba2852f925a8aa3ae52a5c9261d55af942b322b1e0606136",
     "docs/prereg/a5_manifests/nullsize/variance_x2_traces.jsonl.gz": "2c7e497ff72223e86e1c24b1e1691cb1af8a6d2e223d54adc131e1573cdfe582"
    },
    "nullsize_runs": {
+    "data/runs/a5/nullsize/cell_mask_noise.json": "b2da17e774b5bcd65a518dff21e9bdb3a5fe67d1395ab8abc95e49c8ddca1fe5",
+    "data/runs/a5/nullsize/constant_positive_mean.json": "d64ce74bd0e29d000264ac6edde8ac53ad981fdcc1c4dc20265017a76f7173d2",
     "data/runs/a5/nullsize/inputs.json": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
     "data/runs/a5/nullsize/registered.json": "452c078aae520dfedbcf25a44a9390305612d32ade3793840f3118043e4239e8",
     "data/runs/a5/nullsize/unavailable_audit_fails.json": "279c31f8eda4ffef535802befab261ec018bcf363ce9c4dd128e5fb38305790d",

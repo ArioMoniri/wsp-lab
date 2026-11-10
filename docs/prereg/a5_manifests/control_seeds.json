@@ -8,8 +8,41 @@
   "rule_reference": "A5.3.2 / A5.4.2 / A5.6.1: PCG64 seed 20261107, 4,000 draws, linear .025/.975 quantiles"
  },
  "chart_projectors": {
-  "destruction_controls": "A5.8.3 asks for permuted projector identities and independently seeded random frames but names no domain; not registered here (secondary/descriptive arm)",
-  "rule_reference": "A5.8.2 (seed 20261107); src/wsp/features/response_chart.py:tensor_seed = SeedSequence([20261107, crc32(tensor name)]) first uint64"
+  "eligibility": "A5.8.3 destruction-eligibility rule applied to chart projector frames: per arm, coverage >= 0.90 and weighted absolute cosine <= 0.20 computed on the projected-edit blocks P_out^T D P_in (intact versus control), over the full frozen edited-token inventory; written to the destruction-audit artefact; no seed search after a failure",
+  "intact": {
+   "frames": "block_projectors(out, in, k=4, seed): torch.Generator('cpu').manual_seed(seed); P_out = QR(randn(out, min(4, out))) then P_in = QR(randn(in, min(4, in))) from the same generator, positive-diagonal sign convention",
+   "seed": "src/wsp/features/response_chart.py:tensor_seed(<exact tensor name>)",
+   "test_vectors": {
+    "tensor_seed('synthetic-test-vector')": 10746557708158659107
+   }
+  },
+  "permuted_projector": {
+   "construction": "within each compatibility group (exact role string AND exact tensor shape) the intact projector identities (tensor_seed of the tensor name), listed by ascending layer, are moved by the seeded derangement: the tensor at position j uses the intact frames of the tensor at position derangement[j]; singleton groups stay fixed and are disclosed, never reshaped",
+   "derangement": "scripts/a5_build_panels.py:derangement (as permuted_field)",
+   "domain": "20261110:chart-permuted-projector:",
+   "key": "<exact role string>:<shape as 'outxin'>",
+   "test_vectors": {
+    "derangement(5, seed('synthetic-test-vector'))": [
+     1,
+     2,
+     4,
+     0,
+     3
+    ],
+    "seed('synthetic-test-vector')": 5712789333794987871
+   }
+  },
+  "random_frame": {
+   "construction": "independently seeded random frames: block_projectors(out, in, k=4, seed(domain, key)) replaces the intact frames of that tensor; every chart-derived scalar is recomputed; nothing else changes",
+   "domain": "20261110:chart-random-frame:",
+   "key": "<exact tensor name>",
+   "test_vectors": {
+    "seed('synthetic-test-vector')": 4786199304116042505
+   }
+  },
+  "registered_by": "A5.8.3; domains and keys registered 10 Nov 2026 (PREREG A5 freeze-pass amendments, Board A freeze review edit 6), before any chart or field exists",
+  "rule_reference": "A5.8.2 (seed 20261107); src/wsp/features/response_chart.py:tensor_seed = SeedSequence([20261107, crc32(tensor name)]) first uint64",
+  "status": "secondary/descriptive chart arm; registered controls, not measured destruction passes"
  },
  "derivation": {
   "reference_implementation": "scripts/a5_build_panels.py:domain_seed (tested); src/wsp/eval/response_intervention.py:rotation_seed for the rotation domain",
