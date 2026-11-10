@@ -339,3 +339,8 @@ null-size scenarios verified (103 tests). Two blockers: the pinned G2 driver aud
 A5.5.1 require a separate ≥ 16/20 verdict per objective; and the post-freeze commit range mixes governed amendments with
 independently motivated infrastructure and progress commits, which needs an explicit scope reconciliation and three missing
 old/new test hashes. Both repairs are in progress on `prereg/a5-audit-repairs`; Board A re-audits after the merge.
+
+**10 Nov 2026, 19:30 UTC.** Audit repairs merged (a638efa): the G2 driver now audits the twenty predecessors separately for each of the
+five objectives (independent ≥ 16/20 verdicts, short or failed objective = HARD_STOP, per-objective resume, cost estimate checked against
+the 1 GPU-h cap; 36 driver tests), and A5.1.2 carries the scope reconciliation of the post-freeze commit range plus the missing test-file
+hashes; `--verify-pins HEAD` passes on main. Board A's re-audit requested (`docs/reviews/council/board-a-freeze-reaudit-2026-11-10.md`).
