@@ -25,6 +25,13 @@ predictions in [rotation, ladder .25, ladder .5] order.
 `--inputs-spec SPEC` only validates INPUT against the registered NULL-SIZE input
 specification (docs/prereg/a5_manifests/nullsize_inputs.json) and writes the
 report to --output; it exits non-zero unless the status is "valid".
+`--donor-ids FILE` (A5 amendment F7, 11 Nov 2026) restricts the POWER-AND-YIELD donor pool to the
+listed donor row IDs (a JSON list, or an object with a ``donor_ids`` list). The IDs are validated
+against the payload and the fields; donor cells are rebuilt from the restricted rows with the frozen
+cutpoints and the same one-row-per-component rule, and a (family, tertile) cell left without a donor is
+a hard error. NULL-SIZE keeps the full payload, so it still reproduces the registered NULL-SIZE run;
+seeds, streams, scenarios and decision rules are unchanged. The output records the pool and its cell
+counts under ``donor_pool``.
 No project data discovery or access is performed.
 """
 
@@ -154,6 +161,57 @@ def donor_cells(donors, boundaries):
     return result
 
 
+def restricted_donor_cells(donors, boundaries, donor_ids, fields=None):
+    """Donor cells of the POWER-AND-YIELD pool restricted to ``donor_ids`` (A5 amendment F7).
+
+    Every ID must be a unique, eligible payload donor row (and have a prediction when ``fields`` is
+    given). Cells are built by :func:`donor_cells` on the restricted rows with the frozen cutpoints; a
+    cell without a donor is a hard error naming the cell. Returns (cells, report).
+    """
+    ids = list(donor_ids)
+    if not ids or not all(isinstance(i, str) for i in ids):
+        raise ValueError("donor_ids must be a non-empty list of donor row id strings")
+    if len(set(ids)) != len(ids):
+        raise ValueError("donor_ids contains duplicate ids")
+    by_id = {r["id"]: r for r in donors}
+    unknown = sorted(set(ids) - set(by_id))
+    if unknown:
+        raise ValueError(f"donor_ids not in the payload donors: {unknown}")
+    ineligible = sorted(i for i in ids if not by_id[i].get("eligible", True))
+    if ineligible:
+        raise ValueError(f"donor_ids are ineligible payload donors: {ineligible}")
+    if fields is not None:
+        missing = sorted(i for i in ids if i not in fields)
+        if missing:
+            raise ValueError(f"donor_ids without a field prediction: {missing}")
+    rows = [by_id[i] for i in sorted(set(ids))]
+    rows_per_cell = {key: 0 for key in ((f, t) for f in boundaries for t in range(3))}
+    for row in rows:
+        family = row["family"]
+        if family not in boundaries or not np.isfinite(row["norm"]):
+            raise ValueError("invalid donor metadata")
+        rows_per_cell[family, sum((row["norm"], row["id"]) >= e for e in boundaries[family])] += 1
+    empty = [f"{f}:{t}" for (f, t), n in rows_per_cell.items() if n == 0]
+    if empty:
+        raise ValueError(f"donor_ids leave empty donor cell(s): {', '.join(empty)}")
+    cells = donor_cells(rows, boundaries)
+    full = donor_cells(donors, boundaries)
+    report = {
+        "n_ids": len(ids),
+        "ids_sha256": hashlib.sha256(json.dumps(sorted(ids)).encode()).hexdigest(),
+        "applies_to": "power_yield",
+        "cells": {
+            f"{f}:{t}": {
+                "donor_rows": rows_per_cell[f, t],
+                "donor_components": len(cells[f, t]),
+                "full_pool_components": len(full[f, t]),
+            }
+            for (f, t) in cells
+        },
+    }
+    return cells, report
+
+
 def as_float(values):
     """JSON arrays with null for missing values -> float array with NaN."""
     if isinstance(values, np.ndarray):
@@ -258,6 +316,7 @@ def simulate(
     unavailable_audit="assume_pass",
     mean_mode="donor",
     cell_overrides=None,
+    donor_ids=None,
 ):
     """Null without fields; optional power at the registered .75 sign alternative.
 
@@ -270,6 +329,9 @@ def simulate(
     cell in slot order stay active, the others are masked as missing in all three contrasts with no
     replacement; the cell's donor noise is multiplied by s). Overrides only change values: every
     random stream is consumed exactly as in the registered run.
+    ``donor_ids`` (A5 amendment F7) restricts the POWER-AND-YIELD donor pool only
+    (:func:`restricted_donor_cells`); it requires ``fields``. NULL-SIZE draws from the full pool as
+    registered, and the random streams are spawned and consumed in the same order.
     Controls/Part B are outside this Part A calibration and cannot be inferred here.
     Replicate/draw/quota overrides are for synthetic tests, never registered runs.
     """
@@ -277,6 +339,13 @@ def simulate(
         raise ValueError(f"mean_mode must be one of {MEAN_MODES}")
     selected, boundaries = selection_cells(payload["inventory"], quotas)
     cells = donor_cells(payload["donors"], boundaries)
+    power_cells, donor_pool = cells, None
+    if donor_ids is not None:
+        if fields is None:
+            raise ValueError("donor_ids restricts the POWER-AND-YIELD pool and requires fields")
+        power_cells, donor_pool = restricted_donor_cells(
+            payload["donors"], boundaries, donor_ids, fields
+        )
     streams = np.random.SeedSequence(20261107).spawn(3)
     panels, signs, res_rng = [np.random.Generator(np.random.PCG64(s)) for s in streams]
     slots = [key for key, rows in selected.items() for _ in rows]
@@ -324,10 +393,11 @@ def simulate(
         covered = np.zeros(3, dtype=int)
         coverage_n = np.zeros(3, dtype=int)
         traces = []
+        pool = power_cells if mode == "power_yield" else cells
         for _ in range(replicates):
             # Re-run the frozen metadata selection; no outcome replacement.
             selection_cells(payload["inventory"], quotas)
-            chosen = [cells[key][panels.integers(len(cells[key]))] for key in slots]
+            chosen = [pool[key][panels.integers(len(pool[key]))] for key in slots]
             noise = np.stack([inputs[r["id"]][0] for r in chosen], axis=1)  # [32, slots]
             mean = np.asarray([inputs[r["id"]][1] for r in chosen])
             audit = np.stack([inputs[r["id"]][2] for r in chosen])  # [slots, 3]
@@ -428,6 +498,8 @@ def simulate(
         "unavailable_audit": unavailable_audit,
         # Present only for the 10 Nov sensitivity scenarios, so earlier raw outputs stay reproducible.
         **({"sensitivity": sensitivity} if sensitivity else {}),
+        # Present only with donor_ids (A5 amendment F7), so earlier raw outputs stay reproducible.
+        **({"donor_pool": donor_pool} if donor_pool is not None else {}),
         "reports": reports,
     }
 
@@ -576,7 +648,15 @@ def main():
         default="registered",
         help="registered run or a separately labelled frozen sensitivity scenario",
     )
+    parser.add_argument(
+        "--donor-ids",
+        type=Path,
+        help="JSON list (or object with 'donor_ids') restricting the POWER-AND-YIELD donor pool "
+        "(A5 amendment F7); requires --fields",
+    )
     args = parser.parse_args()
+    if args.donor_ids and not args.fields:
+        parser.error("--donor-ids restricts the POWER-AND-YIELD pool and requires --fields")
     if args.inputs.suffix == ".npz":
         with np.load(args.inputs, allow_pickle=False) as archive:
             payload = json.loads(str(archive["payload"].item()))
@@ -591,11 +671,18 @@ def main():
         args.output.write_text(json.dumps(report, indent=2) + "\n")
         return 0 if report["status"] == "valid" else 1
     fields = json.loads(args.fields.read_text()) if args.fields else None
-    result = simulate(payload, fields, **SCENARIOS[args.scenario])
+    donor_ids = None
+    if args.donor_ids:
+        listed = json.loads(args.donor_ids.read_text())
+        donor_ids = listed["donor_ids"] if isinstance(listed, dict) else listed
+    result = simulate(payload, fields, donor_ids=donor_ids, **SCENARIOS[args.scenario])
     result["scenario"] = args.scenario
+    if args.donor_ids:
+        result["donor_pool"]["path"] = str(args.donor_ids)
     result["input_provenance"] = {
         str(path): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in [args.inputs, *([args.fields] if args.fields else [])]
+        + ([args.donor_ids] if args.donor_ids else [])
     }
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     return 0
