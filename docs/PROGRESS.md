@@ -354,3 +354,10 @@ G2 reads no rotation, ladder or sealed outcome.
 revision 736ca25, cap 2.0 GPU-h, self-terminating): builds 20 Qwen3.5-4B Gaussian edits at ρ = 0.005, scores the FP4 pairing panel
 first (base + draws 0/4/8/12/16, two fresh-process repeats), then the remaining 15 entries on WikiText; uploads to the HF zoo dataset.
 Diagnostic, not a gate; the H0 half of the pairing runs after G2. G2 running locally since 20:00 UTC.
+
+**10 Nov 2026, 21:30 UTC.** G2 first run (data/runs/g2, started 20:49 UTC): all five sensitivity fields computed (1.45 of the 2 GPU-h
+cap; wall 525–1,649 s per objective, CPU K-FAC accumulation dominant), projectors and probe cache complete. The predecessor audit
+stage stopped before any row: the driver's cost estimate (0.5 × field wall per row, 100 rows → 11.7 GPU-h) exceeds the 1 GPU-h cap,
+although a gradient-only pass should take a small fraction of the field time. Under the stop-and-reprice rule the driver is being
+amended to measure the first registered row per objective before checking the cap (`feat/g2-audit-reprice`, with an A5.8.1 note and
+re-pin); the audit stage is then resumed. No registered quantity changes. 4B diagnostic running on Lambda.
