@@ -303,3 +303,12 @@ Lambda job code (`feat/scale-4b-diagnostic`). Board A's single freeze pass follo
 RESEARCH_NOTES and verified refs updated; WeightLoop, Neural Thickets and LoL added to `paper/refs`). Board A's single freeze pass is
 under review (`docs/reviews/council/board-a-freeze-2026-11-10.md` when it lands): checklist item 7, the null-size caveats and F5.
 G2 driver and the 4B Lambda job are being written as code only; neither runs before the freeze.
+
+**10 Nov 2026, 14:30 UTC.** G2 driver merged (0788e53): `scripts/g2_fields.py` / `g2_fields.sh` (panel hash verification, five
+objectives with the scorer's tokenisation, K-FAC coverage of 186 linear modules, probe cache on the 24 MLP writers, chart projectors,
+20-predecessor audit with HARD_STOP, wall-clock caps, manifests; 26 CPU tests). Finding from its CPU dry run: the A5.8.1 eigenvalue
+tolerance (1e-6 x trace/dim) fails on rank-deficient factors (MMLU: 64 rows against 1,024–6,144 dims; refusal) because fp32 rounding
+leaves eigenvalues near −1e-7 x the largest; WikiText and HellaSwag pass. Chair decision for the freeze follow-up: fp64 eigendecomposition
+of the factors and a negativity tolerance relative to the largest eigenvalue, recorded as a dated A5.8.1 amendment with the field module
+re-pinned, before Board A's post-commit audit. Board A's freeze pass (4fd1e2a) returned REVISE with seven edits, being applied on
+`prereg/a5-freeze`. The 4B Lambda job code is in its commit hook.
