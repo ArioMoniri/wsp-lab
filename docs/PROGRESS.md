@@ -332,3 +332,10 @@ duplicates removed, lifecycle rule for non-current versions (30 days) set.
 **10 Nov 2026, 17:30 UTC.** 4B builder aligned to the registered F5.3/FP4 text and re-pinned (7ecd186; `--verify-pins HEAD`: all pins
 match). Board A's post-commit freeze audit requested on main at 7ecd186 (`docs/reviews/council/board-a-freeze-audit-2026-11-10.md`).
 G2 launches only on FREEZE ACCEPTED, with `PANELS_SHA256` equal to the A5.1.2 hash and the registered caps.
+
+**10 Nov 2026, 18:30 UTC.** Board A post-commit freeze audit (a0f352b): REVISE, G2 not authorised yet. Edits 1–6 resolved
+prospectively; the eigenvalue amendment and the 4B alignment accepted prospectively; all 97 inventoried hashes and the five
+null-size scenarios verified (103 tests). Two blockers: the pinned G2 driver audits predecessors for WikiText only, while A5.8.1 and
+A5.5.1 require a separate ≥ 16/20 verdict per objective; and the post-freeze commit range mixes governed amendments with
+independently motivated infrastructure and progress commits, which needs an explicit scope reconciliation and three missing
+old/new test hashes. Both repairs are in progress on `prereg/a5-audit-repairs`; Board A re-audits after the merge.
