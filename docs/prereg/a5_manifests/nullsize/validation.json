@@ -1,0 +1,17 @@
+{
+  "status": "valid",
+  "errors": [],
+  "blockers": [],
+  "counts": {
+    "inventory": 796,
+    "eligible": 179,
+    "donors": 141,
+    "masked_windows": 0,
+    "incomplete_pairs": 0,
+    "unavailable_audit_entries": 423
+  },
+  "input_provenance": {
+    "data/runs/a5/nullsize/inputs.json": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+    "docs/prereg/a5_manifests/nullsize_inputs.json": "6e58b589e32491b36fd70e679b20242538ea8e958b9b9072ce0e30b444508885"
+  }
+}

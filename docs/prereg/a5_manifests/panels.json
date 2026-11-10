@@ -3078,7 +3078,7 @@
  "inputs": {
   "code": {
    "path": "scripts/a5_build_panels.py",
-   "sha256": "4a254caeb7c8ceafadaee8fb4e899424fc46091f8709d4e1ecebf41e04f98182"
+   "sha256": "f218b72e927a620fa4b1b1a5bc72e6543bb43846a96c5be12377eaae8a2b29f4"
   },
   "config": {
    "path": "configs/eval_tf_v1.yaml",
@@ -3106,7 +3106,7 @@
   },
   "text_groups": {
    "path": "docs/prereg/a5_manifests/text_groups.json",
-   "sha256": "191381ce51b176bb087f1e5b28021344c8e92a40bef3c12de2283670764329de"
+   "sha256": "f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1"
   }
  },
  "not_existing_scored_sets": {

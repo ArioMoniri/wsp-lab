@@ -20,19 +20,27 @@
   },
   "scripts/a5_build_manifests.py": {
    "role": "builder",
-   "sha256": "759bb79e4a3f8df8dcf2a7f0cff53ff05a21f14d7b1f76ee824e736a7d9716dd"
+   "sha256": "2f994d7bf2f32110f909732b3cdb430abeaae89be411e636cfb1c99b8a3fbcab"
   },
   "scripts/a5_build_panels.py": {
    "role": "builder",
-   "sha256": "d659c7a590afe1c9ea54e09f576b9c080b1bb57aca64462bdb892b99a00225ab"
+   "sha256": "f218b72e927a620fa4b1b1a5bc72e6543bb43846a96c5be12377eaae8a2b29f4"
   },
   "scripts/a5_incremental_norms.py": {
    "role": "producer of the incremental-norm input",
    "sha256": "fbea8c8e9ee147e18f6ca0d6f8d8232866ebc417dd1b5acabda7f2105bc26c3b"
   },
+  "scripts/a5_nullsize_inputs.py": {
+   "role": "NULL-SIZE payload materialisation and reports (checklist item 6)",
+   "sha256": "b09c07a15d9965874e22228477c948a29c359e7b09da560432d663e485229169"
+  },
   "scripts/a5_simulation.py": {
    "role": "simulation and NULL-SIZE input validator",
    "sha256": "ecde1dd7cb99e2b6dc450da5bcbc229e417e21c75b2b94a2a9db61f6b3870668"
+  },
+  "scripts/a5_snapshot.py": {
+   "role": "closed pre-G2 snapshot (checklist item 3)",
+   "sha256": "a7518b416ca21259cef584db28492298de8aa2146ee3c58e0ea165664e6653b3"
   },
   "src/wsp/eval/batch.py": {
    "role": "effective_config_hash (imported)",
@@ -68,18 +76,26 @@
   },
   "tests/test_a5_build_manifests.py": {
    "role": "test",
-   "sha256": "2c4e616853717cadc6786c617b49fb1be3e5a2c7881ce55d8555ce05f4e92b53"
+   "sha256": "ad5ef44bb3549500b0b2588f1ca3497fdc9a5052f5a4a1557a2af76379547683"
   },
   "tests/test_a5_build_panels.py": {
    "role": "test",
    "sha256": "84f734f3dcdfb97d10087d76ff9787e6a8064119f02843166cbd186d66f800f4"
   },
+  "tests/test_a5_nullsize_inputs.py": {
+   "role": "test",
+   "sha256": "dadddb13bebaa28ac1c50a63e6e59e425a53c992fea500e123f4d833e0940125"
+  },
   "tests/test_a5_simulation.py": {
    "role": "test",
    "sha256": "c1bae99ae8565143c688bc5dabbee8a979904ae4a8ff7b14318d5128948a4709"
+  },
+  "tests/test_a5_snapshot.py": {
+   "role": "test",
+   "sha256": "85d27f488d489934e703bc77336614ef7882120f39c0de6ec346264a99ac5dcc"
   }
  },
- "git_sha": "f9395ad988a862aabbc09a27a1fec8b5b8dd422e",
+ "git_sha": "19f5cbf781cb0955fdfe482c12ec523cc2873dc6",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

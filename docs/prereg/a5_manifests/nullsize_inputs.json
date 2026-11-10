@@ -13,7 +13,7 @@
   "rows": "eligible inventory rows that are D3 development members with a TF-v1 primary record and a matched actual-predecessor record on file after G0/G1 closure"
  },
  "input_file": {
-  "commit": "its sha256, inventory and provenance enter docs/prereg/a5_manifests/ before NULL-SIZE",
+  "commit": "its sha256, inventory and provenance enter docs/prereg/a5_manifests/nullsize/ (inputs_provenance.json) with the NULL-SIZE reports",
   "format": "JSON object (or NPZ with the same JSON as scalar Unicode 'payload', no pickle)",
   "path": "data/runs/a5/nullsize/inputs.json"
  },
@@ -169,7 +169,7 @@
   "variance_x2": "centred noise doubled, donor means unchanged (variance inflation)"
  },
  "schema": "a5-nullsize-inputs-spec-v2",
- "status": "specification only; not run on real data; inputs exist only after G0/G1 closure (A5.3.2, A5.11). Registered proxy: chair ruling A5.3.2(ii) and the A5 freeze-prep amendments (7 Nov 2026)",
+ "status": "specification; this file holds no data. The payload is materialised after G0/G1 closure from the closed snapshot (snapshot.json) by scripts/a5_nullsize_inputs.py; its validation and the NULL-SIZE reports are in nullsize/ (A5.3.2, A5.11). Registered proxy: chair ruling A5.3.2(ii) and the A5 freeze-prep amendments (7 Nov 2026)",
  "window_ids": "the list window_item_ids, in order",
  "window_ids_sha256_check": true,
  "window_ids_sorted_sha256": "a7d795f9682813bcc48a2e43d02e64713e258e0a250f34524f69067df3ae9b9a"

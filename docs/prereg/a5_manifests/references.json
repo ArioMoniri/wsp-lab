@@ -1,5 +1,5 @@
 {
- "additional_minutes": 31.2,
+ "additional_minutes": 19.76,
  "identity": {
   "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
   "counts": {
@@ -13,11 +13,6 @@
  },
  "minutes_per_entry": 1.04,
  "missing_originals": [
-  "014f8a9ec78db2be",
-  "0559051354691a70",
-  "0d055869527177b4",
-  "13b02fe2673cc296",
-  "14cdaabee246493b",
   "1ab850a41051fe45",
   "1b2b671e5da5d625",
   "1fc51f7164052d50",
@@ -38,23 +33,16 @@
   "85366c308158ea48",
   "983c5e13c59e0022"
  ],
- "missing_predecessors": [
-  "2114e313c73f15a6",
-  "86ea1fe0ec777cf8",
-  "983bb1066d0fd006",
-  "b7edbb9f8b339f52",
-  "bc6edb1e3c913a10",
-  "fe7f8926879f91db"
- ],
- "n_D": 24,
- "n_P": 6,
+ "missing_predecessors": [],
+ "n_D": 19,
+ "n_P": 0,
  "n_variants": 120,
- "not_priced": "preprocessing and retries are charged separately (A5.3.4 stop-and-reprice)",
+ "not_priced": "preprocessing and retries are charged separately (A5.3.4 stop-and-reprice); the closure work's measured costs are in snapshot.json:cost_ledger",
  "predecessors_without_own_bytes": [
   "983bb1066d0fd006",
   "bc6edb1e3c913a10"
  ],
- "references_to_score": 30,
+ "references_to_score": 19,
  "rows": [
   {
    "closure_proof": {
@@ -93,16 +81,25 @@
    "original_missing": false,
    "predecessor": {
     "bytes_holder": "b7edbb9f8b339f52",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "2778f8ddd66fca5399360e4b91ca276d48418afdfbeeee33a96fbdd14246b4a9"
+    },
+    "eval_json_sha256": "95928972a501db91b265fb2699d5807c8d80a747c45bdfed885adcb824df41a9",
+    "exists": true,
+    "failed_checks": [],
     "id": "b7edbb9f8b339f52",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "b7edbb9f8b339f52/eval.json",
+    "recorded_entry_hashes": {
+     "delta.safetensors": "2778f8ddd66fca5399360e4b91ca276d48418afdfbeeee33a96fbdd14246b4a9"
+    },
+    "records_jsonl_sha256": "824472872a7c2b0ae7b94bc8ef4c51f0c9c9c9de2bd167fda2f4b4a9719ad8ad",
     "repeats_on_file": [
      "g1b"
-    ]
+    ],
+    "run_id": "20261107-105825-56ef1597"
    },
    "predecessor_bytes_present": true,
    "predecessor_closure_proof": {
@@ -114,7 +111,7 @@
     "hash_in_source_identities": false
    },
    "predecessor_id": "b7edbb9f8b339f52",
-   "predecessor_missing": true,
+   "predecessor_missing": false,
    "tertile": "high"
   },
   {
@@ -201,16 +198,25 @@
    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
    "original": {
     "bytes_holder": "014f8a9ec78db2be",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "7c7a6bd55dce0da976a56bb70bf774f39b70a2c2be6529f7e2fa9d53fe6a503f"
+    },
+    "eval_json_sha256": "9c9948d3a6f933880e23300f4b73d2d8c812c62dc1d4b77f0bfe6a58836a15c1",
+    "exists": true,
+    "failed_checks": [],
     "id": "014f8a9ec78db2be",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "014f8a9ec78db2be/eval.json",
-    "repeats_on_file": []
+    "recorded_entry_hashes": {
+     "delta.safetensors": "7c7a6bd55dce0da976a56bb70bf774f39b70a2c2be6529f7e2fa9d53fe6a503f"
+    },
+    "records_jsonl_sha256": "b2d6160054d10c77c050f032f4522e022abf49d55684fe30b9968cff7c5ccbd7",
+    "repeats_on_file": [],
+    "run_id": "20261107-105825-56ef1597"
    },
-   "original_missing": true,
+   "original_missing": false,
    "predecessor": {
     "bytes_holder": null,
     "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
@@ -316,16 +322,25 @@
    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
    "original": {
     "bytes_holder": "0559051354691a70",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "4bcf4a1085d441baea3826d81e664fbea76a9eef46283b4d2e07503b41c0e68e"
+    },
+    "eval_json_sha256": "1ce78ebc15937f45d1e1dd1297473a67383c46d7eb9b3d323cdacc32e71dac59",
+    "exists": true,
+    "failed_checks": [],
     "id": "0559051354691a70",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "0559051354691a70/eval.json",
-    "repeats_on_file": []
+    "recorded_entry_hashes": {
+     "delta.safetensors": "4bcf4a1085d441baea3826d81e664fbea76a9eef46283b4d2e07503b41c0e68e"
+    },
+    "records_jsonl_sha256": "6c9501679886b72199e2732dd5954702b0bb99bf985804820905ba781f147b9b",
+    "repeats_on_file": [],
+    "run_id": "20261107-105825-56ef1597"
    },
-   "original_missing": true,
+   "original_missing": false,
    "predecessor": {
     "bytes_holder": null,
     "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
@@ -388,16 +403,25 @@
    "original_missing": false,
    "predecessor": {
     "bytes_holder": "86ea1fe0ec777cf8",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "459cda585cbe6a25fecc8df9ef382428744ddb1d080f15ef85fb4dee9c54ef90"
+    },
+    "eval_json_sha256": "c0a9ab77e4e94cbd4ae8be2b354d343629a6f9b3c160d1159cc45c004555d5f2",
+    "exists": true,
+    "failed_checks": [],
     "id": "86ea1fe0ec777cf8",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "86ea1fe0ec777cf8/eval.json",
+    "recorded_entry_hashes": {
+     "delta.safetensors": "459cda585cbe6a25fecc8df9ef382428744ddb1d080f15ef85fb4dee9c54ef90"
+    },
+    "records_jsonl_sha256": "c7e782c021255d9c31e3bf0016d13cdef11935dd182ab5575744631cada71138",
     "repeats_on_file": [
      "g1b"
-    ]
+    ],
+    "run_id": "20261107-105825-56ef1597"
    },
    "predecessor_bytes_present": true,
    "predecessor_closure_proof": {
@@ -409,7 +433,7 @@
     "hash_in_source_identities": false
    },
    "predecessor_id": "86ea1fe0ec777cf8",
-   "predecessor_missing": true,
+   "predecessor_missing": false,
    "tertile": "low"
   },
   {
@@ -633,14 +657,23 @@
    "original_missing": false,
    "predecessor": {
     "bytes_holder": "fe7f8926879f91db",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "207237bd61c7004d10445dc5bec6ff2e055c531875c8c5b3ff957bee063947cd"
+    },
+    "eval_json_sha256": "b8b649641da8db22aa95854af6a4c09a921f2ad97b6600e4e761c465224e1138",
+    "exists": true,
+    "failed_checks": [],
     "id": "fe7f8926879f91db",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "fe7f8926879f91db/eval.json",
-    "repeats_on_file": []
+    "recorded_entry_hashes": {
+     "delta.safetensors": "207237bd61c7004d10445dc5bec6ff2e055c531875c8c5b3ff957bee063947cd"
+    },
+    "records_jsonl_sha256": "18f83b139bb262dc1a9a4314135688f0a224f13f7dd84b84aaa402ca429ae924",
+    "repeats_on_file": [],
+    "run_id": "20261107-105825-56ef1597"
    },
    "predecessor_bytes_present": true,
    "predecessor_closure_proof": {
@@ -652,7 +685,7 @@
     "hash_in_source_identities": false
    },
    "predecessor_id": "fe7f8926879f91db",
-   "predecessor_missing": true,
+   "predecessor_missing": false,
    "tertile": "low"
   },
   {
@@ -669,26 +702,44 @@
    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
    "original": {
     "bytes_holder": "0d055869527177b4",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "cb3a672623270dd7bd6f1badabe51df9c15ae4b1f9b1a67995f0b299c3d48fd5"
+    },
+    "eval_json_sha256": "4213c06f9f43f125b3dd8dbcbc0883629484d6be193d665612908990d3af0b12",
+    "exists": true,
+    "failed_checks": [],
     "id": "0d055869527177b4",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "0d055869527177b4/eval.json",
-    "repeats_on_file": []
+    "recorded_entry_hashes": {
+     "delta.safetensors": "cb3a672623270dd7bd6f1badabe51df9c15ae4b1f9b1a67995f0b299c3d48fd5"
+    },
+    "records_jsonl_sha256": "f797a4e04d2171677fbf61f5b1d15a6dd2ff3f30bb8a5f5849f6530a18e79577",
+    "repeats_on_file": [],
+    "run_id": "20261107-105825-56ef1597"
    },
-   "original_missing": true,
+   "original_missing": false,
    "predecessor": {
     "bytes_holder": "2114e313c73f15a6",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "bbb2d5656d4f0842bbe424c19b570d38465a074aff12502de91e6429422e318c"
+    },
+    "eval_json_sha256": "a8de76e21e79bba009f11c74185869e0cce3f79cd20a06ba042e5d363861f03e",
+    "exists": true,
+    "failed_checks": [],
     "id": "2114e313c73f15a6",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "2114e313c73f15a6/eval.json",
-    "repeats_on_file": []
+    "recorded_entry_hashes": {
+     "delta.safetensors": "bbb2d5656d4f0842bbe424c19b570d38465a074aff12502de91e6429422e318c"
+    },
+    "records_jsonl_sha256": "8cd593c702bf8f3eb92361c4eea00c89e8e34bbca4387ba6c53f33bf72171082",
+    "repeats_on_file": [],
+    "run_id": "20261107-105825-56ef1597"
    },
    "predecessor_bytes_present": true,
    "predecessor_closure_proof": {
@@ -700,7 +751,7 @@
     "hash_in_source_identities": true
    },
    "predecessor_id": "2114e313c73f15a6",
-   "predecessor_missing": true,
+   "predecessor_missing": false,
    "tertile": "low"
   },
   {
@@ -717,26 +768,44 @@
    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
    "original": {
     "bytes_holder": "13b02fe2673cc296",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "1a509b1bc44199c66c7af5ae8b5738b1e36beace93daa138f718043eb52c7fbf"
+    },
+    "eval_json_sha256": "efa0e559c7726e89cbbc370101471b483e4d61b29af7ee07574dd24cdfcbbc0d",
+    "exists": true,
+    "failed_checks": [],
     "id": "13b02fe2673cc296",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "13b02fe2673cc296/eval.json",
-    "repeats_on_file": []
+    "recorded_entry_hashes": {
+     "delta.safetensors": "1a509b1bc44199c66c7af5ae8b5738b1e36beace93daa138f718043eb52c7fbf"
+    },
+    "records_jsonl_sha256": "a3d0da61723fca7dc21681254f40f188fd505aee3f111dfc80e4f252563f905f",
+    "repeats_on_file": [],
+    "run_id": "20261107-105825-56ef1597"
    },
-   "original_missing": true,
+   "original_missing": false,
    "predecessor": {
     "bytes_holder": "4b84f551adaf52ba",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "b8f4a8d28e14314dd0e302268c1f11bb04f377e5141be5f594a6a90651f2983a"
+    },
+    "eval_json_sha256": "aace094bbac443001e87630d7b3bd134125e22144bd2b0838f151841da800025",
+    "exists": true,
+    "failed_checks": [],
     "id": "bc6edb1e3c913a10",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "bc6edb1e3c913a10/eval.json",
-    "repeats_on_file": []
+    "recorded_entry_hashes": {
+     "delta.safetensors": "b8f4a8d28e14314dd0e302268c1f11bb04f377e5141be5f594a6a90651f2983a"
+    },
+    "records_jsonl_sha256": "ddcfd0e1772201e766aa06e5ce3a9354cc9054d7dc30c90a913149e6fef86d2c",
+    "repeats_on_file": [],
+    "run_id": "20261107-105825-56ef1597"
    },
    "predecessor_bytes_present": false,
    "predecessor_closure_proof": {
@@ -748,7 +817,7 @@
     "hash_in_source_identities": true
    },
    "predecessor_id": "bc6edb1e3c913a10",
-   "predecessor_missing": true,
+   "predecessor_missing": false,
    "tertile": "low"
   },
   {
@@ -765,26 +834,44 @@
    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
    "original": {
     "bytes_holder": "14cdaabee246493b",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "ce4dfd492a3ccb51059ff503be95c80b5523fa665680d32592353d21a474a7eb"
+    },
+    "eval_json_sha256": "a13daa13f1176c067ff37d37846797c0947e436abf02176c49fcc2390db621b6",
+    "exists": true,
+    "failed_checks": [],
     "id": "14cdaabee246493b",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "14cdaabee246493b/eval.json",
-    "repeats_on_file": []
+    "recorded_entry_hashes": {
+     "delta.safetensors": "ce4dfd492a3ccb51059ff503be95c80b5523fa665680d32592353d21a474a7eb"
+    },
+    "records_jsonl_sha256": "8e94f7c58dcaf8577ed2450901d2cc867db0236305a0dbfdd84f07e945f50e7f",
+    "repeats_on_file": [],
+    "run_id": "20261107-105825-56ef1597"
    },
-   "original_missing": true,
+   "original_missing": false,
    "predecessor": {
     "bytes_holder": "345a7db356689c69",
-    "exists": false,
-    "failed_checks": [
-     "no_record"
-    ],
+    "config_hash": "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+    "current_entry_hashes": {
+     "delta.safetensors": "f318c4dbae97f27cfa5d70d66067c2b94fe420363bde24d9afffe9abe027af26"
+    },
+    "eval_json_sha256": "1e216a0cc416fb89a660f070a50451e10335b520e50f7b60d6173092293929b8",
+    "exists": true,
+    "failed_checks": [],
     "id": "983bb1066d0fd006",
-    "on_file": false,
+    "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "on_file": true,
     "record": "983bb1066d0fd006/eval.json",
-    "repeats_on_file": []
+    "recorded_entry_hashes": {
+     "delta.safetensors": "f318c4dbae97f27cfa5d70d66067c2b94fe420363bde24d9afffe9abe027af26"
+    },
+    "records_jsonl_sha256": "39559f2fdbc8bba431a53c2a9e8c131333c7278b1ec0743d9e6f8c71cc889576",
+    "repeats_on_file": [],
+    "run_id": "20261107-105825-56ef1597"
    },
    "predecessor_bytes_present": false,
    "predecessor_closure_proof": {
@@ -796,7 +883,7 @@
     "hash_in_source_identities": true
    },
    "predecessor_id": "983bb1066d0fd006",
-   "predecessor_missing": true,
+   "predecessor_missing": false,
    "tertile": "high"
   },
   {
@@ -2232,5 +2319,5 @@
  "schema": "a5-references-v1",
  "selection_basis": "registered (A5.3.1 with the registered chair ruling; see selection.json)",
  "selection_status": "selected",
- "total_minutes": 156.0
+ "total_minutes": 144.56
 }
