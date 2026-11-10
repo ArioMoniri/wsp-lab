@@ -442,3 +442,11 @@ one component; arXiv 2611.09382 excluded until its direction is released) and F8
 TFTV rank-one, Concept-Country-style rank-one; SWEET deferred), each with frozen field/chart predictions, κ = q/|a|, a CPU pre-check
 floor from the null-size payload, and ≤ 0.9 GPU-h scoring. H5 gains a scripted-estimator arm and GPT-6.1 Sol as practical editor;
 the ≥ 30 % savings criterion stands. Board A review of F8 requested; Part A does not wait on it. Main at b627cc8; pins match.
+
+**11 Nov 2026, 09:30 UTC.** Board A accepted F8 with conditions (`docs/reviews/council/board-a-f8-2026-11-11.md`): conditions 1–5 and 7
+gate F8 scoring (freeze both panels before any G3 exposure; make the F8.4 gate deterministic with a named floor computation; complete
+the F8.3 prediction contract; qualify the Astra replay against the pinned base; define cluster-level summaries and correct the
+"cannot reject chance" wording; retain citation evidence), condition 6 gates the H5 pilot (reconcile H5_DESIGN/H5_PROTOCOL/HYPOTHESIS,
+pin Sol, specify the LP). Part A does not wait. Condition 7 discharged for the two blocked pages by retained excerpts
+(`docs/council/2026-11-11/evidence/README.md`); the H5 reconciliation is in flight (`docs/council-r4-record`); the F8 execution
+manifest spec (conditions 1–5) is scheduled after the Part A ledger is sealed and before any F8 construction.
