@@ -2140,3 +2140,31 @@ This commit changes only `docs/PREREG_H1_TF.md`, the two package files, `scripts
 | `docs/prereg/a5_manifests/code_hashes.json` | `6dd2615f9e8ea12544716f1cc585adf902c5f751fa1ed6fee0eb4494cd28d346` | changed 2026-11-11 (F6 re-pin (xiii)); old `d3b11bab664e0822ec63b4f059703d6418ff09847c49681fdd7f710617e6a5c7` (re-pin (xii); G2 attempt 2) |
 | `scripts/g2_fields.py` | `6f14a2ac4c0dd9b2dc6b2ba2e022ec6cbe98a75e840dd414804d1febf3fb9f93` | changed 2026-11-11 (F6: stage `chain_exact`); old `cb1835181ae0d8202edcaa72586e38dcc3a8822ce6127f104e5c123a86838723` (re-pin (xii); G2 attempt 2) |
 | `tests/test_g2_fields.py` | `67be8c51375fef4a3536fc1b4ed54843bbf83ab222c49a43941ff0966949a42d` | changed 2026-11-11 (F6; not a code-map member); old `f7be4d4aeb83fe0741a7890005480376514aa2394234f9239894980397a8adaa` |
+
+*A5.1.2 re-pin (xiv) (Part A staging; run 2026-11-10 18:46–23:45 UTC, after Board A's G2 acceptance).* Board A's
+G2 verdict (`docs/reviews/council/board-a-g2-2026-11-11.md`, item 5) authorises Part A preparation, not G3 scoring.
+`wsp.eval.response_intervention prepare` gained `--selection` (stage the registered picks of `selection.json`,
+checked against `registered.edit_ids` and the procedural-freeze id hash, never re-selected), `--references` (load an
+alias-only predecessor from its bytes holder; the scoring plan checks the holder's bytes) and `--text-groups` (the
+primary-record and 64-window checks of the F3(i) reuse proof). It also writes a per-tensor F3(ii) audit file, and
+`score --manifest` now also scores the missing references. These changes were committed with tests in `7f8b453`,
+and the staging ran from that clean commit. `scripts/a5_build_manifests.py --pin-worktree` was then re-run into a copy
+of the package from `7f8b453`. Every regenerated or copied package file was byte for byte identical except
+`code_hashes.json` and `README.md`, and only those two were copied into the package. `code_hashes.json` (schema
+`a5-code-hashes-v2`, `git_sha` = `7f8b453`) still pins 64 files and differs from `6dd2615f…cd28d346` only in `git_sha`
+and the `src/wsp/eval/response_intervention.py` pin. No rule, threshold, seed, selection or panel changes. The staging
+outputs are `docs/prereg/a5_manifests/part_a/`; its README records what was staged and the audit verdicts. Under the
+registered A5.3.3 post-rounding audit, 39 of the 40 rotation pairs are excluded (all 30 lora_sft and 9 of 10 chain;
+reasons are per tensor). 81 variants are staged (1 rotation, 80 ladder). n_D = 19 and n_P = 0, as in
+`references.json`, and the priced count is 100 entries, 104.00 min. No variant or reference was scored. These rows
+supersede the corresponding current-hash entries of A5.1.2's tables.
+
+| Path | SHA256 | Identity |
+|---|---|---|
+| `docs/prereg/a5_manifests/README.md` | `5c770dbe4d8549224c8202192aba3d2eb3e9f22426b8dcfd8b902f795a1194b7` | changed 2026-11-10 (re-pin (xiv)); old `2fab2a1cd6c95301812f8760d36dc02f9cfef24a6eab50f93b35b16c3d013629` (re-pin (xiii)) |
+| `docs/prereg/a5_manifests/code_hashes.json` | `d4b2e0ab32dde329e8d8f15d53709eca741476b51c996096ab863fa93d1a637b` | changed 2026-11-10 (re-pin (xiv)); old `6dd2615f9e8ea12544716f1cc585adf902c5f751fa1ed6fee0eb4494cd28d346` (re-pin (xiii)) |
+| `src/wsp/eval/response_intervention.py` | `b511d3d1ccb2c518317b59eafa4eea034df41ee90b85ab53709ef008736e353a` | changed 2026-11-10 (Part A staging options, commit `7f8b453`); old `7cf453f263b92b3dc056109e06766b7dbd3dc606ad463f11aa4ccdec1b73f903` |
+| `tests/test_response_intervention.py` | `10fa97eeb7693fe10abc89dcb77aec2c4f96d798f71e657f562acdbcb65768e5` | changed 2026-11-10 (commit `7f8b453`; not a code-map member); old `675f710a4c1696f636b407f59b5b84f7f4e4144c7c36b476ae4df937224b37c8` |
+| `docs/prereg/a5_manifests/part_a/manifest.json` | `d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6` | new 2026-11-10 (Part A launch manifest, A5.11; schema `a5-part-a-launch-v1`) |
+| `docs/prereg/a5_manifests/part_a/rotation_audits.jsonl` | `f05fec4265ffd93c8c537100993d23262be95141369240fcad0a7e16ff474d35` | new 2026-11-10 (F3(ii) per-tensor rotation audits, 2,534 rows) |
+| `docs/prereg/a5_manifests/part_a/README.md` | `2fcbf517ccf26f2a1fe325ef31300d291bc0f254c7faaacd18154e327bceada1` | new 2026-11-10 (Part A staging record; no outcome) |
