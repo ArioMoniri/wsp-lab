@@ -399,3 +399,8 @@ conditions: frozen identities and outcome-access order preserved, all predecesso
 objective masks enforced, base-factor q_t flagged, failed rows retained, every attempt charged against the 2.2 GPU-h cap, the accepted
 exact WikiText chain predictions used for the power/yield simulation). The `chain_exact` stage is queued on the local GPU behind the
 4B H0 pairing job.
+
+**11 Nov 2026, 02:45 UTC.** `chain_exact` complete: exact WikiText and MMLU gradients at the actual predecessor for the ten chain picks,
+20 rows in 15 minutes (0.24 of the 2.2 GPU-h cap; rows 10–88 s each). Final G2 manifest copied with hashes (`docs/prereg/a5_manifests/g2/`).
+Board A is checking the completed G2 run; the registered sign predictions per donor for the power/yield simulation are being built from the
+WikiText field (base for LoRA donors, chain_exact gradients for the chain picks). The 4B H0 pairing runs next on the GPU.
