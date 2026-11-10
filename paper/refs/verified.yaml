@@ -521,6 +521,7 @@
   authors:
   - Zhichen Liu
   - Tianle Lun
+  - Yang Xu
   - Zhibin Wen
   - Hao An
   - Yulin Ou
@@ -528,7 +529,6 @@
   - Hao Zhang
   - Wenyi Fang
   - Yang Zheng
-  - Yang Xu
   year: 2026
   venue: arXiv:2604.01025
   claim_we_make: Probing intermediate hidden activations predicts downstream performance with AUROC > 0.75 while
