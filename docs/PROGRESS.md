@@ -457,3 +457,13 @@ round-4 items in `docs/RESEARCH_NOTES.md`; seven new verified references (2609.0
 2611.09382, 2611.10866, 2611.10974) with source texts under `paper/refs/sources/`. Known pre-existing failure: `scripts/verify_refs.py`
 exits 1 on `fastprobing2026` (YAML/BibTeX author mismatch), present on main before this merge; it blocks paper review and is queued
 for repair. Part A staging at 21 of 40.
+
+**11 Nov 2026, 11:30 UTC.** F8 execution specification merged (`docs/design/F8_EXECUTION_SPEC.md`, design document; adopts nothing by
+itself). Discharges Board A F8 conditions 1–6 on paper: one combined gate across a single frozen E+F candidate set (per panel, F8-E
+could never reach four components); design-time floor preview h* = 0.00494 nats/token (component-weighted median of null-size
+half-widths; binding value must come from committed code); explicit chart abstention for every F8 entry (no fitted chart predictor
+exists before Part B); corrected binomial wording (chance rejected only at 6/6 resolved clusters); scoring config must be the Part A
+default `configs/eval_tf_v1.yaml`, not the WikiText-only file named in F8.5 (to be fixed by the adopting amendment); aiXiv
+reconstruction needs thinking-on generations and is unfunded as priced; H5 scripted-arm costs unpriced until the 4096-token tier is
+measured. Remaining for F8: manifest build and freeze after the Part A ledger is sealed, Astra replay checks, builder script, two new
+edit families. Council round 5 (self-editing, self-localisation, pruning, predict-before-modify) in progress; Part A staging 26/40.
