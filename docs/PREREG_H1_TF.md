@@ -2268,3 +2268,85 @@ backbone; the aiXiv 93 % recovery is conditional on supplied layers, budget and 
 
 **F8.10 — post-G3 option, not registered.** A compression-recovery truncation test on non-pick LoRA rows (k ∈ {1, r/2},
 ≤ 0.5 GPU-h) may be registered by a later amendment after the G3 ledger closes.
+
+#### A5 amendment F9 (11 Nov 2026, before any G3 outcome): forecast log, pruning ladder, H5 localisation and test-time-LoRA shadow, generation endpoint
+
+This block is appended; earlier text is not rewritten. It records the chair decision of council round 5
+(`docs/council/2026-11-11/SYNTHESIS-r5.md`; brief `BRIEF-r5.md`; member reports `round5-*.md`) on five threads the user raised:
+edits that improve mathematics, models that edit their own weights while working, models reporting which parts they use, fewer
+parameters at equal performance, and predicting all of these. It was written while Part A staging stood at 27 of 40 edits and before
+any G3, rotation, ladder or sealed outcome had been read. It adds nothing to, and removes nothing from, the registered arms (A5.4),
+the Part A selection (A5.1.2), the decision rules (A5.5), the line-stop rule (F5.5), the H5 success criterion (A5.7) or any seed,
+cap or pin. Everything below is descriptive, runs after the Part A ledger is sealed and after the F8 panels, and is governed by the
+F8a freeze, gate, cluster and scoring-configuration rules once F8a is adopted. Board A reviews F9 with F8a; Part A does not wait.
+
+**F9.1 — forecast-before-modify log (F9-L).** For every edit the programme constructs or receives outside Part A (F8 entries, F9
+panels, every H5 proposal including rejected ones, test-time adapters), one row is appended to a JSONL log **before** the entry is
+scored or deployed, and each batch's SHA-256 is committed before its first scoring job. The row holds: incumbent hash; realised bf16
+delta hash and recipe hash; anchor type (`base-exact`, `incumbent-exact`, `base-factor`); selection status (`outcome-blind`,
+`field-selected`, `externally-selected`); per-tensor and summed a = ⟨g, D⟩ and q = ½tr(GDADᵀ) from the frozen G2 artefacts; κ =
+q/|a| (recorded as undefined at a = 0, never regularised); s* = |a|/q when a < 0 < q; sign(a) at each registered scale; the
+quadratic-sign forecast; top-k tensor shares; the chart output or an explicit abstention; G2 artefact hashes; timestamp; and the
+decision taken. Rows for failed constructions carry no delta and are kept.
+
+**F9.2 — calibration statistics and claim thresholds.** Per family and endpoint, clustered by independent source component:
+primary E₀ = 1 − Σ(Δy − s·a)² / ΣΔy² (a is in nats, so κ is fixed at 1) with its bias² / conditional-MSE split; secondary: E₀ for
+s·a + s²·q (descriptive, q is a Gauss–Newton magnitude), resolved-sign agreement under the A5.3 rule with exact Clopper–Pearson
+intervals over clusters, the calibration intercept and slope of Δy on a, forecast coverage (fraction of non-abstaining forecasts) and
+the predicted-resolvable × resolved 2×2 on the F8a floor. Component bootstrap, 4,000 draws, SeedSequence 20261107. A fitted κ̂ is
+applied, frozen, only to the next family. Below 30 independent clusters per family the log is reported as entries only; at 30–99 any
+statement is labelled exploratory; a precision statement requires ≥ 100. Only the A5.8.3 readout (intercept, Σa, Σq, ridge) and the
+abstention quantiles may learn from scored log rows, between prospectively separated episodes, with a recalibration accepted only if
+held-out loss falls and conditional MSE does not rise. No F9 statistic has A5.5 or F5.5 authority.
+
+**F9.3 — sparsity ladder, native SparseGPT family and ranking panel (F9-P).** (a) Ladder: unstructured deletion of the pinned base at
+10, 20 and 50 % of the supported linear-weight inventory, from three mask sources: Wanda scores built on CPU from the G2 WikiText
+input factors on development windows (after the A5.8.1 99 %-energy truncation is checked), a SparseGPT-derived mask transplanted onto
+the original weights (pure deletion), and a count-matched random mask; each entry carries its A5.3 rotation: 18 entries. (b) Three
+native SparseGPT entries with compensation, D = −W⊙M + C, as a separately labelled family whose contraction uses the complete D.
+(c) Ranking panel: 24 outcome-blind Wanda masks at 20 % global sparsity with per-layer ratios drawn from a registered seeded Dirichlet;
+statistic: Kendall τ of realised WikiText change against a + q, against q_A (G = I), and against the magnitude ⟨D, W⟩ = −‖W⊙M‖²,
+with zero fitted parameters. Comparisons are within sparsity only; eligible-weight and total-model sparsity are reported separately;
+unsupported tensors and embeddings are preserved; recipes, calibration identifiers, seeds and tie-breaking are predeclared. Price at
+the measured 1.04 min per TF-v1 entry: 45 entries ≈ 0.78 GPU-h scoring; construction capped at 0.5 GPU-h under stop-and-reprice;
+SparseGPT solve cost unmeasured. Resolution floor for the ladder: the registered 64-window WikiText endpoint's qualified panel
+half-width 0.00487 nats and per-entry maximum 0.01282 nats (`docs/reviews/P5/tf-v1-requalification-2026-11-06.md`).
+
+**F9.4 — H5 measured localisation and verbal-localisation treatment.** A fifth access flag `field_localisation_access` governs
+whether the editor receives the field's per-tensor ranking (gradient saliency g⊙W, candidate-specific g⊙D, cached down-projection
+input norms); the editor's own verbal site ranking is logged before it sees that ranking. Paired H5 episodes: scripted estimator with
+field localisation; scripted estimator on the LLM's chosen layers; LLM editor with and without the field ranking; a
+shuffled-localisation control at matched information and opportunity. The LLM is credited with localisation value only if the
+LLM-localised variant beats the field-localised variant on held-out gain per real evaluation, paired, under A5.7 accounting.
+Attribution patching and causal validation are new metered artefacts and are not registered here. Inside the G5 caps.
+
+**F9.5 — test-time LoRA shadow sub-stream.** Within G5: 32 frozen development queries, one isolated base-relative LoRA each trained
+with next-token loss on the query context (no generation; no sealed item text), access flags (python 1, forward 1, hidden-state 0,
+feedback 1) plus `backward_enabled`, `gradient_exposed_to_editor`, optimiser, steps, rank and module allowlists and training-data
+provenance. The critic forecasts collateral change on the registered objectives relative to the actual incumbent; forecasts are
+logged under F9.1 before scoring; all 32 are scored on TF-v1. Read-outs: E₀ and sign agreement; savings from evaluating only
+above-floor forecasts at a missed-harm upper bound ≤ 5 %; forecast wall time measured and compared with evaluation time. Training
+cost is paid in both arms; only verification evaluations count as savings. Shadow replay may reject an uneconomic gate; realised
+savings remain A5.7's prospective paired G8 claim. Price ≈ 0.55 GPU-h scoring plus training capped at 0.5 GPU-h.
+
+**F9.6 — F8-E generation endpoint (descriptive; prerequisite for any H5 math-editor claim).** For the exact published Astra edit
+and any F8-E entry with a published generation claim: MATH-500, all 500 items, three arms (unedited thinking-on, edited thinking-on,
+unedited thinking-off), fixed 8,192-token cap and decoding settings, natural-completion rate and strict correctness reported
+together with their paired difference. Screen: five independent paired seeds per item per arm. Qualification: two independent
+five-seed batches per item and arm plus a same-device same-seed replay with a pre-declared A3-style margin. Unpriced: no comparable
+generation-throughput measurement exists; the qualification ceiling is 122.88 M generated tokens; a timed same-device pilot precedes
+any purchase. This endpoint never alters F5.5 and is not an H5 endpoint until qualified.
+
+**F9.7 — no decision authority.** F9 panels and statistics cannot satisfy, fail or unresolve any F5.5 predicate or A5.5 step, cannot
+change A5.7, and fund nothing. A JEPAWG-style latent model is not registered; it may be proposed by a later amendment only if the
+F9.1 log shows structured residuals the first-order terms cannot represent.
+
+**F9.8 — brief corrections recorded.** arXiv 2508.02381 predicts a divergence to the dense model for structured channel pruning from
+775 evaluated masks; arXiv 2611.03244's 82 % is in-sample and 66 % out of sample; arXiv 2610.13991's forecaster is an editable
+program calling a frozen LLM, calibrated by online bias plus conditional MSE; arXiv 2604.25098 tests unstructured pruning at 10 % and
+20 % only, without SparseGPT; arXiv 2610.12002's evaluation stream was deliberately enriched for test-time-training benefit.
+
+**F9.9 — ordering and governance.** Order: Part A → F8-E → F8-F → F9-P; H5 items inside G5. F9 panels use the F8a freeze protocol,
+exposure cutoff, gate, cluster rule and scoring configuration (the Part A default `configs/eval_tf_v1.yaml`, per Board A's F8-spec
+ruling). Re-anchoring: after any accepted edit in H5, the incumbent's exact gradient is recomputed (measured ≈ 43 s per row in the F6
+audit) and factors are flagged `base-factor`; no learned transition is registered.
