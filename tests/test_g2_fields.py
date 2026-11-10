@@ -40,10 +40,36 @@ def toy_ctx(tmp_path_factory):
 
 def wikitext_only(ctx, n_pairs=3):
     """Pipeline-sized context: the WikiText objective (full-rank toy factors) and a few pairs."""
-    keep = [o for o in ctx.objectives if o.spec.name == "wikitext_nll"]
+    return with_objectives(ctx, ("wikitext_nll",), n_pairs)
+
+
+def with_objectives(ctx, names, n_pairs=20):
+    keep = [o for o in ctx.objectives if o.spec.name in names]
     return dataclasses.replace(
         ctx, objectives=keep, pairs=ctx.pairs[:n_pairs], probe_items=ctx.probe_items[:2]
     )
+
+
+TWO = ("wikitext_nll", "hellaswag_gold_char_log_likelihood")
+
+
+def forced_audit(monkeypatch, errors):
+    """Real audit rows, with the approximation replaced so that row i of objective o has relative
+    error errors[o](i); everything else (identities, hashes, exact contraction) stays computed."""
+    original, calls = g2.audit_one, []
+
+    def patched(ctx, field, objective, pair, base, budget, impl):
+        row = original(ctx, field, objective, pair, base, budget, impl)
+        name = objective.spec.name
+        i = sum(1 for c in calls if c == name)
+        calls.append(name)
+        error = errors[name](i)
+        row["approximate"] = row["exact"] + error * row["denominator"]
+        row["relative_error"] = g2.relative_error(row["exact"], row["approximate"])
+        return row
+
+    monkeypatch.setattr(g2, "audit_one", patched)
+    return calls
 
 
 def run_main(tmp_path, ctx, *extra):
@@ -290,6 +316,63 @@ def test_audit_rule_is_16_of_20_with_inclusive_threshold():
     assert short["short"] and short["n_audited"] == 15 and not short["passed"]
 
 
+def test_short_audit_never_passes_even_with_16_passes():
+    # the registered twenty-row floor: 16 or 19 passing rows of a short audit are still a hard stop
+    for n in (16, 19):
+        verdict = g2.audit_verdict(_rows([0.0] * n), "wikitext_nll")
+        assert verdict["n_passed"] == n >= g2.AUDIT_MIN_PASS
+        assert verdict["short"] and not verdict["passed"]
+    assert not g2.audit_verdict([], "wikitext_nll")["passed"]
+    audit = {
+        "status": "complete",
+        "objectives": {
+            "wikitext_nll": {
+                "status": "complete",
+                "verdict": g2.audit_verdict(_rows([0.0] * 19), "wikitext_nll"),
+            }
+        },
+        "verdict": {
+            "passed": True
+        },  # an inconsistent overall flag does not rescue a short objective
+    }
+    stop = g2.audit_hard_stop(audit)
+    assert stop["HARD_STOP"] and stop["short_objectives"] == ["wikitext_nll"]
+
+
+def test_every_objective_needs_its_own_pass():
+    required = list(g2.AUDIT_OBJECTIVES)
+    assert len(required) == 5 and required == list(rf.OBJECTIVES)
+    good = {o: g2.audit_verdict(_rows([0.0] * 20), o) for o in required}
+    assert g2.overall_verdict(good, required)["passed"]
+    for bad in required:  # no single objective's pass (e.g. WikiText) stands for another
+        verdicts = dict(good) | {bad: g2.audit_verdict(_rows([0.0] * 15 + [1.0] * 5), bad)}
+        overall = g2.overall_verdict(verdicts, required)
+        assert not overall["passed"] and overall["failed_objectives"] == [bad]
+    missing = {o: v for o, v in good.items() if o != "refusal_margin_harmful"}
+    overall = g2.overall_verdict(missing, required)
+    assert not overall["passed"] and overall["missing_objectives"] == ["refusal_margin_harmful"]
+
+
+def test_real_run_requires_all_five_audit_objectives(toy_ctx):
+    real = dataclasses.replace(toy_ctx, toy=False)
+    assert g2.required_audit_objectives(real) == list(rf.OBJECTIVES)
+    with pytest.raises(ValueError, match="audit objectives missing"):
+        g2.required_audit_objectives(dataclasses.replace(wikitext_only(toy_ctx), toy=False))
+    assert g2.required_audit_objectives(wikitext_only(toy_ctx)) == ["wikitext_nll"]
+
+
+def test_cost_estimate_is_five_objectives_by_twenty_predecessors():
+    fields = {o: {"resources": {"wall_seconds": 36.0}} for o in rf.OBJECTIVES}
+    est = g2.audit_cost_estimate(fields, list(rf.OBJECTIVES), 1.0, 0.0)
+    assert est["n_objectives"] == 5 and est["n_predecessors"] == 20 and est["n_rows"] == 100
+    # per row 0.5 x 36 s = 18 s; 100 rows = 0.5 GPU-h <= the 1 GPU-h cap
+    assert est["estimated_gpu_hours"] == pytest.approx(0.5) and est["within_cap"]
+    assert not g2.audit_cost_estimate(fields, list(rf.OBJECTIVES), 1.0, 0.6)["within_cap"]
+    assert not g2.audit_cost_estimate(fields, list(rf.OBJECTIVES), 1.0, 0.0, ratio=2.5)[
+        "within_cap"
+    ]
+
+
 def test_audit_pairs_walk_lineages_sort_and_resolve_alias_bytes():
     rows = [
         {"id": "r1", "parent_id": None, "bytes_present": True, "bytes_via_alias": None},
@@ -349,11 +432,14 @@ def test_gradient_only_audit_equals_pinned_predecessor_audit(toy_ctx, tmp_path):
         with torch.no_grad():
             for n, t in base.items():
                 dict(ctx.model.named_parameters())[n].copy_(t)
-    assert rows["gradient"]["exact"] == pytest.approx(rows["pinned"]["exact"], rel=1e-6, abs=1e-9)
-    assert rows["gradient"]["approximate"] == pytest.approx(
-        rows["pinned"]["approximate"], rel=1e-6, abs=1e-9
-    )
-    assert rows["gradient"]["n_displacement_tensors"] > 0
+    g, p = rows["gradient"], rows["pinned"]
+    assert g["exact"] == pytest.approx(p["exact"], rel=1e-6, abs=1e-9)
+    assert g["approximate"] == pytest.approx(p["approximate"], rel=1e-6, abs=1e-9)
+    assert g["approximate"] == pytest.approx(g["base_contraction"] + g["cross_term"], abs=1e-12)
+    assert g["denominator"] == max(abs(g["exact"]), 1e-3)
+    assert g["n_displacement_tensors"] > 0 and g["objective"] == "wikitext_nll"
+    for k in ("increment_sha256", "displacement_sha256", "predecessor_bytes", "successor_bytes"):
+        assert g[k] == p[k]
     for n, p in ctx.model.named_parameters():
         assert torch.equal(p, before[n])
 
@@ -361,15 +447,21 @@ def test_gradient_only_audit_equals_pinned_predecessor_audit(toy_ctx, tmp_path):
 # --------------------------------------------------------------------- pipeline/manifest
 
 
-def test_pipeline_manifest_schema_and_hard_stop(toy_ctx, tmp_path):
+def test_pipeline_manifest_schema_and_short_audit_hard_stop(toy_ctx, tmp_path):
     ctx = wikitext_only(toy_ctx)
     code, out, manifest = run_main(tmp_path, ctx)
     assert g2.validate_manifest(manifest) == []
-    # three audited predecessors can never reach 16 passes: the audit is a hard stop
+    # three identified predecessors are a short audit: hard stop before any audit compute
     assert code == g2.EXIT["HARD_STOP"] and manifest["status"] == "HARD_STOP"
     assert manifest["hard_stop"]["HARD_STOP"] is True and not manifest["complete"]
+    assert manifest["hard_stop"]["short_objectives"] == ["wikitext_nll"]
+    assert manifest["audit"]["short_selection"] and manifest["stages"]["audit"] == "complete"
     audit = json.loads((out / "predecessor_audit.json").read_text())
-    assert audit["verdict"]["n_audited"] == 3 and audit["verdict"]["short"]
+    assert audit["schema"] == g2.AUDIT_SCHEMA and not audit["verdict"]["passed"]
+    assert audit["verdict"]["short_objectives"] == ["wikitext_nll"]
+    per = json.loads((out / "predecessor_audit" / "wikitext_nll.json").read_text())
+    assert per["verdict"]["short"] and per["verdict"]["n_audited"] == 0 and per["rows"] == []
+    assert len(per["short_selection"]) == 3
     assert manifest["audit"]["sha256"] == g2.sha256_file(out / "predecessor_audit.json")
     rec = manifest["fields"]["wikitext_nll"]
     root = out / "fields" / "wikitext_nll"
@@ -394,6 +486,123 @@ def test_pipeline_manifest_schema_and_hard_stop(toy_ctx, tmp_path):
     assert json.loads((out / "g2_manifest.json").read_text())["status"] == "HARD_STOP"
 
 
+def test_per_objective_audit_rows_verdicts_and_manifest_schema(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    assert len(ctx.pairs) == g2.AUDIT_N == 20
+    calls = forced_audit(monkeypatch, {n: (lambda i: 0.09 if i < 16 else 0.9) for n in TWO})
+    code, out, manifest = run_main(tmp_path, ctx)
+    assert calls == [TWO[0]] * 20 + [TWO[1]] * 20  # one objective gradient per predecessor each
+    assert code == g2.EXIT["complete"] and manifest["status"] == "complete" and manifest["complete"]
+    assert g2.validate_manifest(manifest) == []
+    audit = manifest["audit"]
+    assert audit["required_objectives"] == list(TWO) and not audit["short_selection"]
+    assert [p["predecessor_id"] for p in audit["pairs"]] == [p["predecessor_id"] for p in ctx.pairs]
+    est = audit["cost_estimate"]
+    assert est["n_objectives"] == 2 and est["n_predecessors"] == 20 and est["n_rows"] == 40
+    assert est["within_cap"] and est["cap_hours"] == 1.0
+    assert set(est["per_row_seconds"]) == set(TWO)
+    assert audit["verdict"]["passed"] and audit["verdict"]["failed_objectives"] == []
+    for name in TWO:
+        entry = audit["objectives"][name]
+        assert entry["verdict"]["n_audited"] == 20 and entry["verdict"]["n_passed"] == 16
+        assert entry["verdict"]["passed"] and entry["verdict"]["objective"] == name
+        path = out / "predecessor_audit" / f"{name}.json"
+        assert entry["sha256"] == g2.sha256_file(path)
+        per = json.loads(path.read_text())
+        assert per["verdict"] == entry["verdict"] and len(per["rows"]) == 20
+        for row, pair in zip(per["rows"], ctx.pairs):
+            assert set(g2.AUDIT_ROW_KEYS) <= set(row) and row["objective"] == name
+            assert row["predecessor_id"] == pair["predecessor_id"]
+            assert row["successor_id"] == pair["successor_id"]
+            assert row["denominator"] == max(abs(row["exact"]), 1e-3)
+            assert math.isfinite(row["base_contraction"] + row["cross_term"])
+            assert len(row["increment_sha256"]) == len(row["displacement_sha256"]) == 64
+    # identical identities across objectives: the same twenty predecessors are audited per objective
+    rows = [json.loads((out / "predecessor_audit" / f"{n}.json").read_text())["rows"] for n in TWO]
+    assert [r["increment_sha256"] for r in rows[0]] == [r["increment_sha256"] for r in rows[1]]
+    top = json.loads((out / "predecessor_audit.json").read_text())
+    assert set(top["objectives"]) == set(TWO) and top["verdict"]["passed"]
+    # schema checks catch a short objective claimed as passing and a missing per-objective file
+    broken = copy.deepcopy(manifest)
+    broken["audit"]["objectives"][TWO[1]]["rows"] = broken["audit"]["objectives"][TWO[1]]["rows"][
+        :19
+    ]
+    broken["audit"]["objectives"][TWO[1]]["verdict"]["n_audited"] = 19
+    assert "a short audit cannot pass" in " ".join(g2.validate_manifest(broken))
+    broken = copy.deepcopy(manifest)
+    del broken["audit"]["objectives"][TWO[0]]
+    errors = " ".join(g2.validate_manifest(broken))
+    assert "without every required objective" in errors
+    real = copy.deepcopy(manifest) | {"toy": False}
+    assert "all five field objectives" in " ".join(g2.validate_manifest(real))
+
+
+def test_any_objective_failure_is_hard_stop(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    # WikiText passes 20/20; HellaSwag has 15/20: G2 hard-stops, and WikiText cannot stand for it
+    forced_audit(
+        monkeypatch,
+        {TWO[0]: lambda i: 0.0, TWO[1]: lambda i: 0.05 if i < 15 else 0.2},
+    )
+    code, out, manifest = run_main(tmp_path, ctx)
+    assert code == g2.EXIT["HARD_STOP"] and manifest["status"] == "HARD_STOP"
+    assert not manifest["complete"] and g2.validate_manifest(manifest) == []
+    stop = manifest["hard_stop"]
+    assert stop["failed_objectives"] == [TWO[1]] and stop["short_objectives"] == []
+    verdicts = manifest["audit"]["verdict"]
+    assert not verdicts["passed"] and verdicts["failed_objectives"] == [TWO[1]]
+    assert manifest["audit"]["objectives"][TWO[0]]["verdict"]["passed"]
+    assert manifest["audit"]["objectives"][TWO[1]]["verdict"]["n_passed"] == 15
+    resume = ["--toy", "--out", str(out), "--resume", "--stages", "audit"]
+    assert g2.main(resume, context_builder=lambda o, n: ctx) == g2.EXIT["refused"]
+    # a manifest claiming completion with a failed objective is a schema error
+    claimed = copy.deepcopy(manifest) | {"status": "complete", "complete": True}
+    errors = " ".join(g2.validate_manifest(claimed))
+    assert "without a passing per-objective audit" in errors
+    assert "without HARD_STOP status" in errors
+
+
+def test_audit_resumes_per_objective_without_rerunning_completed(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    calls = forced_audit(monkeypatch, {n: (lambda i: 0.0) for n in TWO})
+    original = g2._audit_objective
+    state = {"stopped": False}
+
+    def stop_second(ctx_, out_, manifest_, budget, mpath, impl, objective, base):
+        if objective.spec.name == TWO[1] and not state["stopped"]:
+            state["stopped"] = True
+            raise g2.CapExceeded("audit_gpu_hours", f"audit:{TWO[1]}", 1.01, 1.0)
+        return original(ctx_, out_, manifest_, budget, mpath, impl, objective, base)
+
+    monkeypatch.setattr(g2, "_audit_objective", stop_second)
+    code, out, first = run_main(tmp_path, ctx)
+    assert code == g2.EXIT["incomplete"] and first["incomplete_reason"]["cap"] == "audit_gpu_hours"
+    assert first["audit"]["objectives"][TWO[0]]["status"] == "complete"
+    assert TWO[1] not in first["audit"]["objectives"]
+    assert g2.validate_manifest(first) == []
+    done = first["audit"]["objectives"][TWO[0]]
+    argv = ["--toy", "--out", str(out), "--resume", "--stages", "audit"]
+    assert g2.main(argv, context_builder=lambda o, n: ctx) == g2.EXIT["complete"]
+    manifest = json.loads((out / "g2_manifest.json").read_text())
+    kept = manifest["audit"]["objectives"][TWO[0]]
+    assert kept["sha256"] == done["sha256"] and kept["reused_in_attempt"] == 2
+    assert calls.count(TWO[0]) == 20 and calls.count(TWO[1]) == 20  # first objective not re-run
+    assert manifest["audit"]["verdict"]["passed"] and g2.validate_manifest(manifest) == []
+    assert manifest["attempts"][0]["audit"]["objectives"][TWO[0]]["sha256"] == done["sha256"]
+
+
+def test_audit_estimate_above_cap_stops_before_any_row(toy_ctx, tmp_path, monkeypatch):
+    ctx = with_objectives(toy_ctx, TWO)
+    calls = forced_audit(monkeypatch, {n: (lambda i: 0.0) for n in TWO})
+    code, _, manifest = run_main(tmp_path, ctx, "--max-audit-gpu-hours", "1e-9")
+    assert code == g2.EXIT["incomplete"] and calls == []
+    reason = manifest["incomplete_reason"]
+    assert reason["cap"] == "audit_gpu_hours_estimate" and reason["limit"] == 1e-9
+    est = manifest["audit"]["cost_estimate"]
+    assert est["n_rows"] == 40 and not est["within_cap"]
+    assert manifest["audit"]["objectives"] == {} and g2.validate_manifest(manifest) == []
+
+
 def test_wall_clock_cap_stops_cleanly_with_incomplete_manifest(toy_ctx, tmp_path, monkeypatch):
     ctx = wikitext_only(toy_ctx)
     clock = {"t": 0.0}
@@ -415,7 +624,7 @@ def test_wall_clock_cap_stops_cleanly_with_incomplete_manifest(toy_ctx, tmp_path
 
 
 def test_audit_cap_on_resume_keeps_fields_and_charges_prior_hours(toy_ctx, tmp_path, monkeypatch):
-    ctx = wikitext_only(toy_ctx)
+    ctx = wikitext_only(toy_ctx, n_pairs=20)
     code, out, first = run_main(tmp_path, ctx, "--stages", "fields")
     assert code == g2.EXIT["incomplete"] and first["incomplete_reason"]["pending_stages"]
     clock = {"t": 0.0}
@@ -428,12 +637,14 @@ def test_audit_cap_on_resume_keeps_fields_and_charges_prior_hours(toy_ctx, tmp_p
     argv = ["--resume", "--stages", "audit", "--max-audit-gpu-hours", "1.0"]
     code, out, manifest = run_main(tmp_path, ctx, *argv)
     assert code == g2.EXIT["incomplete"]
-    assert manifest["incomplete_reason"]["cap"] == "audit_gpu_hours"
+    assert manifest["incomplete_reason"]["cap"].startswith("audit_gpu_hours")
+    assert manifest["caps"]["audit"]["used_hours"] > 0
     assert manifest["attempt"] == 2 and manifest["attempts"][0]["status"] == "incomplete"
     assert manifest["fields"]["wikitext_nll"] == first["fields"]["wikitext_nll"]
     assert (
         manifest["audit"]["status"] == "running" and not (out / "predecessor_audit.json").exists()
     )
+    assert g2.validate_manifest(manifest) == []
 
 
 def test_missing_hook_and_factor_audit_failures_are_gate_failures(toy_ctx, tmp_path, monkeypatch):

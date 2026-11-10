@@ -1812,3 +1812,106 @@ token-id hashes equal to `text_groups.json` or to a separate pin given before sc
 discrepancy is added beside the bitwise A2.4/A3 check. The report does not compute FP4's half-width or reliability
 bounds, and states that it alone never establishes qualification.
 *Re-pin.* A5.1.2 (ix).
+
+#### A5.1.2 scope reconciliation (10 Nov 2026, after audit)
+
+Executes the two blocking repairs of Board A's post-commit freeze audit
+([BA-FRZ-AUDIT](reviews/council/board-a-freeze-audit-2026-11-10.md), "Blocking repairs before another freeze
+acceptance"), and nothing else. This block is appended; earlier text is not rewritten. It was written without GPU work,
+without computing any field and without any G2 outcome; data were read only. It is not Board A's acceptance. Board A's
+post-commit check of this commit is still required.
+
+*Repair 1: registered multi-objective predecessor audit (A5.8.1, A5.5.1, F1(b)).* The driver pinned at A5.1.2 (viii)/(ix)
+audited only `wikitext_nll` (`AUDIT_OBJECTIVE`). That does not meet A5.8.1's "for multiple objectives require that count
+separately per objective", A5.5.1's validity row ("≥16/20 predecessor passes per objective") or F1(b)'s "any gate applied
+per objective still applies". `scripts/g2_fields.py` now implements the registered rule, and the rule is unchanged:
+(1) For each of the five field objectives (`wikitext_nll`, `mmlu_gold_log_prob`, `hellaswag_gold_char_log_likelihood`,
+`refusal_margin_harmful`, `refusal_margin_harmless`), separately, the stage audits the same twenty identified
+predecessors (chain picks' actual predecessors and their ancestors, sorted by canonical ID; unchanged selection). Each row
+records predecessor, successor, pick and alias-holder identities; exact contraction; approximate = base contraction + cross
+term, with both parts recorded; increment and displacement hashes; denominator max(|exact|, 1e-3 nats); and relative error.
+(2) Each objective gets its own verdict: pass iff ≥16 of 20 rows have finite error ≤0.1 (inclusive) *and* twenty rows exist.
+(3) A short audit is a hard stop whatever the pass count and whatever the overall `complete` flag. This covers fewer than
+twenty identified predecessors, or fewer than twenty rows for any objective. A short selection hard-stops before any audit
+compute is spent.
+(4) Any failed required objective sets `HARD_STOP` in the manifest and gives exit code 2. A pass on one objective (for
+example WikiText) never stands for another.
+(5) Exact gradients are computed one objective at a time at each predecessor, through the existing gradient-only path, with
+no graph retention. The model is restored to base after every row.
+(6) Before the first row, the manifest records the cost estimate as 5 objectives × 20 predecessors = 100 rows. Each row is
+estimated at 0.5 × that objective's measured field wall time, because the exact gradient is one of the field's two
+forward/backward passes over the same items. The estimate is checked against the registered aggregate 1 GPU-h audit cap,
+and re-checked before each later objective using the largest measured/estimated row-time ratio so far. If the estimate
+exceeds the cap, the run stops as incomplete (`audit_gpu_hours_estimate`) and is repriced prospectively. The budget is
+never multiplied.
+(7) The stage resumes per objective. A completed objective's file is verified by hash, kept, and never re-run (no retry to a
+pass). An interrupted objective restarts, and its earlier partial rows stay in the attempt history. Resuming with a
+different audit implementation after a completed objective is refused.
+Outputs: `predecessor_audit/<objective>.json` per objective, and `predecessor_audit.json`, which holds the overall verdict
+and the per-objective file hashes. Manifest schema: `audit.objectives.<objective>`, `audit.required_objectives`,
+`audit.pairs`, `audit.cost_estimate`, `audit.cost_checks` and `hard_stop.failed_objectives`/`short_objectives`, with
+audit schema `g2-predecessor-audit-v2`. Regression tests in `tests/test_g2_fields.py` cover per-objective verdicts, the
+short-audit hard stop, the any-objective-failure hard stop, the cost estimate, per-objective resume and the manifest schema.
+*Toy CPU dry run* (`scripts/g2_fields.py --toy`: a tiny random Qwen3.5, synthetic panels and synthetic chain deltas; toy
+numbers, not G2 measurements). The run ended `HARD_STOP` with exit code 2, and every objective failed its own count.
+WikiText passed 5/20, MMLU 14/20, HellaSwag 6/20, harmful refusal 8/20 and harmless refusal 7/20. The toy cost estimate
+was 0.0186 h for 100 rows. The measured toy audit took 0.0113 h, about 0.6 × the estimate. On these random toy deltas the
+first-order base-plus-cross approximation is poor; this says nothing about the real fields.
+
+*Repair 2: commits in `b7f10a1..a0f352b` (`git log --oneline`).* Independently motivated commits are kept separate from the
+governed freeze/amendment diff. History is not rewritten, and the independent commits are not absorbed into any allowlist
+wildcard. **This range does not contain only allowlisted repairs.** Board A is asked to approve this explicit, expanded
+audit scope.
+
+| Commit | Subject | Files | Class |
+|---|---|---|---|
+| `a0f352b` | reviews: Board A post-commit freeze audit | `docs/reviews/council/board-a-freeze-audit-2026-11-10.md` | independent: review report |
+| `1965703` | progress: 4B alignment merged; freeze audit requested | `docs/PROGRESS.md` | independent: PROGRESS entry |
+| `7ecd186` | merge prereg/a5-4b-align | contents of `5958498` (diff to first parent identical) | governed amendment merge (A5.1.2 (ix)) |
+| `5958498` | 4B diagnostic builder aligned to F5.3/FP4; re-pin | `docs/PREREG_H1_TF.md`, package `README.md`/`code_hashes.json`, `scripts/scale4b_build_edits.py`, `scripts/scale4b_report.py`, `scripts/lambda_job_scale4b.sh`, `scripts/scale4b_h0_pair.sh`, `tests/test_scale4b.py` | governed amendment ("A5 note (10 Nov 2026): 4B builder aligned to F5.3/FP4") |
+| `21292fe` | progress: eigenvalue amendment merged; 4B ruling; backup corrected | `docs/PROGRESS.md` | independent: PROGRESS entry |
+| `43283ec` | merge prereg/a5-eig | contents of `b67cf34` (diff to first parent identical) | governed amendment merge (A5.1.2 (viii)) |
+| `b67cf34` | A5.8.1 amendment: fp64 eigendecomposition and λ_max-relative tolerance; re-pin | `docs/PREREG_H1_TF.md`, package `README.md`/`code_hashes.json`, `scripts/a5_build_manifests.py`, `scripts/g2_fields.py`, `src/wsp/features/response_field.py`, `tests/test_g2_fields.py`, `tests/test_response_field.py` | governed amendment ("A5.8.1 amendment (10 Nov 2026, before audit)") |
+| `4d51297` | D8 addendum 3 note: symlink fix and lifecycle rule | `docs/DECISIONS.md` | independent: DECISIONS addendum note |
+| `32e8b70` | backup: do not follow symlinks | `scripts/backup_sync.sh` | independent: backup infrastructure |
+| `48ad76b` | progress: freeze edits merged; eigenvalue amendment in progress | `docs/PROGRESS.md` | independent: PROGRESS entry |
+
+*Verification.* The inventory has 98 paths: the 97 path rows of A5.1.2's tables plus `docs/PREREG_H1_TF.md`. For each
+path, `git diff --stat b7f10a1..a0f352b -- <path>` was run. It is empty for 88 paths, including every raw-evidence path,
+which is not in git. It is non-empty for exactly ten paths: `docs/PREREG_H1_TF.md`,
+`docs/prereg/a5_manifests/README.md`, `docs/prereg/a5_manifests/code_hashes.json`, `scripts/a5_build_manifests.py`,
+`scripts/g2_fields.py`, `src/wsp/features/response_field.py`, `scripts/scale4b_build_edits.py`, `scripts/scale4b_report.py`,
+`scripts/lambda_job_scale4b.sh` and `scripts/scale4b_h0_pair.sh`. `git log b7f10a1..a0f352b -- <path>` attributes each of
+those ten paths only to `b67cf34` and/or `5958498`. For each of the six independent commits (`48ad76b`, `32e8b70`,
+`4d51297`, `21292fe`, `1965703`, `a0f352b`), `git diff --name-only <c>^ <c> -- <98 paths>` is empty. **The independent
+commits touched no inventoried file.** In the range, the changed files outside the inventory are the three governed test
+files below, which are not code-map members, and the independent files `docs/PROGRESS.md`, `docs/DECISIONS.md`,
+`scripts/backup_sync.sh` and the audit report.
+
+*Missing test-file identities (audit item 7) and this repair's files.* SHA256 of committed bytes. None of these tests is a
+`code_hashes.json` member.
+
+| Path | SHA256 | Identity |
+|---|---|---|
+| `tests/test_response_field.py` | `4dfb62eb3be29440b89963dd50dbda305714a59660274afdbdb01add771d02f4` | changed 2026-11-10 by `b67cf34` (A5.8.1 amendment: fp64/λ_max-tolerance regressions); old `9e805e1450a18f8dba0ab78dfaca3c4008126ae056883721675eace3daf41965` at `b7f10a1`; unchanged since |
+| `tests/test_scale4b.py` | `3c4bcc153ba78b19aa2d03548b2b81760eba0f4fdb54155b2480dc1e0039714a` | changed 2026-11-10 by `5958498` (4B alignment to F5.3/FP4); old `a9087dd25399d2d26467c7a5b6467e4df693484a68e665115117c7b64ba52776` at `b7f10a1`; unchanged since |
+| `tests/test_g2_fields.py` | `25724b715edcadcaa92f19cba03cf3c4e223125b1c39e02d2a460a3e81aed593` | changed 2026-11-10 by this repair (per-objective audit regressions); old `a35880b3cdfe665ec8ae558ebc6c2bbedf70f69bce051830e5305aa60fa08d8b` (`b67cf34`, A5.8.1 amendment), earlier `8c4c63c16ad71f3db5a55ee547da677ec90ba8334bea8c8955a8a8a5790cb5db` at `b7f10a1` |
+| `scripts/g2_fields.py` | `16a2ee79ea86fb87ef138deac9839395915a69b854f19c43a3db3ae14a503726` | changed 2026-11-10 by this repair (registered per-objective predecessor audit); old `4856f9938633b94138fabc3a592962ea93b2e274045aa71cc30bedf64b5e52f9` (A5.8.1 amendment), earlier `c1366df579a02d060ec9081fe0e77e6ff51e3cb92826ffd6259add8769b37e39` at `b7f10a1` |
+
+*Re-pin (x) (10 Nov 2026, after audit).* `scripts/a5_build_manifests.py --pin-worktree` was re-run against the closed
+snapshot, into a copy of the package, from parent `a0f352b`. Of the regenerated files, `components.jsonl`,
+`selection.json`, `references.json` and `text_groups.json` were byte for byte identical, as was every other package file in
+the copy. Only `code_hashes.json` and `README.md` changed, and only those two were copied into the package.
+`code_hashes.json` (schema `a5-code-hashes-v2`, sha256 `e1ac62fde2c1928ad660eb833df2884c100b11db5884d537df527fb2251f4075`,
+`git_sha` = parent `a0f352b`) still pins 64 files. It differs from `ce07f3b5…c6f8af` only in `git_sha` and the
+`scripts/g2_fields.py` pin. This is now the current code map. `ce07f3b5464457ff96356e58d57279de93cf5392a52bf31d7ce1c8068cc6f8af`,
+`701ae646…130744` and `708c6fab…abfe2c9` remain historical identities. The *Identities* sentence "This freeze's code map
+is `708c…`" names the initial freeze-pass identity. This commit changes only `docs/PREREG_H1_TF.md`, the two package files
+below, `scripts/g2_fields.py` and `tests/test_g2_fields.py`. These rows supersede the corresponding current-hash entries of
+A5.1.2's tables.
+
+| Path | SHA256 | Identity |
+|---|---|---|
+| `docs/prereg/a5_manifests/README.md` | `3766416ce2e3e61465c72d6b42f84dc569188cde7bae79033b65e17c39002296` | changed 2026-11-10 (audit-repair re-pin); old `225f0caeff23bc7f5bf58115f63f4f08294729484979d8912c947e6662766120` (4B builder alignment re-pin) |
+| `docs/prereg/a5_manifests/code_hashes.json` | `e1ac62fde2c1928ad660eb833df2884c100b11db5884d537df527fb2251f4075` | changed 2026-11-10 (audit-repair re-pin); old `ce07f3b5464457ff96356e58d57279de93cf5392a52bf31d7ce1c8068cc6f8af` (4B builder alignment re-pin) |
+| `scripts/g2_fields.py` | `16a2ee79ea86fb87ef138deac9839395915a69b854f19c43a3db3ae14a503726` | changed 2026-11-10 (this repair); old `4856f9938633b94138fabc3a592962ea93b2e274045aa71cc30bedf64b5e52f9` |
