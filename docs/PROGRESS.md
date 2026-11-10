@@ -512,3 +512,10 @@ Round-5 member reports archived in git (e3920b1). H5 documents being reconciled 
 06:30 UTC" through "17:00 UTC" were written as estimates and are wrong; the work they describe happened between about 21:30 UTC on
 10 Nov and 23:20 UTC on 10 Nov 2026. The git commit timestamps (`git log --format='%h %ci %s'`) are authoritative for ordering and
 time; the "before any G3 outcome" status of F7–F9a is unaffected (Part A staging was at 35 of 40 and nothing had been scored).
+
+**10 Nov 2026, 23:40 UTC.** Board A accepted F9a with five conditions (`docs/reviews/council/board-a-f9a-2026-11-11.md`): archive
+the round-5 reports before F9-L logging starts (done, e3920b1); correct F9-P's connected components before C1 and scoring (the fixed
+three-component declaration is rejected; components must come from the dependency graph); freeze cross-population source separation
+before any learned readout update; reconcile H5 documents and freeze/reprice G5 prerequisites before H5 execution (reconciliation in
+flight); confirm generation thresholds before sampling and reprice before qualification. All 15 drafter choices dispositioned in the
+review. Applied at the F8/F9 freeze, after the Part A ledger is sealed.
