@@ -107,3 +107,76 @@ Inventory correction (round3-representation §2): no chain LoRA factors are stor
 chain steps are dense snapshots. Stored adapters number 121 lora_sft + 1 heretic_ara.
 The compact head is about 1.6k parameters; learned frames add parameters, not labels.
 No empirical new programme result is claimed here.
+
+
+## 11 Nov 2026 (council round 4)
+
+Source: round-4 [brief](council/2026-11-11/BRIEF.md) ("What appeared since round 3") and the
+[chair synthesis](council/2026-11-11/SYNTHESIS.md) §1; the decisions are PREREG A5 amendment F8. Earlier notes stay archival.
+Headline: nothing published since 10 Nov touches the registered programme; the news adds two descriptive panels (F8-E external
+edits, F8-F family transfer, no decision authority) and a scripted arm plus second editor for the H5 pilot. Items 1–5, 8 and 9
+were fetched from arXiv on 11 Nov for this record and are in `paper/refs/verified.yaml`; items 6 and 7 are the brief's reading, and the
+blogs and working papers (11–16) are the council's reading (the Concept Country and nathan.rs pages returned HTTP 403 to two members;
+the chair read both on 11 Nov).
+
+**Papers**
+
+1. [WSP-Scope, "Exploring Weight-Space Programming"](https://arxiv.org/abs/2611.09382) (Hu et al.; site <https://wsp-scope.github.io/>):
+   Astra edits of Qwen3.5-0.8B/9B incl. a 1,023-value column edit; direction u not released. Takeaway: excluded from F8-E until u
+   is released; the recipe does not determine u; not an effect-size input. Development numbers are adaptively selected.
+2. [Rane, LoRA fingerprinting](https://arxiv.org/abs/2611.07610): Qwen3.5-0.8B, weights < activations < outputs for domain recovery.
+   Takeaway: prior only, no effect-size revision (48-dimensional spectral summary, CI includes chance, target is domain identity);
+   stated in one sentence in the access-ladder report (F8.8).
+3. [Deletion Tuning](https://arxiv.org/abs/2611.10866) (Lu et al.): < 0.05 % gate-weight mask. Takeaway: new family for the F8-F
+   panel as Wanda-initialised gate deletion plus count-matched random deletion; a learned mask is a separate unpriced purchase.
+4. [Behavioral rate of fine-tuning](https://arxiv.org/abs/2611.06598) (David et al.): rate is receiver-dependent. Takeaway: no new
+   arm (base anchoring already carries the receiver); the compression-recovers-corrupted-adapter result is a post-G3 option
+   (F8.10), not registered.
+5. [IWIBench](https://arxiv.org/abs/2611.08647) (von Csefalvay et al.): controlled benchmark of gradient-free editing by an
+   editor model on Gemma 3 4B IT. Takeaway: GPT-6.1 Sol registered as the practical editor beside Astra in the H5 pilot.
+6. [Can an LLM reason and program about a network's weights](https://arxiv.org/abs/2611.08070) (Ahmed): audit of zero-shot weight
+   reading on small CNNs. Takeaway: context for the tool-access flags and audit discipline; no programme change (not itemised in
+   synthesis §1).
+7. [Can LLMs debug robots by editing weights](https://arxiv.org/abs/2611.09376): 65 embedding rows; random-direction edits do not
+   help. Takeaway: context only; no programme change (not itemised in synthesis §1).
+8. [SWEET](https://arxiv.org/abs/2611.10974) (Fu et al.): activation-contrast weight edits. Takeaway: **deferred** from F8-F
+   (needs generated counterfactuals; unpriced).
+9. [Training-Free Task Vectors](https://arxiv.org/abs/2609.09054) (Perin et al.): rank-one edits from forward statistics.
+   Takeaway: TFTV rank-one on `o_proj` enters F8-F; the edit is s̄ vᵀ with v from W's singular vectors and the expected input.
+10. Minor, no action: [2611.04268](https://arxiv.org/abs/2611.04268) (WSP for image-restoration diffusion, conjectures only),
+    [2611.09559](https://arxiv.org/abs/2611.09559) (LLM-written MILP branching scorers, matched by a pseudocost rule),
+    [2611.06185](https://arxiv.org/abs/2611.06185) (geometry-aware regularised editing).
+
+**Replications, controls and critiques (working papers and blogs, 4–10 Nov)**
+
+11. [Concept Country working paper](https://concept.country/research/weight-space-programming) (Qwen3.8-27B, pre-registered,
+    norm-matched orthogonal control). Takeaway: no change to Part A controls and no flaw found; the control is the published
+    analogue of A5.3's Haar rotation (which also preserves spectrum, rank and support); the down_proj rank-one form feeds F8-F;
+    reliance is on the control's design, not its numbers.
+12. [aiXiv 261103.000004](https://aixiv.science/abs/aixiv.261103.000004): a difference-of-means script given Astra's layers,
+    budget and scale recovers ≈ 93 % of the gain (cosine ≈ 0.78 to Astra's direction). Takeaway: motivates the scripted arm; its
+    reconstruction is an F8-E entry; the 93 % figure is conditional on the supplied information; counts as one component with Astra.
+13. [Barry, "Can a Linear Program Do Weight-Space Programming?"](https://nathan.rs/posts/weight-space-lp/): Astra's column/scale
+    choice is an LP. Takeaway: LP selection is part of the scripted arm; published LP edits enter F8-E only with bytes or a
+    complete recipe; reuses Astra's direction, so the same component.
+14. [Biswas, "Editing a Model's Weights for $10"](https://glitch401.github.io/writing/editing-a-models-weights/): scripted edits cut
+    answer length as much or more than the LLM edit. Takeaway: supports the scripted baseline (grouped under the H5 row; no
+    separate synthesis line).
+15. [Achintya K J audit](https://achintyakj.tech/blog/weight-space-audit): released logs reproduce; most results single runs with
+    partly undisclosed selection. Takeaway: context for the held-out, selection-logged design (not itemised in synthesis §1).
+16. Blogs: [brainwagon](https://brainwagon.org/blog/2026-11-08-a-skeptical-look-at-weight-space-programming),
+    [AutoWeight](https://midhunxavier.com/blog/auto-weight/better-weights-tougher-tests/),
+    [GEPA over weights](https://devichand.com/blog/2026/gepa-wsp/),
+    [Khalfallah](https://dev.to/iyadh_khalfallah/i-tried-weight-space-programming-on-6-kinds-of-models-heres-where-it-works-and-where-it-breaks-58e3),
+    [Jevlar](https://opper.ai/blog/jevlar-weight-space-programming). Takeaway: skeptical or negative small-scale replications; no
+    programme change (not itemised in synthesis §1).
+17. Public artefacts on our base: Hugging Face `RikiyaT/Qwen3.5-0.8B-weight-space-programming` and a two-tensor diff. Takeaway: the
+    released Astra patch is the exact-replay entry of F8-E (hash-pinned against the pinned base revision; fails closed on any other
+    tensor difference).
+18. Not found: any paper since 10 Nov predicting benchmark change from a weight delta on a held-out split with a metanetwork.
+    This limited search does not establish absence.
+
+**Brief corrections (F8.9).** WSP-Scope names "long, unresolved reasoning", not loops, and derives u from token embeddings, not
+activations. TFTV's edit is s̄ vᵀ with v built from W's singular vectors and the expected input, rank one and norm-matched.
+Deletion Tuning tests no Qwen3.5 backbone. The aiXiv 93 % figure is conditional on Astra's layers, budget and scale. Fetch-time
+check, 11 Nov: arXiv lists IWIBench (2611.08647) as submitted 5 Nov, not 4 Nov as in the brief.

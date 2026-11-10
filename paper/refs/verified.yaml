@@ -936,3 +936,114 @@
   location: Abstract
   status: verified
   source_file: paper/refs/sources/2611.07319.txt
+- key: hu2026wspscope
+  arxiv_id: '2611.09382'
+  title: 'Exploring Weight-Space Programming: Capabilities, Generalization, and Limitations'
+  authors:
+  - Junru Hu
+  - Cheng Tang
+  - Wei Li
+  - Hongze Zhu
+  - Chun-Mei Feng
+  - Qi Zhang
+  - Yirong Chen
+  - Ming Hu
+  year: 2026
+  venue: arXiv:2611.09382
+  claim_we_make: 'Astra-driven edits of Qwen3.5-0.8B and 9B: modifying 1,023 parameters raised held-out MATH-500 by 29.45 points, and six of 16 trajectories kept the original weights.'
+  supporting_excerpt: 'Notably, modifying only 1,023 parameters yields a 29.45-point improvement.'
+  supporting_excerpt_2: 'six of the 16 trajectories retain the original weights when candidate improvements cannot be reliably validated'
+  location: Abstract
+  status: verified
+  source_file: paper/refs/sources/2611.09382.txt
+- key: rane2026fingerprint
+  arxiv_id: '2611.07610'
+  title: 'Embedding-Space Fingerprinting of LoRA Fine-Tunes: Recovering the Training-Data Domain from the Model Artifact Alone'
+  authors:
+  - Shivesh Rane
+  year: 2026
+  venue: arXiv:2611.07610
+  claim_we_make: 'On Qwen3.5-0.8B LoRA fine-tunes, leave-one-dataset-out domain recovery from weight-delta statistics (42%) was below gray-box activations (61%) and black-box outputs (64%).'
+  supporting_excerpt: 'activations and outputs were more informative than the weight-delta statistics'
+  supporting_excerpt_2: 'white-box weight statistics reach 42%'
+  location: Abstract
+  status: verified
+  source_file: paper/refs/sources/2611.07610.txt
+- key: lu2026deletiontuning
+  arxiv_id: '2611.10866'
+  title: 'The Surprising Effectiveness of Deleting Weights in LLM Post-Training'
+  authors:
+  - Jack Lu
+  - Zhenbang Yang
+  - Mike Lasby
+  - Tejas Pote
+  - Yani Ioannou
+  - Mengye Ren
+  year: 2026
+  venue: arXiv:2611.10866
+  claim_we_make: 'Zeroing fewer than 0.05% of weights via a learned gate-projection mask matches full fine-tuning across three post-training regimes.'
+  supporting_excerpt: 'of its weights, with no other modification, matches full fine-tuning (FFT) at scale across three LLM post-training regimes'
+  location: Abstract
+  status: verified
+  source_file: paper/refs/sources/2611.10866.txt
+- key: david2026behavioralrate
+  arxiv_id: '2611.06598'
+  title: 'The Behavioral Rate of Fine-Tuning: Compression as a Measure of Useful Information'
+  authors:
+  - Joey David
+  - Paul Caillon
+  - Alexandre Allauzen
+  year: 2026
+  venue: arXiv:2611.06598
+  claim_we_make: 'Fine-tuning compressibility is a property of the dataset-receiver pair, not of the dataset alone.'
+  supporting_excerpt: 'showing that fine-tuning compressibility is a property of the dataset–receiver pair rather than of the dataset alone'
+  location: Abstract
+  status: verified
+  source_file: paper/refs/sources/2611.06598.txt
+- key: csefalvay2026iwibench
+  arxiv_id: '2611.08647'
+  title: 'IWIBench: Evaluating Gradient-Free Model Driven Intra-weight Injection'
+  authors:
+  - Chris von Csefalvay
+  - Pranav Doma
+  - Achyuthan Unni Krishnan
+  - Tamás Földi
+  year: 2026
+  venue: arXiv:2611.08647
+  claim_we_make: 'IWIBench is a controlled benchmark of gradient-free weight editing by an editor model; Astra and GPT-6.1 Sol lead the other editors.'
+  supporting_excerpt: 'A limited number of frontier models perform very significantly ahead of other contenders, most notably Astra and GPT-6.1 Sol.'
+  location: Abstract
+  status: verified
+  source_file: paper/refs/sources/2611.08647.txt
+- key: fu2026sweet
+  arxiv_id: '2611.10974'
+  title: 'SWEET: Mitigating Spurious Feature Reliance in LLM Reasoning via Weight Editing'
+  authors:
+  - Zhizhang Fu
+  - Lucas Zhao
+  - Michalis Korakakis
+  - Mengru Ding
+  - Lukasz Szpruch
+  - Yue Zhang
+  year: 2026
+  venue: arXiv:2611.10974
+  claim_we_make: 'Training-free weight edits from 20 original-counterfactual activation contrasts improve perturbed-input accuracy by 11.8 points on average.'
+  supporting_excerpt: 'SWEET improves accuracy by an average of 11.8 percentage points on perturbed inputs and 2 points on original inputs'
+  location: Abstract
+  status: verified
+  source_file: paper/refs/sources/2611.10974.txt
+- key: perin2026tftv
+  arxiv_id: '2609.09054'
+  title: 'Training-Free Task Vectors for LLM Behavioral Control'
+  authors:
+  - Gabriel J. Perin
+  - Lucas Boscaini
+  - André Araujo
+  - Nina S. T. Hirata
+  year: 2026
+  venue: arXiv:2609.09054
+  claim_we_make: 'Training-free task vectors map activation steering vectors to rank-one weight edits from forward-pass statistics.'
+  supporting_excerpt: 'maps activation steering vectors to rank-one weight-space edits using only forward-pass statistics'
+  location: Abstract
+  status: verified
+  source_file: paper/refs/sources/2609.09054.txt

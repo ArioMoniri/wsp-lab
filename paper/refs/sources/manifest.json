@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-10",
+  "date": "2026-11-11",
   "git_sha": "d83529ecd966920f1937f9e32691beb688487cbd",
   "seed": null,
   "model_revisions": null,
@@ -22,6 +22,41 @@
     "paper/refs/sources/2611.07319.txt": {
       "sha256": "b8d20b0662dc297f94a33d51a206f68f08f44e66abd8e46f7507648fc143a3a4",
       "url": "https://arxiv.org/html/2611.07319",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    },
+    "paper/refs/sources/2611.09382.txt": {
+      "sha256": "7384a6b1d4f06a1194164217c66565fd55d83298ad8a7d4fa061cbc768e903e0",
+      "url": "https://arxiv.org/html/2611.09382",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    },
+    "paper/refs/sources/2611.07610.txt": {
+      "sha256": "42ac2369fee825c059e04fc1b20421e45e2cb5b5bbbc6c6aa4087efbb11fc7b2",
+      "url": "https://arxiv.org/html/2611.07610",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    },
+    "paper/refs/sources/2611.10866.txt": {
+      "sha256": "9062fdcbd539c93498eec738bc712cfc192d3e1497a2e465ab46ee7d85eb6f9b",
+      "url": "https://arxiv.org/html/2611.10866",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    },
+    "paper/refs/sources/2611.06598.txt": {
+      "sha256": "a71dc4c5e316a2830d2b6b1dbbad576405055edea063746417a9c42bdacee6b3",
+      "url": "https://arxiv.org/html/2611.06598",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    },
+    "paper/refs/sources/2611.08647.txt": {
+      "sha256": "a14998dcadbe974856859bb122dd9e6915ee4b291a0d09e5ca0eb1ca55c69538",
+      "url": "https://arxiv.org/html/2611.08647",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    },
+    "paper/refs/sources/2611.10974.txt": {
+      "sha256": "31cfa60279902b72b4d3700f62255f50bbed939902b93207d03b58b517eac16f",
+      "url": "https://arxiv.org/html/2611.10974",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    },
+    "paper/refs/sources/2609.09054.txt": {
+      "sha256": "60cb18bf910a118c090200dc14c7e52c6b243f053f2f36bfc84c4008b28ee6b5",
+      "url": "https://arxiv.org/html/2609.09054",
       "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
     }
   },

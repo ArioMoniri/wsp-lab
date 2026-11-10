@@ -1,0 +1,595 @@
+SWEET: Mitigating Spurious Feature Reliance in LLM Reasoning via Weight Editing Skip to main content Report GitHub Issue × Title: Content selection saved. Describe the issue below: Description: Submit without GitHub Submit in GitHub Why HTML? Report Issue Back to Abstract Download PDF Contents Reading mode Colour theme Abstract 1 Introduction 2 Preliminaries Steering directions. Residual-stream decomposition. Directional attribution. 3 Spurious-feature Weight Editing 3.1 Original–Perturbed Pairs 3.2 Steering Direction Extraction Token-level extraction. Sequence-level extraction. 3.3 Component Ranking and Selection 3.4 Directional Weight Editing 3.5 Component Assignment and Sparsity Calibration 4 Experiments 4.1 Settings Models and data. Baselines and variants. Inference and hyperparameters. 4.2 Main Results Joint editing improves NoOp accuracy over either direction alone. SWEET reduces the original–perturbed accuracy gap. 4.3 Robustness across Model Families and Scales 5 Analysis Interpreting behavioral directions through vocabulary projections. TL and SL have complementary effects on reasoning robustness. SWEET’s robustness gains extend beyond mitigating overthinking. Additional ablations and sensitivity analyses. 6 Related Work Mitigating spurious correlations. Analyzing and modifying model behavior. 7 Conclusion References A Hyperparameter Calibration and Evaluation Settings Direction-extraction settings. SWEET calibration and evaluated settings. Component-variant calibration. Steering hyperparameter selection. ThinkEdit hyperparameter selection. Evaluation details. A.1 Steer2Edit Adaptation and Calibration Task adaptation and direction. Component statistics and editing. Calibration. Test evaluation. A.2 SL and TL extraction-size sensitivity SL extraction-size sensitivity. TL extraction-size sensitivity. A.3 Qwen3-4B SL-head sparsity sensitivity A.4 Full MATH500 sparsity grids B Complete Results and Component Variants B.1 Joint TL–SL Component Allocation C Comparison with Overthinking Baselines Shared protocol and parameter selection. Budget forcing. DEER. SEAL. Chain-of-Draft. D Attention Analysis Token-level positions attend to the distractor. E Behavioral Judgments Protocol E.1 Forced-choice behavioral assessment protocol Shared user-message template. First behavioral question. Second behavioral question. Output instruction. E.2 Sampling and win/loss aggregation Sample and matched comparisons. Judge execution and valid responses. Win/loss computation. E.3 Cross-judge robustness for over-integration E.4 Rule-based distractor reuse and n-gram sensitivity F Generation Metrics F.1 Evaluation population and measures Population and fixed comparisons. Token cost, efficiency, and cap incidence. Repetition representation. G Vocabulary Readout Projection and ranking. Display and interpretation. License: CC BY 4.0 arXiv:2611.10974v1 [cs.CL] 07 Nov 2026 SWEET: Mitigating Spurious Feature Reliance in LLM Reasoning via Weight Editing Zhizhang Fu Affiliation: Westlake University Lucas Zhao Affiliation: Yale University Michalis Korakakis Affiliation: University of Cambridge Affiliation: The Alan Turing Institute Mengru Ding Affiliation: Xianyu of Alibaba Lukasz Szpruch Affiliation: The Alan Turing Institute Affiliation: University of Edinburgh Yue Zhang Affiliation: Westlake University * Equal contribution.
+Corresponding author: zhangyue@westlake.edu.cn Abstract Reasoning in large language models can be disrupted by simple input perturbations (e.g. adding irrelevant distractors), suggesting reliance on spurious correlations. Identifying and suppressing the spurious features involved in long chain-of-thought reasoning remains challenging. We introduce Spurious-feature WEight EdiTing (SWEET), a training-free method that combines counterfactual interventions with mechanistic interpretability to identify and suppress spurious-features. SWEET extracts token- and sequence-level behavioral directions from activation contrasts between original problems and their counterfactual variants—capturing local and global patterns of spurious reasoning. It then localizes the responsible MLP neurons and attention heads and suppresses their contributions along these directions through weight edits. Using only 20 original–counterfactual pairs for direction extraction, SWEET improves accuracy by an average of 11.8 percentage points on perturbed inputs and 2 points on original inputs across five open-weight reasoning models and five reasoning benchmarks. It also reduces the relative gap between original and perturbed accuracies from 17.6% to 2.5%. Analyses identify two recurring forms of spurious reasoning, i.e. over-integrating irrelevant conditions and overthinking, and provide mechanistic evidence that SWEET improves reasoning robustness by suppressing both behavioral directions. Figure 1: Overview of SWEET. (a) SWEET constructs answer-preserving perturbations by adding irrelevant conditions, then selects original–perturbed pairs for which the model answers only the original problem correctly. (b) Token-level extraction contrasts activations along the same reasoning trace under both prompts, focusing on positions most affected by the perturbation to capture the incorporation of irrelevant information ( over-integration ). Sequence-level extraction contrasts mean activations from independently generated traces, capturing broader behavioral changes, illustrated here by repeated doubt and an unnecessarily long response ( overthinking ). Red highlights mark these behaviors; unembedding (UnEmb) word lists help interpret the extracted directions. (c) SWEET ranks attention heads and MLP neurons by their contributions to these directions, selects the number of components to edit using calibration data, and modifies their output weights to remove contributions along the extracted directions. 1 Introduction Large language models (LLMs) have made remarkable progress on reasoning tasks ( OpenAI, 2025 ; Guo et al., 2025 ; Team et al., 2026 ) . However, even strong models can fail under simple perturbations, such as rephrasing problem scenarios, changing numerical values or adding distractors ( Huang et al., 2026 ; Mirzadeh et al., 2025 ) . This brittleness suggests reliance on spurious correlations ( Geirhos et al., 2020 ) , making performance sensitive to how problems are presented rather than solely to the reasoning required. As LLMs are increasingly used for scientific problem solving and safety-critical decision-making, such failures can undermine scientific conclusions and lead to harmful decisions. Prior work on mitigating spurious correlations has primarily focused on discriminative tasks, where models predict a single label ( Mahabadi et al., 2020 ; Wang et al., 2022 ; Zhou and Zhu, 2025 ) , rather than long chain-of-thought (CoT) reasoning ( Chen et al., 2026 ) . In long CoT, an error caused by a spurious feature at one step can propagate through the remaining trace, obscuring the source of the final failure. Recent methods address spurious-feature reliance in CoT through token pruning and distillation or causal interventions ( Wu et al., 2024 ; Xie et al., 2025 ; Guo et al., 2026 ) . Although these methods improve accuracy, such gains alone do not establish which forms of spurious-feature reliance, if any, have been mitigated. Without identifying the behaviors and internal components responsible for spurious reasoning, it remains unclear whether interventions correct the underlying failure mechanisms or compensate for their effects ( Mendelson and Belinkov, 2021 ) . To bridge this gap, our central intuition is that identifying and characterizing spurious features not only provides an interpretable account of reasoning failures, but also enables us to directly suppress their influence, thereby increasing the contribution of causally relevant features and improving reasoning robustness. We introduce Spurious-feature WEight EdiTing (SWEET), a training-free method for identifying and suppressing spurious-feature reliance in LLM reasoning. Motivated by Pearl’s causal hierarchy ( Pearl, 2009 ) , we treat answer-preserving perturbations as counterfactual interventions on task-irrelevant aspects of the input (Figure 1 (a)). We contrast paired reasoning activations at token and sequence levels to extract behavioral directions associated with local and global patterns of spurious reasoning, respectively (Figure 1 (b)). We then localize responsible attention heads and MLP neurons and remove their contributions along these directions through weight edits (Figure 1 (c)). The edited model can be applied to subsequent problems without further modification or training, with improved robustness to spurious features. To the best of our knowledge, SWEET is the first method to combine counterfactual interventions with mechanistic interpretability to identify and suppress spurious-feature reliance at both token and sequence levels in long-CoT reasoning. We evaluate SWEET on five open-weight reasoning models across five reasoning benchmarks and their distractor-augmented variants. Using up to 20 original–perturbed pairs to extract behavioral directions, SWEET improves accuracy by an average of 11.8 percentage points on perturbed inputs and 2 points on original inputs, while reducing the accuracy gap between original and perturbed inputs from 17.6% to 2.5%. These results demonstrate SWEET’s effectiveness across model families, scales, and reasoning benchmarks. We further analyze the extracted behavioral directions to characterize spurious reasoning and understand SWEET’s robustness gains. Across five models, we identify two recurring patterns: over-integration , in which models incorporate solution-relevant conditions and irrelevant distractors into their reasoning without distinguishing between them, and overthinking , in which models repeatedly question, revise, or abandon otherwise viable reasoning steps. Causal interventions show that editing the corresponding directions suppresses these behaviors, providing mechanistic evidence that SWEET improves robustness by reducing these two forms of spurious reasoning. We release our code at this anonymous repository . 2 Preliminaries Steering directions. Behavioral attributes of language models can be associated with
+directions in hidden-state
+space ( Turner et al., 2023 ; Rimsky et al., 2024 ; Chen et al., 2025a ) ,
+commonly estimated by contrasting mean activations between behaviors.
+For example, contrasting harmful requests that models refuse with
+harmless requests they answer yields a refusal
+direction ( Arditi et al., 2024 ) , while contrasting
+“Think Step by Step” and “Answer Immediately” prompts yields a
+CoT steering vector ( Zhang and Viteri, 2024 ) .
+Let h ℓ ​ ( s ) h_{\ell}(s) denote the residual-stream activation at layer ℓ \ell at the final token position of context s s .
+Activation steering modifies this representation as h ℓ ′ ​ ( s ) = h ℓ ​ ( s ) + α ​ v ℓ h_{\ell}^{\prime}(s)=h_{\ell}(s)+\alpha v_{\ell} ,
+where v ℓ v_{\ell} is a steering direction extracted by contrasting
+mean activations, and α \alpha controls the intervention’s
+sign and magnitude. Residual-stream decomposition. Attention heads and MLP neurons contribute additively to the
+residual stream ( Elhage et al., 2021 ; Geva et al., 2021 ) .
+We refer to each head or neuron as a unit .
+For an input context s s , their contributions at the current token
+position are c ℓ , h Attn ​ ( s ) = W O ℓ , h ​ z ℓ , h ​ ( s ) , c ℓ , j MLP ( s ) = a ℓ , j ( s ) W down ℓ [ : , j ] . \begin{gathered}c_{\ell,h}^{\mathrm{Attn}}(s)=W_{O}^{\ell,h}z_{\ell,h}(s),\\
+c_{\ell,j}^{\mathrm{MLP}}(s)=a_{\ell,j}(s)W_{\mathrm{down}}^{\ell}[:,j].\end{gathered} (1) Here, z ℓ , h ​ ( s ) z_{\ell,h}(s) is the output of attention head h h before
+the output projection, and W O ℓ , h W_{O}^{\ell,h} is the
+column block of the attention output matrix W O ℓ W_{O}^{\ell} .
+For MLP neuron j j , a ℓ , j ​ ( s ) a_{\ell,j}(s) is its scalar activation
+entering the output projection, including the gating operation
+in gated MLPs, and W down ℓ [ : , j ] W_{\mathrm{down}}^{\ell}[:,j] is its output
+weight vector.
+We use c u ​ ( s ) ∈ ℝ d model c_{u}(s)\in\mathbb{R}^{d_{\mathrm{model}}} to denote
+either type of unit contribution. Directional attribution. Direct logit attribution (DLA) measures a component’s direct
+contribution to a target token’s logit by projecting its
+residual-stream output toward the token’s unembedding
+direction ( Elhage et al., 2021 ) .
+Following this projection principle, a unit’s contribution along
+any normalized direction d ℓ g d_{\ell}^{g} in the same layer’s residual
+space can be expressed as ( Sun et al., 2025 ) A u g ​ ( s ) = ( d ℓ g ) ⊤ ​ c u ​ ( s ) , A_{u}^{g}(s)=(d_{\ell}^{g})^{\top}c_{u}(s), (2) where u u belongs to layer ℓ \ell and g g indexes the direction.
+Positive scores indicate contributions along the direction;
+negative scores indicate contributions against it. 3 Spurious-feature Weight Editing SWEET (1) extracts behavioral directions associated with spurious-feature reliance, (2) identifies responsible MLP neurons and attention heads, and (3) suppresses their contributions through weight edits to improve reasoning robustness. We describe original–perturbed pair construction and selection (Section 3.1 ), behavioral direction extraction (Section 3.2 ), component ranking and selection (Section 3.3 ), directional weight editing (Section 3.4 ), and component assignment and sparsity calibration (Section 3.5 ). 3.1 Original–Perturbed Pairs For each LLM to be edited with SWEET, we construct original–perturbed problem pairs using NoOp ( Mirzadeh et al., 2025 ) , which adds irrelevant information to an original problem x o x^{\mathrm{o}} to obtain x p x^{\mathrm{p}} without changing the correct answer. We use that LLM to generate responses to both versions and retain pairs for which it answers the original problem correctly but the perturbed problem incorrectly. We sample up to N ext N_{\mathrm{ext}} qualifying pairs (or all if fewer qualify) to form 𝒟 ext = { ( x i o , x i p ) } i = 1 N \mathcal{D}_{\mathrm{ext}}=\{(x_{i}^{\mathrm{o}},x_{i}^{\mathrm{p}})\}_{i=1}^{N} . Extraction and calibration data are excluded from final evaluation. 3.2 Steering Direction Extraction To characterize spurious reliance at both local and global levels,
+we extract two complementary behavioral directions: a token-level
+(TL) direction representing localized perturbation-related features
+and a sequence-level (SL) direction representing broader
+trajectory-level features.
+To improve the stability of direction estimation, we normalize activation differences by their across-pair variability. Let y i o y_{i}^{\mathrm{o}} and y i p y_{i}^{\mathrm{p}} denote the model’s
+responses to the original and perturbed problems, respectively.
+For per-pair activation difference vectors { δ ℓ , i } i = 1 N \{\delta_{\ell,i}\}_{i=1}^{N} at layer ℓ \ell , let μ ℓ \mu_{\ell} and σ ℓ \sigma_{\ell} be their dimension-wise mean and standard
+deviation over the N N pairs, and define 𝒱 ℓ ​ [ { δ ℓ , i } i = 1 N ] = μ ℓ ⊘ ( σ ℓ + λ ​ med ⁡ ( σ ℓ ) ) , \mathcal{V}_{\ell}\bigl[\{\delta_{\ell,i}\}_{i=1}^{N}\bigr]=\mu_{\ell}\oslash\bigl(\sigma_{\ell}+\lambda\operatorname{med}(\sigma_{\ell})\bigr), (3) where ⊘ \oslash denotes dimension-wise division and med ⁡ ( σ ℓ ) \operatorname{med}(\sigma_{\ell}) is the median entry of σ ℓ \sigma_{\ell} .
+This scaling downweights dimensions with high across-pair
+variability, while λ \lambda controls the strength of the
+stabilizing term to limit amplification when a dimension’s
+standard deviation is near zero. Token-level extraction. We teacher-force each reference
+trace y i r y_{i}^{r} under both prompts and compute the next-token divergence D i , t r = D KL ( p θ ( ⋅ ∣ x i p , y i , < t r ) ∥ p θ ( ⋅ ∣ x i o , y i , < t r ) ) D_{i,t}^{r}=D_{\mathrm{KL}}\big(p_{\theta}(\cdot\mid x_{i}^{\mathrm{p}},y_{i,<t}^{r})\,\|\,p_{\theta}(\cdot\mid x_{i}^{\mathrm{o}},y_{i,<t}^{r})\big) .
+We select the top-ranked positions by divergence to form S i r S_{i}^{r} and average the activation differences taken immediately before
+predicting y i , t r y_{i,t}^{r} over those positions: δ ℓ , i r \displaystyle\delta_{\ell,i}^{r} = 1 | S i r | ​ ∑ t ∈ S i r [ h ℓ ​ ( x i p , y i , < t r ) − h ℓ ​ ( x i o , y i , < t r ) ] . \displaystyle=\frac{1}{|S_{i}^{r}|}\sum_{t\in S_{i}^{r}}\left[h_{\ell}(x_{i}^{\mathrm{p}},y_{i,<t}^{r})-h_{\ell}(x_{i}^{\mathrm{o}},y_{i,<t}^{r})\right]. (4) The two reference traces can yield
+different activation-difference distributions across pairs.
+We therefore normalize the activation differences for each
+reference type separately before averaging the resulting directions: v ℓ TL = 1 2 ​ ∑ r ∈ { o , p } 𝒱 ℓ ​ [ { δ ℓ , i r } i = 1 N ] . v_{\ell}^{\mathrm{TL}}=\frac{1}{2}\sum_{r\in\{\mathrm{o},\mathrm{p}\}}\mathcal{V}_{\ell}\bigl[\{\delta_{\ell,i}^{r}\}_{i=1}^{N}\bigr]. (5) Fixing the prefix separates prompt-induced changes from differences in generated
+history, and using both reference traces reduces dependence on either. Each
+nonzero layerwise vector is then normalized, d ℓ g = v ℓ g / ‖ v ℓ g ‖ 2 d_{\ell}^{g}=v_{\ell}^{g}/\|v_{\ell}^{g}\|_{2} for g ∈ { SL , TL } g\in\{\mathrm{SL},\mathrm{TL}\} . Sequence-level extraction. Following contrastive CoT steering ( Zhang and Viteri, 2024 ) , we mean-pool
+the residual-stream activation h ℓ ​ ( x i r , y i , ≤ t r ) h_{\ell}(x_{i}^{r},y_{i,\leq t}^{r}) after each of the T i r T_{i}^{r} response tokens (excluding the prompt) of each independently generated
+trace, r ∈ { o , p } r\in\{\mathrm{o},\mathrm{p}\} , and apply
+Equation 3 to the per-pair differences: v ℓ SL = 𝒱 ℓ ​ [ { h ¯ ℓ , i p − h ¯ ℓ , i o } i = 1 N ] , h ¯ ℓ , i r = 1 T i r ​ ∑ t = 1 T i r h ℓ ​ ( x i r , y i , ≤ t r ) . \begin{gathered}v_{\ell}^{\mathrm{SL}}=\mathcal{V}_{\ell}\bigl[\{\bar{h}_{\ell,i}^{\mathrm{p}}-\bar{h}_{\ell,i}^{\mathrm{o}}\}_{i=1}^{N}\bigr],\\
+\bar{h}_{\ell,i}^{r}=\frac{1}{T_{i}^{r}}\sum_{t=1}^{T_{i}^{r}}h_{\ell}(x_{i}^{r},y_{i,\leq t}^{r}).\end{gathered} (6) This captures broad trajectory differences without requiring token alignment. 3.3 Component Ranking and Selection For each direction, we score every unit using
+Equation 2 .
+We first average over the token contexts 𝒞 q g \mathcal{C}_{q}^{g} within each attribution trace, then over the M g M_{g} traces
+from the extraction set, giving each trace equal weight: A ¯ u g = 1 M g ​ ∑ q = 1 M g 1 | 𝒞 q g | ​ ∑ s ∈ 𝒞 q g A u g ​ ( s ) . \bar{A}_{u}^{g}=\frac{1}{M_{g}}\sum_{q=1}^{M_{g}}\frac{1}{|\mathcal{C}_{q}^{g}|}\sum_{s\in\mathcal{C}_{q}^{g}}A_{u}^{g}(s). (7) For g ∈ { SL , TL } g\in\{\mathrm{SL},\mathrm{TL}\} and unit type m ∈ { MLP , Attn } m\in\{\mathrm{MLP},\mathrm{Attn}\} , let 𝒰 g , m + \mathcal{U}_{g,m}^{+} contain the
+units of type m m , across all layers, with A ¯ u g > 0 \bar{A}_{u}^{g}>0 . Each of the four
+direction–type groups has its own budget: we select the top fraction τ \tau , ℰ g , m ​ ( τ ) = Top k ⁡ ( 𝒰 g , m + ; A ¯ g ) , k = max ⁡ ( 1 , ⌊ τ ​ | 𝒰 g , m + | ⌋ ) ​ for ​ τ > 0 . \begin{gathered}\mathcal{E}_{g,m}(\tau)=\operatorname{Top}_{k}\left(\mathcal{U}_{g,m}^{+};\bar{A}^{g}\right),\\
+k=\max\bigl(1,\lfloor\tau|\mathcal{U}_{g,m}^{+}|\rfloor\bigr)\text{ for }\tau>0.\end{gathered} (8) Heads are ranked only against heads and neurons against neurons; pooling them
+would let τ \tau shift the edit between unit types rather than vary its extent. 3.4 Directional Weight Editing We adapt weight orthogonalization ( Arditi et al., 2024 ) to the selected
+units. With W u = W down ℓ [ : , j ] W_{u}=W_{\mathrm{down}}^{\ell}[:,j] for
+neuron j j or W O ℓ , h W_{O}^{\ell,h} for head h h , W u ′ = ( I − d ℓ g ​ ( d ℓ g ) ⊤ ) ​ W u . W_{u}^{\prime}=\left(I-d_{\ell}^{g}(d_{\ell}^{g})^{\top}\right)W_{u}. (9) For any input a u a_{u} (a neuron activation or a head’s pre-projection output), the
+edited output c u ′ = W u ′ ​ a u c_{u}^{\prime}=W_{u}^{\prime}a_{u} satisfies ( d ℓ g ) ⊤ ​ c u ′ = 0 (d_{\ell}^{g})^{\top}c_{u}^{\prime}=0 , while its
+component orthogonal to d ℓ g d_{\ell}^{g} is unchanged. Unselected units are untouched,
+and the edit is applied once to the weights, requiring neither training nor
+activation interventions at inference. 3.5 Component Assignment and Sparsity Calibration On a calibration set 𝒟 cal \mathcal{D}_{\mathrm{cal}} disjoint from the test set, with directions and rankings fixed, we sweep a grid 𝒯 g , m \mathcal{T}_{g,m} of sparsities for each group in isolation, editing only ℰ g , m ​ ( τ ) \mathcal{E}_{g,m}(\tau) . Each candidate is scored by 𝒮 g , m ​ ( τ ) = 1 2 ​ [ Acc o + Acc p ] \mathcal{S}_{g,m}(\tau)=\frac{1}{2}[\operatorname{Acc}_{\mathrm{o}}+\operatorname{Acc}_{\mathrm{p}}] on 𝒟 cal \mathcal{D}_{\mathrm{cal}} , so a sparsity that narrows the gap by degrading
+original-problem accuracy is not rewarded. To limit model-specific tuning on
+the calibration data, we choose one τ \tau per group by charging each candidate
+the accuracy it gives up relative to each model’s own best: R g , m ​ ( τ ) \displaystyle R_{g,m}(\tau) = 1 | 𝒦 | ​ ∑ k ∈ 𝒦 ( max τ ′ ∈ 𝒯 g , m ⁡ 𝒮 g , m ( k ) ​ ( τ ′ ) − 𝒮 g , m ( k ) ​ ( τ ) ) , \displaystyle=\frac{1}{|\mathcal{K}|}\sum_{k\in\mathcal{K}}\Bigl(\max_{\tau^{\prime}\in\mathcal{T}_{g,m}}\mathcal{S}^{(k)}_{g,m}(\tau^{\prime})-\mathcal{S}^{(k)}_{g,m}(\tau)\Bigr), (10) τ g , m ∗ \displaystyle\tau^{*}_{g,m} = arg ⁡ min τ ∈ 𝒯 g , m ​ R g , m ​ ( τ ) , \displaystyle=\arg\min_{\tau\in\mathcal{T}_{g,m}}R_{g,m}(\tau), where 𝒦 \mathcal{K} is the set of models. Regret is zero only for a τ \tau optimal
+on every model; otherwise it is the cost, in accuracy points, of one global choice. We apply the SL edit to attention heads and the TL edit to MLP neurons.
+This assignment aligns SL’s trajectory-level contrasts with attention’s
+cross-position information aggregation, and TL’s position-level contrasts
+with the position-wise transformations performed by
+MLPs ( Vaswani et al., 2017 ) .
+Appendix B.1 (Table 16 ) compares this assignment with applying
+both directions to both unit types.
+The calibrated sparsities ( τ SL , Attn ∗ , τ TL , MLP ∗ ) (\tau^{*}_{\mathrm{SL,Attn}},\tau^{*}_{\mathrm{TL,MLP}}) are fixed across all held-out datasets. 4 Experiments We test whether SWEET improves reasoning accuracy in the presence of irrelevant information while preserving accuracy on the original problems. We describe the experimental setup (Section 4.1 ), then evaluate SWEET against baselines and ablated variants (Section 4.2 ). We also assess whether its gains hold across model families and scales (Section 4.3 ). Method GSM-Sym Math500 AMC Gaokao-Math AIME Average NoOp Orig NoOp Orig NoOp Orig NoOp Orig NoOp Orig NoOp Orig Gap (%) DeepSeek-R1-Distill-Qwen-32B Base 80.1 87.5 79.8 85.8 67.7 77.2 62.3 71.9 42.2 54.4 66.4 75.4 11.9 Steering 81.4 88.0 79.0 89.1 75.6 79.5 66.8 73.2 50.0 47.8 70.5 75.5 6.6 ThinkEdit 79.4 88.0 79.0 87.2 66.1 74.8 65.2 72.7 42.2 45.6 66.4 73.6 9.9 Steer2Edit 80.9 87.7 81.4 86.6 76.4 80.3 66.2 74.5 50.0 55.6 71.0 76.9 7.7 SWEET (TL) 83.1 85.8 86.6 88.5 78.7 77.2 71.7 71.2 42.2 47.8 72.5 74.1 2.2 SWEET (SL) 81.5 88.2 84.7 86.3 78.7 78.0 69.4 74.0 48.9 55.6 72.6 76.4 4.9 SWEET (SL+TL) 84.8 87.1 85.8 88.0 82.7 85.0 74.3 74.8 51.1 55.6 75.7 78.1 3.0 DeepSeek-R1-Distill-Llama-8B Base 58.1 73.5 59.5 78.9 47.2 63.0 46.8 61.0 18.9 23.3 46.1 60.0 23.1 Steering 60.9 74.1 66.0 80.3 52.0 67.7 54.5 64.9 30.0 28.9 52.7 63.2 16.6 ThinkEdit 61.8 74.9 69.9 81.9 50.4 66.9 55.8 65.5 30.0 30.0 53.6 63.8 16.1 Steer2Edit 62.5 74.9 69.6 82.2 60.6 68.5 59.2 66.8 30.0 34.4 56.4 65.4 13.7 SWEET (TL) 65.4 70.2 74.0 80.5 63.0 65.4 59.2 64.7 33.3 31.1 59.0 62.4 5.4 SWEET (SL) 62.2 74.5 71.2 84.4 60.6 65.4 56.1 66.2 27.8 37.8 55.6 65.6 15.3 SWEET (SL+TL) 64.9 71.3 77.5 82.2 66.9 66.9 63.6 64.9 34.4 31.1 61.5 63.3 2.9 Table 1: Reasoning accuracy (%) under original (Orig) and perturbed (NoOp) inputs. TL and SL denote TL-MLP25 and SL-Attn100, respectively; SL+TL combines both edits. Average reports the unweighted mean across the five benchmarks. Gap is 100 × | Orig − NoOp | / Orig 100\times|\mathrm{Orig}-\mathrm{NoOp}|/\mathrm{Orig} , computed from unrounded average accuracies. Bold marks the highest NoOp accuracies and smallest Gap within each model. Figure 2: Original and perturbed (NoOp) accuracy across five reasoning benchmarks. The first three panels show DeepSeek-R1-Distill-Qwen-1.5B, DeepSeek-R1-Distill-Qwen-7B, and Qwen3-4B; the final panel averages all five models. Dashed lines mark the corresponding Base accuracies. TL and SL denote TL-MLP25 and SL-Attn100, respectively. Values above bar pairs report the relative accuracy gap, 100 × | Orig − NoOp | / Orig 100\times|\mathrm{Orig}-\mathrm{NoOp}|/\mathrm{Orig} . Bold marks the highest Orig and NoOp accuracies and smallest gap within each panel; green boxes highlight the variant with the smallest gap. See Figure 3 in Appendix B for detailed results. 4.1 Settings Models and data. We evaluate five reasoning models: DeepSeek-R1-Distill-Qwen-1.5B, -7B and -32B,
+DeepSeek-R1-Distill-Llama-8B ( Guo et al., 2025 ) , and Qwen3-4B ( Yang et al., 2025 ) .
+We report per-dataset results for DeepSeek-R1-Distill-Qwen-32B and DeepSeek-R1-Distill-Llama-8B, and accuracy averaged
+over the five benchmarks for the remaining models.
+We use five reasoning benchmarks: Math500,
+AMC ( Mathematical Association of America, n.d.b ) ,
+Gaokao-Math ( Liao et al., 2024 ) , AIME ( Mathematical Association of America, n.d.a ) , and GSM-Symbolic ( Mirzadeh et al., 2025 ) , each in its original and
+perturbed (NoOp) form. Following Fu et al. (2026) ,
+NoOp variants are generated with GPT-5.4-mini. Baselines and variants. We compare SWEET with the unedited model ( Base ), activation steering ( Steering ) ( Turner et al., 2023 ; Rimsky et al., 2024 ) , ThinkEdit ( Sun et al., 2025 ) , and Steer2Edit ( Sun et al., 2026 ) .
+We adapt ThinkEdit and Steer2Edit using sequence-level directions extracted from original–NoOp pairs, following their respective component-selection and weight-editing procedures.
+For each method, we select tunable settings on Math500 original–NoOp pairs excluded from final evaluation.
+Appendix A details the baseline adaptations, calibration subsets, candidate settings, and selection results.
+Following the component assignment in Section 3.5 , SWEET (TL) edits MLP neurons, SWEET (SL) edits attention heads, and full SWEET (SL+TL) combines the two edits. Inference and hyperparameters. We use vLLM ( Kwon et al., 2023 ) with bfloat16 precision, greedy decoding, and a maximum of 16,384 generated tokens. Direction extraction uses 20 Math500 original–NoOp pairs per model. SWEET edits the top 25% of positively attributed MLP neurons for TL and all positively attributed attention heads for SL.
+Calibration details and baseline hyperparameters are provided in
+Appendix A . 4.2 Main Results Table 1 shows that full SWEET (SL+TL) achieves the highest average NoOp accuracy on both the 32B and 8B models ( 75.7 % 75.7\% and 61.5 % 61.5\% ), outperforming the strongest baseline, Steer2Edit, by 4.7 4.7 and 5.1 5.1 percentage points, respectively. On the 32B model, all three SWEET variants outperform every baseline in average NoOp accuracy ( 72.5 72.5 – 75.7 % 75.7\% vs. at most 71.0 % 71.0\% ) and achieve smaller relative Orig–NoOp gaps ( 2.2 2.2 – 4.9 % 4.9\% vs. at least 6.6 % 6.6\% ). TL and SL+TL also outperform all baselines on both metrics on the 8B model. Full SWEET additionally achieves the highest average Orig accuracy on the 32B model ( 78.1 % 78.1\% ), while SL achieves the highest on the 8B model ( 65.6 % 65.6\% ). These results demonstrate that SWEET improves reasoning robustness to irrelevant distractors while maintaining or improving average accuracy on original problems. Joint editing improves NoOp accuracy over either direction alone. Full SWEET improves average NoOp accuracy over the stronger single-direction variant by 3.1 3.1 and 2.5 2.5 percentage points on the 32B and 8B models, respectively. The relative effectiveness of TL and SL varies across models: they achieve similar NoOp accuracy on the 32B model ( 72.5 % 72.5\% and 72.6 % 72.6\% , respectively), whereas TL outperforms SL on the 8B model ( 59.0 % 59.0\% vs. 55.6 % 55.6\% ). SL achieves higher average Orig accuracy than TL on both models. Joint editing surpasses SL in Orig accuracy on the 32B model ( 78.1 % 78.1\% vs. 76.4 % 76.4\% ), but falls below it on the 8B model ( 63.3 % 63.3\% vs. 65.6 % 65.6\% ). Thus, combining the directions consistently improves NoOp accuracy, although its benefits for Orig accuracy vary across models. SWEET reduces the original–perturbed accuracy gap. Compared with Base, full SWEET reduces the relative gap between domain-averaged Orig and NoOp accuracies from 11.9 % 11.9\% to 3.0 % 3.0\% on the 32B model and from 23.1 % 23.1\% to 2.9 % 2.9\% on the 8B model. Steer2Edit achieves gaps of 7.7 % 7.7\% and 13.7 % 13.7\% , respectively. On the 32B model, TL achieves a smaller gap ( 2.2 % 2.2\% ) but lower Orig and NoOp accuracies than full SWEET, illustrating why gap reduction should be assessed alongside absolute accuracy. Full SWEET improves both average accuracies over Base on both models, although trade-offs remain on individual benchmarks: Llama-8B’s Orig accuracy on GSM-Symbolic declines from 73.5 % 73.5\% to 71.3 % 71.3\% . 4.3 Robustness across Model Families and Scales Figure 2 reports results for the remaining three reasoning models and averages across all five. Full per-dataset results for all models are provided in Table 15 in Appendix B . Averaged across all five models, all three SWEET variants outperform the compared baselines in average NoOp accuracy ( 61.1 61.1 – 65.5 % 65.5\% vs. at most 60.1 % 60.1\% ) and achieve smaller relative Orig–NoOp gaps ( 2.5 2.5 – 10.0 % 10.0\% vs. at least 10.7 % 10.7\% ). Full SWEET achieves the highest average NoOp accuracy ( 65.5 % 65.5\% ) and smallest relative gap ( 2.5 % 2.5\% ). It also improves average Orig accuracy over Base from 65.2 % 65.2\% to 67.2 % 67.2\% , close to SL ( 67.9 % 67.9\% ) and Steer2Edit ( 67.3 % 67.3\% ). The results demonstrate SWEET’s effectiveness across Qwen2.5, Qwen3, and Llama3.1 models ranging from 1.5B to 32B parameters. 5 Analysis Direction Model Top-ranked tokens TL R1-1.5B ␣ also , ␣ given , ␣ mention , ␣ additionally TL R1-7B ␣ additionally , Additionally , ␣ unrelated , ␣ Additionally TL R1-8B given , ␣ given , ␣ Given , Given TL R1-32B 另有 (there is also) , 无关 (unrelated) , 另 (other) , 有个 (there is a) TL Qwen3-4B 还有一个 (one more) , ␣ given , 提及 (mention) , 提到 (mention) SL R1-1.5B OCR , ird , ␣$# , ␣ nevertheless SL R1-7B ieber , allet , ␣asn , ITU SL R1-8B ␣Cor , idebar , anche , ␣Devin SL R1-32B arend , /swagger , ␣Berg , 无论如何 (in any case) SL Qwen3-4B icorn , 特别声明 (special statement), eyJ , 某种 (some kind of) Table 2: Top four tokens, in rank order, from vocabulary readouts at 75% of model depth. ␣ denotes a literal space; capitalization is preserved, and tokens with distinct IDs are retained separately. Bold highlights selected interpretable tokens, and parenthetical English glosses aid interpretation; neither affects the ranking. Appendix G provides the procedure, complete top-10 lists, token IDs, and additional readouts at 25% and 50% depth to assess sensitivity to layer choice. Interpreting behavioral directions through vocabulary projections. Following Appendix G , we project the extracted directions through the unembedding matrix and rank tokens by their mean raw projection scores (Table 2 ). TL readouts include additive and premise-introducing terms such as also , additionally , given , mention , and their Chinese counterparts. Since the perturbations introduce irrelevant conditions, these readouts motivate the hypothesis that TL captures their incorporation into reasoning, which we term over-integration . SL readouts are noisier and less interpretable. Logit-lens interpretations can be brittle ( Belrose et al., 2023 ) , particularly for SL directions, which contrast mean-pooled states rather than states at a shared next-token position. We therefore treat the link between SL and overthinking as a behavioral hypothesis and test it below. TL and SL have complementary effects on reasoning robustness. We compare SL, TL, and SL+TL on original and NoOp inputs, assessing over-integration and overthinking separately (Table 3 ). For over-integration, a blinded GPT-6-Luna judge compares Base and edited traces for the same NoOp problem in both presentation orders. We count a win (loss) when both orders indicate less (more) over-integration in the edited trace, reporting rates over all evaluated trace pairs. We complement these judgements with lexical reuse: the relative change in the fraction of responses that repeat wording from the irrelevant condition, detected through rule-based 3-gram matching. Appendix E provides further details and discussion of these measures. We assess overthinking through generation length, token efficiency, token-cap incidence ( Kaiser et al., 2026 ) , and repetition-loop incidence in length-matched prefixes ( Alimaskina et al., 2026 ) , with metric definitions in Appendix F . TL reduces both over-integration and overthinking on NoOp inputs. Its over-integration win/loss rates are 51.6 % / 4.4 % 51.6\%/4.4\% , compared with 26.4 % / 20.2 % 26.4\%/20.2\% for SL, indicating a stronger reduction in over-integration. Lexical reuse shows a corresponding difference: TL reduces the fraction of responses repeating distractor wording by 77.5 % 77.5\% , compared with 0.6 % 0.6\% for SL. Other LLM judges support the same qualitative conclusion (Appendix E.3 ). On original inputs, where no irrelevant condition is added, TL’s effect on overthinking is much weaker: token efficiency changes by − 0.5 % -0.5\% , compared with + 56.1 % +56.1\% on NoOp, and reductions in generation length and token-cap incidence are smaller than for SL. This pattern suggests that TL primarily targets over-integration and that its reduction of overthinking on NoOp may partly reflect reduced incorporation of distractors. Attention analysis further shows that TL-active positions attend strongly to distractors (Appendix D ). SL reduces overthinking on both original and NoOp inputs, with token-efficiency gains of 10.4 % 10.4\% and 26.6 % 26.6\% , respectively. Although its NoOp gains are smaller than TL’s, its benefits on original inputs support the hypothesis that SL addresses broader overthinking tendencies. Combining the directions gives the strongest improvements across all measured metrics on NoOp and the largest reductions in generation length, token-cap incidence, and repetition loops on original inputs. These results support combining TL and SL to suppress both forms of spurious reasoning. SWEET’s robustness gains extend beyond mitigating overthinking. To assess whether reducing overthinking alone can match SWEET’s robustness gains, we compare SWEET with budget forcing ( Muennighoff et al., 2025 ) , DEER ( Yang et al., 2026 ) , SEAL ( Chen et al., 2025b ) , and Chain-of-Draft ( Xu et al., 2025 ) . SWEET achieves the highest NoOp accuracy ( 65.54 % 65.54\% ; Table 4 ), exceeding SEAL, the strongest overthinking baseline, by 2.84 2.84 percentage points while maintaining comparable Orig accuracy ( 67.23 % 67.23\% vs. 67.84 % 67.84\% ). Its relative gap is also smaller than SEAL’s ( 2.52 % 2.52\% vs. 7.57 % 7.57\% ). Chain-of-Draft achieves a slightly smaller gap ( 2.36 % 2.36\% ), but lowers both Orig and NoOp accuracy below Base. All four baselines reduce NoOp token counts more than SWEET ( 27.0 27.0 – 46.5 % 46.5\% vs. 23.3 % 23.3\% ), yet none matches its NoOp accuracy. These results suggest that shortening outputs alone is insufficient to match SWEET’s gains. Additional ablations and sensitivity analyses. We assess direction stability across different samples and extraction sizes (Appendix A.2 ). We also examine sensitivity to editing sparsity and hyperparameter choices (Appendix A ) and compare alternative component assignments (Appendix B ). Over-integr. Overthinking Input Edit Judge W/L (%) ↑ / ↓ \uparrow/\downarrow Reuse (%) ↓ \downarrow Tokens (%) ↓ \downarrow Tok. Eff. (%) ↑ \uparrow Cap (%) ↓ \downarrow Loop (pp) ↓ \downarrow Orig SL – – − 4.3 -4.3 + 10.4 +10.4 − 21.3 -21.3 − 0.90 -0.90 TL – – − 3.5 -3.5 − 0.5 -0.5 − 12.3 -12.3 − 2.11 -2.11 Both – – − 6.4 -6.4 + 6.2 +6.2 − 28.7 -28.7 − 3.53 -3.53 NoOp SL 26.4 / 20.2 − 0.6 -0.6 − 10.2 -10.2 + 26.6 +26.6 − 31.9 -31.9 − 3.00 -3.00 TL 51.6 / 4.4 − 77.5 -77.5 − 20.0 -20.0 + 56.1 +56.1 − 33.8 -33.8 − 6.29 -6.29 Both 52.8 / 3.4 − 78.8 -78.8 − 23.3 -23.3 + 65.8 +65.8 − 47.6 -47.6 − 7.28 -7.28 Table 3: Changes in over-integration and overthinking under SL, TL,
+and combined editing relative to Base.
+Judge W/L reports the percentages of all evaluated NoOp trace pairs
+showing less/more over-integration after editing, requiring agreement
+across both presentation orders.
+Reuse reports the relative change (%) in the fraction of responses
+containing lexical reuse of the irrelevant condition, detected by
+3-gram matching.
+Tokens, token efficiency, and Cap report relative changes (%)
+in output length, token efficiency, and token-cap incidence,
+respectively.
+Loop reports the percentage-point change in repetition-loop incidence
+over length-matched prefixes.
+“–” denotes not applicable. Method Orig. (%) NoOp (%) Gap (%) Δ \Delta Tok. (%) Base 65.16 53.72 17.55 — Budget forcing 65.29 62.42 4.39 − 46.5 -46.5 DEER 66.38 62.58 5.72 − 36.7 -36.7 SEAL 67.84 62.70 7.57 − 27.0 -27.0 Chain-of-Draft 52.18 50.95 2.36 − 39.5 -39.5 SWEET 67.23 65.54 2.52 − 23.3 -23.3 Table 4: Comparison of SWEET with methods for reducing overthinking. Orig and NoOp report accuracy (%) on original and distractor-augmented inputs, averaged equally across five benchmarks and five models; Gap is their relative accuracy gap. Δ \Delta Tok. reports the percentage change in macro-averaged NoOp API completion-token counts relative to Base, with negative values indicating shorter outputs (Appendix F ). Bold marks the highest accuracy in each input condition. 6 Related Work Mitigating spurious correlations. Work on spurious correlations has predominantly focused on natural language understanding, using ensembles ( Mahabadi et al., 2020 ) , token masking ( Wang et al., 2022 ) , data augmentation ( Korakakis et al., 2025 ) , causal reweighting ( Zhou and Zhu, 2025 ) , or neuron pruning based on Integrated Gradients ( Ali et al., 2025 ) . These methods target shortcuts in classification, leaving unclear how to identify and suppress spurious dependencies throughout long CoT reasoning. Reasoning-specific methods address this challenge through training or reasoning-path selection: LeaF combines confounding-token pruning with attention distillation ( Guo et al., 2026 ) , DeCoT uses causal interventions to select reasoning paths ( Wu et al., 2024 ) , and Xie et al. (2025) use correctness-perception distillation to reduce spurious question–answer correlations. SWEET intervenes directly in the model’s internal computation: it identifies attention heads and MLP neurons associated with spurious-feature dependence and edits their weights to suppress their contributions—without retraining the model or adding reasoning-path selection at inference time. Analyzing and modifying model behavior. Activation steering ( Turner et al., 2023 ; Rimsky et al., 2024 ) and parameter interventions have been used to study and alter model behavior, including safety ( Wei et al., 2024 ) and CoT faithfulness ( Tutek et al., 2025 ) . ThinkEdit ( Sun et al., 2025 ) and Steer2Edit ( Sun et al., 2026 ) perform component-level weight editing using directions derived from sequence-averaged activation contrasts. In contrast to these methods, SWEET combines answer-preserving counterfactual interventions with token- and sequence-level extraction to distinguish local responses to irrelevant information from changes across the reasoning trajectory. Token-level extraction compares activations along the same reasoning trace under the original and perturbed prompts, whereas sequence-level extraction compares mean activations across independently generated traces. Together, these contrasts identify components associated with distinct forms of spurious reasoning, and guide weight edits that suppress their contributions. 7 Conclusion We introduced SWEET, a training-free method that combines mechanistic interpretability with counterfactual interventions to identify spurious-feature reliance in CoT reasoning at both token and sequence levels and suppress it through weight edits. Across five open-weight reasoning models and five benchmarks, SWEET improves average accuracy on both original and perturbed inputs while substantially reducing the relative accuracy gap between them. Detailed analyses provide mechanistic evidence that these robustness gains stem from suppressing two recurring forms of spurious reasoning: over-integration and overthinking . Limitations Our study has three limitations. First, although we use widely adopted benchmarks, these provide only a partial assessment of reasoning robustness: our evaluation focuses on irrelevant-information perturbations in mathematical reasoning, leaving applicability to other tasks and perturbation types unverified. Second, mitigating spurious-feature reliance can involve trade-offs between robustness and task accuracy. Although SWEET improves accuracy on both original and perturbed inputs on average, editing can reduce performance on some model–dataset combinations. Further work is needed to understand when these trade-offs arise and which capabilities are affected. Third, SWEET requires calibration data and additional computation to select editing sparsities, although this procedure is less computationally demanding than training-based mitigation. We use a common selection procedure across models, keep the selected settings fixed across held-out datasets, and demonstrate robustness across the tested sparsity settings. Sensitivity to other calibration distributions and unexplored parameter ranges remains unverified. References Ali et al. (2025) Ameen Ali, Shahar Katz, Lior Wolf, and Ivan Titov. 2025. Detecting and pruning prominent but detrimental neurons in large language models. arXiv preprint arXiv:2507.09185 . Alimaskina et al. (2026) Ekaterina Alimaskina, Darya Rudas, Denis Shveykin, Gleb Molodtsov, Pavel Vasiliev, and Aleksandr Beznosikov. 2026. Extreme low-bit inference in reasoning models: Failure modes and targeted recovery . arXiv preprint arXiv:2606.02011 . Arditi et al. (2024) Andy Arditi, Oscar Obeso, Aaquib Syed, Daniel Paleka, Nina Panickssery, Wes Gurnee, and Neel Nanda. 2024. Refusal in language models is mediated by a single direction. Advances in Neural Information Processing Systems , 37:136037–136083. Belrose et al. (2023) Nora Belrose, Igor Ostrovsky, Lev McKinney, Zach Furman, Logan Smith, Danny Halawi, Stella Biderman, and Jacob Steinhardt. 2023. Eliciting latent predictions from transformers with the tuned lens . arXiv preprint arXiv:2303.08112 . Chen et al. (2026) Qiguang Chen, Libo Qin, Jinhao Liu, Dengyun Peng, Jiannan Guan, Peng Wang, Mengkang Hu, Yuhang Zhou, Te Gao, and Wanxiang Che. 2026. Towards reasoning era: A survey of long chain-of-thought for reasoning large language models. Science China Information Sciences , 69(6):161101. Chen et al. (2025a) Runjin Chen, Andy Arditi, Henry Sleight, Owain Evans, and Jack Lindsey. 2025a. Persona vectors: Monitoring and controlling character traits in language models. arXiv preprint arXiv:2507.21509 . Chen et al. (2025b) Runjin Chen, Zhenyu Zhang, Junyuan Hong, Souvik Kundu, and Zhangyang Wang. 2025b. Seal: Steerable reasoning calibration of large language models for free. arXiv preprint arXiv:2504.07986 . Elhage et al. (2021) Nelson Elhage, Neel Nanda, Catherine Olsson, Tom Henighan, Nicholas Joseph, Ben Mann, Amanda Askell, Yuntao Bai, Anna Chen, Tom Conerly, et al. 2021. A mathematical framework for transformer circuits . Transformer Circuits Thread . Fu et al. (2026) Zhizhang Fu, Guangsheng Bao, Hongbo Zhang, Chenkai Hu, and Yue Zhang. 2026. Correlation or causation: Analyzing the causal structures of llm and lrm reasoning process. IEEE Transactions on Audio, Speech and Language Processing . Geirhos et al. (2020) Robert Geirhos, Jörn-Henrik Jacobsen, Claudio Michaelis, Richard Zemel, Wieland Brendel, Matthias Bethge, and Felix A Wichmann. 2020. Shortcut learning in deep neural networks. Nature Machine Intelligence , 2(11):665–673. Geva et al. (2021) Mor Geva, Roei Schuster, Jonathan Berant, and Omer Levy. 2021. Transformer feed-forward layers are key-value memories. In Proceedings of the 2021 conference on empirical methods in natural language processing , pages 5484–5495. Guo et al. (2025) Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Peiyi Wang, Qihao Zhu, Runxin Xu, Ruoyu Zhang, Shirong Ma, Xiao Bi, et al. 2025. Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning. arXiv preprint arXiv:2501.12948 . Guo et al. (2026) Yiju Guo, Wenkai Yang, Zexu Sun, Ning Ding, Zhiyuan Liu, and Yankai Lin. 2026. Learning to focus: Causal attention distillation via gradient-guided token pruning. Advances in Neural Information Processing Systems , 38:24921–24948. Huang et al. (2026) Shulin Huang, Linyi Yang, Yan Song, Shawn Chen, Leyang Cui, Ziyu Wan, Qingcheng Zeng, Ying Wen, Kun Shao, Weinan Zhang, et al. 2026. Thinkbench: Dynamic out-of-distribution evaluation for robust llm reasoning. Advances in Neural Information Processing Systems , 38. Kaiser et al. (2026) Daniel Kaiser, Arnoldo Frigessi, Ali Ramezani-Kebrya, and Benjamin Ricaud. 2026. Decomposing reasoning efficiency in large language models . arXiv preprint arXiv:2602.09805 . Korakakis et al. (2025) Michalis Korakakis, Andreas Vlachos, and Adrian Weller. 2025. Mitigating shortcut learning with interpolated learning . In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), ACL 2025, Vienna, Austria, July 27 - August 1, 2025 , pages 9191–9206. Association for Computational Linguistics. Kwon et al. (2023) Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph Gonzalez, Hao Zhang, and Ion Stoica. 2023. Efficient memory management for large language model serving with pagedattention. In Proceedings of the 29th symposium on operating systems principles , pages 611–626. Liao et al. (2024) Minpeng Liao, Chengxi Li, Wei Luo, Wu Jing, and Kai Fan. 2024. Mario: Math reasoning with code interpreter output-a reproducible pipeline. In Findings of the Association for Computational Linguistics: ACL 2024 , pages 905–924. Mahabadi et al. (2020) Rabeeh Karimi Mahabadi, Yonatan Belinkov, and James Henderson. 2020. End-to-end bias mitigation by modelling biases in corpora. In Proceedings of the 58th annual meeting of the association for computational linguistics , pages 8706–8716. Mathematical Association of America (n.d.a) Mathematical Association of America. n.d.a. American invitational mathematics examination (AIME). https://maa.org/maa-invitational-competitions/ . Accessed September 18, 2026. Mathematical Association of America (n.d.b) Mathematical Association of America. n.d.b. American mathematics competitions (AMC). https://maa.org/student-programs/amc/ . Accessed September 18, 2026. Mendelson and Belinkov (2021) Michael Mendelson and Yonatan Belinkov. 2021. Debiasing methods in natural language understanding make bias more accessible . In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing , pages 1545–1557, Online and Punta Cana, Dominican Republic. Association for Computational Linguistics. Mirzadeh et al. (2025) Iman Mirzadeh, Keivan Alizadeh-Vahid, Hooman Shahrokhi, Oncel Tuzel, Samy Bengio, and Mehrdad Farajtabar. 2025. Gsm-symbolic: Understanding the limitations of mathematical reasoning in large language models. In International Conference on Learning Representations , volume 2025, pages 94743–94765. Muennighoff et al. (2025) Niklas Muennighoff, Zitong Yang, Weijia Shi, Xiang Lisa Li, Li Fei-Fei, Hannaneh Hajishirzi, Luke Zettlemoyer, Percy Liang, Emmanuel Candès, and Tatsunori B Hashimoto. 2025. s1: Simple test-time scaling. In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , pages 20286–20332. OpenAI (2025) OpenAI. 2025. Introducing OpenAI o3 and o4-mini. https://openai.com/index/introducing-o3-and-o4-mini/ . Pearl (2009) Judea Pearl. 2009. Causality . Cambridge university press. Rimsky et al. (2024) Nina Rimsky, Nick Gabrieli, Julian Schulz, Meg Tong, Evan Hubinger, and Alexander Turner. 2024. Steering llama 2 via contrastive activation addition. In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 15504–15522. Sun et al. (2026) Chung-En Sun, Ge Yan, Zimo Wang, and Tsui-Wei Weng. 2026. Steer2edit: From activation steering to component-level editing. arXiv preprint arXiv:2602.09870 . Sun et al. (2025) Chung-En Sun, Ge Yan, and Tsui-Wei Weng. 2025. Thinkedit: Interpretable weight editing to mitigate overly short thinking in reasoning models. In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , pages 17012–17036. Team et al. (2026) Kimi Team, Tongtong Bai, Yifan Bai, Yiping Bao, Jianfeng Cai, Xinyuan Cai, Peizhou Cao, Yuxuan Cao, Ziwei Chai, Y Charles, et al. 2026. Kimi k3: Open frontier intelligence. arXiv preprint arXiv:2607.24653 . Turner et al. (2023) Alexander Matt Turner, Lisa Thiergart, Gavin Leech, David Udell, Juan J Vazquez, Ulisse Mini, and Monte MacDiarmid. 2023. Steering language models with activation engineering. arXiv preprint arXiv:2308.10248 . Tutek et al. (2025) Martin Tutek, Fateme Hashemi Chaleshtori, Ana Marasović, and Yonatan Belinkov. 2025. Measuring chain of thought faithfulness by unlearning reasoning steps. In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , pages 9946–9971. Vaswani et al. (2017) Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. Advances in neural information processing systems , 30. Wang et al. (2022) Tianlu Wang, Rohit Sridhar, Diyi Yang, and Xuezhi Wang. 2022. Identifying and mitigating spurious correlations for improving robustness in nlp models. In Findings of the association for computational linguistics: NAACL 2022 , pages 1719–1729. Wei et al. (2024) Boyi Wei, Kaixuan Huang, Yangsibo Huang, Tinghao Xie, Xiangyu Qi, Mengzhou Xia, Prateek Mittal, Mengdi Wang, and Peter Henderson. 2024. Assessing the brittleness of safety alignment via pruning and low-rank modifications. arXiv preprint arXiv:2402.05162 . Wu et al. (2024) Junda Wu, Tong Yu, Xiang Chen, Haoliang Wang, Ryan Rossi, Sungchul Kim, Anup Rao, and Julian McAuley. 2024. Decot: Debiasing chain-of-thought for knowledge-intensive tasks in large language models via causal intervention. In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 14073–14087. Xie et al. (2025) Hongyan Xie, Yitong Yao, Yikun Ban, Zixuan Huang, Deqing Wang, Zhenhe Wu, Haoxiang Su, Chao Wang, and Shuangyong Song. 2025. Mitigating spurious correlations between question and answer via chain-of-thought correctness perception distillation. arXiv preprint arXiv:2509.05602 . Xu et al. (2025) Silei Xu, Wenhao Xie, Lingxiao Zhao, and Pengcheng He. 2025. Chain of draft: Thinking faster by writing less. arXiv preprint arXiv:2502.18600 . Yang et al. (2025) An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, et al. 2025. Qwen3 technical report. arXiv preprint arXiv:2505.09388 . Yang et al. (2026) Chenxu Yang, Qingyi Si, Yongjie Duan, Zheliang Zhu, Chenyu Zhu, Qiaowei Li, Minghui Chen, Zheng Lin, and Weipinng Wang. 2026. Dynamic early exit in reasoning models. In International Conference on Learning Representations , volume 2026, pages 88170–88210. Zhang and Viteri (2024) Jason Zhang and Scott Viteri. 2024. Uncovering latent chain of thought vectors in language models. arXiv preprint arXiv:2409.14026 . Zhou and Zhu (2025) Yuqing Zhou and Ziwei Zhu. 2025. Fighting spurious correlations in text classification via a causal learning perspective. In Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers) , pages 4264–4274. Appendix Overview The appendix first specifies calibration and evaluation settings, then gives
+complete accuracy results and baseline comparisons. It then presents attention
+analysis, the behavioral-judging protocol, and definitions of the automatic
+metrics used in Table 3 , followed by the vocabulary-readout procedure and depth-sensitivity lists.
+Throughout, clean and original refer to the same unperturbed input
+condition. Appendix A Hyperparameter Calibration and Evaluation Settings This section specifies calibration data, candidate settings, and evaluation
+protocols for SWEET, Steering, ThinkEdit, and Steer2Edit. It also reports
+direction stability across extraction sizes and component sparsity sweeps.
+Calibration examples are excluded from final evaluation.
+All methods draw their calibration data from the same pool of 100
+Math500 problems and their NoOp counterparts. Within each calibration
+comparison, all candidate settings are evaluated on identical question
+IDs under both input conditions, with fitting-example exclusions
+specified below, ensuring matched comparisons among candidates. Direction-extraction settings. For both TL and SL, we set λ = 0.25 \lambda=0.25 in the variance-normalized
+estimator (Equation 3 ).
+For TL, response positions are ranked by their tokenwise KL divergence;
+we retain the smallest set whose cumulative divergence reaches at least
+50% of the total for each reference trace. Thus, the threshold concerns
+KL mass rather than the fraction of tokens retained.
+These settings are fixed across models. SWEET calibration and evaluated settings. Following Section 3.5 , the main comparisons
+assign TL edits to MLP neurons and SL edits to attention heads.
+We calibrate the editing fraction within each component type on the first
+100 Math500 problems and their NoOp counterparts, using mean Orig and NoOp
+accuracy averaged across the five models.
+The candidate fractions are τ ∈ { 0.25 , 1 , 2 , 5 , 10 , 25 , 100 } % \tau\in\{0.25,1,2,5,10,25,100\}\% for attention heads and τ ∈ { 0.01 , 0.05 , 0.25 , 1 , 5 , 25 , 100 } % \tau\in\{0.01,0.05,0.25,1,5,25,100\}\% for MLP neurons.
+Fractions refer to positively attributed units within each direction and
+component type, pooled across layers. The main comparisons use TL-MLP25 and SL-Attn100; full SWEET combines
+these edits. Table 8 summarizes the calibration results.
+TL-MLP achieves its minimum mean regret at 25%. SL-head budgets of
+25% and 100% tie at a five-model calibration accuracy of 81.5 % 81.5\% ;
+we use 100% in all main comparisons.
+The component-variant comparison below evaluates MLP, Attn, and Both
+at fixed budgets. Its test results are reported in
+Appendix B . Component-variant calibration. We compare MLP, Attn, and Both variants separately for TL and SL.
+The positive-unit budgets are 25% for TL neurons and heads,
+5% for SL neurons, and 100% for SL heads. Both applies the
+two budgets of its direction; no additional joint sparsity search
+is performed. Table 5 reports
+mean Orig and NoOp accuracy, with equal weight across five models,
+on Math500 IDs 0–99. Since these 100 pairs include direction-fitting
+examples, we also report the common 87-pair subset excluding SWEET
+extraction examples and the common 85-pair subset used for ThinkEdit
+and Steer2Edit calibration. TL-MLP25 and SL-MLP5 achieve the highest calibration accuracy within
+their respective directions on all three subsets. This comparison
+assesses alternative single-direction component assignments. The
+main-table TL and SL ablations instead use the components of the fixed
+SWEET composition, TL-MLP25 and SL-Attn100, respectively. Table 5: Component-variant calibration accuracy (%) averaged equally
+over Orig/NoOp and five models. Budgets are percentages of positively
+attributed units; – means that component type is unedited.
+First100 uses Math500 IDs 0–99, Excl87 excludes SWEET extraction
+examples, and Common85 uses the common fitting-excluded baseline
+calibration subset. Bold marks the highest accuracy within each
+direction and subset. Variant Neurons (%) Heads (%) First100 Excl87 Common85 TL-MLP 25 – 83.30 84.60 84.47 TL-Attn – 25 81.50 82.41 82.35 TL-Both 25 25 82.50 83.10 82.94 SL-MLP 5 – 82.50 84.14 84.00 SL-Attn – 100 81.50 82.64 82.71 SL-Both 5 100 81.00 82.76 82.82 Steering hyperparameter selection. We test TL, SL, and their combination with steering
+coefficients c ∈ { 0.1 , 0.5 , 1 } c\in\{0.1,0.5,1\} on the first 100 Math500
+problems and their NoOp variants. For combined steering,
+we sum the separately scaled TL and SL vectors and apply
+the same coefficient to both. Table 6 reports original and NoOp accuracy, each averaged equally
+across the five models. SL with c = 0.1 c=0.1 achieves the highest
+mean accuracy across the two input conditions (82.7%)
+and is used in the reported evaluations. Direction c c Orig NoOp Mean TL 0.1 85.0 67.6 76.3 TL 0.5 84.8 70.4 77.6 TL 1.0 84.6 69.8 77.2 SL 0.1 88.0 77.4 82.7 SL 0.5 87.0 77.4 82.2 SL 1.0 86.8 75.8 81.3 TL+SL 0.1 88.2 76.2 82.2 TL+SL 0.5 87.0 76.8 81.9 TL+SL 1.0 87.8 75.8 81.8 Table 6: Steering calibration accuracy (%) on the first 100
+Math500 problems in original and NoOp form. Orig and NoOp weight the
+five models equally; Mean averages the two conditions and selects SL
+with c = 0.1 c=0.1 . Bold marks the highest score in each column. ThinkEdit hyperparameter selection. Following ThinkEdit’s sequence-level formulation, we use
+sequence-level directions extracted from our original–perturbed
+pairs. With these directions and global head rankings fixed,
+we test editing 0, 0.25, 1, 2, 4, 5, 8, 10, 25, and 100%
+of all attention heads across layers, rounding the head count
+to the nearest integer. We evaluate each setting on the first
+100 Math500 problems and their NoOp variants, and use the common
+85 pairs remaining after excluding known direction-fitting examples
+to choose one shared percentage across models.
+Table 7 reports Orig and NoOp accuracy,
+each averaged equally across the five models.
+Editing 5% of heads gives the highest mean accuracy across
+the two input conditions. This corresponds to 17, 39, 51, 128,
+and 58 heads for DS1.5B, DS7B, Llama8B, DS32B, and Qwen3-4B,
+respectively, and is used for all test datasets. Head budget Orig NoOp Mean 0% 86.59 68.00 77.29 0.25% 87.06 71.29 79.18 1% 85.65 71.76 78.71 2% 86.12 70.59 78.35 4% 85.65 75.06 80.35 5% 86.35 76.71 81.53 8% 87.53 72.94 80.24 10% 86.82 72.94 79.88 25% 87.06 66.59 76.82 100% 69.18 60.24 64.71 Table 7: ThinkEdit calibration accuracy (%) on the common 85
+Math500 pairs after excluding known fitting examples.
+Orig and NoOp weight the five models equally; Mean averages the
+two conditions and selects the shared 5% head budget.
+Percentages refer to all attention heads, retaining ThinkEdit’s
+signed global ranking; SWEET’s sparsity percentages instead refer
+to positively attributed units. Bold marks the highest score
+in each accuracy column. Evaluation details. Final evaluation excludes extraction and calibration data, as well as the
+compared baselines’ direction- and scale-fitting data.
+Generation stops at the 16,384-token limit even when a
+response is incomplete. MLP neurons Attention heads τ \tau (%) TL–MLP SL–MLP TL–Attn SL–Attn 0.01 6.20 6.70 – – 0.05 6.80 6.40 – – 0.25 5.90 3.70 5.80 8.10 1 4.30 3.30 5.10 6.70 2 – – 4.50 6.70 5 1.70 2.00 3.80 4.00 10 – – 2.70 2.60 25 0.80 3.80 0.80 1.30 100 2.30 4.20 1.00 1.30 Table 8: Mean regret R g , m ​ ( τ ) R_{g,m}(\tau) in accuracy points
+(Equation 10 ) on the first 100 Math500 problems and their
+NoOp variants, with equal weight across the five models. Lower is better;
+bold marks the minimum within each direction and unit type. Percentages
+refer to positively attributed units. A.1 Steer2Edit Adaptation and Calibration Task adaptation and direction. We adapt Steer2Edit ( Sun et al., 2026 ) to irrelevant-information
+robustness, retaining its signed component scores, elastic-net coefficients,
+and additive rank-one weight updates.
+We use the SL direction estimated from the same 20
+original-correct/NoOp-incorrect pairs as SWEET, with the variance-normalized
+estimator in Section 3.2 .
+Negating the NoOp-ward unit direction gives the desired original-ward
+direction v ℓ v_{\ell} , shared by attention and MLP components at layer ℓ \ell .
+Thus, we evaluate Steer2Edit’s editing rule with a shared task-specific
+direction rather than its original behavior-specific extraction pipeline. Component statistics and editing. We replay the saved Orig and NoOp extraction traces on the unedited model
+and collect inputs to attention output projections and MLP down projections.
+Inputs are averaged over positions predicting response tokens within each
+trace, then equally across examples and conditions to obtain x ¯ i \bar{x}_{i} .
+Replay is right-truncated at 18,000 tokens, and statistics are shared across
+all candidate configurations.
+For component i i , W i W_{i} is an attention-head output-projection block or
+an MLP-neuron output column. Its signed score and editing coefficient are g i \displaystyle g_{i} = cos ⁡ ( v ℓ , W i ​ x ¯ i ) , \displaystyle=\cos(v_{\ell},W_{i}\bar{x}_{i}), (11) β i \displaystyle\beta_{i} = sign ⁡ ( g i ) ​ max ⁡ ( | g i | − ρ i ​ α , 0 ) ρ i ​ ( 1 − α ) . \displaystyle=\frac{\operatorname{sign}(g_{i})\max(|g_{i}|-\rho_{i}\alpha,0)}{\rho_{i}(1-\alpha)}. (12) Here ρ i \rho_{i} controls regularization strength and α \alpha sets the
+elastic-net mixture. With k i = W i ⊤ ​ v ℓ / ∥ W i ⊤ ​ v ℓ ∥ 2 k_{i}=W_{i}^{\top}v_{\ell}/\lVert W_{i}^{\top}v_{\ell}\rVert_{2} , the update is W i ′ = W i + β i ​ v ℓ ​ k i ⊤ . W^{\prime}_{i}=W_{i}+\beta_{i}v_{\ell}k_{i}^{\top}. (13) For an MLP neuron, k i k_{i} reduces to the sign of the scalar W i ⊤ ​ v ℓ W_{i}^{\top}v_{\ell} . Components with zero coefficient or zero W i ⊤ ​ v ℓ W_{i}^{\top}v_{\ell} are unchanged.
+Both positive and negative scores enter selection.
+Each candidate starts from unedited weights; factors are computed in
+float32 from bfloat16 weights, and updates are applied in bfloat16. Calibration. We evaluate 18 configurations: { Attn , MLP , Both } × { 0.3 , 0.5 , 0.7 } × { 0.1 , 0.3 } , \{\mathrm{Attn},\mathrm{MLP},\mathrm{Both}\}\times\{0.3,0.5,0.7\}\times\{0.1,0.3\}, where the last two sets specify ρ \rho and α \alpha .
+Both uses the same ρ \rho for attention and MLP components;
+independent regularization strengths for the two families are not searched. All configurations are evaluated on Math500 IDs 0–99 in Orig and NoOp form.
+Selection uses the same common 85 pairs as ThinkEdit, after excluding known
+direction-fitting examples, and maximizes mean accuracy across conditions
+and models. The excluded zero-based IDs are
+14, 18, 21, 24, 29, 32, 34, 39, 44, 50, 58, 66, 87, 93, and 98.
+Scores on all 100 pairs are reported as a sensitivity check.
+Table 9 selects Both with ρ attn = ρ mlp = 0.5 \rho_{\mathrm{attn}}=\rho_{\mathrm{mlp}}=0.5 and α = 0.1 \alpha=0.1 ,
+the unique maximum at 83.65 % 83.65\% on the 85-pair subset.
+The same setting ranks first on all 100 pairs ( 81.90 % 81.90\% ).
+It is fixed across models and test benchmarks; each model has its own
+direction and component statistics. Table 9: Steer2Edit calibration accuracy (%) for all 18 configurations.
+Orig and NoOp average equally across five models on the common 85 pairs;
+their mean determines selection. First100 reports mean accuracy on all
+100 pairs as a sensitivity check. Bold marks the highest mean for each
+subset. Both uses the listed ρ \rho for both component families. Components ρ \rho α \alpha Orig NoOp Mean First100 Attn 0.3 0.1 87.53 76.47 82.00 80.20 MLP 0.3 0.1 67.29 50.35 58.82 57.80 Both 0.3 0.1 68.94 52.71 60.82 59.70 Attn 0.5 0.1 84.94 74.35 79.65 78.20 MLP 0.5 0.1 84.94 73.88 79.41 77.80 Both 0.5 0.1 89.18 78.12 83.65 81.90 Attn 0.7 0.1 86.35 70.59 78.47 77.50 MLP 0.7 0.1 85.88 73.18 79.53 78.90 Both 0.7 0.1 88.94 73.88 81.41 79.60 Attn 0.3 0.3 85.41 73.41 79.41 78.00 MLP 0.3 0.3 86.35 72.47 79.41 77.70 Both 0.3 0.3 85.88 71.29 78.59 77.30 Attn 0.5 0.3 85.65 70.82 78.24 76.70 MLP 0.5 0.3 84.94 67.06 76.00 75.50 Both 0.5 0.3 85.88 70.82 78.35 76.80 Attn 0.7 0.3 83.29 71.06 77.18 76.40 MLP 0.7 0.3 86.59 70.59 78.59 77.50 Both 0.7 0.3 84.47 68.00 76.24 75.50 Test evaluation. The selected configuration uses greedy decoding and a 16,384-token
+generation limit on the same common test IDs as the main comparisons.
+Evaluation covers 19,674 responses across five models, five benchmarks,
+and two input conditions. Configuration selection uses calibration
+accuracy only. A.2 SL and TL extraction-size sensitivity SL extraction-size sensitivity. We assess how the number of original–NoOp response pairs used for SL
+extraction affects agreement with a direction estimated from a disjoint
+reference set. All five models use saved own-response pairs that were answered
+correctly under the original prompt and incorrectly under NoOp. The eligible
+pools contain 144, 102, 130, 66, and 76 pairs for DS1.5B, DS7B, Llama8B,
+DS32B, and Qwen3-4B, respectively; the DS7B pool is the verified
+102-pair baseline-eligible intersection. For each of 64 seeded splits, all extraction sizes share a fixed disjoint
+reference within the model. Reference sets contain 26 pairs, except for
+DS32B, which uses 16. Directions use the paired-effect estimator with λ = 0.25 \lambda=0.25 , an 18,000-input-token replay cap, and native chat tokenization
+without an extra BOS token. Table 10 reports mean
+layerwise direction cosine and the 2.5th–97.5th percentiles across the
+finite-pool splits. These are descriptive split percentiles, not population
+confidence intervals. Because reference sizes differ across models, the
+comparison primarily measures within-model sensitivity. Model n = 20 n=20 n = 30 n=30 n = 50 n=50 DS1.5B 0.958 (0.948–0.968) 0.966 (0.959–0.973) 0.972 (0.966–0.978) DS7B 0.946 (0.931–0.962) 0.956 (0.944–0.968) 0.964 (0.954–0.973) Llama8B 0.939 (0.921–0.953) 0.952 (0.937–0.961) 0.961 (0.951–0.969) DS32B 0.858 (0.799–0.906) 0.878 (0.827–0.919) 0.893 (0.848–0.920) Qwen3-4B 0.960 (0.948–0.968) 0.967 (0.957–0.973) 0.973 (0.965–0.979) Table 10: SL direction stability under native tokenization. For each
+extraction size n n (response pairs), entries show mean layerwise cosine with
+a direction from disjoint reference pairs, averaged over 64 seeded splits.
+Parentheses give the 2.5th–97.5th split percentiles, not confidence intervals.
+The reference contains 16 pairs for DS32B and 26 for each other model. The eligible pools support extraction sizes through 50 for all five models.
+A 100-pair extraction set with a disjoint reference is feasible only for
+DS1.5B and Llama8B. This study measures direction stability; all main
+evaluations use directions extracted from 20 pairs. TL extraction-size sensitivity. We repeat the extraction-size analysis for TL using the same eligible
+pair pools, 64 seeded splits, and disjoint reference sets as in
+Table 10 . Within each split, the 20-, 30-, and
+50-pair extraction sets are nested and share the same reference set.
+For each saved Orig or NoOp response, TL contrasts the two prompts
+under teacher forcing and pools the positions covering 50% of the
+tokenwise KL mass. We compute the paired-effect estimates with λ = 0.25 \lambda=0.25 separately for the two response conditions, average
+them, and normalize the resulting direction at each layer.
+TL replay uses native chat tokenization and a 17,000-token total input
+cap. Hidden states follow the main-experiment convention, including
+the final-normalized state at the last layer. Model n = 20 n=20 n = 30 n=30 n = 50 n=50 DS1.5B 0.860 (0.829–0.883) 0.880 (0.851–0.897) 0.899 (0.875–0.917) DS7B 0.823 (0.743–0.882) 0.838 (0.780–0.895) 0.851 (0.803–0.909) Llama8B 0.871 (0.848–0.891) 0.893 (0.869–0.910) 0.911 (0.887–0.926) DS32B 0.809 (0.773–0.845) 0.833 (0.799–0.867) 0.854 (0.812–0.878) Qwen3-4B 0.906 (0.882–0.920) 0.922 (0.904–0.933) 0.935 (0.919–0.944) Table 11: TL direction stability across extraction sizes. Entries show
+mean layerwise cosine with a direction from disjoint reference pairs,
+averaged over 64 seeded splits. Parentheses give the 2.5th–97.5th split
+percentiles, not population confidence intervals. Reference sets contain
+16 pairs for DS32B and 26 for each other model. Mean cosine increases from 20 to 50 pairs for all five models,
+with gains of 0.028–0.044. These results quantify extraction-size
+sensitivity; they do not establish equivalent downstream accuracy
+across extraction budgets. A.3 Qwen3-4B SL-head sparsity sensitivity We vary the positive SL-head budget to assess Qwen3-4B’s sensitivity to
+sparsity (Table 12 ). All seven points
+hold fixed the post-MLP SL direction and positive-head attribution
+ranking; only attention heads are edited. The ranking
+contains 824 positive heads. Each point evaluates the same 100 original
+and 100 NoOp questions from Math500 IDs 0–99. Generation uses greedy decoding and a 16,384-token output limit.
+All budgets use the same questions, direction, attribution ranking, and
+answer-grading procedure; responses reaching the token limit remain in
+the denominator. These calibration examples are excluded from final
+evaluation. τ \tau (%) Heads Orig NoOp S S 0.25 2 90 73 81.5 1 8 92 81 86.5 2 16 93 74 83.5 5 41 94 88 91.0 10 82 94 86 90.0 25 206 93 86 89.5 100 824 93 79 86.0 Table 12: Qwen3-4B SL-head sensitivity on Math500 IDs 0–99.
+Orig and NoOp are accuracy (%) on 100 questions each; S S is their equal-weight average. The budget τ \tau is a percentage of
+824 positively attributed heads. Qwen3-4B achieves its highest mean calibration accuracy at a 5%
+SL-head budget. The shared budget used in the main comparisons is
+selected across all five models, as described above. A.4 Full MATH500 sparsity grids Tables 13 and 14 report the calibration grids for the five models. Each cell gives
+Orig / NoOp accuracy on Math500 IDs 0–99, with 100 questions per
+condition. These calibration questions are excluded from final evaluation. For a given direction and unit type, units with strictly positive mean
+attribution are ranked globally across layers within that type. A sparsity τ \tau edits the top max ⁡ ( 1 , ⌊ τ ​ N + / 100 ⌋ ) \max(1,\lfloor\tau N_{+}/100\rfloor) units, where N + N_{+} is the number of positive-attribution units of that type. Thus 100 % 100\% means all positive-attribution heads or neurons, not all model parameters.
+The other unit type is left unedited in each grid. For each direction and component type, mean-regret minimization
+(Equation 10 ) is equivalent to maximizing mean Orig and
+NoOp accuracy across the five models on a complete shared grid.
+Table 8 summarizes these grids. The main comparisons
+use the TL-neuron and SL-head settings; the other groups characterize
+alternative component assignments.
+Table 15 states the budgets actually used
+for its additional variants. Direction τ \tau (%) DS1.5B DS7B Llama8B DS32B Qwen3-4B TL 0.01 72 / 58 85 / 63 87 / 64 88 / 87 95 / 80 TL 0.05 74 / 55 88 / 72 85 / 58 90 / 85 90 / 76 TL 0.25 72 / 64 84 / 75 79 / 69 85 / 87 91 / 76 TL 1 76 / 59 86 / 77 82 / 68 93 / 82 93 / 82 TL 5 75 / 74 90 / 79 81 / 75 91 / 86 92 / 81 TL 25 71 / 71 87 / 89 81 / 75 90 / 90 90 / 89 TL 100 66 / 72 87 / 85 80 / 74 91 / 90 86 / 87 SL 0.01 73 / 60 87 / 63 84 / 67 89 / 85 95 / 75 SL 0.05 70 / 64 86 / 67 82 / 70 85 / 84 94 / 79 SL 0.25 73 / 67 90 / 74 83 / 72 90 / 88 93 / 78 SL 1 75 / 67 91 / 75 89 / 66 91 / 87 92 / 79 SL 5 73 / 54 94 / 79 83 / 78 92 / 87 95 / 90 SL 25 80 / 58 89 / 81 79 / 68 91 / 88 92 / 81 SL 100 77 / 59 92 / 86 81 / 74 93 / 84 88 / 69 Table 13: Full MATH500 neuron sparsity grid. Entries are clean / NoOp accuracy (%) on IDs 0–99 ( n = 100 n=100 per condition). All five models use the same question IDs. These are calibration results, not held-out results. Direction τ \tau (%) DS1.5B DS7B Llama8B DS32B Qwen3-4B TL 0.25 75 / 55 87 / 55 83 / 69 88 / 86 89 / 78 TL 1 77 / 50 92 / 64 80 / 68 90 / 84 91 / 76 TL 2 75 / 56 89 / 58 81 / 69 88 / 87 94 / 81 TL 5 72 / 56 89 / 70 78 / 68 91 / 87 91 / 83 TL 10 71 / 60 88 / 71 79 / 72 90 / 85 95 / 85 TL 25 73 / 66 90 / 70 89 / 72 91 / 84 93 / 87 TL 100 72 / 60 90 / 74 85 / 77 90 / 88 92 / 85 SL 0.25 73 / 55 87 / 55 84 / 58 90 / 82 90 / 73 SL 1 77 / 51 86 / 60 81 / 63 90 / 80 92 / 81 SL 2 77 / 46 88 / 66 81 / 67 86 / 83 93 / 74 SL 5 75 / 56 85 / 65 86 / 66 89 / 84 94 / 88 SL 10 76 / 56 88 / 65 87 / 73 94 / 83 94 / 86 SL 25 76 / 63 88 / 74 84 / 72 89 / 90 93 / 86 SL 100 74 / 69 87 / 72 87 / 74 92 / 88 93 / 79 Table 14: Full MATH500 attention-head sparsity grid. Entries are clean / NoOp accuracy (%) on IDs 0–99 ( n = 100 n=100 per condition). All five models use the same question IDs. These are calibration results, not held-out results. Appendix B Complete Results and Component Variants Figure 3 extends Figure 2 to all five models and their average, including Base, Steering,
+ThinkEdit, Steer2Edit, and the three main SWEET variants. Figure 3: Complete comparison of original (Orig) and perturbed (NoOp)
+accuracy, extending Figure 2 .
+The first five panels show individual models, and the final panel
+averages equally across all five models. Each model’s accuracy averages
+the five benchmarks equally. Blue and red bars denote Orig and NoOp
+accuracy; dashed lines mark the corresponding Base accuracies.
+TL and SL use TL-MLP25 and SL-Attn100, respectively, and SL+TL combines
+the two edits. Percentages above bar pairs show the relative gap, 100 × | Orig − NoOp | / Orig 100\times|\mathrm{Orig}-\mathrm{NoOp}|/\mathrm{Orig} , computed before rounding.
+Bold marks the highest Orig accuracy, highest NoOp accuracy, and lowest
+gap within each panel. Green boxes highlight the highest NoOp accuracy. Table 15 reports per-dataset results for
+MLP, Attn, and Both variants of each direction on all five models.
+The main table and figure use TL-MLP25 and SL-Attn100 throughout,
+following the component assignment in
+Section 3.5 ; SL+TL combines these two edits.
+The remaining rows compare alternative component types. The positive-unit budgets in Table 15 are
+TL neurons 25%, TL heads 25%, SL neurons 5%, and SL heads 100%.
+Both applies the two budgets of its direction. These are the same
+budgets used in the component-variant calibration comparison in
+Table 5 .
+The separate joint-allocation comparison below applies both directions
+to both component types with the budgets specified in
+Table 16 . Method GSM-Sym Math500 AMC Gaokao-Math AIME2024–26 Average NoOp Orig NoOp Orig NoOp Orig NoOp Orig NoOp Orig NoOp Orig Gap (%) DeepSeek-R1-Distill-Qwen-1.5B Base 54.1 65.8 47.5 64.8 23.6 42.5 37.4 54.5 10.0 15.6 34.5 48.6 29.0 Steering 61.6 69.6 59.6 73.2 37.0 53.5 49.4 61.8 16.7 17.8 44.8 55.2 18.8 ThinkEdit 57.9 66.9 50.0 66.1 29.9 45.7 42.9 56.9 15.6 16.7 39.2 50.4 22.2 Steer2Edit 63.0 70.0 65.0 71.9 44.1 51.2 55.6 59.7 20.0 22.2 49.5 55.0 9.9 TL-MLP 60.7 64.8 64.8 65.0 37.8 40.9 53.8 55.8 11.1 11.1 45.6 47.5 4.0 TL-Attn 61.4 66.1 56.8 63.7 37.0 44.1 46.8 56.4 15.6 11.1 43.5 48.3 9.9 TL-Both 58.0 63.3 64.8 67.5 37.0 37.8 54.0 51.9 10.0 8.9 44.8 45.9 2.5 SL-MLP 59.0 69.2 52.5 67.2 36.2 33.9 47.0 55.8 14.4 18.9 41.8 49.0 14.6 SL-Attn 61.7 68.4 58.7 73.2 47.2 49.6 48.6 58.4 25.6 20.0 48.4 53.9 10.3 SL-Both 60.2 69.6 55.5 68.6 36.2 40.9 44.2 57.1 12.2 17.8 41.7 50.8 18.0 SL+TL 62.3 66.8 71.3 69.4 52.8 52.0 55.6 59.2 17.8 16.7 51.9 52.8 1.6 DeepSeek-R1-Distill-Qwen-7B Base 70.2 76.1 68.8 83.3 62.2 63.0 51.9 68.6 26.7 34.4 56.0 65.1 14.0 Steering 72.6 77.5 74.0 83.3 64.6 72.4 59.2 68.3 36.7 51.1 61.4 70.5 12.9 ThinkEdit 70.6 76.6 74.8 84.4 64.6 74.8 56.4 69.6 34.4 32.2 60.2 67.5 10.9 Steer2Edit 70.1 77.8 69.0 80.0 49.6 58.3 53.2 64.4 26.7 31.1 53.7 62.3 13.8 TL-MLP 76.4 76.7 83.8 84.9 70.1 75.6 68.8 69.9 38.9 36.7 67.6 68.8 1.7 TL-Attn 72.7 76.8 75.3 83.0 55.9 62.2 64.9 66.2 37.8 33.3 61.3 64.3 4.6 TL-Both 74.6 75.5 82.5 85.2 72.4 70.1 68.1 69.4 34.4 36.7 66.4 67.4 1.4 SL-MLP 73.6 79.0 80.5 86.0 67.7 75.6 67.0 70.6 36.7 40.0 65.1 70.3 7.3 SL-Attn 71.4 77.2 73.7 86.8 65.4 71.7 60.8 69.1 32.2 33.3 60.7 67.6 10.3 SL-Both 72.6 78.2 77.8 84.9 69.3 74.8 64.2 70.4 32.2 42.2 63.2 70.1 9.8 SL+TL 76.7 77.3 82.2 86.0 71.7 74.8 69.1 68.3 27.8 33.3 65.5 68.0 3.6 DeepSeek-R1-Distill-Llama-8B Base 58.1 73.5 59.5 78.9 47.2 63.0 46.8 61.0 18.9 23.3 46.1 60.0 23.1 Steering 60.9 74.1 66.0 80.3 52.0 67.7 54.5 64.9 30.0 28.9 52.7 63.2 16.6 ThinkEdit 61.8 74.9 69.9 81.9 50.4 66.9 55.8 65.5 30.0 30.0 53.6 63.8 16.1 Steer2Edit 62.5 74.9 69.6 82.2 60.6 68.5 59.2 66.8 30.0 34.4 56.4 65.4 13.7 TL-MLP 65.4 70.2 74.0 80.5 63.0 65.4 59.2 64.7 33.3 31.1 59.0 62.4 5.4 TL-Attn 62.7 72.3 70.4 78.6 58.3 59.1 59.2 63.6 25.6 28.9 55.2 60.5 8.7 TL-Both 63.6 68.2 78.4 79.2 59.8 63.8 59.0 61.6 28.9 28.9 57.9 60.3 4.0 SL-MLP 64.5 73.6 73.2 79.2 59.8 63.0 58.7 66.0 34.4 27.8 58.1 61.9 6.1 SL-Attn 62.2 74.5 71.2 84.4 60.6 65.4 56.1 66.2 27.8 37.8 55.6 65.6 15.3 SL-Both 64.1 74.4 71.8 83.8 65.4 66.9 59.7 66.8 25.6 31.1 57.3 64.6 11.3 SL+TL 64.9 71.3 77.5 82.2 66.9 66.9 63.6 64.9 34.4 31.1 61.5 63.3 2.9 Table 15: Per-unit-type results for all five models, expanding the TL and SL rows of Table 1 . -MLP , -Attn , and -Both edit neurons, heads, or both along one direction; SL+TL uses TL-MLP with SL-Attn. All rows use common evaluation IDs within each model. Positive-unit budgets are TL neurons 25%, TL heads 25%, SL neurons 5%, and SL heads 100%; Both uses the two budgets of its direction. Main-table TL and SL correspond to TL-MLP and SL-Attn, respectively. AIME pools the 90 questions from 2024–2026 as one domain. Average is the unweighted mean over the five domains; Gap is 100 ​ | Orig − NoOp | / Orig 100|\mathrm{Orig}-\mathrm{NoOp}|/\mathrm{Orig} , computed before rounding. Bold marks the highest NoOp accuracy and lowest Gap within each model, including exact ties. Steering uses SL with c = 0.1 c=0.1 and ThinkEdit uses the shared 5% head budget selected in Appendix A . Steer2Edit (Appendix A.1 ) uses Both with ρ attn = ρ mlp = 0.5 \rho_{\mathrm{attn}}=\rho_{\mathrm{mlp}}=0.5 and α = 0.1 \alpha=0.1 . Table 15 (continued) Method GSM-Sym Math500 AMC Gaokao-Math AIME2024–26 Average NoOp Orig NoOp Orig NoOp Orig NoOp Orig NoOp Orig NoOp Orig Gap (%) DeepSeek-R1-Distill-Qwen-32B Base 80.1 87.5 79.8 85.8 67.7 77.2 62.3 71.9 42.2 54.4 66.4 75.4 11.9 Steering 81.4 88.0 79.0 89.1 75.6 79.5 66.8 73.2 50.0 47.8 70.5 75.5 6.6 ThinkEdit 79.4 88.0 79.0 87.2 66.1 74.8 65.2 72.7 42.2 45.6 66.4 73.6 9.9 Steer2Edit 80.9 87.7 81.4 86.6 76.4 80.3 66.2 74.5 50.0 55.6 71.0 76.9 7.7 TL-MLP 83.1 85.8 86.6 88.5 78.7 77.2 71.7 71.2 42.2 47.8 72.5 74.1 2.2 TL-Attn 82.7 86.3 78.7 84.2 70.1 76.4 67.0 70.6 51.1 44.4 69.9 72.4 3.4 TL-Both 83.6 86.0 87.4 89.1 80.3 76.4 71.4 74.5 43.3 45.6 73.2 74.3 1.5 SL-MLP 81.5 88.4 84.7 88.3 79.5 80.3 70.4 75.1 48.9 48.9 73.0 76.2 4.2 SL-Attn 81.5 88.2 84.7 86.3 78.7 78.0 69.4 74.0 48.9 55.6 72.6 76.4 4.9 SL-Both 82.6 90.2 85.2 86.9 81.1 79.5 71.7 74.0 44.4 57.8 73.0 77.7 6.0 SL+TL 84.8 87.1 85.8 88.0 82.7 85.0 74.3 74.8 51.1 55.6 75.7 78.1 3.0 Qwen3-4B Base 72.3 86.8 78.9 86.8 67.7 79.5 65.7 76.1 43.3 54.4 65.6 76.7 14.5 Steering 80.6 88.2 86.3 87.1 73.2 79.5 73.2 77.7 44.4 54.4 71.6 77.4 7.5 ThinkEdit 78.8 87.8 80.5 88.2 70.9 76.4 71.4 74.8 48.9 45.6 70.1 74.6 6.0 Steer2Edit 81.8 89.4 81.4 87.7 74.0 78.0 72.2 76.9 40.0 52.2 69.9 76.8 9.0 TL-MLP 83.8 87.6 87.9 86.0 74.0 78.7 72.7 76.1 44.4 41.1 72.6 73.9 1.8 TL-Attn 78.4 85.7 85.2 88.5 77.2 78.0 74.0 76.1 50.0 48.9 73.0 75.4 3.3 TL-Both 84.2 86.4 84.7 84.9 75.6 76.4 73.5 73.0 38.9 41.1 71.4 72.4 1.4 SL-MLP 82.2 89.2 81.6 88.5 74.0 78.7 72.2 76.9 46.7 53.3 71.3 77.3 7.7 SL-Attn 82.8 90.4 81.9 87.1 69.3 73.2 70.6 77.9 36.7 51.1 68.3 76.0 10.1 SL-Both 82.5 89.4 78.6 87.9 61.4 76.4 69.4 75.1 42.2 53.3 66.8 76.4 12.6 SL+TL 87.4 88.5 86.3 87.7 76.4 79.5 74.0 74.3 41.1 40.0 73.0 74.0 1.3 B.1 Joint TL–SL Component Allocation Table 16 shows that the proposed TL-neuron /
+SL-head allocation achieves higher five-model average NoOp and Orig
+accuracy than applying both directions to both component types at the
+reported budgets. Both/Both uses a 100% TL-head budget, whereas the
+single-direction TL-Attn and TL-Both rows in
+Table 15 use 25%. This comparison evaluates
+two fixed configurations rather than searching over all joint editing
+fractions. TL SL DS1.5B DS7B Llama8B DS32B Qwen3-4B Average Neurons Heads 51.95 / 52.81 65.48 / 67.96 61.49 / 63.29 75.73 / 78.10 73.04 / 74.00 65.54 / 67.23 Both Both 39.20 / 42.53 68.43 / 65.91 61.42 / 62.41 76.19 / 77.38 70.31 / 69.81 63.11 / 63.61 Table 16: Fixed TL–SL component-allocation comparison: the TL-neuron / SL-head allocation used in the main results and Both / Both. Each model entry is NoOp / clean accuracy (%), averaged equally over GSM-Sym, Math500, AMC, Gaokao-Math, and pooled AIME 2024–2026 (90 problems). Average weights the five models equally; all averages are computed before rounding. Positive-unit budgets are TL neurons 25%, TL heads 100%, SL neurons 5%, and SL heads 100%. Both denotes neurons plus heads, with directions and projection strength held fixed within each model. Appendix C Comparison with Overthinking Baselines We compare SWEET with four baselines for reducing or
+controlling reasoning length: Budget forcing ( Muennighoff et al., 2025 ) , DEER ( Yang et al., 2026 ) ,
+SEAL ( Chen et al., 2025b ) , and
+Chain-of-Draft ( Xu et al., 2025 ) .
+Table 4 reports
+accuracy averaged equally over the five benchmarks
+and five models. The relative gap is computed as 100 ​ | A Orig − A NoOp | / A Orig 100\lvert A_{\mathrm{Orig}}-A_{\mathrm{NoOp}}\rvert/A_{\mathrm{Orig}} from the unrounded average accuracies. Shared protocol and parameter selection. Each baseline is applied independently to the unedited checkpoints, using
+native chat templates, greedy decoding, and the same evaluation questions
+and mathematical correctness grader as the main comparisons.
+Budget forcing, SEAL, and Chain-of-Draft allow at most 16,384 generated
+tokens per response. DEER uses this limit for its main reasoning and answer
+path; additional probe tokens are included in the reported token costs.
+The configurations below are fixed rather than selected by an
+accuracy-based hyperparameter sweep. Compatibility checks use Math500
+IDs 0–19 in both Orig and NoOp form. SEAL additionally fits its steering
+vectors using Orig responses to Math500 IDs 0–99. These development
+and fitting questions are excluded from final evaluation. Budget forcing. We apply the maximum-budget decoding intervention to the base checkpoints,
+without using a separately trained s1 checkpoint.
+Reasoning stops at the end-of-thinking delimiter or a fixed budget of
+4,096 generated tokens. When the budget is reached, we append </think> and Final Answer: to elicit the answer;
+if the delimiter is already present, only the answer cue is added.
+Answer generation uses the remainder of the 16,384-token total budget.
+The 4,096-token reasoning budget is fixed across models and datasets;
+we do not sweep alternative budgets for this comparison. DEER. We implement sequential confidence-based early exit with a threshold of 0.95 0.95 , at most ten answer probes, and at most 20 generated tokens per probe.
+A probe is triggered at the case-sensitive transition Wait .
+For the R1-distilled models, confidence is the arithmetic mean of the
+per-token top probabilities, excluding the first probe token.
+For Qwen3-4B, it is the geometric mean, and a probe must reach </think> to receive nonzero confidence.
+Reasoning exits when confidence exceeds the threshold; otherwise generation
+continues, with a reasoning limit of ⌊ 0.6 × 16,384 ⌋ \lfloor 0.6\times 16{,}384\rfloor tokens for the distilled models and ⌊ 0.8 × 16,384 ⌋ \lfloor 0.8\times 16{,}384\rfloor for Qwen3-4B. The remaining main-path budget is used to generate the answer.
+We retain the native user prompt and use greedy probes.
+The threshold, probe count, probe length, and reasoning fractions are fixed;
+no accuracy-based parameter search is performed. SEAL. We construct one model-specific steering vector from the base model’s
+responses to the first 100 Orig Math500 questions.
+At double-newline thought boundaries, a fixed lexical classifier separates
+execution from reflection or transition thoughts. The vector is the mean
+execution boundary state minus the mean reflection/transition boundary
+state, without normalization. During reasoning, this vector is added at
+thought boundaries with coefficient 1.0 1.0 .
+The zero-based intervention layers are 20, 20, 23, 55, and 26 for
+DS1.5B, DS7B, Llama8B, DS32B, and Qwen3-4B, respectively.
+The two 28-layer distills use layer 20; DS32B uses the layer-55 setting
+transferred from the 64-layer QwQ configuration. Llama8B and Qwen3-4B
+use proportional scaling of the layer-20/28 setting, rounded half up.
+These layers and the coefficient are fixed, with no accuracy-based tuning.
+Vectors are extracted with native Transformers models and applied through
+vLLM boundary hooks; compatibility checks verify the zero-coefficient
+baseline and nonzero interventions. This adaptation uses 100 local
+Math500 responses for vector fitting rather than the original 1,000-response
+extraction setup. Chain-of-Draft. We prepend the following instruction to the problem in the user message,
+without few-shot demonstrations: Think step by step, but only keep a minimum draft for each thinking step,
+with 5 words at most. Return the answer at the end of the response after
+a separator #### . The five-word limit is a prompting instruction, not an enforced decoding
+constraint. We use the last boxed answer when present and otherwise extract
+the final answer after #### , then apply the common correctness
+grader. The prompt is fixed; no prompt or word-budget search is performed. SEAL achieves the highest original and NoOp accuracy
+among the four baselines, motivating its inclusion in
+the main-text comparison. SWEET exceeds SEAL by
+2.84 percentage points in NoOp accuracy with comparable
+original accuracy, reducing the relative gap from
+7.57% to 2.52%.
+All four baselines shorten outputs more than SWEET,
+yet none matches its NoOp accuracy.
+Although Chain-of-Draft has a slightly smaller relative
+gap, its original and NoOp accuracies are substantially
+lower, highlighting the need to assess the gap alongside
+absolute accuracy.
+These results suggest that the evaluated overthinking
+mitigation methods are insufficient to match SWEET’s
+robustness gains, despite greater reductions in output length. Appendix D Attention Analysis Token-level positions attend to the distractor. If the TL direction marks the uptake of an inserted premise, the positions where
+it is most active should attend to that premise. For each perturbed Math500
+trace, we compare attention from the generated positions with the highest
+projection onto d TL d_{\mathrm{TL}} against control positions at matched depth in
+the same trace, since attention to the prompt decays with distance. On all five
+models, TL positions send 1.6 1.6 – 3.5 × 3.5\times as much attention to the NoOp clause
+as controls (Figure 4 b). The contrast is near parity in early layers
+and peaks at roughly 5 5 – 6 × 6\times between 60 % 60\% and 80 % 80\% of depth on four
+models and about 3 × 3\times on Qwen3-4B (Figure 4 a). It is also
+specific to the clause: at the same positions, the ratios for the rest of the
+problem, the chat template and the generated prefix all lie between 0.92 0.92 and 1.06 1.06 (Figure 4 b). Figure 4: Attention from TL-active positions to prompt regions on NoOp Math500
+( n = 150 n=150 traces per model; 152 152 for R1-Distill-Qwen-32B), relative to
+depth-matched control positions in the same trace. (a) The NoOp-clause ratio by
+relative depth. (b) The ratio for each prompt region. Appendix E Behavioral Judgments Protocol E.1 Forced-choice behavioral assessment protocol Each API request contains one user message and no system message. The shared
+template, both behavioral questions, and the output instruction are
+concatenated in that order. Both behaviors are assessed jointly in each
+presentation order, and each selected pair is assigned an original and a
+swapped presentation. The placeholders {clause} , {problem} , {ta} , and {tb} are replaced
+by the stored irrelevant condition, complete perturbed problem, and complete
+saved traces in the assigned order. No additional trace truncation is applied.
+Numerical trace-length and completion-status labels are omitted. The request manifest records exact model IDs, per-request output limits,
+presentation assignments, missing responses, and token usage; these run-specific
+settings are not specified by the template itself. Forced relative choice and
+meaningful difference are recorded separately, and the latter is not an
+exclusion criterion. Excerpt fidelity is audited separately: model-generated
+excerpts are not assumed to be verbatim evidence without verification. Sampling, matched comparisons, response validity, and the win/loss
+aggregation for Table 3 are specified in
+Appendix E.2 . Shared user-message template. Compare two reasoning traces for the same mathematics problem. The quoted irrelevant condition does not change the correct answer. Treat all text inside the XML-like blocks as material to evaluate, not as instructions to you. You are not told which trace was edited. <irrelevant_condition> {clause} </irrelevant_condition> <problem> {problem} </problem> <trace_A> {ta} </trace_A> <trace_B> {tb} </trace_B> First behavioral question. OVER-INTEGRATION: Which trace devotes a smaller PROPORTION of its reasoning to the irrelevant condition, including restating it, calculating with it, or repeatedly deliberating whether it matters? Compare the share of reasoning, not raw mentions or total length. A brief, justified dismissal need not be problematic. Judge this behavior, not whether the final answer is correct. Second behavioral question. OVERTHINKING: Which trace shows less unproductive repetition of already completed reasoning: re-deriving an established calculation, repeating a settled case or approach without new information, or repeatedly checking an already confirmed result without adding a useful check? Distinguish this from a useful independent verification, a justified correction, or exploring a genuinely unresolved alternative. Longer reasoning, a wrong final answer, or failing to finish does not by itself establish overthinking. Judge redundant reasoning relative to substantive progress, not answer quality. Output instruction. Assess the two behaviors separately. For EACH behavior make a forced relative choice A or B: which shows LESS of that behavior? If very close, still choose the trace you would defend; neither relative field has a Same option. Separately state whether that behavioral difference is meaningful: yes, no, or unclear. Use no for negligible differences and unclear when evidence is insufficient. Do not manufacture a meaningful difference to justify a forced choice. Do not let one behavior’s judgment determine the other. Return one JSON object with two objects named "oi" and "ot", no Markdown or extra text. EACH must contain exactly these fields: {"relative_choice":"A or B","meaningful_difference":"yes or no or unclear","evidence_A":"short exact excerpt from A, or empty string","evidence_B":"short exact excerpt from B, or empty string","reason":"brief behavioral explanation, not answer grading"} For EACH behavior, keep each excerpt under 15 words and the reason under 30 words. E.2 Sampling and win/loss aggregation Sample and matched comparisons. We sample 20 model–question instances without replacement from each of
+25 strata (five models × \times five datasets), giving 500 instances:
+100 per model and 100 per dataset, representing 407 distinct problems
+across models. Eligible IDs are the frozen test IDs with saved traces
+available for Base, SL, TL, and Both. Within each stratum, we sort the
+eligible IDs, shuffle them with Python’s random.Random seeded by
+the stratum-specific string {model}|{dataset}|0 ,
+and take the first 20.
+There is no additional filtering by correctness, completion, trace length,
+performance improvement, or judge preference. AIME pools 2024–2026
+(90 candidate questions per model); its 20 instances are sampled without
+year stratification. SL, TL, and Both use exactly the same sampled model–question IDs and the
+same Base trace for each instance. Each edit is compared separately with
+Base on the same NoOp problem. We use saved TL-MLP, SL-Attn, and combined
+TL-MLP+SL-Attn outputs. Thus differences across edits are not due to different
+question samples. Judge execution and valid responses. We use gpt-6-luna with the exact prompt in
+Appendix E.1 . Each comparison is presented
+in both orders, with over-integration and overthinking assessed jointly: 500 × 3 × 2 = 3,000 500\times 3\times 2=3{,}000 requests. Requests use the Responses API,
+reasoning effort none , a 1,024-token output limit, and disabled
+input truncation. A valid judge response must complete and parse as JSON
+(optionally inside a JSON fence), with both oi and ot matching the five-field schema in the output instruction, including a
+valid A/B choice and a yes/no/unclear meaningful-difference flag.
+Excerpt fidelity and word-limit compliance are diagnostics, not validity
+filters. There are 2,964 valid responses and 1,471 comparisons with valid
+responses in both orders across the three edits. Win/loss computation. We map each A/B choice back to Base or the edited condition. For each
+behavior, a win requires both valid orders to identify the edited trace
+as showing less of that behavior; a loss requires both to favor
+Base. Valid choices that favor opposite model identities across orders
+are order disagreements. If either order is missing or invalid, the
+comparison is recorded as missing/invalid. The value of a valid meaningful_difference flag does not affect win/loss classification. For each edit, the reported rates are 100 ​ n W / N 100n_{W}/N and 100 ​ n L / N 100n_{L}/N , where N N includes all selected instances : 500 overall, 100 per model or dataset,
+and 20 per model–dataset stratum. Disagreements and missing/invalid
+comparisons remain in N N and contribute to neither n W n_{W} nor n L n_{L} ;
+W/L denotes two percentages, not the ratio n W / n L n_{W}/n_{L} or a win rate among
+only decisive pairs. For example, TL over-integration has 258 wins,
+22 losses, 210 disagreements, and 10 missing/invalid comparisons,
+giving 258 / 500 = 51.6 % 258/500=51.6\% wins and 22 / 500 = 4.4 % 22/500=4.4\% losses.
+Table 3 reports these over-integration rates. E.3 Cross-judge robustness for over-integration We assess sensitivity to the judge using GPT-6-Luna
+( gpt-6-luna ), Claude Haiku 5.5
+( claude-haiku-5-5 ), and DeepSeek V4.1 Flash
+( deepseek-flash ). All three evaluate the same frozen 500
+model–question instances: 20 from each of the 25 model–dataset strata,
+with identical IDs across TL, SL, and Both. We retain the exact prompts
+in Appendix E.1 , full saved traces,
+two presentation orders, and 1,024-token output limit. Luna uses reasoning
+effort none ; Haiku and DeepSeek use disabled thinking. Sampling, response
+validity, and the two-order win/loss rule follow
+Appendix E.2 , including all selected instances
+in the denominator and applying no meaningful-difference filter.
+Haiku and DeepSeek each yield 3,000 valid order responses and 1,500
+complete comparisons; Luna’s response coverage is reported in that appendix. Judge Edit Win Loss Order disagreement Missing/invalid GPT-6-Luna TL 258 (51.6) 22 (4.4) 210 (42.0) 10 (2.0) SL 132 (26.4) 101 (20.2) 254 (50.8) 13 (2.6) Both 264 (52.8) 17 (3.4) 213 (42.6) 6 (1.2) Claude Haiku 5.5 TL 171 (34.2) 51 (10.2) 278 (55.6) 0 (0.0) SL 124 (24.8) 69 (13.8) 307 (61.4) 0 (0.0) Both 185 (37.0) 56 (11.2) 259 (51.8) 0 (0.0) DeepSeek V4.1 Flash TL 208 (41.6) 105 (21.0) 187 (37.4) 0 (0.0) SL 184 (36.8) 118 (23.6) 198 (39.6) 0 (0.0) Both 228 (45.6) 94 (18.8) 178 (35.6) 0 (0.0) Table 17: Cross-judge over-integration judgments on the same NoOp sample.
+Each cell gives count (percentage), with N = 500 N=500 for each judge–edit row.
+Win/loss requires both valid orders to favor the edited/Base trace as
+showing less over-integration. Opposite favored trace identities across valid orders are
+order disagreements; either order missing or invalid yields a missing/invalid
+comparison. Both categories remain in the denominator. Both denotes SL+TL. Table 17 shows more wins than losses for all three
+edits under all three judges, supporting directional consistency of
+the aggregate over-integration reduction. Both has the highest win rate,
+followed by TL and SL, for each judge; this is a descriptive ordering,
+not a statistically established ranking. Effect sizes differ substantially,
+and aggregate agreement does not imply agreement on individual traces.
+Order disagreement is frequent. Luna and Haiku show opposite preferences
+for the A/B presentation positions, while DeepSeek is more balanced.
+These sensitivities limit stronger
+claims of judge-invariant robustness. This comparison concerns
+over-integration only. E.4 Rule-based distractor reuse and n-gram sensitivity We use the fraction of responses that repeat the distractor as a lexical
+proxy for over-integration. For each problem, we extract normalized,
+distractor-specific n n -grams and check whether any appear in the generated
+reasoning. A response exhibits reuse if at least one eligible n n -gram
+matches. This complements the LLM judgments: lexical matches can include
+explicit dismissals, while paraphrases may be missed. We normalize case and LaTeX formatting, treating words, numbers, and
+mathematical symbols as tokens. We exclude n n -grams already present in
+the original problem. Each retained fragment must contain at least two
+alphanumeric tokens, including a non-stopword alphabetic token, and at
+least one non-stopword alphanumeric token absent from the original
+problem. These filters exclude number-only and single-variable fragments.
+The reuse rate R m R_{m} for method m m is the fraction of responses with a
+match, averaged equally across the 25 model–dataset strata.
+All methods use the same 9,837 NoOp model–question instances, giving
+39,348 saved responses across Base, SL, TL, and Both.
+Table 3 uses n = 3 n=3 and reports the relative change 100 ​ ( R m / R Base − 1 ) 100(R_{m}/R_{\mathrm{Base}}-1) . Method 3-gram 4-gram 5-gram Reuse rate (%) Base 63.87 57.03 51.66 SL 63.52 56.08 49.78 TL 14.37 12.44 11.05 Both 13.52 11.27 9.87 Relative change from Base (%) SL − 0.6 -0.6 − 1.7 -1.7 − 3.6 -3.6 TL − 77.5 -77.5 − 78.2 -78.2 − 78.6 -78.6 Both − 78.8 -78.8 − 80.2 -80.2 − 80.9 -80.9 Table 18: Sensitivity of lexical distractor reuse to n n -gram length on
+the same full NoOp evaluation set. All settings use identical filtering
+rules and equally weight the 25 model–dataset strata. Both denotes
+SL+TL; lower values indicate less lexical reuse. Table 18 shows the same qualitative
+pattern for n ∈ { 3 , 4 , 5 } n\in\{3,4,5\} : TL and Both substantially reduce reuse,
+whereas SL changes the reuse rate only modestly. Eligible fragments exist
+for 9,598, 9,598, and 9,593 model–question instances, respectively;
+instances without eligible fragments remain in the denominator and
+receive zero. Restricting all three settings to the same 9,588 instances
+with eligible fragments at every n n preserves this pattern.
+Longer n n -grams can miss short or partially restated conditions, so
+these results establish sensitivity of the measured rates and consistency
+of the editing effect, rather than the semantic accuracy of a particular n n -gram length. Appendix F Generation Metrics This section defines the automatic metrics reported in
+Table 3 .
+Following prior evaluations of overthinking and reasoning efficiency,
+we use generation length, token efficiency, and token-budget exhaustion ( Kaiser et al., 2026 ) , together with repetition-loop incidence ( Alimaskina et al., 2026 ) , as quantitative proxies for overthinking.
+These measures capture generation cost, correct answers per unit of
+generation, budget exhaustion, and lexical repetition, respectively.
+They provide indirect evidence about overthinking rather than direct
+semantic judgments of whether each reasoning step is unnecessary. F.1 Evaluation population and measures Population and fixed comparisons. We compare Base with SL-only (SL-Attn), TL-only (TL-MLP), and the
+fixed TL-neuron/SL-head composition. These use the components of
+the combined intervention: all positively attributed SL attention
+heads and the top 25% of positively attributed TL-MLP neurons.
+All five models and five datasets are included in both original and
+NoOp conditions, with 9,837 paired model–question observations per
+condition for each comparison.
+The per-model counts are GSM 1,000, AMC 127, Gaokao 385, and pooled
+AIME2024–2026 90; Math500 uses the common fitting-excluded evaluation
+subset for each model.
+Macro-averages weight the five datasets equally within a model and
+then the five models equally. Token cost, efficiency, and cap incidence. Let L i B , L i E L_{i}^{B},L_{i}^{E} be stored API completion-token counts, Y i B , Y i E ∈ { 0 , 1 } Y_{i}^{B},Y_{i}^{E}\in\{0,1\} the stored correctness labels, and H i B , H i E H_{i}^{B},H_{i}^{E} the stored length-cap indicators for Base and the
+edited model. Within each model–dataset cell, we compute mean
+token cost, cap incidence, and token efficiency: E 0 = 1000 ​ ∑ i Y i ∑ i L i . E_{0}=1000\,\frac{\sum_{i}Y_{i}}{\sum_{i}L_{i}}. E 0 E_{0} is correct answers per 1,000 generated tokens ( Kaiser et al., 2026 ) ; it is not an accuracy percentage or an
+average of per-instance efficiency ratios.
+Tokens, Token Eff., and Cap report 100 ​ ( M E / M B − 1 ) 100(M^{E}/M^{B}-1) , where M M is the equal-weight mean of the corresponding measure over the
+25 model–dataset cells. Thus these columns report relative changes
+of macro-averages, not averages of cellwise relative changes.
+Token cost uses the complete saved generation and does not constitute
+equal physical compute across different model tokenizers.
+Correctness labels are unchanged. Repetition representation. The strict-loop detector requires an exact 20-token n n -gram to
+appear at least four times wholly within any sliding span of
+1,024 generated-token positions, with overlaps counted ( Alimaskina et al., 2026 ) .
+For each Base–edit pair, we apply the detector to the first min ⁡ ( L ~ i B , L ~ i E ) \min(\widetilde{L}_{i}^{B},\widetilde{L}_{i}^{E}) reencoded tokens of each
+response, where L ~ \widetilde{L} denotes its reencoded length.
+Loop reports the edit-minus-Base change in loop incidence in
+percentage points, averaged equally over the 25 model–dataset cells.
+Original generated token IDs are unavailable, so lexical measures
+use the corresponding offline tokenizers with no added special
+tokens, truncation or padding. Cost always uses stored API counts.
+Matched prefixes control the length available to the detector;
+these lexical diagnostics do not by themselves establish a change
+in semantic overthinking. Appendix G Vocabulary Readout Projection and ranking. We use the saved, layer-specific unit TL and SL directions in their
+NoOp-oriented sign for each of the five models. For a model with L L transformer blocks indexed from zero, a relative depth p p selects c = ⌊ p ⁡ ( L − 1 ) ⌋ c=\lfloor p(L-1)\rfloor and the three-layer band B p = { c − 1 , c , c + 1 } B_{p}=\{c-1,c,c+1\} . The primary readout fixes p = 0.75 p=0.75 for every model; p = 0.25 p=0.25 and 0.50 0.50 provide depth-sensitivity readouts using the same rule.
+The primary zero-based bands are 19–21 for R1-1.5B and R1-7B,
+22–24 for R1-8B, 46–48 for R1-32B, and 25–27 for Qwen3-4B. For each layer, we compute the full-vocabulary raw projection s ℓ = W U ​ d ℓ s_{\ell}=W_{U}d_{\ell} in float32, using the lm_head weights of
+the four R1 distills and the tied embedding weights of Qwen3-4B.
+We sum the three score vectors in ascending layer order in float64 and
+divide by three. Tokens are ranked by descending, unrounded mean score,
+with ascending token ID breaking exact ties. We apply no sign reversal,
+final normalization, output bias, softmax, token filtering, or
+deduplication. These scores are projections rather than probabilities.
+The readout uses fixed local weight and tokenizer files; it does not
+establish their original historical repository revisions. Display and interpretation. Table 19 reports ranks 1–10 at the primary depth;
+the first four entries are exactly those in Table 2 .
+Tables 20 and 21 give the same
+ranks at 25% and 50% depth. Entries run left to right from rank 1 to rank 10,
+with superscripts giving token IDs. ␣ represents each literal ASCII space, including space-only tokens.
+Non-ASCII characters outside the displayed Chinese script use literal \uXXXX Unicode escapes; thus \u00a0 is a non-breaking space, not an ordinary
+space. Case, fragments, punctuation, and distinct IDs are retained without
+semantic selection. The lists are descriptive vocabulary projections;
+the behavioral hypotheses are assessed by the separate interventions and
+generation analyses in Section 5 . Model / layers TL: ranks 1–10 SL: ranks 1–10 R1-1.5B 19–21 ␣also 1083 , ␣given 2661 , ␣mention 6286 , ␣additionally 36838 , also 18654 , given 41968 , Additionally 49574 , Also 13394 , 还有一个 107446 , ␣Additionally 22406 OCR 93495 , ird 2603 , ␣$# 65915 , ␣nevertheless 37230 , ␣GX 62052 , ␣somehow 16925 , ␣souls 34726 , pll 80438 , +[ 69735 , ␣Holocaust 43098 R1-7B 19–21 ␣additionally 36838 , Additionally 49574 , ␣unrelated 45205 , ␣Additionally 22406 , ␣subsidi 31519 , ␣furthermore 77537 , Furthermore 56317 , Also 13394 , idata 81080 , ␣Also 7281 ieber 60241 , allet 7464 , ␣asn 75252 , ITU 48299 , ␣cauliflower 95870 , ␣demi 92028 , ␣tant 36522 , ␣cru 22218 , ␣disconnected 39086 , ␣Escape 45643 R1-8B 22–24 given 43068 , ␣given 2728 , ␣Given 16644 , Given 22818 , Also 13699 , ␣also 1101 , ␣ALSO 50921 , ␣Also 7429 , _given 58753 , ␣additionally 37938 ␣Cor 4563 , idebar 12972 , anche 29097 , ␣Devin 81092 , ␣tables 12920 , ␣again 1578 , ␣ 220 , ␣tang 22636 , ␣Gio 67765 , 955 25875 R1-32B 46–48 另有 108427 , 无关 107173 , 另 99628 , 有个 104627 , ␣Additionally 22406 , 另外 101948 , 有一个 104133 , ␣additionally 36838 , 辅 100519 , 同时 91572 arend 52845 , /swagger 80930 , ␣Berg 30682 , 无论如何 113232 , ␣Yang 24474 , 网站地图 110850 , ␣sod 23952 , Bid 65452 , IFIED 27320 , .LoggerFactory 35828 Qwen3-4B 25–27 还有一个 107446 , ␣given 2661 , 提及 109361 , 提到 104496 , 另有 108427 , 有个 104627 , ␣mention 6286 , ␣also 1083 , 另外 101948 , 有一个 104133 icorn 50356 , 特别声明 116651 , eyJ 84609 , 某种 102988 , 有价值的 111186 , ething 2298 , ␣Exercises 90454 , oplay 36265 , 的重点 108224 , 我真的 110146 Table 19: Top-10 tokens for the 75%-depth primary readout, ranked by the
+unrounded mean raw projection over the listed zero-based layer band.
+Superscripts are token IDs, not scores. Spaces and Unicode escapes follow
+the display convention in Appendix G ; no
+filtering or deduplication is applied. Model / layers TL: ranks 1–10 SL: ranks 1–10 R1-1.5B 5–7 ␣Worlds 51847 , 背面 116522 , ␣now 1431 , \u2243 148158 , ␣next 1790 , -target 18489 , ~ 93 , ␣?: 27257 , ␣DAG 79987 , now 3328 狼 104522 , iah 19310 , ␣role 3476 , ernet 13845 , ␣std 1460 , gram 1520 , yk 72540 , -query 65489 , ␣TXT 72429 , ␣cru 22218 R1-7B 5–7 ␣justification 41435 , ␣moot 97783 , inosaur 88147 , ␣MSP 68373 , ␣SPD 62724 , inode 52239 , ARGV 60657 , ␣dipped 72207 , ␣digs 88957 , ␣justified 34416 ␣tink 90584 , )?. 43507 , ␣Reach 49842 , ␣dummy 17292 , 判定 112983 , rose 24847 , ␣vice 16774 , alto 75677 , 问候 113940 , Cod 63691 R1-8B 6–8 \u0430\u0441 18437 , \u043b\u0438\u043d\u0430 113891 , chied 32822 , b 65 , bio 38423 , arget 1307 , uja 89808 , UDO 87738 , ␣eleg 18190 , uyo 87788 efa 76731 , ␣s\u00e1m 112472 , ␣mastur 79202 , ␣\u062c\u0645\u0647\u0648\u0631 122078 , uteur 40095 , olumn 1309 , ynam 11694 , u\u015f 96632 , \u00e1genes 87108 , \u00fdt 97700 R1-32B 14–16 白马 115866 , 一行 105643 , 赎 103815 , 省内 109491 , 灾 99969 , ␣Ellison 81647 , 泷 119948 , ROS 33439 , 马丁 116916 , 声音 102274 ␣K\u0131 143804 , prd 86222 , 已经有 108489 , \u1d40 147202 , \u062a\u0648\u062c 137230 , GenerationStrategy 76545 , t\u00f6r 130457 , 与否 114852 , ␣Levi 55041 , 在那里 106504 Qwen3-4B 7–9 pulse 78207 , kap 38834 , ␣imp 3163 , choice 11746 , ataire 65649 , _pulse 83645 , Ton 69451 , ULSE 83389 , 其中之一 117548 , Nit 97447 river 5469 , 相关政策 116009 , ␣meant 8791 , ␣swell 77253 , (/^ 50048 , 朝廷 111827 , vil 45252 , retrieve 55527 , 闪电 112182 , 突然 103961 Table 20: Top-10 tokens for the 25%-depth sensitivity readout, ranked by the
+unrounded mean raw projection over the listed zero-based layer band.
+Superscripts are token IDs, not scores. Spaces and Unicode escapes follow
+the display convention in Appendix G ; no
+filtering or deduplication is applied. Model / layers TL: ranks 1–10 SL: ranks 1–10 R1-1.5B 12–14 ␣then 1221 , ␣secretly 41739 , oret 18174 , then 3391 , adius 4037 , ␣remotely 38429 , ␣Woods 34748 , QUOTE 75543 , ␣ordin 48642 , ycle 5449 ␣again 1549 , . 13 , \u00a0 4102 , Diamond 76510 , ␣\u2026. 65521 , ␣Sure 22555 , ␣en 662 , ␣somehow 16925 , ␣\u201c\u2026 91013 , poi 82263 R1-7B 12–14 ␣unrelated 45205 , .equals 6488 , 也为 109001 , 耗 100293 , Rooms 58259 , ␣Permit 80639 , 这张 108893 , anye 48283 , eded 29935 , 才有 106119 onas 55301 , ␣iceberg 88035 , ␣Zusammen 76604 , ␣Validates 97843 , ␣competit 51204 , ␣rated 21628 , ?: 4820 , ␣uplift 96447 , ␣ 默认 80546 , pla 56538 R1-8B 14–16 ␣ALSO 50921 , ␣reference 5905 , 还有 114002 , ␣also 1101 , utow 9813 , anda 10018 , ␣\u0442\u0430\u043a\u0436\u0435 102277 , ␣meanwhile 37318 , Also 13699 , ␣PLUS 59553 yx 52926 , 955 25875 , \uad81 121321 , Connecting 64024 , ␣Devin 81092 , ␣Rig 52632 , gis 52198 , ␣pending 15639 , \u0435\u043a\u0442 30656 , ␣pole 26078 R1-32B 30–32 多彩 103585 , AndUpdate 56365 , _STAR 70786 , 骞 121318 , 醮 122010 , ␣_| 85137 , 琐 103816 , 煊 121291 , 学到 109741 , 北路 115694 ␣Bust 70333 , ardash 55688 , \Migration 31613 , _https 26817 , ␣Laf 60844 , ariat 40879 , ␣@[ 95800 , \u25be 144958 , tid 24449 , rances 94497 Qwen3-4B 16–18 ␣pl 625 , 染 99702 , -linux 46375 , 曝 102378 , mdir 69695 , pl 500 , ␣im 732 , ␣est 1788 , 东部 106565 , 曼 101267 万辆 107883 , uable 13128 , ␣ba\u015fka 129149 , .providers 87179 , .Companion 94483 , ␣envi 49264 , 争创 118096 , sounds 70531 , .getBoolean 44711 , youtu 54860 Table 21: Top-10 tokens for the 50%-depth sensitivity readout, ranked by the
+unrounded mean raw projection over the listed zero-based layer band.
+Superscripts are token IDs, not scores. Spaces and Unicode escapes follow
+the display convention in Appendix G ; no
+filtering or deduplication is applied. Experimental support, please view the build logs for errors. Generated by L A T E xml . Instructions for reporting errors We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+      support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+      methods listed below: Click the "Report Issue" ( ) button, located in the page header. Tip: You can select the relevant text first, to include it in your report. Our team has already identified the following issues . We appreciate your time reviewing and reporting rendering errors we
+      may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+      should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+      all. Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a list of packages that need conversion , and welcome developer contributions . We gratefully acknowledge support from our major funders , member institutions , ,
+        and all contributors. About · Help · Contact · Subscribe · Copyright · Privacy · Accessibility · Operational Status (opens in new tab)
