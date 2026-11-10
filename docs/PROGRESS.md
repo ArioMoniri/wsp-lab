@@ -344,3 +344,8 @@ old/new test hashes. Both repairs are in progress on `prereg/a5-audit-repairs`; 
 five objectives (independent ≥ 16/20 verdicts, short or failed objective = HARD_STOP, per-objective resume, cost estimate checked against
 the 1 GPU-h cap; 36 driver tests), and A5.1.2 carries the scope reconciliation of the post-freeze commit range plus the missing test-file
 hashes; `--verify-pins HEAD` passes on main. Board A's re-audit requested (`docs/reviews/council/board-a-freeze-reaudit-2026-11-10.md`).
+
+**10 Nov 2026, 20:00 UTC. FREEZE ACCEPTED** by Board A at a638efa (`docs/reviews/council/board-a-freeze-reaudit-2026-11-10.md`): both
+blocking repairs resolved, all pins and hashes verified, no further conditions. G2 launched on the exclusive local GPU under the frozen
+bytes (`PANELS_SHA256` = the A5.1.2 panels hash; caps 2 GPU-h fields and cache, 1 GPU-h audit, 28 GiB). Outcome-access order holds:
+G2 reads no rotation, ladder or sealed outcome.
