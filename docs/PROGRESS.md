@@ -503,3 +503,7 @@ floor code and freeze manifests are built after the Part A ledger is sealed. F9a
 
 **11 Nov 2026, 16:00 UTC.** F9a (adopting amendment for the F9 execution rules; Board A's eight F9 conditions) merged; pins match.
 Board A review of F9a requested. F8 tooling (floor script, replay identity verifier) in flight. Part A staging 31/40.
+
+**11 Nov 2026, 17:00 UTC.** F8 tooling merged (`scripts/f8_floor.py`, `scripts/f8_replay_verify.py`, 33 tests). Floor recomputed
+from a fresh clone by the chair: h* = 0.0049397 nats/token, equal to the spec preview (`docs/prereg/f8_manifests/floor_payload/`).
+Round-5 member reports archived in git (e3920b1). H5 documents being reconciled with F9a.5–F9a.6; Board A review of F9a in flight.
