@@ -2992,3 +2992,40 @@ table (F9a.8). (15) The domain-seed prefixes `20261111:f9p:`, `20261111:f9-shuff
 | 6 Shadow limits: missed harm separate from missed beneficial proposals; gate frozen before outcomes; all 32 scored; no ≤ 5 % certification, realised savings or G8 gate; costs in both arms; A5.7 unresolved cases | F9a.6 (a)–(e) |
 | 7 Generation qualification/purchase: completion/correctness and qualification rules, independent seeds and pairing, public-item exclusion; token-ceiling scope, screen reuse, replay and checkpoint counts; bounded pilot before repricing; no F5.5 or automatic H5 effect | F9a.7 (a)–(h) |
 | 8 Evidence wording: PPF count, P5 labels, finite-edit exactness, timing qualifications, universal math/introspection claims removed; unverified premises labelled and unused as premises | F9a.8 (1)–(10); F9a.2(i); F9a.5(e) |
+
+*A5.1.2 re-pin (xiv) (Part A staging; run 2026-11-10 18:46–23:45 UTC, after Board A's G2 acceptance).* Board A's
+G2 verdict (`docs/reviews/council/board-a-g2-2026-11-11.md`, item 5) authorises Part A preparation, not G3 scoring.
+`wsp.eval.response_intervention prepare` gained `--selection` (stage the registered picks of `selection.json`,
+checked against `registered.edit_ids` and the procedural-freeze id hash, never re-selected), `--references` (load an
+alias-only predecessor from its bytes holder; the scoring plan checks the holder's bytes) and `--text-groups` (the
+primary-record and 64-window checks of the F3(i) reuse proof). It also writes a per-tensor F3(ii) audit file, and
+`score --manifest` now also scores the missing references. These changes were committed with tests in `7f8b453`,
+and the staging ran from that clean commit. `scripts/a5_build_manifests.py --pin-worktree` was then re-run into a copy
+of the package from `7f8b453`. Every regenerated or copied package file was byte for byte identical except
+`code_hashes.json` and `README.md`, and only those two were copied into the package. `code_hashes.json` (schema
+`a5-code-hashes-v2`, `git_sha` = `7f8b453`) still pins 64 files and differs from `6dd2615f…cd28d346` only in `git_sha`
+and the `src/wsp/eval/response_intervention.py` pin. No rule, threshold, seed, selection or panel changes. The staging
+outputs are `docs/prereg/a5_manifests/part_a/`; its README records what was staged and the audit verdicts. Under the
+registered A5.3.3 post-rounding audit, 39 of the 40 rotation pairs are excluded (all 30 lora_sft and 9 of 10 chain;
+reasons are per tensor). 81 variants are staged (1 rotation, 80 ladder). n_D = 19 and n_P = 0, as in
+`references.json`, and the priced count is 100 entries, 104.00 min. No variant or reference was scored. These rows
+supersede the corresponding current-hash entries of A5.1.2's tables.
+
+| Path | SHA256 | Identity |
+|---|---|---|
+| `docs/prereg/a5_manifests/README.md` | `5c770dbe4d8549224c8202192aba3d2eb3e9f22426b8dcfd8b902f795a1194b7` | changed 2026-11-10 (re-pin (xiv)); old `2fab2a1cd6c95301812f8760d36dc02f9cfef24a6eab50f93b35b16c3d013629` (re-pin (xiii)) |
+| `docs/prereg/a5_manifests/code_hashes.json` | `d4b2e0ab32dde329e8d8f15d53709eca741476b51c996096ab863fa93d1a637b` | changed 2026-11-10 (re-pin (xiv)); old `6dd2615f9e8ea12544716f1cc585adf902c5f751fa1ed6fee0eb4494cd28d346` (re-pin (xiii)) |
+| `src/wsp/eval/response_intervention.py` | `b511d3d1ccb2c518317b59eafa4eea034df41ee90b85ab53709ef008736e353a` | changed 2026-11-10 (Part A staging options, commit `7f8b453`); old `7cf453f263b92b3dc056109e06766b7dbd3dc606ad463f11aa4ccdec1b73f903` |
+| `tests/test_response_intervention.py` | `10fa97eeb7693fe10abc89dcb77aec2c4f96d798f71e657f562acdbcb65768e5` | changed 2026-11-10 (commit `7f8b453`; not a code-map member); old `675f710a4c1696f636b407f59b5b84f7f4e4144c7c36b476ae4df937224b37c8` |
+| `docs/prereg/a5_manifests/part_a/manifest.json` | `d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6` | new 2026-11-10 (Part A launch manifest, A5.11; schema `a5-part-a-launch-v1`) |
+| `docs/prereg/a5_manifests/part_a/rotation_audits.jsonl` | `f05fec4265ffd93c8c537100993d23262be95141369240fcad0a7e16ff474d35` | new 2026-11-10 (F3(ii) per-tensor rotation audits, 2,534 rows) |
+| `docs/prereg/a5_manifests/part_a/README.md` | `2fcbf517ccf26f2a1fe325ef31300d291bc0f254c7faaacd18154e327bceada1` | new 2026-11-10 (Part A staging record; no outcome) |
+
+*A5.1.2 re-pin (xv) (10 Nov 2026, 23:55 UTC; merge of `feat/part-a-prepare` into main after F7–F9a; before any G3 outcome).* The
+staging branch's re-pin, written as "(xiv)" above, was built on a tree without F7's `scripts/a5_simulation.py` change; main's (xiv)
+(F7) was built without the staging CLI. After merging, `scripts/a5_build_manifests.py --pin-worktree` was re-run into a copy of the
+package on the merged tree and only `code_hashes.json` and the package README were copied back. Rows: `docs/prereg/a5_manifests/code_hashes.json`
+`016de4c822c9e2f6517bc820e0f3aa8c143c08ea05c0874b1f844775310c4671` (old main `90a28ef7…`, old branch `d4b2e0ab…`);
+`docs/prereg/a5_manifests/README.md` `461905e4e744645501c7ddff01638a334b80738a203f7474b671cf7676d49a16` (old main `f51a290a…`, old
+branch `5c770dbe…`); `scripts/a5_simulation.py` unchanged from F7 (`04f283d8…`); `src/wsp/eval/response_intervention.py` as pinned by
+the staging branch. No selection, seed, control, panel or decision file changed. Nothing has been scored.

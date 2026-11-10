@@ -167,7 +167,7 @@
   },
   "src/wsp/eval/response_intervention.py": {
    "role": "selection, tertiles, reference identity (imported)",
-   "sha256": "7cf453f263b92b3dc056109e06766b7dbd3dc606ad463f11aa4ccdec1b73f903"
+   "sha256": "b511d3d1ccb2c518317b59eafa4eea034df41ee90b85ab53709ef008736e353a"
   },
   "src/wsp/eval/run.py": {
    "role": "WikiText window construction (perplexity)",
@@ -270,7 +270,7 @@
    "sha256": "85d27f488d489934e703bc77336614ef7882120f39c0de6ec346264a99ac5dcc"
   }
  },
- "git_sha": "c9d187313005a4c66ffa5409a49d7b2430d22cdf",
+ "git_sha": "6cf859aa9093eb288b1c11604416a02e7364c6e7",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

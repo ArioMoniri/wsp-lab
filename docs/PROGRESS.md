@@ -529,3 +529,9 @@ bf16 noise lifts the numerical rank beyond the ±1 tolerance. Under A5.3 the rot
 (Board A F7 condition 4). Nothing has been scored and no outcome has been read. Decision: hold all Part A scoring, including the
 ladder, until a pre-outcome analysis and amendment proposal (F10, `docs/design/ROTATION_YIELD_2026-11-11.md`, in flight) and
 Board A's review settle the rotation construction and whether ladder scoring may precede F10. GPU idle.
+
+**10 Nov 2026, 23:58 UTC.** `feat/part-a-prepare` merged into main (staging commit 01e1326; CLI `--selection/--references/--text-groups`,
+per-tensor audit file, `score --manifest`). Conflicts were append-only (A5 appendix union; pins rebuilt on the merged tree as A5.1.2
+re-pin (xv)). Priced Part A scoring after exclusions: 81 variants + 19 references = 100 entries ≈ 1.73 GPU-h. Open chair decision
+flagged by the staging: for the 8 chain picks with a non-base predecessor the ladder scales the realised increment D because no
+per-step Δ is stored (A5.3 says "not by scaling D_t"); referred to the F10 analysis. Scoring remains on hold.
