@@ -2616,3 +2616,379 @@ expected effect, component count or success claim.
 | 6 H5 reconciliation: §6 contract into H5 documents; access wording; matched information; complete A5.7 estimator; frozen splits and α metric; repricing and drop order; shadow-only G5 and G8 eligibility | F8a.6 (a)–(f) |
 | 7 Configuration: `configs/eval_tf_v1.yaml` replaces F8.5's file; scoring identity and counts pinned; WikiText decisive descriptively, MMLU descriptive; reuse only on complete match | F8a.7 |
 | 8 Funding and provenance: all-entry versus cap pruning resolved before the purchase freeze; caps with overhead; stop, retry and reprice policy; aiXiv status; H5 repricing and drop order; condition 7 carried forward; C4 labelling; no blocked-page numbers | F8a.8 (and F8a.6(f) for the H5 drop order) |
+
+#### A5 amendment F9a (11 Nov 2026, before any G3 outcome): F9 execution rules
+
+This block is appended; earlier text is not rewritten. It adopts F9 subject to Board A's F9 review
+(`docs/reviews/council/board-a-f9-2026-11-11.md`, added by commit `fedc7c842b5def72b7d4d075429d2b6441bc9f14`, sha256
+`fb06563b67f78789f70619d34a86e3dcad0f7ff5a44a030a4fc2a2b4fa52a5ff`; "Board A") and discharges that review's eight numbered
+conditions in clauses F9a.1–F9a.8, in the same order. It was written at main `097b106` (F8a adopted by `e216067`), before any G3,
+rotation, ladder, sealed, F8 or F9 outcome had been read; no Part A score exists to be read and none was opened. It changes no
+registered arm (A5.4), Part A selection (A5.1.2), decision rule (A5.5), line-stop rule (F5.5), H5 success criterion (A5.7), seed,
+cap or pin; the frozen A5, F5, F6, F7, F8 and F8a decisions stand, and Part A keeps priority and does not wait on F9. F9.7 is
+retained in full: F9 panels and statistics cannot satisfy, fail or unresolve any F5.5 predicate or A5.5 step, cannot change A5.7 and
+fund nothing. The bounded allocations named in F9a.4, F9a.5 and F9a.7 are F9's own, are funded only for the purchases named there,
+and borrow from no registered allocation (F9.5's shadow stays inside the existing G5 cap). Where a clause below differs from F9
+(including F9.1–F9.9 wording), the clause governs; F8a governs F8 and is applied to F9 clause by clause in F9a.1(d). Adoption is
+design acceptance only: no manifest is frozen, no entry is constructed or scored, no adapter is trained, no generation is sampled
+and no H5 episode is authorised by this block. Rules that are this block's own rather than Board A's are listed at the end for Board
+A to confirm.
+
+**F9a.1 — authority, provenance, order, F8a overrides and F9 purchase populations (condition 1).** (a) *Authority.* F9.7 is
+retained; F9 adds descriptive panels, access treatments and a training permission (F9.5) that need this prospective amendment, and
+calling them descriptive does not waive freezing. (b) *Provenance.* Member identities (role, provider, model, effort, retrieval
+limits) are archived in `docs/council/2026-11-11/MEMBERS.md` (added by `c461ce021bd0fdd838f61575080c8cf7fb88255b`, sha256
+`03081e305fdf3fa2441b8e9ae4be9590232ecb4064d1fb9150d7e6d2546da9fb`). The four round-5 reports Board A read are identified by Board
+A's SHA-256 table: `round5-editor.md` `e093ff1fc2a7a56636053d1d60297a18467d046996f3eb32da2d2f5cae615b2d`, `round5-metrology.md`
+`155b81a7e18d18720698a7bd2d1aef3f38a66a9587ffb020c296e61ec80108c8`, `round5-representation.md`
+`cd860d3384c4808bc7fa3eadeaa78d67de57cc9477f484b8758681accd91c0e8`, `round5-world-model.md`
+`1c708bc8cc70a0b701b1e1c5ee0843e219f24d5b3e65ff41daef466b1c43847a`. At `097b106` they are not tracked in git; the untracked copies
+in the council worktree (`.worktrees/council/2026-11-11/docs/council/2026-11-11/`) were re-hashed by the session writing this block
+and match the table. No F9a rule depends on a report's content beyond what SYNTHESIS-r5, F9 and Board A state. (c) *Order (repairs
+F9's opening sentence).* F9-L is operative before any F8 score: its batch 0 holds the F8 rows (F9a.2(e)) and is committed after
+F8a's C2 commit and before the first F8 TF-v1 score. F9's "runs after the Part A ledger is sealed and after the F8 panels" applies
+only to F9-P scoring, F9.4, F9.5 and F9.6. Scoring order stays Part A → F8-E → F8-F → F9-P (F9.9); F9-P scoring starts only after
+the F8 scoring record is closed (F8-F scored, unscored or stopped under F8a.5/F8a.8); F9.4 and F9.5 run inside G5 (shadow,
+production disabled); the F9.6 pilot runs only after F8-E TF-v1 scoring closes (SYNTHESIS-r5 §2) and after the F9a.7 generation
+manifest is committed. (d) *F8a overrides, by clause.* F8a.1 (freeze, acyclic hash chain, code pinning, restarts, exposure): F9-P
+gets its own chain (F9a.4(a)); F9-L batch 0 rides on F8's chain; spec §1.3's exposure definition as amended by F8a.1(c) (summaries
+count) and F8a.1(d) (exposure ⇒ explicitly exploratory amendment before scoring) apply to every F9 freeze. F8a.2: only the floor h\*
+("Floor h\*" paragraph, with its committed payload and independent reproduction) is applied, as the operative floor for every F9
+quantity that names a floor (F9.2's predicted-resolvable × resolved table, F9.5's gate); F8a.2's six-slot E+F gate, representative
+hierarchy and dependency graph are **not** inherited by any F9 population, no F9 entry counts toward or against the F8 gate, and no
+F8 entry supports an F9 purchase; F8a.2's survival definitions apply to F9-P as in F9a.4(e). F8a.3 (a)–(d) and (f) (realised
+scaling, edge values, partial q, field identities, chart abstention) apply to every F9-L row; (e) is F8-only. F8a.5's status
+precedence and binomial wording apply to any F9 cluster report with "six slots" read as the population's frozen component count,
+together with its independence record. F8a.6 governs every H5 item of F9 (F9a.5). F8a.7: every F9 TF-v1 score uses
+`configs/eval_tf_v1.yaml` (sha256 `5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317`) and reuses a base reference
+only on the complete identity match of F8a.4. F8a.8: the stop-before-overspend, watchdog (2 × 1.04 min wall per entry excluding the
+single cache load), retry-inside-cap, recovery, reprice-from-timing-and-cost-logs-only and no-borrowing rules apply to every F9
+allocation, with its reference rates 1.04 min per TF-v1 entry, 47.1 s per cache load and 1.751 min for a cold base entry
+(`docs/RESULTS.md` TF-v1 pilot rounds 2 and 3); 1.040 min is the round-3 warm maximum (median 1.003, range 0.994–1.040), a reference
+rate and not a measured high-sparsity, LoRA or generation runtime. (e) *F9's own purchase populations.* No F9 gate is built by
+counting components:
+
+| F9 item | What is bought | Precondition and floor | Allocation | Attests (F8a.1(c) roles) |
+|---|---|---|---|---|
+| F9-L (F9.1–F9.2) | nothing (CPU) | batch commit before scheduling (F9a.2(e)) | 0 GPU-h | chair; every session that writes rows |
+| F9-P (F9.3) | every constructed, non-no-op, non-excluded entry of the 45 frozen entries, in the purchase order of F9a.4(i) | F9-P C1 and C2 complete; sealed Part A ledger; F8 scoring record closed; f_surv ≥ 0.75 over the 45 slots; exposure attestations; floor h\* recorded per entry, never a gate | construction ≤ 0.5 GPU-h (F9.3); scoring ≤ 0.82227 GPU-h (F9a.4(i)) | chair, builder sessions, recipe/parameter selectors, the independent floor reproducer of F8a.2, approving reviewers |
+| F9.4 paired set | inside G5 under F8a.6(f) | G5 manifest frozen; no floor | G5 ≤ 10 + ≤ 6 (existing) | chair, G5 manifest author, every editor-session operator |
+| F9.5 shadow | all 32 adapters, trained and scored | G5 manifest frozen including the F9a.6 gate (floor h\*, counterfactual only) | training ≤ 0.5 GPU-h (F9.5), scoring ≤ 0.59693 GPU-h, both inside the existing G5 ≤ 10 | chair, G5 manifest author, training-harness operator |
+| F9.6 generation | the timed pilot only | F9a.7 generation manifest committed; F8-E TF-v1 scoring closed; no floor | ≤ 0.5 GPU-h (F9a.7(h)) | chair, generation-manifest author |
+
+F9-P has no magnitude gate: the predicted-resolvable flag |a_s| + q_s > h\* is recorded for every entry and never selects one; F9-P
+has at most three source components (F9a.4(h)), so a component-count gate could only be met by manufacturing components. (f)
+*Attestations.* Pre-outcome status of every F9 freeze requires one attestation line per decision-maker (F8a.1(c)); staging counts
+("27 of 40") are context, not proof. The session that wrote this block attests that it opened no Part A score (none exists), no G3,
+rotation, ladder, sealed, F8 or F9 outcome and no file under `data/`. A design frozen after any decision-maker's exposure, and any
+proposal informed by an outcome, is exploratory and needs an explicitly exploratory amendment before it is scored.
+
+**F9a.2 — executable forecasts and statistics (condition 2).** (a) *Realised scale.* Each row's a_s = ⟨g, D_eff(s)⟩ and q_s = ½tr(G
+D_eff(s) A D_eff(s)ᵀ) are contracted on that row's own realised bf16 increment (fp32 difference of stored bf16 states, A5.3), so
+they already carry the scale (a scales with s and q with s² only under exact scaling, which bf16 rounding breaks). The row's
+first-order forecast is **a_s** and its quadratic forecast **a_s + q_s**; F9.2's "s·a" and "s·a + s²·q" are replaced by these
+(F8a.3(a)). Nominal full-direction values s·a₁ and s·a₁ + s²·q₁ may be reported only labelled `nominal` and never enter E₀,
+agreement, calibration or the readout. Every ladder point, sparsity and rotation is contracted separately. (b) *Contrast and
+reference.* Each scored row carries one contrast type. `edit_vs_reference`: target Δy = y(W_ref + D) − y(W_ref), first-order
+forecast a, with W_ref the base for root rows or the actual incumbent (F9a.5(e)). `edit_vs_rotation`: target Δy = y(W_ref + D) −
+y(W_ref + R), first-order forecast ⟨g, D_eff − R_eff⟩ (A5.3), quadratic forecast (a_D + q_D) − (a_R + q_R). The two are different
+estimands with separate E₀, agreement and calibration, never pooled. Orientation: y is the endpoint in its native units and sign;
+for WikiText `extra.mean_nll` (nats per valid next token) positive Δy is a worse fit. (c) *Notation.* κ denotes only the curvature
+ratio q_s/|a_s|, with F8a.3(b)'s edge values. F9.2's parenthesis "κ is fixed at 1" reads "the linear forecast coefficient β on a is
+fixed at 1" (zero-fit), and its "fitted κ̂" reads "fitted readout coefficients", governed by F9a.3. q stays a nonnegative
+Fisher/Gauss–Newton magnitude, never a signed Hessian correction or an interval. (d) *Schema `f9l-v1`.* Append-only JSONL with three
+row kinds. A `forecast` row holds F9.1's fields plus: row id; schema version; population (F8-E, F8-F, F9-P, F9.4, F9.5, G5 stream
+id); family; frozen source-component id; endpoint, objective-field identity and manifest/tensor hashes (F8a.3(d));
+`effective_config_hash` and config sha256 (F8a.7); orientation; contrast type and reference hash; scale or sparsity;
+`gradient_anchor` ∈ {`base-exact`, `incumbent-exact`} and `factor_anchor` ∈ {`base-factor`, `incumbent-factor`} as separate fields
+(replacing F9.1's single anchor type; an `incumbent-exact` gradient with `base-factor` curvature is a valid pair); gradient hash;
+predictor version (F9a.3); `field_status`, `kappa_status`, `q_partial`, `chart_status` (F8a.3); construction status (failed
+constructions carry no delta and are kept). A `decision` row holds the forecast row id and hash, the decision (schedule, skip,
+accept, reject, abstain, no-op, failed), the decision-maker and time; F9.1's "decision taken" moves here. An `outcome` row holds the
+forecast row id, score run id, Δy, interval, resolution status and any missingness reason. (e) *Immutable pre-decision commitment.*
+Forecast rows are written in batches; each batch file's sha256 is committed before any of its rows is scheduled, scored, deployed or
+accepted (F9.1's "before scoring" tightened to "before scheduling"). Decision and outcome rows go in later, separate files
+referencing the forecast hash. No row is edited or deleted; failures, rejections, abstentions, skips and no-ops stay. Batch 0 is
+derived from F8a's `predictions.jsonl` without rewriting it. (f) *Undefined, degenerate and missing values* (JSON null plus a status
+string; never NaN or Infinity, epsilon repair or redraw): ΣwΔy² = 0, including 0/0 → E₀ `undefined:zero_denominator`; missing or
+nonfinite Δy → row `unresolved:missing_target`, kept in the attempted count and out of the E₀ sums; field abstention → no forecast,
+counted against coverage; a bootstrap draw with a zero denominator or a nonfinite value is invalid and any invalid draw makes that
+interval `undefined:invalid_draws` with the count reported (as A5.7); calibration intercept and slope (OLS of Δy on the forecast)
+are `undefined:constant_forecast` at zero forecast variance and `undefined:n_lt_3` below three rows; a zero forecast is a
+disagreement (A5.3); n = 0 resolved components is no test. (g) *E₀ and its decomposition.* Over rows with finite forecast f and
+finite Δy, with weights w summing to 1: E₀ = 1 − Σw(Δy − f)²/ΣwΔy², an uncentred squared-error skill score against predicting zero;
+it can be negative without bound and is not a centred R². With r = Δy − f and b = Σw·r: MSE = Σw·r² = b² + CMSE, CMSE = Σw(r − b)²,
+the **centred residual MSE** under the same weights. F9.2's "conditional MSE" is renamed CMSE; no conditioning strata are
+registered, so no conditional-error estimator is claimed. Reported denominators: attempted, scored-finite, abstaining, missing and
+unresolved rows and coverage. E₀ uses every scored-finite row whatever its resolution; a resolved-only E₀ is never primary. (h)
+*Weighting, representatives, uncertainty.* Primary weighting: equal weight per frozen source component, split equally over its
+scored-finite rows; row-weighted E₀ is reported beside it. Sign agreement and Clopper–Pearson intervals use one Bernoulli per
+component, its representative being the first row of a per-population hierarchy frozen before construction (F8: F8a.5's
+representative; F9-P: the ρ = 0.10 unrotated entry of the mask source; F9.5: the adapter of the lowest frozen query id in the
+component); rotations, scales, sparsities and related masks never add trials. E₀ and calibration intervals: component bootstrap,
+4,000 draws, SeedSequence 20261107 (F9.2), conditional on the fixed endpoint items. An item-population statement requires a joint
+interval that also resamples the 32 two-window blocks with common draws across all rows and their references (the A5.7/A2.3 two-way
+structure); otherwise none is made. Every report gives the actual interval width and the effective concentration (largest and
+top-five component shares of ΣwΔy²). (i) *Floor.* The operative floor is F8a.2's h\*. The P5 figures are historical context only: on
+the 229-entry, 64-item D3 development panel of `wikitext_log_ppl`, 0.00487 is the **upper 97.5 % component-bootstrap bound on the
+panel-mean half-width** and 0.01282 the **observed maximum per-entry half-width**
+(`docs/reviews/P5/tf-v1-requalification-2026-11-06.md`, wikitext_log_ppl table). They replace F9.3's "Resolution floor for the
+ladder" sentence, are not a floor for new masks and are not h\*. New entries get their own paired intervals (A5.3 resolution rule:
+32 two-window blocks, 4,000 draws, percentile, resolved if the interval excludes 0); no recipe or threshold is adjusted from those
+outcomes. (j) *Preserved.* The zero-fit β = 1 primary, chart abstention (`abstain:no_frozen_chart_predictor` unless a chart
+predictor was frozen before the batch commit) and q's magnitude-only status.
+
+**F9a.3 — leakage control (condition 3).** (a) *Scope.* Online learning is limited to the A5.8.3 readout (intercept, Σa, Σq, ridge)
+and the abstention quantiles, for future descriptive episodes only. F8 and F9-P forecasts stay zero-fit; registered Part B fits stay
+frozen; no committed forecast is ever refitted. (b) *Splits.* Before any row of a population is scored, its source-connected
+components (F8a.2's typed edges: shared items, documents, prompts, directions, activation statistics, generators or seed streams,
+plus shared queries) are assigned by a committed rule to one role, `train`, `swap_validation` or `evaluation`, recorded in that
+population's manifest; connected rows never straddle roles. (c) *Order, update protocol and versions.* Population order is frozen
+now: F8-E, F8-F, F9-P, then G5 episodes in the order frozen in the G5 manifest, then the F9.5 shadow. Predictor version v₀ is
+zero-fit (β = 1, no intercept, no abstention quantiles). Version v_{k+1} may be fitted only after population k closes, on `train`
+rows of populations ≤ k; it is assessed once on the `swap_validation` rows of population k (those rows are then retired into
+training and never reused for another swap) and is applied, frozen, only to forecast batches not yet committed. Swap rule: v_{k+1}
+replaces v_k only if its component-weighted MSE on the swap-validation rows is strictly lower and its CMSE is not higher; otherwise
+v_k stays. Every candidate version, accepted or rejected, is hashed and logged with its training-row ids and ridge penalty (fixed in
+the version manifest before its training rows exist); every forecast row names its version. A fitted scale applied to a next family
+is reported separately from the zero-fit E₀ primary. (d) *Eligible rows.* Only rows whose outcome role is `development` in a frozen
+role map: scored F8, F9-P, F9.5 and G5 development-support rows. Never eligible: Part A, sealed (A5.9, G7), G8 calibration or
+evaluation episodes, A5.7 rejected-proposal audits, any H5 held-out evaluation used in an F9.4 or A5.7 comparison, and current
+evaluation rows. (e) *Prohibited.* Audit, sealed or current-test feedback; repeated adaptive use of a holdout; retrospective refits;
+response-conditioned inclusion (rows chosen by outcome, resolution or realised magnitude); selecting recipes, hyperparameters,
+abstention levels or an update on outcomes and then assessing it on the same outcomes; tuning the F9.5 gate on its 32 outcomes;
+endpoint-guided mask repair or recipe retries (F9a.4). (f) *30/100.* Below 30 independent components per family: entries only, and
+no pooled calibration claim; 30–99: exploratory; ≥ 100: a precision statement is allowed only with its actual interval width. These
+are minimum reporting conventions, not evidence of calibration or precision; 100 independent Bernoulli components give roughly ten
+percentage points of worst-case sign precision and no bound on E₀ precision under concentrated losses (Board A).
+
+**F9a.4 — pruning execution and funding (condition 4).** (a) *Freeze.* Directory `docs/prereg/f9p_manifests/`, two commits on
+F8a.1(a)'s pattern. C1, before any F9-P contraction: 1 `exposure_c1.json`, 2 `inventory.json`, 3 `construction_inputs.json`, 4
+`candidates.json`, 5 `code_hashes_c1.json`. C2, before the first F9-P score: 6 `construction_cost.json`, 7 `exposure_c2.json`, 8
+`code_hashes_c2.json` (equal to C1's), 9 `deltas.json`, 10 `predictions.jsonl` (the F9-L batch), 11 `purchase.json`. H₀ =
+sha256(utf8("f9p-manifest-v1:" + S)), S the full sha of the commit that first adds this F9a heading to `docs/PREREG_H1_TF.md` (`git
+log --reverse --format=%H -S '#### A5 amendment F9a' main -- docs/PREREG_H1_TF.md`, first line); H_k = sha256(H_{k−1} ‖
+sha256(file_k)); `MANIFEST_C1.sha256` holds H₀–H₅, `MANIFEST_C2.sha256` H₆–H₁₁; verifier, restart and code-change rules as
+F8a.1(a)–(b). (b) *Inventory.* The supported linear-weight inventory is every 2-D tensor for which the frozen `wikitext_nll` field
+(identity `6fab5b29c1fb70f5b08e1ae09f098088467b3bc649a234a5b12f4bc91223a87e`) holds a gradient and both curvature factors;
+embeddings, output head, norms, biases and any tensor lacking a factor are preserved and listed. `inventory.json` lists name, shape,
+element count n_t and support; N_supp = Σn_t and N_total = all parameters of the pinned base; eligible-weight sparsity K/N_supp and
+total-model sparsity K/N_total are reported separately. (c) *The 45 entries, exactly* (no extra scale or rotation variants): ladder,
+18 = ρ ∈ {0.10, 0.20, 0.50} × source {Wanda, SparseGPT-transplant, random} × {unrotated, A5.3 rotation}, s = 1 only; native, 3 =
+compensated SparseGPT at ρ ∈ {0.10, 0.20, 0.50}, unrotated; ranking, 24 = Wanda masks at global ρ = 0.20 with Dirichlet layer
+ratios, unrotated. (d) *Counts and recipes.* Ladder and native entries delete exactly k(ρ) = ⌊ρ·n_in⌋ entries in every output row of
+every supported tensor, so all sources match counts by row, tensor and total at each ρ. Wanda: score S_ij = |W_ij|·√A_jj with A the
+tensor's frozen WikiText input factor as loaded by `FieldArtifact.load`; the A5.8.1 99 %-energy truncation is checked first, and if
+the loaded factor does not give the exact diagonal the omitted trace fraction is recorded per tensor and the source is labelled
+`wanda:truncated_diagonal`; the k(ρ) lowest scores of each row are deleted, ties by ascending column index. Random: k(ρ) positions
+per row uniformly without replacement from `numpy.random.Generator(numpy.random.PCG64(seed))`, seed =
+`scripts/a5_build_panels.py:domain_seed("20261111:f9p:", "random:<ρ>")`, rows visited in A5.8.3 tensor order, then row-major.
+SparseGPT: one solve per ρ, in the order 0.10, 0.20, 0.50; per tensor H = A + λI with the same frozen input factor A and λ = 1e-3 ×
+trace(A)/dim (A5.8.1's damping rule); mask selection over each full row at k(ρ) by the saliency W_ij²/[H⁻¹]_jj², ties by ascending
+column index; compensation by the sequential column-wise optimal-brain-surgeon update in fp32, with no column blocking, no
+sequential layer-wise recalibration and no other option; reference code pinned in `code_hashes_c1.json`. Because H comes from the
+frozen base input factor rather than fresh activations, this is a one-shot base-statistic SparseGPT variant, labelled so, not a
+reproduction of sequential SparseGPT. Transplant entry: D = −W⊙M with M the solve's mask on the original weights; native entry: D =
+bf16(W_sgpt) − W = −W⊙M + C, C the survivors' compensation. Calibration inputs (the G2 WikiText factor windows) are checked in C1
+for item and article disjointness from the 64 scored WikiText windows and any sealed panel; overlap fails closed. (e) *Rotation,
+rounding, survival, degeneracy.* Rotations follow A5.3's rotation rule with the per-edit seed `domain_seed("20261111:f9p:",
+"rotation:<entry id>")` and the A5.3.3 audit; excluded rotations are listed and count as non-surviving (F8a.2). Deletion entries are
+exact in bf16 (zero is representable), so D_eff = −W⊙M; native and rotated entries are rounded to bf16 and contracted on the
+realised increment. f_surv = surviving entries / 45 with F8a.2's definitions; f_surv < 0.75 leaves F9-P unscored and reported with
+its predictions. A no-op is a disagreement and is not scored. A nonfinite solve or an H singular after damping is `missing:
+construction_degenerate`, retried only with identical inputs and seed; no endpoint-guided mask repair and no retry with an altered
+recipe. (f) *Ranking-panel allocation.* K = Σ_t out_t·⌊0.20·n_in,t⌋ (the 20 % Wanda ladder entry's count). Layers ℓ are the decoder
+blocks holding supported tensors (24 on this base, cf. the 24 `mlp.gate_proj` of F8a.2); N_ℓ = supported entries in block ℓ,
+capacity c_ℓ = ⌊0.5·N_ℓ⌋, and each tensor's capacity ⌊0.5·n_t⌋. Draws m = 1…24 are taken in order from one
+`Generator(PCG64(domain_seed("20261111:f9p:", "dirichlet")))`: π_m ~ Dirichlet(1, …, 1). Block budgets: targets K·π_ℓ; any block
+over capacity is set to capacity and the remainder re-split in proportion to π over the others, repeated until none exceeds;
+integers by largest remainder (ties to the lower ℓ) within capacities, so Σ_ℓ K_ℓ = K exactly. Within a block, K_ℓ goes to tensors
+in proportion to n_t by the same water-filling and largest-remainder rule (ties in A5.8.3 tensor order); within a tensor, each row
+gets ⌊K_t/out⌋ and the first (K_t mod out) rows by index one more; within a row the lowest Wanda scores are deleted, ties by
+ascending column index. (g) *Contractions and ranking statistic.* Native entries are contracted on the complete D, so q includes the
+deletion–compensation cross terms; a(−W⊙M), a(C) (which sum to a(D)) and q_cross = q(D) − q(−W⊙M) − q(C) are reported descriptively;
+the native family is reported separately from transplant entries. For the ranking panel, Δy_m = y(W₀ + D_m) − y(W₀) on WikiText
+`extra.mean_nll`, and the three predictors are oriented so that larger means more predicted damage: P1 = a_m + q_m; P2 = q_A,m =
+½tr(D_m A D_mᵀ) (G = I; a reconstruction-objective comparator, not the task loss); P3 = ‖W⊙M_m‖²_F = −⟨D_m, W⟩ (F9.3's ⟨D, W⟩ with
+its sign reversed). Statistic: Kendall τ-b between Δy and each predictor over the 24 masks, zero fitted parameters. Uncertainty:
+paired block bootstrap over the 32 two-window blocks with common draws across the 24 masks and the base reference, 4,000 draws,
+percentile, seed `domain_seed("20261111:f9p:", "tau")`, for each τ-b and for τ(P1) − τ(P2) and τ(P1) − τ(P3). The interval is
+conditional on the 24 fixed masks and 64 windows; it is not mask-population or cross-family calibration. Comparisons are within
+sparsity only; ladder and native entries never enter τ and sparsities are never pooled. (h) *Component dependence.* F9-P has three
+source components: Wanda (Wanda ladder entries, their rotations and all 24 ranking masks, which share scores), SparseGPT (transplant
+entries, their rotations and the native entries, which share solves) and random (one generator). `candidates.json` records this
+graph with F8a.2's typed edges and records that it supports no binomial inference (F8a.5); F9-P is reported as entries with
+per-entry intervals, entries only under F9a.3(f). (i) *Funding, stops and order.* Construction ≤ 0.5 GPU-h (F9.3) for any GPU use;
+CPU work is charged 0 GPU-h and its wall time and peak memory are logged in `construction_cost.json`. The first solve (ρ = 0.10) is
+the bounded measurement: if the projected cost of the remaining solves exceeds the remaining construction cap, construction stops
+and every SparseGPT entry is `missing: unfunded (cap)`. Scoring allocation ≤ 0.82227 GPU-h = (45 × 1.04 min + 47.1 s cache load +
+1.751 min cold base reference)/60, the overhead-inclusive projection at the reference rates with no retry margin; retries, new loads
+and references are charged inside it; F8a.8's stops, watchdog, recovery and repricing apply. Purchase order: ladder by ρ ascending,
+within ρ (Wanda, Wanda rotation, transplant, transplant rotation, random, random rotation); then native by ρ; then ranking masks in
+draw order. Entries not reached are `unscored: stopped`; τ is computed only on the complete 24-mask panel. (j) *No compression
+claim.* The panel concerns unstructured zeros; it supports no claim of equal-performance compression, reduced memory or dense
+allocation, latency, or a smaller parameter inventory, and no cap is borrowed. The 10/20/50 % rungs are chair choices (F9a.8).
+
+**F9a.5 — H5 reconciliation (condition 5).** (a) *Documents.* The governing H5 texts are `docs/H5_DESIGN.md` "11 Nov 2026 (council
+round 5) amendment — localisation flag, shadow LoRA sub-stream, re-anchoring" and `docs/H5_PROTOCOL.md` "11 Nov 2026 (council
+round 5) amendment — paired localisation episodes, shadow LoRA stream, re-anchoring" (both added by `2ab8fab`, after Board A reviewed
+`f181f0a`), `docs/HYPOTHESIS.md` "11 Nov 2026 (council round 5) prospective note — H5 and H1-OR", and the round-4 11 Nov sections
+(F8.7), each read as amended by F8a.6 and by F9a.5–F9a.6. Those two clauses are appended verbatim with F8a.6 to both H5 documents,
+and HYPOTHESIS is reconciled, before the H5 pilot. Superseded there: "with a missed-harm upper bound ≤ 5 % (A5.7)" (replaced by
+F9a.6), "run by a pinned script with no model calls" (F8a.6(a)) and "measured about 43 s per row" (F9a.5(e)). (b) *Access and
+training meters,* pinned per episode in the G5 manifest before the pilot: `python_tool_access`, `forward_access`,
+`hidden_state_access`, `feedback_access`, `field_localisation_access`, `backward_enabled`, `gradient_exposed_to_editor`. F9.4
+episodes: `backward_enabled = 0`; `gradient_exposed_to_editor = 1` exactly when `field_localisation_access = 1` (g⊙W and g⊙D derive
+from the frozen G2 gradient; no fresh backward pass). `lora_shadow`: python 1, forward 1, hidden-state 0, feedback 1 (F9.5), where
+feedback means the next-token training loss on the query context only (no TF-v1, held-out or sealed signal reaches training);
+`backward_enabled = 1`; `gradient_exposed_to_editor = 0` (no LLM editor; only the harness optimiser consumes gradients). This
+permission covers only the harness-run training of `lora_shadow`: no LLM editor arm gains backward passes, and no other arm's
+registered access changes (A5.7's gradient-based comparators keep theirs). Meters per arm: forward requests and tokens, backward
+passes and tokens, optimiser steps, GPU-seconds and wall time. Optimiser, learning rate, step, rank and target-module limits are
+pinned in the G5 manifest before the first adapter is trained, chosen without any shadow outcome; F9a sets no values. (c)
+*Localisation sequencing and controls.* Candidate-independent inputs (per-tensor g⊙W, cached down-projection input norms) may be
+released before the first candidate; candidate-specific g⊙D exists only after that candidate's realised delta and is returned as
+metered feedback on it, never guiding its own construction. The verbal site ranking is requested and logged with its hash before any
+field ranking is released (harness-enforced) and is never a critic input. The shuffled control permutes tensor labels over the same
+ranking positions, one permutation per episode drawn before the episode from `PCG64(domain_seed("20261111:f9-shuffle:", <episode
+id>))`, at matched length, support, opportunities and cost. (d) *Paired causal contrast.* The only localisation-value contrast is
+the scripted estimator on the LLM's logged layers (variant 2) against the scripted estimator with field localisation (variant 1):
+same editor, localisation alone differs. LLM with versus without the field ranking and real versus shuffled ranking are reported
+descriptively and support no claim. Endpoint: GPE_x = Σ_e gain_{x,e} / Σ_e E_{x,e}, with gain the change in A5.7's bounded held-out
+score (percentage points) of the final incumbent over the starting incumbent and E all real evaluator calls including failed calls
+and audits (A5.7); Δ_loc = GPE₂ − GPE₁ with cluster influence u_k = (g₂,k − GPE₂·E₂,k)/ΣE₂ − (g₁,k − GPE₁·E₁,k)/ΣE₁ in A5.7's paired
+episode-cluster bootstrap-t (4,000 common draws, PCG64 seed 20261107, its failure rules). A zero or nonfinite denominator makes
+Δ_loc undefined, never a success. Localisation value is credited only if the two-sided 95 % lower bound of Δ_loc is > 0; a point
+improvement alone is insufficient; there is one primary contrast and no multiplicity correction. Aggregate sensitivity is not causal
+localisation or faithful self-report, and comparisons at unequal access stay labelled (F8a.6(a)). (e) *Increments, gradients,
+re-anchoring.* Candidates stay stored base-relative (F5.4). A forecast for an acceptance decision is relative to the actual
+incumbent: the realised increment W_cand − W_inc (bf16 states, fp32 difference) contracted with an exact incumbent gradient
+(`gradient_anchor = incumbent-exact`, fresh gradient hash) and base factors (`factor_anchor = base-factor`), or, labelled
+`approx:difference_of_base_forecasts`, f_base(W_cand − W₀) − f_base(W_inc − W₀). Re-anchoring does not turn a submitted base patch
+into an incumbent increment, and an exact gradient contraction is not an exact finite-edit forecast. All re-anchoring work (gradient
+recomputation, loads, failures) is metered and charged to the critic arm's net GPU (A5.7). The historical timings are not future
+rates: 854.718742 s over 20 rows, mean 42.736 s, with different predecessor supports and including load and save/hash work
+(`docs/reviews/council/board-a-g2-2026-11-11.md`), and 13305.825513 s over 141 donors, 94.3676 s each including I/O (power
+`fields_manifest.json` summary, per Board A); per-objective re-anchoring and factored-LoRA costs are unmeasured, measured in the
+pilot and repriced under F8a.6(f). (f) *LoRA scope and groups.* The shadow forecasts completed adapters' collateral TF-v1 change
+only, not on-query gain or whether training is worthwhile; a TF surrogate cannot supply A5.7's bounded task-score endpoint.
+Query/training contexts, support, calibration, acceptance and sealed groups are disjoint by item id and source document; query
+contexts are disjoint from every TF-v1 scored item, the G2 gradient panels (including the 11 WikiText articles and the 500 reserved
+groups, A5.3.2(iii)) and any sealed panel; overlap fails closed. (g) *Contract preserved.* All of A5.7 (arms, primary comparator,
+ratio-of-totals savings, noninferiority, guardrails, the missed-proposal guardrail with its all-rejected denominator and all-zero
+unresolved case, net GPU, prospective joint power ≥ 0.80, unresolved versus kill), the F5.4 critic contract, F8.7's per-stream
+reporting and F8a.6's retained arms and matched-information rule stand. F8a.6(f)'s drop order gains, first, `lora_shadow` as one
+unit, then the F9.4 paired set, then spec §6.6's order. G5 stays shadow-only.
+
+**F9a.6 — shadow limits (condition 6).** (a) *Harm, defined separately.* Adapter j is harmful if its WikiText contrast Δy_j = y(W₀ +
+D_j) − y(W₀) under `configs/eval_tf_v1.yaml` is resolved (A5.3 paired block interval excludes 0) and Δy_j > 0; other TF-v1 endpoints
+are descriptive; a missing or nonfinite score is `unresolved`. This is not A5.7's missed qualifying beneficial proposal, which a
+collateral forecast cannot estimate; A5.7's guardrail, denominator and unresolved cases stay unchanged. (b) *Gate frozen before
+shadow outcomes* (in the G5 manifest, before the first adapter is trained): evaluate adapter j if its zero-fit forecast a_j + q_j
+(WikiText field, `base-exact`, `base-factor`) exceeds h\*, otherwise skip; a field abstention is evaluated. One gate, never tuned on
+the 32 outcomes. (c) *All 32 scored.* Every adapter is trained and scored on TF-v1 whatever the gate says; the gate is applied
+counterfactually. (d) *Read-outs.* Missed harm M_h = #(skipped ∧ harmful)/#skipped (undefined if nothing is skipped) with its exact
+one-sided 95 % Clopper–Pearson upper bound, and #(skipped ∧ harmful)/#harmful. The report states that even 32 independent skips with
+zero misses give an upper bound of 1 − 0.05^(1/32) = 0.08937 > 0.05, and fewer skips or dependence make it worse. Replay saving
+= #skipped/32 verification evaluations, descriptive, with training cost charged in both arms; E₀ and sign agreement follow F9a.2. (e)
+*Limits.* No ≤ 5 % certification, no realised-savings claim and no G8 gate or condition comes from this pilot. The shadow may report
+a gate as uneconomic, descriptively, when measured forecast cost per adapter is at least the measured verification cost per skipped
+adapter. Training, audits and failures stay in both arms' cost accounting; A5.7's unresolved cases are retained.
+
+**F9a.7 — generation qualification and purchase (condition 7).** (a) *Checkpoints.* The Astra edit only if F8a.4 qualifies its
+replay, and any F8-E entry with a published generation claim whose bytes qualify; their number E is frozen before the pilot. (b)
+*Frozen before any sampling,* in a committed generation manifest: model and tokenizer revision
+`2fc06364715b967f1860aea9cf38778875588b17`; chat-template hash; thinking flag per arm (unedited thinking-on, edited thinking-on,
+unedited thinking-off); decoding T 0.6, top-p 0.95, top-k 20, presence penalty 1.5 (the P2 settings in `docs/RESULTS.md`);
+`max_new_tokens` 8,192; EOS token set; the repository's MATH-500 `exact_match` parser and scorer, pinned by code hash; engine, batch
+size and device H0. (c) *Definitions.* Natural completion: generation ends with an EOS-set token before 8,192 generated tokens and,
+in thinking-on arms, after the thinking block is closed. Strict correctness: the pinned parser extracts a final answer and the
+pinned scorer marks it equal to the reference. Truncated, malformed and unparsed outputs are incorrect; the denominator is all 500
+items × seeds; completion and correctness are reported together with their 2×2 per arm; completion is not correctness. (d) *Seeds
+and pairing.* Per item and seed index, the seed is `domain_seed("20261111:f9-gen:", "<batch>:<seed index>:<item id>")`, shared by
+all arms (paired); batch 1 and batch 2 seed indices are disjoint; the pilot uses its own stream and is never pooled. Paired
+differences are per-item means over seeds; intervals by item bootstrap, 4,000 draws, PCG64 seed 20261107, percentile, with common
+draws across arms so shared unedited-arm errors stay paired. (e) *Qualification rule.* Same form as A2.1 and A3's same-device check:
+replay agreement (fraction of replayed generations token-identical to the originals), between-batch reliability of per-item rates,
+and paired-difference half-width against a declared margin δ_gen per endpoint. The numeric limits and δ_gen are written in the
+generation manifest before the pilot and confirmed by Board A; F9a sets no values. An unqualified endpoint is reported descriptively
+and has no H5 use. (f) *Counts and ceiling.* The screen is qualification batch 1 (seed indices 1–5), reused, adding no generations;
+batch 2 is seed indices 6–10; the replay regenerates seed index 1 for all 500 items in all arms on the same device. F9.6's 122.88 M
+= 500 × 10 × 3 × 8,192 is the upper bound (every generation at the cap) for the **two-batch qualification panel of one edited
+checkpoint with its two unedited arms**; it excludes the replay, the pilot and further checkpoints, and replaces F9.6's
+"qualification ceiling" wording. With the unedited arms shared across the E edited checkpoints, the complete qualification upper
+bound including replay is 500 × 11 × (2 + E) × 8,192 = 45.056 M × (2 + E) generated tokens (135.168 M at E = 1). (g) *Public items.*
+MATH-500 items are public and already exposed (`docs/RESULTS.md` P2); they are never fresh H5 held-out, calibration or sealed
+evidence, and every H5 panel excludes them. (h) *Funding.* Only a timed same-device pilot is funded: items in a frozen order
+(`domain_seed("20261111:f9-gen:", "pilot-order")`), all arms interleaved per item, pilot seed stream, stopped at ≤ 0.5 GPU-h or
+after 500 items, whichever comes first; it records tokens and wall time per generation. Complete repricing is a dated amendment
+computed from pilot timing logs only; pilot outcomes change no frozen rule; no qualification batch runs before that amendment. The
+endpoint has no funding or decision authority, never alters F5.5 and is not an H5 endpoint until qualified and adopted by amendment.
+
+**F9a.8 — evidence wording (condition 8).** For every future use (reports, paper, H5 documents) the following replace the
+corresponding text of F9, SYNTHESIS-r5 and the RESEARCH_NOTES round-5 section, which are not rewritten. (1) *PPF (arXiv
+2508.02381).* "A predictor of structured (channel or layer) pruning-policy performance, measured as JS divergence to the original
+model, on an evaluated dataset of 775 collected samples with 20 % used for testing" (excerpt in `paper/refs/verified.yaml`; Board
+A's v2 check); "trained on 775 evaluated masks" (synthesis), "from 775 evaluated masks" (F9.8) and "a surrogate trained on evaluated
+masks" (paper sentence 1) read so; its prediction error is not a perplexity error for our masks. (2) *IDM (arXiv 2610.13991)* was
+submitted 26 Sep 2026, not 15 Oct (RESEARCH_NOTES); its CMSE is a centred residual MSE; our swap loss is F9a.3(c). (3) *P5 labels*
+as F9a.2(i). (4) *Finite-edit exactness.* "The field is exact" for isolated adapters, deletion masks or root edits (synthesis
+verdict, paper sentence 3, RESEARCH_NOTES item 6) reads: "for a root edit of the pinned base the gradient term a = ⟨g, D⟩ is the
+exact first-order contraction at the base, with no predecessor displacement; neither a nor a + q is an exact forecast of a finite
+edit's effect." (5) *Timing* as F9a.1(d) and F9a.5(e). (6) *Mathematics.* "Every small-model math gain so far is a termination or
+robustness repair" reads: "the small-model math gains reviewed in round 5 include termination and robustness repairs; the council
+did not establish that all are." (7) *Introspection.* Paper sentence 2 reads: "In one study of eight open-weight models (arXiv
+2608.20569), verbal reports did not discriminate interventions from shams beyond chance, while linear probes on the same activations
+recovered them; the same source reports a model fine-tuned for this report reaching near-perfect recovery, so no universal claim is
+made." (8) *Wanda.* Paper sentence 4's "Wanda's score is the diagonal of our curvature term" reads: "the squared Wanda score is, up
+to a constant, the diagonal term of q_A (the G = I curvature term), not of q." (9) *Rungs.* 10 and 20 % are where arXiv 2604.25098
+reports unstructured Magnitude and Wanda pruning retaining performance on 7–8B models (Board A's v3 check); "50 where OBC-Prune
+reports collapse" is attributed-only (the archived excerpt reports improvements at 40 and 50 %); all three rungs are chair choices.
+(10) *Premises.* Board A verified PPF's count, arXiv 2611.03244's 82 % and 66 % and arXiv 2604.25098's 10/20 % design. Every other
+numerical premise is either archived-source (text retained in `paper/refs/sources/` and excerpted in `paper/refs/verified.yaml` by
+the chair, not checked by Board A) or attributed-only (no retained primary text); none is a threshold, expected effect, funding
+premise or success premise:
+
+| Premise | Where used | Status |
+|---|---|---|
+| OWMI: AUROC ≈ 0.5007 over 78,000 measurements; probes 75–95.8 % | synthesis Q4/sentence 2, RESEARCH_NOTES 11 | archived-source (`2608.20569.txt`) |
+| PPF: 1.52 s versus 1 min 38 s per policy | RESEARCH_NOTES 20 | archived-source (`2508.02381.txt`) |
+| OBC-Prune "collapse" at 50 % | synthesis Q3 | attributed-only; archived excerpt says the opposite at 40–50 % |
+| Das replication: 10/30 versus 2/30 completion; 16/30 versus 9/30; McNemar p = 0.021 raw, 0.107 Holm | RESEARCH_NOTES 4, paper sentence 5 | attributed-only (dev.to blog; no retained copy) |
+| Pruning laws: collapse past about 70–80 % | RESEARCH_NOTES 18 | attributed-only |
+| aiXiv ≈ 93 % recovery | F8.9, H5 documents | attributed-only; conditional on supplied layers, budget and scale |
+| Agentic-TTT and QueST gains | RESEARCH_NOTES 6–7 | archived-source; qualitative only |
+
+The chair choices (30/100, 24 masks, 32 queries, 10/20/50 %, 8,192 tokens, five-seed batches and every cap) are planned criteria,
+not measurements.
+
+**Rules in this block that are the author's, not Board A's (for Board A to confirm).** (1) No magnitude gate for F9-P; f_surv ≥ 0.75
+reused from F8a.2 as its survival precondition (F9a.1(e), F9a.4(e)). (2) Allocations: F9-P scoring ≤ 0.82227 GPU-h and F9.5 scoring
+≤ 0.59693 GPU-h as overhead-inclusive projections at F8a.8's reference rates with no retry margin; the F9.6 pilot cap ≤ 0.5 GPU-h,
+reusing F9's construction/training cap figure (F9a.1(e), F9a.4(i), F9a.7(h)). (3) Schema `f9l-v1`, the three row kinds and the split
+of anchor into `gradient_anchor`/`factor_anchor` (F9a.2(d)–(e)). (4) Component-weighted E₀ as primary, row-weighted beside it; the
+per-population representative hierarchy; the "any invalid draw ⇒ undefined" rule (F9a.2(f), (h)). (5) The update protocol: one-use
+swap-validation populations retired into training, swap loss = component-weighted MSE, population order F8-E, F8-F, F9-P, G5, F9.5
+(F9a.3(c)). (6) Per-row count rule k(ρ) = ⌊ρ·n_in⌋ for all F9-P sources; Wanda from √A_jj of the frozen factor with the
+`truncated_diagonal` label; SparseGPT as a one-shot solve on the frozen factor with A5.8.1's damping, full-row mask selection and no
+blocking (F9a.4(d)). (7) Dirichlet(1, …, 1) layer ratios with 50 % block and tensor capacities, water-filling and largest-remainder
+integerisation; row allocation (F9a.4(f)). (8) Damage orientation P3 = ‖W⊙M‖²_F, Kendall τ-b, window-block bootstrap for τ, τ only
+on the complete panel; purchase order (F9a.4(g), (i)). (9) Three F9-P components (F9a.4(h)). (10) Access values
+`gradient_exposed_to_editor = 1` with field localisation and 0 in `lora_shadow`; `lora_shadow` first in the drop order (F9a.5(b),
+(g)). (11) The localisation contrast variant 2 versus variant 1 with GPE as ratio of totals, its influence function and lower
+bound > 0 (F9a.5(d)). (12) Harm defined on resolved positive WikiText change; the a + q > h\* shadow gate with abstentions evaluated; the
+"uneconomic gate" descriptive criterion (F9a.6). (13) Generation: P2 decoding settings, completion/correctness definitions, seed
+derivation, screen = batch 1, replay = seed index 1 for all items and arms, shared unedited arms across checkpoints,
+qualification-rule form with values left to the manifest (F9a.7). (14) Wording item (8) on Wanda and q_A, and the premise status
+table (F9a.8). (15) The domain-seed prefixes `20261111:f9p:`, `20261111:f9-shuffle:` and `20261111:f9-gen:`.
+
+| Board A condition | F9a clause |
+|---|---|
+| 1 Authority/provenance: F9.7 and all decisions/pins/caps retained; reports archived with identities; logging-versus-panel order; F8a exposure/freeze/configuration overrides; F9's own gate/purchase population; decision-maker attestations | preamble; F9a.1 (a)–(f) |
+| 2 Executable forecasts/statistics: realised scale, reference/rotation conventions, κ notation, anchor/version/schema fields, immutable pre-decision commitment, undefined/degenerate/missing values, MSE decomposition, weighting, representatives, uncertainty, denominators; zero-fit primaries, chart abstention, q magnitude-only; P5 widths not a floor | F9a.2 (a)–(j) |
+| 3 Leakage control: frozen source-connected splits, family/episode order, update protocol, predictor versions, eligible development rows only; prohibitions; 30/100 as reporting conventions | F9a.3 (a)–(f) |
+| 4 Pruning execution/funding: 45 entries, Dirichlet/count/solve/coverage/rounding recipes, τ/tie/orientation rules, native compensation, within-sparsity ranking, component dependence; overhead-inclusive bounded costs, stop/reprice; no compression claim | F9a.4 (a)–(j) |
+| 5 H5 reconciliation: H5 documents with F8a overrides; access/training meters; localisation sequencing; paired causal contrast; matched-information controls; base-relative versus incumbent increments; exact-gradient provenance; charged re-anchoring; full A5.7/F5.4/F8.7 contract | F9a.5 (a)–(g) |
+| 6 Shadow limits: missed harm separate from missed beneficial proposals; gate frozen before outcomes; all 32 scored; no ≤ 5 % certification, realised savings or G8 gate; costs in both arms; A5.7 unresolved cases | F9a.6 (a)–(e) |
+| 7 Generation qualification/purchase: completion/correctness and qualification rules, independent seeds and pairing, public-item exclusion; token-ceiling scope, screen reuse, replay and checkpoint counts; bounded pilot before repricing; no F5.5 or automatic H5 effect | F9a.7 (a)–(h) |
+| 8 Evidence wording: PPF count, P5 labels, finite-edit exactness, timing qualifications, universal math/introspection claims removed; unverified premises labelled and unused as premises | F9a.8 (1)–(10); F9a.2(i); F9a.5(e) |
