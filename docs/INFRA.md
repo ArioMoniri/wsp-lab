@@ -64,3 +64,7 @@ infrastructure private; do not put hostnames or instance IDs in this file or art
 - Canonical data directory (6 Nov 2026, D8): `/home/ubuntu/wsp-data`, outside the git checkout; `data/` in the
   checkout and in every worktree is a symlink to it. The pre-commit hook refuses any staged path matching `^data($|/)`
   and `wt.sh merge` refuses branches that touch it. No backup yet covers it (policy pending the user's approval).
+
+## Backups (10 Nov 2026)
+
+Nightly `scripts/backup_sync.sh` (cron 03:17 UTC) to the in-region versioned disaster-recovery bucket, prefix `wsp-lab/wsp-data/`; logs in `~/agent-logs/backup-sync-*.log`. Restore: `aws s3 sync s3://<bucket>/wsp-lab/wsp-data/ /home/ubuntu/wsp-data/` (previous versions via `s3api list-object-versions`). EBS snapshots of the root volume are taken on demand (see DECISIONS D8 addendum 3).

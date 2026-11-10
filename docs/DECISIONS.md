@@ -471,3 +471,16 @@ not evidenced.
 - The critic of H5 and every G2 structure consume the effective bf16 delta Δ_eff = bf16(W + Δ) − W (council synthesis §1.6).
 - Council programme adopted as a proposal (docs/council/2026-11-07/SYNTHESIS.md v3.1; Boards A, B, C) with PREREG appendix A5 as the
   registration (Board A: ACCEPT as a draft pending the A5.11 manifests). G6 repriced on 7 Nov from 296 to 635 TF-v1 entries (≈ 11 GPU-h).
+
+## D8 addendum 3 (10 Nov 2026) — backup controls
+
+User approval on 10 Nov 2026 ("I approve all you need") covers the backup policy left open in addendum 2. Controls now in place:
+- **Nightly versioned off-host copy**: `scripts/backup_sync.sh` (cron 03:17 UTC) syncs `/home/ubuntu/wsp-data` (zoo, evals, features,
+  runs, papers; the HF cache and the symlink staging zoos are excluded) to the account's in-region, versioned disaster-recovery bucket
+  under `wsp-lab/wsp-data/`. `sync` never deletes, and the bucket keeps previous object versions, so a local deletion or overwrite
+  does not propagate as a loss. The initial copy started 10 Nov 11:10 UTC (≈ 270 GB).
+- **EBS snapshot** of the 1 TB root volume requested on 10 Nov (previous snapshot 31 Oct); the account's lifecycle policy for this
+  volume is in state ERROR and the instance role cannot repair it.
+Still open, needing account-level IAM that the instance role does not have: a deny-delete bucket policy or object lock, and a working
+lifecycle policy for the root volume. With the off-host versioned copy in place, D8 is **operationally closed for data loss**; the two
+IAM items are recorded as residual risk.
