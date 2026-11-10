@@ -1,0 +1,128 @@
+{
+ "schema": "a5-power-donor-pool-v1",
+ "basis": "A5 amendment F7 (11 Nov 2026, before any G3 outcome): chair ruling F7; Board A F6 review condition 5",
+ "rule": "donors whose WikiText gradient is exact: fields_manifest donors with no flags and either gradient_source 'chain_exact' (registered chain pick, F6.2) or gradient_source 'base_field' with predecessor_is_base (root donor: the base gradient is the exact gradient at its predecessor). Excluded: donors flagged 'base-approximation-unvalidated' (nonroot non-pick chain donors on the base field)",
+ "fields_manifest": {
+  "path": "docs/prereg/a5_manifests/power/fields_manifest.json",
+  "sha256": "19e9de8430ff2a135db848f7d0d5097b5b5724138e9ee815e807e5753e5f9a6b"
+ },
+ "fields_json": {
+  "path": "data/runs/a5/power/fields.json",
+  "sha256": "85843ed28d3fd3ba5dc71e2ba8943fd022924cbc4f0b62dddbfb001cb2bcf3b9"
+ },
+ "nullsize_inputs": {
+  "path": "data/runs/a5/nullsize/inputs.json",
+  "sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
+ },
+ "n_donors": 61,
+ "n_excluded": 80,
+ "excluded_flag_counts": {
+  "base-approximation-unvalidated": 80
+ },
+ "family_counts": {
+  "LoRA": 25,
+  "chain": 36
+ },
+ "gradient_source_counts": {
+  "LoRA:base_field (root, predecessor = base)": 25,
+  "chain:base_field (root, predecessor = base)": 26,
+  "chain:chain_exact (registered pick)": 10
+ },
+ "cells": {
+  "LoRA:0": {
+   "donor_rows": 1,
+   "donor_components": 1,
+   "full_pool_components": 1
+  },
+  "LoRA:1": {
+   "donor_rows": 9,
+   "donor_components": 9,
+   "full_pool_components": 9
+  },
+  "LoRA:2": {
+   "donor_rows": 15,
+   "donor_components": 15,
+   "full_pool_components": 15
+  },
+  "chain:0": {
+   "donor_rows": 12,
+   "donor_components": 11,
+   "full_pool_components": 26
+  },
+  "chain:1": {
+   "donor_rows": 9,
+   "donor_components": 8,
+   "full_pool_components": 20
+  },
+  "chain:2": {
+   "donor_rows": 15,
+   "donor_components": 14,
+   "full_pool_components": 25
+  }
+ },
+ "ids_sha256": "52366da337a570b4e3b850476597fbd8516631f59201a48acb145fc7d23107f1",
+ "ids_sha256_rule": "sha256 of json.dumps(sorted(donor_ids)) (Python default separators), as recorded by scripts/a5_simulation.py donor_pool.ids_sha256",
+ "donor_ids": [
+  "0027efdf2eae7405",
+  "00f8111cbad8218f",
+  "014f8a9ec78db2be",
+  "05531ce1db4df63f",
+  "0559051354691a70",
+  "057dcfbedea3251f",
+  "0712caa1d248514a",
+  "07f9a50b29a7ef5c",
+  "0a841d4082532e8b",
+  "0ba9a89ab486e840",
+  "0bc0a0c4ad0520e0",
+  "0d055869527177b4",
+  "11c9824e1d366771",
+  "13b02fe2673cc296",
+  "14cdaabee246493b",
+  "15a53586efc72a50",
+  "15cdcf0bb126de17",
+  "15f9b68343ea7718",
+  "17668df17662b3f7",
+  "19d9a98cfb2db6e2",
+  "1ac30f3c7a209fe6",
+  "2114e313c73f15a6",
+  "2233954b0cc3edc0",
+  "2410c595817dc20b",
+  "26ea2129fc9db0f7",
+  "2f61a4086395b719",
+  "313209464e63eba4",
+  "342a1be080049e8f",
+  "34e407b92a902282",
+  "388347cfb0b7fafa",
+  "45cd0be9fea1c139",
+  "5abd76a640cc2b9d",
+  "5f80bd482d092938",
+  "7af5977862ec021f",
+  "7bc62b9f723359cb",
+  "8cfc1393b97300ab",
+  "8d29ac2adb7fdda0",
+  "9bac68c953cdeea0",
+  "9c5a366672eca1b7",
+  "9ce6c4569369303c",
+  "9e65cbcd43a17237",
+  "a1b393336e5969f6",
+  "aaf7a0660c6d5a73",
+  "af6d608f8651fb46",
+  "b5d0ac5d76c3cad6",
+  "b943ccc4c39696a6",
+  "bd4e23629c9c7109",
+  "c12f6ec6bad59ba3",
+  "c3ae3e8c8edca6b8",
+  "ce5e9aa1bcff250c",
+  "ceed4c7fe04b679f",
+  "d7f933d3b4e5d25e",
+  "d8a9fc56d92a3ad1",
+  "e810bdeec181cf75",
+  "e8a104c5c6086424",
+  "e8a60c49170e1c7f",
+  "e9ebe9610a3aeddf",
+  "f08bb448e2e3c680",
+  "f1d7ab497acfbd3a",
+  "f39a1bdc9d9e5051",
+  "fd69d121f1cc6ec6"
+ ]
+}

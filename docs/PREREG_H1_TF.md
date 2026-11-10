@@ -2140,3 +2140,64 @@ This commit changes only `docs/PREREG_H1_TF.md`, the two package files, `scripts
 | `docs/prereg/a5_manifests/code_hashes.json` | `6dd2615f9e8ea12544716f1cc585adf902c5f751fa1ed6fee0eb4494cd28d346` | changed 2026-11-11 (F6 re-pin (xiii)); old `d3b11bab664e0822ec63b4f059703d6418ff09847c49681fdd7f710617e6a5c7` (re-pin (xii); G2 attempt 2) |
 | `scripts/g2_fields.py` | `6f14a2ac4c0dd9b2dc6b2ba2e022ec6cbe98a75e840dd414804d1febf3fb9f93` | changed 2026-11-11 (F6: stage `chain_exact`); old `cb1835181ae0d8202edcaa72586e38dcc3a8822ce6127f104e5c123a86838723` (re-pin (xii); G2 attempt 2) |
 | `tests/test_g2_fields.py` | `67be8c51375fef4a3536fc1b4ed54843bbf83ab222c49a43941ff0966949a42d` | changed 2026-11-11 (F6; not a code-map member); old `f7be4d4aeb83fe0741a7890005480376514aa2394234f9239894980397a8adaa` |
+
+#### A5 amendment F7 (11 Nov 2026, before any G3 outcome): power/yield donor pool
+
+This block is appended; earlier text is not rewritten. It records chair ruling F7, taken after the power fields were built
+(`docs/prereg/a5_manifests/power/fields_manifest.json`, sha256 `19e9de84…5e9a6b`; `data/runs/a5/power/fields.json`,
+sha256 `85843ed2…cf3b9`) and before any G3 outcome. No G3, rotation, ladder or sealed outcome was read, and no GPU was used.
+
+*Facts.* `fields.json` holds registered sign predictions for all 141 NULL-SIZE donors. Ten (the registered chain picks) use
+the F6.2 `chain_exact` WikiText gradient at the actual predecessor. Fifty-one are root donors (predecessor = base: 25 LoRA,
+26 chain) and use the G2 base WikiText gradient, which is the exact gradient at their predecessor. The other 80 are chain
+donors whose predecessor is not the base. They use the base field and are flagged `base-approximation-unvalidated`. Board A's
+F6 acceptance ([F6 review](reviews/council/board-a-f6-2026-11-11.md), condition 5) requires POWER-AND-YIELD to use accepted
+exact WikiText chain predictions and does not accept base gradients for nonroot chain donors.
+
+**F7.1 — registered pool.** The registered POWER-AND-YIELD run draws its donors only from the donors whose WikiText gradient
+is exact: the 51 roots and the 10 picks, **61 donors** (LoRA 25; chain 26 roots + 10 picks = 36). The list is
+`docs/prereg/a5_manifests/power/registered_donors.json` (sha256 `6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5`; sorted-id sha256 `52366da3…07f1`). It is
+derived from the manifest flags alone: no flag, and either `gradient_source` `chain_exact` (a registered pick) or
+`base_field` with `predecessor_is_base`. The 80 excluded donors are exactly those flagged `base-approximation-unvalidated`.
+Donor cells are rebuilt from the listed rows with the frozen cutpoints and the same one-row-per-component rule
+(`donor_cells`). Per (family, tertile) cell, donor rows / donor components (full-pool components in brackets):
+
+| Cell | LoRA:0 | LoRA:1 | LoRA:2 | chain:0 | chain:1 | chain:2 |
+|---|---|---|---|---|---|---|
+| Rows / components | 1 / 1 (1) | 9 / 9 (9) | 15 / 15 (15) | 12 / 11 (26) | 9 / 8 (20) | 15 / 14 (25) |
+
+No cell is empty; an empty cell would have stopped the run for a further ruling. The LoRA cells are unchanged. Three chain
+components contribute two exact rows to the same cell, so the 36 chain rows are 33 component representatives.
+
+**F7.2 — unchanged.** The NULL-SIZE payload (`data/runs/a5/nullsize/inputs.json`, sha256 `67da223c…1c53de`), its masks,
+audits and evidence, the selection, quotas and frozen cutpoints, the seeds and stream order (`SeedSequence(20261107)`,
+spawn 3: panels, signs, resolution), 10,000 replicates and 4,000 resolution draws, the registered `.75` alternative, the
+resolution and decision rules, and the ≥ 0.80 ordered-power gate are unchanged. The restriction applies to POWER-AND-YIELD
+only: the NULL-SIZE pass inside the same run uses the full payload, as registered, and reproduces the registered NULL-SIZE
+run exactly.
+
+**F7.3 — sensitivity.** A separately labelled SENSITIVITY run uses all 141 donors with the flagged predictions. It is
+descriptive. The registered decision (ordered simulated power ≥ 0.80 at the registered alternative) is read on the
+registered run only.
+
+*Implementation.* `scripts/a5_simulation.py --donor-ids FILE` (a JSON list, or an object with a `donor_ids` list; requires
+`--fields`). `restricted_donor_cells` checks that every id is a unique, eligible payload donor with a field prediction,
+counts rows per cell, stops on an empty cell (naming it), and rebuilds the cells. The output records `donor_pool` (count,
+sorted-id sha256, per-cell rows/components/full-pool components, file path) and adds the file to `input_provenance`.
+Without `--donor-ids` the output is byte-for-byte what it was. Tests in `tests/test_a5_simulation.py` cover the restriction
+(power traces draw only listed donors; NULL-SIZE identical to the full-pool run), the cell-count report, the empty-cell
+error, id validation and the CLI.
+
+*Results (report: `docs/prereg/a5_manifests/power/report.json` and `README.md`).* Both runs used the code bytes pinned below (`scripts/a5_simulation.py` `04f283d8…c167f`), 10,000 replicates and 4,000 resolution draws (exact two-sided 95% CP intervals). **Registered** (61 donors; raw `data/runs/a5/power/power_registered.json`, sha256 `2b4806e56d405bdd87c233ed3b247bb0c7a2fe4393083ddcad144e3085424522`): ordered power (go) 8540/10,000 = **0.8540** [0.8469, 0.8609]; alternative 0/10,000 = 0.0000 [0.0000, 0.0004]; unresolved 1460/10,000 = 0.1460 [0.1391, 0.1531]; yield (≥ 15 resolved) 1.0000 in each contrast; two-sided power 0.8540 / 0.8525 / 0.8535. **Ordered power 0.8540 ≥ 0.80: Part A is decisive (A5.3.2).** **Sensitivity**, descriptive (141 donors; raw `data/runs/a5/power/power_all.json`, sha256 `aa0af06458cafabbae5dd9364f54f945e1a0f303b10ce3667fafea7be35a4009`): ordered power (go) 8501/10,000 = **0.8501** [0.8430, 0.8570]; alternative 0/10,000 = 0.0000 [0.0000, 0.0004]; unresolved 1499/10,000 = 0.1499 [0.1430, 0.1570]; yield (≥ 15 resolved) 1.0000 in each contrast; two-sided power 0.8501 / 0.8483 / 0.8490. In both outputs the NULL-SIZE pass equals the registered NULL-SIZE run exactly (go 180, alternative 1939, unresolved 7881 of 10,000). Yield 1.0 rests on the registered treatment of unavailable audit evidence as a pass (F2); the proxy limits of F2 and F5.7 apply. The raw outputs are not committed; the report holds their hashes.
+
+*A5.1.2 re-pin (xiv) (11 Nov 2026, F7).* `scripts/a5_build_manifests.py --pin-worktree` was re-run into a copy of the
+package from parent `c9d1873`. Every regenerated or copied package file was byte for byte identical except `code_hashes.json` and `README.md`, and only those two were copied into the package. `code_hashes.json` (schema `a5-code-hashes-v2`, `git_sha` = parent `c9d1873`) still pins 64 files. It differs from `6dd2615f…d28d346` only in `git_sha` and the `scripts/a5_simulation.py` and `tests/test_a5_simulation.py` pins. It is now the current code map, and `6dd2615f…d28d346` is a historical identity (the F6 code map). These rows supersede the corresponding current-hash entries of A5.1.2's tables. This commit changes only `docs/PREREG_H1_TF.md`, the two package files, `scripts/a5_simulation.py`, `tests/test_a5_simulation.py` and the new `docs/prereg/a5_manifests/power/` files `registered_donors.json`, `report.json` and `README.md`. `--verify-pins HEAD` passes after the commit.
+
+| Path | SHA256 | Identity |
+|---|---|---|
+| `docs/prereg/a5_manifests/README.md` | `f51a290a322dd22fba129a064ce3fcd0d9364ef4c386319e3cd2c005d2c04ea4` | changed 2026-11-11 (F7 re-pin (xiv)); old `2fab2a1cd6c95301812f8760d36dc02f9cfef24a6eab50f93b35b16c3d013629` (F6 re-pin (xiii)) |
+| `docs/prereg/a5_manifests/code_hashes.json` | `90a28ef7f43580a33af0d2c5ea11d8168c07e7baf5a5e73918f4d40c66b91ba0` | changed 2026-11-11 (F7 re-pin (xiv)); old `6dd2615f9e8ea12544716f1cc585adf902c5f751fa1ed6fee0eb4494cd28d346` (F6 re-pin (xiii)) |
+| `scripts/a5_simulation.py` | `04f283d8756bc2d81e2e8bd700163f48d5ceff8487041a8969db48beda8c167f` | changed 2026-11-11 (F7: `--donor-ids`); old `3b86668657273b188abdaa2e5d19eec832abe0fdb21f19b002fc5c0504da8fe6` |
+| `tests/test_a5_simulation.py` | `c69a912b7deb1767918452688d862bd076a6933afbe4020b314da27472ed4096` | changed 2026-11-11 (F7); old `721a92c21adaf39d0b5c317ee5ba8e6c60a2b4f63ba1b837fc3f21272cf65072` |
+| `docs/prereg/a5_manifests/power/registered_donors.json` | `6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5` | new 2026-11-11 (F7.1; not a code-map member) |
+| `docs/prereg/a5_manifests/power/report.json` | `ff46de30fa8e4ff97a4034e8bdef78cb19bc49662073523500a43c773b55845a` | new 2026-11-11 (F7 results; not a code-map member) |

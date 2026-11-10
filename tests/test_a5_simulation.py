@@ -186,3 +186,140 @@ def test_cell_mask_noise_scenario_masks_extra_slots_and_scales_cell_noise():
     assert cell["reports"]["null_size"]["audit_or_nonfinite_counts"] == [12 * 40] * 3
     with pytest.raises(ValueError, match="not a selection cell"):
         simulate(payload, cell_overrides={("chain", 0): {"active_slots": 1}}, **kwargs)
+
+
+def test_donor_ids_restrict_power_pool_only():
+    payload, fields = toy(60, noise_sd=0.3, mean_range=(0.2, 0.4), seed=6)
+    quotas = {"LoRA": (5, 5, 5)}
+    kwargs = {"replicates": 30, "draws": 200, "quotas": quotas}
+    _, edges = selection_cells(payload["inventory"], quotas)
+    cells = donor_cells(payload["donors"], edges)
+    # Keep two donors per cell (one cell keeps a single donor).
+    keep = [r["id"] for t in range(3) for r in cells["LoRA", t][: 1 if t == 0 else 2]]
+    full = simulate(payload, fields, **kwargs)
+    part = simulate(payload, fields, donor_ids=keep, **kwargs)
+    # NULL-SIZE uses the full pool and is reproduced exactly; only POWER-AND-YIELD is restricted.
+    assert part["reports"]["null_size"] == full["reports"]["null_size"]
+    assert "donor_pool" not in full
+    for trace in part["reports"]["power_yield"]["traces"]:
+        assert set(trace["donor_representatives"]) <= set(keep)
+    pool = part["donor_pool"]
+    assert pool["n_ids"] == 5 and pool["applies_to"] == "power_yield"
+    assert {k: v["donor_rows"] for k, v in pool["cells"].items()} == {
+        "LoRA:0": 1,
+        "LoRA:1": 2,
+        "LoRA:2": 2,
+    }
+    assert pool["cells"]["LoRA:0"]["full_pool_components"] == len(cells["LoRA", 0])
+    # The restriction is deterministic and the ID order does not matter.
+    assert simulate(payload, fields, donor_ids=keep[::-1], **kwargs) == part
+
+
+def test_donor_ids_cell_components_and_validation():
+    payload, fields = toy(60, seed=7)
+    quotas = {"LoRA": (5, 5, 5)}
+    kwargs = {"replicates": 5, "draws": 50, "quotas": quotas}
+    _, edges = selection_cells(payload["inventory"], quotas)
+    cells = donor_cells(payload["donors"], edges)
+    keep = [cells["LoRA", t][0]["id"] for t in range(3)]
+    # A second row of an already listed component in the same cell adds a row, not a component.
+    twin = dict(payload["donors"][0], id="e000b", component=cells["LoRA", 0][0]["component"])
+    twin_row = dict(payload["inventory"][0], id="e000b", component=twin["component"])
+    payload["inventory"].append(twin_row)
+    payload["donors"].append(twin)
+    payload["centred_noise"].append(payload["centred_noise"][0])
+    payload["window_mask"].append(payload["window_mask"][0])
+    payload["donor_mean"].append(payload["donor_mean"][0])
+    fields["e000b"] = [1, 1, 1]
+    result = simulate(payload, fields, donor_ids=[*keep, "e000b"], **kwargs)
+    assert result["donor_pool"]["cells"]["LoRA:0"] == {
+        "donor_rows": 2,
+        "donor_components": 1,
+        "full_pool_components": len(cells["LoRA", 0]),
+    }
+    with pytest.raises(ValueError, match=r"empty donor cell\(s\): LoRA:2"):
+        simulate(payload, fields, donor_ids=keep[:2], **kwargs)
+    with pytest.raises(ValueError, match="not in the payload"):
+        simulate(payload, fields, donor_ids=[*keep, "zzz"], **kwargs)
+    with pytest.raises(ValueError, match="duplicate"):
+        simulate(payload, fields, donor_ids=[*keep, keep[0]], **kwargs)
+    with pytest.raises(ValueError, match="without a field prediction"):
+        simulate(
+            payload, {k: v for k, v in fields.items() if k != keep[1]}, donor_ids=keep, **kwargs
+        )
+    with pytest.raises(ValueError, match="requires fields"):
+        simulate(payload, donor_ids=keep, **kwargs)
+    payload["donors"][1]["eligible"] = False
+    with pytest.raises(ValueError, match="ineligible"):
+        simulate(payload, fields, donor_ids=[*keep, payload["donors"][1]["id"]], **kwargs)
+
+
+def two_family_toy(n_lora=30, n_chain=12):
+    """Registered-quota toy: LoRA rows e*, chain rows k*, one component per row."""
+    payload, fields = toy(n_lora, seed=9)
+    rows = [
+        {"id": f"k{i:03}", "component": f"kc{i:03}", "family": "chain", "norm": i}
+        for i in range(n_chain)
+    ]
+    payload["inventory"] += rows
+    payload["donors"] += [
+        r | {"audit": [True] * 3, "audit_evidence": ["computed"] * 3} for r in rows
+    ]
+    payload["centred_noise"] += [[0.0] * 64] * n_chain
+    payload["window_mask"] += [[True] * 64] * n_chain
+    payload["donor_mean"] += [1.0] * n_chain
+    fields |= {r["id"]: [1, 1, 1] for r in rows}
+    return payload, fields
+
+
+def test_donor_ids_cli_records_pool_and_provenance(tmp_path, monkeypatch):
+    import functools
+    import hashlib
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    from scripts import a5_simulation
+
+    payload, fields = two_family_toy()
+    _, edges = selection_cells(payload["inventory"])
+    cells = donor_cells(payload["donors"], edges)
+    keep = sorted(r["id"] for key in cells for r in cells[key][:2])
+    paths = {}
+    for name, obj in (("inputs", payload), ("fields", fields), ("ids", {"donor_ids": keep})):
+        paths[name] = tmp_path / f"{name}.json"
+        paths[name].write_text(json.dumps(obj))
+    out = tmp_path / "o.json"
+    script = Path(__file__).resolve().parents[1] / "scripts/a5_simulation.py"
+    base = [sys.executable, str(script), str(paths["inputs"]), "--output", str(out)]
+    # Without --fields, --donor-ids is refused before any simulation.
+    refused = subprocess.run(
+        [*base, "--donor-ids", str(paths["ids"])], capture_output=True, check=False
+    )
+    assert refused.returncode != 0 and b"requires --fields" in refused.stderr
+    # An empty cell is a hard error raised before the registered-scale simulation starts.
+    paths["bad"] = tmp_path / "bad.json"
+    paths["bad"].write_text(json.dumps([i for i in keep if i.startswith("e")]))
+    bad = subprocess.run(
+        [*base, "--fields", str(paths["fields"]), "--donor-ids", str(paths["bad"])],
+        capture_output=True,
+        check=False,
+    )
+    assert bad.returncode != 0 and b"empty donor cell(s): chain:0, chain:1, chain:2" in bad.stderr
+    assert not out.exists()
+    # A short in-process run (synthetic scale) records the pool, its file and its hash.
+    small = functools.partial(a5_simulation.simulate, replicates=3, draws=20)
+    monkeypatch.setattr(a5_simulation, "simulate", small)
+    argv = [*base[1:], "--fields", str(paths["fields"]), "--donor-ids", str(paths["ids"])]
+    monkeypatch.setattr(sys, "argv", argv)
+    assert a5_simulation.main() == 0
+    result = json.loads(out.read_text())
+    assert result["donor_pool"]["path"] == str(paths["ids"])
+    assert result["donor_pool"]["n_ids"] == len(keep) == 12
+    assert (
+        result["input_provenance"][str(paths["ids"])]
+        == hashlib.sha256(paths["ids"].read_bytes()).hexdigest()
+    )
+    for trace in result["reports"]["power_yield"]["traces"]:
+        assert set(trace["donor_representatives"]) <= set(keep)
