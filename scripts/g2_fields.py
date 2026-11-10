@@ -39,6 +39,20 @@ Runs only after Board A's A5 freeze. Stages, in order, each recorded in ``<out>/
   the budget, never drop rows). Every row records its wall seconds and peak CUDA memory. The stage
   resumes per objective: a completed objective is verified by hash and never re-run; ``--resume
   --stages audit`` first verifies the completed fields, projectors and probe cache by hash.
+  After A5 amendment F6 (11 Nov 2026) a real run refuses the audit stage: the audit is recorded as
+  run and infeasible at its cap, and the base-plus-cross-term approximation is not used for chains.
+* ``chain_exact`` (A5 amendment F6.2; requested explicitly, not in the default stages): for each of
+  the ten registered chain picks (sorted by id), the model is set once to the pick's actual
+  predecessor (base plus the predecessor's cumulative delta via its alias holder; the base for a root
+  pick) and the exact WikiText and MMLU gradients are computed with the audit's gradient-only path (no
+  Fisher pass, no K-FAC) on the tensors of the pick's realised increment D. Each of the 20 rows is a
+  FieldArtifact-like directory ``chain_exact/<pick_id>/<objective>/`` (``manifest.json`` identity and
+  content hashes, ``tensors.pt``) with wall/GPU seconds and peak memory in the manifest. HellaSwag
+  and refusal tokens of the picks are masked (presence 0); q_t is flagged ``base-factor``. Cap 2.2
+  GPU-h: the measured check after the first row of each objective and the per-row guard stop the
+  run as incomplete (stop and reprice). Completed rows are verified by hash and never re-run on
+  resume. The first chain_exact run records the audit's F6.1 disposition (``audit_disposition``);
+  from then on a complete G2 needs fields, projectors, probe and chain_exact.
 
 Panels are rebuilt from ``docs/prereg/a5_manifests/panels.json`` with the TF-v1 scorer's tokenisation and
 checked against every recorded hash (file sha256, sorted-id hashes, dataset fingerprints, WikiText window
@@ -46,6 +60,7 @@ token hashes); any mismatch refuses the run before the model is loaded. Wall-clo
 the single exclusive GPU) stop the run cleanly between items and leave a manifest marked incomplete.
 
     python scripts/g2_fields.py --panels-sha256 <A5.1 hash> [--stages fields,projectors,probe,audit]
+    python scripts/g2_fields.py --panels-sha256 <A5.1 hash> --resume --stages chain_exact   # F6.2
     python scripts/g2_fields.py --toy --out /tmp/g2_toy   # CPU dry run, tiny random Qwen3.5, synthetic panels
 
 Exit codes: 0 complete, 2 HARD_STOP (audit), 3 GATE_FAILURE (missing hook), 4 incomplete (cap or
@@ -56,6 +71,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import copy
 import gc
 import hashlib
 import json
@@ -101,6 +117,17 @@ AUDIT_ROW_FRACTION_OF_FIELD = 0.5
 AUDIT_ROW_GUARD_FRACTION_OF_CAP = 0.1
 NOT_CAPTURED = "not captured in this run"
 STAGES = ("fields", "projectors", "probe", "audit")
+# A5 amendment F6 (11 Nov 2026): exact gradients at the actual predecessors of the ten registered chain
+# picks, for the WikiText (mechanism endpoint) and MMLU gold-letter (descriptive) objectives only; no
+# K-FAC at predecessors. HellaSwag and refusal tokens of those picks are masked (presence 0).
+CHAIN_EXACT = "chain_exact"
+ALL_STAGES = (*STAGES, CHAIN_EXACT)
+CHAIN_EXACT_SCHEMA = "g2-chain-exact-v1"
+CHAIN_EXACT_OBJECTIVES = ("wikitext_nll", "mmlu_gold_log_prob")
+CHAIN_EXACT_MASKED = tuple(o for o in FIELD_OBJECTIVES if o not in CHAIN_EXACT_OBJECTIVES)
+CHAIN_EXACT_N_PICKS = 10
+CHAIN_EXACT_CAP_HOURS = 2.2  # F6.2: measured audit row 394 s wall x 20 rows = 2.19 h
+CHAIN_EXACT_AMENDMENT = "A5 amendment F6 (11 Nov 2026)"
 EXIT = {"complete": 0, "HARD_STOP": 2, "GATE_FAILURE": 3, "incomplete": 4, "refused": 5}
 STATUSES = ("running", "complete", "incomplete", "HARD_STOP", "GATE_FAILURE")
 
@@ -576,6 +603,57 @@ def audit_pairs(selection, components, n=AUDIT_N):
     return candidates[:n], meta
 
 
+def chain_exact_picks(selection, components):
+    """The registered chain picks and their actual predecessors (F6.2), sorted by edit id.
+
+    The predecessor is the selection's ``predecessor_id``, which must equal the pick's lineage parent
+    in components.jsonl (``base`` for a root pick, whose predecessor state is the base model). Bytes
+    come from ``bytes_via_alias`` when the entry is an alias.
+    """
+    rows = {r["id"]: r for r in components}
+
+    def holder(x):
+        r = rows.get(x)
+        if r is None:
+            raise ValueError(f"{x}: no component row")
+        h = r.get("bytes_via_alias") or (x if r.get("bytes_present") else None)
+        if h is None:
+            raise ValueError(f"{x}: no stored or aliased bytes")
+        return h
+
+    picks = []
+    for s in sorted(selection["registered"]["selected"], key=lambda s: s["edit_id"]):
+        if s["family"] != "chain":
+            continue
+        pick, pred = s["edit_id"], s["predecessor_id"]
+        is_base = pred in (None, "base")
+        pick_bytes = holder(pick)
+        parent = rows[pick].get("parent_id")
+        if (parent is None) != is_base or (not is_base and parent != pred):
+            raise ValueError(f"{pick}: selection predecessor {pred} differs from lineage {parent}")
+        pred_bytes = None if is_base else holder(pred)
+        picks.append(
+            {
+                "pick_id": pick,
+                "predecessor_id": "base" if is_base else pred,
+                "predecessor_is_base": is_base,
+                "predecessor_bytes": pred_bytes,
+                "predecessor_via_alias": bool(pred_bytes and pred_bytes != pred),
+                "pick_bytes": pick_bytes,
+                "pick_via_alias": pick_bytes != pick,
+            }
+        )
+    ids = [p["pick_id"] for p in picks]
+    meta = {
+        "rule": "registered chain picks (selection.json), sorted by edit id; predecessor = the "
+        "selection's actual predecessor (lineage parent; base for a root pick); bytes via alias holder",
+        "n_picks": len(picks),
+        "n_base_predecessor": sum(p["predecessor_is_base"] for p in picks),
+        "pick_ids_sorted_sha256": sorted_sha(ids),
+    }
+    return picks, meta
+
+
 def relative_error(exact, approximate, floor=AUDIT_FLOOR):
     return abs(exact - approximate) / max(abs(exact), floor)
 
@@ -729,6 +807,8 @@ class Context:
     toy: bool = False
     base_state_hash: str | None = None
     extra: dict = field(default_factory=dict)
+    chain_picks: list = field(default_factory=list)  # F6.2: the registered chain picks
+    chain_picks_record: dict = field(default_factory=dict)
 
 
 def make_objective(doc, name, items, namespace, record, dev_windows=()):
@@ -889,6 +969,8 @@ def build_real_context(args, doc, records):
     for p in pairs:
         p["predecessor_dir"] = str(zoo / p["predecessor_bytes"])
         p["successor_dir"] = str(zoo / p["successor_bytes"])
+    picks, picks_record = chain_exact_picks(selection, components)
+    attach_pick_dirs(picks, zoo)
     state = model.state_dict()
     identity = {
         "model": {"repo": MODEL[0], "revision": runner.revision, "dtype": "bfloat16"},
@@ -912,7 +994,17 @@ def build_real_context(args, doc, records):
         pairs_record,
         lambda d: load_entry_delta(d, state),
         identity,
+        chain_picks=picks,
+        chain_picks_record=picks_record,
     )
+
+
+def attach_pick_dirs(picks, zoo: Path):
+    for p in picks:
+        p["pick_dir"] = str(zoo / p["pick_bytes"])
+        p["predecessor_dir"] = (
+            None if p["predecessor_is_base"] else str(zoo / p["predecessor_bytes"])
+        )
 
 
 # ---------------------------------------------------------------------------------- stages
@@ -1824,6 +1916,578 @@ def audit_hard_stop(audit):
     }
 
 
+# ------------------------------------------------------------- chain_exact (A5 amendment F6)
+
+
+class ChainEstimateExceeded(CapExceeded):
+    """The chain_exact measured-cost projection exceeds its registered cap (F6.2): stop and reprice."""
+
+
+CHAIN_EXACT_POLICY = {
+    "approximation": "F6.1, A5.8.1 fallback: the base-plus-cross-term approximation is not used for any "
+    "chain row",
+    "field_tokens": "F6.2: Part A field tokens of the registered chain picks are the exact objective "
+    "gradients at the actual predecessor state, wikitext_nll (mechanism endpoint) and "
+    "mmlu_gold_log_prob (descriptive)",
+    "q_t": "base-factor: q_t of these rows is computed from the base K-FAC factors; no K-FAC factors "
+    "are computed at predecessors (F6.2)",
+    "masked": "F6.2: hellaswag_gold_char_log_likelihood, refusal_margin_harmful and "
+    "refusal_margin_harmless field tokens of the chain picks are masked (presence 0); LoRA picks are "
+    "unaffected",
+    "part_a_sign": "F6.3: <g_wikitext, D - R>, g the exact gradient at the actual predecessor",
+    "part_b": "F6.4: chain rows other than the picks keep base-anchored tokens flagged 'approximation "
+    "unvalidated'; a registered sensitivity arm repeats the primary contrast without them",
+    "support": "gradients are stored on the tensors of the pick's realised increment D = "
+    "stored(pick) - stored(predecessor), the support of D, of its rotation R and of the ladder "
+    "edits (A5.3); D_t = 0 elsewhere",
+}
+PICK_KEYS = (
+    "pick_id",
+    "predecessor_id",
+    "predecessor_is_base",
+    "predecessor_bytes",
+    "predecessor_via_alias",
+    "pick_bytes",
+    "pick_via_alias",
+)
+CHAIN_ROW_KEYS = (
+    *PICK_KEYS,
+    "objective",
+    "status",
+    "dir",
+    "files",
+    "identity_sha256",
+    "content_hashes_sha256",
+    "panel_content_hash",
+    "increment_sha256",
+    "displacement_sha256",
+    "predecessor_state_sha256",
+    "n_tensors",
+    "exact_contraction",
+    "gradient_norm",
+    "q_t",
+    "resources",
+)
+
+
+def pick_identity(pick):
+    return {k: pick[k] for k in PICK_KEYS}
+
+
+def _chain_key(pick_id, objective):
+    return f"{pick_id}/{objective}"
+
+
+def audit_disposition(manifest):
+    """F6.1: the registered predecessor audit as G2 left it. After F6 it is never run again, and the
+    base-plus-cross-term approximation is not used for any chain row."""
+    audit = manifest.get("audit") or {}
+    objectives = audit.get("objectives") or {}
+    stops = [
+        a.get("incomplete_reason")
+        for a in [*manifest.get("attempts", []), manifest]
+        if str((a.get("incomplete_reason") or {}).get("cap", "")).startswith("audit")
+    ]
+
+    def fails(row):
+        e = row.get("relative_error")
+        return not (isinstance(e, (int, float)) and math.isfinite(e) and e <= AUDIT_MAX_ERROR)
+
+    return {
+        "amendment": f"{CHAIN_EXACT_AMENDMENT}, F6.1",
+        "audit_status": audit.get("status"),
+        "rows_on_record": {n: len(e.get("rows", [])) for n, e in sorted(objectives.items())},
+        "relative_errors_on_record": {
+            n: [r.get("relative_error") for r in e.get("rows", [])]
+            for n, e in sorted(objectives.items())
+        },
+        "rows_failing_rule": {
+            n: sum(fails(r) for r in e.get("rows", [])) for n, e in sorted(objectives.items())
+        },
+        "audit_stop": stops[-1] if stops else None,
+        "approximation_used_for_chains": False,
+        "rule": "A5.8.1 fallback: otherwise the base approximation is not used for chains; the audit "
+        "is recorded as run and infeasible at its cap and is not run again (F6.1)",
+        "recorded_at": utc(),
+    }
+
+
+def chain_masks(picks, objectives, rows=()):
+    """Per pick and objective: presence 1 for a completed exact-gradient row, 0 for the masked
+    objectives (F6.2) and for a failed row, ``pending`` before the row exists."""
+    done = {_chain_key(r["pick_id"], r["objective"]): r for r in rows}
+    masks = {}
+    for p in picks:
+        entry = masks[p["pick_id"]] = {}
+        for o in objectives:
+            r = done.get(_chain_key(p["pick_id"], o))
+            if r is None:
+                entry[o] = {"presence": "pending"}
+            elif r["status"] == "complete":
+                entry[o] = {"presence": 1, "anchor": "actual predecessor (exact gradient)"}
+                entry[o]["q_t"] = "base-factor"
+            else:
+                entry[o] = {"presence": 0, "reason": f"exact gradient failed: {r.get('error')}"}
+        for o in CHAIN_EXACT_MASKED:
+            entry[o] = {
+                "presence": 0,
+                "reason": "masked by F6.2 (no exact gradient at predecessor)",
+            }
+    return masks
+
+
+def chain_cost_projection(fields, names, remaining, measured, used_hours, cap_hours):
+    """Projected chain_exact GPU-hours: used + per objective, its remaining rows x (the mean measured
+    row seconds; before any row of it, the field-based row estimate x the largest measured/field-based
+    ratio; without a field record, the largest measured row)."""
+
+    def field_based(n):
+        rec = (fields or {}).get(n) or {}
+        return field_row_seconds(fields, n) if "resources" in rec else None
+
+    means = {n: sum(s) / len(s) for n, s in measured.items() if s}
+    ratios = {n: means[n] / field_based(n) for n in means if field_based(n)}
+    ratio = max(ratios.values(), default=1.0)
+    every = [s for secs in measured.values() for s in secs]
+    per_row, source = {}, {}
+    for n in names:
+        if n in means:
+            per_row[n], source[n] = means[n], "measured mean row seconds"
+        elif field_based(n):
+            per_row[n] = field_based(n) * ratio
+            source[n] = "field-based row estimate x largest measured/field-based ratio"
+        else:
+            per_row[n], source[n] = max(every, default=0.0), "largest measured row seconds"
+    seconds = {n: per_row[n] * remaining.get(n, 0) for n in names}
+    total = used_hours + sum(seconds.values()) / 3600.0
+    return {
+        "formula": "used chain_exact hours + per objective remaining rows x row seconds (measured "
+        "mean; before any row of the objective, field-based estimate x largest measured ratio)",
+        "remaining_rows": {n: remaining.get(n, 0) for n in names},
+        "row_seconds": per_row,
+        "row_seconds_source": source,
+        "ratios": ratios,
+        "remaining_seconds": seconds,
+        "used_hours": used_hours,
+        "estimated_total_hours": total,
+        "cap_hours": cap_hours,
+        "within_cap": total <= cap_hours,
+    }
+
+
+def _chain_state(ctx, pick, base):
+    """Set the model to the pick's actual predecessor (base + its cumulative delta, alias bytes when
+    needed; the base itself for a root pick). Returns the realised increment D and identities."""
+    params = dict(ctx.model.named_parameters())
+    d_pred = {} if pick["predecessor_is_base"] else ctx.load_delta(pick["predecessor_dir"])
+    d_pick = ctx.load_delta(pick["pick_dir"])
+    names = sorted(set(d_pred) | set(d_pick))
+    for n in names:
+        if n not in params:
+            raise ValueError(f"{n}: delta tensor is not a model parameter")
+        if n not in base:
+            base[n] = params[n].detach().to("cpu", copy=True)
+    w_pred = {n: _stored(base[n], d_pred.get(n)) for n in names}
+    increment = {n: _stored(base[n], d_pick.get(n)).float() - w_pred[n].float() for n in names}
+    increment = {n: d for n, d in increment.items() if torch.count_nonzero(d)}
+    displacement = {n: w_pred[n].float() - base[n].float() for n in d_pred}
+    displacement = {n: e for n, e in displacement.items() if torch.count_nonzero(e)}
+    if not increment:
+        raise ValueError("realised increment is zero")
+    with torch.no_grad():
+        for n in names:
+            params[n].copy_(w_pred[n].to(params[n].device))
+    return {
+        "increment": increment,
+        "increment_sha256": rf._hash({n: rf._tensor_hash(d) for n, d in increment.items()}),
+        "displacement_sha256": rf._hash({n: rf._tensor_hash(e) for n, e in displacement.items()}),
+        "predecessor_state_sha256": rf._hash({n: rf._tensor_hash(w_pred[n]) for n in names}),
+        "n_increment_tensors": len(increment),
+        "n_displacement_tensors": len(displacement),
+        "increment_norm": math.sqrt(sum(d.square().sum().item() for d in increment.values())),
+        "displacement_norm": math.sqrt(sum(e.square().sum().item() for e in displacement.values())),
+    }
+
+
+def _restore(ctx, base):
+    params = dict(ctx.model.named_parameters())
+    with torch.no_grad():
+        for n, t in base.items():
+            params[n].copy_(t.to(params[n].device))
+
+
+def _chain_row(ctx, out, objective, pick, state, budget, code):
+    """One exact-gradient row at the predecessor (model already there); FieldArtifact-like output."""
+    name = objective.spec.name
+    names = sorted(state["increment"])
+    panel = capped(objective.panel, budget, f"chain_exact:{_chain_key(pick['pick_id'], name)}")
+    grads, content = exact_gradient(
+        ctx.model, ctx.tokenizer, objective.spec, panel, ctx.device, names
+    )
+    if content != objective.record["content_hash"]:
+        raise ValueError("chain_exact panel content differs from the verified panel")
+    contraction = sum((grads[n] * d).sum().item() for n, d in state["increment"].items())
+    identity = {
+        "schema": CHAIN_EXACT_SCHEMA,
+        "schema_version": rf.SCHEMA_VERSION,
+        "amendment": f"{CHAIN_EXACT_AMENDMENT}, F6.2",
+        "anchor": "actual predecessor",
+        "kind": "exact objective gradient at the predecessor state; no Fisher pass, no K-FAC factors",
+        "precision": "fp32 gradients, CPU accumulation, divided by the total objective weight",
+        "q_t": "base-factor",
+        "objectives": [objective.spec.identity()],
+        "panels": {
+            name: {
+                "panel_id": objective.panel.panel_id,
+                "text_group_hash": objective.panel.text_group_hash,
+                "scored_text_group_hash": rf._hash(sorted(objective.panel.scored_text_groups)),
+                "content_hash": content,
+            }
+        },
+        "pick": pick_identity(pick),
+        "base_state_hash": ctx.base_state_hash,
+        "predecessor_state_sha256": state["predecessor_state_sha256"],
+        "increment_sha256": state["increment_sha256"],
+        "displacement_sha256": state["displacement_sha256"],
+        "support": names,
+        "code": code,
+    }
+    artifact = rf.FieldArtifact(identity, {name: grads}, {})
+    root = out / CHAIN_EXACT / pick["pick_id"] / name
+    tmp = root.with_name(f"{name}.tmp-{os.getpid()}")
+    if tmp.exists():
+        raise FileExistsError(f"{tmp} exists")
+    t1 = now()
+    artifact.save(tmp)
+    tmp.rename(root)
+    hashes = json.loads((root / "manifest.json").read_text())["content_hashes"]
+    row = {
+        **pick_identity(pick),
+        "objective": name,
+        "status": "complete",
+        "dir": str(root),
+        "files": {f: sha256_file(root / f) for f in ("manifest.json", "tensors.pt")},
+        "identity_sha256": rf._hash(identity),
+        "content_hashes_sha256": rf._hash(hashes),
+        "panel_content_hash": content,
+        "n_tensors": len(names),
+        "exact_contraction": contraction,
+        "gradient_norm": math.sqrt(sum(g.square().sum().item() for g in grads.values())),
+        "q_t": "base-factor",
+        "save_seconds": now() - t1,
+        "bytes_written": tree_bytes(root),
+        **{k: v for k, v in state.items() if k != "increment"},
+    }
+    del grads, artifact
+    return row
+
+
+def _move_stale(root: Path, attempt, block):
+    """A row directory without a completed manifest row (interrupted attempt) is kept aside, never
+    deleted, and the row is computed again."""
+    if not root.exists():
+        return
+    k, stale = 0, root.with_name(f"{root.name}.stale-attempt{attempt}")
+    while stale.exists():
+        k += 1
+        stale = root.with_name(f"{root.name}.stale-attempt{attempt}-{k}")
+    root.rename(stale)
+    block.setdefault("stale_dirs", []).append({"from": str(root), "to": str(stale)})
+
+
+def run_chain_exact(ctx, out: Path, manifest, budget, mpath):
+    """F6.2: exact WikiText and MMLU gradients at the actual predecessors of the registered chain
+    picks (10 x 2 = 20 rows), under the 2.2 GPU-h cap with the measured first-row check (after the
+    first row of each objective) and the per-row guard; resumable per row, completed rows verified by
+    hash and never re-run."""
+    prev = manifest.get(CHAIN_EXACT) or {}
+    if prev.get("status") == "complete":
+        rows_ok = all(
+            _verify_files(Path(r["dir"]), r["files"])
+            for r in prev["rows"]
+            if r["status"] == "complete"
+        )
+        if not rows_ok or sha256_file(prev["file"]) != prev["sha256"]:
+            raise ValueError("completed chain_exact files no longer match their hashes")
+        return
+    picks = ctx.chain_picks
+    present = {o.spec.name: o for o in ctx.objectives}
+    names = [n for n in CHAIN_EXACT_OBJECTIVES if n in present]
+    if not ctx.toy:
+        if len(picks) != CHAIN_EXACT_N_PICKS:
+            raise ValueError(
+                f"chain_exact needs {CHAIN_EXACT_N_PICKS} chain picks, got {len(picks)}"
+            )
+        if names != list(CHAIN_EXACT_OBJECTIVES):
+            raise ValueError(f"chain_exact needs the objectives {list(CHAIN_EXACT_OBJECTIVES)}")
+    if not picks or not names:
+        raise ValueError("chain_exact: no chain picks or no WikiText/MMLU objective in the run")
+    base_hash = state_hash(ctx.model)
+    recorded = {r.get("state_hash") for r in (manifest.get("fields") or {}).values()} - {None}
+    if recorded and recorded != {base_hash}:
+        raise ValueError("the loaded model is not at the base state of the G2 fields")
+    ctx.base_state_hash = base_hash
+    manifest.setdefault("audit_disposition", audit_disposition(manifest))
+    plan = [(p, n) for p in picks for n in names]
+    order = [_chain_key(p["pick_id"], n) for p, n in plan]
+    kept = {}
+    for r in prev.get("rows", []):
+        key = _chain_key(r["pick_id"], r["objective"])
+        if r.get("status") == "complete":
+            if not _verify_files(Path(r["dir"]), r["files"]):
+                raise ValueError(f"{key}: completed chain_exact row no longer matches its hashes")
+            kept[key] = r
+        elif r.get("status") == "error":  # recorded and masked, never retried
+            kept[key] = r
+    code = {
+        "git_sha": (manifest.get("code") or {}).get("git_sha"),
+        "scripts/g2_fields.py": sha256_file(Path(__file__)),
+        "src/wsp/features/response_field.py": sha256_file(rf.__file__),
+    }
+    block = manifest[CHAIN_EXACT] = {
+        "status": "running",
+        "schema": CHAIN_EXACT_SCHEMA,
+        "amendment": f"{CHAIN_EXACT_AMENDMENT}, F6.2",
+        "started_at": prev.get("started_at") or utc(),
+        "attempt": manifest["attempt"],
+        "objectives": names,
+        "masked_objectives": list(CHAIN_EXACT_MASKED),
+        "picks": [pick_identity(p) for p in picks],
+        "picks_record": ctx.chain_picks_record,
+        "policy": CHAIN_EXACT_POLICY,
+        "n_rows": len(plan),
+        "order": order,
+        "base_state_hash": base_hash,
+        "cost_basis": {
+            "cap_hours": budget.hours,
+            "registered": f"{CHAIN_EXACT_CAP_HOURS} GPU-h (F6.2: measured audit row 394 s wall x 20 rows "
+            "= 2.19 h), stop and reprice",
+            "cost_check": "after the first row of each objective, measured",
+            "per_row_guard": "before every later row: used + per objective mean measured row seconds x "
+            "remaining rows <= cap",
+        },
+        "cost_checks": list(prev.get("cost_checks", [])),
+        "stale_dirs": list(prev.get("stale_dirs", [])),
+        "rows": [kept[k] for k in order if k in kept],
+    }
+    block["masks"] = chain_masks(picks, names, block["rows"])
+    write_manifest(mpath, manifest)
+    measured = {n: [] for n in names}
+    for r in block["rows"]:
+        if r["status"] == "complete":
+            measured[r["objective"]].append(r["resources"]["gpu_seconds"])
+    checked = {c["after_first_row_of"] for c in block["cost_checks"]}
+
+    def remaining(start):
+        counts = dict.fromkeys(names, 0)
+        for (_, n), key in zip(plan[start:], order[start:]):
+            counts[n] += key not in kept
+        return counts
+
+    base, current = {}, None
+    try:
+        for i, (pick, name) in enumerate(plan):
+            key = order[i]
+            if key in kept:
+                continue
+            where = f"chain_exact:{key}"
+            budget.check(where)
+            if any(measured.values()):  # per-row guard: never start a row the pace cannot finish
+                guard = chain_cost_projection(
+                    manifest.get("fields"),
+                    names,
+                    remaining(i),
+                    measured,
+                    budget.used(),
+                    budget.hours,
+                )
+                if not guard["within_cap"]:
+                    raise ChainEstimateExceeded(
+                        "chain_exact_gpu_hours_row_guard",
+                        f"{where} (row {i + 1})",
+                        guard["estimated_total_hours"],
+                        budget.hours,
+                    )
+            _move_stale(out / CHAIN_EXACT / pick["pick_id"] / name, manifest["attempt"], block)
+            _reset_peak(ctx.device)
+            r0, load_seconds = now(), 0.0
+            try:
+                if current is None or current[0] != pick["pick_id"]:
+                    _restore(ctx, base)
+                    current = None
+                    state = _chain_state(ctx, pick, base)
+                    load_seconds = now() - r0
+                    current = (pick["pick_id"], state)
+                row = _chain_row(ctx, out, present[name], pick, current[1], budget, code)
+            except (CapExceeded, torch.OutOfMemoryError):
+                raise
+            except Exception as exc:  # noqa: BLE001 - recorded, masked (presence 0), never retried
+                row = {
+                    **pick_identity(pick),
+                    "objective": name,
+                    "status": "error",
+                    "error": f"{type(exc).__name__}: {exc}"[:500],
+                }
+            seconds = now() - r0
+            row["attempt"] = manifest["attempt"]
+            row["resources"] = {
+                "wall_seconds": seconds,
+                "gpu_seconds": seconds,  # wall clock on the single exclusive GPU
+                "state_load_seconds": load_seconds,
+                **_peak(ctx.device),
+            }
+            block["rows"].append(row)
+            _check_vram(ctx.device, where)
+            manifest["caps"][CHAIN_EXACT] = budget.record()
+            log(f"chain_exact {key}: {row['status']} {seconds:.1f}s")
+            if row["status"] == "complete":
+                measured[name].append(seconds)
+                if name not in checked:  # measured first-row check of this objective
+                    checked.add(name)
+                    check = chain_cost_projection(
+                        manifest.get("fields"),
+                        names,
+                        remaining(i + 1),
+                        measured,
+                        budget.used(),
+                        budget.hours,
+                    )
+                    check = {
+                        "after_first_row_of": name,
+                        "row": key,
+                        "measured_first_row_seconds": seconds,
+                    } | check
+                    block["cost_checks"].append(check)
+                    if not check["within_cap"]:
+                        raise ChainEstimateExceeded(
+                            "chain_exact_gpu_hours_estimate",
+                            f"{where} (after the first row of {name})",
+                            check["estimated_total_hours"],
+                            budget.hours,
+                        )
+            block["masks"] = chain_masks(picks, names, block["rows"])
+            write_manifest(mpath, manifest)
+    except BaseException:  # cap (stop and reprice), VRAM or interrupt: computed rows stay on record
+        block["status"] = "stopped"
+        block["masks"] = chain_masks(picks, names, block["rows"])
+        manifest["caps"][CHAIN_EXACT] = budget.record()
+        write_manifest(mpath, manifest)
+        raise
+    finally:
+        _restore(ctx, base)
+    block["rows"].sort(key=lambda r: order.index(_chain_key(r["pick_id"], r["objective"])))
+    block["masks"] = chain_masks(picks, names, block["rows"])
+    done = [r for r in block["rows"] if r["status"] == "complete"]
+    payload = {
+        k: block[k]
+        for k in ("schema", "amendment", "objectives", "masked_objectives", "picks", "picks_record")
+    } | {
+        "policy": block["policy"],
+        "masks": block["masks"],
+        "base_state_hash": base_hash,
+        "rows": [
+            {
+                k: r.get(k)
+                for k in (
+                    *PICK_KEYS,
+                    "objective",
+                    "status",
+                    "error",
+                    "files",
+                    "identity_sha256",
+                    "content_hashes_sha256",
+                    "exact_contraction",
+                    "increment_sha256",
+                    "predecessor_state_sha256",
+                )
+            }
+            | {"dir": str(Path(r["dir"]).relative_to(out)) if r.get("dir") else None}
+            for r in block["rows"]
+        ],
+    }
+    path = out / CHAIN_EXACT / "chain_exact.json"
+    seconds = [r["resources"]["gpu_seconds"] for r in block["rows"]]
+    peaks = [r["resources"]["max_memory_allocated"] for r in block["rows"]]
+    peaks = [p for p in peaks if p is not None]
+    block |= {
+        "status": "complete",
+        "n_complete": len(done),
+        "n_error": len(block["rows"]) - len(done),
+        "file": str(path),
+        "sha256": _write_json(path, payload),
+        "resources": {
+            "row_gpu_seconds_total": sum(seconds),
+            "row_gpu_hours_total": sum(seconds) / 3600.0,
+            "row_seconds_mean": sum(seconds) / max(len(seconds), 1),
+            "max_memory_allocated": max(peaks) if peaks else None,
+        },
+        "finished_at": utc(),
+    }
+    manifest["caps"][CHAIN_EXACT] = budget.record()
+    write_manifest(mpath, manifest)
+
+
+def validate_chain_exact(m):
+    """Schema errors of the manifest's chain_exact block (A5 amendment F6)."""
+    block, errors = m.get(CHAIN_EXACT), []
+    if block is None:
+        return errors
+    for k in (
+        "schema",
+        "status",
+        "objectives",
+        "masked_objectives",
+        "picks",
+        "masks",
+        "rows",
+        "n_rows",
+        "policy",
+        "cost_checks",
+    ):
+        if k not in block:
+            errors.append(f"chain_exact.{k} missing")
+    if block.get("schema") != CHAIN_EXACT_SCHEMA:
+        errors.append("chain_exact.schema version")
+    if "audit_disposition" not in m:
+        errors.append("chain_exact without audit_disposition (F6.1)")
+    if CHAIN_EXACT not in (m.get("caps") or {}):
+        errors.append("caps.chain_exact missing")
+    if not m.get("toy"):
+        if block.get("objectives") != list(CHAIN_EXACT_OBJECTIVES):
+            errors.append("chain_exact.objectives must be wikitext_nll and mmlu_gold_log_prob")
+        if len(block.get("picks") or []) != CHAIN_EXACT_N_PICKS:
+            errors.append(
+                f"chain_exact.picks: not the {CHAIN_EXACT_N_PICKS} registered chain picks"
+            )
+    masks = block.get("masks") or {}
+    for pick in block.get("picks") or []:
+        entry = masks.get(pick["pick_id"]) or {}
+        for o in CHAIN_EXACT_MASKED:
+            if (entry.get(o) or {}).get("presence") != 0:
+                errors.append(f"chain_exact.masks.{pick['pick_id']}.{o}: not masked")
+    rows = block.get("rows") or []
+    for i, row in enumerate(rows):
+        if row.get("status") == "complete":
+            missing = [k for k in CHAIN_ROW_KEYS if k not in row]
+            if missing:
+                errors.append(f"chain_exact.rows[{i}] missing {missing}")
+        elif row.get("status") != "error":
+            errors.append(f"chain_exact.rows[{i}]: status {row.get('status')!r}")
+        res = row.get("resources") or {}
+        for k in ("wall_seconds", "gpu_seconds", "max_memory_allocated"):
+            if k not in res:
+                errors.append(f"chain_exact.rows[{i}].resources.{k} missing")
+    if block.get("status") == "complete":
+        if len(rows) != block.get("n_rows"):
+            errors.append("complete chain_exact without every registered row")
+        for k in ("file", "sha256"):
+            if k not in block:
+                errors.append(f"chain_exact.{k} missing")
+    elif m.get("complete"):
+        errors.append("complete without a complete chain_exact stage")
+    return errors
+
+
 # ------------------------------------------------------------------------------- manifest
 
 
@@ -1886,6 +2550,7 @@ def validate_manifest(m):
         if k not in (m.get("caps") or {}):
             errors.append(f"caps.{k} missing")
     errors += validate_audit(m)
+    errors += validate_chain_exact(m)
     return errors
 
 
@@ -1909,8 +2574,12 @@ AUDIT_ROW_KEYS = (
 def validate_audit(m):
     """Schema errors of the manifest's predecessor audit (A5.8.1 per-objective audit)."""
     audit, errors = m.get("audit"), []
+    # A5 amendment F6.1: once recorded, the audit's disposition (infeasible at its cap; the
+    # approximation not used for chains) replaces its pass as a completion condition, and the
+    # chain_exact stage must be complete instead (validate_chain_exact)
+    f6 = "audit_disposition" in m
     if audit is None:
-        if m.get("complete"):
+        if m.get("complete") and not f6:
             errors.append("complete without a predecessor audit")
         return errors
     required = audit.get("required_objectives")
@@ -1954,7 +2623,7 @@ def validate_audit(m):
                 errors.append("audit.pairs: fewer than twenty identified predecessors")
             if "cost_estimate" not in audit:
                 errors.append("audit.cost_estimate missing")
-    if m.get("complete"):
+    if m.get("complete") and not f6:
         verdict = audit.get("verdict") or {}
         if audit.get("status") != "complete" or not verdict.get("passed"):
             errors.append("complete without a passing per-objective audit")
@@ -2011,6 +2680,7 @@ def new_manifest(args, ctx, panels_sha, code, attempts, attempt):
         "stages": list(args.stages),
         "max_gpu_hours": args.max_gpu_hours,
         "max_audit_gpu_hours": args.max_audit_gpu_hours,
+        "max_chain_exact_gpu_hours": args.max_chain_exact_gpu_hours,
         "vram_cap_bytes": VRAM_CAP_BYTES,
         "audit_impl": args.audit_impl,
         "max_len": MAX_LEN,
@@ -2045,6 +2715,21 @@ def new_manifest(args, ctx, panels_sha, code, attempts, attempt):
             "guard_recheck": "objectives skipped by the cost guard are re-checked at the end of the "
             "same run with the largest measured/estimated ratio and audited if they pass",
         },
+        "chain_exact": {
+            "amendment": f"{CHAIN_EXACT_AMENDMENT}, F6.2",
+            "schema": CHAIN_EXACT_SCHEMA,
+            "objectives": list(CHAIN_EXACT_OBJECTIVES),
+            "masked_objectives": list(CHAIN_EXACT_MASKED),
+            "n_picks": CHAIN_EXACT_N_PICKS,
+            "registered_cap_hours": CHAIN_EXACT_CAP_HOURS,
+            "order": "picks by edit id; per pick wikitext_nll then mmlu_gold_log_prob; the predecessor "
+            "state is loaded once per pick",
+            "cost_check": "measured: after the first row of each objective",
+            "per_row_guard": "used + per objective mean measured row seconds x remaining rows <= cap",
+            "kfac_at_predecessor": False,
+            "q_t": "base-factor",
+            "approximation_used_for_chains": False,
+        },
         "objectives": list(FIELD_OBJECTIVES),
         "microbatch": "one item per forward (one sequence, or the scorer's padded rows)",
         "limit": args.limit,
@@ -2077,23 +2762,43 @@ def new_manifest(args, ctx, panels_sha, code, attempts, attempt):
         "caps": {
             "fields": {"cap_hours": args.max_gpu_hours, "prior_hours": 0.0, "used_hours": 0.0},
             "audit": {"cap_hours": args.max_audit_gpu_hours, "prior_hours": 0.0, "used_hours": 0.0},
+            CHAIN_EXACT: {
+                "cap_hours": args.max_chain_exact_gpu_hours,
+                "prior_hours": 0.0,
+                "used_hours": 0.0,
+            },
         },
         "stages": {s: "pending" for s in STAGES},
         "fields": {},
     }
 
 
+def required_stages(manifest):
+    """Stages a complete G2 needs: the registered four, or after the F6.1 audit disposition the
+    fields, projectors, probe cache and chain_exact (the audit is recorded, not passed)."""
+    if "audit_disposition" in manifest:
+        return ("fields", "projectors", "probe", CHAIN_EXACT)
+    return STAGES
+
+
 def run_pipeline(ctx, out: Path, args, manifest):
     """Run the requested stages; returns the exit code and leaves the manifest on disk."""
     mpath = out / "g2_manifest.json"
-    prior = {k: manifest["caps"][k].get("used_hours", 0.0) for k in ("fields", "audit")}
+    caps = manifest["caps"]
+    prior = {
+        k: (caps.get(k) or {}).get("used_hours", 0.0) for k in ("fields", "audit", CHAIN_EXACT)
+    }
     budget = Budget("fields_and_cache_gpu_hours", args.max_gpu_hours, prior["fields"])
-    audit_budget = None
-    manifest["caps"]["fields"] = budget.record()
+    audit_budget = chain_budget = None
+    # F6: the fields-and-cache budget is charged only by attempts that run fields or the probe cache
+    # (G2 attempt 2 charged it 0.17 h for the audit stage's wall time)
+    fields_ran = bool({"fields", "probe"} & set(args.stages))
+    if fields_ran:
+        manifest["caps"]["fields"] = budget.record()
     write_manifest(mpath, manifest)
     status = "complete"
     try:
-        for stage in STAGES:
+        for stage in ALL_STAGES:
             if stage not in args.stages:
                 continue
             manifest["stages"][stage] = "running"
@@ -2104,11 +2809,16 @@ def run_pipeline(ctx, out: Path, args, manifest):
                 run_projectors(ctx, out, manifest, mpath)
             elif stage == "probe":
                 run_probe(ctx, out, manifest, budget, mpath)
-            else:
+            elif stage == "audit":
                 audit_budget = Budget("audit_gpu_hours", args.max_audit_gpu_hours, prior["audit"])
                 run_audit(ctx, out, manifest, audit_budget, mpath, args.audit_impl)
+            else:
+                chain_budget = Budget(
+                    "chain_exact_gpu_hours", args.max_chain_exact_gpu_hours, prior[CHAIN_EXACT]
+                )
+                run_chain_exact(ctx, out, manifest, chain_budget, mpath)
             manifest["stages"][stage] = "complete"
-        pending = [s for s in STAGES if manifest["stages"][s] != "complete"]
+        pending = [s for s in required_stages(manifest) if manifest["stages"].get(s) != "complete"]
         if pending:
             status = "incomplete"
             manifest["incomplete_reason"] = {"pending_stages": pending}
@@ -2143,9 +2853,12 @@ def run_pipeline(ctx, out: Path, args, manifest):
         if hard_stop is not None and status in ("complete", "incomplete"):
             # a failed or short objective is a hard stop whatever else completed or stopped
             status, manifest["hard_stop"] = "HARD_STOP", hard_stop
-        manifest["caps"]["fields"] = budget.record()
+        if fields_ran:
+            manifest["caps"]["fields"] = budget.record()
         if audit_budget is not None:
             manifest["caps"]["audit"] = audit_budget.record()
+        if chain_budget is not None:
+            manifest["caps"][CHAIN_EXACT] = chain_budget.record()
         manifest["status"], manifest["complete"] = status, status == "complete"
         manifest["resources_summary"] = resource_summary(manifest)
         manifest["run"]["finished_at"] = utc()
@@ -2338,6 +3051,18 @@ def toy_zoo(root: Path, model, n_chains=3, depth=8, seed=1):
             )
             parent = eid
         selected.append({"edit_id": eid, "family": "chain", "predecessor_id": components[-2]["id"]})
+    # one root chain pick: its actual predecessor is the base (as two of the ten registered picks)
+    eid = f"{n_chains:x}0" + "0" * 14
+    params = dict(model.named_parameters())
+    delta = {n: 0.02 * torch.randn(params[n].shape, generator=g) for n in targets[::3]}
+    d = root / eid
+    d.mkdir(parents=True, exist_ok=True)
+    save_file({k: v.contiguous() for k, v in delta.items()}, d / "delta.safetensors")
+    (d / "edit.json").write_text(json.dumps({"id": eid, "delta_format": "dense"}))
+    components.append(
+        {"id": eid, "parent_id": None, "bytes_present": True, "bytes_via_alias": None}
+    )
+    selected.append({"edit_id": eid, "family": "chain", "predecessor_id": "base"})
     return {"registered": {"selected": selected}}, components
 
 
@@ -2372,6 +3097,8 @@ def build_toy_context(out: Path, limit=None):
     for p in pairs:
         p["predecessor_dir"] = str(out / "toy_zoo" / p["predecessor_bytes"])
         p["successor_dir"] = str(out / "toy_zoo" / p["successor_bytes"])
+    picks, picks_record = chain_exact_picks(selection, components)
+    attach_pick_dirs(picks, out / "toy_zoo")
     state = model.state_dict()
     return Context(
         model,
@@ -2393,6 +3120,8 @@ def build_toy_context(out: Path, limit=None):
         },
         toy=True,
         extra={"panels_doc": doc},
+        chain_picks=picks,
+        chain_picks_record=picks_record,
     )
 
 
@@ -2409,6 +3138,12 @@ def parse_args(argv=None):
     p.add_argument("--stages", default=",".join(STAGES))
     p.add_argument("--max-gpu-hours", type=float, default=2.0, help="fields + probe cache cap")
     p.add_argument("--max-audit-gpu-hours", type=float, default=1.0, help="predecessor audit cap")
+    p.add_argument(
+        "--max-chain-exact-gpu-hours",
+        type=float,
+        default=CHAIN_EXACT_CAP_HOURS,
+        help="chain_exact cap (F6.2: 2.2 GPU-h; never higher)",
+    )
     p.add_argument("--audit-impl", choices=("gradient", "pinned"), default="gradient")
     p.add_argument("--device", default="cuda")
     p.add_argument("--zoo", default=str(ROOT / "data/zoo/qwen3.5-0.8b"))
@@ -2428,8 +3163,10 @@ def parse_args(argv=None):
     p.add_argument("--toy-objectives", default=None, help="toy only: comma list of objectives")
     a = p.parse_args(argv)
     a.stages = tuple(s for s in a.stages.split(",") if s)
-    if set(a.stages) - set(STAGES):
-        p.error(f"unknown stages: {sorted(set(a.stages) - set(STAGES))}")
+    if set(a.stages) - set(ALL_STAGES):
+        p.error(f"unknown stages: {sorted(set(a.stages) - set(ALL_STAGES))}")
+    if not a.toy and a.max_chain_exact_gpu_hours > CHAIN_EXACT_CAP_HOURS:
+        p.error(f"--max-chain-exact-gpu-hours cannot exceed the registered {CHAIN_EXACT_CAP_HOURS}")
     if a.toy:
         if a.out is None:
             p.error("--toy needs --out")
@@ -2451,6 +3188,12 @@ def main(argv=None, context_builder=None):
     args = parse_args(argv)
     out = Path(args.out)
     mpath = out / "g2_manifest.json"
+    if not args.toy and "audit" in args.stages:  # A5 amendment F6.1: the audit is not run again
+        reason = (
+            "F6.1: the registered predecessor audit is recorded as run and infeasible at its cap"
+        )
+        print(json.dumps({"status": "refused", "reason": reason}), file=sys.stderr)
+        return EXIT["refused"]
     attempts, attempt, previous = [], 1, None
     if mpath.exists():
         if not args.resume:
@@ -2460,6 +3203,10 @@ def main(argv=None, context_builder=None):
             )
             return EXIT["refused"]
         previous = json.loads(mpath.read_text())
+        if "audit" in args.stages and "audit_disposition" in previous:
+            reason = "F6.1: the audit disposition is recorded; the audit is not run again"
+            print(json.dumps({"status": "refused", "reason": reason}), file=sys.stderr)
+            return EXIT["refused"]
         if previous.get("status") in ("HARD_STOP", "GATE_FAILURE"):
             reason = f"previous attempt ended {previous['status']}: G2 stops pending an amendment"
             print(json.dumps({"status": "refused", "reason": reason}), file=sys.stderr)
@@ -2475,6 +3222,7 @@ def main(argv=None, context_builder=None):
                     "stages",
                     "incomplete_reason",
                     "audit",
+                    CHAIN_EXACT,
                 )
             }
         ]
@@ -2526,7 +3274,14 @@ def main(argv=None, context_builder=None):
                 file=sys.stderr,
             )
             return EXIT["refused"]
-        for key in ("fields", "projectors", "probe_cache", "audit"):
+        for key in (
+            "fields",
+            "projectors",
+            "probe_cache",
+            "audit",
+            CHAIN_EXACT,
+            "audit_disposition",
+        ):
             if key in previous:
                 manifest[key] = previous[key]
         for stage, state in previous["stages"].items():
@@ -2535,7 +3290,13 @@ def main(argv=None, context_builder=None):
         for key in ("hard_stop", "gate_failure"):
             if key in previous:
                 manifest[key] = previous[key]
-        manifest["caps"] = previous["caps"]
+        # a copy: the attempt history keeps the previous attempt's caps (G2 attempt 2's history entry
+        # for attempt 1 shared this object and shows attempt 2's values)
+        manifest["caps"] = copy.deepcopy(previous["caps"])
+        manifest["caps"].setdefault(
+            CHAIN_EXACT,
+            {"cap_hours": args.max_chain_exact_gpu_hours, "prior_hours": 0.0, "used_hours": 0.0},
+        )
         verified, bad = verify_completed_stages(out, manifest, args.stages)
         if bad:
             reason = f"completed artefacts no longer match their hashes: {bad}"

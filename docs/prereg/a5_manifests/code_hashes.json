@@ -99,7 +99,7 @@
   },
   "scripts/g2_fields.py": {
    "role": "G2 driver: fields, chart projectors, probe cache, predecessor audit",
-   "sha256": "cb1835181ae0d8202edcaa72586e38dcc3a8822ce6127f104e5c123a86838723"
+   "sha256": "6f14a2ac4c0dd9b2dc6b2ba2e022ec6cbe98a75e840dd414804d1febf3fb9f93"
   },
   "scripts/g2_fields.sh": {
    "role": "G2 launcher",
@@ -270,7 +270,7 @@
    "sha256": "85d27f488d489934e703bc77336614ef7882120f39c0de6ec346264a99ac5dcc"
   }
  },
- "git_sha": "8f81ab0d9f493db6c5e86ff12d17b8a55efea0c1",
+ "git_sha": "10ac9c5584ed8dcb640e5eb477fba83d157da7e4",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

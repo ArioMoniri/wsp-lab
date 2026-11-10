@@ -212,7 +212,7 @@ def test_real_run_refuses_wrong_panels_hash_before_any_work(tmp_path, monkeypatc
     monkeypatch.setattr(g2, "build_real_context", boom)
     out = tmp_path / "g2"
     argv = ["--out", str(out), "--panels-sha256", "0" * 64, "--allow-code-drift"]
-    assert g2.main(argv) == g2.EXIT["refused"]
+    assert g2.main([*argv, "--stages", "fields"]) == g2.EXIT["refused"]
     assert not (out / "g2_manifest.json").exists()
 
 
@@ -223,6 +223,14 @@ def test_cli_guards():
         g2.parse_args(["--panels-sha256", "a" * 64, "--limit", "3"])  # no coverage cut
     with pytest.raises(SystemExit):
         g2.parse_args(["--toy", "--out", str(g2.ROOT / "data/runs/g2_toy")])  # toy never in data/
+    real = ["--panels-sha256", "a" * 64]
+    assert g2.parse_args(real).max_chain_exact_gpu_hours == g2.CHAIN_EXACT_CAP_HOURS == 2.2
+    with pytest.raises(SystemExit):
+        g2.parse_args([*real, "--max-chain-exact-gpu-hours", "2.3"])  # never above the F6.2 cap
+    with pytest.raises(SystemExit):
+        g2.parse_args([*real, "--stages", "chain_exact,bogus"])
+    assert g2.parse_args([*real, "--stages", "chain_exact"]).stages == ("chain_exact",)
+    assert g2.parse_args(["--toy", "--out", "/tmp/x"]).stages == g2.STAGES  # default unchanged
 
 
 # --------------------------------------------------------------------- scorer conventions
@@ -1079,3 +1087,308 @@ def test_clamp_summary_without_clamps():
     summary = g2.clamp_summary({"m": {"A_audit": audit, "G_audit": audit}})
     assert summary["n_eigenvalues_clamped"] == 0 and summary["most_negative_factor"] is None
     assert summary["n_eigenvalues"] == 6 and summary["most_negative_ratio"] == 0.0
+
+
+# ------------------------------------------------------- chain_exact (A5 amendment F6, 11 Nov 2026)
+
+CHAIN = ("wikitext_nll", "mmlu_gold_log_prob")
+MASKED = ("hellaswag_gold_char_log_likelihood", "refusal_margin_harmful", "refusal_margin_harmless")
+
+
+def chain_ctx(ctx):
+    return with_objectives(ctx, CHAIN)
+
+
+def test_chain_exact_picks_resolve_predecessors_aliases_and_roots():
+    rows = [
+        {"id": "r1", "parent_id": None, "bytes_present": True, "bytes_via_alias": None},
+        {"id": "a2", "parent_id": "r1", "bytes_present": False, "bytes_via_alias": "h2"},
+        {"id": "p3", "parent_id": "a2", "bytes_present": True, "bytes_via_alias": None},
+        {"id": "root", "parent_id": None, "bytes_present": True, "bytes_via_alias": None},
+    ]
+    selection = {
+        "registered": {
+            "selected": [
+                {"edit_id": "p3", "family": "chain", "predecessor_id": "a2"},
+                {"edit_id": "root", "family": "chain", "predecessor_id": "base"},
+                {"edit_id": "L", "family": "lora_sft", "predecessor_id": "base"},
+            ]
+        }
+    }
+    picks, meta = g2.chain_exact_picks(selection, rows)
+    assert [p["pick_id"] for p in picks] == ["p3", "root"]  # chain only, sorted; LoRA unaffected
+    assert picks[0]["predecessor_bytes"] == "h2" and picks[0]["predecessor_via_alias"]
+    assert picks[1]["predecessor_is_base"] and picks[1]["predecessor_bytes"] is None
+    assert meta["n_picks"] == 2 and meta["n_base_predecessor"] == 1
+    bad = copy.deepcopy(selection)
+    bad["registered"]["selected"][0]["predecessor_id"] = "r1"  # not the lineage parent
+    with pytest.raises(ValueError, match="differs from lineage"):
+        g2.chain_exact_picks(bad, rows)
+
+
+def test_chain_exact_picks_on_the_registered_selection():
+    sel = json.loads((g2.MANIFESTS / "selection.json").read_text())
+    comps = [
+        json.loads(x) for x in (g2.MANIFESTS / "components.jsonl").read_text().splitlines() if x
+    ]
+    picks, meta = g2.chain_exact_picks(sel, comps)
+    assert meta["n_picks"] == g2.CHAIN_EXACT_N_PICKS == 10 and meta["n_base_predecessor"] == 2
+    assert sum(p["predecessor_via_alias"] for p in picks) == 2
+
+
+def test_chain_exact_stage_rows_masks_artefacts_and_manifest(toy_ctx, tmp_path):
+    ctx = chain_ctx(toy_ctx)
+    before = {n: p.detach().clone() for n, p in ctx.model.named_parameters()}
+    code, out, manifest = run_main(tmp_path, ctx, "--stages", "chain_exact")
+    assert code == g2.EXIT["incomplete"] and g2.validate_manifest(manifest) == []
+    assert manifest["incomplete_reason"]["pending_stages"] == ["fields", "projectors", "probe"]
+    assert manifest["stages"]["chain_exact"] == "complete"
+    block = manifest["chain_exact"]
+    picks = [p["pick_id"] for p in ctx.chain_picks]
+    assert len(picks) == 4 and block["n_rows"] == 8 == block["n_complete"]
+    assert [(r["pick_id"], r["objective"]) for r in block["rows"]] == [
+        (p, o) for p in picks for o in CHAIN
+    ]
+    assert block["objectives"] == list(CHAIN) and block["masked_objectives"] == list(MASKED)
+    for p in picks:
+        assert all(block["masks"][p][o]["presence"] == 0 for o in MASKED)
+        assert all(block["masks"][p][o]["presence"] == 1 for o in CHAIN)
+        assert all(block["masks"][p][o]["q_t"] == "base-factor" for o in CHAIN)
+    # F6.1: the audit's disposition is recorded and the approximation is not used for chains
+    disposition = manifest["audit_disposition"]
+    assert disposition["approximation_used_for_chains"] is False
+    assert disposition["amendment"].endswith("F6.1")
+    # measured first-row check after the first row of each objective
+    assert [c["after_first_row_of"] for c in block["cost_checks"]] == list(CHAIN)
+    assert all(c["within_cap"] and c["cap_hours"] == 2.2 for c in block["cost_checks"])
+    root_pick = next(r for r in block["rows"] if r["predecessor_is_base"])
+    assert root_pick["displacement_sha256"] == rf._hash({})
+    for row in block["rows"]:
+        d = out / "chain_exact" / row["pick_id"] / row["objective"]
+        assert row["dir"] == str(d) and row["files"]["tensors.pt"] == g2.sha256_file(
+            d / "tensors.pt"
+        )
+        art = rf.FieldArtifact.load(d)
+        assert art.factors == {} and list(art.gradients) == [row["objective"]]
+        assert (
+            art.identity["anchor"] == "actual predecessor" and art.identity["q_t"] == "base-factor"
+        )
+        assert art.identity["pick"]["pick_id"] == row["pick_id"]
+        assert rf._hash(art.identity) == row["identity_sha256"]
+        assert rf._hash(art.content_hashes) == row["content_hashes_sha256"]
+        assert len(art.gradients[row["objective"]]) == row["n_tensors"] > 0
+        res = row["resources"]
+        assert res["gpu_seconds"] == res["wall_seconds"] >= 0 and "max_memory_allocated" in res
+    first = block["rows"][0]
+    assert first["resources"]["state_load_seconds"] >= 0
+    assert block["rows"][1]["resources"]["state_load_seconds"] == 0.0  # one load per pick
+    summary = json.loads((out / "chain_exact" / "chain_exact.json").read_text())
+    assert block["sha256"] == g2.sha256_file(out / "chain_exact" / "chain_exact.json")
+    assert summary["schema"] == g2.CHAIN_EXACT_SCHEMA and len(summary["rows"]) == 8
+    assert manifest["caps"]["chain_exact"]["cap_hours"] == 2.2
+    for n, p in ctx.model.named_parameters():  # the model is back at the base
+        assert torch.equal(p, before[n])
+
+
+def test_chain_exact_gradient_is_the_pinned_gradient_at_the_predecessor(toy_ctx, tmp_path):
+    ctx = chain_ctx(toy_ctx)
+    _, _, manifest = run_main(tmp_path, ctx, "--stages", "chain_exact")
+    pick = next(p for p in ctx.chain_picks if not p["predecessor_is_base"])
+    obj = next(o for o in ctx.objectives if o.spec.name == "wikitext_nll")
+    row = next(
+        r
+        for r in manifest["chain_exact"]["rows"]
+        if r["pick_id"] == pick["pick_id"] and r["objective"] == "wikitext_nll"
+    )
+    base = {}
+    state = g2._chain_state(ctx, pick, base)
+    try:
+        field = rf.collect_field(
+            ctx.model,
+            ctx.tokenizer,
+            [obj.spec],
+            {obj.spec.panel_id: obj.panel},
+            ctx.supported,
+            "cpu",
+        )
+    finally:
+        g2._restore(ctx, base)
+    art = rf.FieldArtifact.load(row["dir"])
+    grads = art.gradients["wikitext_nll"]
+    assert set(grads) == set(state["increment"])
+    for n, g in grads.items():
+        torch.testing.assert_close(g, field.gradients["wikitext_nll"][n], rtol=1e-5, atol=1e-8)
+    exact = sum((grads[n] * d).sum().item() for n, d in state["increment"].items())
+    assert row["exact_contraction"] == pytest.approx(exact)
+    assert row["increment_sha256"] == state["increment_sha256"]
+    assert row["predecessor_state_sha256"] == state["predecessor_state_sha256"]
+
+
+def clocked_chain(monkeypatch, row_seconds):
+    """Real chain_exact rows on a fake clock that advances only inside a row by row_seconds(i)."""
+    clock, calls = {"t": 0.0}, []
+    original = g2._chain_row
+    monkeypatch.setattr(g2, "now", lambda: clock["t"])
+
+    def patched(ctx, out, objective, pick, state, budget, code):
+        row = original(ctx, out, objective, pick, state, budget, code)
+        clock["t"] += row_seconds(len(calls))
+        calls.append((pick["pick_id"], objective.spec.name))
+        return row
+
+    monkeypatch.setattr(g2, "_chain_row", patched)
+    return calls
+
+
+def test_chain_exact_first_row_check_stops_and_keeps_the_row(toy_ctx, tmp_path, monkeypatch):
+    ctx = chain_ctx(toy_ctx)
+    # 10 s rows against 0.01 GPU-h (36 s): 10 + 3 x 10 + 4 x 10 > 36 after the first row
+    calls = clocked_chain(monkeypatch, lambda i: 10.0)
+    argv = ("--stages", "chain_exact", "--max-chain-exact-gpu-hours", "0.01")
+    code, _, manifest = run_main(tmp_path, ctx, *argv)
+    assert code == g2.EXIT["incomplete"] and len(calls) == 1
+    reason = manifest["incomplete_reason"]
+    assert (
+        reason["cap"] == "chain_exact_gpu_hours_estimate"
+        and "first row of wikitext_nll" in (reason["where"])
+    )
+    block = manifest["chain_exact"]
+    assert block["status"] == "stopped" and manifest["stages"]["chain_exact"] == "stopped"
+    (check,) = block["cost_checks"]
+    assert check["measured_first_row_seconds"] == pytest.approx(10.0)
+    assert check["remaining_rows"] == {"wikitext_nll": 3, "mmlu_gold_log_prob": 4}
+    assert check["estimated_total_hours"] == pytest.approx(80.0 / 3600) and not check["within_cap"]
+    assert len(block["rows"]) == 1 and block["rows"][0]["status"] == "complete"
+    assert block["masks"][ctx.chain_picks[1]["pick_id"]]["wikitext_nll"]["presence"] == "pending"
+    assert g2.validate_manifest(manifest) == []
+
+
+def test_chain_exact_per_row_guard_then_resume_without_rerun(toy_ctx, tmp_path, monkeypatch):
+    ctx = chain_ctx(toy_ctx)
+    seconds = [1.0, 1.0, 20.0]
+    calls = clocked_chain(monkeypatch, lambda i: seconds[i] if i < len(seconds) else 1.0)
+    argv = ("--stages", "chain_exact", "--max-chain-exact-gpu-hours", "0.01")
+    code, out, first = run_main(tmp_path, ctx, *argv)
+    # before row 4: 22 s used + 2 x 10.5 s (WikiText mean) + 3 x 1 s (MMLU) = 46 s > 36 s
+    assert code == g2.EXIT["incomplete"] and len(calls) == 3
+    reason = first["incomplete_reason"]
+    assert reason["cap"] == "chain_exact_gpu_hours_row_guard" and "(row 4)" in reason["where"]
+    assert reason["used"] == pytest.approx(46.0 / 3600)
+    assert [c["within_cap"] for c in first["chain_exact"]["cost_checks"]] == [True, True]
+    done = {(r["pick_id"], r["objective"]) for r in first["chain_exact"]["rows"]}
+    # an interrupted row directory without a manifest row is kept aside, not reused
+    nxt = ctx.chain_picks[1]["pick_id"]
+    stale = out / "chain_exact" / nxt / "mmlu_gold_log_prob"
+    stale.mkdir(parents=True)
+    (stale / "partial").write_text("x")
+    seconds[:] = []
+    code, out, manifest = run_main(tmp_path, ctx, "--resume", "--stages", "chain_exact")
+    assert code == g2.EXIT["incomplete"]  # fields/projectors/probe never ran in this toy
+    assert manifest["attempt"] == 2 and manifest["stages"]["chain_exact"] == "complete"
+    assert len(calls) == 8 and set(calls[3:]).isdisjoint(done)  # completed rows never re-run
+    block = manifest["chain_exact"]
+    assert block["n_complete"] == 8 and len(block["cost_checks"]) == 2
+    assert [r["attempt"] for r in block["rows"]] == [1, 1, 1, 2, 2, 2, 2, 2]
+    (moved,) = block["stale_dirs"]
+    assert moved["to"].endswith("mmlu_gold_log_prob.stale-attempt2")
+    assert (stale.parent / "mmlu_gold_log_prob.stale-attempt2" / "partial").exists()
+    assert manifest["caps"]["chain_exact"]["prior_hours"] == pytest.approx(22.0 / 3600)
+    assert manifest["attempts"][0]["caps"]["chain_exact"]["used_hours"] == pytest.approx(
+        22.0 / 3600
+    )
+    assert manifest["caps"]["chain_exact"]["used_hours"] == pytest.approx(27.0 / 3600)  # 22 + 5 x 1
+    assert manifest["caps"]["fields"]["used_hours"] == 0.0  # not charged for chain_exact time
+    assert manifest["attempts"][0]["chain_exact"]["status"] == "stopped"
+    assert g2.validate_manifest(manifest) == []
+    # a completed stage is verified on a further resume and never re-run; tampering refuses
+    code, out, again = run_main(tmp_path, ctx, "--resume", "--stages", "chain_exact")
+    assert len(calls) == 8 and again["chain_exact"]["rows"] == block["rows"]
+    path = out / "chain_exact" / ctx.chain_picks[0]["pick_id"] / "wikitext_nll" / "tensors.pt"
+    path.write_bytes(path.read_bytes() + b"x")
+    with pytest.raises(ValueError, match="no longer match"):
+        run_main(tmp_path, ctx, "--resume", "--stages", "chain_exact")
+
+
+def test_chain_exact_failed_row_is_masked_and_not_retried(toy_ctx, tmp_path, monkeypatch):
+    ctx = chain_ctx(toy_ctx)
+    bad = ctx.chain_picks[2]["pick_id"]
+    original = g2.exact_gradient
+
+    def failing(model, tokenizer, spec, panel, device, names):
+        if spec.name == "mmlu_gold_log_prob" and failing.pick == bad:
+            raise ValueError("nonfinite gradient: toy")
+        return original(model, tokenizer, spec, panel, device, names)
+
+    original_state = g2._chain_state
+
+    def track(ctx_, pick, base):
+        failing.pick = pick["pick_id"]
+        return original_state(ctx_, pick, base)
+
+    monkeypatch.setattr(g2, "exact_gradient", failing)
+    monkeypatch.setattr(g2, "_chain_state", track)
+    _, _, manifest = run_main(tmp_path, ctx, "--stages", "chain_exact")
+    block = manifest["chain_exact"]
+    assert block["status"] == "complete" and block["n_error"] == 1 and block["n_complete"] == 7
+    assert block["masks"][bad]["mmlu_gold_log_prob"]["presence"] == 0
+    assert block["masks"][bad]["wikitext_nll"]["presence"] == 1
+    assert g2.validate_manifest(manifest) == []
+
+
+def test_f6_complete_g2_needs_chain_exact_and_refuses_the_audit(toy_ctx, tmp_path, monkeypatch):
+    ctx = chain_ctx(toy_ctx)
+    code, out, first = run_main(tmp_path, ctx, "--stages", "fields,projectors,probe")
+    assert code == g2.EXIT["incomplete"] and first["incomplete_reason"]["pending_stages"] == [
+        "audit"
+    ]
+    monkeypatch.setattr(g2, "run_fields", lambda *a, **k: pytest.fail("fields re-run"))
+    code, out, manifest = run_main(tmp_path, ctx, "--resume", "--stages", "chain_exact")
+    assert code == g2.EXIT["complete"] and manifest["complete"] and manifest["status"] == "complete"
+    assert manifest["stages"]["audit"] == "pending" and "audit_disposition" in manifest
+    assert manifest["audit_disposition"]["audit_status"] is None
+    assert g2.validate_manifest(manifest) == []
+    # the WikiText/MMLU base fields calibrate the MMLU estimate before its first row
+    (check, _) = manifest["chain_exact"]["cost_checks"]
+    assert check["row_seconds_source"]["mmlu_gold_log_prob"].startswith("field-based")
+    # after F6.1 the audit stage is refused (toy and real alike)
+    resume = ["--toy", "--out", str(out), "--resume", "--stages", "audit"]
+    assert g2.main(resume, context_builder=lambda o, n: ctx) == g2.EXIT["refused"]
+    broken = copy.deepcopy(manifest)
+    broken["chain_exact"]["masks"][ctx.chain_picks[0]["pick_id"]]["refusal_margin_harmful"] = {
+        "presence": 1
+    }
+    broken["chain_exact"]["status"] = "stopped"
+    errors = g2.validate_manifest(broken)
+    assert any("not masked" in e for e in errors)
+    assert "complete without a complete chain_exact stage" in errors
+
+
+def test_real_run_refuses_the_audit_stage_after_f6(tmp_path, monkeypatch):
+    monkeypatch.setattr(g2, "code_record", lambda: pytest.fail("no work before the refusal"))
+    out = tmp_path / "g2"
+    argv = ["--out", str(out), "--panels-sha256", "0" * 64, "--resume", "--stages", "audit"]
+    assert g2.main(argv) == g2.EXIT["refused"] and not out.exists()
+
+
+def test_chain_cost_projection_uses_measured_means_then_field_estimates():
+    fields = fields_with_wall({"wikitext_nll": 1648.6, "mmlu_gold_log_prob": 613.4})
+    names = list(CHAIN)
+    proj = g2.chain_cost_projection(
+        fields,
+        names,
+        {"wikitext_nll": 9, "mmlu_gold_log_prob": 10},
+        {"wikitext_nll": [400.0]},
+        0.1,
+        2.2,
+    )
+    ratio = 400.0 / (0.5 * 1648.6)
+    assert proj["ratios"]["wikitext_nll"] == pytest.approx(ratio)
+    assert proj["row_seconds"]["mmlu_gold_log_prob"] == pytest.approx(0.5 * 613.4 * ratio)
+    total = 0.1 + (9 * 400.0 + 10 * 0.5 * 613.4 * ratio) / 3600
+    assert proj["estimated_total_hours"] == pytest.approx(total) and proj["within_cap"]
+    over = g2.chain_cost_projection(
+        fields, names, {"wikitext_nll": 19}, {"wikitext_nll": [420.0]}, 0, 2.2
+    )
+    assert (
+        over["estimated_total_hours"] == pytest.approx(19 * 420 / 3600) and not over["within_cap"]
+    )
