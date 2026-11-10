@@ -66,3 +66,44 @@
 LFM3-1.7B (#1), DeepSeek-V4.1-Flash-1017, Qwen3.8-27B (8.0M downloads), Nanbeige4.3-33B, and a dense
 ecosystem of `heretic`/`abliterated` variants (huihui-ai, 0bserverx, DavidAU, SC117, orcarouter).
 See `docs/MODELS.md`.
+
+
+## 10 Nov 2026 news amendment — six items and limits
+
+Source: council round-3 reports and [chair synthesis](council/2026-11-10/SYNTHESIS.md).
+The earlier notes remain archival; the following corrections govern this brief.
+
+1. [WeightLoop](https://arxiv.org/abs/2611.07319): feedback-validated,
+   rebuilt-from-base predictor updates motivate H5's reversible critic contract;
+   8/8 versus random and 7/8 versus original are assay-ranking results, not
+   held-out LLM delta-to-benchmark prediction (verified entry `weightloop2026`).
+2. [Neural Thickets](https://arxiv.org/abs/2603.12228): scale-dependent random-edit
+   expert density and select/top-K-ensemble search motivate a capped 4B diagnostic;
+   they do not establish predictability of Qwen3.5-0.8B trained edit effects
+   (`neuralthickets2026`).
+3. [LoL](https://arxiv.org/abs/2410.04207): property prediction from low-rank
+   factors warrants descriptive L/R/K/S secondaries; ARC-C R² .987 versus .983
+   from singular values alone does not isolate orientation information, and the
+   brief's “50,000 times faster” claim is withdrawn (`lol2024`).
+4. Blog debate: [MindStudio](https://www.mindstudio.ai/blog/weight-space-programming-overhyped-debate),
+   [csinva](https://github.com/csinva/weight-space-programming-autoresearch),
+   [MaceTenth](https://github.com/MaceTenth/weight-space-programming-replication),
+   [Wikipedia](https://en.wikipedia.org/wiki/Weight-space_programming), plus
+   [the original blog](https://rikiyat.github.io/blog/weight-space-programming/),
+   motivate explicit tool-access flags and matched random best-of-N; an unpaired
+   6× comparison, Gemma failure and small-network replication do not establish
+   general LLM weight readability. Evolving repository descriptions are not
+   universal impossibility results; the González/Polaris attribution remains
+   unverified (round3-editor §1).
+5. [Neural Field Adaptation](https://arxiv.org/abs/2512.01759): low-rank
+   representations support reconstruction/generation, not our behavioral-response
+   endpoint; no primary-programme change (round3-world-model §1).
+6. [Proxy-metric forecasting](https://arxiv.org/abs/2605.18607) and
+   [weight forecasting](https://arxiv.org/abs/2508.05059) use output statistics or
+   predict weights; neither supplies our held-out delta-to-benchmark test, and
+   this limited search cannot establish absence of relevant 2026 work.
+
+Inventory correction (round3-representation §2): no chain LoRA factors are stored;
+chain steps are dense snapshots. Stored adapters number 121 lora_sft + 1 heretic_ara.
+The compact head is about 1.6k parameters; learned frames add parameters, not labels.
+No empirical new programme result is claimed here.

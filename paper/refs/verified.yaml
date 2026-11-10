@@ -881,3 +881,58 @@
   location: Abstract
   status: verified
   source_file: data/papers/2411.00640.txt
+- key: neuralthickets2026
+  arxiv_id: '2603.12228'
+  title: 'Neural Thickets: Diverse Task Experts Are Dense Around Pretrained Weights'
+  authors:
+  - Yulu Gan
+  - Phillip Isola
+  year: 2026
+  venue: arXiv:2603.12228
+  claim_we_make: Random parameter search selects top-K candidates and ensembles their predictions; the
+    study concerns expert density rather than edit-effect prediction.
+  supporting_excerpt: parameter perturbations at random, selects the top K K , and ensembles predictions
+    via majority vote.
+  location: Abstract
+  status: verified
+  source_file: paper/refs/sources/2603.12228.txt
+- key: lol2024
+  arxiv_id: '2410.04207'
+  title: 'Learning on LoRAs: GL-Equivariant Processing of Low-Rank Weight Spaces for Large Finetuned Models'
+  authors:
+  - Theo Putterman
+  - Derek Lim
+  - Yoav Gelberg
+  - Stefanie Jegelka
+  - Haggai Maron
+  year: 2024
+  venue: arXiv:2410.04207
+  claim_we_make: LoL predicts downstream properties from low-rank weights; Table 5 reports ARC-C R-squared
+    .987 for GL-net and .983 for MLP + SVD.
+  supporting_excerpt: LoL architectures are capable of processing low rank weight decompositions to predict
+    CLIP score, finetuning data attributes, finetuning data membership, and accuracy on downstream tasks.
+  location: Abstract; Table 5 for numeric comparison
+  status: verified
+  source_file: paper/refs/sources/2410.04207.txt
+- key: weightloop2026
+  arxiv_id: '2611.07319'
+  title: 'WeightLoop: Weight-Space Programming with Experimental Feedback'
+  authors:
+  - Mengran Li
+  - Bo Li
+  - Weijing Zhao
+  - Chengyang Zhang
+  - Boyu Zhang
+  - Jinfeng Xu
+  - Zelin Zang
+  - Victor C. M. Leung
+  - Stan Z. Li
+  year: 2026
+  venue: arXiv:2611.07319
+  claim_we_make: Feedback-validated predictor updates improve offline ranking in seven of eight settings
+    against the original and all eight versus random edits.
+  supporting_excerpt: targeted edits improve mean ranking utility in seven of eight endpoint–budget settings
+    (all eight versus random edits)
+  location: Abstract
+  status: verified
+  source_file: paper/refs/sources/2611.07319.txt
