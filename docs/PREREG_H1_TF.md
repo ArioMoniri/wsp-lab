@@ -2201,3 +2201,70 @@ package from parent `c9d1873`. Every regenerated or copied package file was byte
 | `tests/test_a5_simulation.py` | `c69a912b7deb1767918452688d862bd076a6933afbe4020b314da27472ed4096` | changed 2026-11-11 (F7); old `721a92c21adaf39d0b5c317ee5ba8e6c60a2b4f63ba1b837fc3f21272cf65072` |
 | `docs/prereg/a5_manifests/power/registered_donors.json` | `6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5` | new 2026-11-11 (F7.1; not a code-map member) |
 | `docs/prereg/a5_manifests/power/report.json` | `ff46de30fa8e4ff97a4034e8bdef78cb19bc49662073523500a43c773b55845a` | new 2026-11-11 (F7 results; not a code-map member) |
+
+#### A5 amendment F8 (11 Nov 2026, before any G3 outcome): descriptive external-edit and family-transfer panels; H5 scripted arm
+
+This block is appended; earlier text is not rewritten. It records the chair decision of council round 4
+(`docs/council/2026-11-11/SYNTHESIS.md`, member reports in the same directory) on the weight-space editing papers and replications
+that appeared after round 3. It was written while Part A staging was at 20 of 40 edits and before any G3, rotation, ladder or sealed
+outcome had been read. It adds nothing to, and removes nothing from, the registered arms (A5.4), the Part A selection (A5.1.2),
+the decision rules (A5.5), the line-stop rule (F5.5) or any seed, cap or pin. Board A reviews F8 before any F8 entry is scored;
+Part A scoring does not wait on F8.
+
+**F8.1 — external-edit panel (F8-E), descriptive.** A panel of weight edits of the pinned base made by other groups and selected on
+their endpoints, never on ours. Entries: (i) the released Astra two-tensor patch, replayed exactly as one base-root zoo entry holding
+both dense deltas, hash-pinned against the pinned base revision; the entry fails closed if any tensor outside the claimed two
+differs from the pinned base; (ii) published linear-programme edits only if their bytes or a complete recipe (objective, constraints,
+inputs) are public; (iii) the aiXiv difference-of-means recipe re-estimated on frozen development inputs, labelled a
+reconstruction. The arXiv 2611.09382 column edit enters only if its direction u is released. Source clusters are declared before
+scoring; the loop-removal family (Astra, aiXiv, LP) is one component. Entries whose bytes are unavailable are listed as missing,
+never substituted.
+
+**F8.2 — family-transfer panel (F8-F), descriptive.** Edits of the pinned base in families the zoo lacks, constructed from
+development-only inputs with no endpoint selection: a Wanda-initialised deletion mask on gate projections at < 0.05 % of entries;
+a count-matched random gate deletion; a training-free task-vector rank-one edit (arXiv 2609.09054) on o_proj; a rank-one
+down-projection edit from residual-activation contrasts on a non-scored split (the Concept Country construction). Each entry
+carries the registered rotation (A5.3) and the ladder s ∈ {0.25, 0.5, 1}. SWEET-style suppressions (arXiv 2611.10974) are deferred
+until their counterfactual generation is priced; learned deletion masks (arXiv 2611.10866) are excluded as an unpriced purchase.
+Construction is capped at 0.5 GPU-h under the stop-and-reprice rule.
+
+**F8.3 — frozen predictions.** Before any F8 entry is scored, a dated manifest records for every entry: the realised bf16 delta
+hashes and the A5.3.3 effective-rank audit; the field's first-order term a = ⟨g, D⟩ and its sign at each s; sign⟨g, D − R⟩ for the
+rotation R; the curvature term q and κ = q/|a|; the descriptive quadratic-sign forecast (sign flip at s* = |a|/q); the chart
+prediction; abstentions; and a minimum surviving-entry fraction after bf16 rounding (an entry whose realised change is zero counts as
+a disagreement, A5.3). The field and chart used are the frozen G2 artefacts; nothing is refitted.
+
+**F8.4 — CPU pre-check gate.** TF-v1 scoring is bought only if at least four components have |a| + q above the floor, defined as the
+median paired-interval half-width of the registered null-size payload (`docs/prereg/a5_manifests/nullsize/`). Otherwise the panel is
+reported unscored with its predictions.
+
+**F8.5 — endpoints and order.** Scoring on H0 TF-v1 with the common base reference under `configs/eval_tf_v1_wikitext.yaml`;
+WikiText decides for the panel, MMLU is descriptive (its gold-letter log-prob endpoint is unqualified). F8 entries are scored only
+after the Part A ledger is sealed, in the order Part A → F8-E → F8-F. Every entry is reported, including unresolved ones; agreement
+is summarised per independent source cluster with exact binomial and Clopper–Pearson intervals, and the report states that a
+panel of this size cannot reject chance agreement.
+
+**F8.6 — no decision authority.** The F8 panels cannot satisfy, fail or unresolve any F5.5 predicate or any A5.5 step, and fund
+nothing. A resolved sign hit is a transfer precondition for the H5 critic; a resolved miss marks a locality or K-FAC failure for
+that family; an unresolved entry says nothing. None speaks to the published generation-side effects, which teacher-forced
+endpoints do not measure.
+
+**F8.7 — H5 scripted-estimator arm and second editor.** The H5 pilot adds a no-LLM arm: a difference-of-means direction with
+linear-programme column and scale selection, given exactly the localisation the LLM editor receives, plus a variant that chooses
+layers by field ranking. All information supplied to any arm (layers, budget, scale) is logged as prior information, not
+discovery. GPT-6.1 Sol (medium reasoning) is registered as the practical editor beside GPT-6 Astra, which is retained for
+reproduction; versions are pinned; no silent substitution; voluntary early stops are logged. The ≥ 30 % paired evaluation-savings
+criterion (A5.7, F5.4) is unchanged and is reported per proposal stream (LLM, scripted, random best-of-N); an editor-advantage
+claim must beat both baselines at matched information with charged cost.
+
+**F8.8 — access-ladder prior.** The access-ladder report (chart-only, field-only, hybrid, activation-assisted) states in one
+sentence that on this base a frozen domain-recovery study found activation and output features more informative than spectral
+weight summaries (arXiv 2611.07610), that this is a prior and not an effect-size estimate, and that the field is weights plus
+frozen receiver sensitivity rather than a data-free readout.
+
+**F8.9 — brief corrections recorded.** arXiv 2611.09382 names "long, unresolved reasoning" rather than loops and derives its
+direction from token embeddings, not activations; the TFTV edit is rank one and norm-matched; arXiv 2611.10866 tests no Qwen3.5
+backbone; the aiXiv 93 % recovery is conditional on supplied layers, budget and scale.
+
+**F8.10 — post-G3 option, not registered.** A compression-recovery truncation test on non-pick LoRA rows (k ∈ {1, r/2},
+≤ 0.5 GPU-h) may be registered by a later amendment after the G3 ledger closes.
