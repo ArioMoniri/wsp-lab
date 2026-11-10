@@ -289,3 +289,12 @@ replicates, one donor in the LoRA low tertile. Backup controls live (D8 addendum
 running), EBS snapshot `snap-0e72f033cb0002355`. Literature check done (WeightLoop 2611.07319, Neural Thickets 2603.12228, LoL
 2410.04207, blog critiques); council round 3 convened (`docs/council/2026-11-10/BRIEF.md`) on the best predictor now, a LoL-style
 arm, a 4B scale check and kill criteria. Item 7 (freeze) waits for the round-3 synthesis so one Board A pass covers both.
+
+**10 Nov 2026, 12:00 UTC.** Council round 3 merged (d83529e, `docs/council/2026-11-10/SYNTHESIS.md`): programme stands (field primary,
+Part A decision experiment, WikiText first); news adds a LoL-style secondary family (learned / random / anchored frames plus a
+singular-values-only control, descriptive, no funding), a capped Qwen3.5-4B scale diagnostic on Lambda in parallel (20 outcome-blind
+Gaussian edits, WikiText, not a gate), a tightened H5 critic contract after WeightLoop (rebuilt-from-base, held-out support validation,
+permutation controls, four logged access flags, matched random best-of-N 32 draws per block) and a joint line-stop rule at 0.8B.
+Brief corrections: LoL's speed claim withdrawn; WeightLoop 8 of 8 vs random and 7 of 8 vs original; no stored chain LoRA factors.
+Three delegates running: A5 amendment F5 with record changes (`prereg/a5-f5`), the G2 driver code (`feat/g2-driver`), the 4B
+Lambda job code (`feat/scale-4b-diagnostic`). Board A's single freeze pass follows F5.
