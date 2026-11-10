@@ -8,7 +8,7 @@ WikiText stage, `configs/eval_tf_v1_wikitext.yaml`). It is a diagnostic of benef
 effect resolution at 4B; it is never a gate, is not part of G7, and does not touch Part A. If it is
 inconclusive, scale expansion stops.
 
-TF-v1 status of the H100 records: **not counted**: A3 pairing pending (H0 half not run (scripts/scale4b_h0_pair.sh)); FP4 identity pass.
+TF-v1 status of the H100 records: **not counted**: A3 pairing fail (cross-device SD ratio 0.662 > 0.1); FP4 identity pass.
 FP4's paired half-width bound (<= log(1.05)/2) and reliability bound (>= 0.90) are not computed by this report; it never establishes FP4 qualification on its own.
 
 ## Design (fixed before scoring)
@@ -48,12 +48,17 @@ Realised pooled radius over the 20 entries: 5.1933e-03 to 5.1938e-03 (intended 0
 
 ## A3 device pairing
 
-Status: **pending**. H0 half not run (scripts/scale4b_h0_pair.sh).
+Status: **fail**. cross-device SD ratio 0.662 > 0.1.
+
+Cross-device (H100 minus H0) on 5 paired entries: centred SD 6.697e-05, between-entry SD 1.012e-04, ratio 0.662 (limit 0.1); mean offset +1.580e-05; base log-PPL difference +3.466e-04, base per-window max |diff| 6.480e-03.
+- H100 same-device repeats (q4b-r1, q4b-r2): 12 of 12 bitwise; max |primary - repeat| 0 (FP4 limit 0.0001 nats).
+- H0 same-device repeats (q4b-r1, q4b-r2): 12 of 12 bitwise; max |primary - repeat| 0 (FP4 limit 0.0001 nats).
 
 ## FP4 identity
 
 Status: **pass**. Effective config hash `79e81e79d46cee9e980476000ab06ab0e585111e79d3363e2661526b96e98971`; window identity `docs/prereg/a5_manifests/text_groups.json`.
 - H100: {"cuda": "12.8", "driver": "570.148.08", "dtype": "bfloat16", "eval_device_id": "H3", "gpu_model": "NVIDIA H100 PCIe", "torch": "2.11.0+cu128"}
+- H0: {"cuda": "13.2", "driver": "595.112.07", "dtype": "bfloat16", "eval_device_id": "H0", "gpu_model": "NVIDIA RTX PRO 4500 Blackwell Server Edition", "torch": "2.15.0+cu132"}
 
 ## H100 timing
 
@@ -86,4 +91,4 @@ Job window: start 2026-11-10T13:56:26Z launch=2026-11-10T13:56:24Z cap_h=2.0 dea
 
 ## Exposure
 
-Exposed by this diagnostic: the 64 development WikiText windows (wikitext-2-raw-v1 test at the pinned revision, 1,024-token windows 0–63, the H1w development windows) scored on the Qwen3.5-4B base and 20 Gaussian edits. No sealed item, no A5 Part A edit and no 0.8B outcome is touched. H100 run ids: `20261110-140105-bf90e624`, `20261110-140420-165ae81a`.
+Exposed by this diagnostic: the 64 development WikiText windows (wikitext-2-raw-v1 test at the pinned revision, 1,024-token windows 0–63, the H1w development windows) scored on the Qwen3.5-4B base and 20 Gaussian edits. No sealed item, no A5 Part A edit and no 0.8B outcome is touched. H100 run ids: `20261110-140105-bf90e624`, `20261110-140420-165ae81a`. H0 run ids: `20261110-174315-f90969e5`.

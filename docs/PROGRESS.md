@@ -404,3 +404,10 @@ exact WikiText chain predictions used for the power/yield simulation). The `chai
 20 rows in 15 minutes (0.24 of the 2.2 GPU-h cap; rows 10–88 s each). Final G2 manifest copied with hashes (`docs/prereg/a5_manifests/g2/`).
 Board A is checking the completed G2 run; the registered sign predictions per donor for the power/yield simulation are being built from the
 WikiText field (base for LoRA donors, chain_exact gradients for the chain picks). The 4B H0 pairing runs next on the GPU.
+
+**11 Nov 2026, 03:00 UTC. 4B scale diagnostic complete** (`docs/reviews/scale/scale4b-diagnostic-2026-11-10.md`, both halves). Same-device
+repeats are bitwise on the H100 and on H0 (12 of 12 each), but the A3 cross-device pairing fails: the spread between devices is 0.662 of
+the spread between edits (rule ≤ 0.1), so the H100 records stay "not counted" and the diagnostic is read on the H0 half only. Substance:
+at ρ = 0.005, 3 of 20 Gaussian edits of Qwen3.5-4B improve WikiText (none resolved; 2 resolved worsening); the edits sit at the
+64-window resolution floor, so beneficial-edit density at 4B is not measurable at this radius. Diagnostic, not a gate; scale expansion
+stops here unless a larger-radius or larger-panel diagnostic is registered. Cost $0.54 Lambda plus 0.2 local GPU-h.
