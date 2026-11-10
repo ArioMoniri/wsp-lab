@@ -210,7 +210,7 @@ adopting amendment; Part A does not wait.
   ranking is logged **before** it sees that ranking. Paired localisation variants: scripted estimator with field localisation;
   scripted estimator on the LLM's chosen layers; LLM editor with and without the field ranking; a shuffled-localisation control at
   matched information and opportunity. The LLM is credited with localisation value only if the LLM-localised variant beats the
-  field-localised variant on held-out gain per real evaluation, paired, under A5.7 accounting. Attribution patching is a new metered
+  field-localised variant on held-out gain per real evaluation, paired, under A5.7 accounting. *[Superseded 11 Nov 2026 by F9a.5(a) — see S4 in the "11 Nov 2026 (F9a reconciliation)" section below.]* Attribution patching is a new metered
   artefact and is not registered.
 - **Test-time LoRA shadow sub-stream (F9.5).** 32 frozen development queries, one isolated base-relative LoRA each, the critic
   forecasting collateral change only, every forecast logged under F9.1 before scoring and all 32 scored on TF-v1. Shadow replay can
@@ -236,3 +236,107 @@ adopting amendment; Part A does not wait.
 **F9.7: no decision authority.** F9 panels and statistics cannot satisfy, fail or unresolve any F5.5 predicate or A5.5 step, cannot
 change A5.7, and fund nothing. A JEPAWG-style latent model is not registered; it may be proposed by a later amendment only if the
 F9.1 log shows structured residuals the first-order terms cannot represent. No historical hypothesis status changes.
+
+
+## 11 Nov 2026 (F9a reconciliation) — H5 and H1-OR prospective note reconciled with F9a (before any G3 outcome)
+
+Source: [PREREG A5 amendment F9a](PREREG_H1_TF.md) F9a.5–F9a.6 (adopted 11 Nov 2026, before any G3 outcome). F9a.5(a) requires `docs/HYPOTHESIS.md` to be reconciled before the H5 pilot. The registered arms, Part A selection, F5.5 and the H5 success criterion (A5.7) are unchanged; no historical hypothesis status changes. The same clauses appear in `docs/H5_DESIGN.md` and `docs/H5_PROTOCOL.md`.
+
+**(a) F9a.5 and F9a.6, quoted verbatim from [PREREG A5 amendment F9a](PREREG_H1_TF.md)** (`docs/PREREG_H1_TF.md`, clauses F9a.5–F9a.6, main `e3920b1`):
+
+> **F9a.5 — H5 reconciliation (condition 5).** (a) *Documents.* The governing H5 texts are `docs/H5_DESIGN.md` "11 Nov 2026 (council
+> round 5) amendment — localisation flag, shadow LoRA sub-stream, re-anchoring" and `docs/H5_PROTOCOL.md` "11 Nov 2026 (council
+> round 5) amendment — paired localisation episodes, shadow LoRA stream, re-anchoring" (both added by `2ab8fab`, after Board A reviewed
+> `f181f0a`), `docs/HYPOTHESIS.md` "11 Nov 2026 (council round 5) prospective note — H5 and H1-OR", and the round-4 11 Nov sections
+> (F8.7), each read as amended by F8a.6 and by F9a.5–F9a.6. Those two clauses are appended verbatim with F8a.6 to both H5 documents,
+> and HYPOTHESIS is reconciled, before the H5 pilot. Superseded there: "with a missed-harm upper bound ≤ 5 % (A5.7)" (replaced by
+> F9a.6), "run by a pinned script with no model calls" (F8a.6(a)) and "measured about 43 s per row" (F9a.5(e)). (b) *Access and
+> training meters,* pinned per episode in the G5 manifest before the pilot: `python_tool_access`, `forward_access`,
+> `hidden_state_access`, `feedback_access`, `field_localisation_access`, `backward_enabled`, `gradient_exposed_to_editor`. F9.4
+> episodes: `backward_enabled = 0`; `gradient_exposed_to_editor = 1` exactly when `field_localisation_access = 1` (g⊙W and g⊙D derive
+> from the frozen G2 gradient; no fresh backward pass). `lora_shadow`: python 1, forward 1, hidden-state 0, feedback 1 (F9.5), where
+> feedback means the next-token training loss on the query context only (no TF-v1, held-out or sealed signal reaches training);
+> `backward_enabled = 1`; `gradient_exposed_to_editor = 0` (no LLM editor; only the harness optimiser consumes gradients). This
+> permission covers only the harness-run training of `lora_shadow`: no LLM editor arm gains backward passes, and no other arm's
+> registered access changes (A5.7's gradient-based comparators keep theirs). Meters per arm: forward requests and tokens, backward
+> passes and tokens, optimiser steps, GPU-seconds and wall time. Optimiser, learning rate, step, rank and target-module limits are
+> pinned in the G5 manifest before the first adapter is trained, chosen without any shadow outcome; F9a sets no values. (c)
+> *Localisation sequencing and controls.* Candidate-independent inputs (per-tensor g⊙W, cached down-projection input norms) may be
+> released before the first candidate; candidate-specific g⊙D exists only after that candidate's realised delta and is returned as
+> metered feedback on it, never guiding its own construction. The verbal site ranking is requested and logged with its hash before any
+> field ranking is released (harness-enforced) and is never a critic input. The shuffled control permutes tensor labels over the same
+> ranking positions, one permutation per episode drawn before the episode from `PCG64(domain_seed("20261111:f9-shuffle:", <episode
+> id>))`, at matched length, support, opportunities and cost. (d) *Paired causal contrast.* The only localisation-value contrast is
+> the scripted estimator on the LLM's logged layers (variant 2) against the scripted estimator with field localisation (variant 1):
+> same editor, localisation alone differs. LLM with versus without the field ranking and real versus shuffled ranking are reported
+> descriptively and support no claim. Endpoint: GPE_x = Σ_e gain_{x,e} / Σ_e E_{x,e}, with gain the change in A5.7's bounded held-out
+> score (percentage points) of the final incumbent over the starting incumbent and E all real evaluator calls including failed calls
+> and audits (A5.7); Δ_loc = GPE₂ − GPE₁ with cluster influence u_k = (g₂,k − GPE₂·E₂,k)/ΣE₂ − (g₁,k − GPE₁·E₁,k)/ΣE₁ in A5.7's paired
+> episode-cluster bootstrap-t (4,000 common draws, PCG64 seed 20261107, its failure rules). A zero or nonfinite denominator makes
+> Δ_loc undefined, never a success. Localisation value is credited only if the two-sided 95 % lower bound of Δ_loc is > 0; a point
+> improvement alone is insufficient; there is one primary contrast and no multiplicity correction. Aggregate sensitivity is not causal
+> localisation or faithful self-report, and comparisons at unequal access stay labelled (F8a.6(a)). (e) *Increments, gradients,
+> re-anchoring.* Candidates stay stored base-relative (F5.4). A forecast for an acceptance decision is relative to the actual
+> incumbent: the realised increment W_cand − W_inc (bf16 states, fp32 difference) contracted with an exact incumbent gradient
+> (`gradient_anchor = incumbent-exact`, fresh gradient hash) and base factors (`factor_anchor = base-factor`), or, labelled
+> `approx:difference_of_base_forecasts`, f_base(W_cand − W₀) − f_base(W_inc − W₀). Re-anchoring does not turn a submitted base patch
+> into an incumbent increment, and an exact gradient contraction is not an exact finite-edit forecast. All re-anchoring work (gradient
+> recomputation, loads, failures) is metered and charged to the critic arm's net GPU (A5.7). The historical timings are not future
+> rates: 854.718742 s over 20 rows, mean 42.736 s, with different predecessor supports and including load and save/hash work
+> (`docs/reviews/council/board-a-g2-2026-11-11.md`), and 13305.825513 s over 141 donors, 94.3676 s each including I/O (power
+> `fields_manifest.json` summary, per Board A); per-objective re-anchoring and factored-LoRA costs are unmeasured, measured in the
+> pilot and repriced under F8a.6(f). (f) *LoRA scope and groups.* The shadow forecasts completed adapters' collateral TF-v1 change
+> only, not on-query gain or whether training is worthwhile; a TF surrogate cannot supply A5.7's bounded task-score endpoint.
+> Query/training contexts, support, calibration, acceptance and sealed groups are disjoint by item id and source document; query
+> contexts are disjoint from every TF-v1 scored item, the G2 gradient panels (including the 11 WikiText articles and the 500 reserved
+> groups, A5.3.2(iii)) and any sealed panel; overlap fails closed. (g) *Contract preserved.* All of A5.7 (arms, primary comparator,
+> ratio-of-totals savings, noninferiority, guardrails, the missed-proposal guardrail with its all-rejected denominator and all-zero
+> unresolved case, net GPU, prospective joint power ≥ 0.80, unresolved versus kill), the F5.4 critic contract, F8.7's per-stream
+> reporting and F8a.6's retained arms and matched-information rule stand. F8a.6(f)'s drop order gains, first, `lora_shadow` as one
+> unit, then the F9.4 paired set, then spec §6.6's order. G5 stays shadow-only.
+>
+> **F9a.6 — shadow limits (condition 6).** (a) *Harm, defined separately.* Adapter j is harmful if its WikiText contrast Δy_j = y(W₀ +
+> D_j) − y(W₀) under `configs/eval_tf_v1.yaml` is resolved (A5.3 paired block interval excludes 0) and Δy_j > 0; other TF-v1 endpoints
+> are descriptive; a missing or nonfinite score is `unresolved`. This is not A5.7's missed qualifying beneficial proposal, which a
+> collateral forecast cannot estimate; A5.7's guardrail, denominator and unresolved cases stay unchanged. (b) *Gate frozen before
+> shadow outcomes* (in the G5 manifest, before the first adapter is trained): evaluate adapter j if its zero-fit forecast a_j + q_j
+> (WikiText field, `base-exact`, `base-factor`) exceeds h\*, otherwise skip; a field abstention is evaluated. One gate, never tuned on
+> the 32 outcomes. (c) *All 32 scored.* Every adapter is trained and scored on TF-v1 whatever the gate says; the gate is applied
+> counterfactually. (d) *Read-outs.* Missed harm M_h = #(skipped ∧ harmful)/#skipped (undefined if nothing is skipped) with its exact
+> one-sided 95 % Clopper–Pearson upper bound, and #(skipped ∧ harmful)/#harmful. The report states that even 32 independent skips with
+> zero misses give an upper bound of 1 − 0.05^(1/32) = 0.08937 > 0.05, and fewer skips or dependence make it worse. Replay saving
+> = #skipped/32 verification evaluations, descriptive, with training cost charged in both arms; E₀ and sign agreement follow F9a.2. (e)
+> *Limits.* No ≤ 5 % certification, no realised-savings claim and no G8 gate or condition comes from this pilot. The shadow may report
+> a gate as uneconomic, descriptively, when measured forecast cost per adapter is at least the measured verification cost per skipped
+> adapter. Training, audits and failures stay in both arms' cost accounting; A5.7's unresolved cases are retained.
+
+Clause guide (each item is in the quoted text above): access and training meters — F9a.5(b); localisation sequencing and the shuffled control — F9a.5(c); paired causal
+contrast — F9a.5(d); base-relative versus incumbent increments, exact-gradient provenance and charged re-anchoring — F9a.5(e); LoRA scope and disjoint groups — F9a.5(f);
+the full A5.7 / F5.4 / F8.7 contract preserved, drop order and shadow-only G5 — F9a.5(g); missed harm defined separately from missed beneficial proposals — F9a.6(a); collateral
+gate frozen before shadow outcomes — F9a.6(b); all 32 adapters scored — F9a.6(c); read-outs and the 0.08937 bound — F9a.6(d); no ≤ 5 % certification, no realised-savings claim, no G8
+gate, training and audits charged in both arms — F9a.6(e).
+
+**(b) Superseded sentences in the earlier 11 Nov sections.** The earlier text is not deleted; each sentence below is marked in place with a bracketed note. Replacement sentences
+are restatements of F9a.5–F9a.6 above; the quoted clauses govern.
+
+- The round-5 HYPOTHESIS note contains neither "no model calls", "≈ 43 s per row" nor "≤ 5 %" wording, so S1–S3 have nothing to mark here (they are marked in `docs/H5_DESIGN.md` and `docs/H5_PROTOCOL.md`; the same replacements apply to any HYPOTHESIS reading).
+
+- **S4 (localisation credit; F9a.5(d), read as amended by F9a.5)** — `docs/HYPOTHESIS.md`, round-5 note, **Field localisation (F9.4)**. Superseded sentence (verbatim):
+  > The LLM is credited with localisation value only if the LLM-localised variant beats the field-localised variant on held-out gain per real evaluation, paired, under A5.7 accounting.
+
+  Replaced under F9a by:
+  > Localisation value is credited only if the two-sided 95 % lower bound of Δ_loc = GPE₂ − GPE₁ is > 0 (scripted estimator on the LLM's logged layers, variant 2, against the scripted estimator with field localisation, variant 1; A5.7's paired episode-cluster bootstrap-t, 4,000 common draws, PCG64 seed 20261107); a point improvement alone is insufficient. LLM with versus without the field ranking, and real versus shuffled ranking, are reported descriptively and support no claim (F9a.5(d)).
+
+- **Read as amended (no sentence replaced).** The round-5 note's "Shadow replay can reject an uneconomic gate; it cannot demonstrate realised savings" is consistent with F9a.6(e) and stays; it is bounded by F9a.6(e)'s "uneconomic gate" criterion (descriptive: measured forecast cost per adapter at least the measured verification cost per skipped adapter) and by the missed-harm definition in F9a.6(a)–(d).
+
+
+**(c) The ≈ 43 s per row re-anchoring timing is context, not a registered rate.** The figure quoted in the earlier 11 Nov sections ("about 43 s per row") is a historical F6-audit
+measurement: 854.718742 s over 20 rows, mean 42.736 s, with different predecessor supports and including load and save/hash work
+(`docs/reviews/council/board-a-g2-2026-11-11.md`); the other measured contraction is 13305.825513 s over 141 donors, 94.3676 s each including I/O (power
+`fields_manifest.json` summary, per Board A). Under F9a.5(e) neither is a future rate. Per-objective re-anchoring and factored-LoRA costs are unmeasured; they are
+measured in the pilot and repriced under F8a.6(f). Every second of re-anchoring is metered and charged to the critic arm's net GPU; nothing in this document registers a per-row cost.
+
+**Consistency.** The same F9a.5–F9a.6 text, the same replacement sentences S1–S4 (each listed in the document where the superseded sentence occurs) and this timing statement are appended to `docs/H5_DESIGN.md`, `docs/H5_PROTOCOL.md` and
+`docs/HYPOTHESIS.md`; if any wording elsewhere in the three documents differs from the quoted clauses, the quoted clauses govern. Nothing here registers a new arm, cap,
+threshold or access value, authorises an episode, or changes A5.7, F5.4, F8.7 or the H5 success criterion. This section does not itself append F8a.6; F8a.6(a)'s replacement
+sentence is quoted under S1 only because F9a.5(a) cites it. G5 stays shadow-only.
