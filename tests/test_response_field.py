@@ -7,6 +7,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from wsp.features import response_field as rf
 from wsp.features.response_field import (
     FieldArtifact,
     FieldPanel,
@@ -143,6 +144,109 @@ def test_spectral_tail_zero_and_negative_gate():
     assert spectral_factor(torch.zeros(2, 2))[1]["zero_trace"]
     with pytest.raises(ValueError, match="negative"):
         spectral_factor(torch.diag(torch.tensor([1.0, -0.01])))
+    assert info["n_clamped"] == 0 and info["most_negative_ratio"] == 0.0
+
+
+def legacy_spectral_factor(factor):
+    """The schema-1 (pre-amendment) fp32 implementation, kept here as the reference."""
+    f = factor.detach().float().cpu()
+    scale = max(f.trace().item() / f.shape[0], 1e-12)
+    if not torch.allclose(f, f.T, atol=1e-6 * scale, rtol=1e-6):
+        raise ValueError("factor symmetry audit failed")
+    f = (f + f.T) * 0.5
+    values, vectors = torch.linalg.eigh(f)
+    if values.min().item() < -1e-6 * scale:
+        raise ValueError("materially negative factor eigenvalue")
+    values = values.clamp_min(0)
+    damping = 1e-3 * values.sum().item() / f.shape[0]
+    values = values.flip(0) + damping
+    vectors = vectors.flip(1)
+    total = values.sum()
+    rank = int(torch.searchsorted(values.cumsum(0), 0.99 * total).item()) + 1
+    return (vectors[:, :rank] * values[:rank]) @ vectors[:, :rank].T, rank
+
+
+@pytest.fixture
+def few_threads():
+    # fp64 eigh of 1024 x 1024 is slow under thread oversubscription on a loaded CPU host
+    old = torch.get_num_threads()
+    torch.set_num_threads(min(old, 4))
+    yield
+    torch.set_num_threads(old)
+
+
+def test_rank_deficient_fp32_factor_passes_and_records_clamps(few_threads):
+    # MMLU-like: 64 rows against 1,024 dims gives a rank-64 PSD factor; fp32 rounding leaves
+    # null-space eigenvalues of about -1e-7 x lambda_max, which the schema-1 rule rejected.
+    x = torch.randn(64, 1024, generator=torch.Generator().manual_seed(20261110))
+    factor = x.T @ x / 64
+    assert factor.dtype == torch.float32
+    with pytest.raises(ValueError, match="negative"):
+        legacy_spectral_factor(factor)
+    kept, info = spectral_factor(factor)
+    assert kept.dtype == torch.float32 and kept.shape == (1024, 1024)
+    assert info["n_clamped"] > 0
+    assert -rf.NEGATIVE_TOLERANCE <= info["most_negative_ratio"] < 0
+    assert info["rank"] <= 64 and info["raw_trace"] == pytest.approx(factor.trace().item(), 1e-5)
+    assert info["lambda_max"] > 0
+
+
+def test_materially_negative_eigenvalue_still_fails():
+    q, _ = torch.linalg.qr(torch.randn(8, 8, generator=torch.Generator().manual_seed(3)))
+    values = torch.tensor([10.0, 5.0, 2.0, 1.0, 0.5, 0.0, 0.0, -2e-5])  # ratio -2e-6
+    factor = (q * values) @ q.T
+    factor = (factor + factor.T) / 2
+    with pytest.raises(ValueError, match="materially negative"):
+        spectral_factor(factor)
+    with pytest.raises(ValueError, match="materially negative"):
+        spectral_factor(-torch.eye(3))  # no positive lambda_max: any negative fails
+    values[-1] = -5e-6  # ratio -5e-7: inside the tolerance, clamped and counted
+    _, info = spectral_factor((q * values) @ q.T)
+    assert info["n_clamped"] >= 1
+    assert info["most_negative_ratio"] == pytest.approx(-5e-7, rel=5e-2)
+
+
+def test_symmetry_audit_is_relative_to_the_largest_entry():
+    base = torch.diag(torch.tensor([1e3, 1.0, 1e-3]))
+    near = base.clone()
+    near[0, 1] += 5e-4  # 5e-7 x max|F|
+    assert spectral_factor(near)[1]["rank"] >= 1
+    far = base.clone()
+    far[1, 2] += 2e-3  # 2e-6 x max|F|
+    with pytest.raises(ValueError, match="symmetry"):
+        spectral_factor(far)
+
+
+def test_fp64_path_matches_schema_1_contraction_when_well_conditioned(setup, monkeypatch):
+    generator = torch.Generator().manual_seed(7)
+    for dim in (5, 16):
+        x = torch.randn(4 * dim, dim, generator=generator)
+        factor = x.T @ x / len(x) + 0.1 * torch.eye(dim)
+        new, info = spectral_factor(factor)
+        old, rank = legacy_spectral_factor(factor)
+        assert info["rank"] == rank and info["n_clamped"] == 0
+        assert torch.allclose(new, old, rtol=1e-6, atol=1e-6 * old.abs().max().item())
+    model = setup[0]
+    field = collect(setup)
+    delta = {n: torch.randn_like(p) * 1e-2 for n, p in model.named_parameters()}
+    got = contract(field, delta)["synthetic_nll"]
+    monkeypatch.setattr(rf, "spectral_factor", lambda f: (legacy_spectral_factor(f)[0], None))
+    want = contract(field, delta)["synthetic_nll"]
+    for name, row in got.items():
+        assert row["q"] == pytest.approx(want[name]["q"], rel=1e-6, abs=1e-12)
+        assert row["signed"] == want[name]["signed"]
+
+
+def test_coverage_block_records_clamp_statistics(setup):
+    field = collect(setup)
+    assert field.identity["schema_version"] == rf.SCHEMA_VERSION == 2
+    for row in field.identity["coverage"]["synthetic_nll"].values():
+        pair = field.factors["synthetic_nll"][row["module"]]
+        for key in ("A", "G"):
+            assert row["eigen_clamps"][key] == {
+                "n_clamped": pair[f"{key}_audit"]["n_clamped"],
+                "most_negative_ratio": pair[f"{key}_audit"]["most_negative_ratio"],
+            }
 
 
 def test_predecessor_exact_contraction_and_floor(setup):

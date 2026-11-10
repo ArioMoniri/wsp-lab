@@ -4,8 +4,10 @@
 Runs only after Board A's A5 freeze. Stages, in order, each recorded in ``<out>/g2_manifest.json``:
 
 * ``fields``: one ``wsp.features.response_field.collect_field`` call per objective (A5.8.1 table order) on
-  the pinned Qwen3.5-0.8B (bf16 weights on cuda; fp32 gradients, factors and spectral algebra), K-FAC
-  damping 1e-3 x trace/dim and 99% energy truncation as pinned in ``response_field``. Coverage is every
+  the pinned Qwen3.5-0.8B (bf16 weights on cuda; fp32 gradients and factors, fp64 symmetrisation and
+  eigendecomposition per the A5.8.1 amendment of 10 Nov 2026), K-FAC damping 1e-3 x trace/dim and 99%
+  energy truncation as pinned in ``response_field``. Eigenvalues in [-1e-6 x lambda_max, 0) are clamped
+  and counted; each objective's clamp statistics are recorded in its manifest entry (``eigen_clamps``). Coverage is every
   registered matrix slot of ``wsp.zoo.arch.ARCHS['qwen3_5']`` as a typed role (``full_attention:``,
   ``linear_attention:`` = GatedDeltaNet, ``mlp:``); an unregistered Linear inside a decoder layer, or a
   registered slot without a hookable Linear, is ``MissingHookError`` = G2 gate failure. One item is one
@@ -80,6 +82,10 @@ class PanelMismatch(ValueError):
 
 class FieldAuditFailure(RuntimeError):
     """A5.8.1 finite/symmetry/PSD audit or nonfinite score: the G2 gate fails (no retry, no repair)."""
+
+    def __init__(self, objective, cause):
+        super().__init__(f"{objective}: {cause}")
+        self.objective = objective
 
 
 class CapExceeded(RuntimeError):
@@ -929,7 +935,7 @@ def run_fields(ctx, out: Path, manifest, budget, mpath):
                 ctx.device,
             )
         except ValueError as exc:  # finite/symmetry/PSD factor audits, nonfinite score/gradient
-            raise FieldAuditFailure(f"{name}: {exc}") from exc
+            raise FieldAuditFailure(name, exc) from exc
         wall = now() - t0
         _check_vram(ctx.device, f"fields:{name}")
         if ctx.base_state_hash is None:
@@ -957,6 +963,7 @@ def run_fields(ctx, out: Path, manifest, budget, mpath):
                 m: {k: p[f"{k}_audit"] for k in ("A", "G")} | {"count": p["count"]}
                 for m, p in artifact.factors[name].items()
             },
+            "eigen_clamps": clamp_summary(artifact.factors[name]),
             "resources": {
                 "wall_seconds": wall,
                 "save_seconds": now() - t1,
@@ -976,6 +983,26 @@ def run_fields(ctx, out: Path, manifest, budget, mpath):
             torch.cuda.empty_cache()
         manifest["caps"]["fields"] = budget.record()
         write_manifest(mpath, manifest)
+
+
+def clamp_summary(factors):
+    """One objective's A5.8.1 clamp statistics over all its K-FAC factors (amendment, 10 Nov 2026).
+
+    ``most_negative_ratio`` is the minimum lambda_min / lambda_max over clamped factors (0.0 if none);
+    a factor below -NEGATIVE_TOLERANCE never gets here (it raised: G2 gate failure).
+    """
+    audits = {f"{m}/{k}": p[f"{k}_audit"] for m, p in factors.items() for k in ("A", "G")}
+    worst = min(audits, key=lambda f: audits[f]["most_negative_ratio"], default=None)
+    ratio = audits[worst]["most_negative_ratio"] if worst is not None else 0.0
+    return {
+        "n_factors": len(audits),
+        "n_factors_clamped": sum(1 for a in audits.values() if a["n_clamped"]),
+        "n_eigenvalues_clamped": sum(a["n_clamped"] for a in audits.values()),
+        "n_eigenvalues": sum(a["dimension"] for a in audits.values()),
+        "most_negative_ratio": ratio,
+        "most_negative_factor": worst if ratio < 0 else None,
+        "tolerance": -rf.NEGATIVE_TOLERANCE,
+    }
 
 
 def run_projectors(ctx, out: Path, manifest, mpath):
@@ -1296,7 +1323,14 @@ def validate_manifest(m):
         errors.append("incomplete without reason")
     for name, rec in (m.get("fields") or {}).items():
         if rec.get("status") == "complete":
-            for k in ("files", "identity_sha256", "content_hashes_sha256", "resources", "panel"):
+            for k in (
+                "files",
+                "identity_sha256",
+                "content_hashes_sha256",
+                "resources",
+                "panel",
+                "eigen_clamps",
+            ):
                 if k not in rec:
                     errors.append(f"fields.{name}.{k} missing")
             for k in ("wall_seconds", "max_memory_allocated", "bytes_written"):
@@ -1366,6 +1400,9 @@ def new_manifest(args, ctx, panels_sha, code, attempts, attempt):
             "damping": rf.DAMPING,
             "energy": rf.ENERGY,
             "precision": "fp32",
+            "eigendecomposition": "float64",
+            "negative_tolerance_relative_to_lambda_max": rf.NEGATIVE_TOLERANCE,
+            "symmetry_tolerance_relative_to_max_entry": rf.SYMMETRY_TOLERANCE,
             "fisher": "model-sampled, one target per valid scoring position",
         },
         "audit": {
@@ -1465,6 +1502,8 @@ def run_pipeline(ctx, out: Path, args, manifest):
     except (rf.MissingHookError, FieldAuditFailure) as exc:
         status = "GATE_FAILURE"
         manifest["gate_failure"] = {"reason": f"{type(exc).__name__}: {exc}"}
+        if isinstance(exc, FieldAuditFailure):
+            manifest["gate_failure"]["objective"] = exc.objective
     except BaseException as exc:
         status = "incomplete"
         manifest["incomplete_reason"] = {"error": f"{type(exc).__name__}: {exc}"[:500]}

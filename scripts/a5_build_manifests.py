@@ -118,8 +118,28 @@ CODE_FILES = {
     # Expanded 10 Nov 2026 (Board A freeze review item 7): transitive wsp imports of the pinned modules,
     # the primary fitting code/config (A5.8.4) and the fixed selection/panel/qualification inputs in git.
     **TRANSITIVE_FILES,
+    # A5.8.1 amendment (10 Nov 2026, before audit): the G2 driver and the F5.3/FP4 4B diagnostic scripts.
+    "scripts/g2_fields.py": "G2 driver: fields, chart projectors, probe cache, predecessor audit",
+    "scripts/g2_fields.sh": "G2 launcher",
+    "scripts/scale4b_build_edits.py": "F5.3 4B Gaussian edit builder (support, radius, bf16 diagnostics)",
+    "scripts/lambda_job_scale4b.sh": "F5.3/FP4 4B Lambda H100 job",
+    "scripts/scale4b_h0_pair.sh": "FP4 4B paired H0 scoring",
+    "scripts/scale4b_report.py": "F5.3/FP4 4B report",
+    "configs/eval_tf_v1_wikitext.yaml": "F5.3 4B WikiText endpoint config",
 }
-ENV_PACKAGES = ("numpy", "torch", "transformers", "tokenizers", "datasets", "safetensors", "pyyaml")
+ENV_PACKAGES = (
+    "numpy",
+    "torch",
+    "transformers",
+    "tokenizers",
+    "datasets",
+    "safetensors",
+    "pyyaml",
+    # fitting libraries (A5.8.4), added by the A5.8.1 amendment of 10 Nov 2026
+    "lightgbm",
+    "scikit-learn",
+    "scipy",
+)
 PROCEDURAL_FREEZE_DATE = "2026-11-07"
 RULING = (
     "REGISTERED: chair ruling A5.3.1 (7 Nov 2026), adopted by Board A "

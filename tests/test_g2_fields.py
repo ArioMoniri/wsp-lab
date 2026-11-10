@@ -436,15 +436,28 @@ def test_audit_cap_on_resume_keeps_fields_and_charges_prior_hours(toy_ctx, tmp_p
     )
 
 
-def test_missing_hook_and_factor_audit_failures_are_gate_failures(toy_ctx, tmp_path):
+def test_missing_hook_and_factor_audit_failures_are_gate_failures(toy_ctx, tmp_path, monkeypatch):
     ctx = wikitext_only(toy_ctx)
     bad = dataclasses.replace(ctx, supported={**ctx.supported, "model.layers.0.mlp": "mlp:block"})
     code, _, manifest = run_main(tmp_path / "hook", bad, "--stages", "fields")
     assert code == g2.EXIT["GATE_FAILURE"] and manifest["status"] == "GATE_FAILURE"
     assert "MissingHookError" in manifest["gate_failure"]["reason"]
-    # 3 MMLU items give rank-3 factors: fp32 eigh roundoff exceeds the A5.8.1 tolerance
-    mmlu = next(o for o in toy_ctx.objectives if o.spec.name == "mmlu_gold_log_prob")
-    items = list(mmlu.panel.items())[:3]
+    # A materially negative eigenvalue (below -1e-6 x lambda_max) still fails the gate
+    original = rf.spectral_factor
+
+    def shifted(factor):
+        return original(factor - 2e-6 * factor.abs().max() * torch.eye(len(factor)))
+
+    monkeypatch.setattr(rf, "spectral_factor", shifted)
+    code, _, manifest = run_main(tmp_path / "psd", ctx, "--stages", "fields")
+    assert code == g2.EXIT["GATE_FAILURE"]
+    assert "materially negative factor eigenvalue" in manifest["gate_failure"]["reason"]
+    assert manifest["gate_failure"]["objective"] == "wikitext_nll"
+
+
+def small_mmlu(ctx, n=3):
+    mmlu = next(o for o in ctx.objectives if o.spec.name == "mmlu_gold_log_prob")
+    items = list(mmlu.panel.items())[:n]
     panel = rf.FieldPanel(
         mmlu.panel.panel_id,
         lambda: iter(items),
@@ -452,7 +465,34 @@ def test_missing_hook_and_factor_audit_failures_are_gate_failures(toy_ctx, tmp_p
         mmlu.panel.scored_text_groups,
     )
     record = mmlu.record | {"content_hash": rf._hash([rf._hash(rf._hash_item(i)) for i in items])}
-    small = dataclasses.replace(ctx, objectives=[g2.Objective(mmlu.spec, panel, record)])
-    code, _, manifest = run_main(tmp_path / "psd", small, "--stages", "fields")
-    assert code == g2.EXIT["GATE_FAILURE"]
-    assert "negative factor eigenvalue" in manifest["gate_failure"]["reason"]
+    return dataclasses.replace(
+        wikitext_only(ctx), objectives=[g2.Objective(mmlu.spec, panel, record)]
+    )
+
+
+def test_rank_deficient_factors_pass_and_record_clamps_per_objective(toy_ctx, tmp_path):
+    # 3 MMLU items give rank-3 factors: fp32 rounding leaves small negative eigenvalues that the
+    # schema-1 rule (1e-6 x trace/dim) rejected; the A5.8.1 amendment clamps and counts them.
+    code, _, manifest = run_main(tmp_path, small_mmlu(toy_ctx), "--stages", "fields")
+    assert code == g2.EXIT["incomplete"] and "gate_failure" not in manifest
+    assert g2.validate_manifest(manifest) == []
+    assert manifest["config"]["field"]["schema_version"] == rf.SCHEMA_VERSION == 2
+    assert manifest["config"]["field"]["eigendecomposition"] == "float64"
+    assert manifest["config"]["field"]["negative_tolerance_relative_to_lambda_max"] == 1e-6
+    rec = manifest["fields"]["mmlu_gold_log_prob"]
+    clamps = rec["eigen_clamps"]
+    audits = [a for m in rec["factor_audits"].values() for a in (m["A"], m["G"])]
+    assert clamps["n_factors"] == len(audits) == 2 * len(rec["factor_audits"])
+    assert clamps["n_eigenvalues_clamped"] == sum(a["n_clamped"] for a in audits) > 0
+    assert clamps["n_factors_clamped"] == sum(1 for a in audits if a["n_clamped"]) > 0
+    assert -1e-6 <= clamps["most_negative_ratio"] == min(a["most_negative_ratio"] for a in audits)
+    assert clamps["most_negative_ratio"] < 0 and clamps["most_negative_factor"] is not None
+    module, key = clamps["most_negative_factor"].rsplit("/", 1)
+    assert rec["factor_audits"][module][key]["most_negative_ratio"] == clamps["most_negative_ratio"]
+
+
+def test_clamp_summary_without_clamps():
+    audit = {"n_clamped": 0, "most_negative_ratio": 0.0, "dimension": 3}
+    summary = g2.clamp_summary({"m": {"A_audit": audit, "G_audit": audit}})
+    assert summary["n_eigenvalues_clamped"] == 0 and summary["most_negative_factor"] is None
+    assert summary["n_eigenvalues"] == 6 and summary["most_negative_ratio"] == 0.0

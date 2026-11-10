@@ -1,10 +1,13 @@
 {
  "environment": {
   "datasets": "5.1.0",
+  "lightgbm": "4.7.0",
   "numpy": "2.5.4",
   "python": "3.12.3",
   "pyyaml": "6.0.3",
   "safetensors": "0.8.0",
+  "scikit-learn": "1.9.1",
+  "scipy": "1.18.1",
   "tokenizers": "0.23.3",
   "torch": "2.15.0",
   "transformers": "5.22.1"
@@ -38,6 +41,10 @@
    "role": "resolved TF-v1 config",
    "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317"
   },
+  "configs/eval_tf_v1_wikitext.yaml": {
+   "role": "F5.3 4B WikiText endpoint config",
+   "sha256": "5fd90d015b206d10780e791a710563ee41fbbd3e00deeb53ec4b65abd617ac0c"
+  },
   "configs/p4_predictors.json": {
    "role": "fitting settings (A5.8.4: n_splits, seed, scaling, neural settings)",
    "sha256": "c217b5a5b012689475609782bfb68d862cbfb4864b1233093be7d355a7e04cfe"
@@ -68,7 +75,7 @@
   },
   "scripts/a5_build_manifests.py": {
    "role": "builder",
-   "sha256": "e9f0e6faf3096e50f3977c030e74b49f61dc4800d2ba501c2de408beef3bd769"
+   "sha256": "c7dfedb1201307314059c03249905eeabbb4cbe4262a6370c3e84f1103ac0e05"
   },
   "scripts/a5_build_panels.py": {
    "role": "builder",
@@ -89,6 +96,30 @@
   "scripts/a5_snapshot.py": {
    "role": "closed pre-G2 snapshot (checklist item 3)",
    "sha256": "a0e68302e1256ab55594e12223677d527bc4fa830451194d61e28aebaecaed72"
+  },
+  "scripts/g2_fields.py": {
+   "role": "G2 driver: fields, chart projectors, probe cache, predecessor audit",
+   "sha256": "4856f9938633b94138fabc3a592962ea93b2e274045aa71cc30bedf64b5e52f9"
+  },
+  "scripts/g2_fields.sh": {
+   "role": "G2 launcher",
+   "sha256": "13b761dac0a0682ed7f12f521ef0e1cfd31eeb613489aac68155f08b66f4c133"
+  },
+  "scripts/lambda_job_scale4b.sh": {
+   "role": "F5.3/FP4 4B Lambda H100 job",
+   "sha256": "2cd984f19ae78447aed0f79757486a18963c96379acf94e37f2f93ea32cc88f8"
+  },
+  "scripts/scale4b_build_edits.py": {
+   "role": "F5.3 4B Gaussian edit builder (support, radius, bf16 diagnostics)",
+   "sha256": "55669ed20f1f502cd3567b35d5bb444b0994de8a5ab0dae54db1b81df7f9fa0d"
+  },
+  "scripts/scale4b_h0_pair.sh": {
+   "role": "FP4 4B paired H0 scoring",
+   "sha256": "317da12dac9324afb12becb2dfdc56d4573c220ea019477c4be5090cac45fda1"
+  },
+  "scripts/scale4b_report.py": {
+   "role": "F5.3/FP4 4B report",
+   "sha256": "27b15f45ada44f61855c51e1914a2f3262c2f8a89647100122122d55718f1440"
   },
   "src/wsp/__init__.py": {
    "role": "package marker (imported)",
@@ -172,7 +203,7 @@
   },
   "src/wsp/features/response_field.py": {
    "role": "G2 field and registered panel-size consumer check",
-   "sha256": "94bbe9b89ee51b8a444ca9859cb3415182c38dca61ce90133df8beef5bb3bd4d"
+   "sha256": "98d81bbc300e715fe27a02e04711c0d036ae7ef9342d6bddbcaa227d91f725bc"
   },
   "src/wsp/features/rotation.py": {
    "role": "A5.3.3 rotation (imported)",
@@ -239,7 +270,7 @@
    "sha256": "85d27f488d489934e703bc77336614ef7882120f39c0de6ec346264a99ac5dcc"
   }
  },
- "git_sha": "4fd1e2ac12bcfc46918ee5d6d0a47486d44a8dcc",
+ "git_sha": "b7f10a1522c8fa193fdcad8162e04764851770d2",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",
