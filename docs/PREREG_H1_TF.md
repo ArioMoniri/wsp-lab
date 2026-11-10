@@ -1107,3 +1107,175 @@ index, not a full immutable snapshot. Existing G0/G1/G6 observations keep their 
 Generated labels now read "registered" where the rulings register them and "rejected" for the extraction fill (the
 pre-ruling literal selection run is kept as a superseded audit record); components, references, text groups and panel
 IDs were not rebuilt against live data, which remains checklist items 4–5 after the census.
+
+
+#### A5 amendment F5 (10 Nov 2026, before freeze; Board A reviews at the freeze)
+
+Authority: [10 Nov chair synthesis](council/2026-11-10/SYNTHESIS.md), §§1, 4–6, and
+its four round-3 reports. This prospective block appends to, and does not repair,
+the historical registration. The earlier **F5 — procedural freeze** retains its
+7 Nov meaning; F5.1–F5.7 below identify this separate 10 Nov amendment. No G2/G3
+outcome is used. New settings are planned chair defaults for Board A review, not
+measurements. A5.1 hashes/acceptance remain required before execution. The field
+remains sole primary; A5.5's ordered funding decision is unchanged.
+
+**F5.1 — secondary LoL family (extends A5.4.3).** Register L (learned-frame
+GL-set head), R (random-frame control), K (K-FAC-anchored frame), and S
+(singular-values-only control), computed on CPU. Per supported matrix use the
+realised increment D = fp32(bf16(W + Δ)) − fp32(W) at its pinned actual
+predecessor; truncate its SVD at the recorded rank: r for LoRA/chain-LoRA,
+1 for random-direction/abliteration, 32 for task vectors, with omitted energy
+recorded. Unsupported/missing-rank rows are listed before fitting, never silently
+assigned raw factors. Raw α/r-scaled stored adapters are a separately named
+sensitivity on the authentic-factor subset, never substituted for scored D.
+
+Following round3-representation §3, L uses GL-equivariant left/right frames
+shared within role across layers, width 4 with layer/role embeddings; R uses
+frozen Haar frames of width 8, SHA256 domain `20261110:lol-random:` plus tensor
+identity (first eight bytes, big-endian, modulo 2^63; PCG64, positive-diagonal QR).
+K uses frozen top-8 G2 WikiText K-FAC eigenframes, with block
+M = (Λ_G^(1/2) Q_Gᵀ B)(A Q_A Λ_A^(1/2)); S sees only log singular values
+1–8 and tail energy, with zero/presence flags. Pin eigenbasis/tie conventions and
+frame hashes before fitting. Gauge refactorization (B,A)→(BQ,Q⁻¹A) must leave
+predictions invariant; audit with fixed well-conditioned Q, retaining discrepancies.
+
+The compact shared readout uses padded/masked tokens (vec(M), log spectrum,
+tail energy, layer/24, full-attention flag), a 75→16→16 MLP with role embedding,
+masked sum/mean pooling and a linear endpoint head: about 1.6k parameters
+(1,617 for the representation report's one-endpoint head). Learned frame
+parameters are additional: do not call the entire L encoder 1.6k (up/down
+frames alone have 36,864 in that report). S masks directional inputs; padding
+and masks are fixed, not fitted to outcomes. Return f(D)−f(0), exactly zero at
+zero edit; use explicit zero flags for log spectra. Freeze complete input dimensions
+and actual per-arm parameter counts under A5.1, including the F5.2 fusion inputs.
+
+Fit L1 loss to training-only nuisance residuals, AdamW lr 1e-3, weight decay
+1e-2, batch 16, at most 300 epochs. Use four ancestry-component inner folds
+inside each outer training fold, patience 30; take median inner best epoch,
+then refit outer training rows. Seeds 0/1/2 are prediction-averaged before loss.
+This nested early stopping is a secondary-only exception to A5.4.1; no outer
+held-out row selects epochs, transforms or architecture. WikiText is the endpoint;
+MMLU remains descriptive/unqualified. Evaluate on both identical eligible LoRA-only
+rows/inherited folds and the 386-logical-row G1 H1w folds (eligibility exclusions
+reported, not 386 independent examples). No sealed rows enter development.
+Compare L/R/K/S and each against same-row augmented StatNN; the secondary tree
+comparator gets inner-only tree count choice {100,300,600}, all other A5.8.4
+settings fixed. Report conditional and joint paired ratio intervals exactly as
+A5.4.2 (C_X:Y = 1−A_X/A_Y, ancestry clusters/common items, guards and failures).
+The family is descriptive/exploratory, cannot fund G7 or any other purchase,
+and cannot replace the primary after outcomes. Intervals crossing zero are
+inconclusive. The **family-only kill** is valid L-versus-S paired upper bound
+≤0 on LoRA-only rows in both conditional and joint procedures; undefined or wide
+intervals are unresolved. This alone does not stop the entire 0.8B line.
+
+**F5.2 — anchored GL-set head.** Register K+F, taking the K blocks above plus
+per-tensor field tokens (signed gradient contractions, q and predecessor cross
+term c) before pooling, with field-only F and anchored-only K comparators.
+Use F5.1's compact zero-at-zero head, L1/nested recipe, rows, folds and paired
+A5.4.2 intervals. Keep masks/role/metadata and training opportunity matched;
+remove every K-derived input for F and every field-derived input for K.
+Report K+F:F and K+F:K beside K:R and L:S; include each against augmented
+StatNN with all corresponding scalar inputs. These are secondary descriptive
+contrasts with no funding or promotion power. This does not change the primary
+tree/no-field/destruction-control family in A5.4.
+
+**F5.3 — capped 4B scale diagnostic.** Register 20 outcome-blind Gaussian edits
+of pinned Qwen3.5-4B plus one shared 4B base. Before scoring, hash the model,
+tokenizer, supports and 20 seeds. Planned chair default: radius ρ=0.005,
+D=ρ||W_support||_F Z/||Z||_F, Z iid standard Gaussian on all supported floating-point
+linear-weight matrices; zero/nonfinite norms fail closed. Pin the exact tensor list
+and realised bf16 rounding diagnostics. Derive each seed from SHA256 of
+`20261110:4b-gaussian:` plus draw index 0–19 (first eight bytes, big-endian,
+modulo 2^63; PCG64). No radius or support selection from wins.
+Score the same 64-window WikiText log-PPL/mean-NLL endpoint, with shared-reference
+paired per-edit changes and resolution intervals under A5.3, and report every
+edit, improvement fraction (NLL reduction with paired interval excluding zero),
+exact binomial uncertainty and unresolved fraction. No predictor is fitted.
+Run on a Lambda H100 in parallel with local G2/G3 after the registration freeze;
+first time and qualify the actual 4B endpoint/device under A3, including matched
+identity/repeat and precision. Otherwise label all results **fast-tier only**,
+never qualified TF-v1. Record all panel/source exposure, qualification, failures,
+references and measured costs under A5.2/F4; no exposed group becomes fresh later.
+This is a diagnostic of density/effect resolution, never a gate, never G7, and
+cannot delay, condition or resize Part A. Stop scale expansion if effects remain
+inconclusive or qualification fails; no automatic larger zoo. The **1.82 TF-v1
+GPU-h** estimate is an **unmeasured linear size extrapolation**:
+21 × (4/0.8) × 1.04 min / 60, excluding cold load, qualification/repeats and edit
+construction. The planned Lambda cap is 2 GPU-h including qualification;
+stop/reprice before exceeding it, never report a favourable incomplete subset
+as the completed diagnostic. This amendment starts no GPU job.
+
+**F5.4 — H5 critic contract.** The critic schedules real evaluation, ranks or
+abstains; measured held-out support improvement authorises acceptance. Pin immutable
+base, incumbent and candidate hashes. Diagnose/train proposals on proposal support,
+validate on disjoint held-out support, rebuild every accepted update from the same
+pinned base (never compound patches), reload/verify the effective delta, and validate
+the rebuilt candidate on an untouched acceptance slice if its bytes changed.
+Only a measured qualifying improvement over the actual incumbent under A5.7's
+feasibility/safety predicates is accepted; otherwise retain/restore the incumbent
+(or base initially). Preserve base-relative storage and actual-incumbent targets
+separately. Keep rollback/reversibility checks and a complete ledger including
+invalid, rejected, failed, no-op and reverted attempts. Reused support feedback is
+adaptive development; sealed outcomes never select updates or refit the critic.
+
+Log four separate Boolean treatment flags, fixed across matched critic/no-critic
+arms: `python_tool_access`, `forward_access`, `hidden_state_access`,
+`feedback_access`, with actual calls, code/decode hashes and costs. Python access
+does not imply forward access; hidden-state and feedback access are independently
+specified. Compare architecture-compatible random permutations of proposed updates,
+matched on changed count/norm and validation/tuning opportunities; distinguish
+these from critic-feature permutations.
+
+A matched random **best-of-N** arm is mandatory for any editor-advantage claim:
+32 independent Gaussian draws per source block, matched effective support/norm,
+fixed seed order and scale before outcomes, with nested prefixes N=1/8/32.
+Select each prefix's single winner using development support only, then evaluate
+on held-out items under the frozen policy. Match editor opportunities at each N
+and report equal-real-evaluation and equal-GPU costs, all draws/failures included.
+Retain existing G5 arms; G5 is shadow feasibility, not production rejection.
+Single-model selection (K=1) is separate from RandOpt-style top-K ensembles;
+any ensemble requires its own registration and multi-pass inference accounting.
+A5.7's ≥30% realised-savings, score noninferiority, missed-winner, power and net
+compute contract is unchanged; forecasts never substitute for measured acceptance.
+
+**F5.5 — joint line-stop rule at 0.8B.** Stop this weight-space world-model line
+at 0.8B and publish the measurement paper as its final word only when all three
+valid predicates hold jointly:
+(a) Part A resolves ≥15 rotation pairs with agreement CP upper bound ≤0.6;
+(b) every registered orientation contrast in Part B has both conditional and joint
+95% upper bounds <0.05 at simulated power ≥0.80 for both procedures;
+(c) learned L does not beat S on LoRA-only rows, meaning valid conditional and
+joint L:S paired upper bounds ≤0 as in F5.1.
+For (b), enumerate before fitting C_abl, C_rand, C_perm, K:R, L:S,
+K+F:F and K+F:K, plus the registered chart intact-versus-random/permuted-frame
+contrasts; use A5.4.2 and freeze the development-only power simulation for these
+actual ratios at C=0.15 with shared component/item covariance. Invalid/ineligible
+controls or missing power cannot satisfy (b). Apply A5.5 validity first. Any one
+predicate failing, missing, underpowered or undefined leaves the line **unresolved**,
+not killed. This bounded line-stop is separate from funding and is no universal
+scientific falsifier: Part B still reuses examined outcomes under A4.4. Funding
+stops on a registered no-go regardless of this conjunction; the Part A alternative
+also stops field funding under A5.5. No secondary supplies a funding fallback.
+
+**F5.6 — brief corrections.** Withdraw the LoL “50,000 times faster” claim;
+it was not found in the fetched text. WeightLoop beats random edits in **8 of 8**
+settings and the original predictor in **7 of 8**, not 7 of 8 versus random.
+No chain LoRA factors are stored: chain steps are dense snapshots; their F5.1
+factors are reconstructed realised-increment SVDs, never original adapters.
+The 122 stored adapters are **121 lora_sft + 1 heretic_ara** (round3-representation
+§2); stored adapters are not independent labelled rows or a power calculation.
+
+**F5.7 — null-size caveats and interpretation.** Record the evidence in
+`docs/prereg/a5_manifests/nullsize/report.json` and its README: the three
+contrasts rescale one donor block, so this is **one test, not three**; the
+registered null returns alternative in 1,939/10,000 replicates (**19.4%**, exact
+rate 0.1939), beside go 180/10,000 (0.018); the LoRA low tertile has one donor
+reused for all ten slots; donor means dominate within-pair noise (SD about
+0.004 nats per synthesis §5), explaining proxy yield 1.0. These are limitations,
+not rotation-null or power certification. Keep the registered ≤0.07 size gate.
+Every Part A report must show the alternative branch's null count/rate and
+binomial interval next to the ordered go rate, for the registered and reported
+sensitivity scenarios; distinguish those null rates from observed branch outcomes.
+An **alternative** outcome is a **funding stop for the field**, never evidence
+of wrong signs. Do not reinterpret its high null frequency as directional
+falsification or alter A5.5's branch order retrospectively.

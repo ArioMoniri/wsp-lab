@@ -146,3 +146,33 @@ Keep all attempts, including invalid and rejected ones, in the ledger; preserve 
 G5 is feasibility only; G8 needs fresh episodes, frozen calibration/rejection and joint savings/noninferiority/guardrail criteria (synthesis §§3, 4.4).
 A powered negative structural contrast rejects only the registered representation's incremental benefit on that population.
 It does not reject structural mechanisms generally; deployment decisions are separate (synthesis §4.4).
+
+
+## 10 Nov 2026 prospective amendment — H1-OR and H5 (before freeze)
+
+The [10 Nov synthesis](council/2026-11-10/SYNTHESIS.md) is implemented by
+[PREREG A5 amendment F5.1–F5.7](PREREG_H1_TF.md); Board A reviews at freeze.
+H1-OR keeps the base-anchored field primary. Add descriptive CPU LoL secondaries
+L/R/K/S on realised-increment SVD factors (raw stored adapters sensitivity only),
+LoRA-only and 386-row inherited folds, and K+F versus field-only/anchored-only.
+Use zero-at-zero compact heads, nested early stopping and paired A5.4 ratio
+intervals; no secondary funds a purchase or becomes primary after outcomes.
+The family-only stop requires L:S upper bounds ≤0. The 0.8B line stops only
+jointly when (a) Part A has ≥15 resolved rotation pairs with agreement upper
+bound ≤0.6, (b) every registered Part B orientation contrast has upper bound
+<0.05 at simulated power ≥0.80, and (c) L:S paired upper bounds ≤0 on LoRA
+rows, with valid conditional/joint bounds as F5.5 specifies. Any missing/failing
+predicate leaves the line unresolved; registered no-go still stops funding.
+Alternative stops field funding and is never evidence of wrong signs (F5.7).
+
+H5 gains F5.4's critic contract: critic schedules/abstains, measured held-out
+support improvement authorises acceptance; rebuild each accepted update from
+pinned base, verify/reload, compare matched random-permutation updates, and retain
+rollback plus complete attempts. Log separate Python, forward, hidden-state and
+feedback flags. Add matched random best-of-N, 32 draws per source block with
+nested 1/8/32 curves, development-only single-winner selection and held-out
+validation; report ensembles separately. Actual-incumbent targets and base-relative
+storage remain distinct. A5.7's ≥30% realised savings and conjunctive deployment
+gates remain binding; G5 is shadow feasibility and production stays disabled.
+The 4B pilot is a parallel Lambda diagnostic under F5.3, never a gate or H6 result.
+No compute is started and no historical hypothesis status is repaired.

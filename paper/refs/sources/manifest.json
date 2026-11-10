@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-10",
+  "git_sha": "d83529ecd966920f1937f9e32691beb688487cbd",
+  "seed": null,
+  "model_revisions": null,
+  "config": {
+    "parser": "BeautifulSoup html.parser",
+    "separator": " ",
+    "strip": true
+  },
+  "sources": {
+    "paper/refs/sources/2410.04207.txt": {
+      "sha256": "7abe1c8ed30bf3b9c95ed6359a2913da8ef751e40082d9cde3daaf76ad52ac92",
+      "url": "https://arxiv.org/html/2410.04207",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    },
+    "paper/refs/sources/2603.12228.txt": {
+      "sha256": "ae5c612b67de926217f05216f4e603518cfb3b19e1f5532f66559ffe09477386",
+      "url": "https://arxiv.org/html/2603.12228",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    },
+    "paper/refs/sources/2611.07319.txt": {
+      "sha256": "b8d20b0662dc297f94a33d51a206f68f08f44e66abd8e46f7507648fc143a3a4",
+      "url": "https://arxiv.org/html/2611.07319",
+      "kind": "fetched source text; BeautifulSoup get_text, not experimental data"
+    }
+  },
+  "config_hash": "4db9dbab6884f6f7952006033553baee7be13be9c65a4716b453bb0dd0085a02"
+}

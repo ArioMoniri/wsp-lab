@@ -142,3 +142,31 @@ APC-corrected attention maps, so head-only refitting is the mandatory first cont
 best-of-N, a non-LLM search over the same weights, sham reload; identity-clustered protein splits with cluster
 bootstrap; editor replicates as a crossed random effect. Pilot: ESM2-8M, frozen clustered CASP-derived test set,
 20 proposals, target < 1 GPU-hour (estimate). Scheduled after the H5 Stage-1 pilot; not before.
+
+
+## 10 Nov 2026 ordering amendment (before freeze)
+
+[Chair synthesis](council/2026-11-10/SYNTHESIS.md), implemented by A5 F5;
+Board A reviews at the freeze. This ordering governs the bounded programme;
+no unchecked gate is marked complete and no compute starts with this document.
+
+1. Freeze: Board A item 7 accepts the merged pre-G2 evidence plus F5 and A5.1 hashes.
+2. G2: fields, chart, probe cache and 20-predecessor audit (≤3 local GPU-h cap).
+3. CPU power/yield simulation on G2 development predictions, before G3.
+4. G3 Part A: unchanged forty edits, 120 variants plus 19 references against the
+   closed snapshot; apply the ordered A5.5 rules and F5.7 reporting.
+5. G4 Part B: unchanged primary plus CPU LoL L/R/K/S and anchored K+F secondaries,
+   with field-only/anchored-only comparators; descriptive, no funding power.
+6. G5 shadow editor pilot: F5.4 validation/rebuild/reversibility contract and four
+   access flags; mandatory 32-draw/block random best-of-N with nested 1/8/32 curves.
+   Caps remain ≤10 local GPU-h plus ≤6 for best-of-N; stop/reprice at caps.
+
+In parallel after freeze, run the capped F5.3 4B diagnostic on Lambda H100,
+20 outcome-blind fixed-radius Gaussian edits plus shared base, 64-window WikiText;
+A3 device qualification first or fast-tier-only reporting. The 1.82 TF-v1 GPU-h
+linear size extrapolation is unmeasured and excludes overhead/qualification.
+It neither delays nor conditions Part A and never gates a purchase; stop scale
+expansion if inconclusive. This narrowly scoped parallel Lambda item supersedes
+the historical no-new-Lambda wording only for this diagnostic, not a larger zoo.
+G7 remains conditional on primary go; G8 needs separate pricing/power. Funding
+stops on registered no-go; whole-line stopping needs all F5.5 predicates.

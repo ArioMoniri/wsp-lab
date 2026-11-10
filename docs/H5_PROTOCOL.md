@@ -58,3 +58,41 @@ three workers; 4096-token and 32k tiers to be measured on the frozen sealed set 
 ## Open items for the user
 - Budget for Stage 2 (options a/b/c above). Default if no answer: (b).
 - Consent to use commercial editor models and to publish their transcripts (Board B licence/consent statement).
+
+
+## 10 Nov 2026 amendment — critic validation and matched search (before freeze)
+
+Authority: PREREG A5 F5.4, [10 Nov synthesis](council/2026-11-10/SYNTHESIS.md).
+This prospective section supplements the earlier design; it reports no execution.
+G5 remains shadow feasibility, production disabled, and A5.7 controls any G8 trial.
+
+Record four separate Boolean flags per treatment/attempt: `python_tool_access`,
+`forward_access`, `hidden_state_access`, `feedback_access`. Pin them before the
+run and hold them fixed across matched critic/no-critic arms. Log actual calls,
+code/config/decode hashes, feedback exposure, sequences/tokens and all compute;
+Python algebra alone does not imply model inference or hidden-state access.
+
+The loop is forecast → schedule/abstain → measure on held-out support → rebuild
+from pinned base → reload/verify → accept or roll back. Separate proposal-training,
+support-validation, calibration and sealed items. Every candidate remains a
+base-relative patch, never a compounded patch. Preserve actual incumbent hashes
+and measure its relative improvement separately. If rebuilding changes bytes,
+validate the rebuilt tensor on an untouched acceptance slice. Only measured
+improvement satisfying the frozen support/feasibility/safety predicates authorises
+acceptance; a critic prediction does not. Failure retains the incumbent, initially
+the base. Test reversibility and deterministic reload; keep all invalid, failed,
+rejected, no-op and reverted attempts. Compare architecture-compatible random
+permutations of updates with matched support/count/norm and equal validation/tuning
+budget, separately from feature permutations. Adaptive reused support is development;
+sealed feedback cannot select edits or refit a frozen critic.
+
+Retain the existing G5 arms and add matched random best-of-N: 32 independent
+Gaussian draws per source block, effective support/norm matched, fixed scales,
+seeds and draw order before outcomes. Use nested prefixes 1/8/32, select one winner
+per prefix on development support, then evaluate on held-out items. Match editor
+opportunities at each N; report equal-real-evaluation and equal-GPU comparisons,
+charging all draws, diagnostics, failed attempts and selection. No editor advantage
+claim is allowed without this comparator. Single-model selection (K=1) is separate
+from top-K ensembles and their multi-pass inference costs; any ensemble is separately
+registered. A5.7's ≥30% realised savings, noninferiority, missed-winner, net-cost and
+prospective power conditions remain unchanged. This amendment authorises no episode.
