@@ -312,3 +312,12 @@ leaves eigenvalues near −1e-7 x the largest; WikiText and HellaSwag pass. Chai
 of the factors and a negativity tolerance relative to the largest eigenvalue, recorded as a dated A5.8.1 amendment with the field module
 re-pinned, before Board A's post-commit audit. Board A's freeze pass (4fd1e2a) returned REVISE with seven edits, being applied on
 `prereg/a5-freeze`. The 4B Lambda job code is in its commit hook.
+
+**10 Nov 2026, 16:00 UTC.** Board A freeze edits 1–7 merged (b7f10a1, branch `prereg/a5-freeze`): closure reconciliation (37 old-seal
+components / 187 census-scored members exposed), the two missing sensitivity scenarios implemented and run (constant positive mean:
+size 0.041, alternative branch 0.218 [0.210, 0.226]; cell mask/noise: size 0.031, alternative 0.154 [0.147, 0.162]; all five scenarios
+under the 0.07 gate), LoL/head schema pins (all frames width 4; 39-input head, 1,137 parameters per endpoint), 4B paired qualification
+spec, best-of-N executable rules, chart contrasts enumerated and chart seeds registered, upper-bound exclusion power spec, A5.1.2 literal
+inventory (90 hashes). 4B diagnostic code merged (f252d68). Pre-audit follow-up running on `prereg/a5-eig`: A5.8.1 eigenvalue
+tolerance amendment (fp64, relative to the largest eigenvalue) with the field module, G2 driver and 4B scripts re-pinned. Then Board A's
+post-commit audit, then G2.
