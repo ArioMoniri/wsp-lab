@@ -349,3 +349,8 @@ hashes; `--verify-pins HEAD` passes on main. Board A's re-audit requested (`docs
 blocking repairs resolved, all pins and hashes verified, no further conditions. G2 launched on the exclusive local GPU under the frozen
 bytes (`PANELS_SHA256` = the A5.1.2 panels hash; caps 2 GPU-h fields and cache, 1 GPU-h audit, 28 GiB). Outcome-access order holds:
 G2 reads no rotation, ladder or sealed outcome.
+
+**10 Nov 2026, 20:30 UTC.** F5.3 scale diagnostic launched on Lambda (H100 PCIe, us-west-3, instance `a6508259…`, device id H3, repo
+revision 736ca25, cap 2.0 GPU-h, self-terminating): builds 20 Qwen3.5-4B Gaussian edits at ρ = 0.005, scores the FP4 pairing panel
+first (base + draws 0/4/8/12/16, two fresh-process repeats), then the remaining 15 entries on WikiText; uploads to the HF zoo dataset.
+Diagnostic, not a gate; the H0 half of the pairing runs after G2. G2 running locally since 20:00 UTC.
