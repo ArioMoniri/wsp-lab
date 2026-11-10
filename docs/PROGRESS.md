@@ -507,3 +507,8 @@ Board A review of F9a requested. F8 tooling (floor script, replay identity verif
 **11 Nov 2026, 17:00 UTC.** F8 tooling merged (`scripts/f8_floor.py`, `scripts/f8_replay_verify.py`, 33 tests). Floor recomputed
 from a fresh clone by the chair: h* = 0.0049397 nats/token, equal to the spec preview (`docs/prereg/f8_manifests/floor_payload/`).
 Round-5 member reports archived in git (e3920b1). H5 documents being reconciled with F9a.5–F9a.6; Board A review of F9a in flight.
+
+**Timestamp note (added at 23:20 UTC, 10 Nov 2026 system clock).** The clock labels on the entries above from "11 Nov 2026,
+06:30 UTC" through "17:00 UTC" were written as estimates and are wrong; the work they describe happened between about 21:30 UTC on
+10 Nov and 23:20 UTC on 10 Nov 2026. The git commit timestamps (`git log --format='%h %ci %s'`) are authoritative for ordering and
+time; the "before any G3 outcome" status of F7–F9a is unaffected (Part A staging was at 35 of 40 and nothing had been scored).
