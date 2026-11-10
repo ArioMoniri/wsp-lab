@@ -375,3 +375,6 @@ GPU seconds and peak memory (the fields of the first run already had peak memory
 resumes alone after hash-checking the completed stages. Follow-up in progress: objectives processed in ascending estimated row cost and
 cost-guarded objectives re-checked at the end of the same run, so one resume can complete all five; then merge, re-verify pins and
 resume the audit on the GPU.
+
+**11 Nov 2026, 00:00 UTC.** Audit reprice and ordering fix merged (1a238ee; 46 driver tests; pins verified on main). G2 audit stage
+resumed on the exclusive GPU (`--resume --stages audit`; completed fields, projectors and probe cache hash-checked first).
