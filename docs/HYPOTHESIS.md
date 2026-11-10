@@ -378,3 +378,5 @@ plus ≤ 6 for best-of-N) before launch; if it does not fit, streams are dropped
 dropped; dropped streams are reported as unfunded. G5 stays shadow-only, G8 keeps its existing eligibility (G5 feasibility plus
 G3/G4 go), and every A5.7 rejection and acceptance safeguard is retained. No episode is authorised by this block.
 
+
+**11 Nov 2026 (F8a.6 reconciliation note).** Spec §6 of `docs/design/F8_EXECUTION_SPEC.md` (scripted-estimator arm), with the F8a.6 overrides and the F9a precedence statement, is appended verbatim to `docs/H5_DESIGN.md` and `docs/H5_PROTOCOL.md` under "11 Nov 2026 (F8 execution spec §6, verbatim, with F8a.6 overrides)". No hypothesis, threshold or arm changes; G5 stays shadow-only.
