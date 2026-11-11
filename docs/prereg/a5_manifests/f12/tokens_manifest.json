@@ -1,0 +1,232 @@
+{
+ "base": {
+  "model": {
+   "dtype": "bfloat16",
+   "repo": "Qwen/Qwen3.5-0.8B",
+   "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+  },
+  "state_hash": "18f07d70a89aa63125e7e95535ff2730eb54bae4ee846d72f183e004a740d982"
+ },
+ "basis": "PREREG_H1_TF F12.3 (K+F tokens 0-38 with K blocks + probe columns 39-41), F12.5 (real token matrix for the outcome-free simulation), F12.8 (fields and K/SVD/probe extraction, CPU, measured); F5 schema pins (10 Nov 2026); Board A F12 review conditions 2, 6, 7",
+ "code": {
+  "code_files_dirty": false,
+  "git_sha": "04127991845e246c2fab77293654b773674f01a2",
+  "scripts/a5_power_fields.py": "bcf7d15d679e819d17f7784262bb22fbe10fece33bbb6757e8e08b44d3e592a8",
+  "scripts/f12_population.py": "7e1c196dcbedd36e2ea7102d6a1ef4e50e23b8381dcc2bbf1cfffce77b2ee45d",
+  "scripts/f12_tokens.py": "3188c5c54e51110d0fb161f688c8c94832eed674be80b3c757060951a596092a",
+  "scripts/part_a_predictions.py": "d312967e317e330a3a7beff73a74f47c8da4ebbaaf110f763f2d7f36a8233847",
+  "src/wsp/features/response_chart.py": "f23397779c13d2d63cb9db79f126886612eb3deb67d1d97b433ead7ec5bcc0c6",
+  "src/wsp/features/response_field.py": "98d81bbc300e715fe27a02e04711c0d036ae7ef9342d6bddbcaa227d91f725bc",
+  "src/wsp/zoo/apply.py": "4dbeb10e9d7024508baa376b915a90072170428f87663b32865ff4543cd72005",
+  "src/wsp/zoo/arch.py": "1cb721530a05a0bc33c7dc9cd41667805b10e65c4dc7dcb71fa3558ce8c304f2"
+ },
+ "column_rules": {
+  "0-15": "vec(M_t) row-major, M_t = (Lambda_G^1/2 U_G^T B)(A U_A Lambda_A^1/2); zeros with flag k_cutoff_tie",
+  "16-23": "log sigma_j(D_t), natural log, untruncated fp32 thin SVD, 0 where absent",
+  "24-31": "1[sigma_j > 1e-3 sigma_1]",
+  "32": "sum_{j>8} sigma_j^2 / sum_j sigma_j^2",
+  "33": "layer / 24",
+  "34": "1 iff the tensor's layer type is full_attention (field module_roles)",
+  "35-38": "<g_t, D_t> (wikitext_nll, fp32 as response_field.contract), q_t (base spectral factors), c_t = 0 (roots), presence",
+  "39-41": "mlp.down_proj only: RMS_i of mean(D x)_i, RMS_i of RMS(D x)_i over the G2 probe cache (mean over a prompt's tokens, equal prompt weight), presence; 0 elsewhere (drafting default)",
+  "eligibility": "a row with a supported changed tensor lacking r, a finite SVD or a K frame is excluded",
+  "presence": "token present iff the tensor is one of the 186 matrix slots and D_t != 0 after rounding",
+  "rank": "adapter r (lora_sft; chain inner lora_sft), 1 (abliteration, random_dir and their chain roots)"
+ },
+ "columns": [
+  "K_M_00",
+  "K_M_01",
+  "K_M_02",
+  "K_M_03",
+  "K_M_10",
+  "K_M_11",
+  "K_M_12",
+  "K_M_13",
+  "K_M_20",
+  "K_M_21",
+  "K_M_22",
+  "K_M_23",
+  "K_M_30",
+  "K_M_31",
+  "K_M_32",
+  "K_M_33",
+  "log_sigma_1",
+  "log_sigma_2",
+  "log_sigma_3",
+  "log_sigma_4",
+  "log_sigma_5",
+  "log_sigma_6",
+  "log_sigma_7",
+  "log_sigma_8",
+  "sigma_present_1",
+  "sigma_present_2",
+  "sigma_present_3",
+  "sigma_present_4",
+  "sigma_present_5",
+  "sigma_present_6",
+  "sigma_present_7",
+  "sigma_present_8",
+  "tail_energy_gt8",
+  "layer_over_24",
+  "full_attention_layer",
+  "field_contraction_wikitext_nll",
+  "q",
+  "cross_term",
+  "field_present",
+  "probe_rms_of_mean_Dx",
+  "probe_rms_of_rms_Dx",
+  "probe_present"
+ ],
+ "files": {
+  "aq.json": "90ab8466ee08b08e2fc003d419cbeb4d87494dc007413fe4f542a961f79d4e67",
+  "detail.jsonl": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a",
+  "kframes.json": "b80b9b3aef8b29c242e13c5a99d9e6096c28aa444fbac7b66454f40f0d256e48",
+  "kframes.safetensors": "100a4024bf09f33820540c21b53bd0512c14bd1d1dfb7c299f647f5aedd0b519",
+  "pricing.json": "1146a853b066fbce80acb06975083e7c9c579b2faafa018e23939d3f2cfecd98",
+  "rows.jsonl": "424c9039c7f3bcb7232465428681072da5ce4bfbe24f98ca1f04d7ca72f863c6",
+  "tokens.safetensors": "f8c5e163fcbcb013fdf6287a6ac19f242f0ec1bd786c7add618cc8af8974a054"
+ },
+ "inputs": {
+  "g2_manifest": {
+   "path": "/home/ubuntu/projects/wsp-lab/.worktrees/feat/f12-inputs/data/runs/g2/g2_manifest.json",
+   "sha256": "c4ec7390aaf118ed785c390ce337a4077936a31204f97da54341bcfa54fd09ff"
+  },
+  "probe_cache": {
+   "content_hash": "1efc2c2630cd61b7a4e7c5d03b0c918910e029e5468cc7d8049a9fecb3c923ef",
+   "dir": "/home/ubuntu/projects/wsp-lab/.worktrees/feat/f12-inputs/data/runs/g2/probe_cache",
+   "files_sha256": "e8667e18eb0b630af83427d93181d4b275511d5a86c188d0a37a8ad91f588502",
+   "hooks": "A5.8.3 MLP writers, post-gating input of mlp.down_proj",
+   "n_prompts": 64,
+   "n_tokens": 1565,
+   "pooling": "mean over a prompt's tokens, then equal weight over prompts",
+   "predecessor": {
+    "id": "base",
+    "state_hash": "18f07d70a89aa63125e7e95535ff2730eb54bae4ee846d72f183e004a740d982"
+   }
+  },
+  "timing": {
+   "field_load_seconds": 165.93063807487488,
+   "k_frame_seconds": 1641.1513466835022,
+   "spectral_seconds": 1632.9112555980682
+  },
+  "wikitext_field": {
+   "content_hashes_sha256": "b881959fd431756bf615376ef6a95553861252d38d1182920b78a5a48e271e26",
+   "dir": "/home/ubuntu/projects/wsp-lab/.worktrees/feat/f12-inputs/data/runs/g2/fields/wikitext_nll",
+   "files": {
+    "manifest.json": "38e26b16b08ba542b1d1a58f4bb1b93d79c87e657d346c58cb712c64e15e5eee",
+    "tensors.pt": "dac704239ae0fbd0e6da719c8c41030676d5514dd2e5b9e4522b293d089c3614"
+   },
+   "identity_sha256": "6fab5b29c1fb70f5b08e1ae09f098088467b3bc649a234a5b12f4bc91223a87e",
+   "state_hash": "18f07d70a89aa63125e7e95535ff2730eb54bae4ee846d72f183e004a740d982"
+  },
+  "zoo": "/home/ubuntu/projects/wsp-lab/.worktrees/feat/f12-inputs/data/zoo/qwen3.5-0.8b"
+ },
+ "kframes": {
+  "flag_counts": {},
+  "kframes_safetensors_sha256": "100a4024bf09f33820540c21b53bd0512c14bd1d1dfb7c299f647f5aedd0b519",
+  "n_tensors": 186,
+  "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/kframes.json",
+  "sha256": "b80b9b3aef8b29c242e13c5a99d9e6096c28aa444fbac7b66454f40f0d256e48"
+ },
+ "ordering_note": "computed on the feat/f12-inputs branch after population.json and its fold manifest were written and hash-verified (population_frozen), before the F12 C1 commit; the chair decides whether this run stands as the C2 token output or is recomputed after C1 with the pinned code",
+ "out_dir": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens",
+ "outcomes_read": "none: stored edit bytes, edit.json, the base model, the G2 WikiText field and probe cache only; no evaluation record, TF-v1 score or outcome is opened",
+ "population_frozen": {
+  "fold_manifest_sha256": "3fdee6859926e3935d9fa18dc3fac7c4b61a8b30bc60415db27e53585de073de",
+  "population_ids_sha256": "bd695b4ee6590156d2264b5f4c8dca252a1e63aced35d927a0d940d0eadd6348",
+  "population_json_sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5",
+  "verified_at": "2026-11-11T16:47:15Z"
+ },
+ "rows_sha256": "95eabb4a4ccbcfed267ce5d4387e8949e0d3aba2dc9783dadbe84376a52555cd",
+ "schema": "f12-tokens-v1",
+ "slots": {
+  "layer_types": [
+   "linear_attention",
+   "linear_attention",
+   "linear_attention",
+   "full_attention",
+   "linear_attention",
+   "linear_attention",
+   "linear_attention",
+   "full_attention",
+   "linear_attention",
+   "linear_attention",
+   "linear_attention",
+   "full_attention",
+   "linear_attention",
+   "linear_attention",
+   "linear_attention",
+   "full_attention",
+   "linear_attention",
+   "linear_attention",
+   "linear_attention",
+   "full_attention",
+   "linear_attention",
+   "linear_attention",
+   "linear_attention",
+   "full_attention"
+  ],
+  "n": 186,
+  "names_sha256": "416c34cea967a230eed47577e2f2df91ebf9863f8f5d064e0d29566ee7d4929c"
+ },
+ "status": "complete",
+ "summary": {
+  "eligible": 270,
+  "excluded": {},
+  "field_status": {
+   "ok": 270
+  },
+  "max_rss_bytes": 17180188672,
+  "n_rows_done": 270,
+  "n_rows_population": 270,
+  "omitted_energy_gt_0.01_rows": 212,
+  "pricing": {
+   "cap_wall_hours": 24.0,
+   "first_row_id": "03579532a8d658ba",
+   "first_row_seconds": 109.69869422912598,
+   "first_row_stored_tensors": 17,
+   "n_rows": 270,
+   "projected_wall_hours": 13.22856042405359,
+   "projected_wall_seconds": 47622.817526592924,
+   "projected_wall_seconds_naive": 33071.60838031769,
+   "projected_wall_seconds_tensor_weighted": 47622.817526592924,
+   "setup_seconds": 3452.9609384536743,
+   "stored_tensors_total": 6845,
+   "threads": 6,
+   "within_cap": true
+  },
+  "q_partial_rows": 0,
+  "rank_sources": {
+   "adapter_config.r": 29,
+   "params.inner_params.rank": 36,
+   "pinned:abliteration": 83,
+   "pinned:chain:abliteration": 34,
+   "pinned:chain:random_dir": 35,
+   "pinned:random_dir": 53
+  },
+  "rows_with_unsupported_changed_tensors": [],
+  "timing": {
+   "field_load_seconds": 165.93063807487488,
+   "k_frame_seconds": 1641.1513466835022,
+   "row_seconds_total": 21587.00013446808,
+   "setup_seconds": 3452.9609384536743,
+   "spectral_seconds": 1632.9112555980682,
+   "threads": 6,
+   "wall_seconds": 25091.261086940765
+  },
+  "token_flag_rows": {}
+ },
+ "tokens": {
+  "X_sha256": "3a1cb59bec12d09329bf4504eeeeb2204b0e752f9be8ce6f250fcf24779341ed",
+  "n_present_tokens": 6845,
+  "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/tokens.safetensors",
+  "presence_sha256": "e1068061ee2d49e4b9b522320d21feb4c9f3a00460c816229851e4b93ef79a86",
+  "row_ids_sha256": "bd695b4ee6590156d2264b5f4c8dca252a1e63aced35d927a0d940d0eadd6348",
+  "sha256": "f8c5e163fcbcb013fdf6287a6ac19f242f0ec1bd786c7add618cc8af8974a054",
+  "shape": [
+   270,
+   186,
+   42
+  ]
+ }
+}

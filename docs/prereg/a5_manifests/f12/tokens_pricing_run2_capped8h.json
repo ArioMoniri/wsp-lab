@@ -1,0 +1,15 @@
+{
+ "cap_wall_hours": 8.0,
+ "first_row_id": "0298985df48ec8f9",
+ "first_row_seconds": 16.128672122955322,
+ "first_row_stored_tensors": 2,
+ "n_rows": 270,
+ "projected_wall_hours": 17.91464032597012,
+ "projected_wall_seconds": 64492.70517349243,
+ "projected_wall_seconds_naive": 13647.066305875778,
+ "projected_wall_seconds_tensor_weighted": 64492.70517349243,
+ "setup_seconds": 9292.324832677841,
+ "stored_tensors_total": 6845,
+ "threads": 6,
+ "within_cap": false
+}
