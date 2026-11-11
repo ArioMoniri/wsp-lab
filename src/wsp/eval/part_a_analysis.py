@@ -25,9 +25,31 @@ note of ``docs/PREREG_H1_TF.md``, this module's constant and (CLI) the required 
 ``text_groups.json`` must have its A5.1.2 sha256, and the ledger must carry exactly its 64 window
 item ids in registered order, its 32 two-window blocks and its per-window token-id hashes; every
 selected pair needs a complete re-stage audit entry bound to a hashed re-stage report, otherwise
-its rotation pair is excluded as ``audit_missing``; if the re-stage yield is below 40/40 a hashed
-slot-masked calibration report (F10.6) is required, its gates and verdict are disclosed and its
-embedded NULL-SIZE row is added to the F5.7 table without replacing a row.
+its rotation pair is excluded as ``audit_missing``; if the re-stage yield is below full yield a
+hashed slot-masked calibration report (F10.6) is required, its gates and verdict are disclosed and
+its embedded NULL-SIZE row is added to the F5.7 table without replacing a row.
+
+Two manifests (Board A re-review condition 2: bind trusted input evidence)
+--------------------------------------------------------------------------
+* The **frozen staged manifest** is the preserved a533 staging manifest
+  ``docs/prereg/a5_manifests/part_a/manifest_a533.json`` (sha256
+  :data:`FROZEN_STAGED_MANIFEST_SHA256`, verified at load). The norm tertiles, the ln ρ cut keys
+  and cells, the staged ln ρ values and the S30 recomputation are anchored there and never in a
+  regenerated manifest (spec §§1.1, 2.2, 3.1; F10b.2 item 3: "frozen from the staged manifest; any
+  pair whose re-stage value would cross a cut is flagged, never moved"). Its forty selections are
+  the registered ids (sorted-id sha256 :data:`REGISTERED_EDIT_IDS_SHA256`).
+* The **execution manifest** is the manifest whose variants were scored (F10 re-stage report,
+  later regenerations). It is passed explicitly (CLI ``--manifest`` with the required
+  ``--manifest-sha256``); the file bytes must hash to the supplied value, and the sealed ledger's
+  ``manifest_sha256`` and ``restage_provenance.manifest_sha256`` must record the same hash. The
+  F10 verdicts and reason codes (``edit_audits[i].pair_verdict`` / ``.exclusions``), the F10.4
+  pooled ρ (``edit_audits[i].edit_audit.pooled_energy_ratio``, used for the covariate model and for
+  ``cell_drift``), the ladder exclusion flags, the selection rows and the variant ids are read
+  from it; the ledger's re-stage entries must agree with it (a disagreement refuses the run). The
+  run is refused unless every registered id and every a533 variant id is in it, and unless every
+  registered selection row equals its frozen row. A selection that is not registered must carry
+  ``supplementary: true`` (F11 supplementary edits): supplementary edits are analysed and reported
+  in the registered analysis and excluded from the registered-40 F10.5 sensitivity reports.
 
 The paired-block helpers, the resolution draws and the CP intervals are reused from
 ``scripts/a5_simulation.py`` (``donor_block``, ``resolution``, ``cp_interval``).
@@ -41,12 +63,13 @@ pending adopting note** (a dated A5 note must adopt it, or replace it, before sc
    extended by the condition-3 bindings)::
 
        {"schema": ..., "sealed": true,
-        "manifest_sha256": <staged Part A manifest sha256>, "fields_sha256": <fields file sha256>,
+        "manifest_sha256": <execution manifest sha256>, "fields_sha256": <fields file sha256>,
         "text_groups_sha256": <text_groups.json sha256>,
         "window_ids": ["0", ..., "63"] (text_groups.json windows[].item_id, registered order),
         "two_window_blocks": [[0, 1], ..., [62, 63]] (text_groups.json two_window_blocks),
         "window_token_ids_hashes": [64 token_ids_hash values, aligned with window_ids],
-        "restage_provenance": {"manifest_sha256": h, "audit_file_sha256": h, "readme_sha256": h},
+        "restage_provenance": {"manifest_sha256": <execution manifest sha256>,
+                               "audit_file_sha256": h, "readme_sha256": h},
         "references": {<edit id (original W+D) | predecessor id | "base">: {"mean_nll": [64]}},
         "variants": {<edit id>: {"rotation" | "ladder_0.25" | "ladder_0.5":
                      {"variant_id": ..., "mean_nll": [64] (absent if not scored),
@@ -76,8 +99,9 @@ pending adopting note** (a dated A5 note must adopt it, or replace it, before sc
    "sha256": <64 hex>}, ...]}}`` for every name in :data:`VALIDITY_PREDICATES`. A predicate
    certifies step 1 only with ``pass: true`` and a non-empty, well-formed evidence list that links
    the required pins (:func:`validity_bindings`): ``registration_pinned`` the specification,
-   staged manifest, text groups, fields and NULL-SIZE report hashes; ``selection_and_audits`` the
-   three re-stage provenance hashes; ``null_size`` the NULL-SIZE report and, when F10.6 applies,
+   frozen staged (a533) manifest, text groups, fields and NULL-SIZE report hashes;
+   ``selection_and_audits`` the three re-stage provenance hashes (whose manifest hash is the
+   execution manifest's); ``null_size`` the NULL-SIZE report and, when F10.6 applies,
    the slot-masked calibration report hash. ``g2_predecessor_audit`` with ``pass: false`` carries
    the registered hard stop of G2 pending a new amendment.
 5. *Part B input* (``--part-b``; produced by the Part B pipeline, not computed here):
@@ -94,14 +118,15 @@ pending adopting note** (a dated A5 note must adopt it, or replace it, before sc
    ``scripts/a5_simulation.py --slot-mask`` (``slot_mask`` with label, mask file sha256, canonical
    mapping sha256, masked ids and gates; ``reports.null_size``). Its masked rotation ids must
    equal the re-stage exclusions and its canonical mapping sha256 must recompute from them.
-   Required (else refusal) when the re-stage yield is below 40/40; refused when the yield is 40/40,
+   Required (else refusal) when the re-stage yield is below full yield; refused at full yield,
    where the registered F2/F7 simulations stand without a new run. A failed gate makes step 1
    unresolved (F10.6: "A failure makes Part A not decisive").
 
     python scripts/part_a_analyse.py --ledger LEDGER.json --fields FIELDS.json \
         --spec-sha256 8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4 \
+        --manifest docs/prereg/a5_manifests/part_a/manifest.json --manifest-sha256 SHA256 \
         --output REPORT.json --markdown REPORT.md [--validity V.json] [--part-b B.json] \
-        [--masked-calibration MASKED.json]
+        [--masked-calibration MASKED.json] [--frozen-manifest manifest_a533.json]
 """
 
 from __future__ import annotations
@@ -138,11 +163,15 @@ FLOOR = 15
 CONTRASTS = ("rotation", "ladder_0.25", "ladder_0.5")
 LADDER_STRENGTH = {"ladder_0.25": 0.25, "ladder_0.5": 0.5}
 
-DEFAULT_MANIFEST = ROOT / "docs/prereg/a5_manifests/part_a/manifest.json"
+# The preserved a533 staging manifest: the anchor of every frozen cut, cell and subset.
+DEFAULT_FROZEN_MANIFEST = ROOT / "docs/prereg/a5_manifests/part_a/manifest_a533.json"
 DEFAULT_NULLSIZE = ROOT / "docs/prereg/a5_manifests/nullsize/report.json"
 DEFAULT_TEXT_GROUPS = ROOT / "docs/prereg/a5_manifests/text_groups.json"
 DEFAULT_REGISTRATION = ROOT / "docs/PREREG_H1_TF.md"
-STAGED_MANIFEST_SHA256 = "d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6"
+FROZEN_STAGED_MANIFEST_SHA256 = "d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6"
+# manifest_a533.json:selection_ledger.edit_ids_sorted_sha256 (the forty registered ids, A5.3.1).
+REGISTERED_EDIT_IDS_SHA256 = "e2bd6cb2956c0fbe64194b3f1ebbb481248ecec45b8a729a59a54b9a2bac9d6b"
+N_REGISTERED = 40
 NULLSIZE_REPORT_SHA256 = "1bed2c9531e4230864a1ebbe7e4023e0ffafcf704a59c40e93f9a75bd469dfa6"
 # A5.1.2 inventory row of docs/prereg/a5_manifests/text_groups.json (registered 64 windows).
 TEXT_GROUPS_SHA256 = "f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1"
@@ -551,14 +580,103 @@ def window_nll_from_records(records_path, window_ids):
 # ---------------------------------------------------------------------------- input loading
 
 
-def load_manifest(path=DEFAULT_MANIFEST) -> dict:
-    digest = sha256_file(path)
-    if digest != STAGED_MANIFEST_SHA256:
+def load_frozen_manifest(path=DEFAULT_FROZEN_MANIFEST) -> dict:
+    """The preserved a533 staging manifest, verified by its constant sha256 before it is parsed."""
+    try:
+        digest = sha256_file(path)
+    except OSError as e:
+        raise AnalysisRefused(f"frozen staged manifest {path} missing or unreadable: {e}") from e
+    if digest != FROZEN_STAGED_MANIFEST_SHA256:
         raise AnalysisRefused(
-            f"manifest sha256 {digest} does not match the staged Part A manifest "
-            f"{STAGED_MANIFEST_SHA256}"
+            f"frozen staged manifest sha256 {digest} does not match the preserved a533 staging "
+            f"manifest {FROZEN_STAGED_MANIFEST_SHA256}"
         )
     return json.loads(Path(path).read_text())
+
+
+def load_execution_manifest(path, expected_sha256) -> dict:
+    """The manifest whose variants were scored; its sha256 must be supplied and must match."""
+    if not _is_sha(expected_sha256):
+        raise AnalysisRefused(
+            "the execution manifest sha256 (--manifest-sha256, 64 lowercase hex) is required"
+        )
+    try:
+        digest = sha256_file(path)
+    except OSError as e:
+        raise AnalysisRefused(f"execution manifest {path} missing or unreadable: {e}") from e
+    if digest != expected_sha256:
+        raise AnalysisRefused(
+            f"execution manifest sha256 {digest} does not match the supplied --manifest-sha256 "
+            f"{expected_sha256}"
+        )
+    return json.loads(Path(path).read_text())
+
+
+def bind_manifests(frozen, manifest, manifest_sha256) -> dict:
+    """Bind the execution manifest to the frozen a533 manifest; refuse on any inconsistency.
+
+    The forty registered ids are the frozen manifest's selections. Every one must be selected in
+    the execution manifest with an identical selection row (apart from an optional false
+    ``supplementary`` flag), every a533 variant id must be present, and every other selection must
+    be flagged ``supplementary: true``.
+    """
+    if not _is_sha(manifest_sha256):
+        raise AnalysisRefused("the execution manifest sha256 is required (64 lowercase hex)")
+    frozen_sel = _selected(frozen)
+    registered = sorted(frozen_sel)
+    if (
+        len(frozen["selections"]) != N_REGISTERED
+        or len(registered) != N_REGISTERED
+        or sorted_sha(registered) != REGISTERED_EDIT_IDS_SHA256
+        or (frozen.get("selection_ledger") or {}).get("edit_ids_sorted_sha256")
+        != REGISTERED_EDIT_IDS_SHA256
+    ):
+        raise AnalysisRefused(
+            "frozen staged manifest does not carry the forty registered ids "
+            f"(sorted-id sha256 {REGISTERED_EDIT_IDS_SHA256})"
+        )
+    rows = manifest.get("selections")
+    if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+        raise AnalysisRefused("execution manifest has no selections list")
+    sel = _selected(manifest)
+    if len(sel) != len(rows):
+        raise AnalysisRefused("execution manifest selects an edit id more than once")
+    missing = [i for i in registered if i not in sel]
+    if missing:
+        raise AnalysisRefused(
+            f"execution manifest lacks registered id(s) {missing}: the a533 ids must be a subset "
+            "of the execution manifest's ids"
+        )
+    frozen_variants = {v["variant_id"] for v in frozen["variants"]}
+    exec_variants = {v.get("variant_id") for v in manifest.get("variants") or []}
+    lost = sorted(frozen_variants - exec_variants)
+    if lost:
+        raise AnalysisRefused(
+            f"execution manifest lacks a533 variant id(s) {lost}: the a533 ids must be a subset "
+            "of the execution manifest's ids"
+        )
+    for i in registered:
+        row = {k: v for k, v in sel[i].items() if k != "supplementary"}
+        if sel[i].get("supplementary", False) is not False:
+            raise AnalysisRefused(f"registered id {i} is flagged supplementary")
+        if row != frozen_sel[i]:
+            raise AnalysisRefused(
+                f"selection row of registered id {i} differs from the frozen staged manifest"
+            )
+    supplementary = sorted(i for i in sel if i not in frozen_sel)
+    stray = [i for i in supplementary if sel[i].get("supplementary") is not True]
+    if stray:
+        raise AnalysisRefused(
+            f"execution manifest selects id(s) {stray} that are neither registered nor flagged "
+            "supplementary: true"
+        )
+    return {
+        "frozen_manifest_sha256": FROZEN_STAGED_MANIFEST_SHA256,
+        "execution_manifest_sha256": manifest_sha256,
+        "registered_ids": registered,
+        "supplementary_ids": supplementary,
+        "selected_ids": sorted(sel),
+    }
 
 
 def load_nullsize_report(path=DEFAULT_NULLSIZE) -> dict:
@@ -705,16 +823,68 @@ def validate_windows(ledger, text_groups) -> None:
         raise AnalysisRefused("registered blocks are not consecutive positions of the ledger")
 
 
+def _manifest_verdict(manifest, i):
+    """Execution manifest F10 verdict of edit ``i``: (verdict, pre-audit codes, F10.3 codes) or
+    a list of evidence problems (→ ``audit_missing``)."""
+    ea = (manifest.get("edit_audits") or {}).get(i)
+    if not isinstance(ea, dict):
+        return ["execution manifest has no edit_audits entry"]
+    problems = []
+    if ea.get("audit_rule") != "f10":
+        problems.append(f"execution manifest audit_rule {ea.get('audit_rule')!r} is not 'f10'")
+    if ea.get("pair_verdict") not in F10_3_VERDICTS:
+        problems.append(
+            f"execution manifest pair_verdict {ea.get('pair_verdict')!r} not in {F10_3_VERDICTS}"
+        )
+    exc = ea.get("exclusions")
+    if not isinstance(exc, list) or not all(
+        isinstance(x, dict) and isinstance(x.get("reason"), str) for x in exc
+    ):
+        problems.append("execution manifest exclusions malformed")
+    if problems:
+        return problems
+    codes = sorted({x["reason"] for x in exc})
+    bad = [c for c in codes if c not in PRE_AUDIT_CODES + F10_3_CODES]
+    if bad:
+        raise AnalysisRefused(f"{i}: unknown execution manifest reason code(s) {bad}")
+    if bool(codes) != (ea["pair_verdict"] == "excluded"):
+        raise AnalysisRefused(
+            f"{i}: execution manifest pair_verdict {ea['pair_verdict']!r} contradicts its "
+            "reason codes"
+        )
+    pre = [c for c in codes if c in PRE_AUDIT_CODES]
+    f10 = [c for c in codes if c in F10_3_CODES]
+    return ea["pair_verdict"], pre, f10
+
+
+def restage_rho(manifest) -> dict:
+    """Execution manifest F10.4 pooled ρ per selected edit (None when absent or nonfinite)."""
+    out = {}
+    for i in _selected(manifest):
+        ea = ((manifest.get("edit_audits") or {}).get(i) or {}).get("edit_audit") or {}
+        rho = ea.get("pooled_energy_ratio") if isinstance(ea, dict) else None
+        out[i] = float(rho) if _finite(rho) and rho > 0 else None
+    return out
+
+
 def restage_audit(ledger, manifest) -> dict:
-    """Per selected pair: F10.3 re-stage audit state; incomplete evidence → ``audit_missing``."""
+    """Per selected pair: F10.3 re-stage audit state; incomplete evidence → ``audit_missing``.
+
+    The verdict and reason codes are the execution manifest's; the sealed ledger's re-stage entry
+    must be complete (else ``audit_missing``) and must agree with them (else refusal).
+    """
     prov = ledger.get("restage_provenance")
     prov_missing = [
         k for k in RESTAGE_PROVENANCE_KEYS if not (isinstance(prov, dict) and _is_sha(prov.get(k)))
     ]
+    rhos = restage_rho(manifest)
     out = {}
     for i in sorted(_selected(manifest)):
         r = ledger.get("restage", {}).get(i)
         missing = []
+        verdict = _manifest_verdict(manifest, i)
+        if isinstance(verdict, list):
+            missing.extend(verdict)
         if prov_missing:
             missing.append(f"restage_provenance lacks {prov_missing}")
         if not isinstance(r, dict) or not r:
@@ -752,10 +922,27 @@ def restage_audit(ledger, manifest) -> dict:
             raise AnalysisRefused(
                 f"{i}: re-stage verdict {r['f10_3_verdict']!r} contradicts its reason codes"
             )
-        if r["pre_audit_exclusions"]:
-            out[i] = {"status": "pre_audit_excluded", "reasons": list(r["pre_audit_exclusions"])}
-        elif r["f10_3_exclusions"]:
-            out[i] = {"status": "f10_3_excluded", "reasons": list(r["f10_3_exclusions"])}
+        m_verdict, m_pre, m_f10 = verdict
+        if (
+            r["f10_3_verdict"] != m_verdict
+            or sorted(set(r["pre_audit_exclusions"])) != m_pre
+            or sorted(set(r["f10_3_exclusions"])) != m_f10
+        ):
+            raise AnalysisRefused(
+                f"{i}: ledger re-stage entry ({r['f10_3_verdict']}, "
+                f"{r['pre_audit_exclusions'] + r['f10_3_exclusions']}) contradicts the execution "
+                f"manifest ({m_verdict}, {m_pre + m_f10})"
+            )
+        lr = r.get("pooled_rho")
+        if _finite(lr) and rhos[i] is not None and not math.isclose(lr, rhos[i], rel_tol=1e-12):
+            raise AnalysisRefused(
+                f"{i}: ledger pooled_rho {lr!r} contradicts the execution manifest's pooled ρ "
+                f"{rhos[i]!r}"
+            )
+        if m_pre:
+            out[i] = {"status": "pre_audit_excluded", "reasons": m_pre}
+        elif m_f10:
+            out[i] = {"status": "f10_3_excluded", "reasons": m_f10}
         else:
             out[i] = {"status": "pass", "reasons": []}
         out[i]["registered_realised_verdict"] = r["registered_realised_verdict"]
@@ -763,16 +950,33 @@ def restage_audit(ledger, manifest) -> dict:
     return out
 
 
-def validate_ledger(ledger, manifest, text_groups) -> dict:
-    """Fail-closed ledger checks; returns the per-pair re-stage audit state."""
+def validate_ledger(ledger, manifest, text_groups, manifest_sha256) -> dict:
+    """Fail-closed ledger checks; returns the per-pair re-stage audit state.
+
+    ``manifest`` is the execution manifest and ``manifest_sha256`` its verified file hash; the
+    ledger must record that hash (``manifest_sha256`` and, when present and well formed,
+    ``restage_provenance.manifest_sha256``).
+    """
     if ledger.get("schema") != LEDGER_SCHEMA:
         raise AnalysisRefused(f"ledger schema must be {LEDGER_SCHEMA!r}")
     if ledger.get("sealed") is not True:
         raise AnalysisRefused(
             "ledger is not sealed (A5.3: one analysis after the ledger is closed)"
         )
-    if ledger.get("manifest_sha256") != STAGED_MANIFEST_SHA256:
-        raise AnalysisRefused("ledger manifest_sha256 does not match the staged Part A manifest")
+    if not _is_sha(manifest_sha256):
+        raise AnalysisRefused("the execution manifest sha256 is required (64 lowercase hex)")
+    if ledger.get("manifest_sha256") != manifest_sha256:
+        raise AnalysisRefused(
+            f"ledger manifest_sha256 {ledger.get('manifest_sha256')} does not match the execution "
+            f"manifest {manifest_sha256}"
+        )
+    prov = ledger.get("restage_provenance")
+    prov_manifest = prov.get("manifest_sha256") if isinstance(prov, dict) else None
+    if _is_sha(prov_manifest) and prov_manifest != manifest_sha256:
+        raise AnalysisRefused(
+            f"ledger restage_provenance.manifest_sha256 {prov_manifest} does not match the "
+            f"execution manifest {manifest_sha256}"
+        )
     validate_windows(ledger, text_groups)
     expected = _variant_ids(manifest)
     for i in _selected(manifest):
@@ -780,12 +984,21 @@ def validate_ledger(ledger, manifest, text_groups) -> dict:
         if entry is None:
             raise AnalysisRefused(f"ledger lacks the variant entries of selected edit {i}")
         for c in CONTRASTS:
+            if expected[(i, c)] is None:
+                raise AnalysisRefused(f"execution manifest lacks the {c} variant of {i}")
             v = entry.get(c)
             if v is None:
                 raise AnalysisRefused(f"ledger lacks the {c} variant of {i}")
             if v.get("variant_id") != expected[(i, c)]:
                 raise AnalysisRefused(
                     f"{i} {c}: variant id {v.get('variant_id')} != manifest {expected[(i, c)]}"
+                )
+    m_excluded = {v.get("variant_id"): bool(v.get("excluded")) for v in manifest["variants"]}
+    for i in _selected(manifest):
+        for c in ("ladder_0.25", "ladder_0.5"):
+            if bool(ledger["variants"][i][c].get("excluded")) != m_excluded[expected[(i, c)]]:
+                raise AnalysisRefused(
+                    f"{i} {c}: ledger exclusion flag contradicts the execution manifest"
                 )
     audit = restage_audit(ledger, manifest)
     for i, a in audit.items():
@@ -1013,7 +1226,7 @@ def validity_bindings(spec_sha, fields_sha, provenance, masked_sha=None) -> dict
     return {
         "registration_pinned": [
             spec_sha,
-            STAGED_MANIFEST_SHA256,
+            FROZEN_STAGED_MANIFEST_SHA256,
             TEXT_GROUPS_SHA256,
             fields_sha,
             NULLSIZE_REPORT_SHA256,
@@ -1297,7 +1510,7 @@ def decision(
 
 
 def masked_calibration_state(masked, masked_sha, audit) -> dict:
-    """F10.6 disclosure: 40/40 → registered simulations stand; else a hashed masked run is required."""
+    """F10.6 disclosure: full yield → registered simulations stand; else a hashed masked run."""
     excluded = sorted(i for i, a in audit.items() if a["status"] != "pass")
     n = len(audit)
     base = {
@@ -1307,12 +1520,12 @@ def masked_calibration_state(masked, masked_sha, audit) -> dict:
     if not excluded:
         if masked is not None:
             raise AnalysisRefused(
-                "F10.6: all 40 pairs pass the re-stage audit, so no slot-masked run applies; a "
+                f"F10.6: all {n} pairs pass the re-stage audit, so no slot-masked run applies; a "
                 "masked calibration report was supplied anyway"
             )
         return base | {
             "required": False,
-            "status": "not required (40/40)",
+            "status": f"not required ({n}/{n})",
             "passed": True,
             "statement": F10_6_ALL_PASS,
         }
@@ -1765,10 +1978,10 @@ def moment_differences(tensors) -> dict:
     return out
 
 
-def _covariates(i, sel, restage) -> dict:
+def _covariates(i, sel, restage, rho) -> dict:
+    """Covariate row of pair ``i``: selection metadata, ledger moments, execution-manifest ρ."""
     s = sel[i]
     norm = s.get("effective_norm")
-    rho = (restage or {}).get("pooled_rho")
     row = {
         "chain": 1.0 if s["family"] == "chain" else 0.0 if s["family"] == "lora_sft" else None,
         "log1p_effective_norm": math.log1p(norm) if _finite(norm) and norm > -1 else None,
@@ -1778,20 +1991,29 @@ def _covariates(i, sel, restage) -> dict:
     return row
 
 
-def staged_ln_rho(manifest) -> dict:
-    """Spec §1.1: staged ln ρ = 2·ln(1 + pooled_norm_mismatch) (all staged signed values positive)."""
+def staged_ln_rho(frozen) -> dict:
+    """Spec §1.1: staged ln ρ = 2·ln(1 + pooled_norm_mismatch) (all staged signed values positive).
+
+    ``frozen`` is the preserved a533 staging manifest; never a regenerated manifest.
+    """
     return {
-        i: 2 * math.log1p(manifest["edit_audits"][i]["edit_audit"]["pooled_norm_mismatch"])
-        for i in _selected(manifest)
+        i: 2 * math.log1p(frozen["edit_audits"][i]["edit_audit"]["pooled_norm_mismatch"])
+        for i in _selected(frozen)
     }
 
 
-def covariate_report(records, ledger, manifest, draws) -> dict:
-    sel = _selected(manifest)
+def covariate_report(records, ledger, manifest, frozen, draws) -> dict:
+    """Spec §1 on the forty registered pairs (supplementary edits excluded).
+
+    Selection metadata from the frozen rows (identical in the execution manifest, verified), the
+    logged moments from the ledger's re-stage entries, ρ from the execution manifest.
+    """
+    sel = _selected(frozen)
+    rhos = restage_rho(manifest)
     resolved = [i for i in sorted(sel) if records[i]["rotation"]["status"] == "resolved"]
     rows, dropped, X, a = [], [], [], []
     for i in resolved:
-        cov = _covariates(i, sel, ledger.get("restage", {}).get(i))
+        cov = _covariates(i, sel, ledger.get("restage", {}).get(i), rhos.get(i))
         bad = [c for c in COVARIATE_COLUMNS if not _finite(cov[c])]
         if bad:
             dropped.append({"id": i, "reason": f"covariate_missing:{bad[0]}", "columns": bad})
@@ -1803,25 +2025,18 @@ def covariate_report(records, ledger, manifest, draws) -> dict:
     models = covariate_models(
         rows, np.asarray(X).reshape(len(rows), len(COVARIATE_COLUMNS)), a, draws
     )
-    staged = staged_ln_rho(manifest)
-    diffs = [
-        abs(math.log(r["pooled_rho"]) - staged[i])
-        for i, r in ledger.get("restage", {}).items()
-        if i in staged
-        and isinstance(r, dict)
-        and _finite(r.get("pooled_rho"))
-        and r["pooled_rho"] > 0
-    ]
+    staged = staged_ln_rho(frozen)
+    diffs = [abs(math.log(rhos[i]) - staged[i]) for i in staged if rhos.get(i) is not None]
     full = agreement_row(records, sorted(sel))
     return {
         "authority": AUTHORITY_NONE,
         "spec": "§1 (F10.5(a))",
         "columns": list(COVARIATE_COLUMNS),
         "column_notes": {
-            "chain": "1 = chain, 0 = lora_sft (manifest selections[].family)",
-            "log1p_effective_norm": "ln(1 + manifest selections[].effective_norm)",
+            "chain": "1 = chain, 0 = lora_sft (frozen manifest selections[].family)",
+            "log1p_effective_norm": "ln(1 + frozen manifest selections[].effective_norm)",
             "d_*": "element-count-weighted mean over edited tensors of logged_r − logged_d (re-stage variant.json)",
-            "ln_rho": "ln of the re-stage F10.4 pooled ρ = Σ‖R_eff‖²/Σ‖D‖²",
+            "ln_rho": "ln of the re-stage F10.4 pooled ρ = Σ‖R_eff‖²/Σ‖D‖² (execution manifest edit_audits[].edit_audit.pooled_energy_ratio)",
         },
         "rules": {
             "penalty": "λ = 1 on Σβ², intercept unpenalised (sklearn LogisticRegression(C=1.0))",
@@ -1843,6 +2058,7 @@ def covariate_report(records, ledger, manifest, draws) -> dict:
             "ln_rho": "natural log, dimensionless",
             "d̂, predictions": UNITS,
         },
+        "population": "the forty registered pairs (supplementary edits excluded)",
         "selected_ids": sorted(sel),
         "resolved_ids": resolved,
         "complete_case_ids": rows,
@@ -1870,8 +2086,9 @@ def covariate_report(records, ledger, manifest, draws) -> dict:
 # ---------------------------------------------------------------------------- tertiles and subsets
 
 
-def norm_tertiles(manifest) -> dict:
-    sel = _selected(manifest)
+def norm_tertiles(frozen) -> dict:
+    """Spec §2.1 from the frozen a533 manifest's selection cells, verified by sorted-id sha256."""
+    sel = _selected(frozen)
     cells = {}
     for t in range(3):
         pooled = sorted(i for i, s in sel.items() if s["tertile"] == t)
@@ -1890,9 +2107,9 @@ def _lnrho_cell(x, i) -> int:
     return 0 if key < LNRHO_CUTS[0] else 1 if key < LNRHO_CUTS[1] else 2
 
 
-def lnrho_tertiles(manifest):
-    """Spec §2.2: recompute from staged values and fail closed unless equal to the frozen lists."""
-    x = staged_ln_rho(manifest)
+def lnrho_tertiles(frozen):
+    """Spec §2.2: recompute from staged (a533) values; fail closed unless equal to frozen lists."""
+    x = staged_ln_rho(frozen)
     ordered = sorted(x, key=lambda i: (x[i], i))
     n = len(ordered)
     b1, b2 = n // 3, (2 * n) // 3
@@ -1911,7 +2128,9 @@ def _descriptive_row(records, ids, cell, label) -> dict:
     return {"cell": cell, "authority": AUTHORITY_NONE, "label": label} | row
 
 
-def tertile_report(records, ledger, manifest) -> dict:
+def tertile_report(records, manifest, frozen) -> dict:
+    """Spec §2: frozen cells from the a533 manifest; re-stage ln ρ from the execution manifest."""
+
     def label(r):
         return (
             "below floor (descriptive)"
@@ -1920,14 +2139,14 @@ def tertile_report(records, ledger, manifest) -> dict:
         )
 
     norm_rows = []
-    for t, cell in norm_tertiles(manifest).items():
+    for t, cell in norm_tertiles(frozen).items():
         for group in ("pooled", "lora_sft", "chain"):
             r = _descriptive_row(records, cell[group], f"{TERTILE_NAMES[t]} ({t}) {group}", None)
             r["label"] = label(r)
             norm_rows.append(r)
-    cells, cuts = lnrho_tertiles(manifest)
-    staged = staged_ln_rho(manifest)
-    restage = ledger.get("restage", {})
+    cells, cuts = lnrho_tertiles(frozen)
+    staged = staged_ln_rho(frozen)
+    rhos = restage_rho(manifest)
     lnrho_rows = []
     for k, ids in enumerate(cells):
         r = _descriptive_row(records, ids, LNRHO_CELL_NAMES[k], None)
@@ -1935,9 +2154,8 @@ def tertile_report(records, ledger, manifest) -> dict:
         values = {}
         drift = []
         for i in ids:
-            entry = restage.get(i)
-            rho = entry.get("pooled_rho") if isinstance(entry, dict) else None
-            v = math.log(rho) if _finite(rho) and rho > 0 else None
+            rho = rhos.get(i)
+            v = math.log(rho) if rho is not None else None
             values[i] = v
             if v is not None and _lnrho_cell(v, i) != k:
                 drift.append(i)
@@ -2020,6 +2238,8 @@ def analyse(
     fields,
     nullsize,
     *,
+    manifest_sha256=None,
+    frozen_manifest=None,
     text_groups=None,
     spec_check=None,
     validity=None,
@@ -2032,20 +2252,29 @@ def analyse(
 ) -> dict:
     """The single Part A analysis: registered outputs plus the F10.5 reports.
 
+    ``manifest`` is the execution manifest (the one whose variants were scored) and
+    ``manifest_sha256`` its verified file hash (:func:`load_execution_manifest`; required).
+    ``frozen_manifest`` is the preserved a533 staging manifest (default: loaded from
+    :data:`DEFAULT_FROZEN_MANIFEST` and verified by :data:`FROZEN_STAGED_MANIFEST_SHA256`); like
+    ``spec_check`` and ``text_groups`` an injected object is a trusted interface.
+
     Refuses (:class:`AnalysisRefused`) before any outcome is summarised unless the specification
-    hash, the registered window order and every frozen id list verify.
+    hash, the manifest binding, the registered window order and every frozen id list verify.
     """
     spec_check = spec_check if spec_check is not None else verify_spec()
     if spec_check.get("verified") is not True or spec_check.get("sha256_file") != SPEC_SHA256:
         raise AnalysisRefused("specification hash not verified at run time (F10b.1)")
+    frozen = frozen_manifest if frozen_manifest is not None else load_frozen_manifest()
+    binding = bind_manifests(frozen, manifest, manifest_sha256)
     text_groups = text_groups if text_groups is not None else load_text_groups()
-    audit = validate_ledger(ledger, manifest, text_groups)
+    audit = validate_ledger(ledger, manifest, text_groups, manifest_sha256)
     preds = validate_fields(fields, ledger, manifest, audit)
     sel = _selected(manifest)
     ids = sorted(sel)
+    registered, supplementary = binding["registered_ids"], binding["supplementary_ids"]
     # Fail closed on every frozen id list before any outcome is summarised.
-    norm_tertiles(manifest)
-    lnrho_tertiles(manifest)
+    norm_tertiles(frozen)
+    lnrho_tertiles(frozen)
     for name, sub, sha in (("S30", S30_IDS, S30_SHA256), ("S34", S34_IDS, S34_SHA256)):
         if sorted_sha(sub) != sha:
             raise AnalysisRefused(
@@ -2059,6 +2288,11 @@ def analyse(
         contrasts[c]["by_family"] = {
             fam: agreement_row(records, [i for i in ids if sel[i]["family"] == fam], c)
             for fam in ("lora_sft", "chain")
+        }
+        contrasts[c]["by_selection"] = {
+            "authority": AUTHORITY_NONE,
+            "registered_40": agreement_row(records, registered, c),
+            "supplementary": agreement_row(records, supplementary, c),
         }
     for c in ("ladder_0.25", "ladder_0.5"):
         contrasts[c]["realised_increment_ladder_ids"] = sorted(REALISED_INCREMENT_LADDER_IDS)
@@ -2076,7 +2310,14 @@ def analyse(
             "reason": "frozen NULL-SIZE report verdict is not PASS",
             "evidence": f"docs/prereg/a5_manifests/nullsize/report.json (sha256 {NULLSIZE_REPORT_SHA256})",
         },
-        "manifest_sha256": {"pass": True, "evidence": STAGED_MANIFEST_SHA256},
+        "frozen_manifest_sha256": {
+            "pass": True,
+            "evidence": f"manifest_a533.json sha256 {FROZEN_STAGED_MANIFEST_SHA256}",
+        },
+        "execution_manifest_sha256": {
+            "pass": True,
+            "evidence": f"execution manifest sha256 {manifest_sha256} = ledger provenance",
+        },
         "f10_6_calibration": {
             "pass": masked["passed"],
             "reason": F10_6_FAILED,
@@ -2120,8 +2361,12 @@ def analyse(
     sensitivity = {
         "authority": AUTHORITY_NONE,
         "authority_statement": AUTHORITY_STATEMENT,
-        "covariate": covariate_report(records, ledger, manifest, bootstrap_draws),
-        "tertiles": tertile_report(records, ledger, manifest),
+        "population": (
+            "the forty registered pairs of the frozen a533 manifest; supplementary edits are "
+            "reported in the registered analysis only"
+        ),
+        "covariate": covariate_report(records, ledger, manifest, frozen, bootstrap_draws),
+        "tertiles": tertile_report(records, manifest, frozen),
         "subsets": {
             "authority": AUTHORITY_NONE,
             "spec": "§3 (F10.5(c), (e))",
@@ -2129,8 +2374,8 @@ def analyse(
                 "X = pairs the F10 re-stage excludes (F10.3 or pre-audit codes, including "
                 "audit_missing) plus pairs with a missing or nonfinite score in either arm"
             ),
-            "S30": subset_report(records, "S30", S30_IDS, S30_SHA256, sel),
-            "S34": subset_report(records, "S34", S34_IDS, S34_SHA256, sel),
+            "S30": subset_report(records, "S30", S30_IDS, S30_SHA256, registered),
+            "S34": subset_report(records, "S34", S34_IDS, S34_SHA256, registered),
         },
         "constant_sign_comparator": comparator,
     }
@@ -2144,6 +2389,21 @@ def analyse(
             "window_ids": list(text_groups["window_ids"]),
             "two_window_blocks": text_groups["two_window_blocks"],
             "rule": "ledger window order, blocks and token-id hashes equal text_groups.json (verified)",
+        },
+        "manifests": {
+            "frozen": {
+                "path": "docs/prereg/a5_manifests/part_a/manifest_a533.json",
+                "sha256": FROZEN_STAGED_MANIFEST_SHA256,
+                "role": "frozen cuts, cells, staged ln ρ and subsets (spec §§1.1, 2, 3)",
+            },
+            "execution": {
+                "sha256": manifest_sha256,
+                "role": "scored variants: F10 verdicts and codes, F10.4 pooled ρ, variant ids",
+                "rule": "file sha256 = supplied --manifest-sha256 = ledger manifest_sha256 = "
+                "ledger restage_provenance.manifest_sha256",
+            },
+            "registered_ids": registered,
+            "supplementary_ids": supplementary,
         },
         "restage": {
             "provenance": ledger.get("restage_provenance"),
@@ -2330,6 +2590,15 @@ def render_markdown(rep) -> str:
             f"(32), per-window token-id hashes equal ({rep['windows']['rule']})."
         ),
     ]
+    mf = rep["manifests"]
+    L.append(
+        f"Frozen staged manifest (cuts, cells, staged ln ρ, subsets): `{mf['frozen']['path']}` "
+        f"sha256 `{mf['frozen']['sha256']}` (verified at load). Execution manifest (scored "
+        f"variants, F10 verdicts, re-stage ρ, variant ids): sha256 `{mf['execution']['sha256']}` "
+        f"({mf['execution']['rule']}). Registered ids: {len(mf['registered_ids'])}; supplementary "
+        f"ids ({len(mf['supplementary_ids'])}, in the registered analysis, not in the F10.5 "
+        f"reports): {_ids(mf['supplementary_ids'])}."
+    )
     prov = rep["restage"]["provenance"]
     y = rep["restage"]["yield"]
     L.append(
@@ -2395,6 +2664,16 @@ def render_markdown(rep) -> str:
             *_sign_md(r["sign_table"]),
             "",
             *_accounting_md(r),
+            "",
+        ]
+        bs = r["by_selection"]
+        L += [
+            (
+                f"{c} by selection (authority: {bs['authority']}): registered 40 "
+                f"({bs['registered_40']['resolved']} resolved) field {_prop(bs['registered_40']['field'])}; "
+                f"supplementary ({bs['supplementary']['n_selected']} selected, "
+                f"{bs['supplementary']['resolved']} resolved) field {_prop(bs['supplementary']['field'])}."
+            ),
             "",
         ]
         for fam, fr in r["by_family"].items():
@@ -2755,7 +3034,23 @@ def main(argv=None) -> int:
     )
     ap.add_argument("--spec", type=Path, default=DEFAULT_SPEC)
     ap.add_argument("--registration", type=Path, default=DEFAULT_REGISTRATION)
-    ap.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    ap.add_argument(
+        "--manifest",
+        required=True,
+        type=Path,
+        help="execution manifest: the Part A manifest whose variants were scored",
+    )
+    ap.add_argument(
+        "--manifest-sha256",
+        required=True,
+        help="sha256 of the execution manifest; must equal the file and the sealed ledger's record",
+    )
+    ap.add_argument(
+        "--frozen-manifest",
+        type=Path,
+        default=DEFAULT_FROZEN_MANIFEST,
+        help=f"preserved a533 staging manifest (sha256 must be {FROZEN_STAGED_MANIFEST_SHA256})",
+    )
     ap.add_argument("--nullsize-report", type=Path, default=DEFAULT_NULLSIZE)
     ap.add_argument("--text-groups", type=Path, default=DEFAULT_TEXT_GROUPS)
     ap.add_argument(
@@ -2765,7 +3060,7 @@ def main(argv=None) -> int:
     ap.add_argument(
         "--masked-calibration",
         type=Path,
-        help="F10.6 slot-masked a5_simulation.py output (required iff re-stage yield < 40/40)",
+        help="F10.6 slot-masked a5_simulation.py output (required iff re-stage yield is not full)",
     )
     ap.add_argument("--output", required=True, type=Path)
     ap.add_argument("--markdown", required=True, type=Path)
@@ -2773,7 +3068,8 @@ def main(argv=None) -> int:
     try:
         # Condition 2: the specification is verified before any other input is read.
         spec_check = verify_spec(args.spec, args.registration, args.spec_sha256)
-        manifest = load_manifest(args.manifest)
+        frozen = load_frozen_manifest(args.frozen_manifest)
+        manifest = load_execution_manifest(args.manifest, args.manifest_sha256)
         nullsize = load_nullsize_report(args.nullsize_report)
         text_groups = load_text_groups(args.text_groups)
         ledger = json.loads(args.ledger.read_text())
@@ -2796,6 +3092,8 @@ def main(argv=None) -> int:
             manifest,
             fields,
             nullsize,
+            manifest_sha256=args.manifest_sha256,
+            frozen_manifest=frozen,
             text_groups=text_groups,
             spec_check=spec_check,
             validity=validity,
@@ -2819,7 +3117,12 @@ def main(argv=None) -> int:
         "spec": {"path": str(args.spec), "sha256": spec_check["sha256_file"]},
         "spec_sha256_supplied": args.spec_sha256,
         "registration": ref(args.registration),
-        "manifest_sha256": STAGED_MANIFEST_SHA256,
+        "frozen_manifest": {
+            "path": str(args.frozen_manifest),
+            "sha256": FROZEN_STAGED_MANIFEST_SHA256,
+        },
+        "manifest": {"path": str(args.manifest), "sha256": args.manifest_sha256},
+        "manifest_sha256_supplied": args.manifest_sha256,
         "nullsize_report_sha256": NULLSIZE_REPORT_SHA256,
         "text_groups_sha256": text_groups["sha256"],
         "validity": ref(args.validity),
