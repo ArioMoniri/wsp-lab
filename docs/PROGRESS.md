@@ -896,3 +896,10 @@ bounds (power ≥ 838/1,000; each size count ≤ 46/1,000; 10,000 only by prospe
 `docs/prereg/f12_manifests/code_hashes_c1.json`; forecasts under F9a.2 before scheduling; F12-I C4 split tests J = I − c_q
 (descriptive); attestation 33. Housekeeping: `f10_attestations.md` had an accidental duplicate of entries 1–29 (merge-union
 artefact); removed, content unchanged. In flight: F12 simulation code and F12 inputs. Part A held.
+
+**11 Nov 2026, 12:45 UTC.** F12 inputs: the delegate session was killed (out of memory) after launching the token run, which
+continues under agent-tmux `f12-tokens` (field loaded in 184 s; 6 threads; log `data/runs/a5/f12_inputs/tokens_run.log`). The chair
+ran its 40 tests (pass), committed its scripts and the frozen population (`docs/prereg/a5_manifests/f12/population.json`: 270 rows /
+234 components reproduced; ids sha256 `bd695b4e…`; one mixed component; purchase order and s_k recorded; outcomes read: none) and
+merged. F12-I dry runs not yet performed (the delegate died first); to be done before C1. Memory: 17 of 30 GB in use with the
+simulation-code task also running. Part A held.
