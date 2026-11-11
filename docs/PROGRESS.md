@@ -856,3 +856,10 @@ closed) and the batch-index check (re-pin xxvii; 43 tests); attestations 16–18
 statements, 28 corrected, 30–32 added. **Phase 1 (proofs-only, CPU) launching now under agent-tmux `a5-part-a-phase1`.** Phase 2
 needs the committed proof and phase-1 records, the price check, Board A's acceptance if the price differs, and a dated explicit
 authorisation note.
+
+**11 Nov 2026, 11:58 UTC. Phase 1 refused; scoring held by the user; council round 6 opened.** Phase 1 (proofs-only) was
+launched at 11:41 UTC and refused itself (exit 2, "TREE NOT CLEAN": the chair's untracked wrapper copy `scripts/part_a_phase1_wrapper.sh`);
+nothing written, nothing scored. The user then held further action. The user's thesis for round 6: weight-edit prediction cannot be
+a single first-order "neuron"; at least a model-specific world model is needed. Brief `docs/council/2026-11-11/BRIEF-r6.md` (with the
+table of how each recent paper edits weights and what, if anything, predicted the effect first; new items arXiv 2611.11604 and
+2606.13461); four members dispatched; chair synthesis and any F12 to follow. Part A remains unscored and held.
