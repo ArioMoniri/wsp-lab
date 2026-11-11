@@ -752,3 +752,9 @@ the staging mode requested (F11 condition 2). Analysis F11-path corrections stil
 (`board-a-f11-stage-2026-11-11.md`; deferred proofs acceptable; conservative price 178 entries). Merged (bef5396); A5.1.2 re-pin
 (xx); `supplement_freeze.json` computed under the frozen environment. Supplementary staging launching under agent-tmux
 `a5-f11-supplement`. Analysis F11-path corrections still in flight (needed before scoring, not before staging).
+
+**Timestamp note 2 (added at 08:12 UTC, 11 Nov 2026, system clock).** The clock labels on the 11 Nov entries from "00:20 UTC" through
+"11:40 UTC" above were again written as estimates and run ahead of the real clock by up to about 3.5 hours; the launch records
+(`restage_launch.json` 02:44–06:22 UTC, the calibration 06:25–06:36 UTC, the supplementary staging launched 08:06 UTC) and the git
+commit timestamps are authoritative. Ordering is unaffected. From this entry on, labels are taken from `date -u` at the time of
+writing.
