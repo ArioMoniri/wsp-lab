@@ -221,3 +221,120 @@ python scripts/f12b_diagnostics.py gamma --name gamma_k145.json --hstar 10 --cal
 
 Run with `OMP_NUM_THREADS=2` under `agent-tmux`, one job at a time. The k = 0 gamma output was saved as `gamma_k0.json`; the
 k = 145 part of that first invocation was stopped and re-run separately with 10 h\*.
+
+## 9. F12c: response to Board A's F12b review (11 Nov 2026)
+
+PREREG_H1_TF A5 note **F12c** discharges Board A's F12b conditions 1–7
+(`docs/reviews/council/board-a-f12b-2026-11-11.md`). The rules are registered there. This section holds the supporting evidence:
+the refreshed artifact inventory and the reduced synthetic check of the F12c runner. **Synthetic-token evidence only; not a gate
+result.**
+
+### 9.1 What changed in the runner
+
+- **Studentiser.** Non-finite terms are rejected, and V_comp must be finite and positive at the point and in every draw. The
+  report gives per-contrast amended, strict and one-way validity, binding distributions and guard causes.
+- **Stress scenario and coverage.** The γ = 0 scenario is renamed the stress scenario. The report gives the expected-row-sum
+  coverage target (200 independent `target` replicates) and coverage and tail-error qualification at α = 0.05/36 each.
+- **Configurations and selection.** The F12c configurations carry exact schedules: stage 1 is 40 + 40 at six k, stage 2 is
+  1,000 + 1,000 + 200 at k\*, the target run is 200, and the pilot is 10 with `pilot:<r>` seeds. The frozen and verified
+  stage-1 selection is written to `docs/prereg/f12_manifests/f12c_stage2_selection.json`.
+- **Validation and release.** Parts of a run can be assembled into one report. A fail-closed execution validator checks the
+  result, and the release field reads "numerical eligibility pending Board A acceptance".
+- **Payload, noise and resources.** The restricted payload has a byte pin. Two new subcommands, `noisecheck` and `c1-draft`,
+  implement the F12a.4(d) noise check and the C1 pin. The runner allows at most two workers.
+
+Reproduction: `/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/f12c/jobs/smoke.sh`, run under `agent-tmux` with
+`OMP_NUM_THREADS=2`.
+
+### 9.2 Refreshed artifact inventory of `/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/f12b/`
+
+The table was read directly from the files on 11 Nov 2026 after every F12b job had finished (`runs.status`: the last job ended
+17:17 UTC; `gamma_k145` ended 17:20 UTC). It replaces the `files_sha256` block of `f12b_reduced_summary.json`. That block was
+written at 16:04 UTC, before `timing_k0_k87` finished, so it lists the empty-file hash `e3b0c442…b855` for
+`timing_k0_k87.log` and `timing_k0_k87.stdout.json`. Their completed hashes are below. The block also omits the head, smoke,
+gamma_k145 and timing report files. The reduced report's hash `22b6fe40…4d76` matches Board A's.
+
+| file | bytes | modified (UTC, 11 Nov) | sha256 |
+|---|---|---|---|
+| `f12b_reduced_summary.json` | 8243 | 16:04 | `5bdcda2f258afe8c710ebf4b141e571dd7307da94564ef32b622bf9b1b43a762` |
+| `gamma_k0.json` | 38806 | 14:35 | `2ebe6c8628fc9f90e1626d701ed4cd2d80e8696685412c55688c8320c388550f` |
+| `gamma_k0.log` | 4654 | 14:35 | `9fe1eae2bcc0585fbed1e4032182af2d9ec84a1d6293652116afd17184d13ee1` |
+| `gamma_k145.json` | 17149 | 17:20 | `38595968d88e3e78d77985fa0a04aa27c3cc529275c673d120c958ae810bc324` |
+| `gamma_k145.log` | 1778 | 17:20 | `a5c78f3deb6ae7c8f81ef56c81d96595a8ca6556dd4c2fa78dd5c3da5c21c329` |
+| `head.json` | 22023 | 17:17 | `1783cc7271550c8d8b1f53db3a574b9f6edb15151e6ce25e8b06ec5f518b077f` |
+| `head.log` | 2789 | 17:17 | `fbb7eed275f257f3ced53cb8c38521b565e001951c4e54d8a9accc42f3bafac0` |
+| `head.stdout` | 107 | 17:17 | `0c735a239c7cca8891471169214ae3687f081f5009a4ec481304ecd007e89e91` |
+| `jobs/gamma.sh` | 389 | 14:30 | `967b2116c5e86f739a21cc1c195908bddce57cad25975c6648d4239c1dc6b461` |
+| `jobs/gamma145.sh` | 391 | 17:17 | `3ba69287f679e8ac3d7e87ccd8e1963d373a774a394f00db32a3b3cb517423c7` |
+| `jobs/probe_timing.log` | 644 | 14:22 | `0e5a6d36212fb7320ed52696065c5b9f9500a698279213c728411512c12b1505` |
+| `jobs/probe_timing.py` | 1901 | 14:15 | `8ac19de7fb14f2fbe4bf4fe97901421cb79fb11736701d97618133cf50340bfb` |
+| `jobs/probe_timing.sh` | 331 | 14:16 | `109aa3ce683406b89b4b4d93b2e79d5543f4e55b0dc979c6348fe9bcb27420c4` |
+| `jobs/runs.sh` | 1524 | 14:34 | `6d13f820e03f03324a2e77bdf1502a31683091f89f8300a70e9d46e6544df1b4` |
+| `jobs/summarise.py` | 4331 | 14:38 | `2c1012d531faa271dbc792029b89538e0f125b1fcba6a0d559efdc60db130ed4` |
+| `probe.log` | 404 | 13:54 | `a67a9c16ff38ebb70f44b2d6bafa06f4e20ccd4accfa546c459886729b403c0e` |
+| `reduced_k145.log` | 2770 | 16:04 | `30d7a7392a16d207fe58d0ebfed6ead1c5c05aa80438662585784085055ad2d2` |
+| `reduced_k145.stdout.json` | 8990 | 16:04 | `e29d973d277f797e627d38a5c60f0a7da57a872873b3113b0ac50037950b3cb3` |
+| `reduced_k145/report.json` | 255484 | 16:04 | `22b6fe4043df1cf293f51d3daa9c190db42ac5f3f69a22edcbfecec2fa034d76` |
+| `reduced_k145/report.time` | 657 | 16:04 | `f8a3df6b048e116005de060b1ccfc55f2119bd342318b029a7b4aff41f1c8ab0` |
+| `reduced_k145/synthetic_tokens.npz` | 4637488 | 14:36 | `e4e3ba81529d8cc5293ca67a444a3f7b5668941735f9e542aea3a617e7326100` |
+| `runs.status` | 210 | 17:17 | `a2c193983c99b48f73a32ec92a6492e5ad9eb5c7cc324bfae365355160db7c84` |
+| `smoke_draws.json` | 13747 | 16:34 | `376e4854603c1278ba94699fee480e2a2e3dfe581f018c3f44b47b034b12fadf` |
+| `smoke_draws.log` | 286 | 16:34 | `fc2359ece71f6d434b7b6bbb54f98c270c8bf223860ea4d966d3792e1387c0f0` |
+| `smoke_draws.stdout` | 106 | 16:34 | `b8da7774553b87486063adcad2a58802a7a9c1e68203384fb218787f7468fdb2` |
+| `timing_k0_k87.log` | 533 | 16:18 | `a7d73af68f1a5168971d98a0228ce2853d20029503783bd72b5a550ce24d0b2f` |
+| `timing_k0_k87.stdout.json` | 16399 | 16:18 | `9524d210b55265237ef4df2f9ac95ddba75bccb1afd254c1a4a42652fdbe59b3` |
+| `timing_k0_k87/report.json` | 72439 | 16:18 | `4a62a7bdfce32a43429a3cbf91cddcf192f6f87aba12523afef52d77ac41aafd` |
+| `timing_k0_k87/report.time` | 850 | 16:18 | `2e2806b9f3cd2c523046ead01f3133a1672124a96d67dcc4a9a6363b58431b0f` |
+| `timing_k0_k87/synthetic_tokens.npz` | 4637488 | 16:04 | `e4e3ba81529d8cc5293ca67a444a3f7b5668941735f9e542aea3a617e7326100` |
+
+The completed timing sidecars give 121.04 / 136.38 s (k = 0) and 189.97 / 208.28 s (k = 87) per stress / alternative replicate,
+with peak worker RSS 885 MB and parent RSS 730 MB (`timing_k0_k87/report.time`). They give 201.80 / 218.57 s at k = 145
+(`reduced_k145/report.time`; workers 890 MB, parent 719 MB).
+
+### 9.3 Reduced synthetic check of the F12c runner (not a gate result)
+
+Script `f12c/jobs/smoke.sh` ran on 11 Nov 2026 from 18:34 to 18:48 UTC. It used OMP_NUM_THREADS=2, two workers, synthetic
+tokens, the restricted copy (pin verified) and code at commit `0f55c18`. It made 4 replicates.
+
+- **`noisecheck` smoke.** 500 panels at k = 145 on the synthetic population (270 rows, 234 components). Status: pass. Not the
+  F12a.4(d) check, which needs 10,000 panels on real tokens.
+
+  | quantity | empirical | plug-in | MC SE | z |
+  |---|---|---|---|---|
+  | panel-mean variance of ε | 1.292e-5 | 1.239e-5 | 6.9e-7 | 0.76 |
+  | within-component covariance | 1.154e-5 | 1.084e-5 | 7.0e-7 | 1.01 |
+  | cross-component (common-item) covariance | 6.16e-6 | 5.90e-6 | 3.8e-7 | 0.70 |
+
+  The plug-in correlations are 0.875 (within) and 0.476 (cross). The minimum donor plug-in variance is 7.6e-9, and every donor's
+  block means sum to 0. It took 0.68 CPU-s, with peak RSS 0.65 GB. Projected 10,000 panels: about 14 CPU-s.
+- **Stage-2 configuration, reduced.** The run used a non-registered `--schedule null=2,alt=1,null_var2=1` at k = 145. It ran as
+  two `--part` invocations (`null,null_var2`; `alt`), and `assemble` merged them. The assembled report had `complete` true,
+  status "synthetic dry run, not a gate", and release field "numerical eligibility pending Board A acceptance" with `eligible`
+  false (validator not run).
+
+  | scenario | n | amended valid | strict valid | C_WM floor-binding fraction | C_WM,S floor-binding fraction | point binding | CPU-s / replicate |
+  |---|---|---|---|---|---|---|---|
+  | stress | 2 | 2 | 0 | 0.177–0.295 | 0.319–0.357 | 1 | 202.7 |
+  | alternative | 1 | 1 | 0 | 0.085 | 0.245 | 0 | 234.6 |
+  | variance-×2 | 1 | 1 | 0 | 0.165 | 0.162 | 0 | 210.7 |
+
+  No non-finite term or invalid V_comp occurred. The invocation overhead (process-tree CPU beyond the replicates) was 9.7 and
+  7.2 CPU-s. Peak RSS was 0.72 GB for the parent and 0.88 GB per worker, about 2.5 GB in total with two workers. The
+  alternative replicate ran 7 % above F12b.6's figure while the machine load was about 15.
+
+### 9.4 All-in CPU plan
+
+See `docs/prereg/f12_manifests/f12c_resource_plan.json` and PREREG F12c.7(b). The worst case (k\* = 145) is 163.6 CPU-h:
+
+| item | CPU-h |
+|---|---|
+| noise check | 0.01 |
+| pilot | 0.61 |
+| stage 1 | 23.79 |
+| coverage target | 11.21 |
+| stage 2 | 127.98 |
+| overhead | 0.04 |
+
+By k\* the all-in total is 109.4 (k\* = 0), 125.0 (29), 140.6 (58), 156.2 (87) and 159.9 (116). The ≤ 150 CPU-h all-in ceiling
+is therefore not attainable without dropping required work. F12c requests a prospective repricing to 190 CPU-h (15 %
+headroom). With two workers the wall time is about 100 h. The four-worker projection of §6 is withdrawn.

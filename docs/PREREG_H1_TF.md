@@ -5505,3 +5505,337 @@ sub-agent session working only in the worktree `.worktrees/prereg/f12b` on branc
 (allowlisted fields only). It opened no file under `data/` (no file under `data/evals`, no TF-v1 record, no score, no
 `donor_mean`), read no real F12 token, saw no G3, rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A
 score, used no GPU, and wrote nothing under `data/`.
+
+#### A5 note F12c (11 Nov 2026, before any G3 outcome): response to Board A's F12b conditions
+
+This block is appended; earlier text is not rewritten. It responds to Board A's review of amendment F12b
+(`docs/reviews/council/board-a-f12b-2026-11-11.md`, added by commit `8df6c74faa08199d5505dbce1e2b56c72a082497`, file sha256
+`9ef5743dda3047cfbe2ea0e64e511c9ee1533932a39ef5df48e79e0c7e5dd741`; "the review"). The review's verdict is "**ACCEPT WITH
+CONDITIONS as a pre-outcome amendment; REJECT release of stage 1 under the present specification and runner.**" Clauses
+F12c.1–F12c.7 discharge its numbered conditions 1–7 in order. Each clause says what was done and where. F12c.9 gives the status of
+each condition (done, partially done or not done, and why). The note was written on branch `prereg/f12c` (main `8df6c74`) while
+Part A is staged, frozen, released with conditions, unscored and held (F11e), and before any G3, rotation, ladder, sealed, F8 or
+F9 outcome had been read. Where F12, F12a or F12b read differently for the F12 simulation and the F12 analysis, F12c governs. The
+code is `scripts/f12_simulation.py` with tests `tests/test_f12c_governance.py` (commits `7676340`, tests first, and `0f55c18`,
+implementation). The design note `docs/design/F12B_REPAIRS.md` gains §9 (F12c). Every number below is synthetic-token evidence or
+arithmetic; no real token was read. **F12c releases nothing.** Stage 1, stage 2, the timing pilot and the 10,000-panel noise check
+were not run. Stage 1 stays held until Board A accepts F12c, C1 is complete and verified, the noise check and pilot have passed,
+and the chair has accepted the CPU repricing of F12c.7(b).
+
+**F12c.1 — Training changes frozen and disclosed; attestations (condition 1).** (a) *Frozen for simulation and analysis.* The four
+training changes are now part of the F12 training and model-selection algorithm for the F12 analysis as well as for every
+simulation stage. They are fixed by the committed F12c configurations (F12c.5) and pinned in C1 with the analysis code:
+- F12b.1(a), the zero-initialised WM-R output (`head_zero_init`);
+- F12b.1(b), each fit's residual target divided by its SD over that fit's training rows only, with a fail-closed fit failure at ≤
+  1e-12 (`target_standardise`);
+- F12b.5(a), the one-thread StatNN fit (`lgbm.n_jobs` 1);
+- F12b.5(b), the StatNN tree count chosen from {100, 300, 600} on the four inner folds with seed 0's predictions only
+  (`statnn_select_seeds` [0]), the outer refit still averaging seeds 0/1/2.
+
+The analysis may not use other values. (b) *Disclosure.* Every F12 report and any paper text that describes F12 states: "WM-R's
+output layer starts at zero and its residual target is scaled by each fit's training-row SD; StatNN's tree count is selected with
+seed 0 only, while its final predictor still averages seeds 0, 1 and 2. These are prospective changes to the training and
+model-selection algorithm (F12b.1, F12b.5), made before any F12 outcome, and they apply to the simulation and the analysis alike."
+F12b.5's sentence "the comparator's inputs, settings, grid and final seed-averaged predictor are unchanged" is qualified: model
+*selection* changed (seed 0 only). That can change the chosen tree count and hence the comparator's strength, so unchanged final
+seed averaging is not described as unchanged model selection. The two-comparator conjunction is retained. (c) *Attestations.* The
+register `docs/prereg/f12_attestations.md` lists every session known to have made, implemented or approved an F12 choice through
+F12c. Each entry has three statements: (i) old development outcomes, (ii) new outcomes, and (iii) the prescore-audit qualification
+of the original condition 1 (F12a.1(a)). Entries quote existing attestations (F12, F12a, F12b, Board A's F12b review) only for
+their own sessions. Entry 9 is this session's attestation. It discloses one baseline test run that parsed the allowlisted fields
+of the raw F8a.2 payload; that test now reads the restricted copy. The chair's entry (10) and the entries for the council, the
+Board A F12 reviewer, the F12 input and simulation implementers and every later decision-maker are stubs marked **PENDING**.
+Nothing in them is written by anyone other than that session. Synthetic diagnostics do not satisfy the C1 requirement for governed
+execution, and no held outcome may choose a later amendment.
+
+**F12c.2 — Studentiser enforcement and reporting (condition 2).** (a) *Rule unchanged.* V\* = max(V_comp + V_item − V_both,
+V_comp) at the point and in every joint draw, for C_WM and C_WM,S only. It supersedes the original condition 3's prohibition on
+repairs for these two contrasts only; A5.4.2 as written governs every other contrast. All conditional rules, loss and component
+guards and the 4,000 planned draws are kept; there is no retry, replacement or deletion. Conservatism of the rule is **not
+claimed**: flooring changes the bootstrap-t quantiles and the point multiplier, so interval width and rejection need not move
+monotonically. The F12b reduced run is restated as the review reads it: the floor binds in 99–1,713 of 4,000 draws; strict
+validity is 0 of 40 replicates; 20 of 20 valid under the amended rule is not 20 of 20 valid under A5.4.2 as written. No rarity
+threshold is registered and the studentiser is not chosen after a run; the F12c.3 qualification is indispensable. (b)
+*Enforcement* (`joint_variance`, `a542_contrast`):
+- *Non-finite terms.* A draw is invalid under every rule if any of V_comp, V_item or V_both is non-finite. The non-finite raw
+  value is rejected; the `np.where` path that could replace it with a finite V_comp is removed.
+- *V_comp checked separately.* Under the floor rules a draw is invalid unless V_comp itself is finite and > 0; this is checked on
+  its own, not only through the final variance. The point fails closed in the same way ("joint point V_comp"; "joint point term
+  non-finite").
+- *Failure reasons.* Each draw's reasons now include `two_way_term_nonfinite` and `v_comp_nonpositive_or_nonfinite`. The strict
+  rule remains A5.4.2 as written.
+- *Adversarial tests.* `test_joint_variance_rejects_nonfinite_terms_and_nonpositive_vcomp` and
+  `test_a542_contrast_enforces_vcomp_at_point_and_every_draw`.
+
+(c) *Reports* (`studentiser_summary`; report path `summary.<k>.<scenario>.studentiser.<contrast>`), per contrast, k and scenario:
+- amended validity (the registered rule) over the planned denominator, strict validity, and the validity of the one-way-max rule;
+- raw non-positive and non-finite draw counts, with totals, the number of replicates with any, and their distribution;
+- the number of draws with V_comp invalid;
+- the floor's draw-binding fraction and its distribution over replicates (min, quartiles, max);
+- the point-binding rate;
+- the strict and one-way-max sensitivities on the identical draws (their joint lower bound > 0 counts and their binding
+  fractions);
+- failed guards by cause (replicate-level, contrast-level and draw-level).
+
+Each sensitivity record now carries its own `floor_binding`, `raw_nonpositive`, `raw_nonfinite`, `vcomp_invalid` and
+`point_floor_binding` (`test_studentiser_summary_by_contrast_planned_denominator`, `test_schedule_run_end_to_end_reduced`).
+
+**F12c.3 — Stress scenario, no boundary-null claim, coverage qualification (condition 3).** (a) *Rename.* The γ = 0 scenario is
+the **linear-signal / ridge-bias stress scenario** in every report (`SCENARIO_LABELS`, `STRESS_LABEL`) and in this preregistration
+from here on. The configuration key `null` survives only inside the registered seed strings (`sim:null:<k>:<r>`), which are
+unchanged. (b) *Requirements kept, interpretation withdrawn.* The five ≤ 0.07 upper-bound requirements (C_WM and C_WM,S
+conditional and joint lower bound > 0, and "correction detected") are retained unchanged as **conservative operational safety
+requirements**. That means the same bounds, α = 0.05/36, ≤ 46/1,000 at stage 2, the ≤ 2/40 stage-1 selection rule and
+invalid-as-rejection with the planned denominator. A failed stress requirement still blocks purchase. Their interpretation as
+**type-I size certification at C = 0 is withdrawn.** F12a.3(b)'s sentence "The size gates are evaluated at the global null γ = 0;
+this does not certify every composite-null configuration against StatNN" and "γ = 0 is the exact null" (F12a.4(j); repeated in
+F12b.8) are replaced by: "The stress-scenario requirements are operational safety requirements under γ = 0, where ridge-1's
+estimation shrinkage is learnable by a nonlinear residual head; they are not type-I size certification at C = 0, and no type-I
+guarantee follows from them." In code they are `stress_rates` / `stress_pass`. (c) *No boundary-null release claim in this round.*
+F12 does **not** claim controlled false detection at a no-correction boundary, and no boundary-null case (including the composite
+null where only one comparator has no gain) is registered. No F12 report or paper may state or imply such control or a broad
+type-I guarantee. A later claim of that kind would need its own amendment with:
+- registered boundary-null cases for the relevant contrasts;
+- a stated and proved expected-risk equality or inequality for the complete learning procedure;
+- marginal lower-bound size requirements applied only where that marginal null is true;
+- exact CP bounds, invalid-as-rejection and a new simultaneous allocation.
+
+(d) *Coverage and error qualification at the actual expected-row-sum risk ratio* (registered before stage 1;
+`expected_row_sum_target`, `coverage_summary`; configuration `docs/prereg/f12_manifests/f12c_target_config.json`, sha256
+`be372fc56657bc4e6a62732e0e7bbce1701027197635b846efee6e8f4948e29c`).
+- *Target.* For the stress scenario at the frozen k\*, C̄_c = 1 − Σ_r A_WM,r / Σ_r A_ref,r, with A_ref = A_F3 for C_WM and A_S for
+  C_WM,S. It is computed under the frozen procedure over **T = 200 independent target replicates**, r = 2,000…2,199, with panel
+  seeds seed("20261111:f12:", "target:null:<k\*>:<r>"). These noise streams are disjoint from stage 1 (r 1,000–1,039, tag
+  `f12b-stage1`), stage 2 (r 0–999, tag `sim`) and the pilot (r 3,000–3,009). Each target replicate refits F3, WM-R and StatNN on
+  its own panel. Training randomness is fixed by the frozen procedure (seeds 0/1/2 and per-model shuffling) and so enters only
+  through the independent panels. The target is never estimated from the stage-2 replicates, which would be circular.
+- *Estimand.* All planned target replicates, with no valid-only conditioning: the losses need no contrast validity. A missing,
+  duplicated or unplanned target replicate, or a fit failure in any of them, leaves the target undefined. The coverage
+  qualification then fails closed.
+- *Monte Carlo uncertainty.* The delta-method SE of the ratio of sums is reported, together with the conservative band [target − 2
+  SE, target + 2 SE]. On the scale of the F12b reduced run the SE is about 0.004.
+- *Coverage.* The stage-2 stress replicates (1,000 planned) are evaluated against the target. For each of the six A4.4 intervals
+  of both contrasts the report gives coverage of the point target, the lower-tail error (lower bound > target − 2 SE) and the
+  upper-tail error (upper bound < target + 2 SE). An invalid replicate counts as an error in both tails and does not cover.
+- *Qualification.* Purchase requires that the lower-tail error of the conditional and joint bootstrap-t intervals of C_WM and
+  C_WM,S (four bounds) each have a one-sided CP upper bound ≤ 0.07 at α = 0.05/36. This enters `qualification_pass` beside the
+  power and stress gates. The analogous upper-tail bounds (four) are required for any upper-bound label ("bounded below 5 %", or
+  no detectable gain against both comparators), not for purchase.
+- *Allocation.* At stage 2's single k there are 6 gating bounds plus 8 coverage bounds = 14 one-sided bounds, each at 0.05/36. The
+  total is 14 × 0.05/36 = 0.0194 ≤ 0.05, so simultaneous coverage is ≥ 95 % over all gating and qualification bounds within
+  F12a.5(c)'s 36-slot allocation.
+- *Failures.* A failed lower-tail qualification (or an undefined target) means "unresolved — not qualified": no purchase, no
+  repeat, no extension, no new target run.
+- *Cost.* 200 × (stress CPU-s per replicate at k\*): 11.2 CPU-h at k\* = 145, 10.6 at 87 and 6.7 at 0.
+- *Other scenarios.* No coverage target is registered for the alternative (each replicate's truth depends on its own h\* and is
+  not estimable at registered cost) or for variance-×2. Their coverage is reported as "not computed", and coverage under them is
+  not claimed.
+
+**F12c.4 — Alternative, failure wording, estimand (condition 4).** (a) The two-comparator ordered claim and the existing
+alternative are retained. The alternative is a **token-function alternative calibrated against F3** (`SCENARIO_LABELS["alt"]`).
+(b) *Failure wording, adopted verbatim* (`FAILURE_WORDING`, printed in the release field of a failed stage 2): "**The registered
+two-comparator decision did not meet its power qualification under this alternative; it does not establish absence of a K+F
+correction.**" It replaces F12b.9's proposed sentence. A failure is attributed to the same-input tree only when the separate
+comparator results support it (C_S:F3 and the marginal C_WM,S rate); fit failures, noise and F3 uncertainty can also cause
+failure. (c) *Descriptive publication.* Both contrasts and their marginal detection rates are published descriptively, each being
+point C ≥ 0.05 with both bootstrap-t lower bounds > 0 for that contrast alone, over the planned denominator
+(`marginal_detection`). They create no separate purchase route. The original field-only wording for a qualified upper-bound result
+(F12a.3(c)) is retained, now also requiring the F12c.3 upper-tail qualification; a failure to reject never becomes absence. (d)
+*No second alternative in this round.* A joint alternative with margins against both comparators is **not registered**. **No F12
+report or paper will claim adequate power against a WM-over-StatNN margin.** There is no h\* restriction chosen after power
+results, no removal of StatNN and no "either alternative passes" path. (e) *Estimand.* The ratio of expected row sums governs
+everywhere: calibration, validation, learned C, the coverage target and every gate report. Gate reporting holds no mean of
+replicate ratios: `learned_C` reports ratios of sums only, labelled with its valid-only conditioning, and the calibration summary
+reports the median and range of the validation ratios. The per-replicate C stays in the records, descriptively. F12b.9's means
+(C_WM 0.224, C_WM,S 0.057) are withdrawn as reported figures; the governing ratios of sums are 0.166 and 0.025 (synthetic).
+
+**F12c.5 — Frozen selection and the stage-2 schedule (condition 5).** (a) *Configurations (committed, sha256-pinned in
+`F12C_CONFIG_SHA256`).* The F12b configurations stay committed but are superseded: they are not governed (`governed_name` is None)
+and can never be numerically eligible. The F12c configurations are identical to F12b's stage-2 configuration in every training,
+inference, calibration and gate field (`test_f12c_configs_pinned_with_exact_schedules`) and add only `schedule`, `k_rule`,
+`seed_key`, `cov_se_mult` (2) and `cov_error_limit` (0.07).
+- stage 1: `f12c_stage1_config.json`, sha256 `7cb10a83a6a2fb0e7e92ee14b2bea21d3efea42d49510e1625e9bcb9df204b01`. 40 stress + 40
+  alternative replicates at each of the six k, r = 1,000…1,039, seed tag `f12b-stage1` (the F12b.4(a) streams).
+- stage 2: `f12c_stage2_config.json`, sha256 `ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f`. Exactly one k =
+  k\*: **1,000 stress (r 0–999) + 1,000 alternative (r 0–999) + 200 variance-×2 (r 0–199)**, seeds `sim:<scenario>:<k*>:<r>`.
+- target: as in F12c.3(d).
+- pilot: `f12c_pilot_config.json`, sha256 `5e8c8c2aef6bdb049c9470757f5847e406fbc908384abb0c83cf4e1b2254b24e`. 10 alternatives at k
+  = 145, r = 3,000…3,009, panel seeds seed("20261111:f12:", "pilot:<r>"). Its h\* and calibration streams are disjoint from every
+  other stage. It records timing, memory and validity only and computes no gate rate.
+
+Every planned (scenario, k, r) is distinct, with its own PCG64 stream
+(`test_planned_ids_are_distinct_with_disjoint_seed_streams`). (b) *Selection frozen before any stage-2 replicate.* `python
+scripts/f12_simulation.py select --stage1-report <report>` verifies the complete stage-1 report (F12c.6(a)), recomputes k\* from
+its records and writes `docs/prereg/f12_manifests/f12c_stage2_selection.json`. The file holds the stage-1 report sha256, the
+stage-1 config sha256, the token, payload and code identities, the rule checks per k and k\*. It is immutable: a different
+selection is refused, and a selection made on synthetic inputs can never be written to that path. The file is committed before any
+target or stage-2 replicate. Every target or stage-2 run needs `--selection` and `--stage1-report`; it recomputes the selection,
+requires equality with the frozen file and identical identities, and refuses `--k-grid`. (c) *Stage 2 fixed.* There is no fallback
+k, no extension, no partial-run decision and no repeated pilot. α = 0.05/36 is kept for each one-sided bound (838/1,000 and
+46/1,000 at n = 1,000), with invalid replicates counted as power failures and stress rejections over the planned denominators. The
+added coverage bounds are allocated in F12c.3(d).
+
+**F12c.6 — Code conformance and negative tests (condition 6).** (a) *Stage-1 verification* (`verify_stage1_report`). The verifier
+requires:
+- the report schema;
+- the config equal to the pinned F12c stage-1 config, with its file sha256;
+- non-synthetic inputs (or an explicitly synthetic, never-governed selection);
+- token, payload and code identities equal to the current run's;
+- a k grid of exactly the six k;
+- exactly the 480 planned records (40 unique per scenario and k), each carrying its registered offset and seed and complete;
+- a summary recomputed from the records that equals the stored one, from which the selection is recomputed.
+
+Negative tests cover a dropped, duplicated, re-seeded or incomplete record, a tampered summary, the F12b config, a wrong config
+sha256, synthetic tokens, token or code identity mismatch and a wrong k grid
+(`test_stage1_verifier_rejects_wrong_provenance_or_counts`, `test_synthetic_stage1_never_selects_a_governed_run`,
+`test_stage1_report_verified_and_selection_frozen`). (b) *Fail-closed execution validator* (`validate_execution`). It requires:
+- the pinned stage-2 config and the registered 1,000/1,000/200 schedule;
+- non-synthetic tokens and the pinned restricted payload;
+- the verified frozen selection: non-synthetic, identical in the report, with the same identities and a k grid of exactly [k\*];
+- exactly the planned 2,200 unique records with their seeds, complete and not a partial report;
+- the summary recomputed from the records;
+- the prerequisites: the passed F12a.4(d) noise check (10,000 panels, k = 145, same identities); the chair's pilot-projection
+  acceptance; the complete f12c_target report at k\* reproducing the report's coverage target; and C1 code hashes that are not a
+  draft, equal current bytes and cover the run's code identity.
+
+Board A's acceptance is not checkable by code and is always "pending". The release field is relabelled **"numerical eligibility
+pending Board A acceptance"** (`RELEASE_FIELD`). It holds `eligible`, `numerical_eligibility`, `wording` and an explicit
+`authority` of "none" (no `binding` key and no "release S_k" outcome). A synthetic, partial, reduced or otherwise unvalidated run
+is never eligible (`test_execution_validator_fails_closed` with 17 adversarial cases,
+`test_partial_or_synthetic_run_never_eligible`, `test_f12b_configs_are_superseded_and_never_eligible`). (c) *Schedule and
+assembly.* `run` executes exactly the planned ids of the config's schedule, or a `--part` subset of scenarios run as separate
+invocations. `assemble` merges parts only if their provenance is identical: schema, config and file sha256, registration,
+identities, k grid, frozen selection, coverage target and planned-id hash. Each planned id must occur once, records go in planned
+order, the summary is recomputed and the part sha256s are listed (`test_report_assembly_across_invocations_preserves_provenance`).
+The `--replicates` override is refused for scheduled configs. (d) *Timing sidecar.* `report.time` now projects F12b's schedule
+(`project_cpu`): stage 1 at the six k (interpolated), stage 2 = 1,000 + 1,000 + 200 at each k, the coverage target and the pilot.
+It also records process-tree CPU and its overhead over the per-replicate sums. The 1,000 × six k × two scenarios projection is
+gone (`test_timing_projection_follows_the_f12c_schedule`). (e) *Summaries* report coverage of all six intervals at the stress
+scenario's expected-row-sum target and distinguish amended from strict validity (F12c.2–F12c.3;
+`test_coverage_of_six_intervals_at_the_expected_row_sum_target`). (f) *Rules text.* A registered config's report carries one
+`rules.effective` block generated from its own config values, with no drafted noise, γ, seed or comparator statements. The drafted
+defaults are labelled `drafted_not_registered`, and the module docstring now says the drafted list is not the governing one
+(`test_rules_text_states_only_the_effective_rules`). (g) *Provisional upper-bound codes.* `none_detectable_bounds` becomes
+`none_detectable_provisional` (`test_upper_bound_decision_code_is_provisional`). (h) *Restricted payload byte pin.*
+`docs/prereg/f12_manifests/noise_payload_restricted_pin.json` (status "draft, pending Board A C1 verification") pins:
+- the restricted bytes: sha256 `a21f426f0f8aef616d4bedca19603ed4cf8b7acd4823383acf749ba3d8f4a972`, 279,252 bytes;
+- the source digest `67da223c…3de`;
+- the contents: 141 donors, 63 components, 64 windows, families chain 116 / LoRA 25, all windows masked in, and hashes of the
+  window ids, donor ids and donor-component pairs;
+- the extractor provenance: `scripts/f12_simulation.py` at `07e1dc286a16e87926de92ddd84868c6cfbce7ed` (sha256 `ae76dbfe…ee8`),
+  `NoisePayload.load` + `json.dumps(restricted(), sort_keys=True)`, written 11 Nov 13:25 UTC by the F12 synthetic smoke run.
+
+`NoisePayload.load_restricted(path, pin)` requires the pin and verifies the digest, the source, every content field, the presence
+of extractor provenance and that the bytes are exactly the extractor's re-serialisation; the real copy reproduces byte for byte.
+The raw-payload loader is refused for every configured run, so it is not a governed fallback, and the F12 tests no longer open the
+raw payload. *Disclosed gap.* The copy lacks the `eligible` donor flag that F12a.4(e) lists; eligibility is evidenced only by 141
+all-finite donors. Whether to re-extract, which changes the bytes and the pin, is for Board A at C1. Population, eligibility, fold
+and gauge qualification on actual tokens remain open (F12c.9). (i) *Two-worker cap.* `--workers` > 2 is refused (`MAX_WORKERS`).
+
+**F12c.7 — Noise check, all-in budget, workers, pins, inventory (condition 7).** (a) *F12a.4(d) noise check* (`python
+scripts/f12_simulation.py noisecheck`; `noise_check`, `noise_plug_ins`, `noise_check_panel`; tests
+`test_noise_check_matches_plug_ins_within_four_se`, `test_noise_check_fails_closed`).
+- *Panels and draw order.* 10,000 noise-only panels at k = 145, panel d from its own stream seed("20261111:f12:",
+  "noisecheck:<d>"), drawn in the F12a.4(b) order on the restricted copy. No model is fitted and no outcome is read.
+- *Plug-ins.* With donor block means e_d, S_dd′ = (1/32)Σ_l e_dl e_d′l and m_d = mean_l e_dl, the plug-in E[ε_i ε_i′ | d, d′] =
+  (1/32)S_dd′ + (31/32)m_d m_d′. Donors are uniform over the 63 payload components and within a component. Rows of one simulated
+  component take distinct donors, drawn with replacement when m > n_c.
+- *Comparisons.* The empirical and plug-in values are compared for (i) the panel-mean variance of ε, (ii) the within-component
+  covariance (and correlation) and (iii) the cross-component common-item covariance (and correlation). Each comparison has a Monte
+  Carlo SE over the independent panels.
+- *Fail-closed criterion.* The check fails if any donor's plug-in panel-mean variance is ≤ 0, or if any |empirical − plug-in|
+  exceeds 4 Monte Carlo SE. Tests include a zero-variance donor and a generator with independent item indices per row, which fails
+  on the common-item covariance.
+- *Status.* The output is labelled the F12a.4(d) check only at 10,000 panels, k = 145 and non-synthetic tokens; every other run is
+  a "smoke". The full check was **not run**; it runs on the real tokens' S_145 before the pilot.
+- *Smoke* (500 panels, synthetic population, restricted copy): pass. z = 0.76 (variance), 1.01 (within) and 0.70 (cross); plug-in
+  within-component correlation 0.875 and cross-component 0.476. It took 0.68 CPU-s, so 10,000 panels project to about 14 CPU-s.
+
+(b) *All-in CPU plan: ≤ 150 CPU-h is not attainable, so an explicit prospective repricing is required.* The figures use measured
+synthetic-token process CPU per replicate (F12b.6; k = 0: 121/136 s, k = 87: 190/208 s, k = 145: 202/219 s stress/alternative,
+other k interpolated) and the measured overhead of F12c.7(f). Worst case is k\* = 145:
+
+| item (worst case k\* = 145) | CPU-h |
+|---|---|
+| F12a.4(d) noise check (10,000 panels, k = 145) | 0.01 |
+| timing pilot (10 alternatives, k = 145) | 0.61 |
+| stage 1 (40 + 40 at six k) | 23.79 |
+| coverage target (200 stress at k*) | 11.21 |
+| stage 2 (1,000 + 1,000 + 200 at k*) | 127.98 |
+| measured overhead (15 invocations x 10 CPU-s) | 0.04 |
+| **all-in, worst case** | **163.6** |
+| all-in at k\* = 0 / 29 / 58 / 87 / 116 | 109.4 / 125.0 / 140.6 / 156.2 / 159.9 |
+
+Only dropping both the coverage-target run and the 200 variance-×2 replicates would bring the worst case below 150 CPU-h, to 141.2
+CPU-h before overhead, and the review requires both. Cutting gating replicates, draws or qualification work is not permitted (the
+review: "no silent reduction"). F12c therefore **requests a prospective repricing of the whole F12 simulation programme to an
+all-in ceiling of 190 CPU-h**: the worst case 163.6 CPU-h plus 15 % headroom for real-token cost and machine contention, rounded
+up. Until the chair accepts it in writing (entry in `pilot_acceptance`, schema `f12c-pilot-acceptance-v1`, with
+`all_in_ceiling_cpu_h`), stage 1 does not start. *Stop rules.* After the timing pilot the projection is recomputed from its
+measured real-token CPU (`project_cpu`) and stage 1 starts only if the projected all-in total is within the accepted ceiling.
+During execution, a projected breach stops the run for a new dated repricing. The fixed replicate counts never change. F12b.6's
+"within the 150 CPU-h ceiling for the registered run" is a stage-2-only statement and is not an all-in ceiling. (c) *Worker-count
+rule.* At most **two** single-thread workers on this shared 8-core machine (`MAX_WORKERS`; the CLI refuses more). The measured
+peaks are a parent of 0.72 GB and workers of 0.88 GB each, so about 2.5 GB in total against the 4 GB limit. The design note's
+four-worker projection (≈ 32 h wall) is **withdrawn**. At two workers the worst-case wall time is about 100 h for the whole
+programme, run as one `agent-tmux` job at a time. (d) *C1 draft pin.* `docs/prereg/f12_manifests/code_hashes_c1.json` (`c1-draft`;
+status "**draft, pending Board A C1 verification**") lists sha256 for 22 files: every F12 script (`scripts/f12*.py`), every F12
+test (`tests/test_f12*.py`), every F12 configuration (F12b and F12c), the dependencies `scripts/a5_build_panels.py`,
+`scripts/a5_simulation.py` and `scripts/tfv1_requalify.py`, the restricted-payload pin and the resource plan
+`docs/prereg/f12_manifests/f12c_resource_plan.json`. It also records the restricted-bytes digest with its extractor and the
+Python, numpy, torch, LightGBM and scipy versions; `test_code_hashes_c1_draft_pins_current_bytes` keeps it equal to current bytes.
+It is not a C1 file until `MANIFEST_C1.sha256` exists (F12a.6(c) item 11) and is regenerated after any change. C1 still lacks the
+exposure file, the population, folds, schemas, models, intervals, F12-I and resources files, the C1 verifier and actual-token
+qualification. (e) *Artifact inventory.* `docs/design/F12B_REPAIRS.md` §9 freezes a refreshed inventory (sha256, size,
+modification time) of `/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/f12b/`. It is read directly from the completed timing report
+and sidecar and corrects `f12b_reduced_summary.json`'s stale empty-file hashes for `timing_k0_k87.log` and
+`timing_k0_k87.stdout.json`. (f) *Reduced synthetic check of the F12c runner* (≤ 6 replicates; design note §9; not a gate result):
+on the synthetic population at k = 145 with the restricted copy, the F12c stage-2 config under a non-registered schedule override
+(stress 2, alternative 1, variance-×2 1; 4 replicates) ran as two `--part` invocations with two workers, and `assemble` merged
+them into one complete report (planned ids exactly once; status "synthetic dry run, not a gate"; release "none: execution
+validator did not pass"; `eligible` false). The C_WM floor bound in 17.7–29.5 % of draws in the stress replicates (point binding 1
+of 2), 8.5 % (alternative) and 16.5 % (variance-×2); strict validity was 0 of 4 and amended validity 4 of 4; no non-finite term
+occurred. Process CPU per replicate was 202.7 s (stress), 234.6 s (alternative) and 210.7 s (variance-×2); the alternative ran 7 %
+above F12b.6 on the loaded machine (load ≈ 15). Process-tree overhead beyond the replicates was 9.7 and 7.2 CPU-s per invocation.
+Peak RSS: parent 0.72 GB, workers 0.88 GB. (g) *Order before stage 1.* The sequence is:
+1. Board A accepts F12c;
+2. C1 is completed and verified;
+3. the actual tokens, population and gauge are qualified;
+4. the 10,000-panel noise check passes;
+5. the timing pilot runs (F12c.5(a));
+6. the chair accepts the all-in projection and the repricing;
+7. stage 1 runs;
+8. `select` freezes and commits k\*;
+9. the coverage-target run executes;
+10. stage 2 executes (in parts if needed), followed by `assemble` and the validator;
+11. Board A accepts the committed report.
+
+The Part A → F8-E → F8-F → F9 → F12 → F12-I ordering, C2, the before-scheduling forecasts, the exposure requirements and the
+independent GPU caps are unchanged. Corrected bytes are re-pinned before execution under the C1/C2 identity and restart rules.
+
+**F12c.8 — What does not change.** The population, folds and k grid; the endpoint; F3; WM-R's architecture, parameter count and
+optimiser; StatNN's inputs, settings and tree grid; h\*, γ ≥ 0 with its grid, bracket and F12b.3 calibration; the noise generator;
+A5.4.2's procedures and all guards except the F12b.2 floor as enforced in F12c.2; 4,000 draws and PCG64 seed 20261107; the
+decision order; the power and stress bounds, α = 0.05/36, 1,000 replicates per gating scenario and invalid-as-failure; the stage-1
+rule and the stage-1 and stage-2 seed streams; purchase only after Board A's acceptance; F12a.6–F12a.10; F12-I; Part A (held,
+unscored); and every registered arm, decision rule, seed, cap and pin outside F12.
+
+**F12c.9 — Status by condition.**
+
+| condition | status | what was done, where | what remains, why |
+|---|---|---|---|
+| 1 training changes, attestations | partially | F12c.1; configs; `docs/prereg/f12_attestations.md` (implementer entry given) | chair and other sessions' attestations: only those sessions can give them |
+| 2 studentiser | done | F12c.2; `joint_variance`, `a542_contrast`, `studentiser_summary`; adversarial tests | its consequences are measured only by the registered run |
+| 3 stress scenario, coverage | done (registration and code) | F12c.3; `f12c_target_config.json`; `expected_row_sum_target`, `coverage_summary`; no boundary-null claim | target and coverage computed only at execution |
+| 4 alternative, wording | done | F12c.4; `FAILURE_WORDING`, `marginal_detection`, ratio-of-sums summaries | — |
+| 5 selection, schedule | done (code and configs) | F12c.5; `select`, `write_selection`, `verify_selection`; F12c configs | the selection file is written only after a real stage 1 |
+| 6 code conformance | done for the listed gaps; partially overall | F12c.6; validator, assembly, CLI, timing, rules, codes, byte pin; negative tests | actual-token population, eligibility, fold and gauge qualification; `eligible` flag decision at C1 |
+| 7 budget, pins, order | partially | F12c.7; `noisecheck` (smoke only); all-in plan; worker rule; C1 draft; inventory | full noise check and pilot need real tokens; ≤ 150 CPU-h not attainable, repricing awaits the chair; C1 incomplete |
+
+*No-exposure attestation (implementation session, 11 Nov 2026, about 18:10 UTC to this commit).* Entry 9 of
+`docs/prereg/f12_attestations.md` is this session's full attestation: Claude Opus 5.5 implementation sub-agent, worktree
+`.worktrees/prereg/f12c`. (i) It saw no TF-v1 record, ledger outcome or D3 outcome; it handled centred qualification noise through
+the restricted copy and, once, through a baseline test that parsed the raw F8a.2 payload's allowlisted fields. (ii) It saw no G3,
+rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A score, opened nothing under `data/evals`, read no real
+F12 token and used no GPU. (iii) It read F12a.1's account of the prescore audits, not the audits. It attests to this session only.
+
