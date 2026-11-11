@@ -287,3 +287,20 @@ read the regenerated manifest, the audit files, the calibration and sizing outpu
 reports. I opened no file under `data/evals` for any Part A variant, supplementary edit or missing reference, ran no scoring, and
 read no score, response or contrast. No Part A outcome exists. The scoring launch script exists at `/tmp/a5_part_a_score.sh` and
 has not been run.
+
+## 14. F11b drafter (this drafting session; added 11 Nov 2026)
+
+- **Role:** wrote note F11b (adoption of the Part A analysis F11-path conventions, Board A Part A analysis review 4, condition 1)
+  and this entry.
+- **Session identity:** Claude Sonnet 5.5, branch `prereg/f11b` (worktree `.worktrees/prereg/f11b`), delegated by the chair; created
+  from main `9add718` at 11 Nov 2026, about 08:20 UTC.
+- **Coverage:** from branch creation through the commit that adds this entry.
+- **Read and ran:** `docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md`, the module docstring and two short passages (the
+  supplement-row checks, the route-acceptance function, the size-hold check) of `src/wsp/eval/part_a_analysis.py`, the F10c, F11,
+  F11a and re-pin (xxi) text of `docs/PREREG_H1_TF.md`, `docs/PROGRESS.md` (the 08:06 and 08:16 UTC entries) and this file. It ran
+  `scripts/secret_scan.sh` and git commands. It ran no scoring, GPU job, simulation, staging or test suite, and wrote only under
+  `docs/`.
+- **Attestation:** I opened nothing under `data/evals/`, opened no zoo `eval.json`, `records.jsonl` or `summary.json`, used no GPU,
+  and wrote nothing under `data/`. I have seen no G3, rotation, ladder, reference or sealed outcome, or a summary of one. None
+  exists. I made no methodological choice: F11b copies Board A's rulings and the builder's recorded decisions. This attests this
+  session only; it does not prove other sessions' histories.
