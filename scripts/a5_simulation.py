@@ -32,6 +32,30 @@ cutpoints and the same one-row-per-component rule, and a (family, tertile) cell 
 a hard error. NULL-SIZE keeps the full payload, so it still reproduces the registered NULL-SIZE run;
 seeds, streams, scenarios and decision rules are unchanged. The output records the pool and its cell
 counts under ``donor_pool``.
+`--slot-mask FILE` (A5 amendment F10.6; Board A F10 condition 5) masks the rotation contrast's failed
+slots in every NULL-SIZE and POWER-AND-YIELD replicate while retaining the ladder slots of the same
+edits. Frozen ID mapping format (schema ``a5-slot-mask-v1``), a JSON object with exactly two keys::
+
+    {"schema": "a5-slot-mask-v1",
+     "available": {"<selected edit id>": ["rotation", "ladder_0.25", "ladder_0.5"], ...}}
+
+``available`` has one entry per selected edit id of the frozen A5.3.1 selection (``selection_cells``
+of the payload inventory; for the registered payload exactly the 40 ``edit_ids`` of
+``docs/prereg/a5_manifests/part_a/manifest.json``), no more and no fewer. Its value lists, without
+duplicates and in any order, the contrasts available for that edit, named ``rotation`` (scale 1),
+``ladder_0.25`` and ``ladder_0.5``; an edit whose rotation pair is excluded by the F10 re-stage omits
+``rotation``. Edit id -> slot is the frozen slot order of the simulation: quota family order (LoRA,
+chain), then tertile 0-2, then edit id ascending within the cell (the order of ``selection_cells``);
+the output lists that mapping under ``slot_mask.slots``. F10.6 masks rotation slots only: both
+ladders must be available for every edit (a ladder mask would need a new ruling). A masked slot is
+treated as a failed audit of that contrast alone: it contributes no pair to that contrast's resolved
+count, agreement, yield or power and counts in ``audit_or_nonfinite_counts``; the other contrasts of
+the slot, the donor pool (the F7 restriction for POWER-AND-YIELD, the full payload for NULL-SIZE),
+quotas, cutpoints, seeds, streams and draw consumption are unchanged, and nothing is resampled. The
+output records under ``slot_mask`` the label "slot-masked (F10.6)", the file path and sha256, the
+canonical mapping sha256, per-contrast available slot counts, masked ids, per-cell counts, and the
+gates (ordered go power >= 0.80; ordered go and each two-sided size <= 0.07) on the masked run.
+Without ``--slot-mask`` the output is byte-for-byte what it was.
 No project data discovery or access is performed.
 """
 
@@ -69,6 +93,9 @@ SCENARIOS = {  # registered run and its frozen sensitivity scenarios (A5 freeze-
     },
 }
 MEAN_MODES = ("donor", "family_constant")
+CONTRASTS = ("rotation", "ladder_0.25", "ladder_0.5")  # order of SCALES, audit[3] and fields
+SLOT_MASK_SCHEMA = "a5-slot-mask-v1"
+SLOT_MASK_LABEL = "slot-masked (F10.6)"
 
 
 def family_constants(cells, inputs):
@@ -212,6 +239,112 @@ def restricted_donor_cells(donors, boundaries, donor_ids, fields=None):
     return cells, report
 
 
+def slot_mask_matrix(mask, slot_ids, slot_cells):
+    """Contrast availability [n_slots, 3] from a frozen ``a5-slot-mask-v1`` mask (F10.6).
+
+    ``slot_ids`` are the selected edit ids in slot order and ``slot_cells`` their (family, tertile)
+    selection cells; the format is frozen in the module docstring. Every selected id must be listed
+    exactly once, contrasts must be known and unique, and both ladder contrasts must stay available.
+    Returns (available, report).
+    """
+    if not isinstance(mask, dict) or not isinstance(mask.get("available"), dict):
+        # ValueError like every other input check of this script (the CLI fails on any of them).
+        raise ValueError("slot mask must be an object whose 'available' maps ids")  # noqa: TRY004
+    unknown_keys = sorted(set(mask) - {"schema", "available"})
+    if unknown_keys:
+        raise ValueError(f"slot mask has unknown key(s): {unknown_keys}")
+    if mask.get("schema") != SLOT_MASK_SCHEMA:
+        raise ValueError(f"slot mask schema must be {SLOT_MASK_SCHEMA!r}")
+    listed = mask["available"]
+    missing = sorted(set(slot_ids) - set(listed))
+    if missing:
+        raise ValueError(f"slot mask lacks missing selected edit id(s): {missing}")
+    extra = sorted(set(listed) - set(slot_ids))
+    if extra:
+        raise ValueError(f"slot mask lists not selected edit id(s): {extra}")
+    available = np.zeros((len(slot_ids), len(CONTRASTS)), dtype=bool)
+    for s, edit_id in enumerate(slot_ids):
+        names = listed[edit_id]
+        if not isinstance(names, list) or not all(isinstance(n, str) for n in names):
+            raise ValueError(f"slot mask {edit_id}: available contrasts must be a list of names")
+        if len(set(names)) != len(names):
+            raise ValueError(f"slot mask {edit_id}: duplicate contrast names {names}")
+        bad = sorted(set(names) - set(CONTRASTS))
+        if bad:
+            raise ValueError(f"slot mask {edit_id}: unknown contrast(s) {bad}; use {CONTRASTS}")
+        available[s] = [c in names for c in CONTRASTS]
+    ladder_masked = sorted(i for s, i in enumerate(slot_ids) if not available[s, 1:].all())
+    if ladder_masked:
+        raise ValueError(
+            f"F10.6 masks rotation slots only; ladder slots must stay available for {ladder_masked}"
+        )
+    canonical = {i: [c for c in CONTRASTS if c in listed[i]] for i in sorted(slot_ids)}
+    cells = {}
+    for s, (family, t) in enumerate(slot_cells):
+        cell = cells.setdefault(
+            f"{family}:{t}", {"slots": 0, "available": dict.fromkeys(CONTRASTS, 0)}
+        )
+        cell["slots"] += 1
+        for c, name in enumerate(CONTRASTS):
+            cell["available"][name] += int(available[s, c])
+    report = {
+        "label": SLOT_MASK_LABEL,
+        "schema": SLOT_MASK_SCHEMA,
+        "mapping_sha256": hashlib.sha256(
+            json.dumps(canonical, sort_keys=True).encode()
+        ).hexdigest(),
+        "applies_to": ["null_size", "power_yield"],
+        "contrasts": list(CONTRASTS),
+        "available_slots": {c: int(available[:, k].sum()) for k, c in enumerate(CONTRASTS)},
+        "masked_ids": {
+            c: sorted(i for s, i in enumerate(slot_ids) if not available[s, k])
+            for k, c in enumerate(CONTRASTS)
+        },
+        "cells": cells,
+        "slots": [
+            {
+                "slot": s,
+                "edit_id": i,
+                "cell": f"{slot_cells[s][0]}:{slot_cells[s][1]}",
+                "available": [c for k, c in enumerate(CONTRASTS) if available[s, k]],
+            }
+            for s, i in enumerate(slot_ids)
+        ],
+    }
+    return available, report
+
+
+def slot_mask_gates(reports, replicates):
+    """F10.6 / A5.3.2 gates on the slot-masked run: size <= 0.07 (FP2) and ordered power >= 0.80."""
+    null = reports["null_size"]
+    size = {
+        "applies_to": "ordered go and each individual two-sided test (FP2); "
+        "not the funding-only alternative branch (F5.7)",
+        "threshold": 0.07,
+        "ordered_go_rate": null["ordered_go_rate"],
+        "two_sided_rejection_rates": null["two_sided_rejection_rates"],
+        "alternative_rate": null["decisions"]["alternative"] / replicates,
+        "passed": bool(null["accepted"]),
+    }
+    power_report = reports.get("power_yield")
+    if power_report is None:
+        power = {"threshold": 0.80, "status": "not run (no fields)", "passed": False}
+    elif "ordered_go_rate" not in power_report:
+        power = {"threshold": 0.80, "status": power_report["status"], "passed": False}
+    else:
+        power = {
+            "threshold": 0.80,
+            "ordered_go_rate": power_report["ordered_go_rate"],
+            "passed": bool(power_report["accepted"]),
+        }
+    return {
+        "label": SLOT_MASK_LABEL,
+        "size": size,
+        "power": power,
+        "passed": size["passed"] and power["passed"],
+    }
+
+
 def as_float(values):
     """JSON arrays with null for missing values -> float array with NaN."""
     if isinstance(values, np.ndarray):
@@ -317,6 +450,7 @@ def simulate(
     mean_mode="donor",
     cell_overrides=None,
     donor_ids=None,
+    slot_mask=None,
 ):
     """Null without fields; optional power at the registered .75 sign alternative.
 
@@ -332,6 +466,9 @@ def simulate(
     ``donor_ids`` (A5 amendment F7) restricts the POWER-AND-YIELD donor pool only
     (:func:`restricted_donor_cells`); it requires ``fields``. NULL-SIZE draws from the full pool as
     registered, and the random streams are spawned and consumed in the same order.
+    ``slot_mask`` (A5 amendment F10.6) is a parsed ``a5-slot-mask-v1`` object (module docstring):
+    masked rotation slots fail that contrast's audit in every NULL-SIZE and POWER-AND-YIELD replicate;
+    ladder slots, donor pools and every random stream are unchanged (:func:`slot_mask_matrix`).
     Controls/Part B are outside this Part A calibration and cannot be inferred here.
     Replicate/draw/quota overrides are for synthetic tests, never registered runs.
     """
@@ -349,6 +486,10 @@ def simulate(
     streams = np.random.SeedSequence(20261107).spawn(3)
     panels, signs, res_rng = [np.random.Generator(np.random.PCG64(s)) for s in streams]
     slots = [key for key, rows in selected.items() for _ in rows]
+    available, slot_report = None, None
+    if slot_mask is not None:
+        slot_ids = [r["id"] for rows in selected.values() for r in rows]
+        available, slot_report = slot_mask_matrix(slot_mask, slot_ids, slots)
     donors = payload["donors"]
     inputs = donor_inputs(payload, noise_scale, unavailable_audit)
     sensitivity = {}
@@ -401,6 +542,8 @@ def simulate(
             noise = np.stack([inputs[r["id"]][0] for r in chosen], axis=1)  # [32, slots]
             mean = np.asarray([inputs[r["id"]][1] for r in chosen])
             audit = np.stack([inputs[r["id"]][2] for r in chosen])  # [slots, 3]
+            if available is not None:
+                audit = audit & available  # F10.6: a masked slot fails that contrast only
             # A pair with any missing window or nonfinite donor mean is missing in all three
             # contrasts, whether or not the outer panel redraws that block.
             complete = np.isfinite(noise).all(axis=0) & np.isfinite(mean) & slot_active
@@ -474,6 +617,8 @@ def simulate(
                 else rate >= 0.80
             ),
         }
+    if slot_report is not None:
+        slot_report["gates"] = slot_mask_gates(reports, replicates)
     return {
         "replicates": replicates,
         "resolution_draws": draws,
@@ -500,6 +645,8 @@ def simulate(
         **({"sensitivity": sensitivity} if sensitivity else {}),
         # Present only with donor_ids (A5 amendment F7), so earlier raw outputs stay reproducible.
         **({"donor_pool": donor_pool} if donor_pool is not None else {}),
+        # Present only with slot_mask (A5 amendment F10.6), so earlier raw outputs stay reproducible.
+        **({"slot_mask": slot_report} if slot_report is not None else {}),
         "reports": reports,
     }
 
@@ -654,6 +801,12 @@ def main():
         help="JSON list (or object with 'donor_ids') restricting the POWER-AND-YIELD donor pool "
         "(A5 amendment F7); requires --fields",
     )
+    parser.add_argument(
+        "--slot-mask",
+        type=Path,
+        help="a5-slot-mask-v1 JSON (edit id -> available contrasts) masking failed rotation slots "
+        "in NULL-SIZE and POWER-AND-YIELD (A5 amendment F10.6); ladder slots are retained",
+    )
     args = parser.parse_args()
     if args.donor_ids and not args.fields:
         parser.error("--donor-ids restricts the POWER-AND-YIELD pool and requires --fields")
@@ -675,14 +828,30 @@ def main():
     if args.donor_ids:
         listed = json.loads(args.donor_ids.read_text())
         donor_ids = listed["donor_ids"] if isinstance(listed, dict) else listed
-    result = simulate(payload, fields, donor_ids=donor_ids, **SCENARIOS[args.scenario])
+    mask_kwargs = {}
+    if args.slot_mask:
+        mask_kwargs["slot_mask"] = json.loads(args.slot_mask.read_text())
+        # Validate the mapping before the registered-scale simulation starts.
+        selected, _ = selection_cells(payload["inventory"])
+        slot_mask_matrix(
+            mask_kwargs["slot_mask"],
+            [r["id"] for rows in selected.values() for r in rows],
+            [key for key, rows in selected.items() for _ in rows],
+        )
+    result = simulate(
+        payload, fields, donor_ids=donor_ids, **mask_kwargs, **SCENARIOS[args.scenario]
+    )
     result["scenario"] = args.scenario
     if args.donor_ids:
         result["donor_pool"]["path"] = str(args.donor_ids)
+    if args.slot_mask:
+        result["slot_mask"]["path"] = str(args.slot_mask)
+        result["slot_mask"]["sha256"] = hashlib.sha256(args.slot_mask.read_bytes()).hexdigest()
     result["input_provenance"] = {
         str(path): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in [args.inputs, *([args.fields] if args.fields else [])]
         + ([args.donor_ids] if args.donor_ids else [])
+        + ([args.slot_mask] if args.slot_mask else [])
     }
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     return 0
