@@ -105,16 +105,19 @@ exists. A pre-TF-v1 record of each missing original exists in the zoo and is rea
   Its report to the chair states that F10.11 was checked by path existence only. That report is not committed; only the chair's
   record of it exists (this entry, on the chair's instruction). `docs/PROGRESS.md` does not quote it.
 
-## 5. F10 code builder — pending its report
+## 5. F10 code builder (completed by the chair from its report, 11 Nov 2026)
 
-- **Role:** builder of the F10.3 audit and F10.4 diagnostics with tests (F10.7; review condition 2).
-- **Session:** Claude Opus 5.5, branch `feat/f10-rotation-audit` (worktree `.worktrees/feat/f10-rotation-audit`), in progress.
-- **Coverage:** from branch creation 11 Nov 2026 01:03:12 UTC; no commit on the branch at the time of this file (HEAD `c76a93c`
-  = main at creation). End time to be entered from its report.
-- **Scope (as tasked by the chair):** dry run on three staged edits into a scratch directory, no scoring. The chair's record
-  (`docs/PROGRESS.md`, 11 Nov 01:00 UTC entry): "F10 code (tests, dry run on three edits) in flight."
-- **Attestation: pending its report.** To be completed, with a quotation from its report or committed artefact, before the
-  implementation merge (review condition 1). Until then this entry is not an attestation.
+- **Role:** implementer of the F10.3 checks, F10.4 diagnostics, the `--audit-rule a533|f10` switch, the realised-increment ladder flag
+  and `scripts/a5_f10_dryrun.py` (commit e177ce6 on `feat/f10-rotation-audit`; under Board A review for condition 2; not merged).
+- **Session identity:** delegated session, Claude Opus 5.5 (claude_umut instance), branch `feat/f10-rotation-audit`, worktree
+  `.worktrees/feat/f10-rotation-audit`; coverage from 01:03:12 UTC to about 02:50 UTC, 11 Nov 2026.
+- **Read and ran:** the rotation-yield note, the F10 text, the staging README/manifest, `rotation.py` and `response_intervention.py`;
+  14 new tests (written first); a CPU dry run on exactly three staged edits (`00f8111cbad8218f`, `0a841d4082532e8b`,
+  `0027efdf2eae7405`) writing only to `data/runs/a5/f10_dryrun/` (5.2 GB); rotation-only timing measurements.
+- **Statement (from its report to the chair, quoted):** "Dry-run verdicts (scratch only; nothing scored)". It opened no file under
+  `data/evals`; its inputs are stored weights and the staged variants, not outcomes. The dry-run verdicts (two passes, one
+  `replay_failed` exclusion) are audit results, not outcomes.
+- Its report to the chair is on record only through this entry and `docs/PROGRESS.md`.
 
 ## 6. Board A
 
@@ -162,3 +165,15 @@ condition 7), and the scoring record adds one for the interval up to the scoring
   `data/evals` was opened."
 - **Coverage:** 01:18 UTC to the time of its report (about 01:55 UTC), 11 Nov 2026. Its report to the chair is on record only through
   this entry.
+
+## 9. Slot-mask path builder (added by the chair, 11 Nov 2026)
+
+- **Role:** implementer of `--slot-mask` in `scripts/a5_simulation.py` (Board A F10 condition 5), merged as b3bd276 with re-pin (xvi).
+- **Session identity:** delegated session, Claude Opus 5.5 (claude_umut instance), branch `feat/a5-slot-mask`; commit a8a84af
+  (content identical to the merged a03d2d2 except the root README status block).
+- **Read and ran:** the F10 review condition 5, F10.6, F7 and the registered power run's command, the Part A manifest (edit ids and
+  tertiles), the simulator tests; CPU only; one 200-replicate smoke run on the real inputs with a synthetic 39-slot mask written to
+  `data/runs/a5/slot_mask_dryrun/`; the registered-scale 10,000-replicate slot-masked run was NOT executed (it is gated).
+- **Statement (from its report to the chair, quoted):** "I did not run the 10,000-replicate registered run." It opened no file under
+  `data/evals`; its inputs are the null-size payload and the sign predictions, not outcomes.
+- **Coverage:** about 01:20 to 02:40 UTC, 11 Nov 2026. Its report to the chair is on record only through this entry.

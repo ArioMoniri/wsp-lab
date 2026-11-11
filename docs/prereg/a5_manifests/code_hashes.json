@@ -91,7 +91,7 @@
   },
   "scripts/a5_simulation.py": {
    "role": "simulation and NULL-SIZE input validator",
-   "sha256": "04f283d8756bc2d81e2e8bd700163f48d5ceff8487041a8969db48beda8c167f"
+   "sha256": "c4f0c55fd8e8c9bc5bb6521539f58db996f23e1a3cb37d99a19403e134d2fdf2"
   },
   "scripts/a5_snapshot.py": {
    "role": "closed pre-G2 snapshot (checklist item 3)",
@@ -263,14 +263,14 @@
   },
   "tests/test_a5_simulation.py": {
    "role": "test",
-   "sha256": "c69a912b7deb1767918452688d862bd076a6933afbe4020b314da27472ed4096"
+   "sha256": "78785f9d2fd7d972df36c5afadaf973fa0c069cc24ae7ea7f425a2a3922af983"
   },
   "tests/test_a5_snapshot.py": {
    "role": "test",
    "sha256": "85d27f488d489934e703bc77336614ef7882120f39c0de6ec346264a99ac5dcc"
   }
  },
- "git_sha": "6cf859aa9093eb288b1c11604416a02e7364c6e7",
+ "git_sha": "b3bd27616c15e5e11183b65bf6c89ac2b508bf00",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

@@ -573,3 +573,43 @@ confirming its operational choices (v4 differences = the five logged moments; pe
 tertile sets); implement, test and pin it before scoring; report the sign table as 3×2 and units as nats per valid next token
 (`docs/reviews/council/board-a-f10a-2026-11-11.md`). Scoring remains held. Waiting on the F10 code (condition 2) and the slot-mask
 path (condition 5).
+
+**11 Nov 2026, 02:45 UTC.** Merged: `feat/a5-slot-mask` (`--slot-mask` for the F10.6 slot-masked calibration; 18 simulator tests;
+A5.1.2 re-pin (xvi), pins match) and `prereg/f10b` (F10.5 specification adopted by hash with Board A's operational confirmations and
+reporting corrections). The F10 exclusion-rule implementation (commit e177ce6 on `feat/f10-rotation-audit`: F10.3 checks, F10.4
+diagnostics, a533/f10 audit-rule switch, realised-increment ladder flag, dry-run script) is under Board A review for condition 2
+before merge; the code builder's attestation and the Part A analysis code (A5.4/A5.5 outputs plus F10.5 reports, synthetic-tested)
+are in flight. Scoring held.
+
+**11 Nov 2026, 03:00 UTC. F10 code dry run: two rulings.** Commit e177ce6 (`feat/f10-rotation-audit`; 14 new tests; full suite 839
+passed) implements F10.3–F10.4. Dry run on three staged edits (scratch only, nothing scored): `00f8111c` (chain) and `0a841d40`
+(lora_sft) pass F10 with construction checks far inside 1e-5 and byte-identical rebuilt deltas; `0027efdf` (chain, predecessor
+`b7edbb9f`) is **excluded** under F10.3(iii): the predecessor holds exact zeros where the base is about ±1e-4, the rotated state there
+is about 1e-10, and the scorer's chain convention bf16(base + (state − base)) cannot carry it in fp32 (19 entries, 13 of 32 tensors;
+reason `replay_failed`, check `scorer_roundtrip`). Chair ruling 1: the exclusion stands as implemented; changing the chain storage or
+apply convention is outside F10.3 and would be a new post-audit amendment; all 8 non-root chain picks are at risk, so the F10
+yield may fall below 40 and the F10.6 slot-masked calibration (implemented, re-pin xvi) then applies. The rotation-yield note's 40/40
+covered only the measured items (F10 table), so this is not a contradiction of the registration. Chair ruling 2: check (iv) must
+match the F10/F10a text (½ ulp of the rounded value W + R_eff, which the draft states, with a slack of one fp32 spacing at W + R);
+the builder used a slack of 2·ulp_fp32(|W| + |R|) and reports the literal half-ulp(W) count separately; Board A's code review (in
+flight) rules whether the factor-two slack is accepted; if so it enters as a disclosed F10c note with the measured justification
+before the re-stage, otherwise the code is corrected before merge. Re-stage price measured: about 2 h 11 min to 3 h 32 min CPU for
+the 40 rotations (4 threads), +35.8 GB; `prepare` needs a rotation-only mode that preserves the staged ladders and the original
+manifest (Board A condition 3), to be added with Board A's code conditions. Attestation 5 completed from the builder's report.
+
+**11 Nov 2026, 03:20 UTC.** Board A REJECTED the F10 implementation e177ce6 under condition 2 with eight corrections
+(`docs/reviews/council/board-a-f10-code-2026-11-11.md`): F10a near-cut rank budget; exactly the registered one-fp32-spacing slack;
+pooled half-norm guard; bit-pattern replay against reloaded files with four threads; fail-closed missing/non-finite audits and D
+support; the complete a533 verdict as a diagnostic; pooled F10.4 diagnostics with deliberate-failure tests; an audit-only
+(rotation-only) preparation path with no evaluation reads. Corrections in flight on the same branch (merging main first). Nothing
+merged; scoring held.
+
+**11 Nov 2026, 03:45 UTC.** Part A analysis code committed (`feat/f10-sensitivity-reports`, 91d976b; `src/wsp/eval/part_a_analysis.py`,
+`scripts/part_a_analyse.py`, 53 synthetic tests; subset and tertile hashes reproduce from the manifest; fail-closed CLI). Under Board A
+review. Items the adopting note must rule on, from the builder's report: Part B contrasts are supplied as precomputed intervals via
+`--part-b` (funding unresolved if absent); seven A5.5 step-1 validity checks come from a `--validity` evidence file (gate unresolved if
+absent); resolution seed PCG64(20261107) with one shared [4000, 32] index array (not the simulation's SeedSequence stream); a
+flat-step tie-break in the λ = 1 solver (accepted only if it reduces the gradient norm; matches sklearn C=1 to 1e-6); the sealed-ledger
+and fields formats (`a5-part-a-sealed-ledger-v1`); `audit_missing` as a fail-closed exclusion code; a wrong subset hash stops the run
+rather than voiding the subset; frozen staged correlations printed, not recomputed; edit `057dcfbedea3251f` sits on ln ρ cut 1 and
+will be flagged `cell_drift` on any downward re-stage drift (never moved).
