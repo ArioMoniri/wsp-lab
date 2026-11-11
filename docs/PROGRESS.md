@@ -573,3 +573,10 @@ confirming its operational choices (v4 differences = the five logged moments; pe
 tertile sets); implement, test and pin it before scoring; report the sign table as 3×2 and units as nats per valid next token
 (`docs/reviews/council/board-a-f10a-2026-11-11.md`). Scoring remains held. Waiting on the F10 code (condition 2) and the slot-mask
 path (condition 5).
+
+**11 Nov 2026, 02:45 UTC.** Merged: `feat/a5-slot-mask` (`--slot-mask` for the F10.6 slot-masked calibration; 18 simulator tests;
+A5.1.2 re-pin (xvi), pins match) and `prereg/f10b` (F10.5 specification adopted by hash with Board A's operational confirmations and
+reporting corrections). The F10 exclusion-rule implementation (commit e177ce6 on `feat/f10-rotation-audit`: F10.3 checks, F10.4
+diagnostics, a533/f10 audit-rule switch, realised-increment ladder flag, dry-run script) is under Board A review for condition 2
+before merge; the code builder's attestation and the Part A analysis code (A5.4/A5.5 outputs plus F10.5 reports, synthetic-tested)
+are in flight. Scoring held.
