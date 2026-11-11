@@ -596,3 +596,10 @@ flight) rules whether the factor-two slack is accepted; if so it enters as a dis
 before the re-stage, otherwise the code is corrected before merge. Re-stage price measured: about 2 h 11 min to 3 h 32 min CPU for
 the 40 rotations (4 threads), +35.8 GB; `prepare` needs a rotation-only mode that preserves the staged ladders and the original
 manifest (Board A condition 3), to be added with Board A's code conditions. Attestation 5 completed from the builder's report.
+
+**11 Nov 2026, 03:20 UTC.** Board A REJECTED the F10 implementation e177ce6 under condition 2 with eight corrections
+(`docs/reviews/council/board-a-f10-code-2026-11-11.md`): F10a near-cut rank budget; exactly the registered one-fp32-spacing slack;
+pooled half-norm guard; bit-pattern replay against reloaded files with four threads; fail-closed missing/non-finite audits and D
+support; the complete a533 verdict as a diagnostic; pooled F10.4 diagnostics with deliberate-failure tests; an audit-only
+(rotation-only) preparation path with no evaluation reads. Corrections in flight on the same branch (merging main first). Nothing
+merged; scoring held.
