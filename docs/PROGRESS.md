@@ -758,3 +758,12 @@ the staging mode requested (F11 condition 2). Analysis F11-path corrections stil
 (`restage_launch.json` 02:44–06:22 UTC, the calibration 06:25–06:36 UTC, the supplementary staging launched 08:06 UTC) and the git
 commit timestamps are authoritative. Ordering is unaffected. From this entry on, labels are taken from `date -u` at the time of
 writing.
+
+**11 Nov 2026, 08:06 UTC.** Analysis F11-path corrections committed (f57b70a on `fix/part-a-analysis-manifest-binding`;
+172 analysis tests; full suite 1110 passed): supplements join the covariate, sign, comparator and tertile reports with the forty's
+frozen cells and S30/S34 unchanged; registered-40 descriptive report with availability-vs-resolved and root/non-root splits;
+per-contrast masks (supplementary ladder masks accepted); F11a screen route with size-failure priority and the F11.7 validity
+wording tested against the registration. Builder decisions for the adopting note: forty-only size failure now refuses; the screen
+route needs an `f11a_screen_route` acceptance input bound to the calibration-report hash; the 52-slot calibration is always
+required when supplements exist; supplement cell assignment and the acceptance-input format are conventions to adopt. Under Board
+A re-review. Supplementary staging running (launched 08:06 UTC).
