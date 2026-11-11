@@ -4898,3 +4898,453 @@ and member reports, the P4 d3v2f summary, `docs/RESULTS.md` (TF-v1 timing lines)
 (of which only `scoring.minutes_per_entry` was printed). From `snapshot.json` it read entry ids and file hashes of the
 TF-v1 records, never their contents. It saw no G3, rotation, ladder, reference, sealed, F8 or F9 outcome and no Part A score (none
 exists); it used no GPU and wrote nothing under `data/`. The counts and hashes above are functions of committed manifests only.
+
+#### A5 note F12a (11 Nov 2026, before any G3 outcome): implementation of Board A's F12 and F12-I conditions
+
+This block is appended; earlier text is not rewritten. It implements Board A's review of F12 and F12-I
+(`docs/reviews/council/board-a-f12-2026-11-11.md`, added by commit `6dab4bdb73389149b8f0960a91bfb31000c0913e`, file sha256
+`215bc01e5de366fa089dc46e9b9fe67f3662d35ff3b785ff00b5d7defff8c1b8`; "the review"), whose verdicts are "**F12: ACCEPT WITH
+CONDITIONS. F12-I: ACCEPT WITH CONDITIONS, independently of whether F12 is purchased.**" Clauses F12a.1–F12a.10 discharge the
+review's numbered conditions 1–10 in the same order; each opens with the condition's operative wording, quoted verbatim, and then
+states the implementing rule. F12a.1 also adopts the review's section "Population ruling and reproducibility". It was written on
+branch `prereg/f12a` at main `94a1905`, while Part A is staged, frozen, released with conditions and unscored, and before any G3,
+rotation, ladder, sealed, F8 or F9 outcome had been read. Where F12 reads differently, F12a governs. Settings the review leaves
+open and this note fixes are marked **implementing default**; Board A verifies them at the C1 freeze. Like the review, F12a
+releases no simulation, purchase or scoring ("Acceptance is of the secondary designs in principle. Neither simulation, purchase
+nor scoring is released by this review."). It changes no registered arm (A5.4), Part A selection or analysis (A5.1.2, F11.2,
+F11.5), decision rule (A5.5), line-stop rule (F5.5), H5 success criterion (A5.7), seed, cap or pin outside F12 (F12.9).
+
+**F12a.1 — Scope, provenance, wording and population (condition 1; the review's population ruling).** Operative wording:
+> F12.1 and the member reports explicitly summarize Part A predictions and calibration, so F12.7's absolute statement that no Part
+> A prediction or calibration informed any choice is too strong without an attested account. State that this design is
+> outcome-blind but informed by the disclosed prescore audits; permit only the fixed exclusion metadata operationally. No Part A
+> score, residual, calibration update or sealed-ledger contents may choose F12 features, rows, thresholds or sample size. Ledger
+> sealing is an ordering signal/hash only. Keep every A5.5, F5.5, funding, G7/G8 and H5 decision unchanged. Exposure attestations
+> must distinguish old development outcomes from new Part A/F8/F9 outcomes and cover every approving session. Because execution
+> follows those panels, use unexposed implementers/analysts or invoke F8a.1(d)'s explicitly exploratory amendment before scoring.
+> Temporal ordering alone does not establish blindness.
+
+Implementing rules. (a) *F12.7(1) corrected.* Its sentence "F12 reads nothing from Part A: its 52 components are excluded and no
+Part A prediction, staging record, calibration, score or ledger informs any F12 choice" is replaced by: "F12 is outcome-blind with
+respect to Part A. No Part A outcome exists, and none has been or will be read for any F12 choice. F12 is informed by disclosed
+pre-score audits: F12.1 and the round-6 member reports summarise Part A's frozen predictions (`part_a/predictions_f11.json`: κ, s\*,
+predicted |a| by family, a(0.5)/a(1)) and its calibration (F11.4's simulated 0.8722 ordered power under the registered 0.75
+alternative; the computational agreements of `part_a/PRESCORE_INVENTORY_2.md` §5). These are predictions and simulation outputs,
+not outcomes. The only Part A-derived input F12 uses operationally is fixed exclusion metadata: the 52 Part A component ids
+(`selection.json` → `registered.component_ids`, `selection_f11.json` → `supplement_ids` with their components, F11.5), whose
+entries F12 never scores, together with the edit ids of the Part A components that the population selector needs to apply that
+exclusion. No Part A score, residual, calibration update or sealed-ledger contents may choose F12 features, rows, thresholds or
+sample size. The sealed Part A ledger enters F12 only as an ordering signal and a hash (F12.7(5)); its contents are not read for
+F12." (b) *Unchanged.* Every A5.5, F5.5, funding, G7/G8 and H5 decision stands; F12 and F12-I have no authority over any of them
+(F12.4). (c) *Exposure attestations* (F8a.1(c), `f12` for `f8`) carry, for every person, agent session or process that makes or
+approves an F12 or F12-I choice (the chair, every builder of a C1/C2 file, every implementer of pinned code, the analyst, every
+Board A reviewer approving an F12 parameter or the simulation report), two separate statements: (i) *old development outcomes*:
+whether the session has seen the 123 existing TF-v1 root records, the G0/G1/G6 exposure-ledger outcomes or D3 development outcomes
+(disclosed; these are already treated as exposed, F12.2, and do not disqualify); (ii) *new outcomes*: whether the session has
+opened, computed, scored or received any Part A (G3, rotation, ladder, missing-reference, sealed), F8-E, F8-F or F9 outcome, or a
+summary of one (disqualifying). (d) *Unexposed roles or an exploratory amendment.* F12 and F12-I scoring and analysis follow the
+Part A, F8 and F9 panels (F12.7(5)). Every F12/F12-I choice made after any of those outcomes exists, and the F12 analysis run, must
+be made and approved by sessions whose statement (ii) is "none"; if no such set of sessions is available, an explicitly
+exploratory amendment under F8a.1(d) is committed before any F12 or F12-I scoring, and every F12/F12-I label is then reported as
+exploratory. A commit time earlier than an outcome is not an attestation; ordering alone never establishes blindness.
+
+(e) *Population.* Adopted, verbatim: "**Adopt F12.2's 270-row / 234-component reading**, expressly as reuse of already-exposed
+development outcomes." F12.2's exclusion item "every entry of a `confirmatory` or `fresh_unselected` component (no new scoring, no
+G7 freshness spent)" is replaced by the review's sentence: "No entry in a confirmatory or fresh_unselected component is newly
+scored by F12; the explicitly enumerated 44 G6-exposed existing roots are reused only as development observations." C1's
+population file enumerates those 44 ids (37 components, all chain). Retaining them spends no fresh confirmatory outcome and confers
+no confirmatory status; no other confirmatory record is admitted. The literal 226-row / 197-component restriction is descriptive
+only (F12.4(g)), never an outcome-selected alternative primary population. (f) *Reproduction adopted* (review, sorted-id SHA-256 of
+Python-default `json.dumps(sorted(ids))`): existing roots outside Part A 123 / 89, `f96e4ea5…ca2160`; purchasable roots with no
+primary anywhere in their component 147 / 145 (abliteration 79, random_dir 49, lora_sft 19 rows), `d31b9686…3dba0`; union 270 / 234,
+`bd695b4e…6348`; literal status-exclusion sensitivity 226 / 197, `dc687e52f89c01f6f5878f9f150e91b165bb504dc6cf2d0f68c644599b93d5e3`.
+(g) *Mandatory component filter; corrected unfiltered count.* The component-level no-TF-v1-primary filter is mandatory. Removing
+only that filter gives **194 root rows in 179 components** (abliteration 103, random_dir 70, lora_sft 21 rows), as the review
+reproduced on this commit; F12.10(c)'s "181 components" is not the component count of those 194 roots and is not adopted. Those
+additional rows are not bought. (h) *Aliases and logical rows.* Null `entry_delta_hash` values of the 45 unstored existing chain
+roots are resolved through `bytes_via_alias` before counting: 267 resolved distinct deltas, never "all 45 nulls as one delta".
+The three duplicate pairs (`4b67b0aa12cce3e5`/`db5c3a7bfc19178c`, the mixed chain/random_dir component; `4f31558031fe08c8`/
+`adf416337f5a2277`; `8cd3182b6e55dcbf`/`bccb9ab10b5661e0`) each stay in one component as logical rows with row-summed losses; no
+report claims 270 independent examples. (i) *Strata and folds.* Component strata abliteration 83, chain 71, random_dir 50,
+lora_sft 29, mixed 1; the explicit mixed stratum and F12.2's globally round-robin concatenation are adopted and recomputed on each
+S_k. C1 freezes the actual outer and inner fold ids for every S_k and the leave-one-family-out splits, not only the rule. In
+leave-one-family-out (F12.4(b)) the entire mixed component stays in training for every held-out family and its rows are excluded
+from every held-family evaluation. (j) *Exposure of rows.* All 123 existing ids are treated as exposed, including the six of them
+without a G0/G1/G6 ledger row (117 have one). The purchased rows are fresh development rows, which is narrower than fresh
+confirmation: the pooled analysis still reuses examined outcomes on the shared TF-v1 panel. (k) *Selector.* The executable
+population/alias/closure/eligibility selector and its full membership (every row id, component, family, stratum, alias
+resolution, existing/purchasable flag, purchase rank) are committed and pinned in C1 (F12a.6).
+
+**F12a.2 — Nested models (condition 2).** Operative wording:
+> Accept F3 = training-only ridge-1 intercept/a/q readout; WM-R = F3 plus the F5-pinned K+F head with three probe columns, 1,185
+> nominal head parameters (1,137 + 3×16), with three additional F3 coefficients and no learned K frames. Accept the probe
+> RMS-of-mean, RMS-of-RMS and presence summaries as drafting defaults; freeze cache panel, hook, base and tensor identities.
+
+> Nest F3 fitting, standardization, bandwidth estimation, epoch selection and tree-count selection **inside each inner-training
+> split**, then refit on outer training only.
+
+Implementing rules. (a) *F3.* ŷ_F3 = β₀ + β₁Σa + β₂Σq, ridge penalty 1 exactly as in A5.8.3, fitted on training rows only.
+(b) *WM-R.* ŷ_WM = ŷ_F3 + h_θ(x), h the F5-pinned K+F head over token columns 0–38 plus three probe columns, defined for each
+`mlp.down_proj` token t on the cached probe panel with per-token inputs x: column 39 **RMS-of-mean** = sqrt(mean over output
+coordinates o of (mean over probe tokens of (D_t x)_o)²); column 40 **RMS-of-RMS** = sqrt(mean over o of (sqrt(mean over probe
+tokens of (D_t x)_o²))²); column 41 presence = 1 when the token's probe cache exists; all three are 0 on every other token. W1 is
+42×16; WM-R's head has **1,185** nominal parameters (1,137 + 3×16) plus the three F3 coefficients; K frames are computed, frozen
+inputs, never learned. These defaults are frozen as accepted. (c) *Identities frozen in C1:* the probe cache panel (the
+scoring-disjoint 64-prompt panel, item ids and hash), the hook (the post-gating input of `mlp.down_proj`), the base (model and
+tokenizer revision `2fc06364715b967f1860aea9cf38778875588b17`, G2 manifest sha256 `c4ec7390…09ff`) and the 24 `down_proj` tensor
+names with their base tensor hashes. (d) *Shared design.* All arms (F3, WM-R, StatNN, K, M, controls) share eligibility, logical
+rows, outer and inner folds and seed averaging (seeds 0/1/2 averaged before the loss). (e) *Exclusions before fitting.* The
+rank/finite-SVD/K-frame eligibility audit runs on all 270 rows once the C1 token builder has run and before any fit or simulation;
+its list is committed in C2 (F12a.6). Each S_k consists of the eligible rows of its components; excluded rows are not replaced and
+S_k is never topped up with later components; ineligible rows of a purchased component are listed and not scored. The simulation
+qualifies the actual eligible rows of each S_k, never an assumed 270. (f) *Nesting.* For each outer fold and each of its four inner
+folds j (inner-training = outer-training rows outside inner fold j): F3 is refitted on inner-training rows only and supplies the
+residual targets of both the inner-training and the inner-validation rows; standardisation statistics and the kernel bandwidth are
+computed on inner-training rows only; epochs (WM-R, M), λ (K) and tree count (StatNN) are chosen from the inner-validation L1 losses
+aggregated over the four inner folds as the F5 pins prescribe. Then F3, standardisation and bandwidth are recomputed on all
+outer-training rows and each arm is refitted there with its selected setting and predicts the outer-held-out rows. This replaces
+F12.3's use of one outer-training F3 fit for inner-validation targets. (g) *Comparator and sensitivities.* The matched augmented
+StatNN residual comparator (the same 42-column tokens plus the disclosed v4 extras) is a conservative same-information
+comparator, not a literally identical feature vector. Arm K (Gaussian-kernel ridge, λ ∈ {10⁻³, 10⁻², 10⁻¹, 1, 10}, larger λ on
+ties) and arm M (width-8 GELU MLP, 8d + 17 parameters) are descriptive. (h) *Edge pins.* A column with zero training standard
+deviation is centred and given scale 1. A zero or nonfinite median pairwise distance leaves arm K undefined for that fit (fail
+closed; no repair, no substitute bandwidth). The zero-edit input x₀ has all 186 slots absent (presence 0, zero padding, token
+columns 0) and the v4 pooled statistics of the zero delta computed by the pinned pooling code (nonfinite fails closed); it is
+standardised with the same statistics as the training inputs, and h, K and M predict f(x) − f(x₀). (i) *Audits.* The F5 gauge
+audit applies to WM-R and the frozen A5.8.3 permuted-field eligibility applies to WM-R-perm, unchanged. (j) *Nesting statement
+corrected.* F12.3's "so WM-R reduces to F3 at zero edit and any gain belongs to h" is replaced by: "WM-R's function class contains
+F3 at h ≡ 0 for all inputs (final-layer weights and bias zero); h(0) = 0 alone does not prove nesting. At the zero edit
+ŷ_WM(0) = ŷ_F3(0) = β₀, which need not be zero. The pooled token head with a linear final readout is additive over tokens and
+cannot learn arbitrary cross-tensor interactions; this architecture does not exhaust the thesis."
+
+**F12a.3 — Contrasts and A4.4 (condition 3).** Operative wording:
+> Accept both ratios and all A5.4.2 guards, component influences, log-ratio endpoint reversal, shared-reference joint
+> studentization and 4,000 valid draws without repairs. "Correction detected" requires each point C ≥ 0.05 and conditional/joint
+> lower bounds > 0 against **both** F3 and StatNN.
+
+> **Accept the field-only interpretation of "none detectable"**, but print "WM-R correction versus F3 bounded below 5% at the
+> registered simulated power." Both F3 upper bounds must be strictly <0.05; report StatNN alongside and do not imply equivalence to
+> it.
+
+> A4.4 is not discharged by the two bootstrap-t intervals: publish conditional/joint bootstrap-t, BCa and percentile intervals with
+> simulated size/coverage. "Distinguishable from zero" requires all six lower bounds >0.
+
+Implementing rules. (a) *Inference.* C_WM = 1 − A_WM/A_F3 and C_WM,S = 1 − A_WM/A_S, each by A5.4.2 exactly: bootstrap-t on
+L = log(A_WM/A_comparator) with component influences u_c = A_c/ΣA − B_c/ΣB; [L_lo, L_hi] mapped to [1 − exp(L_hi), 1 − exp(L_lo)];
+conditional draws resample whole components; joint draws also resample the 32 common two-window item blocks across all rows and the
+shared base reference, studentised by V_comp + V_item − V_both; 4,000 draws, PCG64 seed 20261107, linear .025/.975 quantiles;
+n the sampled logical-row count; A_x finite, positive and A_x/n > 1e-12 nats for each arm; at least two distinct components in the
+point data and every draw; all 4,000 draws valid; no retry, clamp, variance floor or replacement. Any failure makes that contrast
+undefined and the F12 decision "unresolved (validity)". (b) *"Correction detected"* iff C_WM ≥ 0.05 and C_WM,S ≥ 0.05 and the
+conditional and joint lower bounds of both contrasts are > 0. This intersection–union claim takes no multiplicity adjustment; each
+of its four marginal lower-bound procedures must be valid, which F12a.5 checks by simulated size (gates (2)–(5) there). Every F12
+report states: "The size gates are evaluated at the global null γ = 0; this does not certify every composite-null configuration
+against StatNN." (c) *"None detectable"* replaces F12.4 item 3: the label is printed exactly as "WM-R correction versus F3 bounded
+below 5% at the registered simulated power." iff the conditional and joint upper bounds of C_WM are both strictly < 0.05 and the
+F12a.5 power gate passed on the analysed population. C_WM,S and its intervals are printed beside it; no equivalence to StatNN is
+stated or implied. A sentence of no detectable gain against both comparators may be printed only if, in addition, the conditional
+and joint upper bounds of C_WM,S are both strictly < 0.05. No universal absence or kill claim follows. The descriptive K and M arms,
+controls, E₀, leave-one-family-out, existing/purchased splits and the 226-row restriction cannot promote an arm or rescue any
+branch. F12.4's evaluation order (unresolved (validity); correction detected; none detectable; unresolved) is kept. (d) *A4.4.* For
+each of C_WM and C_WM,S, six intervals are published: conditional and joint bootstrap-t (A2.3/A5.4.2), BCa and percentile (same
+draws, PCG64 seed 20261107; BCa acceleration from the component jackknife of L), each beside its simulated null size and coverage
+from the γ = 0 scenario of F12a.5. "Distinguishable from zero" is printed only if all six lower bounds are > 0; otherwise "not
+distinguishable"; no pass/kill label. The F12 labels describe the frozen secondary algorithm, not a confirmatory success or a
+scientific falsifier. All six implementations and their validity checks are pinned in C1; no interval gains decisive status after
+outcomes.
+
+**F12a.4 — Noise generator and oracle calibration (condition 4).** Operative wording:
+> As written, epsilon is the mean of a donor's already-centered 64-window vector. With all windows present that mean is zero (up to
+> numerical centering tolerance). Component resampling alone cannot restore panel-mean noise. Introduce an explicit common
+> resampled 32-block index vector per simulated panel, applied jointly to all donor vectors and reference-linked differences,
+> before taking row means. Preserve component donor grouping, within-component row selection and covariance, masks, base-reference
+> pairing and joint item alignment. Freeze exact draw consumption and demonstrate nonzero panel-mean variance, within-component
+> dependence and common-item dependence using outcome-free CPU checks. Do not independently permute each donor's item positions.
+
+Implementing rules. (a) *Withdrawn.* F12.5's "ε_i is the window mean of the drawn donor's centred noise" is withdrawn: that mean is
+zero by construction. (b) *Construction (one simulated panel = one replicate r of one scenario at one k).* Inputs: the restricted
+payload of (e); donors are the `eligible` rows with all 64 windows masked-in and finite (expected 141 in 63 components, F8a.2),
+paired into the 32 two-window blocks (2k, 2k+1) by `scripts/a5_simulation.py:donor_block(noise, mask, 1.0)`. Draws come from
+`numpy.random.Generator(numpy.random.PCG64(seed("20261111:f12:", "sim:<scenario>:<k>:<r>")))` in exactly this order:
+(i) *component assignment*: for each simulated component of S_k in ascending component-id order, one `integers(0, 63)`, indexing
+the 63 payload components sorted by component id; (ii) *within-component row selection*: for each simulated component in the same
+order, its m eligible rows in ascending entry-id order receive donors by one `choice(n_c, size=m, replace=(m > n_c))` over the
+assigned payload component's n_c donors sorted by id (**implementing default**); (iii) *common item index*: one vector
+b = `integers(0, 32, size=32)` for the whole panel. Every simulated row i takes its donor's block pair (2b_j, 2b_j + 1) in
+position j, j = 0…31, with the same b for every row; its 64 simulated windows are y_i,w = a_i + γ·h\*(x_i) + noise_i,w, its ε_i the
+window mean of the resampled noise, and its Δy_i = mean_w y_i,w. The payload rows are edit-minus-predecessor window differences
+(`inputs_provenance.json` → `donor_source` `tf_v1_edit_minus_actual_predecessor`), so the one b is applied jointly to all donor
+vectors and every reference-linked difference; masks, base-reference pairing, block pairing and item alignment across rows are
+preserved; no donor's item positions are permuted independently. The variance-×2 scenario multiplies the resampled noise by √2.
+Each replicate's A5.4.2 analysis then resamples components and the same 32 common blocks of these simulated vectors.
+(c) *What this adds.* For a donor with block means e_j (Σ_j e_j = 0), the panel-mean component has variance (1/32)·(1/32)Σ_j e_j²,
+two rows with donors d and d' have covariance (1/32)·(1/32)Σ_j e_dj·e_d'j (common-item dependence), and rows of one simulated
+component inherit the payload component's donor grouping and covariance. The panel-mean variance is thus estimated from the
+qualification residuals themselves; no separately parametrised variance is introduced. (d) *Outcome-free CPU checks*, before the
+pilot and reported in the simulation report: on the restricted payload alone (no model, no outcome), 10,000 noise-only panels at
+k = 145 with seeds seed("20261111:f12:", "noisecheck:<d>"), reporting (i) the empirical variance of ε_i against its plug-in
+value, (ii) the within-component correlation of ε, and (iii) the cross-component common-item covariance against its plug-in, each
+with a Monte Carlo SE. The check fails closed if any used donor's plug-in panel-mean variance is zero or if an empirical quantity
+differs from its plug-in by more than 4 Monte Carlo SE (**implementing default**). (e) *Payload.* Only the allowlisted fields
+`centred_noise`, `window_mask` and `donors[j].{id, component, family, eligible}` are read; no `donor_mean`, no raw evaluation record,
+no Part A outcome. The source is the committed byte-identical copy `docs/prereg/f8_manifests/floor_payload/nullsize_inputs.json`;
+its sha256 must equal `67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de` before use (fail closed). A pinned
+extractor writes a restricted copy holding only the allowlisted fields, committed in C1 with provenance (source path and sha256,
+extractor sha256, field list, Python/numpy versions); the simulation reads only that restricted copy.
+
+> Oracle C=0.15 is a defensible *design scenario*, not WM-R's achieved effect or its advantage over StatNN. F3 can absorb h*'s
+> intercept/a/q component; C(gamma) is not guaranteed monotone. Pin h*'s zero-edit subtraction, population normalization,
+> degeneracy failure, finite bracket, gamma sign/range and calibration criterion. Bisection is permitted only after an outcome-free
+> bracket/monotonicity check; no solution means failed qualification, not a replacement h* seed. Calibrate separately for each S_k
+> and use independent calibration noise streams (100 draws and ±0.005 accepted as initial defaults), then validate achieved oracle
+> ratio on independent draws with Monte Carlo uncertainty. Define whether this is mean replicate C or ratio of expected row sums and
+> use that same definition throughout.
+
+(f) *h\*.* For replicate r: an untrained 42-column WM-R head at PyTorch default initialisation under
+`torch.manual_seed(seed("20261111:f12:", "hstar:<r>"))`; raw value h_raw(x_i) = f(x_i) − f(x₀) with x₀ as in F12a.2(h)
+(zero-edit subtraction); normalised separately on each S_k by its population standard deviation (ddof 0) over the eligible rows of
+S_k. Degeneracy: a standard deviation ≤ 1e-12 or nonfinite fails qualification of (k, r). (g) *Definition of C.* Throughout F12
+(calibration, validation and every summary of achieved or learned C across draws or replicates) C is the **ratio of expected row
+sums**: C̄ = 1 − Σ_d A_x,d / Σ_d A_ref,d over draws d, with A_x,d = Σ_i |Δy_i,d − p_x,d(i)|; per-replicate C values are reported
+only descriptively. (h) *Calibration.* γ ≥ 0 (h\*'s sign is random). Scale τ = the root-mean-square of the plug-in panel-mean noise
+SDs of (c) over eligible donors (an outcome-free scalar). Grid γ ∈ {0} ∪ {τ·2^g : g = −8, …, 12}. For each (k, r), 100 calibration
+draws with seeds seed("20261111:f12:", "cal:<k>:<r>:<d>"), d = 0…99, are reused across all γ (common random numbers); for each
+draw F3 is refitted on S_k's outer folds and the oracle predictor a + γ·h\* is compared with out-of-fold F3, giving C̄(γ).
+*Bracket/monotonicity check:* C̄(0) < 0.15; some grid point has C̄ ≥ 0.15; with γ_g\* the first such point and γ_lo the preceding
+grid point, C̄ is nondecreasing along the grid up to γ_g\* and at five equally spaced interior points of [γ_lo, γ_g\*]. Only then
+bisection on [γ_lo, γ_g\*] until |C̄(γ) − 0.15| ≤ 0.005, at most 50 halvings. A failed check or no solution fails qualification
+of (k, r): no replacement h\* seed, no alternative bracket. (i) *Validation.* The achieved oracle ratio is re-estimated on 100
+independent draws seed("20261111:f12:", "calval:<k>:<r>:<d>") and reported per k with its Monte Carlo SE (delta method on the ratio
+of sums); it is reported, not a gate. (j) *Reports.* Per k: learned C̄ of WM-R against F3 and against StatNN, and the ordered
+detection rate; a 15 % oracle gain against F3 is never described as establishing 80 % learnable joint power. γ = 0 is the exact
+null. Variance-×2 is run under γ = 0 only and is descriptive, with its size, coverage and failure diagnostics disclosed. The
+inherited A5.4.2 qualification is retained alongside the gates: per k and scenario, failure counts by arm, procedure and reason,
+and coverage of every published interval procedure (F12a.3(d)) at the scenario's expected-row-sum C̄.
+
+**F12a.5 — Monte Carlo precision and selection (condition 5).** Operative wording:
+> 1,000 replicates is enough for an initial estimate, not to certify a boundary by point estimate: at p=.80 its Monte Carlo SE is
+> about .0126; at p=.07 about .0081. I do **not** accept the drafting default that 800/1,000 or 70/1,000 automatically releases a
+> purchase. Keep 1,000 per scenario/k if the pilot makes it practical, but require exact binomial **lower power bound ≥.80 and upper
+> size bounds ≤.07**, with simultaneous 95% bounds over the six k values and all gating rates (freeze a Bonferroni allocation in the
+> config). [...] No unregistered repeat-until-pass or adaptive replicate extension; a planned larger fixed run requires a
+> prospective config amendment. Invalid replicates count as failures for power and are reported separately, never silently removed.
+
+Implementing rules. (a) *Replicate count.* **1,000 replicates per scenario and k**, fixed in advance (γ = 0; calibrated
+alternative; variance-×2 at γ = 0, descriptive). The review accepts no sequential rule and none is registered. A different fixed
+count (for example 10,000, as in the registered NULL-SIZE runs) may be adopted only by a prospective configuration amendment
+committed before any full-run replicate is computed. (b) *Gating rates*, six per k: (1) power: the "correction detected" rate under
+the alternative; size, under γ = 0: (2) C_WM conditional lower bound > 0, (3) C_WM joint lower bound > 0, (4) C_WM,S conditional
+lower bound > 0, (5) C_WM,S joint lower bound > 0, (6) "correction detected". Rates (4) and (5) are added by this note to qualify the
+marginal procedures of F12a.3(b); F12.5 named (2), (3) and (6). (c) *Bonferroni allocation (frozen in the simulation config).* 6 k
+values × 6 rates = 36 one-sided bounds, each at α = 0.05/36 = 0.0013889, giving simultaneous 95 % coverage. With x events in n
+replicates, the exact Clopper–Pearson lower bound is the α quantile of Beta(x, n − x + 1) and the upper bound the 1 − α quantile of
+Beta(x + 1, n − x). Gate at k: power lower bound ≥ 0.80 and each of the five size upper bounds ≤ 0.07 (equality passes). At
+n = 1,000 this means power ≥ **838/1,000** (lower bound 0.80054; 837 gives 0.79946) and each size count ≤ **46/1,000** (upper
+bound 0.06932; 47 gives 0.07052); the bound, not these counts, is the rule. Ordinary two-sided 95 % CP intervals of every rate are
+reported too. (d) *Invalid replicates.* The denominator is always the 1,000 planned replicates. A replicate failing calibration
+qualification, any A5.4.2 validity rule or a gauge audit counts as a failure (no detection) for power and, for each size rate, as
+a rejection (**implementing default**, conservative where the review is silent); invalid replicates are counted and reported
+separately by cause, never removed. (e) *Candidates and selection.* k ∈ {0, 29, 58, 87, 116, 145}, whole components, purchase order
+ascending sha256(UTF-8 `20261111:f12:purchase:` + component id), folds recomputed per S_k (F12a.1(i)). The purchase is the smallest
+S_k whose gate passes, and only that one. A passing k = 0 means an existing-only analysis and no purchase. No passing k means
+"unresolved — not powered": no purchase, no alternate rows, no model search. (f) *Pilot.* Before the full run, 10 replicates at
+k = 145 under the alternative (calibration included), seeds seed("20261111:f12:", "pilot:<r>"); it records CPU time, memory and
+validity counts only and computes no gate rate. The projected total CPU time (all k, scenarios, calibration and validation) is
+recorded and accepted by the chair before the full run; the full run is launched through `agent-tmux`. (g) *Purchase gate.*
+Purchase requires the passed size and ordered-power gates at the selected k **and** Board A's acceptance of the committed simulation
+report; the review is not that acceptance. Any eligibility loss that changes the analysed population (an unscorable or
+identity-failed purchased row, a new exclusion) invalidates that population's qualification until the simulation is rerun for the
+changed population under the same committed configuration and its report is accepted, before the analysis.
+
+**F12a.6 — Pins before simulation; C2 and forecasts before scoring (condition 6).** Operative wording:
+> Before any F12 contraction, C1 must commit the corrected specification; executable population/alias/closure/eligibility
+> selector; all S_k fold manifests and purchase order; endpoint/scoring identities; realized-delta/SVD/K-frame/probe schemas and
+> input hashes; field/factor/cache provenance; complete F3/WM-R/StatNN/K/MLP configs, counts and preprocessing; gauge/control
+> audits; simulation/noise/calibration RNG and gate code; all six interval implementations/validity checks; payload allowlist/hash;
+> F12-I constructions/supports; resource settings; verifier; exposure attestations; and dependency/runtime versions. Bind every
+> executed source/config to SHA-256. Resolve the seed heading commit to its full SHA (`49fec4a3c885e7f611084c0e56dac77053ba2ec8`),
+> use F12's acyclic chain, and pin all construction/prediction/analysis code needed at C2. Tokens do not exist until after C1; hash
+> their output in C2, with the committed simulation report.
+
+> Before scoring, freeze C2 and the accepted simulation/purchase decision. Implement **F9a.2's stronger before-scheduling
+> commitment**, separate gradient/factor anchors, immutable forecast/decision/outcome files, configuration/endpoint/reference hashes
+> and statuses, not merely F9.1's shorter before-scoring list.
+
+Implementing rules. (a) *Pin status.* The review's run of `python scripts/a5_build_manifests.py --verify-pins HEAD` ("all pins
+match") verifies existing A5 pins only; F12 has no implementation yet and is not executable. F12's pins live in its own file
+`docs/prereg/f12_manifests/code_hashes_c1.json` (F12.7(3)); `docs/prereg/a5_manifests/code_hashes.json` is not modified by F12.
+(b) *Chain.* S = `49fec4a3c885e7f611084c0e56dac77053ba2ec8`; H₀ = sha256(UTF-8 `f12-manifest-v1:` + S) =
+`e0619f6a29af18c80301b42b7ed2a43f12fdd43ec5e8e98462846140289b5301`; H_k = sha256(H_{k−1} ‖ sha256(file_k)) over raw 32-byte
+digests; C1 and C2 write disjoint file sets under `docs/prereg/f12_manifests/`; no C1 file is rewritten and no file holds its own
+commit's sha or time (F8a.1(a)). (c) *C1 files, in chain order*, committed before any F12 field token, contraction, K-frame, SVD or
+probe summary is computed: 1 `exposure_c1.json` (F12a.1(c)); 2 `population.json` (selector output, F12a.1(e)–(k)); 3 `folds.json`
+(outer, inner and leave-one-family-out fold ids for every S_k; purchase order); 4 `schemas.json` (endpoint and scoring identities,
+`configs/eval_tf_v1.yaml` sha256 `5c20cabe…0317`, field identities and factor/cache provenance per F8a.3(d), realised-delta, SVD,
+K-frame and probe schemas and input hashes, F12a.2(c) identities); 5 `models.json` (F3/WM-R/StatNN/K/M configurations, parameter
+counts, preprocessing, edge pins, gauge and control audits); 6 `noise_payload/restricted.json` with its provenance (F12a.4(e));
+7 `simulation_config.json` (scenarios, draw consumption, calibration grid, replicate count, Bonferroni allocation, gate rules,
+pilot); 8 `intervals.json` (the six interval procedures and validity checks); 9 `f12i_c1.json` (F12a.8–F12a.10: parts, supports,
+boundaries, parent/support/tensor hashes, dependencies, full eligibility and prices); 10 `resources.json` (F12a.7); 11
+`code_hashes_c1.json`. `MANIFEST_C1.sha256` holds H₀–H₁₁. `code_hashes_c1.json` binds by SHA-256 every source and configuration
+executed up to scoring and analysis, and must include at least: the F12 simulation script (noise generator, h\*, calibration,
+gates), the field-token builder for the 270 roots (contraction, K-frame/SVD/probe extraction, token assembly), the F12-I
+construction script, the population/fold selector, the restricted-payload extractor, the model and analysis code, the six interval
+implementations, the verifier and the identity verifier, **and the tests of each**, with dependency and runtime versions. Because
+none of these exists at this note, the simulation cannot run until they are written, tested and pinned in C1. (d) *C2 supplements,
+in order, continuing from H₁₁*: 12 `exposure_c2.json`; 13 `code_hashes_c2.json` (byte-equal to C1's); 14 `deltas.json` (realised
+delta hashes); 15 `tokens.json` (hashes of the field tokens, K frames, SVDs and probe summaries); 16 `eligibility.json` (F12a.2(e));
+17 `noise_checks.json` (F12a.4(d)); 18 `pilot.json` (with the chair's acceptance of the projection); 19 `simulation_report.json`;
+20 `purchase_decision.json` (selected k or "unresolved — not powered", with the reference to Board A's acceptance of item 19).
+`MANIFEST_C2.sha256` holds H₁₂–H₂₀. The verifier recomputes both manifests and checks every C1 blob unchanged at C2; any mismatch
+refuses scoring. Items 14–19 are computed after the C1 commit and before C2, under the C1 code. A code change after C1 follows
+F8a.1(b): before any contraction value exists, a dated pre-exposure restart; afterwards, only a new dated amendment disclosing
+what was visible. (e) *Forecasts.* F12.7(4)'s F9.1 wording is replaced by F9a.2: every F12 and F12-I entry to be scored gets a
+schema `f9l-v1` forecast row (F9a.2(d)) with separate `gradient_anchor` and `factor_anchor`, endpoint, configuration and reference
+hashes and its statuses (`field_status`, `kappa_status`, `q_partial`, `chart_status`); each batch's sha256 is committed **before any
+of its rows is scheduled** (F9a.2(e)); decision and outcome rows go in later, separate, immutable files referencing the forecast
+hash. (f) *Existing outcomes.* The 123 existing TF-v1 records are read by the analysis only after the C2 freeze, once, by the
+pinned analysis run; no historical prediction for them is relabelled prospective. (g) *Order.* The Part A ledger is sealed and the
+Part A, F8-E, F8-F and F9 scoring records are closed first; then F12, then F12-I. No F12 or F12-I setting is tuned on those panels'
+outcomes.
+
+**F12a.7 — Purchase/scoring resource gate (condition 7).** Operative wording:
+> Accept 147×1.04 min = 152.88 min ≈2.55 GPU-h and the independent **3 GPU-h cap**, including references, failures and retries.
+> 270×94.3676 s =25,479.252 s ≈**7.08 CPU-h** is field contraction only; K/SVD/probe extraction and the potentially very large
+> nested simulation are additional CPU charges, timed by the pilot. These are projections, not observed F12 costs.
+
+Implementing rules. (a) *GPU.* F12 scoring is projected at (purchased eligible rows) × 1.04 min, 152.88 min ≈ 2.55 GPU-h at
+k = 145, under an independent **3 GPU-h cap** that includes base/reference runs, failures and retries. (b) *CPU.* Field contraction
+for the 270 roots is projected at 25,479.252 s ≈ **7.08 CPU-h**; K-frame, SVD and probe extraction and the whole simulation
+(calibration, validation, noise checks, pilot, full run) are separate CPU charges, each metered and reported; the simulation's
+ceiling is the chair-accepted pilot projection (F12a.5(f)), and a projected breach stops the run for a prospective repricing
+without changing the fixed replicate count. All figures are projections, not observed F12 costs. (c) *Reuse.* Existing fields are
+reused only after an exact identity check (F8a.3(d) field identities, realised-delta hash, factor and cache provenance).
+(d) *Stop-and-reprice.* After the first ten purchased entries the measured rate is projected; a projected cap breach or any overrun
+stops scoring until a dated amendment reprices. Nothing is borrowed from Part A, G5, G7, F8 or F9. (e) *Authority.* Board A's
+acceptance of the simulation report authorises only its enumerated purchase; scoring additionally requires F12a.1–F12a.6, the
+panel ordering, committed forecasts and this cap check.
+
+**F12a.8 — F12-I supports and estimand (condition 8).** Operative wording:
+> Accept the reproduced list of 16 eligible development LoRA roots, layers 0–11 versus 12–23 (32 parts), qualified Astra patch
+> split by tensor (two parts), and C4 own-definition layer-12 down_proj edit split by input-column halves (two parts): 36 planned
+> part entries for 18 planned full edits. Accept the column split default, with an explicit integer boundary and tensor
+> orientation. It is not a reproduction of Concept Country. Freeze parent/support/tensor hashes and shared-source dependencies.
+> Verify the realized bf16 parts sum bitwise to the realized full delta; no-op halves yield undefined I without replacement. Failed
+> Astra qualification drops that pair; it cannot be bypassed by buying the full in F12-I. Missing or gated-out other fulls need
+> their own frozen scoring eligibility, not a bypass of an upstream refusal.
+
+Implementing rules, frozen in F12-I's C1 (F12a.10(a)) with the forecasts' inputs. (a) *LoRA (32 parts).* The 16 ids of F12.6(a);
+part₁ = every edited tensor named `model.layers.<l>.…` with 0 ≤ l ≤ 11, part₂ = 12 ≤ l ≤ 23. An edited tensor without a layer
+index makes that entry's split undefined (fail closed, reported, never reassigned; **implementing default**). (b) *Astra (2 parts).*
+One part per changed tensor of the qualified two-tensor patch (F8a.4 A6). (c) *C4 (2 parts).* Tensor
+`model.layers.12.mlp.down_proj.weight`, stored in PyTorch `[out, in]` orientation, expected shape [1024, 3584] (hidden 1024, MLP
+3584, `docs/ARCHITECTURES.md`); boundary j_b = in // 2 = 1792 read from the stored shape at construction (any other shape fails
+closed); part₁ = input columns j < 1792, part₂ = j ≥ 1792. Labelled an own-definition contrast, never a Concept Country
+reproduction. (d) *Frozen hashes.* Parent (full) delta hashes, each part's support (tensor names and index ranges), base tensor
+hashes and shared-source dependencies (shared construction items, directions, generators or training sources, typed as in F8a.2;
+the C4 pair shares its construction with F8-F) are frozen with the forecasts' inputs. (e) *Bitwise check.* For each part, the
+realised increment fp32(bf16(W + Δ restricted to the support)) − fp32(W) must equal the full entry's realised increment on the
+support and be zero off it, elementwise and bitwise, so that the two realised parts sum bitwise to the realised full delta; any
+mismatch fails construction closed. (f) *No-op.* A part with zero realised increment is not scored; that full's I is undefined and
+reported; nothing is substituted. (g) *Astra.* A failed F8a.4 qualification drops the Astra pair and is reported; F12-I never buys
+the Astra full to bypass it. (h) *Other fulls* follow F12a.10(c).
+
+**F12a.9 — Linear versus quadratic interaction claims (condition 9).** Operative wording:
+> The paired per-window statistic `y(full)-y(part1)-y(part2)+y(base)` and common 32-block percentile interval, 4,000 draws and
+> entry-specific seed are accepted. Linear a predicts zero for every split. Zero-fit q also predicts zero for the disjoint-tensor
+> splits, but **not for C4's within-tensor column split**: covariance across input columns can produce a cross term. Record that
+> signed cross-term forecast. A resolved C4 I contradicts linear additivity only; it is not evidence that the quadratic field cannot
+> represent the interaction. An inference beyond q needs a separately specified paired discrepancy from its forecast.
+
+Implementing rules. (a) *Statistic and interval.* I_w = y_w(full) − y_w(part₁) − y_w(part₂) + y_w(base) and I = mean_w I_w, all on
+the common base reference (identity-matched, F8a.4); percentile bootstrap over the 32 two-window blocks with one common index array
+for the four terms, 4,000 draws, `Generator(PCG64(seed("20261111:f12-i:", "<full entry id>")))`, linear .025/.975 quantiles;
+"resolved" iff the interval strictly excludes 0. (b) *Linear term.* Because a is linear in D and the realised parts sum bitwise to
+the realised full, a(full) − a(part₁) − a(part₂) = 0 for **every** split; the computed value is recorded (contraction rounding
+only). (c) *Quadratic term.* c_q = q(full) − q(part₁) − q(part₂). For the 16 LoRA splits and the Astra split the parts occupy
+disjoint tensor sets and q is block-diagonal across tensors, so c_q = 0 exactly and the zero-fit forecasts a and a + q both
+predict I = 0. For C4's within-tensor column split, c_q = tr(G D₁ A D₂ᵀ) with D₁, D₂ the realised parts and G, A the field's
+(truncated) K-FAC factors of that tensor; it is generally nonzero and of either sign. The **signed** c_q is recorded in C4's F9-L
+forecast row before scheduling. (d) *F12.6 corrected.* Its sentence "A resolved I is direct evidence of an interaction the field
+cannot represent, i.e. for the thesis; an unresolved I says nothing" is replaced by: "For the LoRA and Astra splits, which test
+cross-tensor additivity of both a and q, a resolved I contradicts both the linear and the zero-fit quadratic forecast. For the C4
+column split, which tests the linear term only, a resolved I contradicts linear additivity only and is not evidence that the
+quadratic field cannot represent the interaction. An unresolved I says nothing." The q term is tested on C4 only through the
+separately specified paired discrepancy J = I − c_q, whose interval is the interval of (a) shifted by the pre-registered constant
+c_q; "q-discrepancy resolved" iff that interval strictly excludes 0. J is descriptive and computed only for C4 (for the other splits
+J = I). (e) *Calibrated predictions.* The naive sum of three calibrated predictions carries −β₀ from F3's intercept; F12-I uses the
+zero-fit a and q and, wherever F3 appears, zero-edit-centred predictions ŷ(D) − ŷ(0) = β₁a + β₂q (interaction forecast 0 for
+disjoint splits, β₂·c_q for C4). F12.1(i) is read with that centring. (f) *F12.1(ii) corrected.* s\* = |a|/q (a < 0 < q) concerns the
+zero-fit, unrounded ray s·a + s²·q under exact scaling; it is not a statement about arbitrary fitted β₀, β₁, β₂ or about bf16
+ladders (F8a.3(a)). For fitted coefficients the zero-edit-centred prediction β₁sa + β₂s²q has at most one nonzero root, at
+s = −β₁a/(β₂q) when that is positive, and its direction depends on the fitted signs; "improve-then-harm only" is withdrawn as an
+unqualified claim. (g) *Floor.* Each |I| is reported beside the fixed F8a floor h\* (the value cited by F8's C1 `floor.json`; the
+independent recompute `floor_recompute_2026-11-11.json` gives 0.0049397 nats/token), labelled "above floor" only for |I| > h\*
+strictly. h\* is a historical one-edit screen, not a calibrated interaction SE or a significance threshold; "resolved" is reported
+separately from "above floor". (h) *Summary.* There are at most 18 source groups before dependency merges, fewer than 30: reporting
+is entries-only and descriptive, with no inferential CP population claim, no assumption of 18 independent units and no panel-wide
+discovery claim from unadjusted per-entry intervals. This replaces F12.6's "the number of resolved I among the 18 split edits with
+exact CP intervals over independent components". (i) *Scope.* An unresolved panel cannot establish the absence of interactions and
+cannot close or reopen the world-model line; F12.6's parenthesis "a latent dynamics model is reopened only if F12-I resolves
+interactions" is replaced by: any later dynamics proposal requires its own amendment and budget, even after resolved interactions.
+
+**F12a.10 — F12-I gate, independent of F12 power (condition 10).** Operative wording:
+> F12-I does not need the F12 ordered-power gate and may proceed when F12 is not bought, only after its own C1/C2, F9a forecasts,
+> exposure and upstream qualification requirements and Part A/F8/F9 closure are satisfied. Price missing eligible fulls explicitly
+> in C1: 36 parts ≈0.624 GPU-h; at most 18 additional fulls ≈0.312 GPU-h, total **56.16 GPU-min / 0.936 GPU-h** projected maximum.
+> Adopt 56.16 GPU-min as its separately metered stop-and-reprice ceiling unless a dated amendment increases it; base/reference
+> overhead, failures and retries count inside it. The 0.62 GPU-h headline is not a full-panel all-in cap.
+
+Implementing rules. (a) *Own freeze.* F12-I has its own C1 and C2 file sets under `docs/prereg/f12_manifests/f12i/` and its own
+chain, H₀ᴵ = sha256(UTF-8 `f12i-manifest-v1:` + S) = `7ba2957b30755704b670156131cdfe6393fc56051851cb4d094d6ea1d82b961e`, S as in
+F12a.6(b), with the F8a.1 rules (exposure, construction inputs and supports per F12a.8, full eligibility and prices,
+`code_hashes_c1.json` pinning the F12-I construction script, its tests and the analysis; C2: exposure, code hashes equal to C1,
+realised part deltas and bitwise checks, forecast batch hash). F12-I's C1 may share a commit with F12's C1; neither chain depends on
+the other's C2. (b) *Gate.* F12-I does not need the F12 ordered-power gate or an F12 purchase. It may be scored only after its C1/C2,
+its F9a.2 forecast batch committed before scheduling, its exposure attestations (F12a.1(c)–(d)), the upstream qualifications its
+entries require (F8a.4 for Astra; the F8a C1 construction of C4) and the closure of Part A, F8-E, F8-F and F9 (and of F12 when F12
+is bought), in the order of F12a.6(g). (c) *Full eligibility, frozen in F12-I's C1.* A full already scored by F12 or F8 on the
+identity-matched common base reference is reused and not rescored. Otherwise: a LoRA full is eligible iff its row passes the F12
+C1 population and identity audits (root, development, bytes present, `eligibility` `eligible`), whether or not F12 is bought; the
+Astra full only after a passed F8a.4 qualification; the C4 full only from F8a's C1-frozen construction that is neither
+`construction_degenerate` nor a no-op and passes the identity verifier. A full that F8 did not score because the combined F8 gate
+(F8a.2) failed is a panel-level non-purchase, not a refusal of the entry, and may be scored inside F12-I's ceiling; any upstream
+validity refusal (failed qualification, degenerate construction, identity failure, no-op) is never bypassed (**implementing
+reading**; Board A confirms at F12-I's C1). (d) *Pricing in C1.* F12-I's C1 lists each of the 18 fulls with its expected source
+(F12, F8-E, F8-F or F12-I) and its F12-I price: 36 parts × 1.04 min = 37.44 min ≈ 0.624 GPU-h; at most 18 additional fulls × 1.04
+min = 18.72 min ≈ 0.312 GPU-h; **56.16 GPU-min (0.936 GPU-h)** projected maximum. (e) *Ceiling.* 56.16 GPU-min is F12-I's
+separately metered stop-and-reprice ceiling, with base/reference overhead, failures and retries counted inside it, unless a dated
+amendment increases it; F12.6/F12.8's "≈ 0.62 GPU-h" is a parts-only headline, not an all-in cap. After ten F12-I entries the
+measured rate is reprojected and scoring stops before a projected breach. Nothing is borrowed from Part A, G5, G7, F8, F9 or F12.
+
+*Gates after F12a (review, final paragraph).* Simulation gate: F12a.1–F12a.6 and the C1 commit, the noise checks and the
+chair-accepted CPU pilot. Purchase gate: the F12a.5 gates passed and Board A's acceptance of the committed simulation report, plus
+the F12a.7 resource check. F12 scoring gate: additionally C2, the committed forecast batch and the panel ordering. F12-I:
+F12a.8–F12a.10. Both verdicts remain **ACCEPT WITH CONDITIONS**, not operational release.
+
+| condition | clause | rule in one line | gate |
+|---|---|---|---|
+| 1 scope, wording, population | F12a.1 | F12.7(1) corrected; 270/234 with the review's exclusion sentence; 194/179 unfiltered; two-part attestations | before simulation |
+| 2 nested models | F12a.2 | F3 ridge-1; WM-R 1,185 + 3; probe columns defined; nuisance nested in inner splits; edge pins | before simulation |
+| 3 contrasts, A4.4 | F12a.3 | both ratios, A5.4.2 in full; detected vs both; printed "none detectable" sentence; six intervals | before simulation; analysis |
+| 4 noise, oracle | F12a.4 | common 32-block index per panel; draw order; noise checks; restricted payload; h\*, C̄, bracket, bisection | before simulation |
+| 5 MC precision | F12a.5 | 1,000 fixed; 36 Bonferroni one-sided CP bounds; ≥ 838 and ≤ 46 of 1,000; invalid counted | purchase |
+| 6 pins, C1/C2 | F12a.6 | H₀ `e0619f6a…`; C1 files 1–11 incl. simulation, token builder, F12-I construction and tests; C2 12–20; F9a.2 | simulation; scoring |
+| 7 resources | F12a.7 | 2.55 GPU-h, cap 3; 7.08 CPU-h fields; extraction and simulation metered | purchase; scoring |
+| 8 F12-I supports | F12a.8 | 32 + 2 + 2 parts; boundary 1792 of [1024, 3584]; bitwise check | F12-I C1 |
+| 9 linear vs quadratic | F12a.9 | a: 0 everywhere; q: 0 for disjoint splits, signed c_q for C4; J = I − c_q; entries-only | F12-I scoring |
+| 10 F12-I gate | F12a.10 | own chain H₀ᴵ `7ba2957b…`; independent of F12 power; full eligibility; 56.16 GPU-min ceiling | F12-I purchase |
+
+*No-exposure attestation (drafting session, 11 Nov 2026, about 12:00–12:50 UTC).* This block was drafted by an implementation
+sub-agent session (Claude Opus 5.5, claude_umut) working only in the worktree `.worktrees/prereg/f12a` on branch `prereg/f12a`
+(main `94a1905`). It read committed files only: the review; this preregistration (A4.4, A5.4.2, F8a, F9.1, F9a.2, F11a's opening,
+F12); `SYNTHESIS-r6.md`; `docs/prereg/f10_attestations.md`; the head of `docs/prereg/a5_manifests/code_hashes.json`;
+`docs/prereg/a5_manifests/nullsize/inputs_provenance.json` (donor inventory metadata: ids, components, families, eligibility,
+norms, audit flags; no residual values); `docs/prereg/f8_manifests/floor_payload/README.md` and the key names and printed floor
+value of `floor_recompute_2026-11-11.json`; `docs/ARCHITECTURES.md` and `docs/design/F8_EXECUTION_SPEC.md` (C4 lines); and
+`scripts/secret_scan.sh` and the commit hooks. It computed the byte SHA-256 of
+`docs/prereg/f8_manifests/floor_payload/nullsize_inputs.json` (equal to `67da223c…3de`) without parsing it, and the arithmetic
+above (CP bounds with scipy; chain anchors with hashlib). Old development outcomes: it saw none (no TF-v1 record, no ledger
+outcome, no D3 outcome). New outcomes: it opened no file under `data/` (no file under `data/evals`, no TF-v1 record, no score, no
+payload values), saw no G3, rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A score, and used no GPU and
+wrote nothing under `data/`.

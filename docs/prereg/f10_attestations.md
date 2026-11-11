@@ -1002,3 +1002,15 @@ operator of both scoring phases. I opened no file under `data/evals` for any var
 phase 1, ran no scoring, and read no score, response or contrast. No Part A outcome exists at launch. The proofs-only phase reads the
 TF-v1 reference records of the 12 supplementary originals through the pinned proof function; I will read only the proof record's
 identity, coverage, verdict and price metadata before phase 2 (Board A release condition 3).
+
+## 33. F12a drafter (this drafting session; added 11 Nov 2026)
+
+- **Role:** author of A5 note F12a (`docs/PREREG_H1_TF.md`, implementation of Board A's F12 and F12-I conditions 1–10) and of this
+  entry. **Session:** Claude Opus 5.5 (claude_umut), implementation sub-agent, branch `prereg/f12a` from main `94a1905`, about
+  12:00–12:50 UTC 11 Nov 2026. It makes no F12 parameter choice beyond the drafting it records; its implementing defaults await
+  Board A's verification at the F12 C1 freeze.
+- **Old development outcomes (F12a.1(c)(i)):** none seen; no TF-v1 record, G0/G1/G6 ledger outcome or D3 outcome was opened.
+- **New outcomes (F12a.1(c)(ii)):** none. I opened no file under `data/` (nothing under `data/evals`, no TF-v1 record, no score, no
+  null-size payload values) and saw no G3, rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A score. I read
+  committed documents and manifests only (listed in F12a's closing attestation), computed the byte SHA-256 of the committed floor
+  payload copy without parsing it, used no GPU, ran no simulation, scoring or experiment, and wrote nothing under `data/`.
