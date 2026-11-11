@@ -12,7 +12,6 @@ import torch
 
 from scripts import f12_simulation as fs
 from scripts.tfv1_requalify import joint_replicates
-
 from tests.test_f12_simulation import TINY, small_matrix, toy_payload
 
 # One intra-op thread, as in every simulation worker (_init_worker): multi-threaded accumulation of the
@@ -236,7 +235,7 @@ def test_noise_draw_order_follows_f12a():
     perm = np.random.default_rng(0).permutation(len(pay.donors))
     pay = fs.NoisePayload(pay.noise[perm], pay.mask[perm], [pay.donors[j] for j in perm])
     comp = np.array([0, 0, 1, 2, 2, 2, 2, 3, 4, 4, 5])  # one component with more rows than donors
-    row_ids = np.array(["r%02d" % i for i in (5, 1, 9, 3, 8, 0, 2, 7, 4, 6, 10)])
+    row_ids = np.array([f"r{i:02d}" for i in (5, 1, 9, 3, 8, 0, 2, 7, 4, 6, 10)])
     for s in range(5):
         got = fs.draw_panel_noise(
             pay, comp, np.random.default_rng(s), order="f12a", row_ids=row_ids
