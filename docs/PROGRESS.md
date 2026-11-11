@@ -838,3 +838,8 @@ update the pre-score inventory with the final hashes, Board A explicit release, 
 `test_f10_logs_the_complete_a533_verdict_without_using_it`) fail on a `pooled_rounding_error_rel` approx comparison, while the
 file alone passes 98/98; an order- or thread-dependent numeric tolerance in the tests, not in the pipeline (the staged values are
 frozen and hashed). Fix task opened; secret scan clean; pins match at HEAD.
+
+**11 Nov 2026, 11:22 UTC.** Test-order fix merged (77f6718; tests only; root cause: a one-thread Torch leak from the predictions
+test changed the float32 matmul path; conftest now restores the thread count); re-pin (xxv) committed through the hook with the
+full suite green (1203 passed). Pre-scoring inventory 2 in flight; Board A explicit release next; then phase 1 (proofs-only) and
+phase 2 (GPU).
