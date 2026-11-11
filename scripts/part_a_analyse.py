@@ -4,15 +4,26 @@
 Thin wrapper over ``wsp.eval.part_a_analysis.main``; see that module for the sealed-ledger,
 validity, Part B and masked-calibration input formats (each a choice pending adopting note).
 Refuses (exit 2, nothing written) on a specification hash that differs from the F10b.1 adoption
-note or from ``--spec-sha256``; a manifest/NULL-SIZE/text-groups/fields hash mismatch; a ledger
-window order, block assignment or token identity that differs from ``text_groups.json``; an
-unsealed or incomplete ledger; a contradictory re-stage entry; a missing frozen prediction row; a
-frozen id-list mismatch; or a missing/mismatched F10.6 slot-masked calibration report.
+note or from ``--spec-sha256``; a frozen (a533) manifest whose sha256 is not the preserved
+staging manifest's; an execution manifest (``--manifest``) whose bytes differ from the required
+``--manifest-sha256`` or from the hash the sealed ledger records, that lacks a registered id or an
+a533 variant id, or that selects an unflagged non-registered edit; a NULL-SIZE/text-groups/fields
+hash mismatch; a ledger window order, block assignment or token identity that differs from
+``text_groups.json``; an unsealed or incomplete ledger; a re-stage entry that contradicts itself
+or the execution manifest; a missing frozen prediction row; a frozen id-list mismatch; or a
+missing/mismatched F10.6 slot-masked calibration report or, with F11 supplementary edits, F11.4
+supplemented calibration report (masks verified per contrast; a ladder mask on a registered id is
+refused); and on a calibration size failure ("hold: size failure requires a new amendment",
+F11a.1(b)). A power-only F11.4 failure runs as the F11.7 screen (F11a.1). Reports: the registered
+Part A on every selected edit, the F10.5 reports on the supplemented set (frozen cells unchanged,
+supplements marked), and the descriptive registered-40 sensitivity.
 
     python scripts/part_a_analyse.py --ledger LEDGER.json --fields FIELDS.json \
         --spec-sha256 8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4 \
+        --manifest docs/prereg/a5_manifests/part_a/manifest.json --manifest-sha256 SHA256 \
         --output REPORT.json --markdown REPORT.md [--validity V.json] [--part-b B.json] \
-        [--masked-calibration MASKED.json]
+        [--masked-calibration MASKED.json] \
+        [--frozen-manifest docs/prereg/a5_manifests/part_a/manifest_a533.json]
 """
 
 import sys

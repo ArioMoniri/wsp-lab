@@ -6,7 +6,7 @@ metadata named below). Implements, without tuning:
 * the **registered** Part A analysis (PREREG_H1_TF A5.3, A5.3.1, A5.3.2; F10.3 set; F10.9 flags):
   per-pair paired block-bootstrap resolution (32 two-window blocks, 4,000 draws, linear .025/.975
   percentiles; resolved = interval strictly excludes zero), sign agreement (a zero prediction
-  disagrees), exact CP 95 % intervals, the forty-ID ledger, and the A5.5.1 ordered decision,
+  disagrees), exact CP 95 % intervals, the per-selected-id ledger, and the A5.5.1 ordered decision,
   evaluated once and **validity first**: step 1 (every external A5.5.1 checklist predicate with
   its linked evidence, the internal pins, the F10.6 calibration state and the A5.4.2 validity of
   the supplied Part B family) is decided before any contrast is read; an unresolved step 1 leaves
@@ -25,9 +25,57 @@ note of ``docs/PREREG_H1_TF.md``, this module's constant and (CLI) the required 
 ``text_groups.json`` must have its A5.1.2 sha256, and the ledger must carry exactly its 64 window
 item ids in registered order, its 32 two-window blocks and its per-window token-id hashes; every
 selected pair needs a complete re-stage audit entry bound to a hashed re-stage report, otherwise
-its rotation pair is excluded as ``audit_missing``; if the re-stage yield is below 40/40 a hashed
-slot-masked calibration report (F10.6) is required, its gates and verdict are disclosed and its
-embedded NULL-SIZE row is added to the F5.7 table without replacing a row.
+its rotation pair is excluded as ``audit_missing``; if the re-stage yield is below full yield a
+hashed slot-masked calibration report (F10.6) is required, its gates and verdict are disclosed and
+its embedded NULL-SIZE row is added to the F5.7 table without replacing a row.
+
+Two manifests (Board A re-review condition 2: bind trusted input evidence)
+--------------------------------------------------------------------------
+* The **frozen staged manifest** is the preserved a533 staging manifest
+  ``docs/prereg/a5_manifests/part_a/manifest_a533.json`` (sha256
+  :data:`FROZEN_STAGED_MANIFEST_SHA256`, verified at load). The norm tertiles, the ln ρ cut keys
+  and cells, the staged ln ρ values and the S30 recomputation are anchored there and never in a
+  regenerated manifest (spec §§1.1, 2.2, 3.1; F10b.2 item 3: "frozen from the staged manifest; any
+  pair whose re-stage value would cross a cut is flagged, never moved"). Its forty selections are
+  the registered ids (sorted-id sha256 :data:`REGISTERED_EDIT_IDS_SHA256`).
+* The **execution manifest** is the manifest whose variants were scored (F10 re-stage report,
+  later regenerations). It is passed explicitly (CLI ``--manifest`` with the required
+  ``--manifest-sha256``); the file bytes must hash to the supplied value, and the sealed ledger's
+  ``manifest_sha256`` and ``restage_provenance.manifest_sha256`` must record the same hash. The
+  F10 verdicts and reason codes (``edit_audits[i].pair_verdict`` / ``.exclusions``), the F10.4
+  pooled ρ (``edit_audits[i].edit_audit.pooled_energy_ratio``, used for the covariate model and for
+  ``cell_drift``), the ladder exclusion flags, the selection rows and the variant ids are read
+  from it; the ledger's re-stage entries must agree with it (a disagreement refuses the run). The
+  run is refused unless every registered id and every a533 variant id is in it, and unless every
+  registered selection row equals its frozen row. A selection that is not registered must carry
+  ``supplementary: true`` (F11 supplementary edits). A supplementary edit must be a root
+  (predecessor ``base``) in an F11.2 depleted cell whose stated tertile recomputes from the frozen
+  A5.3.1 norm cut keys (:data:`NORM_CUT_KEYS`; selection.json, bound by the a533 manifest).
+
+F11 (A5 amendment F11, note F11a; Board A Part A analysis review 3, corrections 1–4)
+-----------------------------------------------------------------------------------
+* **Registered Part A** (F11.5): every selected edit — the forty and the supplements — with
+  per-contrast denominators (52 less exclusions, no borrowing) and the ordered decision.
+* **F10.5 reports on the supplemented set**: supplements join the covariate models, every sign
+  table, the constant-sign comparator and the tertile reports. The forty's frozen cells are
+  unchanged; a supplement joins the norm tertile its frozen cut keys give and the ln ρ cell the
+  frozen §2.2 cut keys give for its own staged ln ρ (choice 7 below), marked ``supplementary``,
+  never moving a frozen member. S30/S34 stay the registered-40 lists; each supplement's values of
+  the two subset predicates are shown beside them and never enter them.
+* **Registered-40 sensitivity** (``registered_40_sensitivity``): the same contrasts and A5.5
+  decision on the forty alone (31 rotation / 40 per ladder strength available under F10),
+  labelled descriptive with no decision authority; no supplement enters it. Every contrast is also
+  split into roots versus non-root chain steps per family and into the forty versus supplements.
+* **Calibration masks per contrast** (F11.4): the supplemented calibration run is required for
+  any supplemented analysis; its masks are verified per contrast against the execution manifest
+  (rotation exclusions of any id; ladder exclusions of a supplementary id); a ladder exclusion of
+  a registered id is refused.
+* **Route** (F11.7, F11a.1): size first — a size failure refuses with "hold: size failure requires
+  a new amendment"; a power-only failure of the supplemented run selects the screen route
+  (rotation contrast not decisive, A5.5 validity row worded as F11.7 states, no Part A go, no G7
+  contribution, no Part B funding; ladder alternative priority and the ≥ 15 floor kept), subject
+  to Board A's linked acceptance (choice 8); a forty-only F10.6 power failure leaves step 1
+  unresolved as before.
 
 The paired-block helpers, the resolution draws and the CP intervals are reused from
 ``scripts/a5_simulation.py`` (``donor_block``, ``resolution``, ``cp_interval``).
@@ -41,12 +89,13 @@ pending adopting note** (a dated A5 note must adopt it, or replace it, before sc
    extended by the condition-3 bindings)::
 
        {"schema": ..., "sealed": true,
-        "manifest_sha256": <staged Part A manifest sha256>, "fields_sha256": <fields file sha256>,
+        "manifest_sha256": <execution manifest sha256>, "fields_sha256": <fields file sha256>,
         "text_groups_sha256": <text_groups.json sha256>,
         "window_ids": ["0", ..., "63"] (text_groups.json windows[].item_id, registered order),
         "two_window_blocks": [[0, 1], ..., [62, 63]] (text_groups.json two_window_blocks),
         "window_token_ids_hashes": [64 token_ids_hash values, aligned with window_ids],
-        "restage_provenance": {"manifest_sha256": h, "audit_file_sha256": h, "readme_sha256": h},
+        "restage_provenance": {"manifest_sha256": <execution manifest sha256>,
+                               "audit_file_sha256": h, "readme_sha256": h},
         "references": {<edit id (original W+D) | predecessor id | "base">: {"mean_nll": [64]}},
         "variants": {<edit id>: {"rotation" | "ladder_0.25" | "ladder_0.5":
                      {"variant_id": ..., "mean_nll": [64] (absent if not scored),
@@ -76,8 +125,9 @@ pending adopting note** (a dated A5 note must adopt it, or replace it, before sc
    "sha256": <64 hex>}, ...]}}`` for every name in :data:`VALIDITY_PREDICATES`. A predicate
    certifies step 1 only with ``pass: true`` and a non-empty, well-formed evidence list that links
    the required pins (:func:`validity_bindings`): ``registration_pinned`` the specification,
-   staged manifest, text groups, fields and NULL-SIZE report hashes; ``selection_and_audits`` the
-   three re-stage provenance hashes; ``null_size`` the NULL-SIZE report and, when F10.6 applies,
+   frozen staged (a533) manifest, text groups, fields and NULL-SIZE report hashes;
+   ``selection_and_audits`` the three re-stage provenance hashes (whose manifest hash is the
+   execution manifest's); ``null_size`` the NULL-SIZE report and, when F10.6 applies,
    the slot-masked calibration report hash. ``g2_predecessor_audit`` with ``pass: false`` carries
    the registered hard stop of G2 pending a new amendment.
 5. *Part B input* (``--part-b``; produced by the Part B pipeline, not computed here):
@@ -94,14 +144,32 @@ pending adopting note** (a dated A5 note must adopt it, or replace it, before sc
    ``scripts/a5_simulation.py --slot-mask`` (``slot_mask`` with label, mask file sha256, canonical
    mapping sha256, masked ids and gates; ``reports.null_size``). Its masked rotation ids must
    equal the re-stage exclusions and its canonical mapping sha256 must recompute from them.
-   Required (else refusal) when the re-stage yield is below 40/40; refused when the yield is 40/40,
+   Required (else refusal) when the re-stage yield is below full yield; refused at full yield,
    where the registered F2/F7 simulations stand without a new run. A failed gate makes step 1
-   unresolved (F10.6: "A failure makes Part A not decisive").
+   unresolved (F10.6: "A failure makes Part A not decisive"). With supplementary edits the
+   ``--supplement`` output (F11.4) is always required: label "slot-masked (F10.6); supplemented
+   (F11.4)", a ``supplement`` block binding the supplementary ids' sorted-id sha256, k and slot
+   count, per-contrast ``masked_ids`` and the canonical availability mapping sha256 recomputed
+   from the execution manifest, optional ``slots`` table consistent with it, and the gates with
+   the ordered power, ordered-go size and three two-sided size rates (needed for the screen
+   route, F11a.1(c)). The registered-40 sensitivity run (no decision authority) is refused.
+7. *Supplementary cell convention* (F11.5 "F10.5 reports on the supplemented set"; Board A
+   correction 1): a supplement's norm tertile is its A5.3.1 cell under :data:`NORM_CUT_KEYS`
+   (verified against every a533 row); its ln ρ cell is :data:`LNRHO_CUTS` applied to its staged
+   ln ρ = 2·ln(1 + pooled_norm_mismatch) from its own F11.3 staging record (execution manifest),
+   the spec §1.1 formula; no staged value → no ln ρ cell (listed). Re-stage ln ρ and
+   ``cell_drift`` are shown as for the forty. S30/S34 predicate values come from the same record
+   (``pooled_norm_mismatch`` ≤ 2e-2, cross-checked with ``in_subset_pooled_norm_2e-2``;
+   ``in_subset_noise_calibrated`` or ``noise_calibrated_passes``).
+8. *Screen-route acceptance input* (F11a.1(d)): ``--validity`` may carry
+   ``"f11a_screen_route": {"pass": true, "evidence": [{path, sha256}, ...]}``; on a power-only
+   failure its evidence must link the calibration report's sha256, else step 1 is unresolved.
 
     python scripts/part_a_analyse.py --ledger LEDGER.json --fields FIELDS.json \
         --spec-sha256 8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4 \
+        --manifest docs/prereg/a5_manifests/part_a/manifest.json --manifest-sha256 SHA256 \
         --output REPORT.json --markdown REPORT.md [--validity V.json] [--part-b B.json] \
-        [--masked-calibration MASKED.json]
+        [--masked-calibration MASKED.json] [--frozen-manifest manifest_a533.json]
 """
 
 from __future__ import annotations
@@ -138,11 +206,15 @@ FLOOR = 15
 CONTRASTS = ("rotation", "ladder_0.25", "ladder_0.5")
 LADDER_STRENGTH = {"ladder_0.25": 0.25, "ladder_0.5": 0.5}
 
-DEFAULT_MANIFEST = ROOT / "docs/prereg/a5_manifests/part_a/manifest.json"
+# The preserved a533 staging manifest: the anchor of every frozen cut, cell and subset.
+DEFAULT_FROZEN_MANIFEST = ROOT / "docs/prereg/a5_manifests/part_a/manifest_a533.json"
 DEFAULT_NULLSIZE = ROOT / "docs/prereg/a5_manifests/nullsize/report.json"
 DEFAULT_TEXT_GROUPS = ROOT / "docs/prereg/a5_manifests/text_groups.json"
 DEFAULT_REGISTRATION = ROOT / "docs/PREREG_H1_TF.md"
-STAGED_MANIFEST_SHA256 = "d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6"
+FROZEN_STAGED_MANIFEST_SHA256 = "d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6"
+# manifest_a533.json:selection_ledger.edit_ids_sorted_sha256 (the forty registered ids, A5.3.1).
+REGISTERED_EDIT_IDS_SHA256 = "e2bd6cb2956c0fbe64194b3f1ebbb481248ecec45b8a729a59a54b9a2bac9d6b"
+N_REGISTERED = 40
 NULLSIZE_REPORT_SHA256 = "1bed2c9531e4230864a1ebbe7e4023e0ffafcf704a59c40e93f9a75bd469dfa6"
 # A5.1.2 inventory row of docs/prereg/a5_manifests/text_groups.json (registered 64 windows).
 TEXT_GROUPS_SHA256 = "f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1"
@@ -387,6 +459,49 @@ F10_6_FAILED = (
 )
 SLOT_MASK_LABEL = "slot-masked (F10.6)"
 SLOT_MASK_SCHEMA = "a5-slot-mask-v1"
+# F11.4 (scripts/a5_simulation.py --supplement): labels of the supplemented calibration run.
+SUPPLEMENT_LABEL = "supplemented (F11.4)"
+SUPPLEMENT_SLOT_MASK_LABEL = f"{SLOT_MASK_LABEL}; {SUPPLEMENT_LABEL}"
+REGISTERED_40_LABEL = "registered-40 sensitivity (F11.5); descriptive, no decision authority"
+LADDERS = ("ladder_0.25", "ladder_0.5")
+
+# F11.2: the frozen supplementary list (selection_f11.json) and its depleted cells.
+F11_SUPPLEMENT_IDS_SHA256 = "1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9"
+F11_SUPPLEMENT_CELLS = (("lora_sft", 2), ("chain", 0), ("chain", 2))
+ROOT_PREDECESSOR = "base"
+# A5.3.1 frozen norm cut keys (selection.json:procedural_freeze.cutpoints[family].keys; that file
+# is bound by manifest_a533.json:selection_ledger.selection_json_sha256). A (norm, id) key equal to
+# a cut key falls in the higher half-open cell. Verified against every a533 selection row at run
+# time; used to assign supplementary edits to norm tertiles (never moved, never recut).
+SELECTION_JSON_SHA256 = "393530365f87f981d5da3ecb2779c89b8e7bf98105b6c45d1824bf290e908c63"
+NORM_CUT_KEYS = {
+    "lora_sft": (
+        (1.0580346482037204, "f4b10903b8e09e24"),
+        (2.2141261523655484, "f8c2cf0c6b9ffa8c"),
+    ),
+    "chain": ((0.7725259468377004, "7af5977862ec021f"), (1.3049782925751559, "14cdaabee246493b")),
+}
+S30_THRESHOLD = 2e-2  # spec §3.1: staged pooled realised norm mismatch ≤ 2e-2
+
+# F11.7 / F11a.1: the power-only screen route (Option B) and the size-failure hold.
+SIZE_HOLD = "hold: size failure requires a new amendment"
+F11_7_VALIDITY_ROW = (
+    'The A5.5 validity predicate "applicable power … gates pass" is read as not applicable to '
+    "the rotation contrast. The step-2 ladder alternative keeps its funding-stop role. A rotation "
+    'interval with lower bound > 0.5 is reported as "Part A rotation: positive screen, not '
+    'decisive". It is not a Part A go, and it does not count toward G7 ("G3 go and G4 go, never '
+    'screen", A5.6). Every other outcome is reported as registered.'
+)
+F11A_SCREEN_RULE = (
+    'In the screen route only rotation power is waived: "no Part A go, G7 contribution or Part B '
+    "funding is possible. The step-2 ladder alternative retains priority and funding-stop meaning, "
+    "and the ≥15 resolved floor still applies to a positive screen. Remaining validity checks and "
+    "unresolved cases retain their registered handling. Report the failed power and all size "
+    "results beside the screen. 'Every other outcome ... as registered' cannot silently restore "
+    'step-3 go or downstream funding." (F11a.1(e))'
+)
+SCREEN_POSITIVE = "Part A rotation: positive screen, not decisive"
+SCREEN_ROUTE_KEY = "f11a_screen_route"  # optional --validity entry: Board A acceptance (F11a.1(d))
 
 COLLINEARITY_DISCLOSURE = (
     "Outcome-free collinearity disclosure (spec §1.1, staged values, 40 pairs): Pearson correlation "
@@ -551,14 +666,149 @@ def window_nll_from_records(records_path, window_ids):
 # ---------------------------------------------------------------------------- input loading
 
 
-def load_manifest(path=DEFAULT_MANIFEST) -> dict:
-    digest = sha256_file(path)
-    if digest != STAGED_MANIFEST_SHA256:
+def load_frozen_manifest(path=DEFAULT_FROZEN_MANIFEST) -> dict:
+    """The preserved a533 staging manifest, verified by its constant sha256 before it is parsed."""
+    try:
+        digest = sha256_file(path)
+    except OSError as e:
+        raise AnalysisRefused(f"frozen staged manifest {path} missing or unreadable: {e}") from e
+    if digest != FROZEN_STAGED_MANIFEST_SHA256:
         raise AnalysisRefused(
-            f"manifest sha256 {digest} does not match the staged Part A manifest "
-            f"{STAGED_MANIFEST_SHA256}"
+            f"frozen staged manifest sha256 {digest} does not match the preserved a533 staging "
+            f"manifest {FROZEN_STAGED_MANIFEST_SHA256}"
         )
     return json.loads(Path(path).read_text())
+
+
+def load_execution_manifest(path, expected_sha256) -> dict:
+    """The manifest whose variants were scored; its sha256 must be supplied and must match."""
+    if not _is_sha(expected_sha256):
+        raise AnalysisRefused(
+            "the execution manifest sha256 (--manifest-sha256, 64 lowercase hex) is required"
+        )
+    try:
+        digest = sha256_file(path)
+    except OSError as e:
+        raise AnalysisRefused(f"execution manifest {path} missing or unreadable: {e}") from e
+    if digest != expected_sha256:
+        raise AnalysisRefused(
+            f"execution manifest sha256 {digest} does not match the supplied --manifest-sha256 "
+            f"{expected_sha256}"
+        )
+    return json.loads(Path(path).read_text())
+
+
+def bind_manifests(frozen, manifest, manifest_sha256) -> dict:
+    """Bind the execution manifest to the frozen a533 manifest; refuse on any inconsistency.
+
+    The forty registered ids are the frozen manifest's selections. Every one must be selected in
+    the execution manifest with an identical selection row (apart from an optional false
+    ``supplementary`` flag), every a533 variant id must be present, and every other selection must
+    be flagged ``supplementary: true``.
+    """
+    if not _is_sha(manifest_sha256):
+        raise AnalysisRefused("the execution manifest sha256 is required (64 lowercase hex)")
+    frozen_sel = _selected(frozen)
+    registered = sorted(frozen_sel)
+    if (
+        len(frozen["selections"]) != N_REGISTERED
+        or len(registered) != N_REGISTERED
+        or sorted_sha(registered) != REGISTERED_EDIT_IDS_SHA256
+        or (frozen.get("selection_ledger") or {}).get("edit_ids_sorted_sha256")
+        != REGISTERED_EDIT_IDS_SHA256
+    ):
+        raise AnalysisRefused(
+            "frozen staged manifest does not carry the forty registered ids "
+            f"(sorted-id sha256 {REGISTERED_EDIT_IDS_SHA256})"
+        )
+    rows = manifest.get("selections")
+    if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+        raise AnalysisRefused("execution manifest has no selections list")
+    sel = _selected(manifest)
+    if len(sel) != len(rows):
+        raise AnalysisRefused("execution manifest selects an edit id more than once")
+    missing = [i for i in registered if i not in sel]
+    if missing:
+        raise AnalysisRefused(
+            f"execution manifest lacks registered id(s) {missing}: the a533 ids must be a subset "
+            "of the execution manifest's ids"
+        )
+    frozen_variants = {v["variant_id"] for v in frozen["variants"]}
+    exec_variants = {v.get("variant_id") for v in manifest.get("variants") or []}
+    lost = sorted(frozen_variants - exec_variants)
+    if lost:
+        raise AnalysisRefused(
+            f"execution manifest lacks a533 variant id(s) {lost}: the a533 ids must be a subset "
+            "of the execution manifest's ids"
+        )
+    for i in registered:
+        row = {k: v for k, v in sel[i].items() if k != "supplementary"}
+        if sel[i].get("supplementary", False) is not False:
+            raise AnalysisRefused(f"registered id {i} is flagged supplementary")
+        if row != frozen_sel[i]:
+            raise AnalysisRefused(
+                f"selection row of registered id {i} differs from the frozen staged manifest"
+            )
+    supplementary = sorted(i for i in sel if i not in frozen_sel)
+    stray = [i for i in supplementary if sel[i].get("supplementary") is not True]
+    if stray:
+        raise AnalysisRefused(
+            f"execution manifest selects id(s) {stray} that are neither registered nor flagged "
+            "supplementary: true"
+        )
+    verify_norm_cut_keys(frozen)
+    for i in supplementary:
+        s = sel[i]
+        if s.get("predecessor_id") != ROOT_PREDECESSOR:
+            raise AnalysisRefused(f"supplementary id {i} is not a root (F11.2 filter 2)")
+        cell = (s.get("family"), s.get("tertile"))
+        if cell not in F11_SUPPLEMENT_CELLS:
+            raise AnalysisRefused(
+                f"supplementary id {i} is in cell {cell}, not an F11.2 depleted cell "
+                f"{list(F11_SUPPLEMENT_CELLS)}"
+            )
+        if norm_tertile(s.get("family"), s.get("effective_norm"), i) != s["tertile"]:
+            raise AnalysisRefused(
+                f"supplementary id {i}: stated tertile {s['tertile']} differs from the frozen "
+                "A5.3.1 norm cut keys"
+            )
+    supp_sha = sorted_sha(supplementary) if supplementary else None
+    return {
+        "frozen_manifest_sha256": FROZEN_STAGED_MANIFEST_SHA256,
+        "execution_manifest_sha256": manifest_sha256,
+        "registered_ids": registered,
+        "supplementary_ids": supplementary,
+        "supplementary_ids_sorted_sha256": supp_sha,
+        "supplementary_matches_f11_2_frozen_list": (
+            supp_sha == F11_SUPPLEMENT_IDS_SHA256 if supplementary else None
+        ),
+        "selected_ids": sorted(sel),
+    }
+
+
+def norm_tertile(family, norm, i):
+    """A5.3.1 norm tertile of (norm, id) under the frozen cut keys (None if not computable)."""
+    keys = NORM_CUT_KEYS.get(family)
+    if keys is None or not _finite(norm):
+        return None
+    return sum((norm, i) >= k for k in keys)
+
+
+def verify_norm_cut_keys(frozen) -> None:
+    """The frozen norm cut keys bind to the a533 manifest: its selection.json hash, and every one of
+    its forty selection rows recomputes to its registered tertile (fail closed otherwise)."""
+    if (frozen.get("selection_ledger") or {}).get("selection_json_sha256") != SELECTION_JSON_SHA256:
+        raise AnalysisRefused(
+            "frozen staged manifest does not bind the registered selection.json "
+            f"({SELECTION_JSON_SHA256}) whose norm cut keys assign supplementary tertiles"
+        )
+    bad = [
+        s["edit_id"]
+        for s in frozen["selections"]
+        if norm_tertile(s["family"], s["effective_norm"], s["edit_id"]) != s["tertile"]
+    ]
+    if bad:
+        raise AnalysisRefused(f"frozen norm cut keys do not reproduce the a533 tertiles of {bad}")
 
 
 def load_nullsize_report(path=DEFAULT_NULLSIZE) -> dict:
@@ -705,16 +955,68 @@ def validate_windows(ledger, text_groups) -> None:
         raise AnalysisRefused("registered blocks are not consecutive positions of the ledger")
 
 
+def _manifest_verdict(manifest, i):
+    """Execution manifest F10 verdict of edit ``i``: (verdict, pre-audit codes, F10.3 codes) or
+    a list of evidence problems (→ ``audit_missing``)."""
+    ea = (manifest.get("edit_audits") or {}).get(i)
+    if not isinstance(ea, dict):
+        return ["execution manifest has no edit_audits entry"]
+    problems = []
+    if ea.get("audit_rule") != "f10":
+        problems.append(f"execution manifest audit_rule {ea.get('audit_rule')!r} is not 'f10'")
+    if ea.get("pair_verdict") not in F10_3_VERDICTS:
+        problems.append(
+            f"execution manifest pair_verdict {ea.get('pair_verdict')!r} not in {F10_3_VERDICTS}"
+        )
+    exc = ea.get("exclusions")
+    if not isinstance(exc, list) or not all(
+        isinstance(x, dict) and isinstance(x.get("reason"), str) for x in exc
+    ):
+        problems.append("execution manifest exclusions malformed")
+    if problems:
+        return problems
+    codes = sorted({x["reason"] for x in exc})
+    bad = [c for c in codes if c not in PRE_AUDIT_CODES + F10_3_CODES]
+    if bad:
+        raise AnalysisRefused(f"{i}: unknown execution manifest reason code(s) {bad}")
+    if bool(codes) != (ea["pair_verdict"] == "excluded"):
+        raise AnalysisRefused(
+            f"{i}: execution manifest pair_verdict {ea['pair_verdict']!r} contradicts its "
+            "reason codes"
+        )
+    pre = [c for c in codes if c in PRE_AUDIT_CODES]
+    f10 = [c for c in codes if c in F10_3_CODES]
+    return ea["pair_verdict"], pre, f10
+
+
+def restage_rho(manifest) -> dict:
+    """Execution manifest F10.4 pooled ρ per selected edit (None when absent or nonfinite)."""
+    out = {}
+    for i in _selected(manifest):
+        ea = ((manifest.get("edit_audits") or {}).get(i) or {}).get("edit_audit") or {}
+        rho = ea.get("pooled_energy_ratio") if isinstance(ea, dict) else None
+        out[i] = float(rho) if _finite(rho) and rho > 0 else None
+    return out
+
+
 def restage_audit(ledger, manifest) -> dict:
-    """Per selected pair: F10.3 re-stage audit state; incomplete evidence → ``audit_missing``."""
+    """Per selected pair: F10.3 re-stage audit state; incomplete evidence → ``audit_missing``.
+
+    The verdict and reason codes are the execution manifest's; the sealed ledger's re-stage entry
+    must be complete (else ``audit_missing``) and must agree with them (else refusal).
+    """
     prov = ledger.get("restage_provenance")
     prov_missing = [
         k for k in RESTAGE_PROVENANCE_KEYS if not (isinstance(prov, dict) and _is_sha(prov.get(k)))
     ]
+    rhos = restage_rho(manifest)
     out = {}
     for i in sorted(_selected(manifest)):
         r = ledger.get("restage", {}).get(i)
         missing = []
+        verdict = _manifest_verdict(manifest, i)
+        if isinstance(verdict, list):
+            missing.extend(verdict)
         if prov_missing:
             missing.append(f"restage_provenance lacks {prov_missing}")
         if not isinstance(r, dict) or not r:
@@ -752,10 +1054,27 @@ def restage_audit(ledger, manifest) -> dict:
             raise AnalysisRefused(
                 f"{i}: re-stage verdict {r['f10_3_verdict']!r} contradicts its reason codes"
             )
-        if r["pre_audit_exclusions"]:
-            out[i] = {"status": "pre_audit_excluded", "reasons": list(r["pre_audit_exclusions"])}
-        elif r["f10_3_exclusions"]:
-            out[i] = {"status": "f10_3_excluded", "reasons": list(r["f10_3_exclusions"])}
+        m_verdict, m_pre, m_f10 = verdict
+        if (
+            r["f10_3_verdict"] != m_verdict
+            or sorted(set(r["pre_audit_exclusions"])) != m_pre
+            or sorted(set(r["f10_3_exclusions"])) != m_f10
+        ):
+            raise AnalysisRefused(
+                f"{i}: ledger re-stage entry ({r['f10_3_verdict']}, "
+                f"{r['pre_audit_exclusions'] + r['f10_3_exclusions']}) contradicts the execution "
+                f"manifest ({m_verdict}, {m_pre + m_f10})"
+            )
+        lr = r.get("pooled_rho")
+        if _finite(lr) and rhos[i] is not None and not math.isclose(lr, rhos[i], rel_tol=1e-12):
+            raise AnalysisRefused(
+                f"{i}: ledger pooled_rho {lr!r} contradicts the execution manifest's pooled ρ "
+                f"{rhos[i]!r}"
+            )
+        if m_pre:
+            out[i] = {"status": "pre_audit_excluded", "reasons": m_pre}
+        elif m_f10:
+            out[i] = {"status": "f10_3_excluded", "reasons": m_f10}
         else:
             out[i] = {"status": "pass", "reasons": []}
         out[i]["registered_realised_verdict"] = r["registered_realised_verdict"]
@@ -763,16 +1082,33 @@ def restage_audit(ledger, manifest) -> dict:
     return out
 
 
-def validate_ledger(ledger, manifest, text_groups) -> dict:
-    """Fail-closed ledger checks; returns the per-pair re-stage audit state."""
+def validate_ledger(ledger, manifest, text_groups, manifest_sha256) -> dict:
+    """Fail-closed ledger checks; returns the per-pair re-stage audit state.
+
+    ``manifest`` is the execution manifest and ``manifest_sha256`` its verified file hash; the
+    ledger must record that hash (``manifest_sha256`` and, when present and well formed,
+    ``restage_provenance.manifest_sha256``).
+    """
     if ledger.get("schema") != LEDGER_SCHEMA:
         raise AnalysisRefused(f"ledger schema must be {LEDGER_SCHEMA!r}")
     if ledger.get("sealed") is not True:
         raise AnalysisRefused(
             "ledger is not sealed (A5.3: one analysis after the ledger is closed)"
         )
-    if ledger.get("manifest_sha256") != STAGED_MANIFEST_SHA256:
-        raise AnalysisRefused("ledger manifest_sha256 does not match the staged Part A manifest")
+    if not _is_sha(manifest_sha256):
+        raise AnalysisRefused("the execution manifest sha256 is required (64 lowercase hex)")
+    if ledger.get("manifest_sha256") != manifest_sha256:
+        raise AnalysisRefused(
+            f"ledger manifest_sha256 {ledger.get('manifest_sha256')} does not match the execution "
+            f"manifest {manifest_sha256}"
+        )
+    prov = ledger.get("restage_provenance")
+    prov_manifest = prov.get("manifest_sha256") if isinstance(prov, dict) else None
+    if _is_sha(prov_manifest) and prov_manifest != manifest_sha256:
+        raise AnalysisRefused(
+            f"ledger restage_provenance.manifest_sha256 {prov_manifest} does not match the "
+            f"execution manifest {manifest_sha256}"
+        )
     validate_windows(ledger, text_groups)
     expected = _variant_ids(manifest)
     for i in _selected(manifest):
@@ -780,12 +1116,21 @@ def validate_ledger(ledger, manifest, text_groups) -> dict:
         if entry is None:
             raise AnalysisRefused(f"ledger lacks the variant entries of selected edit {i}")
         for c in CONTRASTS:
+            if expected[(i, c)] is None:
+                raise AnalysisRefused(f"execution manifest lacks the {c} variant of {i}")
             v = entry.get(c)
             if v is None:
                 raise AnalysisRefused(f"ledger lacks the {c} variant of {i}")
             if v.get("variant_id") != expected[(i, c)]:
                 raise AnalysisRefused(
                     f"{i} {c}: variant id {v.get('variant_id')} != manifest {expected[(i, c)]}"
+                )
+    m_excluded = {v.get("variant_id"): bool(v.get("excluded")) for v in manifest["variants"]}
+    for i in _selected(manifest):
+        for c in ("ladder_0.25", "ladder_0.5"):
+            if bool(ledger["variants"][i][c].get("excluded")) != m_excluded[expected[(i, c)]]:
+                raise AnalysisRefused(
+                    f"{i} {c}: ledger exclusion flag contradicts the execution manifest"
                 )
     audit = restage_audit(ledger, manifest)
     for i, a in audit.items():
@@ -1013,7 +1358,7 @@ def validity_bindings(spec_sha, fields_sha, provenance, masked_sha=None) -> dict
     return {
         "registration_pinned": [
             spec_sha,
-            STAGED_MANIFEST_SHA256,
+            FROZEN_STAGED_MANIFEST_SHA256,
             TEXT_GROUPS_SHA256,
             fields_sha,
             NULLSIZE_REPORT_SHA256,
@@ -1220,13 +1565,22 @@ def decision(
     internal=None,
     bindings=None,
     part_b_sha256=None,
+    route="decisive",
 ) -> dict:
     """A5.5.1 ordered if/else, evaluated once, validity first.
 
     ``rotation``/``ladder_025``: dicts with resolved, agreements, cp95. Step 1 is decided before
     either is read; an unresolved step 1 leaves every later step unresolved. The supplied Part B
     results are reported on every branch.
+
+    ``route`` is ``"decisive"`` (registered A5.5, unchanged) or ``"screen"`` (F11.7 Option B as
+    restricted by F11a.1, only after a power-only F11.4 failure whose acceptance is a step-1
+    predicate): the validity row reads rotation power as not applicable, the step-2 ladder
+    alternative keeps priority, the ≥ 15 floor applies, and a rotation interval with lower bound
+    > 0.5 is a positive screen, never a Part A go; Part B cannot fund and nothing counts toward G7.
     """
+    if route not in ("decisive", "screen"):
+        raise AnalysisRefused(f"unknown decision route {route!r}")
     v = _validity(validity, internal, bindings)
     pb = check_part_b(part_b)
     v["part_b"] = pb
@@ -1239,6 +1593,14 @@ def decision(
         "validity": v,
         "part_b_reporting": part_b_report(part_b, pb, part_b_sha256),
     }
+    if route == "screen":
+        out["route"] = "screen (F11.7 Option B; F11a.1)"
+        out["rotation_contrast"] = "not decisive (A5.3.2; F11.7)"
+        v["validity_row"] = F11_7_VALIDITY_ROW
+        v["screen_rule"] = F11A_SCREEN_RULE
+        out["g7"] = 'no G7 contribution ("G3 go and G4 go, never screen", A5.6)'
+    if route == "screen" and v["pass"]:
+        return out | _screen_steps(rotation, ladder_025)
     if not v["pass"]:
         consequence = "nothing downstream runs (A5.5.1 step 1)"
         if v["g2_hard_stop"]:
@@ -1296,27 +1658,117 @@ def decision(
     return out
 
 
-def masked_calibration_state(masked, masked_sha, audit) -> dict:
-    """F10.6 disclosure: 40/40 → registered simulations stand; else a hashed masked run is required."""
-    excluded = sorted(i for i, a in audit.items() if a["status"] != "pass")
+def _screen_steps(rotation, ladder_025) -> dict:
+    """Steps 2–5 on the F11.7 screen route (step 1 passed; F11a.1(e))."""
+    out = {"step_1_validity": "pass"}
+    lad_n, lad_cp = ladder_025["resolved"], ladder_025["cp95"]
+    alternative = bool(lad_n >= FLOOR and lad_cp is not None and lad_cp[1] <= 0.6)
+    out["step_2_ladder_alternative"] = alternative
+    if alternative:
+        return out | {
+            "gate": "alternative",
+            "part_a": "not reached (alternative has priority on the screen route, F11a.1(e))",
+            "step_4_part_b_eligibility": "not reached (alternative)",
+            "funding": "stop: the field is not pursued; no sealed purchase on the field arm",
+            "scientific": (
+                "An alternative outcome is a funding stop for the field, never evidence of wrong "
+                "signs (F5.7)."
+            ),
+        }
+    n, iv = rotation["resolved"], rotation["cp95"]
+    if n < FLOOR:
+        part_a = "unresolved: fewer than 15 resolved rotation pairs"
+    elif iv[0] > 0.5:
+        part_a = SCREEN_POSITIVE
+    elif iv[1] < 0.5:
+        part_a = "unresolved: interval entirely below 0.5 (observed disagreement reported)"
+    else:
+        part_a = "unresolved: interval includes 0.5"
+    positive = part_a == SCREEN_POSITIVE
+    return out | {
+        "part_a": part_a,
+        "gate": "Part A screen (rotation not decisive)" if positive else "Part A unresolved",
+        "scientific": (
+            "Positive screen on the rotation contrast; not decisive, not a Part A go (F11.7)."
+            if positive
+            else "No scientific kill; Part A evidence is unresolved."
+        ),
+        "step_4_part_b_eligibility": (
+            "not eligible: no Part A go is possible on the F11.7 screen route (A5.5 step 4)"
+        ),
+        "funding": (
+            "unresolved: Part B is reported but cannot fund without a Part A go (F11.7; A5.5 "
+            "step 4)"
+        ),
+    }
+
+
+def contrast_availability(ledger, audit, ids) -> dict:
+    """Canonical id → available contrasts (CONTRASTS order), from the execution-manifest-bound
+    state: the rotation by the F10.3 audit, each ladder by its (manifest-verified) exclusion flag.
+    The simulator's ``slot_mask.mapping_sha256`` hashes exactly this mapping (sort_keys)."""
+    return {
+        i: [c for c, ex in _excluded_contrasts(ledger, audit, i).items() if not ex]
+        for i in sorted(ids)
+    }
+
+
+def _rates_ok(rates, n):
+    return isinstance(rates, list) and len(rates) == n and all(_finite(x) for x in rates)
+
+
+def masked_calibration_state(masked, masked_sha, audit, ledger, supplementary=()) -> dict:
+    """F10.6 / F11.4 calibration disclosure and route (F11.7, F11a.1).
+
+    Forty only (no supplementary edits): full rotation yield → the registered simulations stand
+    and no masked run is accepted; otherwise the hashed F10.6 slot-masked run is required.
+    Supplemented (F11): the hashed F11.4 run on every selected id ("slot-masked (F10.6);
+    supplemented (F11.4)") is always required. Its masks are verified **per contrast** against the
+    execution-manifest-bound availability: rotation exclusions of any id, ladder exclusions of a
+    supplementary id (F11.4: "every supplementary rotation or ladder exclusion"); a ladder exclusion
+    of a registered id cannot be masked (F10.6, F11a.3) and is refused. A size failure refuses the
+    run (F11a.1(b), size first); a power-only failure of the F11.4 run selects the F11.7 screen
+    route (F11a.1(a)); a power failure of a forty-only F10.6 run leaves step 1 unresolved (F10.6).
+    """
+    supplementary = sorted(supplementary)
+    supp = set(supplementary)
+    avail = contrast_availability(ledger, audit, audit)
+    unavailable = {c: sorted(i for i in avail if c not in avail[i]) for c in CONTRASTS}
+    excluded = unavailable["rotation"]
     n = len(audit)
+    registered_ladder = sorted(i for c in LADDERS for i in unavailable[c] if i not in supp)
     base = {
         "restage_yield": {"passing": n - len(excluded), "selected": n},
         "excluded_ids": excluded,
+        "unavailable_by_contrast": unavailable,
+        "available_counts": {c: n - len(unavailable[c]) for c in CONTRASTS},
+        "supplemented": bool(supplementary),
     }
-    if not excluded:
+    required = bool(excluded) or bool(supplementary)
+    if not required:
         if masked is not None:
             raise AnalysisRefused(
-                "F10.6: all 40 pairs pass the re-stage audit, so no slot-masked run applies; a "
+                f"F10.6: all {n} pairs pass the re-stage audit, so no slot-masked run applies; a "
                 "masked calibration report was supplied anyway"
             )
         return base | {
             "required": False,
-            "status": "not required (40/40)",
+            "status": f"not required ({n}/{n})",
             "passed": True,
+            "route": "decisive",
             "statement": F10_6_ALL_PASS,
         }
+    if registered_ladder:
+        raise AnalysisRefused(
+            f"ladder exclusion(s) of registered id(s) {registered_ladder}: the forty's ladders "
+            "must stay available and cannot be masked (F10.6, F11a.3); a new ruling is needed"
+        )
     if masked is None:
+        if supplementary:
+            raise AnalysisRefused(
+                f"F11.4: {len(supplementary)} supplementary edit(s) are selected; the supplemented "
+                "slot-masked calibration report on every selected id is required before scoring"
+            )
         raise AnalysisRefused(
             f"F10.6: {len(excluded)} rotation pair(s) excluded by the re-stage audit; the "
             "slot-masked POWER-AND-YIELD calibration report is required before scoring"
@@ -1324,29 +1776,63 @@ def masked_calibration_state(masked, masked_sha, audit) -> dict:
     if not _is_sha(masked_sha):
         raise AnalysisRefused("slot-masked calibration report needs its file sha256")
     sm = masked.get("slot_mask") if isinstance(masked, dict) else None
-    if not isinstance(sm, dict) or sm.get("label") != SLOT_MASK_LABEL:
-        raise AnalysisRefused("masked calibration report lacks the 'slot-masked (F10.6)' block")
+    label = SUPPLEMENT_SLOT_MASK_LABEL if supplementary else SLOT_MASK_LABEL
+    if not isinstance(sm, dict) or sm.get("label") != label:
+        raise AnalysisRefused(
+            f"masked calibration report lacks the {label!r} slot-masked block (got "
+            f"{sm.get('label') if isinstance(sm, dict) else None!r})"
+        )
+    if (
+        "registered_40_sensitivity" in masked
+        or (sm.get("gates") or {}).get("decision_authority") is False
+    ):
+        raise AnalysisRefused(
+            "masked calibration report is the registered-40 sensitivity run (F11.5; no decision "
+            "authority); the supplemented F11.4 run is required"
+        )
     if sm.get("schema") != SLOT_MASK_SCHEMA or not _is_sha(sm.get("sha256")):
         raise AnalysisRefused("masked calibration report lacks its slot-mask schema/file sha256")
     if masked.get("seed") != SEED:
         raise AnalysisRefused("masked calibration report is not on the registered seed")
-    canonical = {
-        i: (["rotation"] if audit[i]["status"] == "pass" else []) + ["ladder_0.25", "ladder_0.5"]
-        for i in sorted(audit)
-    }
-    mapping_sha = hashlib.sha256(json.dumps(canonical, sort_keys=True).encode()).hexdigest()
-    masked_ids = sm.get("masked_ids") or {}
-    if sorted(masked_ids.get("rotation") or []) != excluded or any(
-        masked_ids.get(c) for c in ("ladder_0.25", "ladder_0.5")
-    ):
+    sup_block = masked.get("supplement")
+    if supplementary:
+        if not (
+            isinstance(sup_block, dict)
+            and sup_block.get("label") == SUPPLEMENT_LABEL
+            and sup_block.get("ids_sorted_sha256") == sorted_sha(supplementary)
+            and sup_block.get("k") == len(supplementary)
+            and sup_block.get("n_slots") == n
+        ):
+            raise AnalysisRefused(
+                "masked calibration supplement block does not bind the execution manifest's "
+                f"supplementary ids (label {SUPPLEMENT_LABEL!r}, sorted-id sha256 "
+                f"{sorted_sha(supplementary)}, k {len(supplementary)}, {n} slots)"
+            )
+    elif sup_block is not None:
         raise AnalysisRefused(
-            "masked calibration masked ids differ from the re-stage rotation exclusions"
+            "a supplemented (F11.4) calibration report was supplied but the execution manifest "
+            "selects no supplementary edit"
         )
+    mapping_sha = hashlib.sha256(json.dumps(avail, sort_keys=True).encode()).hexdigest()
+    masked_ids = sm.get("masked_ids") or {}
+    for c in CONTRASTS:
+        if sorted(masked_ids.get(c) or []) != unavailable[c]:
+            raise AnalysisRefused(
+                f"masked calibration masked ids of {c} {sorted(masked_ids.get(c) or [])} differ "
+                f"from the execution-manifest exclusions {unavailable[c]}"
+            )
     if sm.get("mapping_sha256") != mapping_sha:
         raise AnalysisRefused(
             f"masked calibration mapping sha256 {sm.get('mapping_sha256')} != {mapping_sha} "
-            "recomputed from the re-stage exclusions"
+            "recomputed from the per-contrast exclusions"
         )
+    slots = sm.get("slots")
+    if slots is not None and (
+        not isinstance(slots, list)
+        or sorted(s.get("edit_id") for s in slots if isinstance(s, dict)) != sorted(avail)
+        or any(s.get("available") != avail[s["edit_id"]] for s in slots)
+    ):
+        raise AnalysisRefused("masked calibration slot table differs from the per-contrast mapping")
     gates = sm.get("gates")
     if not (
         isinstance(gates, dict)
@@ -1357,6 +1843,26 @@ def masked_calibration_state(masked, masked_sha, audit) -> dict:
         == (gates["size"].get("passed") is True and gates["power"].get("passed") is True)
     ):
         raise AnalysisRefused("masked calibration gates missing or inconsistent")
+    size, power = gates["size"], gates["power"]
+    go_rate, two_sided = size.get("ordered_go_rate"), size.get("two_sided_rejection_rates")
+    if two_sided is not None and not _rates_ok(two_sided, len(CONTRASTS)):
+        raise AnalysisRefused("masked calibration two-sided size rates malformed")
+    if _finite(go_rate):
+        rates = [go_rate] + (list(two_sided) if two_sided is not None else [])
+        size_ok = all(r <= 0.07 for r in rates)
+        # Without the two-sided rates only a passing flag can be contradicted by the go rate.
+        if (size.get("passed") is True) != size_ok and (two_sided is not None or not size_ok):
+            raise AnalysisRefused("masked calibration gates inconsistent: size flag vs size rates")
+    p_rate = power.get("ordered_go_rate")
+    if _finite(p_rate) and (p_rate >= 0.80) != (power.get("passed") is True):
+        raise AnalysisRefused("masked calibration gates inconsistent: power flag vs ordered power")
+    # F11a.1(b): size first; a size failure never falls back to the screen.
+    if size.get("passed") is not True:
+        raise AnalysisRefused(
+            f"{SIZE_HOLD} (F11a.1(b)): the calibration report (sha256 {masked_sha}) fails the "
+            "size gate (ordered go or an individual two-sided size > 0.07); validity stays "
+            "unresolved and the scoring hold stays in place for every Part A entry"
+        )
     null = (masked.get("reports") or {}).get("null_size")
     reps = masked.get("replicates")
     if not isinstance(null, dict) or not isinstance(reps, int) or reps <= 0:
@@ -1364,7 +1870,7 @@ def masked_calibration_state(masked, masked_sha, audit) -> dict:
     dec = null["decisions"]
     row = {
         "scenario": "slot_masked_null_size",
-        "label": SLOT_MASK_LABEL + " — embedded NULL-SIZE pass of the masked run; replaces no row",
+        "label": label + " — embedded NULL-SIZE pass of the masked run; replaces no row",
         "go_count": dec["go"],
         "ordered_go_rate": null["ordered_go_rate"],
         "ordered_go_cp95": null["ordered_go_cp95"],
@@ -1375,22 +1881,61 @@ def masked_calibration_state(masked, masked_sha, audit) -> dict:
         "replicates": reps,
     }
     passed = gates["passed"]
+    if passed:
+        route = "decisive"
+    elif supplementary:
+        # F11a.1(a): power failure only, every size gate passing; eligibility must be known from
+        # the report (F11a.1(c)): the ordered power and every size rate must be present.
+        if not (_finite(p_rate) and _finite(go_rate) and _rates_ok(two_sided, len(CONTRASTS))):
+            raise AnalysisRefused(
+                "F11a.1(c): power-only failure but the calibration report does not give the "
+                "ordered power, the ordered-go size and every two-sided size rate; screen-route "
+                "eligibility is unknown"
+            )
+        route = "screen"
+    else:
+        route = "f10_6_failed"
+    who = "supplemented (F11.4)" if supplementary else "slot-masked (F10.6)"
+    if route == "decisive":
+        tail = "passed its gates (size ≤ 0.07, ordered power ≥ 0.80)."
+    elif route == "screen":
+        tail = (
+            "FAILED the POWER gate only (size passed): Part A proceeds as a screen; the rotation "
+            "contrast is not decisive (A5.3.2; F11.7 Option B as restricted by F11a.1). "
+            + F11_7_VALIDITY_ROW
+        )
+    else:
+        tail = "FAILED. " + F10_6_FAILED
     return base | {
         "required": True,
         "status": "supplied",
         "sha256": masked_sha,
+        "slot_mask_label": label,
         "slot_mask_file_sha256": sm["sha256"],
         "mapping_sha256": mapping_sha,
-        "masked_ids": masked_ids,
+        "mapping": avail,
+        "masked_ids": {c: list(unavailable[c]) for c in CONTRASTS},
+        "supplement": (
+            {k: sup_block.get(k) for k in ("label", "k", "ids_sorted_sha256", "n_slots", "sha256")}
+            if supplementary
+            else None
+        ),
         "gates": gates,
         "verdict": "PASS" if passed else "FAIL",
         "passed": passed,
+        "route": route,
         "null_size_row": row,
         "statement": (
-            f"{len(excluded)} of {n} rotation pairs are excluded by the re-stage audit; the "
-            f"separately labelled slot-masked calibration (sha256 {masked_sha}) "
-            + ("passed its gates (size ≤ 0.07, ordered power ≥ 0.80)." if passed else "FAILED. ")
-            + ("" if passed else F10_6_FAILED)
+            f"{len(excluded)} of {n} rotation pairs are excluded by the re-stage audit"
+            + (
+                f" ({len(supplementary)} supplementary ids selected; supplementary ladder "
+                f"exclusions masked per contrast: "
+                f"{ {c: unavailable[c] for c in LADDERS} })"
+                if supplementary
+                else ""
+            )
+            + f"; the separately labelled {who} calibration (sha256 {masked_sha}) "
+            + tail
         ),
     }
 
@@ -1765,10 +2310,10 @@ def moment_differences(tensors) -> dict:
     return out
 
 
-def _covariates(i, sel, restage) -> dict:
+def _covariates(i, sel, restage, rho) -> dict:
+    """Covariate row of pair ``i``: selection metadata, ledger moments, execution-manifest ρ."""
     s = sel[i]
     norm = s.get("effective_norm")
-    rho = (restage or {}).get("pooled_rho")
     row = {
         "chain": 1.0 if s["family"] == "chain" else 0.0 if s["family"] == "lora_sft" else None,
         "log1p_effective_norm": math.log1p(norm) if _finite(norm) and norm > -1 else None,
@@ -1778,20 +2323,109 @@ def _covariates(i, sel, restage) -> dict:
     return row
 
 
-def staged_ln_rho(manifest) -> dict:
-    """Spec §1.1: staged ln ρ = 2·ln(1 + pooled_norm_mismatch) (all staged signed values positive)."""
+def staged_ln_rho(frozen) -> dict:
+    """Spec §1.1: staged ln ρ = 2·ln(1 + pooled_norm_mismatch) (all staged signed values positive).
+
+    ``frozen`` is the preserved a533 staging manifest; never a regenerated manifest.
+    """
     return {
-        i: 2 * math.log1p(manifest["edit_audits"][i]["edit_audit"]["pooled_norm_mismatch"])
-        for i in _selected(manifest)
+        i: 2 * math.log1p(frozen["edit_audits"][i]["edit_audit"]["pooled_norm_mismatch"])
+        for i in _selected(frozen)
     }
 
 
-def covariate_report(records, ledger, manifest, draws) -> dict:
+def _supplement_audit(manifest, i) -> dict:
+    ea = ((manifest.get("edit_audits") or {}).get(i) or {}).get("edit_audit")
+    return ea if isinstance(ea, dict) else {}
+
+
+def supplementary_staged_ln_rho(manifest, ids) -> dict:
+    """Staged ln ρ of supplementary edits (spec §1.1 formula on their own F11.3 staging record,
+    the execution manifest's ``edit_audits[i].edit_audit.pooled_norm_mismatch``); None if absent."""
+    out = {}
+    for i in sorted(ids):
+        m = _supplement_audit(manifest, i).get("pooled_norm_mismatch")
+        out[i] = 2 * math.log1p(m) if _finite(m) and m > -1 else None
+    return out
+
+
+def supplementary_predicates(manifest, ids) -> dict:
+    """Per supplementary edit: frozen-cut cells and the values of the S30/S34 predicates (F11.5).
+
+    The predicates are read from the supplement's own staging record (execution manifest): S30's
+    staged pooled realised norm mismatch ≤ 2e-2 (spec §3.1; the record's
+    ``in_subset_pooled_norm_2e-2`` flag must agree when present, else refusal) and S34's
+    noise-calibrated realised audit (spec §3.2; ``in_subset_noise_calibrated``, else
+    ``noise_calibrated_passes``; ``None`` = not evaluated). Supplements never enter S30/S34.
+    """
     sel = _selected(manifest)
+    rhos = restage_rho(manifest)
+    staged = supplementary_staged_ln_rho(manifest, ids)
+    out = {}
+    for i in sorted(ids):
+        ea = _supplement_audit(manifest, i)
+        m = ea.get("pooled_norm_mismatch")
+        s30 = bool(m <= S30_THRESHOLD) if _finite(m) else None
+        flag = ea.get("in_subset_pooled_norm_2e-2")
+        if isinstance(flag, bool) and s30 is not None and flag != s30:
+            raise AnalysisRefused(
+                f"supplementary id {i}: in_subset_pooled_norm_2e-2 {flag} contradicts its pooled "
+                f"norm mismatch {m!r} (S30 predicate ≤ {S30_THRESHOLD})"
+            )
+        s34 = ea.get("in_subset_noise_calibrated")
+        s34_src = "in_subset_noise_calibrated"
+        if not isinstance(s34, bool):
+            s34, s34_src = ea.get("noise_calibrated_passes"), "noise_calibrated_passes"
+        if not isinstance(s34, bool):
+            s34, s34_src = None, "not evaluated in the staging record"
+        x = staged[i]
+        rho = rhos.get(i)
+        restage = math.log(rho) if rho is not None else None
+        cell = _lnrho_cell(x, i) if x is not None else None
+        out[i] = {
+            "supplementary": True,
+            "family": sel[i]["family"],
+            "root": sel[i].get("predecessor_id") == ROOT_PREDECESSOR,
+            "norm_tertile": sel[i]["tertile"],
+            "effective_norm": sel[i].get("effective_norm"),
+            "staged_ln_rho": x,
+            "lnrho_cell": cell,
+            "restage_ln_rho": restage,
+            "cell_drift": bool(
+                cell is not None and restage is not None and _lnrho_cell(restage, i) != cell
+            ),
+            "s30_predicate": {
+                "definition": "staged pooled realised norm mismatch ≤ 2e-2 (spec §3.1)",
+                "value": m if _finite(m) else None,
+                "verdict": s30,
+                "record_flag": flag if isinstance(flag, bool) else None,
+            },
+            "s34_predicate": {
+                "definition": "passes the noise-calibrated realised audit (spec §3.2)",
+                "verdict": s34,
+                "source": s34_src,
+            },
+            "enters_subsets": False,
+        }
+    return out
+
+
+def covariate_report(records, ledger, manifest, frozen, draws, supplementary=()) -> dict:
+    """Spec §1 on the supplemented set (F11.5): the forty registered pairs and every supplementary
+    edit, which joins the models in canonical id order and is marked ``supplementary``.
+
+    Selection metadata from the execution manifest rows (the forty's rows equal the frozen a533
+    rows, verified), the logged moments from the ledger's re-stage entries, ρ from the execution
+    manifest. Staged ln ρ (difference column only): a533 for the forty, the supplement's own F11.3
+    staging record for a supplement.
+    """
+    sel = _selected(manifest)
+    supplementary = sorted(supplementary)
+    rhos = restage_rho(manifest)
     resolved = [i for i in sorted(sel) if records[i]["rotation"]["status"] == "resolved"]
     rows, dropped, X, a = [], [], [], []
     for i in resolved:
-        cov = _covariates(i, sel, ledger.get("restage", {}).get(i))
+        cov = _covariates(i, sel, ledger.get("restage", {}).get(i), rhos.get(i))
         bad = [c for c in COVARIATE_COLUMNS if not _finite(cov[c])]
         if bad:
             dropped.append({"id": i, "reason": f"covariate_missing:{bad[0]}", "columns": bad})
@@ -1803,25 +2437,25 @@ def covariate_report(records, ledger, manifest, draws) -> dict:
     models = covariate_models(
         rows, np.asarray(X).reshape(len(rows), len(COVARIATE_COLUMNS)), a, draws
     )
-    staged = staged_ln_rho(manifest)
-    diffs = [
-        abs(math.log(r["pooled_rho"]) - staged[i])
-        for i, r in ledger.get("restage", {}).items()
-        if i in staged
-        and isinstance(r, dict)
-        and _finite(r.get("pooled_rho"))
-        and r["pooled_rho"] > 0
+    staged = staged_ln_rho(frozen)
+    supp_staged = supplementary_staged_ln_rho(manifest, supplementary)
+    diffs = [abs(math.log(rhos[i]) - staged[i]) for i in staged if rhos.get(i) is not None]
+    supp_diffs = [
+        abs(math.log(rhos[i]) - x)
+        for i, x in supp_staged.items()
+        if rhos.get(i) is not None and x is not None
     ]
     full = agreement_row(records, sorted(sel))
+    marked = set(supplementary)
     return {
         "authority": AUTHORITY_NONE,
         "spec": "§1 (F10.5(a))",
         "columns": list(COVARIATE_COLUMNS),
         "column_notes": {
-            "chain": "1 = chain, 0 = lora_sft (manifest selections[].family)",
-            "log1p_effective_norm": "ln(1 + manifest selections[].effective_norm)",
+            "chain": "1 = chain, 0 = lora_sft (frozen manifest selections[].family)",
+            "log1p_effective_norm": "ln(1 + frozen manifest selections[].effective_norm)",
             "d_*": "element-count-weighted mean over edited tensors of logged_r − logged_d (re-stage variant.json)",
-            "ln_rho": "ln of the re-stage F10.4 pooled ρ = Σ‖R_eff‖²/Σ‖D‖²",
+            "ln_rho": "ln of the re-stage F10.4 pooled ρ = Σ‖R_eff‖²/Σ‖D‖² (execution manifest edit_audits[].edit_audit.pooled_energy_ratio)",
         },
         "rules": {
             "penalty": "λ = 1 on Σβ², intercept unpenalised (sklearn LogisticRegression(C=1.0))",
@@ -1843,9 +2477,18 @@ def covariate_report(records, ledger, manifest, draws) -> dict:
             "ln_rho": "natural log, dimensionless",
             "d̂, predictions": UNITS,
         },
+        "population": (
+            "the supplemented set (F11.5): the forty registered pairs plus the supplementary "
+            "edits, marked supplementary"
+            if supplementary
+            else "the forty registered pairs"
+        ),
         "selected_ids": sorted(sel),
+        "supplementary_ids": supplementary,
         "resolved_ids": resolved,
         "complete_case_ids": rows,
+        "complete_case_supplementary_ids": [i for i in rows if i in marked],
+        "dropped_supplementary_ids": [d["id"] for d in dropped if d["id"] in marked],
         "n_cc": len(rows),
         "dropped_rows": dropped,
         "complete_case_agreement": cc,
@@ -1862,6 +2505,7 @@ def covariate_report(records, ledger, manifest, draws) -> dict:
         "full_analysis_set_ledger": full["ledger"],
         "models": models,
         "max_abs_lnrho_restage_minus_staged": max(diffs) if diffs else None,
+        "max_abs_lnrho_restage_minus_staged_supplementary": max(supp_diffs) if supp_diffs else None,
         "collinearity_disclosure": COLLINEARITY_DISCLOSURE,
         "sentence": COVARIATE_SENTENCE,
     }
@@ -1870,8 +2514,9 @@ def covariate_report(records, ledger, manifest, draws) -> dict:
 # ---------------------------------------------------------------------------- tertiles and subsets
 
 
-def norm_tertiles(manifest) -> dict:
-    sel = _selected(manifest)
+def norm_tertiles(frozen) -> dict:
+    """Spec §2.1 from the frozen a533 manifest's selection cells, verified by sorted-id sha256."""
+    sel = _selected(frozen)
     cells = {}
     for t in range(3):
         pooled = sorted(i for i, s in sel.items() if s["tertile"] == t)
@@ -1890,9 +2535,9 @@ def _lnrho_cell(x, i) -> int:
     return 0 if key < LNRHO_CUTS[0] else 1 if key < LNRHO_CUTS[1] else 2
 
 
-def lnrho_tertiles(manifest):
-    """Spec §2.2: recompute from staged values and fail closed unless equal to the frozen lists."""
-    x = staged_ln_rho(manifest)
+def lnrho_tertiles(frozen):
+    """Spec §2.2: recompute from staged (a533) values; fail closed unless equal to frozen lists."""
+    x = staged_ln_rho(frozen)
     ordered = sorted(x, key=lambda i: (x[i], i))
     n = len(ordered)
     b1, b2 = n // 3, (2 * n) // 3
@@ -1911,7 +2556,14 @@ def _descriptive_row(records, ids, cell, label) -> dict:
     return {"cell": cell, "authority": AUTHORITY_NONE, "label": label} | row
 
 
-def tertile_report(records, ledger, manifest) -> dict:
+def tertile_report(records, manifest, frozen, supplementary=None) -> dict:
+    """Spec §2 on the supplemented set (F11.5). The forty's frozen cells come from the a533
+    manifest unchanged; each supplementary edit joins the cell its frozen cut keys give (norm: its
+    A5.3.1 tertile under the selection.json keys, verified; ln ρ: its staged ln ρ under the frozen
+    §2.2 cut keys), marked ``supplementary``, never moving a frozen member and never recutting.
+    ``supplementary`` is :func:`supplementary_predicates` output (empty: the forty only)."""
+    supp = supplementary or {}
+
     def label(r):
         return (
             "below floor (descriptive)"
@@ -1919,31 +2571,54 @@ def tertile_report(records, ledger, manifest) -> dict:
             else "at or above floor (descriptive)"
         )
 
+    def row(frozen_ids, supp_ids, cell):
+        r = _descriptive_row(records, list(frozen_ids) + list(supp_ids), cell, None)
+        r["label"] = label(r)
+        r["frozen_ids"] = sorted(frozen_ids)
+        r["supplementary_ids"] = sorted(supp_ids)
+        if supp_ids:
+            f40 = agreement_row(records, frozen_ids)
+            r["frozen_40"] = {
+                "resolved": f40["resolved"],
+                "field": f40["field"],
+                "comparator": f40["comparator"],
+                "predicted_sign_counts": f40["predicted_sign_counts"],
+            }
+        return r
+
     norm_rows = []
-    for t, cell in norm_tertiles(manifest).items():
+    for t, cell in norm_tertiles(frozen).items():
         for group in ("pooled", "lora_sft", "chain"):
-            r = _descriptive_row(records, cell[group], f"{TERTILE_NAMES[t]} ({t}) {group}", None)
-            r["label"] = label(r)
-            norm_rows.append(r)
-    cells, cuts = lnrho_tertiles(manifest)
-    staged = staged_ln_rho(manifest)
-    restage = ledger.get("restage", {})
+            extra = [
+                i
+                for i, p in supp.items()
+                if p["norm_tertile"] == t and group in ("pooled", p["family"])
+            ]
+            norm_rows.append(row(cell[group], extra, f"{TERTILE_NAMES[t]} ({t}) {group}"))
+    cells, cuts = lnrho_tertiles(frozen)
+    staged = staged_ln_rho(frozen)
+    rhos = restage_rho(manifest)
     lnrho_rows = []
     for k, ids in enumerate(cells):
-        r = _descriptive_row(records, ids, LNRHO_CELL_NAMES[k], None)
-        r["label"] = label(r)
+        extra = [i for i, p in supp.items() if p["lnrho_cell"] == k]
+        r = row(ids, extra, LNRHO_CELL_NAMES[k])
         values = {}
         drift = []
         for i in ids:
-            entry = restage.get(i)
-            rho = entry.get("pooled_rho") if isinstance(entry, dict) else None
-            v = math.log(rho) if _finite(rho) and rho > 0 else None
+            rho = rhos.get(i)
+            v = math.log(rho) if rho is not None else None
             values[i] = v
             if v is not None and _lnrho_cell(v, i) != k:
                 drift.append(i)
+        for i in extra:
+            values[i] = supp[i]["restage_ln_rho"]
+            if supp[i]["cell_drift"]:
+                drift.append(i)
         r["ids_in_frozen_order"] = list(ids)
         r["restage_ln_rho"] = values
-        r["staged_ln_rho"] = {i: staged[i] for i in ids}
+        r["staged_ln_rho"] = {i: staged[i] for i in ids} | {
+            i: supp[i]["staged_ln_rho"] for i in extra
+        }
         r["cell_drift"] = drift
         lnrho_rows.append(r)
     return {
@@ -1956,7 +2631,16 @@ def tertile_report(records, ledger, manifest) -> dict:
             "independent views. No test across tertiles, trend statistic or difference interval "
             "is computed."
         ),
+        "supplementary_note": (
+            "F11.5: the supplementary edits join these reports in the cell their frozen cut keys "
+            "assign (norm: A5.3.1 selection.json keys; ln ρ: the frozen §2.2 keys applied to the "
+            "supplement's own staged ln ρ), listed under supplementary_ids; the forty's frozen "
+            "cells (frozen_ids) are unchanged and their forty-only values are shown under frozen_40."
+        ),
         "lnrho_cuts": [list(c) for c in cuts],
+        "lnrho_unassigned_supplementary_ids": sorted(
+            i for i, p in supp.items() if p["lnrho_cell"] is None
+        ),
         "norm": norm_rows,
         "ln_rho": lnrho_rows,
     }
@@ -2011,6 +2695,71 @@ def subset_report(records, name, ids, expected_sha, selected) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------- F11 helpers
+
+
+def availability(row) -> dict:
+    """Staging availability (not excluded by the F10 audit / ladder flag) vs scoring vs resolution."""
+    led = row["ledger"]
+    excluded = sum(
+        led[k]["n"] for k in ("pre_audit_excluded", "f10_3_excluded", "excluded") if k in led
+    )
+    available = led["selected"]["n"] - excluded
+    return {
+        "selected": led["selected"]["n"],
+        "excluded": excluded,
+        "available": available,
+        "missing_score": led["missing_score"]["n"],
+        "scored": available - led["missing_score"]["n"],
+        "unresolved": led["unresolved"]["n"],
+        "resolved": led["resolved"]["n"],
+        "rule": (
+            "available = selected − excluded (F10.3 audit for the rotation, the staged ladder "
+            "flag for a ladder); scored = available − missing score; resolved = interval strictly "
+            "excludes zero. Availability is not resolution."
+        ),
+    }
+
+
+def lineage_rows(records, sel, ids, contrast) -> dict:
+    """Roots (predecessor = base) versus non-root chain steps, per family (F11.5; F11.6 bias (i))."""
+    out: dict = {"authority": AUTHORITY_NONE}
+    for fam in ("lora_sft", "chain"):
+        fam_ids = [i for i in ids if sel[i]["family"] == fam]
+        roots = [i for i in fam_ids if sel[i].get("predecessor_id") == ROOT_PREDECESSOR]
+        out[fam] = {
+            "root": agreement_row(records, roots, contrast),
+            "non_root": agreement_row(records, [i for i in fam_ids if i not in roots], contrast),
+        }
+    return out
+
+
+def screen_route_acceptance(validity, masked_sha) -> dict:
+    """F11a.1(d): the screen route needs Board A's acceptance of the power-only failure report,
+    supplied as ``validity["f11a_screen_route"] = {"pass": true, "evidence": [{path, sha256}]}``
+    with evidence linking the calibration report's sha256. Missing or invalid → step 1 fails."""
+    v = validity.get(SCREEN_ROUTE_KEY) if isinstance(validity, dict) else None
+    base = {"evidence_required": [masked_sha]}
+    if not isinstance(v, dict) or v.get("pass") is not True:
+        return base | {
+            "pass": False,
+            "reason": (
+                "F11a.1(d): Board A acceptance of the power-only F11.4 failure report is not "
+                f"supplied ({SCREEN_ROUTE_KEY} must pass); the screen route is not authorised"
+            ),
+        }
+    hashes, prob = _evidence_hashes(v.get("evidence"))
+    if prob or masked_sha not in hashes:
+        return base | {
+            "pass": False,
+            "reason": (
+                f"F11a.1(d): {SCREEN_ROUTE_KEY} evidence "
+                + (prob if prob else f"does not link the calibration report sha256 {masked_sha}")
+            ),
+        }
+    return base | {"pass": True, "evidence": v["evidence"]}
+
+
 # ---------------------------------------------------------------------------- top level
 
 
@@ -2020,6 +2769,8 @@ def analyse(
     fields,
     nullsize,
     *,
+    manifest_sha256=None,
+    frozen_manifest=None,
     text_groups=None,
     spec_check=None,
     validity=None,
@@ -2032,33 +2783,58 @@ def analyse(
 ) -> dict:
     """The single Part A analysis: registered outputs plus the F10.5 reports.
 
+    ``manifest`` is the execution manifest (the one whose variants were scored) and
+    ``manifest_sha256`` its verified file hash (:func:`load_execution_manifest`; required).
+    ``frozen_manifest`` is the preserved a533 staging manifest (default: loaded from
+    :data:`DEFAULT_FROZEN_MANIFEST` and verified by :data:`FROZEN_STAGED_MANIFEST_SHA256`); like
+    ``spec_check`` and ``text_groups`` an injected object is a trusted interface.
+
     Refuses (:class:`AnalysisRefused`) before any outcome is summarised unless the specification
-    hash, the registered window order and every frozen id list verify.
+    hash, the manifest binding, the registered window order and every frozen id list verify.
     """
     spec_check = spec_check if spec_check is not None else verify_spec()
     if spec_check.get("verified") is not True or spec_check.get("sha256_file") != SPEC_SHA256:
         raise AnalysisRefused("specification hash not verified at run time (F10b.1)")
+    frozen = frozen_manifest if frozen_manifest is not None else load_frozen_manifest()
+    binding = bind_manifests(frozen, manifest, manifest_sha256)
     text_groups = text_groups if text_groups is not None else load_text_groups()
-    audit = validate_ledger(ledger, manifest, text_groups)
+    audit = validate_ledger(ledger, manifest, text_groups, manifest_sha256)
     preds = validate_fields(fields, ledger, manifest, audit)
     sel = _selected(manifest)
     ids = sorted(sel)
+    registered, supplementary = binding["registered_ids"], binding["supplementary_ids"]
     # Fail closed on every frozen id list before any outcome is summarised.
-    norm_tertiles(manifest)
-    lnrho_tertiles(manifest)
+    norm_tertiles(frozen)
+    lnrho_tertiles(frozen)
     for name, sub, sha in (("S30", S30_IDS, S30_SHA256), ("S34", S34_IDS, S34_SHA256)):
         if sorted_sha(sub) != sha:
             raise AnalysisRefused(
                 f"{name} id list sha256 {sorted_sha(sub)} != frozen {sha}; subset void"
             )
-    masked = masked_calibration_state(masked_calibration, masked_calibration_sha256, audit)
+    masked = masked_calibration_state(
+        masked_calibration, masked_calibration_sha256, audit, ledger, supplementary
+    )
+    route = "screen" if masked["route"] == "screen" else "decisive"
 
     records, res_meta = resolve(ledger, manifest, preds, audit, draws=resolution_draws)
-    contrasts = {c: agreement_row(records, ids, c) for c in CONTRASTS}
+
+    def contrast_rows(subset):
+        out = {c: agreement_row(records, subset, c) for c in CONTRASTS}
+        for c in CONTRASTS:
+            out[c]["availability"] = availability(out[c])
+            out[c]["by_family"] = {
+                fam: agreement_row(records, [i for i in subset if sel[i]["family"] == fam], c)
+                for fam in ("lora_sft", "chain")
+            }
+            out[c]["by_lineage"] = lineage_rows(records, sel, subset, c)
+        return out
+
+    contrasts = contrast_rows(ids)
     for c in CONTRASTS:
-        contrasts[c]["by_family"] = {
-            fam: agreement_row(records, [i for i in ids if sel[i]["family"] == fam], c)
-            for fam in ("lora_sft", "chain")
+        contrasts[c]["by_selection"] = {
+            "authority": AUTHORITY_NONE,
+            "registered_40": agreement_row(records, registered, c),
+            "supplementary": agreement_row(records, supplementary, c),
         }
     for c in ("ladder_0.25", "ladder_0.5"):
         contrasts[c]["realised_increment_ladder_ids"] = sorted(REALISED_INCREMENT_LADDER_IDS)
@@ -2076,28 +2852,94 @@ def analyse(
             "reason": "frozen NULL-SIZE report verdict is not PASS",
             "evidence": f"docs/prereg/a5_manifests/nullsize/report.json (sha256 {NULLSIZE_REPORT_SHA256})",
         },
-        "manifest_sha256": {"pass": True, "evidence": STAGED_MANIFEST_SHA256},
+        "frozen_manifest_sha256": {
+            "pass": True,
+            "evidence": f"manifest_a533.json sha256 {FROZEN_STAGED_MANIFEST_SHA256}",
+        },
+        "execution_manifest_sha256": {
+            "pass": True,
+            "evidence": f"execution manifest sha256 {manifest_sha256} = ledger provenance",
+        },
         "f10_6_calibration": {
-            "pass": masked["passed"],
+            "pass": masked["passed"] or route == "screen",
             "reason": F10_6_FAILED,
             "evidence": masked.get("sha256") or masked["status"],
         },
     }
+    if route == "screen":
+        internal["f10_6_calibration"]["note"] = (
+            "power-only failure of the F11.4 run (size passed): rotation power read as not "
+            "applicable (F11.7; F11a.1(a)); every other step-1 predicate still applies"
+        )
+        internal[SCREEN_ROUTE_KEY] = screen_route_acceptance(validity, masked["sha256"])
     bindings = validity_bindings(
         spec_check["sha256_file"],
         ledger.get("fields_sha256"),
         ledger.get("restage_provenance"),
         masked.get("sha256"),
     )
-    dec = decision(
-        validity,
-        contrasts["rotation"],
-        contrasts["ladder_0.25"],
-        part_b,
-        internal,
-        bindings,
-        part_b_sha256,
-    )
+    if route == "screen":
+        bindings[SCREEN_ROUTE_KEY] = [masked["sha256"]]
+
+    def decide(rows):
+        d = decision(
+            validity,
+            rows["rotation"],
+            rows["ladder_0.25"],
+            part_b,
+            internal,
+            bindings,
+            part_b_sha256,
+            route=route,
+        )
+        if route == "screen":
+            g = masked["gates"]
+            d["screen_calibration"] = {
+                "power": g["power"],
+                "size": g["size"],
+                "statement": (
+                    f"The F11.4 calibration (sha256 {masked['sha256']}) failed ordered power "
+                    f"({g['power'].get('ordered_go_rate')!r} < 0.80); size passed (ordered go "
+                    f"{g['size'].get('ordered_go_rate')!r}, two-sided "
+                    f"{g['size'].get('two_sided_rejection_rates')!r}, each ≤ 0.07). Stated beside "
+                    "any rotation result (F11.7; F11a.1(e))."
+                ),
+            }
+        return d
+
+    dec = decide(contrasts)
+
+    if supplementary:
+        r40 = contrast_rows(registered)
+        dec40 = decide(r40)
+        dec40.pop("part_b_reporting", None)  # reported once, under the registered decision
+        dec40["authority"] = AUTHORITY_NONE
+        registered_40 = {
+            "authority": AUTHORITY_NONE,
+            "label": REGISTERED_40_LABEL,
+            "statement": (
+                "The same A5.3 resolution, yield and CP rules, A5.4 contrasts and A5.5 ordered "
+                "decision evaluated on the original forty only (F11.5). Descriptive: it has no "
+                "decision authority and does not reverse, qualify or delay the registered decision "
+                "on the supplemented set. No supplementary edit enters it."
+            ),
+            "ids": list(registered),
+            "n_selected": len(registered),
+            "availability": {c: r40[c]["availability"] for c in CONTRASTS},
+            "contrasts": r40,
+            "decision": dec40,
+        }
+    else:
+        registered_40 = {
+            "authority": AUTHORITY_NONE,
+            "label": REGISTERED_40_LABEL,
+            "applicable": False,
+            "statement": (
+                "No supplementary edit is selected: the registered analysis is the forty, and no "
+                "separate registered-40 sensitivity applies (F11.5)."
+            ),
+        }
+    supp_pred = supplementary_predicates(manifest, supplementary)
 
     comparator = {
         "authority": AUTHORITY_NONE,
@@ -2114,14 +2956,39 @@ def analyse(
             "predicted_sign_counts": contrasts["rotation"]["predicted_sign_counts"],
             "negative_prediction_share": contrasts["rotation"]["negative_prediction_share"],
         },
+        "by_selection": {
+            part: {
+                k: contrasts["rotation"]["by_selection"][part][k]
+                for k in (
+                    "n_selected",
+                    "field",
+                    "comparator",
+                    "sign_table",
+                    "predicted_sign_counts",
+                )
+            }
+            for part in ("registered_40", "supplementary")
+        },
         "shown_beside": "main contrast, every tertile row, both subsets, covariate θ_raw",
         "statement": NO_SUPERIORITY_STATEMENT,
     }
     sensitivity = {
         "authority": AUTHORITY_NONE,
         "authority_statement": AUTHORITY_STATEMENT,
-        "covariate": covariate_report(records, ledger, manifest, bootstrap_draws),
-        "tertiles": tertile_report(records, ledger, manifest),
+        "population": (
+            "the supplemented set (F11.5): the forty registered pairs and the supplementary "
+            "edits (marked supplementary) in the covariate models, sign tables, comparator and "
+            "tertile reports; the forty's frozen cells and the S30/S34 lists are unchanged and "
+            "supplements never enter S30/S34"
+            if supplementary
+            else "the forty registered pairs of the frozen a533 manifest"
+        ),
+        "supplementary_ids": supplementary,
+        "covariate": covariate_report(
+            records, ledger, manifest, frozen, bootstrap_draws, supplementary
+        ),
+        "tertiles": tertile_report(records, manifest, frozen, supp_pred),
+        "supplementary_predicates": supp_pred,
         "subsets": {
             "authority": AUTHORITY_NONE,
             "spec": "§3 (F10.5(c), (e))",
@@ -2129,8 +2996,17 @@ def analyse(
                 "X = pairs the F10 re-stage excludes (F10.3 or pre-audit codes, including "
                 "audit_missing) plus pairs with a missing or nonfinite score in either arm"
             ),
-            "S30": subset_report(records, "S30", S30_IDS, S30_SHA256, sel),
-            "S34": subset_report(records, "S34", S34_IDS, S34_SHA256, sel),
+            "S30": subset_report(records, "S30", S30_IDS, S30_SHA256, registered),
+            "S34": subset_report(records, "S34", S34_IDS, S34_SHA256, registered),
+            "supplementary_predicates": {
+                i: {"s30": p["s30_predicate"], "s34": p["s34_predicate"], "enters_subsets": False}
+                for i, p in supp_pred.items()
+            },
+            "supplementary_note": (
+                "The S30/S34 lists stay frozen on the forty (F10a.4); each supplementary edit's "
+                "values of the two subset predicates are shown beside them and do not enter "
+                "either subset (F11.5)."
+            ),
         },
         "constant_sign_comparator": comparator,
     }
@@ -2145,6 +3021,26 @@ def analyse(
             "two_window_blocks": text_groups["two_window_blocks"],
             "rule": "ledger window order, blocks and token-id hashes equal text_groups.json (verified)",
         },
+        "manifests": {
+            "frozen": {
+                "path": "docs/prereg/a5_manifests/part_a/manifest_a533.json",
+                "sha256": FROZEN_STAGED_MANIFEST_SHA256,
+                "role": "frozen cuts, cells, staged ln ρ and subsets (spec §§1.1, 2, 3)",
+            },
+            "execution": {
+                "sha256": manifest_sha256,
+                "role": "scored variants: F10 verdicts and codes, F10.4 pooled ρ, variant ids",
+                "rule": "file sha256 = supplied --manifest-sha256 = ledger manifest_sha256 = "
+                "ledger restage_provenance.manifest_sha256",
+            },
+            "registered_ids": registered,
+            "supplementary_ids": supplementary,
+            "supplementary_ids_sorted_sha256": binding["supplementary_ids_sorted_sha256"],
+            "supplementary_matches_f11_2_frozen_list": binding[
+                "supplementary_matches_f11_2_frozen_list"
+            ],
+            "f11_2_frozen_sorted_sha256": F11_SUPPLEMENT_IDS_SHA256,
+        },
         "restage": {
             "provenance": ledger.get("restage_provenance"),
             "audit": audit,
@@ -2158,7 +3054,11 @@ def analyse(
             "decision": dec,
             "part_b": dec["part_b_reporting"],
             "pairs": records,
+            "pair_origin": {
+                i: ("supplementary" if i in set(supplementary) else "registered") for i in ids
+            },
         },
+        "registered_40_sensitivity": registered_40,
         "f5_7_null_branch_table": f57_table(nullsize, masked.get("null_size_row")),
         "f10_5_sensitivity": sensitivity,
         "limitations": LIMITATIONS,
@@ -2307,6 +3207,110 @@ def _part_b_md(pbr):
     return L
 
 
+def _availability_md(contrasts):
+    L = [
+        "| contrast | selected | excluded | available | missing score | scored | unresolved | resolved |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for c, r in contrasts.items():
+        a = r["availability"]
+        L.append(
+            f"| {c} | {a['selected']} | {a['excluded']} | {a['available']} | {a['missing_score']} "
+            f"| {a['scored']} | {a['unresolved']} | {a['resolved']} |"
+        )
+    return L + ["", next(iter(contrasts.values()))["availability"]["rule"]]
+
+
+def _lineage_md(c, lin):
+    L = [f"{c} by lineage (authority: {lin['authority']}; roots = predecessor base):"]
+    for fam in ("lora_sft", "chain"):
+        for part in ("root", "non_root"):
+            r = lin[fam][part]
+            L.append(
+                f"- `{fam}` {part.replace('_', '-')} ({r['n_selected']} selected, {r['resolved']} "
+                f"resolved): field {_prop(r['field'])}; agree {_ids(r['agreement_ids'])}; "
+                f"disagree {_ids(r['disagreement_ids'])}"
+            )
+    return L
+
+
+def _decision_md(d):
+    v = d["validity"]
+    L = []
+    if d.get("route"):
+        L += [
+            f"- Route: **{d['route']}**; rotation contrast {d['rotation_contrast']}; {d['g7']}.",
+            f"- A5.5 validity row (F11.7, verbatim): {v['validity_row']}",
+            f"- {v['screen_rule']}",
+        ]
+    L.append(f"- Step 1 validity: **{d['step_1_validity']}** — {v['reason']}")
+    for k, p in v["problems"].items():
+        L.append(f"  - {k}: {p}")
+    L += [
+        f"- Step 2 ladder alternative (s = 0.25): {d['step_2_ladder_alternative']}",
+        f"- Step 3 Part A: {d['part_a']}",
+        f"- Step 4 Part B eligibility: {d['step_4_part_b_eligibility']}",
+        f"- Gate: **{d['gate']}**",
+        f"- Funding (steps 4–5): {d['funding']}",
+        f"- Scientific consequence (stated separately): {d['scientific']}",
+    ]
+    if d.get("screen_calibration"):
+        L.append(f"- Calibration beside the screen: {d['screen_calibration']['statement']}")
+    return L
+
+
+def _registered_40_md(r40):
+    L = [
+        "## Registered-40 sensitivity (F11.5) — no decision authority",
+        "",
+        f"authority: {r40['authority']}; label: {r40['label']}",
+        "",
+        r40["statement"],
+        "",
+    ]
+    if r40.get("applicable") is False:
+        return L
+    L += [
+        f"Ids ({r40['n_selected']}): {_ids(r40['ids'])}",
+        "",
+        "| contrast | resolved | field agreement [exact CP 95 %] | ledger |",
+        "|---|---|---|---|",
+    ]
+    for c, r in r40["contrasts"].items():
+        L.append(f"| {c} | {r['resolved']} | {_prop(r['field'])} | {_ledger_md(r['ledger'])} |")
+    L += ["", *_availability_md(r40["contrasts"]), ""]
+    rot = r40["contrasts"]["rotation"]
+    L += [f"Constant-sign comparator (rotation, forty): {_prop(rot['comparator'])}.", ""]
+    for c, r in r40["contrasts"].items():
+        L += [
+            f"#### Registered-40 sign table, {c}",
+            "",
+            f"Zero predictions inside the disagreements: {r['zero_prediction_disagreements']}.",
+            "",
+            *_sign_md(r["sign_table"]),
+            "",
+            *_accounting_md(r),
+            "",
+            *_ledger_ids_md(r["ledger"]),
+            "",
+        ]
+        for fam, fr in r["by_family"].items():
+            L.append(
+                f"{c}, family `{fam}` ({fr['n_selected']} selected, {fr['resolved']} resolved): "
+                f"field {_prop(fr['field'])}"
+            )
+        L += ["", *_lineage_md(c, r["by_lineage"]), ""]
+    L += [
+        "### Registered-40 A5.5 ordered decision (descriptive; no decision authority)",
+        "",
+        f"authority: {r40['decision']['authority']}",
+        "",
+        *_decision_md(r40["decision"]),
+        "",
+    ]
+    return L
+
+
 def render_markdown(rep) -> str:
     reg = rep["registered"]
     sens = rep["f10_5_sensitivity"]
@@ -2330,6 +3334,24 @@ def render_markdown(rep) -> str:
             f"(32), per-window token-id hashes equal ({rep['windows']['rule']})."
         ),
     ]
+    mf = rep["manifests"]
+    L.append(
+        f"Frozen staged manifest (cuts, cells, staged ln ρ, subsets): `{mf['frozen']['path']}` "
+        f"sha256 `{mf['frozen']['sha256']}` (verified at load). Execution manifest (scored "
+        f"variants, F10 verdicts, re-stage ρ, variant ids): sha256 `{mf['execution']['sha256']}` "
+        f"({mf['execution']['rule']}). Registered ids: {len(mf['registered_ids'])}; supplementary "
+        f"ids ({len(mf['supplementary_ids'])}; in the registered analysis and the F10.5 reports, "
+        "marked supplementary; never in S30/S34 or the registered-40 sensitivity): "
+        f"{_ids(mf['supplementary_ids'])}"
+        + (
+            f" (sorted-id sha256 `{mf['supplementary_ids_sorted_sha256']}`; equals the F11.2 "
+            f"frozen list `{mf['f11_2_frozen_sorted_sha256']}`: "
+            f"{mf['supplementary_matches_f11_2_frozen_list']})"
+            if mf["supplementary_ids"]
+            else ""
+        )
+        + "."
+    )
     prov = rep["restage"]["provenance"]
     y = rep["restage"]["yield"]
     L.append(
@@ -2342,23 +3364,37 @@ def render_markdown(rep) -> str:
         + f". Re-stage yield: {y['passing']}/{y['selected']} pairs pass F10.3."
     )
     f106 = rep["f10_6_calibration"]
-    L += ["", "### F10.6 calibration disclosure", "", f"Status: **{f106['status']}**."]
+    L += ["", "### F10.6 / F11.4 calibration disclosure", "", f"Status: **{f106['status']}**."]
     if f106["required"]:
         g = f106["gates"]
         L += [
             (
-                f"- Slot-masked calibration report sha256 `{f106['sha256']}`; slot-mask file sha256 "
-                f"`{f106['slot_mask_file_sha256']}`; canonical mapping sha256 `{f106['mapping_sha256']}` "
-                "(recomputed from the re-stage exclusions)."
-            ),
-            f"- Masked rotation slots: {_ids(f106['masked_ids'].get('rotation'))}.",
-            (
-                f"- Gates: size ≤ 0.07 passed = {g['size'].get('passed')} (ordered go "
-                f"{_g(g['size'].get('ordered_go_rate'))}); ordered power ≥ 0.80 passed = "
-                f"{g['power'].get('passed')} ({_g(g['power'].get('ordered_go_rate'))}); "
-                f"verdict **{f106['verdict']}** (masked calibration passed: {f106['passed']})."
+                f"- Calibration report (`{f106['slot_mask_label']}`) sha256 `{f106['sha256']}`; "
+                f"slot-mask file sha256 `{f106['slot_mask_file_sha256']}`; canonical per-contrast "
+                f"mapping sha256 `{f106['mapping_sha256']}` (recomputed from the execution-manifest "
+                "exclusions of every contrast)."
             ),
         ]
+        if f106.get("supplement"):
+            sb = f106["supplement"]
+            L.append(
+                f"- Supplement block: `{sb['label']}`, k = {sb['k']}, {sb['n_slots']} slots, "
+                f"sorted-id sha256 `{sb['ids_sorted_sha256']}`."
+            )
+        for c in CONTRASTS:
+            L.append(
+                f"- Masked {c} slots ({len(f106['masked_ids'][c])}; available "
+                f"{f106['available_counts'][c]}/{f106['restage_yield']['selected']}): "
+                f"{_ids(f106['masked_ids'][c])}."
+            )
+        L.append(
+            f"- Gates: size ≤ 0.07 passed = {g['size'].get('passed')} (ordered go "
+            f"{_g(g['size'].get('ordered_go_rate'))}; two-sided "
+            f"{json.dumps(g['size'].get('two_sided_rejection_rates'))}); ordered power ≥ 0.80 "
+            f"passed = {g['power'].get('passed')} ({_g(g['power'].get('ordered_go_rate'))}); "
+            f"verdict **{f106['verdict']}** (masked calibration passed: {f106['passed']}); "
+            f"route **{f106['route']}**."
+        )
     L += ["", f106["statement"], ""]
     L += [
         "## Registered outputs (A5.3, A5.5) — decision authority",
@@ -2376,6 +3412,7 @@ def render_markdown(rep) -> str:
     ]
     for c, r in reg["contrasts"].items():
         L.append(f"| {c} | {r['resolved']} | {_prop(r['field'])} | {_ledger_md(r['ledger'])} |")
+    L += ["", *_availability_md(reg["contrasts"])]
     rot = reg["contrasts"]["rotation"]
     L += [
         "",
@@ -2397,6 +3434,16 @@ def render_markdown(rep) -> str:
             *_accounting_md(r),
             "",
         ]
+        bs = r["by_selection"]
+        L += [
+            (
+                f"{c} by selection (authority: {bs['authority']}): registered 40 "
+                f"({bs['registered_40']['resolved']} resolved) field {_prop(bs['registered_40']['field'])}; "
+                f"supplementary ({bs['supplementary']['n_selected']} selected, "
+                f"{bs['supplementary']['resolved']} resolved) field {_prop(bs['supplementary']['field'])}."
+            ),
+            "",
+        ]
         for fam, fr in r["by_family"].items():
             L += [
                 (
@@ -2407,6 +3454,7 @@ def render_markdown(rep) -> str:
                 *_sign_md(fr["sign_table"]),
                 "",
             ]
+        L += [*_lineage_md(c, r["by_lineage"]), ""]
     L += [
         "Ladder variants flagged `realised-increment ladder` (F10.9): "
         + _ids(reg["contrasts"]["ladder_0.25"]["realised_increment_ladder_ids"]),
@@ -2416,19 +3464,8 @@ def render_markdown(rep) -> str:
     ]
     d = reg["decision"]
     v = d["validity"]
+    L += [*_decision_md(d), ""]
     L += [
-        f"- Step 1 validity: **{d['step_1_validity']}** — {v['reason']}",
-    ]
-    for k, p in v["problems"].items():
-        L.append(f"  - {k}: {p}")
-    L += [
-        f"- Step 2 ladder alternative (s = 0.25): {d['step_2_ladder_alternative']}",
-        f"- Step 3 Part A: {d['part_a']}",
-        f"- Step 4 Part B eligibility: {d['step_4_part_b_eligibility']}",
-        f"- Gate: **{d['gate']}**",
-        f"- Funding (steps 4–5): {d['funding']}",
-        f"- Scientific consequence (stated separately): {d['scientific']}",
-        "",
         "Step-1 evidence links required: "
         + "; ".join(
             f"{k}: " + ", ".join(f"`{h}`" for h in hs) for k, hs in v["required_bindings"].items()
@@ -2455,6 +3492,7 @@ def render_markdown(rep) -> str:
         "",
         rep["f5_7_null_branch_table"]["note"],
         "",
+        *_registered_40_md(rep["registered_40_sensitivity"]),
         "## F10.5 sensitivity reports — no decision authority",
         "",
         f"authority: {sens['authority']}",
@@ -2481,7 +3519,14 @@ def render_markdown(rep) -> str:
             f"full analysis set {_prop(cov['full_analysis_set_agreement'])}."
         ),
         "",
+        f"Population: {cov['population']}.",
+        "",
         f"- selected ({len(cov['selected_ids'])}): {_ids(cov['selected_ids'])}",
+        f"- supplementary (marked; {len(cov['supplementary_ids'])}): {_ids(cov['supplementary_ids'])}",
+        (
+            f"- supplementary complete-case rows ({len(cov['complete_case_supplementary_ids'])}): "
+            f"{_ids(cov['complete_case_supplementary_ids'])}"
+        ),
         f"- resolved rotation pairs ({len(cov['resolved_ids'])}): {_ids(cov['resolved_ids'])}",
         "- dropped (covariate missing, both models): "
         + (", ".join(f"`{x['id']}` ({x['reason']})" for x in cov["dropped_rows"]) or "none"),
@@ -2601,7 +3646,12 @@ def render_markdown(rep) -> str:
             )
     L += [
         "",
-        f"max |ln ρ(re-stage) − ln ρ(staged)| = {_fmt(cov['max_abs_lnrho_restage_minus_staged'], 6)}.",
+        (
+            f"max |ln ρ(re-stage) − ln ρ(staged)| = "
+            f"{_fmt(cov['max_abs_lnrho_restage_minus_staged'], 6)} (forty, a533 staged values); "
+            "supplementary (own staging record): "
+            f"{_fmt(cov['max_abs_lnrho_restage_minus_staged_supplementary'], 6)}."
+        ),
         "",
         cov["collinearity_disclosure"],
         "",
@@ -2612,6 +3662,8 @@ def render_markdown(rep) -> str:
         f"authority: {sens['tertiles']['authority']}",
         "",
         sens["tertiles"]["note"],
+        "",
+        sens["tertiles"]["supplementary_note"],
         "",
         (
             "| cell | ledger | agree / disagree (zero predictions) | field agreement [CP 95 %] "
@@ -2636,6 +3688,23 @@ def render_markdown(rep) -> str:
             "",
             f"Field {_prop(r['field'])}; comparator {_prop(r['comparator'])}. Ledger: {_ledger_md(r['ledger'])}.",
             "",
+            (
+                f"Frozen members ({len(r['frozen_ids'])}, unchanged): {_ids(r['frozen_ids'])}. "
+                "Supplementary members (frozen cut keys; marked supplementary) "
+                f"({len(r['supplementary_ids'])}): {_ids(r['supplementary_ids'])}."
+            ),
+            "",
+        ]
+        if r.get("frozen_40"):
+            f40 = r["frozen_40"]
+            L += [
+                (
+                    f"Frozen forty only: resolved {f40['resolved']}; field {_prop(f40['field'])}; "
+                    f"comparator {_prop(f40['comparator'])}."
+                ),
+                "",
+            ]
+        L += [
             *_sign_md(r["sign_table"]),
             "",
             *_accounting_md(r),
@@ -2646,14 +3715,18 @@ def render_markdown(rep) -> str:
                 "| frozen member (order) | staged ln ρ | re-stage ln ρ | cell_drift |",
                 "|---|---|---|---|",
             ]
-            for i in r["ids_in_frozen_order"]:
+            for i in r["ids_in_frozen_order"] + r["supplementary_ids"]:
+                tag = " (supplementary)" if i in r["supplementary_ids"] else ""
                 L.append(
-                    f"| `{i}` | {_g(r['staged_ln_rho'][i])} | {_g(r['restage_ln_rho'][i])} | "
+                    f"| `{i}`{tag} | {_g(r['staged_ln_rho'][i])} | {_g(r['restage_ln_rho'][i])} | "
                     f"{'yes (not moved)' if i in r['cell_drift'] else 'no'} |"
                 )
         L.append("")
     drift = [i for r in sens["tertiles"]["ln_rho"] for i in r["cell_drift"]]
     L += ["ln ρ cell_drift (not moved): " + _ids(drift), ""]
+    un = sens["tertiles"]["lnrho_unassigned_supplementary_ids"]
+    if un:
+        L += ["Supplementary ids without a staged ln ρ (no ln ρ cell): " + _ids(un), ""]
     L += [
         "### Pre-listed subsets (spec §3)",
         "",
@@ -2693,6 +3766,24 @@ def render_markdown(rep) -> str:
             "",
         ]
     L += [SUBSET_DISCLOSURE, ""]
+    sp = sens["subsets"]["supplementary_predicates"]
+    if sp:
+        L += [
+            "#### Supplementary edits: values of the S30/S34 predicates (shown beside, never entered)",
+            "",
+            sens["subsets"]["supplementary_note"],
+            "",
+            "| supplementary id | family / norm tertile | root | S30: pooled norm mismatch (≤ 2e-2) | S34: noise-calibrated audit | enters S30/S34 |",
+            "|---|---|---|---|---|---|",
+        ]
+        for i, x in sp.items():
+            p = sens["supplementary_predicates"][i]
+            L.append(
+                f"| `{i}` | {p['family']} / {p['norm_tertile']} | {p['root']} | "
+                f"{_g(x['s30']['value'])} → {x['s30']['verdict']} | "
+                f"{x['s34']['verdict']} ({x['s34']['source']}) | no |"
+            )
+        L.append("")
     c = sens["constant_sign_comparator"]
     L += [
         "### Constant-sign comparator (spec §4)",
@@ -2703,13 +3794,20 @@ def render_markdown(rep) -> str:
         "",
         f"Main contrast: field {_prop(c['main_contrast']['field'])}; comparator {_prop(c['main_contrast']['comparator'])}.",
         "",
+        *[
+            f"- {part}: {x['n_selected']} selected; field {_prop(x['field'])}; comparator "
+            f"{_prop(x['comparator'])}; predicted −/0/+ "
+            + "/".join(str(x["predicted_sign_counts"][s_]) for s_ in SIGNS)
+            for part, x in c["by_selection"].items()
+        ],
+        "",
         c["statement"],
         "",
         "## Limitations",
         "",
         rep["limitations"],
         "",
-        "## Ledger appendix (forty IDs, every contrast)",
+        "## Ledger appendix (every selected id, every contrast)",
         "",
     ]
     for cname, r in reg["contrasts"].items():
@@ -2721,8 +3819,9 @@ def render_markdown(rep) -> str:
         "|---|" + "---|" * len(CONTRASTS),
     ]
     for i, recs in reg["pairs"].items():
+        tag = " (supplementary)" if reg["pair_origin"].get(i) == "supplementary" else ""
         L.append(
-            f"| `{i}` | "
+            f"| `{i}`{tag} | "
             + " | ".join(
                 f"{recs[cn]['status']}: {recs[cn].get('detail') or ''}" for cn in CONTRASTS
             )
@@ -2755,7 +3854,23 @@ def main(argv=None) -> int:
     )
     ap.add_argument("--spec", type=Path, default=DEFAULT_SPEC)
     ap.add_argument("--registration", type=Path, default=DEFAULT_REGISTRATION)
-    ap.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    ap.add_argument(
+        "--manifest",
+        required=True,
+        type=Path,
+        help="execution manifest: the Part A manifest whose variants were scored",
+    )
+    ap.add_argument(
+        "--manifest-sha256",
+        required=True,
+        help="sha256 of the execution manifest; must equal the file and the sealed ledger's record",
+    )
+    ap.add_argument(
+        "--frozen-manifest",
+        type=Path,
+        default=DEFAULT_FROZEN_MANIFEST,
+        help=f"preserved a533 staging manifest (sha256 must be {FROZEN_STAGED_MANIFEST_SHA256})",
+    )
     ap.add_argument("--nullsize-report", type=Path, default=DEFAULT_NULLSIZE)
     ap.add_argument("--text-groups", type=Path, default=DEFAULT_TEXT_GROUPS)
     ap.add_argument(
@@ -2765,7 +3880,7 @@ def main(argv=None) -> int:
     ap.add_argument(
         "--masked-calibration",
         type=Path,
-        help="F10.6 slot-masked a5_simulation.py output (required iff re-stage yield < 40/40)",
+        help="F10.6 slot-masked a5_simulation.py output (required iff re-stage yield is not full)",
     )
     ap.add_argument("--output", required=True, type=Path)
     ap.add_argument("--markdown", required=True, type=Path)
@@ -2773,7 +3888,8 @@ def main(argv=None) -> int:
     try:
         # Condition 2: the specification is verified before any other input is read.
         spec_check = verify_spec(args.spec, args.registration, args.spec_sha256)
-        manifest = load_manifest(args.manifest)
+        frozen = load_frozen_manifest(args.frozen_manifest)
+        manifest = load_execution_manifest(args.manifest, args.manifest_sha256)
         nullsize = load_nullsize_report(args.nullsize_report)
         text_groups = load_text_groups(args.text_groups)
         ledger = json.loads(args.ledger.read_text())
@@ -2796,6 +3912,8 @@ def main(argv=None) -> int:
             manifest,
             fields,
             nullsize,
+            manifest_sha256=args.manifest_sha256,
+            frozen_manifest=frozen,
             text_groups=text_groups,
             spec_check=spec_check,
             validity=validity,
@@ -2819,7 +3937,12 @@ def main(argv=None) -> int:
         "spec": {"path": str(args.spec), "sha256": spec_check["sha256_file"]},
         "spec_sha256_supplied": args.spec_sha256,
         "registration": ref(args.registration),
-        "manifest_sha256": STAGED_MANIFEST_SHA256,
+        "frozen_manifest": {
+            "path": str(args.frozen_manifest),
+            "sha256": FROZEN_STAGED_MANIFEST_SHA256,
+        },
+        "manifest": {"path": str(args.manifest), "sha256": args.manifest_sha256},
+        "manifest_sha256_supplied": args.manifest_sha256,
         "nullsize_report_sha256": NULLSIZE_REPORT_SHA256,
         "text_groups_sha256": text_groups["sha256"],
         "validity": ref(args.validity),

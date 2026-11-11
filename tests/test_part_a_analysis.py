@@ -1,9 +1,12 @@
 """Synthetic-outcome tests for the Part A analysis (A5.3/A5.5 registered outputs, F10.5 reports).
 
 Every outcome here is synthetic (synthetic ledgers, fields, Part B results and masked-calibration
-reports only). The only repository files read are committed, outcome-free metadata: the Part A
-staging manifest, the NULL-SIZE report, text_groups.json, the F10.5 specification and the
-registration text (for the F10b.1 hash and the verbatim texts). Nothing under data/ is opened.
+reports only). The only repository files read are committed, outcome-free metadata: the preserved
+a533 Part A staging manifest (the frozen anchor), the committed execution manifest (one binding
+smoke test; its hash is not pinned here), the NULL-SIZE report, text_groups.json, the F10.5
+specification and the registration text (for the F10b.1 hash and the verbatim texts). Execution
+manifests are otherwise synthetic: the frozen manifest plus synthetic F10 verdicts and pooled rho.
+Nothing under data/ is opened.
 """
 
 import copy
@@ -19,7 +22,8 @@ import pytest
 from wsp.eval import part_a_analysis as pa
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = ROOT / "docs/prereg/a5_manifests/part_a/manifest.json"
+FROZEN = ROOT / "docs/prereg/a5_manifests/part_a/manifest_a533.json"
+EXECUTION = ROOT / "docs/prereg/a5_manifests/part_a/manifest.json"
 NULLSIZE = ROOT / "docs/prereg/a5_manifests/nullsize/report.json"
 SPEC = ROOT / "docs/design/F10_SENSITIVITY_SPEC.md"
 REGISTRATION = ROOT / "docs/PREREG_H1_TF.md"
@@ -27,9 +31,13 @@ TEXT_GROUPS = ROOT / "docs/prereg/a5_manifests/text_groups.json"
 DRAWS = 200  # API override for speed; the CLI always uses the registered 4,000
 
 
+FROZEN_M = pa.load_frozen_manifest(FROZEN)
+
+
 @pytest.fixture(scope="module")
 def manifest():
-    return pa.load_manifest(MANIFEST)
+    """The frozen (a533) staging manifest: registered ids, cuts, cells, staged values."""
+    return FROZEN_M
 
 
 @pytest.fixture(scope="module")
@@ -39,6 +47,110 @@ def nullsize():
 
 TG = pa.load_text_groups(TEXT_GROUPS)
 PROV = {k: hashlib.sha256(k.encode()).hexdigest() for k in pa.RESTAGE_PROVENANCE_KEYS}
+
+
+def manifest_bytes(m):
+    return json.dumps(m, sort_keys=True).encode()
+
+
+def exec_sha(m):
+    """sha256 of the bytes a synthetic execution manifest is written with."""
+    return hashlib.sha256(manifest_bytes(m)).hexdigest()
+
+
+def bind(ledger, execution):
+    """Record ``execution``'s hash in the ledger (after a deliberate execution-manifest edit)."""
+    h = exec_sha(execution)
+    ledger["manifest_sha256"] = h
+    if isinstance(ledger.get("restage_provenance"), dict):
+        ledger["restage_provenance"]["manifest_sha256"] = h
+    return ledger
+
+
+F11_SELECTION = ROOT / "docs/prereg/a5_manifests/selection_f11.json"
+# The frozen F11.2 list (committed, outcome-free metadata): ids, cells and effective norms, in the
+# file's cell order (LoRA-high, chain-low, chain-high).
+F11_ROWS = json.loads(F11_SELECTION.read_text())["supplements"]
+F11_IDS = sorted(r["id"] for r in F11_ROWS)
+
+
+def supplementary_rows(k, order=None):
+    """The first k frozen F11.2 supplementary root edits (synthetic staging): selection rows with
+    their cells and norms, and three variants each. ``order`` reorders the twelve first."""
+    rows, variants = [], []
+    src = [next(r for r in F11_ROWS if r["id"] == i) for i in order] if order else F11_ROWS
+    for n, r in enumerate(src[:k]):
+        i = r["id"]
+        family, tertile = r["cell"].split(":")
+        rows.append(
+            {
+                "component_id": r["component_id"],
+                "edit_id": i,
+                "effective_norm": r["effective_norm"],
+                "family": family,
+                "predecessor_id": "base",
+                "rank": 16,
+                "supplementary": True,
+                "tertile": int(tertile),
+            }
+        )
+        for kind, strength, tag in (
+            ("rotation", 1.0, "r"),
+            ("scale", 0.25, "a"),
+            ("scale", 0.5, "b"),
+        ):
+            variants.append(
+                {
+                    "excluded": False,
+                    "exclusions": [],
+                    "kind": kind,
+                    "predecessor_id": "base",
+                    "source_id": i,
+                    "strength": strength,
+                    "variant_id": f"e{tag}{n:014x}",
+                }
+            )
+    return rows, variants
+
+
+def execution_manifest(frozen, codes, rhos, supplementary=0, ladder_excluded=None, order=None):
+    """Synthetic F10 execution manifest: the frozen manifest plus F10 verdicts and pooled rho.
+
+    Supplementary edits also get their own staging values (pooled norm mismatch from rho, the two
+    subset flags); ``ladder_excluded`` {id: [contrast, ...]} marks staged ladder exclusions."""
+    m = dict(frozen)
+    rows, variants = supplementary_rows(supplementary, order)
+    supp = {r["edit_id"] for r in rows}
+    strength = {"ladder_0.25": 0.25, "ladder_0.5": 0.5}
+    lad = {(i, strength[c]) for i, cs in (ladder_excluded or {}).items() for c in cs}
+    m["selections"] = list(frozen["selections"]) + rows
+    m["variants"] = [
+        dict(v, excluded=True, exclusions=["construction_failed"])  # a copy: frozen stays intact
+        if v["kind"] == "scale" and (v["source_id"], float(v["strength"])) in lad
+        else v
+        for v in list(frozen["variants"]) + variants
+    ]
+    m["audit_rule"] = "f10"
+    m["edit_audits"] = {}
+    for s in m["selections"]:
+        i = s["edit_id"]
+        code = codes.get(i)
+        m["edit_audits"][i] = {
+            "audit_rule": "f10",
+            "pair_verdict": "excluded" if code else "pass",
+            "exclusions": [{"reason": code, "tensor": "model.layers.0.mlp.up_proj.weight"}]
+            if code
+            else [],
+            "edit_audit": {"pooled_energy_ratio": rhos.get(i)},
+        }
+        if i in supp and rhos.get(i) is not None:
+            mismatch = abs(math.sqrt(rhos[i]) - 1.0)
+            m["edit_audits"][i]["edit_audit"] |= {
+                "pooled_norm_mismatch": mismatch,
+                "in_subset_pooled_norm_2e-2": mismatch <= 2e-2,
+                "in_subset_noise_calibrated": True,
+            }
+    return m
 
 
 # ------------------------------------------------------------------------------ synthetic builder
@@ -63,14 +175,17 @@ def build(
     drop_covariate=None,
     ladder_mean=None,
     ladder_pred=None,
+    supplementary=0,
+    ladder_excluded=None,
+    order=None,
 ):
-    """Synthetic sealed ledger + fields for the forty registered ids (no real outcome)."""
+    """Synthetic sealed ledger, fields and execution manifest (no real outcome).
+
+    ``manifest`` is the frozen a533 manifest; the forty registered ids plus ``supplementary``
+    synthetic supplementary edits are selected in the returned execution manifest, whose hash the
+    ledger records.
+    """
     rng = np.random.default_rng(seed)
-    ids = sorted(s["edit_id"] for s in manifest["selections"])
-    sel = {s["edit_id"]: s for s in manifest["selections"]}
-    var_ids = {
-        (v["source_id"], v["kind"], v["strength"]): v["variant_id"] for v in manifest["variants"]
-    }
     d_mean = d_mean or {}
     predictions = predictions or {}
     excluded = excluded or {}
@@ -79,6 +194,23 @@ def build(
     drop_covariate = drop_covariate or {}
     ladder_mean = ladder_mean if ladder_mean is not None else {}
     ladder_pred = ladder_pred if ladder_pred is not None else {}
+    frozen_ids = [s["edit_id"] for s in manifest["selections"]]
+    supp_ids = [r["edit_id"] for r in supplementary_rows(supplementary, order)[0]]
+    ladder_excluded = ladder_excluded or {}
+    staged = {
+        i: 2 * math.log1p(manifest["edit_audits"][i]["edit_audit"]["pooled_norm_mismatch"])
+        for i in frozen_ids
+    }
+    rhos = {i: restage_rho.get(i, math.exp(staged.get(i, 0.02))) for i in frozen_ids + supp_ids}
+    for i, col in drop_covariate.items():
+        if col == "ln_rho":
+            rhos[i] = None
+    execution = execution_manifest(manifest, excluded, rhos, supplementary, ladder_excluded, order)
+    ids = sorted(s["edit_id"] for s in execution["selections"])
+    sel = {s["edit_id"]: s for s in execution["selections"]}
+    var_ids = {
+        (v["source_id"], v["kind"], v["strength"]): v["variant_id"] for v in execution["variants"]
+    }
     windows = list(TG["window_ids"])
     refs, variants, restage, fields = {}, {}, {}, {}
 
@@ -106,8 +238,7 @@ def build(
                 "mean_nll": series(base, 2 * lm),
             },
         }
-        staged = 2 * math.log1p(manifest["edit_audits"][i]["edit_audit"]["pooled_norm_mismatch"])
-        rho = restage_rho.get(i, math.exp(staged))
+        rho = rhos[i]
         tensors = {
             f"t{k}": {
                 "shape": [8, 4 + k],
@@ -138,12 +269,16 @@ def build(
                 "variant_id": var_ids[(i, "rotation", 1.0)],
                 "excluded": True,
             }
+        for c in ladder_excluded.get(i, ()):
+            variants[i][c] = {
+                "variant_id": variants[i][c]["variant_id"],
+                "excluded": True,
+                "exclusions": ["construction_failed"],
+            }
         p = predictions.get(i, 0.5 if d >= 0 else -0.5)
         fields[i] = [p, ladder_pred.get(i, 0.3), ladder_pred.get(i, 0.3)]
         col = drop_covariate.get(i)
-        if col == "ln_rho":
-            restage[i]["pooled_rho"] = None
-        elif col == "d_mean":
+        if col == "d_mean":
             restage[i]["tensors"]["t0"]["logged_r"]["mean"] = float("nan")
     for i, arm in missing.items():
         if arm in ("original",):
@@ -156,42 +291,59 @@ def build(
     ledger = {
         "schema": pa.LEDGER_SCHEMA,
         "sealed": True,
-        "manifest_sha256": pa.STAGED_MANIFEST_SHA256,
+        "manifest_sha256": exec_sha(execution),
         "fields_sha256": hashlib.sha256(fields_bytes).hexdigest(),
         "text_groups_sha256": TG["sha256"],
         "window_ids": windows,
         "two_window_blocks": copy.deepcopy(TG["two_window_blocks"]),
         "window_token_ids_hashes": list(TG["token_ids_hashes"]),
-        "restage_provenance": dict(PROV),
+        "restage_provenance": dict(PROV, manifest_sha256=exec_sha(execution)),
         "references": refs,
         "variants": variants,
         "restage": restage,
     }
-    return ledger, fields, fields_bytes
+    return ledger, fields, fields_bytes, execution
 
 
-def masked_for(ledger, manifest, passed=True, power_passed=True):
-    """Synthetic ``a5_simulation.py --slot-mask`` output matching the ledger's exclusions."""
-    audit = pa.restage_audit(ledger, manifest)
-    excluded = sorted(i for i, a in audit.items() if a["status"] != "pass")
-    canonical = {
-        i: (["rotation"] if audit[i]["status"] == "pass" else []) + ["ladder_0.25", "ladder_0.5"]
-        for i in sorted(audit)
-    }
-    mapping = hashlib.sha256(json.dumps(canonical, sort_keys=True).encode()).hexdigest()
+def masked_for(
+    ledger,
+    execution,
+    passed=True,
+    power_passed=True,
+    *,
+    power_rate=None,
+    size_rate=None,
+    two_sided=(0.03, 0.03, 0.03),
+):
+    """Synthetic ``a5_simulation.py --slot-mask [--supplement]`` output matching the ledger's
+    per-contrast exclusions (the simulator's canonical availability mapping)."""
+    audit = pa.restage_audit(ledger, execution)
+    supp = sorted(s["edit_id"] for s in execution["selections"] if s.get("supplementary"))
+    avail = pa.contrast_availability(ledger, audit, audit)
+    mapping = hashlib.sha256(json.dumps(avail, sort_keys=True).encode()).hexdigest()
+    label = "slot-masked (F10.6); supplemented (F11.4)" if supp else "slot-masked (F10.6)"
+    power_rate = power_rate if power_rate is not None else (0.83 if power_passed else 0.7514)
+    size_rate = size_rate if size_rate is not None else (0.015 if passed else 0.081)
     rep = {
         "replicates": 10000,
         "seed": 20261107,
         "slot_mask": {
-            "label": "slot-masked (F10.6)",
+            "label": label,
             "schema": "a5-slot-mask-v1",
             "sha256": "ab" * 32,
             "mapping_sha256": mapping,
-            "masked_ids": {"rotation": excluded, "ladder_0.25": [], "ladder_0.5": []},
+            "masked_ids": {c: sorted(i for i in avail if c not in avail[i]) for c in pa.CONTRASTS},
+            "slots": [
+                {"slot": n, "edit_id": i, "available": avail[i]} for n, i in enumerate(avail)
+            ],
             "gates": {
-                "label": "slot-masked (F10.6)",
-                "size": {"passed": passed, "ordered_go_rate": 0.015},
-                "power": {"passed": power_passed, "ordered_go_rate": 0.83},
+                "label": label,
+                "size": {
+                    "passed": passed,
+                    "ordered_go_rate": size_rate,
+                    "two_sided_rejection_rates": list(two_sided),
+                },
+                "power": {"passed": power_passed, "ordered_go_rate": power_rate},
                 "passed": passed and power_passed,
             },
         },
@@ -203,6 +355,15 @@ def masked_for(ledger, manifest, passed=True, power_passed=True):
             }
         },
     }
+    if supp:
+        rep["supplement"] = {
+            "label": "supplemented (F11.4)",
+            "schema": "a5-f11-supplement-v1",
+            "k": len(supp),
+            "ids_sorted_sha256": pa.sorted_sha(supp),
+            "n_slots": len(avail),
+            "sha256": "ce" * 32,
+        }
     raw = json.dumps(rep, sort_keys=True).encode()
     return rep, hashlib.sha256(raw).hexdigest(), raw
 
@@ -219,20 +380,27 @@ def valid_for(ledger, masked_sha=None):
     return out
 
 
-def analyse(manifest, nullsize, ledger, fields, **kw):
-    """API wrapper: synthetic masked calibration when the ledger has exclusions; 'auto' validity."""
+def analyse(execution, nullsize, ledger, fields, **kw):
+    """API wrapper: synthetic masked calibration when the ledger has exclusions; 'auto' validity.
+
+    ``execution`` is the (synthetic) execution manifest; its sha256 is that of its written bytes
+    and the frozen a533 manifest is the verified committed file, unless overridden.
+    """
     kw.setdefault("bootstrap_draws", DRAWS)
+    kw.setdefault("manifest_sha256", exec_sha(execution))
+    kw.setdefault("frozen_manifest", FROZEN_M)
     if "masked_calibration" not in kw:
-        audit = pa.restage_audit(ledger, manifest)
-        if any(a["status"] != "pass" for a in audit.values()):
+        audit = pa.restage_audit(ledger, execution)
+        supp = any(s.get("supplementary") for s in execution["selections"])
+        if supp or any(a["status"] != "pass" for a in audit.values()):
             kw["masked_calibration"], kw["masked_calibration_sha256"], _ = masked_for(
-                ledger, manifest
+                ledger, execution
             )
     if isinstance(kw.get("validity"), str):
         kw["validity"] = valid_for(ledger, kw.get("masked_calibration_sha256"))
     if kw.get("part_b") == "ok":
         kw["part_b"] = PB()
-    return pa.analyse(ledger, manifest, fields, nullsize, **kw)
+    return pa.analyse(ledger, execution, fields, nullsize, **kw)
 
 
 EV = [{"path": "synthetic/evidence.json", "sha256": "0" * 64}]
@@ -406,8 +574,8 @@ def test_bootstrap_indices_registered_stream():
 
 
 def test_all_agree_goes_and_comparator_reported(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
-    rep = analyse(manifest, nullsize, ledger, fields, validity="auto", part_b="ok")
+    ledger, fields, _, execution = build(manifest)
+    rep = analyse(execution, nullsize, ledger, fields, validity="auto", part_b="ok")
     rot = rep["registered"]["contrasts"]["rotation"]
     assert rot["resolved"] == 40 and rot["agreements"] == 40
     assert rot["units"] == "nats per valid next token"
@@ -424,8 +592,8 @@ def test_all_agree_goes_and_comparator_reported(manifest, nullsize):
 def test_zero_prediction_counts_as_disagreement_and_sign_table(manifest, nullsize):
     ids = sorted(manifest["edit_ids"])
     preds = {ids[0]: 0.0, ids[1]: -0.4}
-    ledger, fields, _ = build(manifest, predictions=preds)
-    rep = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest, predictions=preds)
+    rep = analyse(execution, nullsize, ledger, fields)
     rot = rep["registered"]["contrasts"]["rotation"]
     assert rot["agreements"] == 38 and rot["disagreements"] == 2
     assert rot["zero_prediction_disagreements"] == 1
@@ -446,13 +614,13 @@ def test_zero_prediction_counts_as_disagreement_and_sign_table(manifest, nullsiz
 
 def test_exclusions_missing_and_unresolved_stay_in_ledger(manifest, nullsize):
     ids = sorted(manifest["edit_ids"])
-    ledger, fields, _ = build(
+    ledger, fields, _, execution = build(
         manifest,
         excluded={ids[0]: "sub_resolution", ids[1]: "non_2d"},
         missing={ids[2]: "original", ids[3]: "rotation_nonfinite", ids[4]: "rotation_absent"},
         d_mean={ids[5]: 0.0},
     )
-    rep = analyse(manifest, nullsize, ledger, fields)
+    rep = analyse(execution, nullsize, ledger, fields)
     led = rep["registered"]["contrasts"]["rotation"]["ledger"]
     assert led["selected"]["n"] == 40
     assert led["pre_audit_excluded"]["by_code"] == {"non_2d": [ids[1]]}
@@ -472,9 +640,9 @@ def test_exclusions_missing_and_unresolved_stay_in_ledger(manifest, nullsize):
 
 
 def test_resolution_is_deterministic_and_uses_common_draws(manifest, nullsize):
-    ledger, fields, _ = build(manifest, noise=2e-2, seed=5)
-    r1 = analyse(manifest, nullsize, ledger, fields)
-    r2 = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest, noise=2e-2, seed=5)
+    r1 = analyse(execution, nullsize, ledger, fields)
+    r2 = analyse(execution, nullsize, ledger, fields)
     assert r1["registered"] == r2["registered"]
     rec = r1["registered"]["pairs"][min(manifest["edit_ids"])]["rotation"]
     assert rec["interval"][0] <= rec["d_hat"] <= rec["interval"][1]
@@ -485,8 +653,8 @@ def test_resolution_is_deterministic_and_uses_common_draws(manifest, nullsize):
 def test_ladder_alternative_overrides_rotation_go(manifest, nullsize):
     ids = manifest["edit_ids"]
     # ladder predictions all negative while ladder responses positive -> 0 agreement at s=.25
-    ledger, fields, _ = build(manifest, ladder_pred={i: -0.3 for i in ids})
-    rep = analyse(manifest, nullsize, ledger, fields, validity="auto", part_b="ok")
+    ledger, fields, _, execution = build(manifest, ladder_pred={i: -0.3 for i in ids})
+    rep = analyse(execution, nullsize, ledger, fields, validity="auto", part_b="ok")
     dec = rep["registered"]["decision"]
     assert rep["registered"]["contrasts"]["rotation"]["agreements"] == 40
     assert dec["step_2_ladder_alternative"] is True
@@ -495,8 +663,8 @@ def test_ladder_alternative_overrides_rotation_go(manifest, nullsize):
 
 
 def test_realised_increment_ladder_flags(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
-    rep = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest)
+    rep = analyse(execution, nullsize, ledger, fields)
     flagged = [
         i
         for i, p in rep["registered"]["pairs"].items()
@@ -632,10 +800,10 @@ def test_covariate_loo_held_out_uses_training_moments(monkeypatch):
 
 def test_covariate_report_drops_missing_from_both_models(manifest, nullsize):
     ids = sorted(manifest["edit_ids"])
-    ledger, fields, _ = build(
+    ledger, fields, _, execution = build(
         manifest, drop_covariate={ids[0]: "ln_rho", ids[1]: "d_mean"}, predictions={ids[2]: -1.0}
     )
-    rep = analyse(manifest, nullsize, ledger, fields)
+    rep = analyse(execution, nullsize, ledger, fields)
     cov = rep["f10_5_sensitivity"]["covariate"]
     assert cov["authority"] == "none (descriptive)"
     dropped = {d["id"]: d["reason"] for d in cov["dropped_rows"]}
@@ -666,8 +834,8 @@ def test_moment_differences_are_element_weighted():
 
 def test_lnrho_restage_drift_flag_and_disclosure(manifest, nullsize):
     low = "15a53586efc72a50"  # frozen low-energy cell
-    ledger, fields, _ = build(manifest, restage_rho={low: math.exp(0.05)})
-    rep = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest, restage_rho={low: math.exp(0.05)})
+    rep = analyse(execution, nullsize, ledger, fields)
     rows = rep["f10_5_sensitivity"]["tertiles"]["ln_rho"]
     low_row = rows[0]
     assert low in low_row["ids"]  # never moved
@@ -679,8 +847,8 @@ def test_lnrho_restage_drift_flag_and_disclosure(manifest, nullsize):
 
 
 def test_tertile_rows_labelled_and_complete(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
-    rep = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest)
+    rep = analyse(execution, nullsize, ledger, fields)
     t = rep["f10_5_sensitivity"]["tertiles"]
     assert t["authority"] == "none (descriptive)"
     assert len(t["norm"]) == 9 and len(t["ln_rho"]) == 3
@@ -697,13 +865,13 @@ def test_tertile_rows_labelled_and_complete(manifest, nullsize):
 
 def test_subset_intersection_disclosed_never_replaced(manifest, nullsize):
     in_s30 = "0027efdf2eae7405"
-    ledger, fields, _ = build(
+    ledger, fields, _, execution = build(
         manifest,
         excluded={in_s30: "replay_failed"},
         missing={"00f8111cbad8218f": "original"},
         d_mean={"014f8a9ec78db2be": 0.0},
     )
-    rep = analyse(manifest, nullsize, ledger, fields)
+    rep = analyse(execution, nullsize, ledger, fields)
     subs = rep["f10_5_sensitivity"]["subsets"]
     assert subs["authority"] == "none (descriptive)"
     s30 = subs["S30"]
@@ -722,15 +890,15 @@ def test_subset_intersection_disclosed_never_replaced(manifest, nullsize):
 
 def test_subset_hash_mismatch_fails_closed(manifest, nullsize, monkeypatch):
     monkeypatch.setattr(pa, "S30_IDS", pa.S30_IDS[:-1] + ("0a841d4082532e8b",))
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     with pytest.raises(pa.AnalysisRefused, match="S30"):
-        analyse(manifest, nullsize, ledger, fields)
+        analyse(execution, nullsize, ledger, fields)
 
 
 def test_subset_below_floor_label(manifest, nullsize):
     ids = sorted(pa.S30_IDS)[:16]
-    ledger, fields, _ = build(manifest, excluded={i: "support_failed" for i in ids})
-    rep = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest, excluded={i: "support_failed" for i in ids})
+    rep = analyse(execution, nullsize, ledger, fields)
     assert rep["f10_5_sensitivity"]["subsets"]["S30"]["label"] == "below floor (n < 15)"
 
 
@@ -738,8 +906,8 @@ def test_subset_below_floor_label(manifest, nullsize):
 
 
 def test_authority_separation_and_texts(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
-    rep = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest)
+    rep = analyse(execution, nullsize, ledger, fields)
     sens = rep["f10_5_sensitivity"]
     assert sens["authority"] == "none (descriptive)"
     for key in ("covariate", "tertiles", "subsets", "constant_sign_comparator"):
@@ -755,8 +923,8 @@ def test_authority_separation_and_texts(manifest, nullsize):
 
 
 def test_markdown_rendering_contains_required_text(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
-    md = pa.render_markdown(analyse(manifest, nullsize, ledger, fields))
+    ledger, fields, _, execution = build(manifest)
+    md = pa.render_markdown(analyse(execution, nullsize, ledger, fields))
     assert pa.LIMITATIONS in md
     assert pa.NO_SUPERIORITY_STATEMENT in md
     assert pa.COVARIATE_SENTENCE in md
@@ -770,131 +938,1017 @@ def test_markdown_rendering_contains_required_text(manifest, nullsize):
 
 
 def test_missing_prediction_row_refused(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     fields.pop(min(fields))
     with pytest.raises(pa.AnalysisRefused, match="prediction"):
-        analyse(manifest, nullsize, ledger, fields)
+        analyse(execution, nullsize, ledger, fields)
 
 
 def test_null_prediction_only_for_excluded_variant(manifest, nullsize):
     i = min(manifest["edit_ids"])
-    ledger, fields, _ = build(manifest, excluded={i: "sub_resolution"})
+    ledger, fields, _, execution = build(manifest, excluded={i: "sub_resolution"})
     fields[i][0] = None
-    analyse(manifest, nullsize, ledger, fields)  # excluded rotation: accepted
-    ledger, fields, _ = build(manifest)
+    analyse(execution, nullsize, ledger, fields)  # excluded rotation: accepted
+    ledger, fields, _, execution = build(manifest)
     fields[i][0] = None
     with pytest.raises(pa.AnalysisRefused, match="prediction"):
-        analyse(manifest, nullsize, ledger, fields)
+        analyse(execution, nullsize, ledger, fields)
 
 
 def test_unsealed_or_bad_ledger_refused(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     bad = copy.deepcopy(ledger)
     bad["sealed"] = False
     with pytest.raises(pa.AnalysisRefused, match="sealed"):
-        analyse(manifest, nullsize, bad, fields)
+        analyse(execution, nullsize, bad, fields)
     bad = copy.deepcopy(ledger)
     bad["window_ids"] = bad["window_ids"][:63]
     with pytest.raises(pa.AnalysisRefused, match="64"):
-        analyse(manifest, nullsize, bad, fields)
+        analyse(execution, nullsize, bad, fields)
     bad = copy.deepcopy(ledger)
     i = min(bad["variants"])
     bad["variants"][i]["ladder_0.5"]["variant_id"] = "ffffffffffffffff"
     with pytest.raises(pa.AnalysisRefused, match="variant id"):
-        analyse(manifest, nullsize, bad, fields)
+        analyse(execution, nullsize, bad, fields)
     bad = copy.deepcopy(ledger)
     bad["restage"][i]["f10_3_exclusions"] = ["audit_failed"]
     with pytest.raises(pa.AnalysisRefused, match="reason code"):
-        analyse(manifest, nullsize, bad, fields)
+        analyse(execution, nullsize, bad, fields)
 
 
 def test_missing_restage_audit_fails_closed(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     i = min(ledger["restage"])
     del ledger["restage"][i]
-    rep = analyse(manifest, nullsize, ledger, fields)
+    rep = analyse(execution, nullsize, ledger, fields)
     led = rep["registered"]["contrasts"]["rotation"]["ledger"]
     assert led["f10_3_excluded"]["by_code"] == {"audit_missing": [i]}
 
 
-def test_manifest_hash_mismatch_refused(tmp_path):
-    bad = tmp_path / "manifest.json"
-    bad.write_bytes(MANIFEST.read_bytes() + b"\n")
-    with pytest.raises(pa.AnalysisRefused, match="manifest sha256"):
-        pa.load_manifest(bad)
+def test_frozen_manifest_hash_mismatch_refused(tmp_path):
+    bad = tmp_path / "manifest_a533.json"
+    bad.write_bytes(FROZEN.read_bytes() + b"\n")
+    with pytest.raises(pa.AnalysisRefused, match="frozen staged manifest sha256"):
+        pa.load_frozen_manifest(bad)
+    with pytest.raises(pa.AnalysisRefused, match="missing or unreadable"):
+        pa.load_frozen_manifest(tmp_path / "absent.json")
+    # The regenerated manifest is never accepted as the frozen anchor.
+    with pytest.raises(pa.AnalysisRefused, match="frozen staged manifest sha256"):
+        pa.load_frozen_manifest(EXECUTION)
+    assert pa.sha256_file(FROZEN) == pa.FROZEN_STAGED_MANIFEST_SHA256
+    assert pa.FROZEN_STAGED_MANIFEST_SHA256.startswith("d7785b35")
+    assert pa.DEFAULT_FROZEN_MANIFEST == FROZEN
+
+
+def test_execution_manifest_hash_mismatch_refused(tmp_path, manifest):
+    *_, execution = build(manifest)
+    path = tmp_path / "execution.json"
+    path.write_bytes(manifest_bytes(execution))
+    sha = exec_sha(execution)
+    assert pa.load_execution_manifest(path, sha) == json.loads(path.read_text())
+    with pytest.raises(pa.AnalysisRefused, match="does not match the supplied --manifest-sha256"):
+        pa.load_execution_manifest(path, "0" * 64)
+    path.write_bytes(manifest_bytes(execution) + b"\n")
+    with pytest.raises(pa.AnalysisRefused, match="does not match the supplied --manifest-sha256"):
+        pa.load_execution_manifest(path, sha)
+    for absent in (None, "", "abc", sha.upper()):
+        with pytest.raises(pa.AnalysisRefused, match="is required"):
+            pa.load_execution_manifest(path, absent)
+    with pytest.raises(pa.AnalysisRefused, match="missing or unreadable"):
+        pa.load_execution_manifest(tmp_path / "absent.json", sha)
+
+
+def test_api_requires_execution_manifest_hash(manifest, nullsize):
+    ledger, fields, _, execution = build(manifest)
+    for absent in (None, "not-a-hash"):
+        with pytest.raises(pa.AnalysisRefused, match="sha256 is required"):
+            analyse(execution, nullsize, ledger, fields, manifest_sha256=absent)
+
+
+def test_ledger_provenance_mismatch_refused(manifest, nullsize):
+    ledger, fields, _, execution = build(manifest)
+    bad = copy.deepcopy(ledger)
+    bad["manifest_sha256"] = pa.FROZEN_STAGED_MANIFEST_SHA256  # the old staged binding
+    with pytest.raises(pa.AnalysisRefused, match="ledger manifest_sha256"):
+        analyse(execution, nullsize, bad, fields)
+    bad = copy.deepcopy(ledger)
+    bad.pop("manifest_sha256")
+    with pytest.raises(pa.AnalysisRefused, match="ledger manifest_sha256"):
+        analyse(execution, nullsize, bad, fields)
+    bad = copy.deepcopy(ledger)
+    bad["restage_provenance"]["manifest_sha256"] = "1" * 64
+    with pytest.raises(pa.AnalysisRefused, match=r"restage_provenance\.manifest_sha256"):
+        analyse(execution, nullsize, bad, fields)
+    # A supplied hash differing from the ledger's record refuses even if the ledger is intact.
+    with pytest.raises(pa.AnalysisRefused, match="ledger manifest_sha256"):
+        analyse(execution, nullsize, ledger, fields, manifest_sha256="1" * 64)
+    # An edited execution manifest no longer matches the hash the ledger sealed.
+    edited = dict(execution, scored=True)
+    with pytest.raises(pa.AnalysisRefused, match="ledger manifest_sha256"):
+        analyse(edited, nullsize, ledger, fields)
+
+
+def _without(execution, **kw):
+    return dict(execution, **kw)
+
+
+def test_execution_manifest_must_contain_the_registered_ids(manifest, nullsize):
+    ledger, fields, _, execution = build(manifest)
+    i = min(manifest["edit_ids"])
+    cases = [
+        (
+            _without(
+                execution, selections=[s for s in execution["selections"] if s["edit_id"] != i]
+            ),
+            "lacks registered id",
+        ),
+        (
+            _without(
+                execution,
+                variants=[
+                    v
+                    for v in execution["variants"]
+                    if v["variant_id"] != manifest["variant_ids"][0]
+                ],
+            ),
+            "lacks a533 variant id",
+        ),
+        (
+            _without(execution, selections=execution["selections"] + execution["selections"][:1]),
+            "more than once",
+        ),
+    ]
+    rows = copy.deepcopy(execution["selections"])
+    rows[0]["tertile"] = (rows[0]["tertile"] + 1) % 3
+    cases.append((_without(execution, selections=rows), "differs from the frozen"))
+    rows = copy.deepcopy(execution["selections"])
+    rows[0]["effective_norm"] *= 1.5
+    cases.append((_without(execution, selections=rows), "differs from the frozen"))
+    rows = copy.deepcopy(execution["selections"])
+    rows[0]["supplementary"] = True
+    cases.append((_without(execution, selections=rows), "is flagged supplementary"))
+    extra, extra_variants = supplementary_rows(1)
+    extra[0].pop("supplementary")
+    cases.append(
+        (
+            _without(
+                execution,
+                selections=execution["selections"] + extra,
+                variants=execution["variants"] + extra_variants,
+            ),
+            "neither registered nor flagged",
+        )
+    )
+    for bad, needle in cases:
+        with pytest.raises(pa.AnalysisRefused, match=needle):
+            analyse(
+                bad, nullsize, bind(copy.deepcopy(ledger), bad), fields, masked_calibration=None
+            )
+    rows = copy.deepcopy(execution["selections"])
+    rows[0]["supplementary"] = False  # an explicit false flag on a registered row is accepted
+    ok = _without(execution, selections=rows)
+    analyse(ok, nullsize, bind(copy.deepcopy(ledger), ok), fields)
+
+
+def test_frozen_manifest_must_carry_the_forty_registered_ids(manifest, nullsize):
+    ledger, fields, _, execution = build(manifest)
+    short = dict(manifest, selections=manifest["selections"][1:])
+    with pytest.raises(pa.AnalysisRefused, match="forty registered ids"):
+        analyse(execution, nullsize, ledger, fields, frozen_manifest=short)
+    other = dict(manifest, selection_ledger={"edit_ids_sorted_sha256": "0" * 64})
+    with pytest.raises(pa.AnalysisRefused, match="forty registered ids"):
+        analyse(execution, nullsize, ledger, fields, frozen_manifest=other)
+
+
+def test_frozen_cuts_come_from_a533_not_from_the_execution_manifest(manifest, nullsize):
+    """Re-stage ρ in the execution manifest moves no frozen id; staged values stay a533's."""
+    ids = sorted(manifest["edit_ids"])
+    shifted = {i: 1.5 for i in ids}  # every re-stage ln ρ = 0.405, far above both cuts
+    ledger, fields, _, execution = build(manifest, restage_rho=shifted)
+    rep = analyse(execution, nullsize, ledger, fields)
+    t = rep["f10_5_sensitivity"]["tertiles"]
+    assert t["lnrho_cuts"] == [list(c) for c in pa.LNRHO_CUTS]
+    rows = t["ln_rho"]
+    assert [tuple(r["ids_in_frozen_order"]) for r in rows] == list(pa.LNRHO_CELLS)
+    assert rows[0]["cell_drift"] == list(pa.LNRHO_CELLS[0])  # flagged, never moved
+    assert rows[1]["cell_drift"] == list(pa.LNRHO_CELLS[1])
+    assert rows[2]["cell_drift"] == []
+    staged = pa.staged_ln_rho(manifest)
+    assert rows[0]["staged_ln_rho"] == {i: staged[i] for i in pa.LNRHO_CELLS[0]}
+    assert rows[0]["restage_ln_rho"][pa.LNRHO_CELLS[0][0]] == pytest.approx(math.log(1.5))
+    assert [len(r["ids"]) for r in t["norm"][::3]] == [14, 13, 13]
+    subs = rep["f10_5_sensitivity"]["subsets"]
+    assert subs["S30"]["sha256"] == pa.S30_SHA256 and subs["S34"]["sha256"] == pa.S34_SHA256
+    assert rep["manifests"]["frozen"]["sha256"] == pa.FROZEN_STAGED_MANIFEST_SHA256
+    assert rep["manifests"]["execution"]["sha256"] == exec_sha(execution)
+
+
+def test_verdicts_and_rho_are_read_from_the_execution_manifest(manifest, nullsize):
+    ids = sorted(manifest["edit_ids"])
+    i, j = ids[0], ids[1]
+    ledger, fields, _, execution = build(manifest, excluded={i: "replay_failed"})
+    rep = analyse(execution, nullsize, ledger, fields)
+    assert rep["registered"]["pairs"][i]["rotation"]["status"] == "f10_3_excluded"
+    assert rep["restage"]["audit"][i]["reasons"] == ["replay_failed"]
+    # The ledger's re-stage entry must agree with the execution manifest.
+    bad = copy.deepcopy(ledger)
+    bad["restage"][i].update(f10_3_verdict="pass", f10_3_exclusions=[])
+    bad["variants"][i]["rotation"].pop("excluded")
+    with pytest.raises(pa.AnalysisRefused, match="contradicts the execution manifest"):
+        analyse(execution, nullsize, bad, fields, masked_calibration=None)
+    bad = copy.deepcopy(ledger)
+    bad["restage"][i]["f10_3_exclusions"] = ["rounding_bound_failed"]
+    with pytest.raises(pa.AnalysisRefused, match="contradicts the execution manifest"):
+        analyse(execution, nullsize, bad, fields, masked_calibration=None)
+    bad = copy.deepcopy(ledger)
+    bad["restage"][j]["pooled_rho"] *= 1.01
+    with pytest.raises(pa.AnalysisRefused, match="pooled_rho"):
+        analyse(execution, nullsize, bad, fields, masked_calibration=None)
+    # A ledger without pooled_rho takes ρ from the execution manifest (no covariate dropped).
+    led2 = copy.deepcopy(ledger)
+    led2["restage"][j].pop("pooled_rho")
+    rep = analyse(execution, nullsize, led2, fields)
+    assert j in rep["f10_5_sensitivity"]["covariate"]["complete_case_ids"]
+    # Execution-manifest evidence: unknown codes and contradictions refuse ...
+    for ea_mutate, needle in (
+        (lambda ea: ea["exclusions"].append({"reason": "audit_failed"}), "unknown execution"),
+        (lambda ea: ea.update(pair_verdict="pass"), "contradicts its reason codes"),
+    ):
+        ex = dict(execution, edit_audits=copy.deepcopy(execution["edit_audits"]))
+        ea_mutate(ex["edit_audits"][i])
+        with pytest.raises(pa.AnalysisRefused, match=needle):
+            analyse(ex, nullsize, bind(copy.deepcopy(ledger), ex), fields, masked_calibration=None)
+    # ... and missing or malformed evidence fails the pair closed as audit_missing.
+    for ea_mutate, needle in (
+        (lambda eas: eas.pop(j), "no edit_audits entry"),
+        (lambda eas: eas[j].pop("pair_verdict"), "pair_verdict None"),
+        (lambda eas: eas[j].update(audit_rule="a533"), "audit_rule 'a533'"),
+        (lambda eas: eas[j].update(exclusions="none"), "exclusions malformed"),
+    ):
+        ex = dict(execution, edit_audits=copy.deepcopy(execution["edit_audits"]))
+        ea_mutate(ex["edit_audits"])
+        rep = analyse(ex, nullsize, bind(copy.deepcopy(ledger), ex), fields)
+        rec = rep["registered"]["pairs"][j]["rotation"]
+        assert rec["status"] == "f10_3_excluded" and rec["reasons"] == ["audit_missing"]
+        assert needle in rec["detail"]
+    # Ladder exclusion flags must agree with the execution manifest's variants.
+    lad = next(
+        v["variant_id"]
+        for v in execution["variants"]
+        if v["source_id"] == j and v["kind"] == "scale" and v["strength"] == 0.5
+    )
+    ex = dict(
+        execution,
+        variants=[
+            dict(v, excluded=True) if v["variant_id"] == lad else v for v in execution["variants"]
+        ],
+    )
+    with pytest.raises(pa.AnalysisRefused, match="exclusion flag contradicts"):
+        analyse(ex, nullsize, bind(copy.deepcopy(ledger), ex), fields)
+
+
+LORA_HIGH = sorted(r["id"] for r in F11_ROWS if r["cell"] == "lora_sft:2")
+CHAIN_LOW = sorted(r["id"] for r in F11_ROWS if r["cell"] == "chain:0")
+CHAIN_HIGH = sorted(r["id"] for r in F11_ROWS if r["cell"] == "chain:2")
+# F11.1(a): the nine registered rotation exclusions of the F10 re-stage, with their reasons.
+F10_EXCLUSIONS = {
+    "15a53586efc72a50": "rounding_bound_failed",
+    "2233954b0cc3edc0": "rounding_bound_failed",
+    "72d3756e968e3209": "rounding_bound_failed",
+    "057dcfbedea3251f": "replay_failed",
+    "0bc0a0c4ad0520e0": "replay_failed",
+    "0d055869527177b4": "replay_failed",
+    "0027efdf2eae7405": "replay_failed",
+    "05531ce1db4df63f": "replay_failed",
+    "14cdaabee246493b": "replay_failed",
+}
+
+
+def _ids_in(obj):
+    return set(re.findall(r"[0-9a-f]{16}", json.dumps(obj, default=str)))
+
+
+def test_supplementary_edits_join_f10_5_reports_with_frozen_cells_unchanged(manifest, nullsize):
+    """Correction 1: supplements join the covariate model, sign tables, comparator and tertile
+    reports (frozen cut keys, marked supplementary); the forty's cells and S30/S34 are unchanged."""
+    ledger, fields, _, execution = build(
+        manifest, supplementary=3, excluded={LORA_HIGH[1]: "replay_failed"}
+    )
+    supp = LORA_HIGH[:3]
+    registered = sorted(manifest["edit_ids"])
+    rep = analyse(execution, nullsize, ledger, fields, validity="auto", part_b="ok")
+    assert rep["manifests"]["supplementary_ids"] == supp
+    assert rep["manifests"]["registered_ids"] == registered
+    assert rep["manifests"]["supplementary_matches_f11_2_frozen_list"] is False  # 3 of 12
+    # Registered analysis: 43 selected, the supplementary exclusion counted like any other.
+    rot = rep["registered"]["contrasts"]["rotation"]
+    assert rot["ledger"]["selected"]["n"] == 43 and rot["resolved"] == 42
+    assert rot["ledger"]["f10_3_excluded"]["by_code"] == {"replay_failed": [supp[1]]}
+    assert rep["registered"]["contrasts"]["ladder_0.25"]["resolved"] == 43
+    bs = rot["by_selection"]
+    assert bs["registered_40"]["n_selected"] == 40 and bs["supplementary"]["resolved"] == 2
+    assert rep["registered"]["decision"]["step_1_validity"] == "pass"
+    sens = rep["f10_5_sensitivity"]
+    assert sens["supplementary_ids"] == supp
+    # Covariate model on the supplemented set, supplements marked.
+    cov = sens["covariate"]
+    assert cov["selected_ids"] == sorted(registered + supp)
+    assert cov["supplementary_ids"] == supp
+    assert cov["complete_case_supplementary_ids"] == [supp[0], supp[2]]
+    assert set(cov["complete_case_ids"]) == set(registered) | {supp[0], supp[2]}
+    assert cov["n_cc"] == 42 and cov["full_analysis_set_agreement"]["n"] == 42
+    assert cov["sign_table"] == cov["complete_case_agreement"]["sign_table"]
+    assert sum(r["n"] for r in cov["sign_table"].values()) == 42
+    # Tertiles: frozen cells unchanged; supplements added by the frozen cut keys, marked.
+    frozen_cells = pa.norm_tertiles(manifest)
+    for r in sens["tertiles"]["norm"]:
+        t = pa.TERTILE_NAMES.index(r["cell"].split(" ")[0])
+        group = r["cell"].split(" ")[-1]
+        assert r["frozen_ids"] == sorted(frozen_cells[t][group])
+        want = supp if (t == 2 and group in ("pooled", "lora_sft")) else []
+        assert r["supplementary_ids"] == want, r["cell"]
+        assert r["ids"] == sorted(r["frozen_ids"] + want)
+        assert ("frozen_40" in r) == bool(want)
+    staged = pa.supplementary_staged_ln_rho(execution, supp)
+    placed = {}
+    for k, r in enumerate(sens["tertiles"]["ln_rho"]):
+        assert tuple(r["ids_in_frozen_order"]) == pa.LNRHO_CELLS[k]
+        assert pa.sorted_sha(r["frozen_ids"]) == pa.LNRHO_CELL_SHA256[k]
+        for i in r["supplementary_ids"]:
+            placed[i] = k
+            assert r["staged_ln_rho"][i] == staged[i]
+    assert placed == {i: pa._lnrho_cell(staged[i], i) for i in supp}
+    pred = sens["supplementary_predicates"]
+    assert set(pred) == set(supp) and all(p["supplementary"] and p["root"] for p in pred.values())
+    # S30/S34 stay the registered-40 lists; supplements' predicate values shown beside.
+    for name, ids_ in (("S30", pa.S30_IDS), ("S34", pa.S34_IDS)):
+        assert sens["subsets"][name]["ids"] == sorted(ids_)
+        assert not set(supp) & _ids_in(sens["subsets"][name])
+    sp = sens["subsets"]["supplementary_predicates"]
+    assert set(sp) == set(supp) and not any(x["enters_subsets"] for x in sp.values())
+    for i in supp:
+        m = execution["edit_audits"][i]["edit_audit"]["pooled_norm_mismatch"]
+        assert sp[i]["s30"]["value"] == m and sp[i]["s30"]["verdict"] == (m <= 2e-2)
+        assert sp[i]["s34"]["verdict"] is True
+    # Constant-sign comparator: main contrast on the supplemented set, split by selection.
+    comp = sens["constant_sign_comparator"]
+    assert comp["main_contrast"]["comparator"] == rot["comparator"]
+    assert comp["by_selection"]["supplementary"]["n_selected"] == 3
+    md = pa.render_markdown(rep)
+    assert all(i in md for i in supp) and "supplementary ids (3" in md
+    assert "(supplementary)" in md and "values of the S30/S34 predicates" in md
+    # A supplementary edit still needs its frozen prediction row.
+    fields.pop(supp[0])
+    with pytest.raises(pa.AnalysisRefused, match="prediction"):
+        analyse(execution, nullsize, ledger, fields)
+
+
+def test_frozen_forty_reports_identical_with_and_without_supplements(manifest, nullsize):
+    """Supplements never move a frozen member: the forty's cell lists, cut keys and S30/S34
+    reports (on the same synthetic forty) are identical with and without supplements."""
+    led0, f0, _, ex0 = build(manifest, seed=3)
+    led1, f1, _, ex1 = build(manifest, seed=3, supplementary=12)
+    r0 = analyse(ex0, nullsize, led0, f0)
+    r1 = analyse(ex1, nullsize, led1, f1)
+    t0, t1 = r0["f10_5_sensitivity"]["tertiles"], r1["f10_5_sensitivity"]["tertiles"]
+    assert t0["lnrho_cuts"] == t1["lnrho_cuts"]
+    for a, b in zip(t0["norm"] + t0["ln_rho"], t1["norm"] + t1["ln_rho"], strict=True):
+        assert a["frozen_ids"] == b["frozen_ids"] and a["cell"] == b["cell"]
+    added = sorted(i for r in t1["ln_rho"] for i in r["supplementary_ids"])
+    assert added == F11_IDS  # every supplement placed once by the frozen ln ρ cuts
+    for name in ("S30", "S34"):
+        assert (
+            r0["f10_5_sensitivity"]["subsets"][name]["ids"]
+            == (r1["f10_5_sensitivity"]["subsets"][name]["ids"])
+        )
+    assert r0["registered_40_sensitivity"]["applicable"] is False
+
+
+@pytest.mark.parametrize(
+    "target,mutate,needle",
+    [
+        (
+            "chain_low",
+            lambda r: r.update(tertile=2),
+            "differs from the frozen A5.3.1 norm cut keys",
+        ),
+        ("lora_high", lambda r: r.update(predecessor_id="b7edbb9f8b339f52"), "is not a root"),
+        ("lora_high", lambda r: r.update(tertile=0, effective_norm=0.5), "not an F11.2 depleted"),
+        ("lora_high", lambda r: r.update(family="dpo"), "not an F11.2 depleted cell"),
+        ("chain_high", lambda r: r.update(effective_norm=None), "norm cut keys"),
+    ],
+)
+def test_supplementary_cell_and_lineage_fail_closed(manifest, nullsize, target, mutate, needle):
+    ledger, fields, _, execution = build(manifest, supplementary=12)
+    i = {"lora_high": LORA_HIGH, "chain_low": CHAIN_LOW, "chain_high": CHAIN_HIGH}[target][0]
+    rows = copy.deepcopy(execution["selections"])
+    mutate(next(r for r in rows if r["edit_id"] == i))
+    bad = _without(execution, selections=rows)
+    with pytest.raises(pa.AnalysisRefused, match=needle):
+        analyse(bad, nullsize, bind(copy.deepcopy(ledger), bad), fields)
+
+
+def test_frozen_norm_cut_keys_bind_to_a533(manifest, nullsize):
+    pa.verify_norm_cut_keys(manifest)
+    bad = copy.deepcopy(manifest)
+    bad["selection_ledger"]["selection_json_sha256"] = "0" * 64
+    with pytest.raises(pa.AnalysisRefused, match="selection.json"):
+        pa.verify_norm_cut_keys(bad)
+    bad = copy.deepcopy(manifest)
+    next(r for r in bad["selections"] if r["tertile"] == 0)["effective_norm"] = 100.0
+    with pytest.raises(pa.AnalysisRefused, match="do not reproduce"):
+        pa.verify_norm_cut_keys(bad)
+    sel = json.loads((ROOT / "docs/prereg/a5_manifests/selection.json").read_text())
+    assert pa.sha256_file(ROOT / "docs/prereg/a5_manifests/selection.json") == (
+        pa.SELECTION_JSON_SHA256
+    )
+    for fam, keys in pa.NORM_CUT_KEYS.items():
+        assert [tuple(k) for k in sel["procedural_freeze"]["cutpoints"][fam]["keys"]] == list(keys)
+    for r in F11_ROWS:
+        fam, t = r["cell"].split(":")
+        assert pa.norm_tertile(fam, r["effective_norm"], r["id"]) == int(t)
+
+
+def test_supplementary_predicate_contradiction_and_lnrho_drift(manifest, nullsize):
+    i, j = LORA_HIGH[:2]
+    ledger, fields, _, execution = build(manifest, supplementary=2)
+    bad = copy.deepcopy(execution)
+    ea = bad["edit_audits"][i]["edit_audit"]
+    ea["in_subset_pooled_norm_2e-2"] = not ea["in_subset_pooled_norm_2e-2"]
+    with pytest.raises(pa.AnalysisRefused, match="contradicts its pooled norm mismatch"):
+        analyse(bad, nullsize, bind(copy.deepcopy(ledger), bad), fields)
+    # Staged ln ρ (own staging record) in the low cell, re-stage ln ρ in the high cell: the
+    # supplement is placed by the staged value under the frozen cuts and flagged, never moved.
+    rho = math.exp(0.05)  # ln ρ 0.05 > cut 2 (0.035)
+    ledger, fields, _, execution = build(manifest, supplementary=2, restage_rho={i: rho})
+    drift = copy.deepcopy(execution)
+    drift["edit_audits"][i]["edit_audit"]["pooled_norm_mismatch"] = 1e-4  # staged ln ρ 2e-4
+    drift["edit_audits"][i]["edit_audit"]["in_subset_pooled_norm_2e-2"] = True
+    for k in ("pooled_norm_mismatch", "in_subset_pooled_norm_2e-2", "in_subset_noise_calibrated"):
+        del drift["edit_audits"][j]["edit_audit"][k]
+    rep = analyse(drift, nullsize, bind(copy.deepcopy(ledger), drift), fields)
+    t = rep["f10_5_sensitivity"]["tertiles"]
+    low, high = t["ln_rho"][0], t["ln_rho"][2]
+    assert low["supplementary_ids"] == [i] and i not in high["supplementary_ids"]
+    assert i in low["cell_drift"]
+    assert low["staged_ln_rho"][i] == 2 * math.log1p(1e-4)
+    assert math.isclose(low["restage_ln_rho"][i], 0.05)
+    assert t["lnrho_unassigned_supplementary_ids"] == [j]
+    assert j not in {x for r in t["ln_rho"] for x in r["ids"]}
+    sp = rep["f10_5_sensitivity"]["subsets"]["supplementary_predicates"][j]
+    assert sp["s30"]["verdict"] is None and sp["s34"]["verdict"] is None
+    assert sp["s34"]["source"] == "not evaluated in the staging record"
+    md = pa.render_markdown(rep)
+    assert "without a staged ln ρ" in md
+
+
+def test_registered_40_report_and_lineage_splits(manifest, nullsize):
+    """Correction 2: the registered-40 report on the forty alone (no decision authority), with
+    availability distinct from resolution, root/non-root splits and full accounting."""
+    reg = sorted(manifest["edit_ids"])
+    disagree = reg[:12]  # 28/40 agree on the forty
+    preds = {i: -0.5 for i in disagree} | {i: -0.5 for i in F11_IDS}
+    ledger, fields, _, execution = build(
+        manifest, supplementary=12, excluded=F10_EXCLUSIONS, predictions=preds
+    )
+    rep = analyse(execution, nullsize, ledger, fields, validity="auto", part_b="ok")
+    r40 = rep["registered_40_sensitivity"]
+    assert r40["authority"] == pa.AUTHORITY_NONE and r40["label"] == pa.REGISTERED_40_LABEL
+    assert r40["ids"] == reg and not set(F11_IDS) & _ids_in(r40)
+    av = r40["availability"]
+    assert (av["rotation"]["selected"], av["rotation"]["available"]) == (40, 31)
+    assert av["ladder_0.25"]["available"] == av["ladder_0.5"]["available"] == 40
+    assert av["rotation"]["resolved"] == r40["contrasts"]["rotation"]["resolved"]
+    assert "Availability is not resolution" in av["rotation"]["rule"]
+    reg_av = rep["registered"]["contrasts"]["rotation"]["availability"]
+    assert (reg_av["selected"], reg_av["available"]) == (52, 43)
+    # Decision on the forty is descriptive and never replaces the registered one.
+    d40, dec = r40["decision"], rep["registered"]["decision"]
+    assert d40["authority"] == pa.AUTHORITY_NONE and dec["authority"] == pa.AUTHORITY_REGISTERED
+    rot40 = r40["contrasts"]["rotation"]
+    assert rot40["resolved"] == 31
+    assert "part_b_reporting" not in d40
+    reg_rot = rep["registered"]["contrasts"]["rotation"]
+    wrong40 = len([i for i in disagree if i not in F10_EXCLUSIONS])
+    assert reg_rot["resolved"] == 43 and rot40["agreements"] == 31 - wrong40
+    assert reg_rot["agreements"] == rot40["agreements"]  # the twelve supplements disagree
+    assert reg_rot["field"]["cp95"] != rot40["field"]["cp95"]
+    # Root versus non-root chain splits, per family, in both reports.
+    lin = rep["registered"]["contrasts"]["rotation"]["by_lineage"]
+    assert lin["authority"] == pa.AUTHORITY_NONE
+    assert lin["chain"]["root"]["ids"] == sorted(
+        ["014f8a9ec78db2be", "0559051354691a70"] + CHAIN_LOW + CHAIN_HIGH
+    )
+    assert lin["chain"]["non_root"]["ids"] == sorted(pa.REALISED_INCREMENT_LADDER_IDS)
+    assert lin["lora_sft"]["non_root"]["n_selected"] == 0
+    assert lin["lora_sft"]["root"]["n_selected"] == 34
+    lin40 = rot40["by_lineage"]
+    assert lin40["chain"]["root"]["ids"] == ["014f8a9ec78db2be", "0559051354691a70"]
+    md = pa.render_markdown(rep)
+    assert "## Registered-40 sensitivity (F11.5) — no decision authority" in md
+    assert "Registered-40 A5.5 ordered decision (descriptive; no decision authority)" in md
+    assert "`chain` non-root" in md and "`chain` root" in md
+    sec = md.split("## Registered-40 sensitivity")[1].split("## F10.5 sensitivity")[0]
+    assert not set(F11_IDS) & set(re.findall(r"[0-9a-f]{16}", sec))
+    for i in F10_EXCLUSIONS:
+        assert i in sec  # exclusion ids listed in the forty's ledger
+
+
+def test_registered_40_decision_differs_and_has_no_authority(manifest, nullsize):
+    """A go on the forty alone with an unresolved registered (supplemented) result: reported as
+    a descriptive disagreement only."""
+    reg = sorted(manifest["edit_ids"])
+    preds = {i: -0.5 for i in reg[:12]} | {i: -0.5 for i in F11_IDS}
+    ledger, fields, _, execution = build(manifest, supplementary=12, predictions=preds)
+    rep = analyse(execution, nullsize, ledger, fields, validity="auto", part_b="ok")
+    d40 = rep["registered_40_sensitivity"]["decision"]
+    dec = rep["registered"]["decision"]
+    assert d40["part_a"] == "go" and d40["authority"] == pa.AUTHORITY_NONE
+    assert dec["part_a"].startswith("unresolved") and dec["gate"] == "Part A unresolved"
+    assert dec["funding"].startswith("unresolved")
+
+
+def _ladder_case(manifest):
+    a, b, c = LORA_HIGH[0], CHAIN_LOW[0], CHAIN_HIGH[0]
+    excluded = dict(F10_EXCLUSIONS) | {c: "replay_failed"}
+    lad = {a: ["ladder_0.25"], b: ["ladder_0.5"], c: ["ladder_0.25"]}
+    return (a, b, c), build(manifest, supplementary=12, excluded=excluded, ladder_excluded=lad)
+
+
+def test_per_contrast_masks_with_supplementary_ladder_exclusions(manifest, nullsize):
+    """Correction 3: supplementary ladder exclusions at each strength are masked per contrast; a
+    valid ladder is kept after a rotation failure; the denominators are separate."""
+    (a, b, c), (ledger, fields, _, execution) = _ladder_case(manifest)
+    masked, sha, _ = masked_for(ledger, execution)
+    assert masked["slot_mask"]["masked_ids"]["ladder_0.25"] == sorted([a, c])
+    assert masked["slot_mask"]["masked_ids"]["ladder_0.5"] == [b]
+    rep = analyse(
+        execution,
+        nullsize,
+        ledger,
+        fields,
+        masked_calibration=masked,
+        masked_calibration_sha256=sha,
+        validity=valid_for(ledger, sha),
+        part_b="ok",
+    )
+    f = rep["f10_6_calibration"]
+    assert f["route"] == "decisive" and f["supplemented"] is True
+    assert f["masked_ids"]["rotation"] == sorted(list(F10_EXCLUSIONS) + [c])
+    assert f["available_counts"] == {"rotation": 42, "ladder_0.25": 50, "ladder_0.5": 51}
+    assert f["mapping"][c] == ["ladder_0.5"] and f["mapping"][a] == ["rotation", "ladder_0.5"]
+    con = rep["registered"]["contrasts"]
+    assert con["ladder_0.25"]["ledger"]["excluded"]["ids"] == sorted([a, c])
+    assert con["ladder_0.5"]["ledger"]["excluded"]["ids"] == [b]
+    assert (
+        con["ladder_0.5"]["pair_status"][
+            [p["id"] for p in con["ladder_0.5"]["pair_status"]].index(c)
+        ]["status"]
+        == "resolved"
+    )
+    assert (con["rotation"]["resolved"], con["ladder_0.25"]["resolved"]) == (42, 50)
+    assert con["ladder_0.5"]["resolved"] == 51
+    md = pa.render_markdown(rep)
+    assert "Masked ladder_0.25 slots (2; available 50/52)" in md
+
+
+def test_per_contrast_mask_mismatches_refused(manifest, nullsize):
+    (a, b, _c), (ledger, fields, _, execution) = _ladder_case(manifest)
+    masked, sha, _ = masked_for(ledger, execution)
+
+    def run(m):
+        return analyse(
+            execution,
+            nullsize,
+            ledger,
+            fields,
+            masked_calibration=m,
+            masked_calibration_sha256=sha,
+        )
+
+    cases = []
+    bad = copy.deepcopy(masked)
+    bad["slot_mask"]["masked_ids"]["ladder_0.25"] = [a]  # omits c's ladder mask
+    cases.append((bad, "masked ids of ladder_0.25"))
+    bad = copy.deepcopy(masked)
+    bad["slot_mask"]["masked_ids"]["ladder_0.5"] = [b, min(manifest["edit_ids"])]
+    cases.append((bad, "masked ids of ladder_0.5"))  # a ladder mask on a registered id
+    bad = copy.deepcopy(masked)
+    old = masked_for(*build(manifest, supplementary=12, excluded=F10_EXCLUSIONS)[::3])[0]
+    bad["slot_mask"]["mapping_sha256"] = old["slot_mask"]["mapping_sha256"]  # rotation-only map
+    cases.append((bad, "mapping sha256"))
+    bad = copy.deepcopy(masked)
+    bad["slot_mask"]["slots"][0]["available"] = ["rotation"]
+    cases.append((bad, "slot table"))
+    bad = copy.deepcopy(masked)
+    bad["supplement"]["ids_sorted_sha256"] = pa.sorted_sha(F11_IDS[:11])
+    cases.append((bad, "supplement block"))
+    bad = copy.deepcopy(masked)
+    del bad["supplement"]
+    cases.append((bad, "supplement block"))
+    bad = copy.deepcopy(masked)
+    bad["slot_mask"]["label"] = "slot-masked (F10.6)"
+    cases.append((bad, "slot-masked block"))
+    bad = copy.deepcopy(masked)
+    bad["slot_mask"]["label"] = f"slot-masked (F10.6); {pa.REGISTERED_40_LABEL}"
+    cases.append((bad, "slot-masked block"))
+    bad = copy.deepcopy(masked)
+    bad["slot_mask"]["gates"]["decision_authority"] = False
+    cases.append((bad, "registered-40 sensitivity run"))
+    for m, needle in cases:
+        with pytest.raises(pa.AnalysisRefused, match=re.escape(needle)):
+            run(m)
+    run(masked)  # the correct mask is accepted
+
+
+def test_registered_ladder_exclusion_cannot_be_masked(manifest, nullsize):
+    i = min(manifest["edit_ids"])
+    for supp in (0, 12):
+        ledger, fields, _, execution = build(
+            manifest,
+            supplementary=supp,
+            excluded={max(manifest["edit_ids"]): "replay_failed"},
+            ladder_excluded={i: ["ladder_0.25"]},
+        )
+        with pytest.raises(pa.AnalysisRefused, match="cannot be masked"):
+            analyse(execution, nullsize, ledger, fields)
+
+
+def test_supplemented_analysis_always_needs_the_f11_4_run(manifest, nullsize):
+    """F11.4: a supplemented analysis needs the supplemented calibration even at full yield."""
+    ledger, fields, _, execution = build(manifest, supplementary=2)
+    with pytest.raises(pa.AnalysisRefused, match="F11.4"):
+        analyse(execution, nullsize, ledger, fields, masked_calibration=None)
+    rep = analyse(execution, nullsize, ledger, fields)
+    f = rep["f10_6_calibration"]
+    assert f["required"] and f["slot_mask_label"] == pa.SUPPLEMENT_SLOT_MASK_LABEL
+    assert all(f["masked_ids"][c] == [] for c in pa.CONTRASTS)
+    # A supplemented run supplied to a forty-only analysis is refused.
+    led0, f0, _, ex0 = build(manifest, excluded={min(manifest["edit_ids"]): "replay_failed"})
+    m0, sha0, _ = masked_for(led0, ex0)
+    m0["supplement"] = {"label": pa.SUPPLEMENT_LABEL}
+    with pytest.raises(pa.AnalysisRefused, match="selects no supplementary edit"):
+        analyse(ex0, nullsize, led0, f0, masked_calibration=m0, masked_calibration_sha256=sha0)
+
+
+def _screen(manifest, nullsize, *, accept=True, link=True, preds=None, ladder_mean=None, **kw):
+    ledger, fields, _, execution = build(
+        manifest,
+        supplementary=12,
+        excluded=F10_EXCLUSIONS,
+        predictions=preds,
+        ladder_mean=ladder_mean,
+        ladder_pred=kw.pop("ladder_pred", None),
+    )
+    masked, sha, _ = masked_for(ledger, execution, power_passed=False)
+    validity = valid_for(ledger, sha)
+    if accept:
+        ev = [{"path": "docs/reviews/council/board-a-f11-calibration.md", "sha256": "12" * 32}]
+        if link:
+            ev.append({"path": "power_slotmask_f11.json", "sha256": sha})
+        validity[pa.SCREEN_ROUTE_KEY] = {"pass": True, "evidence": ev}
+    return analyse(
+        execution,
+        nullsize,
+        ledger,
+        fields,
+        masked_calibration=masked,
+        masked_calibration_sha256=sha,
+        validity=validity,
+        part_b="ok",
+        **kw,
+    )
+
+
+def _f11_7_quote():
+    text = REGISTRATION.read_text()
+    block = text[text.index("**F11.7 — Fallback (Option B).**") : text.index("**F11.8")]
+    quote = [ln[2:] for ln in block.splitlines() if ln.startswith("> ")]
+    return " ".join(" ".join(quote).split())
+
+
+def test_power_only_failure_runs_as_screen(manifest, nullsize):
+    """Correction 4: power-only F11.4 failure with Board A acceptance → screen route; the rotation
+    contrast is not decisive and the A5.5 validity row is worded as F11.7 states."""
+    assert " ".join(pa.F11_7_VALIDITY_ROW.split()) == _f11_7_quote()
+    rep = _screen(manifest, nullsize)
+    f = rep["f10_6_calibration"]
+    assert f["route"] == "screen" and f["verdict"] == "FAIL" and f["passed"] is False
+    assert pa.F11_7_VALIDITY_ROW in f["statement"]
+    dec = rep["registered"]["decision"]
+    assert dec["step_1_validity"] == "pass"
+    assert dec["route"] == "screen (F11.7 Option B; F11a.1)"
+    assert dec["rotation_contrast"] == "not decisive (A5.3.2; F11.7)"
+    assert dec["validity"]["validity_row"] == pa.F11_7_VALIDITY_ROW
+    assert dec["validity"]["screen_rule"] == pa.F11A_SCREEN_RULE
+    assert dec["part_a"] == pa.SCREEN_POSITIVE
+    assert dec["gate"] == "Part A screen (rotation not decisive)" and "go" not in dec["gate"]
+    assert dec["funding"].startswith("unresolved") and "cannot fund" in dec["funding"]
+    assert dec["step_4_part_b_eligibility"].startswith("not eligible")
+    assert "no G7 contribution" in dec["g7"]
+    sc = dec["screen_calibration"]
+    assert sc["power"]["ordered_go_rate"] == 0.7514 and sc["size"]["passed"] is True
+    assert "0.7514" in sc["statement"] and "[0.03, 0.03, 0.03]" in sc["statement"]
+    assert rep["registered"]["part_b"]["status"] == "supplied"  # Part B still reported
+    d40 = rep["registered_40_sensitivity"]["decision"]
+    assert d40["authority"] == pa.AUTHORITY_NONE and d40["part_a"] != "go"
+    md = pa.render_markdown(rep)
+    assert "route **screen**" in md and pa.F11_7_VALIDITY_ROW in md
+    assert "Gate: **Part A screen (rotation not decisive)**" in md
+
+
+def test_screen_route_keeps_ladder_alternative_priority_and_floor(manifest, nullsize):
+    # Ladder s = .25 resolves negative while predicted positive: alternative fires first.
+    rep = _screen(
+        manifest, nullsize, ladder_mean=dict.fromkeys(F11_IDS + sorted(manifest["edit_ids"]), -0.01)
+    )
+    dec = rep["registered"]["decision"]
+    assert dec["step_2_ladder_alternative"] is True and dec["gate"] == "alternative"
+    assert dec["funding"].startswith("stop")
+    # Zero predictions disagree: no positive screen.
+    many = sorted(manifest["edit_ids"]) + F11_IDS
+    rep = _screen(manifest, nullsize, preds=dict.fromkeys(many[:30], 0.0))
+    assert rep["registered"]["decision"]["part_a"].startswith("unresolved")
+    d = pa.decision(VALID, _summary(10, 14), _summary(0, 0), part_b=PB(), route="screen")
+    assert d["part_a"] == "unresolved: fewer than 15 resolved rotation pairs"
+    d = pa.decision(VALID, _summary(8, 20), _summary(0, 0), part_b=PB(), route="screen")
+    assert d["part_a"] == "unresolved: interval includes 0.5"
+
+
+@pytest.mark.parametrize("accept,link", [(False, False), (True, False)])
+def test_screen_route_needs_linked_acceptance(manifest, nullsize, accept, link):
+    rep = _screen(manifest, nullsize, accept=accept, link=link)
+    dec = rep["registered"]["decision"]
+    assert _is_validity_unresolved(dec)
+    assert "F11a.1(d)" in dec["validity"]["problems"][pa.SCREEN_ROUTE_KEY]
+    assert dec["route"].startswith("screen")
+
+
+@pytest.mark.parametrize("supp", [0, 12])
+@pytest.mark.parametrize("power_ok", [True, False])
+def test_size_failure_refuses_with_priority(manifest, nullsize, supp, power_ok):
+    ledger, fields, _, execution = build(manifest, supplementary=supp, excluded=F10_EXCLUSIONS)
+    masked, sha, _ = masked_for(
+        ledger, execution, passed=False, power_passed=power_ok, two_sided=(0.03, 0.08, 0.03)
+    )
+    with pytest.raises(pa.AnalysisRefused, match=re.escape(pa.SIZE_HOLD)):
+        analyse(
+            execution,
+            nullsize,
+            ledger,
+            fields,
+            masked_calibration=masked,
+            masked_calibration_sha256=sha,
+            validity=valid_for(ledger, sha),
+            part_b="ok",
+        )
+
+
+def test_screen_route_evidence_and_gate_consistency_fail_closed(manifest, nullsize):
+    ledger, fields, _, execution = build(manifest, supplementary=12, excluded=F10_EXCLUSIONS)
+
+    def run(m, sha):
+        return analyse(
+            execution, nullsize, ledger, fields, masked_calibration=m, masked_calibration_sha256=sha
+        )
+
+    m, sha, _ = masked_for(ledger, execution, power_passed=False)
+    bad = copy.deepcopy(m)
+    del bad["slot_mask"]["gates"]["size"]["two_sided_rejection_rates"]
+    with pytest.raises(pa.AnalysisRefused, match=r"F11a\.1\(c\)"):
+        run(bad, sha)
+    bad = copy.deepcopy(m)
+    bad["slot_mask"]["gates"]["size"]["two_sided_rejection_rates"] = [0.03, 0.09, 0.03]
+    with pytest.raises(pa.AnalysisRefused, match="size flag vs size rates"):
+        run(bad, sha)  # flagged as passing but a two-sided rate exceeds 0.07
+    bad = copy.deepcopy(m)
+    bad["slot_mask"]["gates"]["power"]["ordered_go_rate"] = 0.85
+    with pytest.raises(pa.AnalysisRefused, match="power flag vs ordered power"):
+        run(bad, sha)
+    bad = copy.deepcopy(m)
+    bad["slot_mask"]["gates"]["size"]["two_sided_rejection_rates"] = [0.03, 0.03]
+    with pytest.raises(pa.AnalysisRefused, match="two-sided size rates malformed"):
+        run(bad, sha)
+
+
+def test_decisive_route_is_unchanged():
+    for rot, lad in (
+        ((40, 40), (0, 0)),
+        ((10, 20), (0, 0)),
+        ((40, 40), (2, 20)),
+        ((5, 10), (0, 0)),
+    ):
+        a = pa.decision(VALID, _summary(*rot), _summary(*lad), part_b=PB())
+        b = pa.decision(VALID, _summary(*rot), _summary(*lad), part_b=PB(), route="decisive")
+        assert a == b and "route" not in a
+    with pytest.raises(pa.AnalysisRefused, match="unknown decision route"):
+        pa.decision(VALID, _summary(40, 40), _summary(0, 0), part_b=PB(), route="waived")
+
+
+def test_cli_end_to_end_f11_twelve_supplements(tmp_path, manifest, monkeypatch):
+    """Correction 5 (CPU end-to-end): the twelve frozen supplements, the nine preserved original
+    exclusions, independent supplementary rotation/ladder exclusions, a closed ledger, complete
+    supplemented and registered-40 reports, the decisive and the screen route, refusals."""
+    monkeypatch.setattr(pa, "BOOTSTRAP_DRAWS", DRAWS)
+    a, b, c = LORA_HIGH[0], CHAIN_LOW[1], CHAIN_HIGH[2]
+    ledger, _fields, fields_bytes, execution = build(
+        manifest,
+        supplementary=12,
+        excluded=dict(F10_EXCLUSIONS) | {b: "replay_failed"},
+        ladder_excluded={a: ["ladder_0.5"], c: ["ladder_0.25", "ladder_0.5"]},
+    )
+    (tmp_path / "fields.json").write_bytes(fields_bytes)
+    (tmp_path / "ledger.json").write_text(json.dumps(ledger))
+    (tmp_path / "execution.json").write_bytes(manifest_bytes(execution))
+    (tmp_path / "part_b.json").write_text(json.dumps(PB()))
+    base = _cli_args(
+        tmp_path,
+        tmp_path / "ledger.json",
+        tmp_path / "fields.json",
+        "--spec-sha256",
+        pa.SPEC_SHA256,
+        "--part-b",
+        str(tmp_path / "part_b.json"),
+    )
+
+    def run(masked_raw, validity):
+        (tmp_path / "masked.json").write_bytes(masked_raw)
+        (tmp_path / "validity.json").write_text(json.dumps(validity))
+        for f in ("r.json", "r.md"):
+            (tmp_path / f).unlink(missing_ok=True)
+        return pa.main(
+            base
+            + ["--validity", str(tmp_path / "validity.json")]
+            + ["--masked-calibration", str(tmp_path / "masked.json")]
+        )
+
+    # Decisive route.
+    _m, msha, mraw = masked_for(ledger, execution)
+    assert run(mraw, valid_for(ledger, msha)) == 0
+    rep = json.loads((tmp_path / "r.json").read_text())
+    assert rep["manifests"]["supplementary_ids"] == F11_IDS
+    assert rep["manifests"]["supplementary_matches_f11_2_frozen_list"] is True
+    con = rep["registered"]["contrasts"]
+    assert [con[k]["availability"]["available"] for k in pa.CONTRASTS] == [42, 51, 50]
+    assert con["rotation"]["ledger"]["selected"]["n"] == 52
+    assert sorted(con["rotation"]["ledger"]["f10_3_excluded"]["ids"]) == sorted(
+        list(F10_EXCLUSIONS) + [b]
+    )
+    r40 = rep["registered_40_sensitivity"]
+    assert [r40["availability"][k]["available"] for k in pa.CONTRASTS] == [31, 40, 40]
+    sens = rep["f10_5_sensitivity"]
+    assert sens["covariate"]["supplementary_ids"] == F11_IDS
+    assert sorted(i for r in sens["tertiles"]["ln_rho"] for i in r["supplementary_ids"]) == F11_IDS
+    pooled = {r["cell"]: r for r in sens["tertiles"]["norm"] if r["cell"].endswith("pooled")}
+    assert pooled["high (2) pooled"]["supplementary_ids"] == sorted(LORA_HIGH + CHAIN_HIGH)
+    assert pooled["low (0) pooled"]["supplementary_ids"] == CHAIN_LOW
+    assert pooled["middle (1) pooled"]["supplementary_ids"] == []
+    assert set(sens["subsets"]["supplementary_predicates"]) == set(F11_IDS)
+    dec = rep["registered"]["decision"]
+    assert dec["step_1_validity"] == "pass" and dec["gate"] == "Part A go" and "route" not in dec
+    assert rep["f10_6_calibration"]["masked_ids"]["ladder_0.5"] == sorted([a, c])
+    md = (tmp_path / "r.md").read_text()
+    for needle in (
+        "## Registered-40 sensitivity (F11.5) — no decision authority",
+        "values of the S30/S34 predicates",
+        "slot-masked (F10.6); supplemented (F11.4)",
+        "Masked ladder_0.5 slots (2; available 50/52)",
+        "(supplementary)",
+    ):
+        assert needle in md, needle
+    # Screen route (power-only failure, acceptance linked).
+    _m, msha, mraw = masked_for(ledger, execution, power_passed=False)
+    v = valid_for(ledger, msha)
+    v[pa.SCREEN_ROUTE_KEY] = {"pass": True, "evidence": [{"path": "accept.md", "sha256": msha}]}
+    assert run(mraw, v) == 0
+    dec = json.loads((tmp_path / "r.json").read_text())["registered"]["decision"]
+    assert dec["part_a"] == pa.SCREEN_POSITIVE and dec["funding"].startswith("unresolved")
+    # Size failure: refused, nothing written.
+    _m, msha, mraw = masked_for(ledger, execution, passed=False, power_passed=False)
+    assert run(mraw, valid_for(ledger, msha)) == 2
+    assert not (tmp_path / "r.json").exists() and not (tmp_path / "r.md").exists()
+    # Wrong per-contrast mask (rotation-only mapping): refused, nothing written.
+    led_r, _, _, ex_r = build(
+        manifest, supplementary=12, excluded=dict(F10_EXCLUSIONS) | {b: "replay_failed"}
+    )
+    _m, msha, mraw = masked_for(led_r, ex_r)
+    assert run(mraw, valid_for(ledger, msha)) == 2
+    assert not (tmp_path / "r.json").exists()
+
+
+def test_committed_execution_manifest_binds_to_the_frozen_a533():
+    """The committed regenerated manifest (hash computed here, not pinned) binds to the a533."""
+    sha = pa.sha256_file(EXECUTION)
+    assert sha != pa.FROZEN_STAGED_MANIFEST_SHA256
+    m = pa.load_execution_manifest(EXECUTION, sha)
+    b = pa.bind_manifests(FROZEN_M, m, sha)
+    assert b["registered_ids"] == sorted(FROZEN_M["edit_ids"])
+    assert set(b["registered_ids"]) <= set(b["selected_ids"])
+    assert set(b["supplementary_ids"]) == set(b["selected_ids"]) - set(b["registered_ids"])
+    for i in b["selected_ids"]:
+        assert not isinstance(pa._manifest_verdict(m, i), list), i  # F10 verdict present
+    rho = pa.restage_rho(m)
+    assert all(rho[i] is not None for i in b["registered_ids"])
 
 
 def _write_inputs(tmp_path, manifest, **kw):
-    ledger, _fields, fields_bytes = build(manifest, **kw)
+    ledger, _fields, fields_bytes, execution = build(manifest, **kw)
     (tmp_path / "fields.json").write_bytes(fields_bytes)
     (tmp_path / "ledger.json").write_text(json.dumps(ledger))
+    (tmp_path / "execution.json").write_bytes(manifest_bytes(execution))
     return tmp_path / "ledger.json", tmp_path / "fields.json"
+
+
+def _manifest_args(tmp_path, path=None, sha=None):
+    path = path or tmp_path / "execution.json"
+    return ["--manifest", str(path), "--manifest-sha256", sha or pa.sha256_file(path)]
 
 
 def test_cli_writes_json_and_markdown(tmp_path, manifest, monkeypatch):
     monkeypatch.setattr(pa, "BOOTSTRAP_DRAWS", DRAWS)
     led, fld = _write_inputs(tmp_path, manifest)
     out, md = tmp_path / "r.json", tmp_path / "r.md"
-    rc = pa.main(
-        ["--ledger", str(led), "--fields", str(fld), "--output", str(out), "--markdown", str(md)]
-        + ["--spec-sha256", pa.SPEC_SHA256]
-    )
+    rc = pa.main(_cli_args(tmp_path, led, fld, "--spec-sha256", pa.SPEC_SHA256))
     assert rc == 0
     rep = json.loads(out.read_text())
+    sha = pa.sha256_file(tmp_path / "execution.json")
     assert rep["registered"]["contrasts"]["rotation"]["resolved"] == 40
-    assert rep["inputs"]["manifest_sha256"] == pa.STAGED_MANIFEST_SHA256
-    assert pa.LIMITATIONS in md.read_text()
+    assert rep["inputs"]["manifest"] == {"path": str(tmp_path / "execution.json"), "sha256": sha}
+    assert rep["inputs"]["manifest_sha256_supplied"] == sha
+    assert rep["inputs"]["frozen_manifest"]["sha256"] == pa.FROZEN_STAGED_MANIFEST_SHA256
+    assert rep["manifests"]["execution"]["sha256"] == sha
+    assert pa.LIMITATIONS in md.read_text() and sha in md.read_text()
 
 
-def test_cli_refuses_missing_prediction_and_bad_manifest(tmp_path, manifest, capsys):
+def test_cli_refuses_missing_prediction_and_bad_manifests(tmp_path, manifest, capsys, monkeypatch):
+    monkeypatch.setattr(pa, "BOOTSTRAP_DRAWS", DRAWS)
     led, fld = _write_inputs(tmp_path, manifest)
     fields = json.loads(fld.read_text())
     fields.pop(min(fields))
     fld.write_text(json.dumps(fields))
-    out = tmp_path / "r.json"
-    args = [
-        "--ledger",
-        str(led),
-        "--fields",
-        str(fld),
-        "--output",
-        str(out),
-        "--markdown",
-        str(tmp_path / "r.md"),
-        "--spec-sha256",
-        pa.SPEC_SHA256,
-    ]
-    assert pa.main(args) == 2  # fields hash no longer matches the ledger either way: refused
+    out, md = tmp_path / "r.json", tmp_path / "r.md"
+    spec = ["--spec-sha256", pa.SPEC_SHA256]
+    assert pa.main(_cli_args(tmp_path, led, fld, *spec)) == 2  # fields hash no longer matches
     assert not out.exists()
     led, fld = _write_inputs(tmp_path, manifest)
-    bad = tmp_path / "m.json"
-    bad.write_bytes(MANIFEST.read_bytes().replace(b'"scored": false', b'"scored": true'))
-    args[3] = str(fld)
-    assert pa.main(args + ["--manifest", str(bad)]) == 2
-    assert "manifest sha256" in capsys.readouterr().err
+    capsys.readouterr()
+    sha = pa.sha256_file(tmp_path / "execution.json")
+    tampered = tmp_path / "m.json"
+    tampered.write_bytes(
+        (tmp_path / "execution.json").read_bytes().replace(b'"scored": false', b'"scored": true')
+    )
+    frozen_bad = tmp_path / "a533.json"
+    frozen_bad.write_bytes(FROZEN.read_bytes().replace(b'"scored": false', b'"scored": true'))
+    led_bad = tmp_path / "ledger_bad.json"
+    lb = json.loads(led.read_text())
+    lb["restage_provenance"]["manifest_sha256"] = "1" * 64
+    led_bad.write_text(json.dumps(lb))
+    base = ["--ledger", str(led), "--fields", str(fld), "--output", str(out)]
+    base += ["--markdown", str(md), *spec]
+    cases = [
+        (_manifest_args(tmp_path, tampered, sha), "execution manifest sha256"),
+        (_manifest_args(tmp_path, sha="0" * 64), "execution manifest sha256"),
+        (_manifest_args(tmp_path, sha="xyz"), "is required"),
+        (_manifest_args(tmp_path, FROZEN), "ledger manifest_sha256"),  # a533 as execution
+        (
+            _manifest_args(tmp_path) + ["--frozen-manifest", str(frozen_bad)],
+            "frozen staged manifest sha256",
+        ),
+        (
+            _manifest_args(tmp_path) + ["--frozen-manifest", str(EXECUTION)],
+            "frozen staged manifest sha256",
+        ),
+        (
+            _manifest_args(tmp_path) + ["--ledger", str(led_bad)],
+            "restage_provenance.manifest_sha256",
+        ),
+    ]
+    for extra, needle in cases:
+        assert pa.main(base + extra) == 2
+        assert needle in capsys.readouterr().err
+        assert not out.exists() and not md.exists()
+    for drop in ("--manifest", "--manifest-sha256"):  # both are required
+        args = _manifest_args(tmp_path)
+        k = args.index(drop)
+        with pytest.raises(SystemExit) as e:
+            pa.main(base + args[:k] + args[k + 2 :])
+        assert e.value.code == 2
     assert not out.exists()
+    assert pa.main(base + _manifest_args(tmp_path)) == 0  # the untampered inputs run
 
 
 def test_cli_refuses_fields_without_row_even_if_hash_matches(tmp_path, manifest):
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     fields.pop(min(fields))
     fb = json.dumps(fields).encode()
     ledger["fields_sha256"] = hashlib.sha256(fb).hexdigest()
     (tmp_path / "f.json").write_bytes(fb)
     (tmp_path / "l.json").write_text(json.dumps(ledger))
+    (tmp_path / "execution.json").write_bytes(manifest_bytes(execution))
     rc = pa.main(
-        [
-            "--ledger",
-            str(tmp_path / "l.json"),
-            "--fields",
-            str(tmp_path / "f.json"),
-            "--output",
-            str(tmp_path / "r.json"),
-            "--markdown",
-            str(tmp_path / "r.md"),
-            "--spec-sha256",
-            pa.SPEC_SHA256,
-        ]
+        _cli_args(
+            tmp_path, tmp_path / "l.json", tmp_path / "f.json", "--spec-sha256", pa.SPEC_SHA256
+        )
     )
     assert rc == 2 and not (tmp_path / "r.json").exists()
 
@@ -1131,13 +2185,13 @@ def test_funding_equalities_and_independent_control_failures():
 
 def test_validity_first_in_full_analysis(manifest, nullsize):
     ids = manifest["edit_ids"]
-    ledger, fields, _ = build(manifest, ladder_pred={i: -0.3 for i in ids})
-    rep = analyse(manifest, nullsize, ledger, fields, validity="auto", part_b=_invalid_b())
+    ledger, fields, _, execution = build(manifest, ladder_pred={i: -0.3 for i in ids})
+    rep = analyse(execution, nullsize, ledger, fields, validity="auto", part_b=_invalid_b())
     dec = rep["registered"]["decision"]
     assert rep["registered"]["contrasts"]["ladder_0.25"]["agreements"] == 0
     assert _is_validity_unresolved(dec)
     assert rep["registered"]["part_b"]["supplied"]["valid"]["C"] is False
-    rep = analyse(manifest, nullsize, ledger, fields, validity="auto", part_b="ok")
+    rep = analyse(execution, nullsize, ledger, fields, validity="auto", part_b="ok")
     assert rep["registered"]["decision"]["gate"] == "alternative"
     assert rep["registered"]["part_b"]["status"] == "supplied"
 
@@ -1174,15 +2228,16 @@ def test_registration_note_hash_mismatch_or_absent_refused(tmp_path):
 
 
 def test_analyse_refuses_unverified_spec(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     with pytest.raises(pa.AnalysisRefused, match="specification"):
-        analyse(manifest, nullsize, ledger, fields, spec_check={"verified": False})
-    rep = analyse(manifest, nullsize, ledger, fields)  # default: hashes the file at run time
+        analyse(execution, nullsize, ledger, fields, spec_check={"verified": False})
+    rep = analyse(execution, nullsize, ledger, fields)  # default: hashes the file at run time
     v = rep["spec"]["verification"]
     assert v["sha256_file"] == v["sha256_f10b_note"] == pa.SPEC_SHA256
 
 
 def _cli_args(tmp_path, led, fld, *extra):
+    """CLI arguments with the execution manifest written by :func:`_write_inputs`."""
     return [
         "--ledger",
         str(led),
@@ -1192,6 +2247,7 @@ def _cli_args(tmp_path, led, fld, *extra):
         str(tmp_path / "r.json"),
         "--markdown",
         str(tmp_path / "r.md"),
+        *_manifest_args(tmp_path),
         *extra,
     ]
 
@@ -1236,10 +2292,10 @@ def test_cli_refuses_spec_problems_and_writes_nothing(tmp_path, manifest, capsys
     ],
 )
 def test_window_order_and_blocks_must_match_text_groups(manifest, nullsize, mutate):
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     mutate(ledger)
     with pytest.raises(pa.AnalysisRefused, match="window|block|text_groups|token"):
-        analyse(manifest, nullsize, ledger, fields)
+        analyse(execution, nullsize, ledger, fields)
 
 
 def test_text_groups_file_tamper_refused(tmp_path):
@@ -1252,8 +2308,8 @@ def test_text_groups_file_tamper_refused(tmp_path):
     assert tg["two_window_blocks"][0] == [0, 1] and tg["two_window_blocks"][-1] == [62, 63]
 
 
-def _restage_status(manifest, nullsize, ledger, fields, i):
-    rep = analyse(manifest, nullsize, ledger, fields)
+def _restage_status(execution, nullsize, ledger, fields, i):
+    rep = analyse(execution, nullsize, ledger, fields)
     return rep["registered"]["pairs"][i]["rotation"], rep
 
 
@@ -1275,10 +2331,10 @@ def _restage_status(manifest, nullsize, ledger, fields, i):
     ],
 )
 def test_incomplete_restage_entry_is_audit_missing(manifest, nullsize, mutate, needle):
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     i = min(ledger["restage"])
     mutate(ledger["restage"][i])
-    rec, rep = _restage_status(manifest, nullsize, ledger, fields, i)
+    rec, rep = _restage_status(execution, nullsize, ledger, fields, i)
     assert rec["status"] == "f10_3_excluded" and rec["reasons"] == ["audit_missing"]
     assert needle in rec["detail"]
     led = rep["registered"]["contrasts"]["rotation"]["ledger"]
@@ -1292,9 +2348,9 @@ def test_missing_restage_provenance_fails_every_pair_closed(manifest, nullsize):
         lambda L: L["restage_provenance"].pop("audit_file_sha256"),
         lambda L: L["restage_provenance"].update(readme_sha256="not-a-hash"),
     ):
-        ledger, fields, _ = build(manifest)
+        ledger, fields, _, execution = build(manifest)
         mutate(ledger)
-        rep = analyse(manifest, nullsize, ledger, fields)
+        rep = analyse(execution, nullsize, ledger, fields)
         led = rep["registered"]["contrasts"]["rotation"]["ledger"]
         assert led["f10_3_excluded"]["by_code"] == {"audit_missing": sorted(manifest["edit_ids"])}
         assert rep["registered"]["contrasts"]["rotation"]["resolved"] == 0
@@ -1304,10 +2360,10 @@ def test_missing_restage_provenance_fails_every_pair_closed(manifest, nullsize):
 
 
 def test_restage_hashes_must_be_linked_in_validity_evidence(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     v = valid_for(ledger)
     v["selection_and_audits"]["evidence"] = v["selection_and_audits"]["evidence"][:2]
-    rep = analyse(manifest, nullsize, ledger, fields, validity=v, part_b="ok")
+    rep = analyse(execution, nullsize, ledger, fields, validity=v, part_b="ok")
     dec = rep["registered"]["decision"]
     assert _is_validity_unresolved(dec)
     assert PROV["readme_sha256"] in dec["validity"]["problems"]["selection_and_audits"]
@@ -1315,28 +2371,28 @@ def test_restage_hashes_must_be_linked_in_validity_evidence(manifest, nullsize):
     v["registration_pinned"]["evidence"] = [
         e for e in v["registration_pinned"]["evidence"] if e["sha256"] != ledger["fields_sha256"]
     ]
-    rep = analyse(manifest, nullsize, ledger, fields, validity=v, part_b="ok")
+    rep = analyse(execution, nullsize, ledger, fields, validity=v, part_b="ok")
     assert "registration_pinned" in rep["registered"]["decision"]["validity"]["problems"]
-    rep = analyse(manifest, nullsize, ledger, fields, validity="auto", part_b="ok")
+    rep = analyse(execution, nullsize, ledger, fields, validity="auto", part_b="ok")
     assert rep["registered"]["decision"]["gate"] == "Part A go"
 
 
 def test_contradictory_restage_verdict_refused(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
+    ledger, fields, _, execution = build(manifest)
     i = min(ledger["restage"])
     ledger["restage"][i]["f10_3_exclusions"] = ["sub_resolution"]  # verdict still "pass"
     with pytest.raises(pa.AnalysisRefused, match="contradicts"):
-        analyse(manifest, nullsize, ledger, fields)
-    ledger, fields, _ = build(manifest)
+        analyse(execution, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest)
     ledger["restage"][i]["f10_3_verdict"] = "excluded"  # no reason code
     with pytest.raises(pa.AnalysisRefused, match="contradicts"):
-        analyse(manifest, nullsize, ledger, fields)
+        analyse(execution, nullsize, ledger, fields)
 
 
 def test_complete_case_exclusion_is_not_an_audit_failure(manifest, nullsize):
     ids = sorted(manifest["edit_ids"])
-    ledger, fields, _ = build(manifest, drop_covariate={ids[0]: "ln_rho"})
-    rep = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest, drop_covariate={ids[0]: "ln_rho"})
+    rep = analyse(execution, nullsize, ledger, fields)
     assert rep["registered"]["pairs"][ids[0]]["rotation"]["status"] == "resolved"
     cov = rep["f10_5_sensitivity"]["covariate"]
     assert [d["id"] for d in cov["dropped_rows"]] == [ids[0]]
@@ -1349,14 +2405,14 @@ def test_complete_case_exclusion_is_not_an_audit_failure(manifest, nullsize):
 
 def test_every_pair_listed_with_status_and_cause(manifest, nullsize):
     ids = sorted(manifest["edit_ids"])
-    ledger, fields, _ = build(
+    ledger, fields, _, execution = build(
         manifest,
         excluded={ids[0]: "replay_failed"},
         missing={ids[1]: "original"},
         d_mean={ids[2]: 0.0},
         noise=2e-3,
     )
-    rep = analyse(manifest, nullsize, ledger, fields)
+    rep = analyse(execution, nullsize, ledger, fields)
     for c in pa.CONTRASTS:
         row = rep["registered"]["contrasts"][c]
         assert [p["id"] for p in row["pair_status"]] == ids
@@ -1374,8 +2430,8 @@ def test_every_pair_listed_with_status_and_cause(manifest, nullsize):
 
 def test_sign_tables_per_contrast_and_family(manifest, nullsize):
     ids = sorted(manifest["edit_ids"])
-    ledger, fields, _ = build(manifest, predictions={ids[0]: 0.0, ids[1]: -0.2})
-    rep = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest, predictions={ids[0]: 0.0, ids[1]: -0.2})
+    rep = analyse(execution, nullsize, ledger, fields)
     sel = {s["edit_id"]: s["family"] for s in manifest["selections"]}
     for c in pa.CONTRASTS:
         row = rep["registered"]["contrasts"][c]
@@ -1401,13 +2457,13 @@ def test_sign_tables_per_contrast_and_family(manifest, nullsize):
 def test_covariate_and_subset_id_accounting(manifest, nullsize):
     in_s30 = "0027efdf2eae7405"
     ids = sorted(manifest["edit_ids"])
-    ledger, fields, _ = build(
+    ledger, fields, _, execution = build(
         manifest,
         excluded={in_s30: "replay_failed"},
         predictions={"014f8a9ec78db2be": 0.0},
         drop_covariate={ids[-1]: "d_mean"},
     )
-    rep = analyse(manifest, nullsize, ledger, fields)
+    rep = analyse(execution, nullsize, ledger, fields)
     cov = rep["f10_5_sensitivity"]["covariate"]
     assert cov["selected_ids"] == ids
     assert in_s30 not in cov["resolved_ids"]
@@ -1430,10 +2486,10 @@ def test_covariate_and_subset_id_accounting(manifest, nullsize):
 def test_markdown_carries_all_required_tables(manifest, nullsize):
     low = "15a53586efc72a50"
     ids = sorted(manifest["edit_ids"])
-    ledger, fields, _ = build(
+    ledger, fields, _, execution = build(
         manifest, restage_rho={low: math.exp(0.05)}, predictions={ids[3]: 0.0}
     )
-    rep = analyse(manifest, nullsize, ledger, fields, validity="auto", part_b="ok")
+    rep = analyse(execution, nullsize, ledger, fields, validity="auto", part_b="ok")
     md = pa.render_markdown(rep)
     n_tables = md.count("| predicted sign (3 × 2) |")
     # 3 contrasts × (pooled + 2 families) + covariate θ_raw + 12 tertile cells + 2 subsets
@@ -1572,17 +2628,19 @@ def test_forced_fit_failure_counts_every_draw_and_fold(monkeypatch):
 
 
 def test_exclusion_without_masked_calibration_refused(manifest, nullsize):
-    ledger, fields, _ = build(manifest, excluded={min(manifest["edit_ids"]): "sub_resolution"})
+    ledger, fields, _, execution = build(
+        manifest, excluded={min(manifest["edit_ids"]): "sub_resolution"}
+    )
     with pytest.raises(pa.AnalysisRefused, match="F10.6"):
-        analyse(manifest, nullsize, ledger, fields, masked_calibration=None)
+        analyse(execution, nullsize, ledger, fields, masked_calibration=None)
 
 
 def test_masked_row_added_without_replacement(manifest, nullsize):
     i = min(manifest["edit_ids"])
-    ledger, fields, _ = build(manifest, excluded={i: "sub_resolution"})
-    masked, sha, _ = masked_for(ledger, manifest)
+    ledger, fields, _, execution = build(manifest, excluded={i: "sub_resolution"})
+    masked, sha, _ = masked_for(ledger, execution)
     rep = analyse(
-        manifest,
+        execution,
         nullsize,
         ledger,
         fields,
@@ -1610,35 +2668,41 @@ def test_masked_row_added_without_replacement(manifest, nullsize):
 
 @pytest.mark.parametrize("size_ok,power_ok", [(False, True), (True, False)])
 def test_failed_masked_calibration_makes_step_1_unresolved(manifest, nullsize, size_ok, power_ok):
-    ledger, fields, _ = build(manifest, excluded={min(manifest["edit_ids"]): "replay_failed"})
-    masked, sha, _ = masked_for(ledger, manifest, passed=size_ok, power_passed=power_ok)
-    rep = analyse(
-        manifest,
-        nullsize,
-        ledger,
-        fields,
-        masked_calibration=masked,
-        masked_calibration_sha256=sha,
-        validity=valid_for(ledger, sha),
-        part_b="ok",
+    """Forty only (F10.6): a power failure leaves step 1 unresolved; a size failure now refuses
+    the run outright (F11a.1(b): size first, scoring hold, a new amendment needed)."""
+    ledger, fields, _, execution = build(
+        manifest, excluded={min(manifest["edit_ids"]): "replay_failed"}
     )
+    masked, sha, _ = masked_for(ledger, execution, passed=size_ok, power_passed=power_ok)
+    kw = {
+        "masked_calibration": masked,
+        "masked_calibration_sha256": sha,
+        "validity": valid_for(ledger, sha),
+        "part_b": "ok",
+    }
+    if not size_ok:
+        with pytest.raises(pa.AnalysisRefused, match=re.escape(pa.SIZE_HOLD)):
+            analyse(execution, nullsize, ledger, fields, **kw)
+        return
+    rep = analyse(execution, nullsize, ledger, fields, **kw)
     dec = rep["registered"]["decision"]
     assert _is_validity_unresolved(dec)
     assert dec["validity"]["problems"]["f10_6_calibration"] == pa.F10_6_FAILED
     assert rep["f10_6_calibration"]["verdict"] == "FAIL"
+    assert rep["f10_6_calibration"]["route"] == "f10_6_failed"
     assert pa.F10_6_FAILED in rep["f10_6_calibration"]["statement"]
     assert len(rep["f5_7_null_branch_table"]["rows"]) == 6  # still disclosed
 
 
 def test_masked_calibration_must_match_exclusions(manifest, nullsize):
     ids = sorted(manifest["edit_ids"])
-    ledger, fields, _ = build(manifest, excluded={ids[0]: "sub_resolution"})
-    masked, sha, _ = masked_for(ledger, manifest)
+    ledger, fields, _, execution = build(manifest, excluded={ids[0]: "sub_resolution"})
+    masked, sha, _ = masked_for(ledger, execution)
     bad = copy.deepcopy(masked)
     bad["slot_mask"]["masked_ids"]["rotation"] = [ids[1]]
     with pytest.raises(pa.AnalysisRefused, match="masked ids"):
         analyse(
-            manifest,
+            execution,
             nullsize,
             ledger,
             fields,
@@ -1649,7 +2713,7 @@ def test_masked_calibration_must_match_exclusions(manifest, nullsize):
     bad["slot_mask"]["mapping_sha256"] = "0" * 64
     with pytest.raises(pa.AnalysisRefused, match="mapping sha256"):
         analyse(
-            manifest,
+            execution,
             nullsize,
             ledger,
             fields,
@@ -1660,7 +2724,7 @@ def test_masked_calibration_must_match_exclusions(manifest, nullsize):
     bad["slot_mask"]["label"] = "unmasked"
     with pytest.raises(pa.AnalysisRefused, match="slot-masked"):
         analyse(
-            manifest,
+            execution,
             nullsize,
             ledger,
             fields,
@@ -1672,7 +2736,7 @@ def test_masked_calibration_must_match_exclusions(manifest, nullsize):
     bad["slot_mask"]["gates"]["size"]["passed"] = False
     with pytest.raises(pa.AnalysisRefused, match="gates"):
         analyse(
-            manifest,
+            execution,
             nullsize,
             ledger,
             fields,
@@ -1681,7 +2745,7 @@ def test_masked_calibration_must_match_exclusions(manifest, nullsize):
         )
     with pytest.raises(pa.AnalysisRefused, match="sha256"):
         analyse(
-            manifest,
+            execution,
             nullsize,
             ledger,
             fields,
@@ -1691,10 +2755,12 @@ def test_masked_calibration_must_match_exclusions(manifest, nullsize):
 
 
 def test_masked_hash_must_be_linked_in_null_size_evidence(manifest, nullsize):
-    ledger, fields, _ = build(manifest, excluded={min(manifest["edit_ids"]): "sub_resolution"})
-    masked, sha, _ = masked_for(ledger, manifest)
+    ledger, fields, _, execution = build(
+        manifest, excluded={min(manifest["edit_ids"]): "sub_resolution"}
+    )
+    masked, sha, _ = masked_for(ledger, execution)
     rep = analyse(
-        manifest,
+        execution,
         nullsize,
         ledger,
         fields,
@@ -1709,16 +2775,16 @@ def test_masked_hash_must_be_linked_in_null_size_evidence(manifest, nullsize):
 
 
 def test_full_yield_states_simulations_stand_and_refuses_masked_run(manifest, nullsize):
-    ledger, fields, _ = build(manifest)
-    rep = analyse(manifest, nullsize, ledger, fields)
+    ledger, fields, _, execution = build(manifest)
+    rep = analyse(execution, nullsize, ledger, fields)
     f106 = rep["f10_6_calibration"]
     assert f106["required"] is False and f106["statement"] == pa.F10_6_ALL_PASS
     assert "stand without a new run" in f106["statement"]
     assert len(rep["f5_7_null_branch_table"]["rows"]) == 5
-    masked, sha, _ = masked_for(ledger, manifest)
+    masked, sha, _ = masked_for(ledger, execution)
     with pytest.raises(pa.AnalysisRefused, match="all 40 pairs pass"):
         analyse(
-            manifest,
+            execution,
             nullsize,
             ledger,
             fields,
@@ -1733,13 +2799,16 @@ def test_full_yield_states_simulations_stand_and_refuses_masked_run(manifest, nu
 def test_cli_full_inputs_end_to_end(tmp_path, manifest, monkeypatch):
     monkeypatch.setattr(pa, "BOOTSTRAP_DRAWS", DRAWS)
     i = min(manifest["edit_ids"])
-    ledger, _fields, fields_bytes = build(manifest, excluded={i: "rounding_bound_failed"})
-    _masked, msha, mraw = masked_for(ledger, manifest)
+    ledger, _fields, fields_bytes, execution = build(
+        manifest, excluded={i: "rounding_bound_failed"}
+    )
+    _masked, msha, mraw = masked_for(ledger, execution)
     (tmp_path / "fields.json").write_bytes(fields_bytes)
     (tmp_path / "ledger.json").write_text(json.dumps(ledger))
     (tmp_path / "masked.json").write_bytes(mraw)
     (tmp_path / "validity.json").write_text(json.dumps(valid_for(ledger, msha)))
     (tmp_path / "part_b.json").write_text(json.dumps(PB()))
+    (tmp_path / "execution.json").write_bytes(manifest_bytes(execution))
     args = _cli_args(
         tmp_path,
         tmp_path / "ledger.json",
@@ -1767,5 +2836,6 @@ def test_cli_full_inputs_end_to_end(tmp_path, manifest, monkeypatch):
     assert rep["inputs"]["spec_sha256_supplied"] == pa.SPEC_SHA256
     assert rep["spec"]["verification"]["sha256_f10b_note"] == pa.SPEC_SHA256
     assert rep["inputs"]["text_groups_sha256"] == pa.TEXT_GROUPS_SHA256
+    assert rep["inputs"]["manifest"]["sha256"] == exec_sha(execution)
     md = (tmp_path / "r.md").read_text()
     assert "Gate: **Part A go**" in md and msha in md
