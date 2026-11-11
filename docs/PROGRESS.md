@@ -580,3 +580,19 @@ reporting corrections). The F10 exclusion-rule implementation (commit e177ce6 on
 diagnostics, a533/f10 audit-rule switch, realised-increment ladder flag, dry-run script) is under Board A review for condition 2
 before merge; the code builder's attestation and the Part A analysis code (A5.4/A5.5 outputs plus F10.5 reports, synthetic-tested)
 are in flight. Scoring held.
+
+**11 Nov 2026, 03:00 UTC. F10 code dry run: two rulings.** Commit e177ce6 (`feat/f10-rotation-audit`; 14 new tests; full suite 839
+passed) implements F10.3–F10.4. Dry run on three staged edits (scratch only, nothing scored): `00f8111c` (chain) and `0a841d40`
+(lora_sft) pass F10 with construction checks far inside 1e-5 and byte-identical rebuilt deltas; `0027efdf` (chain, predecessor
+`b7edbb9f`) is **excluded** under F10.3(iii): the predecessor holds exact zeros where the base is about ±1e-4, the rotated state there
+is about 1e-10, and the scorer's chain convention bf16(base + (state − base)) cannot carry it in fp32 (19 entries, 13 of 32 tensors;
+reason `replay_failed`, check `scorer_roundtrip`). Chair ruling 1: the exclusion stands as implemented; changing the chain storage or
+apply convention is outside F10.3 and would be a new post-audit amendment; all 8 non-root chain picks are at risk, so the F10
+yield may fall below 40 and the F10.6 slot-masked calibration (implemented, re-pin xvi) then applies. The rotation-yield note's 40/40
+covered only the measured items (F10 table), so this is not a contradiction of the registration. Chair ruling 2: check (iv) must
+match the F10/F10a text (½ ulp of the rounded value W + R_eff, which the draft states, with a slack of one fp32 spacing at W + R);
+the builder used a slack of 2·ulp_fp32(|W| + |R|) and reports the literal half-ulp(W) count separately; Board A's code review (in
+flight) rules whether the factor-two slack is accepted; if so it enters as a disclosed F10c note with the measured justification
+before the re-stage, otherwise the code is corrected before merge. Re-stage price measured: about 2 h 11 min to 3 h 32 min CPU for
+the 40 rotations (4 threads), +35.8 GB; `prepare` needs a rotation-only mode that preserves the staged ladders and the original
+manifest (Board A condition 3), to be added with Board A's code conditions. Attestation 5 completed from the builder's report.
