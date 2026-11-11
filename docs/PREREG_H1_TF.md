@@ -3990,3 +3990,21 @@ xvi); `tests/test_a5_simulation.py` `d231c8b0264d48e7e75b991b5bf82ee2f71b846c036
 xviii); `docs/prereg/a5_manifests/README.md` `26ca1d2da368f321acd4addbefb84a091cbbe8e9c775c5eb2731c96bf2cb034b` (old `692879c7…`,
 xviii). No selection, seed, control, panel or decision file changed; no F11.4 run executed; nothing scored. Further re-pins follow
 the `prepare --supplement` merge (before staging) and the analysis F11-path merge (before scoring).
+
+*A5.1.2 re-pin (xx) (11 Nov 2026, about 11:40 UTC; merge of `feat/f11-supplement-stage` after Board A's acceptance with conditions,
+`docs/reviews/council/board-a-f11-stage-2026-11-11.md`; pre-execution freeze for the F11 supplementary staging; before any G3
+outcome).* `src/wsp/eval/response_intervention.py` gained `prepare --supplement` (loader bound to the frozen `selection_f11.json`
+and the F11.2 rule; the forty re-hashed before and after; merged 52-id manifest with `supplementary: true` flags; `*_pre_f11.*`
+preserved; `--no-reference-proofs` default, proofs established by `score --manifest` before scoring), the `slot-mask` builder and the
+deferred proof step. Builder re-run with `--pin-worktree` into a copy; only `code_hashes.json` and the package README copied back.
+Rows: `src/wsp/eval/response_intervention.py` `e52ea009740751a3…` (old `694f9f4e…`, xviii); `tests/test_response_intervention.py`
+`c7f202369469f56a…`; `docs/prereg/a5_manifests/code_hashes.json` `46dd52341df19ad0…` (old `a0077ab6…`, xix);
+`docs/prereg/a5_manifests/README.md` `62e6841312b34710…` (old `26ca1d2d…`, xix). Frozen execution: Board A's command verbatim
+(`prepare --supplement … --no-reference-proofs --audit-rule f10 --strengths 0.25 0.5 --config configs/eval_tf_v1.yaml`), CPU only,
+`OMP_NUM_THREADS=4`, `MKL_NUM_THREADS=4`, `HF_HUB_OFFLINE=1`, `PYTHONDONTWRITEBYTECODE=1`; the freeze record
+`docs/prereg/a5_manifests/part_a/supplement_freeze.json` (sha256 `1094d170…` before the revision patch; re-hashed in the launch
+record) was computed UNDER the frozen environment this time (Torch build-config `07f0372b…`, threads 4, Python 3.12.3, Torch
+2.15.0+cu132, MKL available, CPU model, x86_64, model revision `2fc06364…` from the manifest), with the selection_f11 hashes, the
+input hashes, the originals' manifest (`59d839e3…`) and audit (`4ec0928a…`) hashes and the 81-file staged byte inventory. The
+execution SHA is the clean HEAD at launch, recorded in `supplement_launch.json`. Conservative priced count 178 entries. No
+selection beyond F11.2's committed list, no seed, decision rule, cap or other pin changed; nothing scored.

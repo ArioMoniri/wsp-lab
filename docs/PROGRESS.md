@@ -747,3 +747,8 @@ key set; sorted-id sha256 recomputed and pinned; inputs re-hashed) and the F11.2
 `alias_only`; reuse proofs deferred to `score --manifest` (proven originals reused, failed ones scored as references; refuses unproven
 supplementary variants); `supplementary: true` on selections and edit audits; default priced count ≤ 178 entries. Board A review of
 the staging mode requested (F11 condition 2). Analysis F11-path corrections still in flight.
+
+**11 Nov 2026, 11:40 UTC.** Board A accepted `prepare --supplement` with conditions and the frozen staging command
+(`board-a-f11-stage-2026-11-11.md`; deferred proofs acceptable; conservative price 178 entries). Merged (bef5396); A5.1.2 re-pin
+(xx); `supplement_freeze.json` computed under the frozen environment. Supplementary staging launching under agent-tmux
+`a5-f11-supplement`. Analysis F11-path corrections still in flight (needed before scoring, not before staging).
