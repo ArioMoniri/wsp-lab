@@ -3204,3 +3204,93 @@ pool and Board A condition 4. (h) F10.9–F10.11 are new (R2, R3, attestation).
 | F10.9 chain-ladder convention | A5.3 "s·Δ_t" read as s·D_t for the 8 non-root chain picks, flagged `realised-increment ladder` | ladders unchanged: 40 per strength, 16 variants flagged | none (simulated ladder contrasts already scale the realised-edit residual block, A5.3.2) |
 | F10.10 order and hold | no Part A scoring before Board A rules on F10 | – | masked run, if needed, precedes scoring |
 | Fallback (e) on rejection | none | 1/40 (rotation unresolved) | none; the go branch is unreachable |
+
+#### A5 note F10a (11 Nov 2026, before any G3 outcome): methodological clarifications for F10 (Board A condition 1)
+
+This block is appended; earlier text is not rewritten. It discharges the methodological-record part of condition 1 of Board A's F10
+review (`docs/reviews/council/board-a-f10-2026-11-11.md`, commit `e9c6db7`, sha256
+`f1c494ab608c464d29f9dc261dee8711e553ab0fee90a136581b0efb432142b3`; "the review"). The quotations in F10a.1 and F10a.2 are
+copied verbatim from the review's section "Three implementability edits" (F10.3(i)) and section "Simulations and chain ladders"
+(F10.9). F10a clarifies how F10 is read and executed; it changes no F10 operational rule except as stated in F10a.1, where it
+adopts the review's own formula.
+
+**F10a.1 — F10.3(i) rank criterion: a near-cut rank budget (Board A wording adopted verbatim).**
+> Rank is discontinuous: exact equality is an inappropriate requirement for a fixed fp32 rotation even when fp64 audits find tiny
+> norm/spectrum errors. The explicit rule is `abs(rank_R − rank_D) <= N_near`, where
+> `N_near = count(abs(σ_j(D) − 0.001 σ_1(D)) <= 0.00001 σ_1(D))`; each rank uses its own largest singular value and strict `>` at
+> its cut. Keep this rule and the independent fp64 norm/spectrum/reconstruction/orthogonality checks fixed before re-stage yields
+> are seen. A count budget is not proof that individual crossings were caused only by near-cut values; describe it as a budget, and
+> log the ranks, cuts and N_near. The Frobenius spectrum criterion alone is not an entrywise `1e-5 σ_1` perturbation theorem. Do
+> not widen the window or add ±1 after seeing failures.
+
+Reading. The last clause of F10.3(i) ("except that |rank R − rank D| may not exceed the number of singular values of D within
+1e-5·σ₁(D) of the cut 1e-3·σ₁(D)") is this rule, with "within" inclusive (`<=`). rank_D counts σ_j(D) > 1e-3·σ₁(D) and rank_R counts
+σ_j(R) > 1e-3·σ₁(R), both in fp64 (D from the stored bf16 states, R the fp32 construction before rounding). F10.12(a)'s phrase "rank differences caused only by
+singular values within 1e-5·σ₁(D) of the 1e-3 cut" is read as a count budget, not as a causal claim about individual crossings: a
+tensor that meets the budget is not thereby shown to have changed rank only through near-cut values, and the re-stage report says
+"rank budget", not "rank match". Every tensor logs rank_D, rank_R, both cuts (1e-3·σ₁(D), 1e-3·σ₁(R)) and N_near. The window
+(1e-5·σ₁(D)) and the budget are fixed; there is no ±1 allowance. The executable tests the review lists for this rule (equality at
+the cut and window edges, both rank directions, own-σ₁ thresholds, N_near = 0, rejection above the budget) belong to condition 2.
+
+**F10a.2 — F10.9 chain-ladder convention: uncertainty of the realised-increment ladder (Board A wording adopted verbatim).**
+> **F10.9 is accepted as an explicit operational amendment, not literal compliance with the original “not by scaling D_t”
+> clause.** […]
+>
+> For these eight non-root picks, raw Δ is unavailable: the root-edit rounding comparison does not measure their missing raw-step
+> error. Calling D−Δ “one bf16 rounding” requires an identified underlying additive raw update and construction history; the quoted
+> uniform-rounding floor is a heuristic scale, not a measured error or upper bound for those eight. Qualify F10.9 accordingly.
+> Accepting this available direction changes the operational ladder intervention, potentially relevant to step 2; it does not
+> establish equivalence of the unavailable raw ladder.
+
+Reading. F10.9's statements that "D_t = … is Δ_t up to one bf16 rounding of W_t", that "the substitution is of rounding scale",
+and that "D_t − Δ_t is one bf16 rounding of W_t, whose uniform-rounding size relative to ‖D_t‖ is … 0.066–0.392" are qualified as
+follows: for the 8 non-root chain picks (`0027efdf2eae7405`, `00f8111cbad8218f`, `05531ce1db4df63f`, `057dcfbedea3251f`,
+`0bc0a0c4ad0520e0`, `0d055869527177b4`, `13b02fe2673cc296`, `14cdaabee246493b`) the raw per-step Δ_t was not stored, so
+D_t − Δ_t was not measured and is not bounded; "one bf16 rounding" holds only under the unverified assumption of an identified
+additive raw update with a known construction history; 0.066–0.392 is a heuristic uniform-rounding scale, not a measured error or an
+upper bound; and the root-edit comparison (ε_D on the 32 roots) does not measure the error of these eight. The 16 ladder variants
+built as bf16(W_t + s·D_t) − W_t are the operational A5.3 ladder for these picks by explicit amendment, not a demonstrated
+equivalent of the raw-Δ ladder that A5.3 describes. Their `realised-increment ladder` flag and this qualification are carried into
+the re-stage report and the Part A report (conditions 4 and 6), and any step-2 statement that relies on them says so. F10.9's
+operational rule is unchanged: the 16 variants as staged, the 2 root chain picks and the 30 lora_sft picks scaling their stored Δ,
+the prediction ⟨g, bf16(W_t + s·D_t) − W_t⟩ on the realised increment, 40 slots per strength, the step-2 rule and A5.5. No
+raw-step reconstruction or retraining is authorised.
+
+**F10a.3 — Status of F10's thresholds: fixed before outcomes, not before audits.** The F10 parameters were fixed after the Part A
+staging audit and before any outcome. Staging ran 10 Nov 2026 18:46–23:45 UTC (audit file sha256 `f05fec42…474d35`; README
+`2fcbf517…ceada1`); the yield analysis (design note `fad409cc…f0e5719b`) recomputed audit quantities on all 2,534 staged rows and
+the remedy yields between about 23:50 UTC 10 Nov and 01:01 UTC 11 Nov; F10 was committed at 01:12 UTC 11 Nov (`0af5a66`). The
+parameters concerned are: the 1e-5 construction tolerances of F10.3(i) (orthogonality, fp64 reconstruction residual, pre-rounding
+norm and spectrum) and its 1e-5·σ₁(D) near-cut window (F10a.1); the one-fp32-spacing slack ulp₃₂(W + R) of F10.3(iv); the 0.5
+pooled half-norm guard of F10.3(v); and the replay settings of F10.3(iii) (fresh `manual_seed` generator per tensor, pinned code and
+environment, `OMP_NUM_THREADS` = `MKL_NUM_THREADS` = 4, bitwise comparison with reloaded bytes). Their authors had seen the
+staged audit rows, the 1/40 registered yield, the staged maxima F10.1 and F10.3(v) quote (orthogonality 8.7e-7, pre-rounding norm
+1.43e-7, pooled mismatch 0.0309) and the remedy yields of the note §2. They are therefore audit-yield-informed: **fixed before
+outcomes, not before audits.** No G3, rotation, ladder, missing-reference or sealed outcome, or a summary of one, existed when they
+were fixed (attestations, F10a.5). The 39/40 registered failure, the remedy-yield comparisons and the original realised verdict
+stay disclosed and logged (F10.3, last sentence; the review, "Pre-outcome legitimacy and attestation").
+
+**F10a.4 — No retuning on the re-stage yield.** No F10 parameter may be changed after any re-stage verdict, yield or diagnostic has
+been seen. This covers every parameter listed in F10a.3, the reason codes, the rank rule of F10a.1, the F10.4
+diagnostic definitions, the F10.5 covariate, tertiles and subset lists, and the F10.6 masking rule. A tensor or pair that fails a
+fixed tolerance is excluded with its reason code (F10.3), without replacement, and stays in the forty-ID ledger. Any other response
+to a failure is a new, dated, disclosed amendment that states the yield and diagnostics already seen, is reviewed by Board A
+before any scoring, and does not replace the fixed rule retroactively. A failure is never handled by widening a window, adding a
+±1 rank allowance, changing the slack or the guard, choosing other seeds or thread settings, or re-running until a pair passes.
+
+**F10a.5 — Exposure attestations.** One no-exposure attestation per decision-maker (F8a.1(c): role, session identity, coverage
+time) is recorded in `docs/prereg/f10_attestations.md`: the chair; the staging builder (`feat/part-a-prepare`); the rotation-yield
+analyst (`design/rotation-yield`); the F10 drafter (`prereg/f10`); the F10 code builder (`feat/f10-rotation-audit`, pending its
+report); Board A (`review/board-a-f10`, quoted from the review); and the session that wrote this block (`prereg/f10a`). The file
+also records the path check made for this block: none of the 120 Part A variant ids and none of the 19 missing originals has an
+entry under `data/evals/qwen3.5-0.8b/tf_v1/`, and none of the 120 variant ids appears anywhere under `data/evals/`. The 19
+missing originals do appear by name one level up, as symlinks `data/evals/qwen3.5-0.8b/<id>` created 6 Nov 2026 08:10 UTC into
+their zoo entries, which hold pre-TF-v1 records written at zoo generation (file names listed only; contents not opened). These are
+not TF-v1 or Part A records and were not produced by Part A; the file records them so that each attestation covers them. A
+decision-maker who makes or approves a further F10 choice before scoring adds its own attestation there (the review, condition 7).
+The code builder's attestation must be completed from its report before the implementation merge (condition 1).
+
+**F10a.6 — Scope.** F10a changes no selection (A5.3.1, `selection.json`), seed (`control_seeds.json`, A5.3.3), prediction,
+resolution, yield or decision rule (A5.3, A5.5), simulation gate (A5.3.2, F10.6), cap or allocation (A5.3.4), and no pin: no file
+pinned in A5.1.2 changes with this block. It does not release scoring: F10.10 and conditions 2–7 of the review still hold every
+Part A entry, including the 80 ladders and the 19 missing originals.
