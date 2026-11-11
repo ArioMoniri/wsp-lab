@@ -4024,3 +4024,134 @@ conventions Board A requires by dated note (supplement cell assignment; screen-r
 refuses; 52-slot calibration always required with supplements; supplementary row refusals) are adopted in A5 note F11b. No
 selection, seed, decision rule or cap changed; nothing scored. The supplementary staging launched at 08:06 UTC on execution SHA
 8211ecf is unaffected (it does not import the analysis module).
+
+#### A5 note F11b (11 Nov 2026, before any G3 outcome): adoption of the Part A analysis F11-path conventions
+
+This block is appended; earlier text is not rewritten. It is the dated A5 note that Board A's fourth Part A analysis review
+(`docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md`, "the review"; verdict ACCEPT WITH CONDITIONS; reviewed commit
+`f57b70afffcd3f1cca281f50c365ef497fe05e74`, merged and re-pinned as (xxi)) requires in its condition 1: "Adopt the conventions
+before scoring. A dated A5 note must adopt module choices 7 and 8: supplementary norm cells from the original selection cut keys
+and ln rho cells from frozen energy cut keys applied to the supplement's own staged value, with no movement/re-cutting of the forty
+and no supplement in S30/S34; and `f11a_screen_route: {pass: true, evidence: [{path, sha256}, ...]}` requiring linkage to the exact
+accepted power-only calibration report. Preserve the existing accepted choices 1–6. State the forty-only size-refusal behavior, the
+continued unresolved-validity/scoring hold and the requirement for actual Board A report acceptance. No post-outcome convention
+choice." Everything is adopted prospectively. Choices 1–6 of the module docstring of `src/wsp/eval/part_a_analysis.py`, adopted in
+F10c, stay in force unchanged, as do F10b.2–F10b.4 and F11a. Where this note states a convention, the executable at the pinned
+bytes of (xxi) implements it; the clauses below are the registration, and the code is the means.
+
+**F11b.1 — Supplementary cell assignment (module choice 7).** Adopted, as the review accepts it ("methodologically acceptable
+prospectively"; condition 1). Each of the twelve supplementary edits joins the F10.5 reports under a cell assigned by a frozen rule
+and is marked `supplementary`:
+- (a) *Norm tertile.* The supplement's A5.3.1 norm tertile is the cell its `(effective_norm, id)` key falls in under the frozen
+  selection cut keys of its family (`selection.json:procedural_freeze.cutpoints[family].keys`; the file is bound by
+  `manifest_a533.json:selection_ledger.selection_json_sha256` = `393530365f87f981…`). A key equal to a cut key falls in the higher
+  half-open cell. The cut keys are verified at run time against the a533 manifest, and the assignment is verified against all forty
+  original rows before any supplement is assigned; the stated tertile of each supplement must equal the recomputed one, otherwise
+  the run is refused.
+- (b) *ln ρ cell.* The supplement's ln ρ cell is the frozen spec §2.2 energy cut keys (`LNRHO_CUTS`) applied to the supplement's
+  **own staged** value ln ρ = 2·ln(1 + pooled_norm_mismatch) from its F11.3 staging record in the execution manifest (spec §1.1
+  formula). It is not assigned from the re-stage value and not from any re-cut population. A supplement without a staged value has
+  no ln ρ cell and is listed as unassigned. The re-stage ln ρ and `cell_drift` are displayed for supplements as for the forty;
+  crossings of a cut are disclosed and never move a member.
+- (c) *The forty are untouched.* No cut is recomputed with supplements in the population, no frozen member moves cell, and the forty's
+  cell memberships stay anchored to the preserved a533 manifest (sha256 `d7785b35…`; norm-cell membership hashes verified).
+- (d) *S30 and S34 are unchanged.* They remain the frozen registered-40 lists. Each supplement's values of the two subset
+  predicates (staged `pooled_norm_mismatch` ≤ 2e-2, cross-checked with `in_subset_pooled_norm_2e-2`; `in_subset_noise_calibrated`
+  or `noise_calibrated_passes`) are shown **beside** the lists, with their verdicts, and never enter either list, any subset
+  estimate or any decision.
+- (e) Supplementary rows join the covariate models M0/M1, every 3 × 2 sign table, the constant-sign comparator and the tertile
+  reports, marked `supplementary`, all with authority none (descriptive). Nothing in F10b.2–F10b.4 is relaxed.
+
+**F11b.2 — Screen-route acceptance input (module choice 8).** Adopted. The F11a.1 screen route (power-only failure of the
+supplemented F11.4 calibration, every size rate passing) releases step 1 only with the following object in the `--validity` input,
+under the key `f11a_screen_route`, exactly:
+
+```json
+{"f11a_screen_route": {"pass": true, "evidence": [{"path": "<repository-relative path>", "sha256": "<64 lowercase hex>"}]}}
+```
+
+- (a) `pass` must be the JSON boolean `true`; `evidence` must be a non-empty list of well-formed `{path, sha256}` objects, and at
+  least one `sha256` must equal the sha256 of the exact supplemented, slot-masked F11.4 calibration report supplied as
+  `--masked-calibration`. Absence of the key, `pass` other than `true`, a malformed or empty evidence list, or evidence that does not
+  link that hash leaves step 1 **unresolved**, with the reason printed, and every later step unresolved with it. The input is
+  consulted only when the calibration state is a power-only failure; on a pass of both gates it is not needed, and it never waives a
+  size failure (clause 4).
+- (b) *Who may issue it.* Only on **Board A's acceptance of the power-only failure report** (F11a.1(d): "Board A must accept the
+  power-only failure report first"). The chair or a builder transcribes that acceptance into the object; the evidence list names the
+  calibration report (by its sha256) and, as further entries, the Board A report that records the acceptance. The object is a
+  producer's assertion, not independent proof. As the review states: "A syntactically valid JSON assertion is a trusted producer
+  assertion, not independent proof that Board A accepted anything. Its real review record must be checked in the pre-score
+  inventory." Condition 3 below requires that check. An object issued without a Board A report that accepts that exact calibration
+  report by hash is void.
+- (c) In the screen route only rotation power is waived (F11a.1(e)): no Part A go, G7 contribution or Part B funding is possible;
+  the ladder alternative keeps priority and its funding-stop meaning; a positive screen still needs 15 resolved pairs; the failed
+  power and all size rates are reported beside it. The A5.5 validity row is worded as F11.7 states. Other validity predicates and
+  Part B inference/control validity still apply.
+
+**F11b.3 — Forty-only size failure refuses.** Adopted as the review rules: "This is a stronger fail-closed operational expression
+of the unresolved-validity/scoring hold, not a newly authorized decision or screen route. It does not resolve validity as
+scientifically negative. Record this behavior in the adopting note so operators do not mistake refusal for missing analysis output
+to work around." Accordingly, when the calibration state shows a genuine size failure (ordered-go size or any individual two-sided
+size > 0.07), the analysis **refuses** with the message "hold: size failure requires a new amendment" and writes no report, on the
+supplemented run (F11a.1(b)) and on the forty-only F10.6 run alike. Inconsistent gate flags and rates also refuse. A refusal is not
+a missing output to be worked around, a Part A negative or an unresolved-validity report: scoring stays held for every Part A entry
+until a new amendment with its own review releases it. Neither simultaneous power failure nor an `f11a_screen_route` input can
+waive failed size. A forty-only F10.6 power failure (size passing) leaves step 1 unresolved, as in F10c; it has no screen route.
+
+**F11b.4 — The scoring hold continues.** Nothing in this note releases scoring. The unresolved-validity and scoring holds stand
+until the pre-score conditions below are met; the calibration and its route are accepted separately by Board A; the screen route
+exists only after an actual Board A acceptance of a power-only failure report (clause 2(b)); other staging, calibration,
+reference-reuse, pricing, qualification, exposure and release conditions remain in force until separately met.
+
+**F11b.5 — The 52-slot calibration is always required when supplements exist.** Adopted, as the review rules: "Accepted and
+necessary. Full audit yield does not make the forty-slot calibration applicable to fifty-two slots." With any supplement in the
+selection, the analysis requires the supplemented slot-masked calibration report (label "slot-masked (F10.6); supplemented
+(F11.4)") covering every selected slot, **even at full audit yield**: under the twelve-ID inventory this is the one registered-scale
+52-slot run, not a forty-slot calibration reused for a larger panel. It carries a `supplement` block (supplementary ids' sorted-id
+sha256, k, slot count), per-contrast masks that recompute from the execution manifest in the canonical availability mapping with
+their sha256, the ordered power, the ordered-go size and the three two-sided size rates. Masks of an original-forty ladder are
+refused (the eighty ladders are preserved, F11a.3); supplementary ladder exclusions at either strength are accepted independently of
+rotation availability; the registered-40 sensitivity run is refused as calibration authority. Without supplements, F10c.2 and the
+frozen registered evidence for the full-yield route are unchanged.
+
+**F11b.6 — Supplementary row conditions; the twelve-ID population is bound by hash.** Adopted within the existing trusted
+execution-manifest and input-inventory contract, as the review rules: "acceptable [...] not a general waiver of F11.2". The analysis
+refuses any supplementary selection row that is not flagged `supplementary: true`, is not a root (predecessor `base`), is not in one
+of the three depleted cells (`lora_sft:2`, `chain:0`, `chain:2`) or whose stated tertile differs from the frozen cut keys (clause
+1(a)); it refuses a registered id flagged supplementary or a registered row that differs from its a533 row. It reports the sorted-id
+sha256 of the supplementary ids and whether it equals the frozen `selection_f11` hash
+`1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9`. As the review states, the executable alone "does not enforce
+k=12, four per depleted cell, distinct components, exact selected IDs or original staging-byte/verdict preservation"; a false list
+match is reported rather than refused, and **a false list match is never an authorized production F11 run**. Those requirements
+are enforced by the accepted staging evidence and the pre-score inventory (clause 7). No top-up or substitution is permitted.
+
+**F11b.7 — What the analysis binds (Board A condition 3).** The Part A analysis of the F11 path binds **exactly the twelve-ID
+supplementary population**, with the forty, through: (i) the `selection_f11` sorted-id sha256
+`1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9` (twelve IDs, four per depleted cell, distinct components, file
+sha256 `ce746e71…4793c`); (ii) the **execution manifest**, passed by `--manifest` with the required `--manifest-sha256` and agreeing
+with the sealed ledger's `manifest_sha256` and `restage_provenance`; (iii) the **frozen masks**: the per-contrast canonical
+availability recomputed from that manifest and the mapping hash; and (iv) the **accepted calibration and route evidence**: the
+one registered-scale 52-slot calibration report by sha256 and, on a power-only failure, the hash-linked `f11a_screen_route`
+object backed by the actual Board A acceptance. The trusted pre-score inventory must, before scoring (review condition 3), verify:
+exactly the twelve frozen IDs and the four-per-cell allocation; component uniqueness; the original forty's preserved identities,
+staging bytes, nine rotation exclusions with reasons and eighty ladders; the a533 and final execution manifest hashes; the
+ledger and field predictions, windows, producer and scoring identities; the accepted staging evidence; the actual per-contrast
+masks and mapping; the 52-slot calibration report and its separate acceptance; and, if a power-only failure, the Board A record
+and the hash-linked input. A size failure holds all scoring pending a new amendment. It must also exercise the analysis's
+input-binding and tamper checks against the final accepted outcome-free manifest, using synthetic responses only. These
+conditions discharge the analysis implementation gate only; they do not discharge any other staging, calibration, reference-reuse,
+pricing, qualification, exposure or release condition. One sealed-ledger analysis with descriptive sensitivities is then run.
+
+**F11b.8 — What this note does not do.** It changes no selection, seed, decision rule, cap or pin. It authorises no staging,
+calibration or scoring, and it does not close F11 condition 5 (that closes only after the review's conditions 1–3 are discharged,
+before scoring). No convention is chosen after any outcome: nothing has been scored, and no G3, rotation, ladder, reference or
+sealed outcome exists (`part_a/manifest.json:scored` false). Condition 2 of the review (final-bytes verification and
+`--verify-pins HEAD` at the real execution HEAD) is satisfied by its own later record, not by this note.
+
+*No-exposure attestation (this session, 11 Nov 2026).* The drafter of F11b is Claude Sonnet 5.5, branch `prereg/f11b` (worktree
+`.worktrees/prereg/f11b`), delegated by the chair. It read the review, the module docstring and two short passages of
+`src/wsp/eval/part_a_analysis.py`, the F10c, F11, F11a, F10b and re-pin (xxi) text of this file, `docs/PROGRESS.md` and the
+attestations file. It ran no scoring, test suite, simulation, staging or GPU job and wrote only under `docs/`. It opened nothing under
+`data/evals/`, wrote nothing under `data/`, and has seen no G3, rotation, ladder, reference or sealed outcome or a summary of one;
+none exists. It chose nothing: the clauses copy the review's rulings and the builder's recorded decisions. This attests this session
+only; it is also entry 14 of `docs/prereg/f10_attestations.md`.

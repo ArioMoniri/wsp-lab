@@ -771,3 +771,9 @@ A re-review. Supplementary staging running (launched 08:06 UTC).
 **11 Nov 2026, 08:16 UTC.** Board A accepted the analysis F11 path with conditions (`board-a-part-a-analysis-4-2026-11-11.md`;
 172 / 1112 tests). Merged (f57b70a); A5.1.2 re-pin (xxi); the full test suite is green on main again. F11b adopting note (the two
 conventions and the builder's decisions) in flight. Supplementary staging running since 08:06 UTC.
+
+**11 Nov 2026, 08:22 UTC.** A5 note F11b appended (`prereg/f11b`): adopts the Part A analysis F11-path conventions (supplement cell
+assignment, `f11a_screen_route` input and who may issue it, forty-only size refusal, 52-slot calibration always required with
+supplements, supplement row conditions, twelve-ID binding by hash) per Board A analysis review 4 condition 1; attestation entry 14.
+Changes no selection, seed, rule, cap or pin; nothing scored. Review condition 2 (final-bytes verification) and condition 3
+(pre-score inventory) remain open.
