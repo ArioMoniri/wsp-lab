@@ -31,7 +31,7 @@ round-6 member reports. They are predictions and simulation outputs, not outcome
 | 7 | F12b drafting (implementation sub-agent) | branch `prereg/f12b`, about 14:10-18:10 UTC | F12b, its code and synthetic diagnostics | none opened | none | not stated | `docs/PREREG_H1_TF.md`, end of amendment F12b | given (its own session only); (iii) **PENDING** |
 | 8 | Board A methods reviewer, F12b review | `review/board-a-f12b` worktree | that review | not stated | none | not stated | the review's "Exposure attestation" | given (its own session only); (i), (iii) **PENDING** |
 | 9 | F12c implementer (this file's author) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12c`, worktree `.worktrees/prereg/f12c`, 11 Nov 2026 about 18:10 UTC to the F12c commit | F12c note, code, tests, manifests, synthetic checks | see below | none | see below | below | given (this session only) |
-| 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | — | through the final freeze | — | — | — | — | **PENDING**: the chair writes this entry |
+| 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11 Nov 2026 | through 21:50 UTC 11 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entry 10 below | given to 21:50 UTC; **renewal PENDING** at C1 |
 | 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** |
 
 PENDING cells are blank on purpose. Nothing is inferred from a session's role, branch or timing.
@@ -68,3 +68,34 @@ stage 1, stage 2, timing pilot or real-token job.
 *(iii) Prescore audits.* The session read F12a.1's account of the disclosed pre-score audits, which names the Part A prediction and
 calibration files and quotes F11.4's simulated 0.8722 ordered power. It did not open those files, the round-6 member reports or
 `SYNTHESIS-r6.md`.
+
+## Entry 10: chair (given to 21:50 UTC, 11 Nov 2026; renewal pending at the C1 freeze)
+
+*Session.* The orchestrating chair session of the wsp-lab programme on 11 Nov 2026. It commissioned and merged the council
+round 6 synthesis, amendment F12, note F12a, amendment F12b, note F12c and the chair ruling on F12c, and launched the F12 token
+run (`agent-tmux` jobs `f12-tokens`, `f12-tokens2`, `f12-tokens3`). It attests to this session only, up to 21:50 UTC, and must
+renew this entry at the C1 freeze.
+
+*(i) Old development outcomes.* Seen. Across the programme the chair has read council briefs, syntheses and reviews that quote
+old development results, including the 342-row predictor comparison (descriptor-only 0.51/0.61, StatNN 0.56/0.66), the M3 latent
+dynamics result (rho 0.15/0.13 on 25 evaluated successor pairs), the D3 results and the TF-v1 qualification summaries used for the
+F7 power donors and the F8a.2 noise floor. This is disclosed development exposure, which does not disqualify under F12a.1.
+
+*(ii) New outcomes.* None. Part A is unscored and held by the programme owner. The single Part A phase-1 launch attempt (CPU
+proofs-only, about 11:41 UTC) refused itself at its clean-tree check before reading anything, and no relaunch was made. The chair
+opened nothing under `data/evals` for Part A variants or references, and received no G3, rotation, ladder, missing-reference,
+sealed, F8 or F9 outcome or summary, because none exists. No F12 or F12-I purchase, scoring or GPU job was run.
+
+*(iii) Prescore audits.* Read and commissioned. The chair commissioned the Part A prescore inventories (`PRESCORE_INVENTORY.md`,
+`PRESCORE_INVENTORY_2.md` and their notes), merged the frozen predictions `predictions_f11.json` and the F11.4 calibration records,
+and read the round-6 synthesis, which summarises those predictions (for example kappa median 0.023 at s = 1). These are the
+disclosed prescore audits named in F12a.1.
+
+*Disclosure: real F12 field values.* While monitoring the token run the chair read its log, whose per-row lines print the row id,
+family, the field's first-order term a, the curvature term q and the token count. These are field forecasts computed from the
+frozen G2 field, not outcomes. The chair also read the run's `pricing.json` and listed the token directory's file names; it opened
+no token, detail or K-frame file. No F12 choice was made from those values: every F12 parameter was fixed in F12, F12a, F12b or
+F12c before the token run produced its first row at 16:46 UTC.
+
+*Decisions this entry covers.* The F12b repairs brief, the F12c brief, the 190 CPU-h all-in repricing (18:55 UTC) and the
+ordering that keeps stage 1 held. None of them used a Part A, F8, F9 or F12 outcome.
