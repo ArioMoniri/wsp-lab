@@ -1,12 +1,21 @@
 {
- "schema": "a5-f11-supplement-launch-v1",
- "start_utc": "2026-11-11T08:06:02Z",
- "execution_sha": "8211ecf4c079f32dd8cc59b77fdfa5bd8a99a7bc",
- "dirty_files": 0,
- "freeze_sha256": "503e415efda3801216cc57ba332ab643a333e4b73cb92ce6366add0682fda0a4",
+ "command": "env CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 HF_HUB_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m wsp.eval.response_intervention prepare --supplement docs/prereg/a5_manifests/selection_f11.json --no-reference-proofs --audit-rule f10 --staged-manifest docs/prereg/a5_manifests/part_a/manifest.json --zoo data/zoo/qwen3.5-0.8b --selection docs/prereg/a5_manifests/selection.json --references docs/prereg/a5_manifests/references.json --strengths 0.25 0.5 --out data/runs/a5/part_a --manifest-out docs/prereg/a5_manifests/part_a/manifest.json --config configs/eval_tf_v1.yaml",
  "cwd": "/home/ubuntu/projects/wsp-lab",
- "nproc": 8,
- "load_at_start": "5.72 6.31 8.44",
+ "dirty_files": 0,
  "end_utc": "2026-11-11T09:26:07Z",
- "exit_code": 0
+ "execution_sha": "8211ecf4c079f32dd8cc59b77fdfa5bd8a99a7bc",
+ "exit_code": 0,
+ "freeze_sha256": "503e415efda3801216cc57ba332ab643a333e4b73cb92ce6366add0682fda0a4",
+ "launch_script": "/tmp/a5_f11_supplement.sh",
+ "launch_script_sha256": "1dcc133a4b1cfd8e356fd6b2ff7613054fc43033a0035c83cbd1c3d0eb6c92e4",
+ "load_at_start": "5.72 6.31 8.44",
+ "log_path": "/home/ubuntu/agent-logs/a5-f11-supplement-20261111-080602.log",
+ "log_sha256": "8e312647a270707e53da0cea4a00119ff30a15aad0cf6a631e20529713135892",
+ "nproc": 8,
+ "outputs": {
+  "manifest_sha256": "71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6",
+  "rotation_audits_sha256": "9412eb0d4d60f5587c4c5d19e9afcda86c6c45faa38a37b3ab937008d505c45a"
+ },
+ "schema": "a5-f11-supplement-launch-v1",
+ "start_utc": "2026-11-11T08:06:02Z"
 }

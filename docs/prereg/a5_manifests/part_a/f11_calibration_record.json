@@ -4,6 +4,7 @@
   "ladder_0.5": 52,
   "rotation": 43
  },
+ "environment": {},
  "gates": {
   "label": "slot-masked (F10.6); supplemented (F11.4)",
   "passed": true,
@@ -25,7 +26,17 @@
    ]
   }
  },
+ "input_provenance": {
+  "data/runs/a5/nullsize/inputs.json": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+  "data/runs/a5/power/fields.json": "85843ed28d3fd3ba5dc71e2ba8943fd022924cbc4f0b62dddbfb001cb2bcf3b9",
+  "docs/prereg/a5_manifests/part_a/slot_mask_f11.json": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+  "docs/prereg/a5_manifests/power/registered_donors.json": "6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5",
+  "docs/prereg/a5_manifests/selection_f11.json": "ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c"
+ },
  "label": "slot-masked (F10.6); supplemented (F11.4)",
+ "launch_script_sha256": "00c3a8bb46acbd1e34f095deba6b8a5f58167060e1c4a8414b70ae23de91b19b",
+ "log_path": "/home/ubuntu/agent-logs/a5-f11-calibration-20261111-092804.log",
+ "log_sha256": "afbcd5b218bbe5e7e9735bc49f554a9abd46ae33119c4e334c493bffdaa378b1",
  "mapping_sha256": "171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a",
  "mask_path": "docs/prereg/a5_manifests/part_a/slot_mask_f11.json",
  "mask_sha256": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
@@ -54,6 +65,7 @@
   "start_utc": "2026-11-11T09:28:04Z"
  },
  "schema": "a5-f11-calibration-record-v1",
+ "slot_mapping_file": "docs/prereg/a5_manifests/part_a/slot_mapping_f11.json",
  "supplement": "ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c",
  "verdict": "PASS: ordered power 0.8722 >= 0.80 and size 0.0175 <= 0.07 (two-sided 0.0348/0.0378/0.0378); alternative rate 0.2576 reported, not gated (F5.7). Part A is decisive on the supplemented 52-edit design (F11.4); Board A acceptance required before scoring."
 }
