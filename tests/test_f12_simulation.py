@@ -220,23 +220,9 @@ def test_repaired_noise_has_panel_mean_variance_and_clustering():
     assert abs(np.corrcoef(e2.T)[0, 39]) < 0.15
 
 
-@pytest.mark.skipif(not fs.DEFAULT_PAYLOAD.exists(), reason="noise payload absent")
-def test_real_payload_allowlist_and_panel_mean():
-    pay = fs.NoisePayload.load()
-    assert pay.provenance["sha256"] == fs.PAYLOAD_SHA256
-    assert set(pay.restricted()) == {
-        "schema",
-        "provenance",
-        "window_ids",
-        "donors",
-        "centred_noise",
-        "window_mask",
-    }
-    assert all(set(d) <= set(fs.DONOR_FIELDS) for d in pay.donors)
-    assert len(pay.donors) == 141 and len(pay.members) == 63
-    diag = fs.noise_diagnostics(pay, np.arange(30), seed=0, draws=300)
-    assert diag["panel_mean_sd_median"] > 1e-4
-    assert diag["max_abs_mean_without_common_resampling"] < 1e-12
+# The real-payload check moved to tests/test_f12c_governance.py
+# (test_committed_restricted_pin_matches_the_restricted_copy): F12c.6 reads only the byte-pinned
+# restricted copy; the raw payload is never opened by the F12 tests.
 
 
 # ---------------------------------------------------------------------------- calibration
@@ -306,7 +292,7 @@ def test_decision_order():
     assert fs.f12_decision(c(0.2, 0.1, 0.3, False), c(0.2, 0.1, 0.3)) == "unresolved_validity"
     assert fs.f12_decision(c(0.2, 0.1, 0.3), c(0.2, 0.01, 0.3)) == "correction_detected"
     assert fs.f12_decision(c(0.2, 0.1, 0.3), c(0.04, 0.01, 0.3)) == "unresolved"
-    assert fs.f12_decision(c(0.0, -0.1, 0.049), c(-0.3, -0.5, 0.0)) == "none_detectable_bounds"
+    assert fs.f12_decision(c(0.0, -0.1, 0.049), c(-0.3, -0.5, 0.0)) == "none_detectable_provisional"
     assert fs.f12_decision(c(0.0, -0.1, 0.05), c(-0.3, -0.5, 0.0)) == "unresolved"
 
 
@@ -350,10 +336,10 @@ def test_monte_carlo_bounds_and_gates():
     assert s["0"]["gates"] == {"size_pass": True, "size_point_pass": True, "power_pass": True,
                                "power_point_pass": True, "both_pass": True}  # fmt: skip
     assert s["0"]["alt"]["invalid"] == 100 and s["0"]["alt"]["detected"]["rate"] == 0.9
-    rel = fs.release_decision(s, cfg, [0], 1000, True)
-    assert not rel["binding"] and rel["outcome"] == "no gate decision"  # partial k grid
-    rel = fs.release_decision(s, cfg, list(fs.K_GRID), 1000, True)
-    assert rel["binding"] and rel["outcome"] == "release S_0"
+    # F12c.6: the drafted config never yields numerical eligibility, whatever its gates say
+    rel = fs.release_decision(s, cfg, {"passed": False, "failures": ["drafted F12 config"]})
+    assert rel["eligible"] is False and rel["field"] == fs.RELEASE_FIELD
+    assert "binding" not in rel and rel["numerical_eligibility"].startswith("none")
 
 
 # ------------------------------------------------------------------ end to end, determinism

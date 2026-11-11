@@ -1,0 +1,74 @@
+{
+ "amendment": "PREREG_H1_TF A5 note F12c",
+ "config": {
+  "batch": 16,
+  "bonferroni_m": 36,
+  "boot_seed": 20261107,
+  "cal_bisect_tol": 0.001,
+  "cal_draws": 4000,
+  "cal_halvings": 50,
+  "cal_monotone": "convex",
+  "cal_tol": 0.02,
+  "calibration": "f12b",
+  "cov_error_limit": 0.07,
+  "cov_se_mult": 2.0,
+  "draws": 4000,
+  "gamma_grid": 25,
+  "gamma_max": 1.0,
+  "gating": "f12a",
+  "head_zero_init": true,
+  "joint_studentiser": "floor_vcomp",
+  "k_rule": "145",
+  "lgbm": {
+   "colsample_bytree": 0.5,
+   "learning_rate": 0.05,
+   "min_child_samples": 5,
+   "n_jobs": 1,
+   "num_leaves": 8,
+   "reg_lambda": 1.0,
+   "subsample": 0.8,
+   "subsample_freq": 1
+  },
+  "lr": 0.001,
+  "max_epochs": 300,
+  "mc_alpha": 0.05,
+  "name": "f12c_pilot",
+  "noise_draw": "f12a",
+  "patience": 30,
+  "power_limit": 0.8,
+  "replicate_offset": 3000,
+  "replicates": 10,
+  "ridge_lambda": 1.0,
+  "schedule": [
+   [
+    "alt",
+    10
+   ]
+  ],
+  "seed_key": "{tag}:{r}",
+  "seed_tag": "pilot",
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "size_limit": 0.07,
+  "stage": 4,
+  "stage1_power_min": 0.9,
+  "stage1_size_max": 0.07,
+  "statnn_select_seeds": [
+   0
+  ],
+  "target_standardise": true,
+  "tree_grid": [
+   100,
+   300,
+   600
+  ],
+  "val_draws": 4000,
+  "weight_decay": 0.01
+ },
+ "note": "F12a.5(f) timing pilot: 10 alternative replicates at k = 145, panel seeds 'pilot:<r>'; timing, memory and validity only",
+ "schema": "f12-simulation-config-v1",
+ "stage": "pilot"
+}

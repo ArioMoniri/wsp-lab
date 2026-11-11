@@ -83,7 +83,9 @@ def test_zero_initialised_head_is_f3_until_trained_and_zero_at_zero_edit():
     _, P = fs.train_heads(data, [fs._seeded(0, zero_out=True)], [st], [y], [rows], TINY, epochs=[3])
     assert torch.any(P["w"] != 0)
     zero_rows = [{"id": "z", "component": "zc", "family": "chain", "origin": "existing"}]
-    zd = fs.HeadData(fs.assemble_matrix(zero_rows, [([], np.zeros((0, fs.N_COLS)))], synthetic=True))
+    zd = fs.HeadData(
+        fs.assemble_matrix(zero_rows, [([], np.zeros((0, fs.N_COLS)))], synthetic=True)
+    )
     assert fs.predict_heads(zd, P, [st], [0])[0, 0] == 0.0
 
 
@@ -109,7 +111,9 @@ def test_target_standardisation_is_training_only_and_inverted():
     p3, _ = fs.fit_wmr_fold(data, a, q, y3, comps, train, test, cfg)
     np.testing.assert_array_equal(p3, p1)
     # without the repair the old behaviour is kept (no scaling recorded)
-    _, i0 = fs.fit_wmr_fold(data, a, q, y, comps, train, test, dataclasses.replace(TINY, max_epochs=3))
+    _, i0 = fs.fit_wmr_fold(
+        data, a, q, y, comps, train, test, dataclasses.replace(TINY, max_epochs=3)
+    )
     assert "target_sd" not in i0
     # a degenerate residual fails closed
     with pytest.raises(ValueError, match="target SD"):
@@ -160,14 +164,15 @@ def test_floor_rule_is_max_of_two_way_and_one_way_terms():
         "v_item": np.array([0.5, 3.0, 0.5, 0.0]),
         "v_both": np.array([0.2, 5.0, 3.0, 2.0]),
     }
+    counts = {"raw_nonpositive": 3, "raw_nonfinite": 0, "vcomp_invalid": 0, "floor_binding": 3}
     var, info = fs.joint_variance(parts, "floor_one_way")
     np.testing.assert_allclose(var, [1.3, 3.0, 2.0, 1.0])
-    assert info == {"raw_nonpositive": 3, "floor_binding": 3}
+    assert info == counts
     var, info = fs.joint_variance(parts, "floor_vcomp")
     np.testing.assert_allclose(var, [1.3, 1.0, 2.0, 1.0])
-    assert info == {"raw_nonpositive": 3, "floor_binding": 3}
-    raw, info = fs.joint_variance(parts, "strict")
-    np.testing.assert_allclose(raw, [1.3, -1.0, -0.5, -1.0])
+    assert info == counts
+    raw, info = fs.joint_variance(parts, "strict")  # F12c.2: invalid draws are NaN, never values
+    np.testing.assert_allclose(raw, [1.3, np.nan, np.nan, np.nan])
     assert info["raw_nonpositive"] == 3 and info["floor_binding"] == 0
     with pytest.raises(ValueError):
         fs.joint_variance(parts, "drop")
@@ -233,7 +238,9 @@ def test_noise_draw_order_follows_f12a():
     comp = np.array([0, 0, 1, 2, 2, 2, 2, 3, 4, 4, 5])  # one component with more rows than donors
     row_ids = np.array(["r%02d" % i for i in (5, 1, 9, 3, 8, 0, 2, 7, 4, 6, 10)])
     for s in range(5):
-        got = fs.draw_panel_noise(pay, comp, np.random.default_rng(s), order="f12a", row_ids=row_ids)
+        got = fs.draw_panel_noise(
+            pay, comp, np.random.default_rng(s), order="f12a", row_ids=row_ids
+        )
         ref = reference_f12a_noise(pay, comp, row_ids, np.random.default_rng(s))
         np.testing.assert_array_equal(got[1], ref[1])
         np.testing.assert_array_equal(got[2], ref[2])
@@ -319,19 +326,24 @@ def test_f12a_gates_six_rates_bonferroni_36_invalid_counted():
     assert fs.mc_bounds(46, 1000, cfg)["bonferroni_upper"] <= 0.07
     assert fs.mc_bounds(47, 1000, cfg)["bonferroni_upper"] > 0.07
     # 40 valid rejections + 6 invalid null replicates = 46 rejections: passes; one more fails
-    null = [_rec("null", "unresolved", 0.1)] * 40 + [_rec("null", "unresolved_validity", 0, False)] * 6
+    null = [_rec("null", "unresolved", 0.1)] * 40 + [
+        _rec("null", "unresolved_validity", 0, False)
+    ] * 6
     null += [_rec("null", "unresolved", -0.1)] * (1000 - 46)
     alt = [_rec("alt", "correction_detected", 0.1)] * 838 + [_rec("alt", "unresolved", -1)] * 162
     s = fs.summarise(null + alt, cfg)["0"]
-    assert set(s["null"]["size_rates"]) == {
+    assert set(s["null"]["stress_rates"]) == {
         "C_WM_cond_lower", "C_WM_joint_lower", "C_WM_S_cond_lower", "C_WM_S_joint_lower", "detected"
     }  # fmt: skip
-    assert s["null"]["size_rates"]["C_WM_cond_lower"]["count"] == 46
-    assert s["null"]["size_rates"]["detected"]["count"] == 6  # invalid counted as rejection
-    assert s["gates"]["size_pass"] and s["gates"]["power_pass"] and s["gates"]["both_pass"]
+    assert s["null"]["stress_rates"]["C_WM_cond_lower"]["count"] == 46
+    assert s["null"]["stress_rates"]["detected"]["count"] == 6  # invalid counted as rejection
+    assert s["gates"]["stress_pass"] and s["gates"]["power_pass"] and s["gates"]["both_pass"]
     null2 = null[:-1] + [_rec("null", "unresolved_validity", 0, False)]
     s2 = fs.summarise(null2 + alt, cfg)["0"]
-    assert s2["null"]["size_rates"]["C_WM_cond_lower"]["count"] == 47 and not s2["gates"]["size_pass"]
+    assert (
+        s2["null"]["stress_rates"]["C_WM_cond_lower"]["count"] == 47
+        and not s2["gates"]["stress_pass"]
+    )
 
 
 def test_stage2_k_selection_rule():
@@ -364,17 +376,21 @@ def test_stage2_k_selection_rule():
         fs.select_stage2_k({str(k): v for k, v in list(s.items())[:5]}, cfg)  # all six k required
 
 
-def test_release_is_binding_only_for_the_registered_stage2_run():
+def test_f12b_configs_are_superseded_and_never_eligible():
+    """F12c: the F12b configs remain committed but are not governed; their reports never become
+    numerically eligible (the F12c execution validator rejects their config)."""
     cfg = F12B
     recs = [_rec("null", "unresolved", -0.1, k=116)] * 1000
     recs += [_rec("alt", "correction_detected", 0.1, k=116)] * 1000
     s = fs.summarise(recs, cfg)
-    rel = fs.release_decision(s, cfg, [116], 1000, "f12b_stage2", selected_k=[116])
-    assert rel["binding"] and rel["outcome"] == "release S_116"
-    rel = fs.release_decision(s, cfg, [116], 1000, "f12b_stage2", selected_k=[87, 116])
-    assert not rel["binding"]
-    rel = fs.release_decision(s, cfg, [116], 1000, "f12b_stage1", selected_k=[116])
-    assert not rel["binding"] and rel["outcome"] == "no gate decision"
+    assert s["116"]["gates"]["both_pass"]
+    assert fs.governed_name(cfg) is None and fs.registered_name(cfg) == "f12b_stage2"
+    report = {"config": cfg.as_dict(), "config_file": {"sha256": fs.F12B_CONFIG_SHA256["stage2"]},
+              "identities": {"tokens_synthetic": False}, "k_grid": [116], "records": recs, "summary": s}  # fmt: skip
+    v = fs.validate_execution(report, selection=None, prereqs={})
+    assert not v["passed"] and "config is not the registered F12c stage-2 config" in v["failures"]
+    rel = fs.release_decision(s, cfg, v)
+    assert rel["eligible"] is False and rel["field"] == fs.RELEASE_FIELD
 
 
 # ------------------------------------------------------------------------- end to end
@@ -396,7 +412,8 @@ def test_f12b_end_to_end_null_and_alt_deterministic():
             assert st["rule"] == "floor_vcomp"
             # descriptive sensitivity: the other rules on the same draws
             assert set(st["sensitivity"]) == {"strict", "floor_one_way"}
-            assert set(st["sensitivity"]["strict"]) == {"valid", "joint_bootstrap_t"}
+            # F12c.2: each sensitivity record carries its own binding / raw counts
+            assert set(st["sensitivity"]["strict"]) >= {"valid", "joint_bootstrap_t", "floor_binding"}
             assert all("target_sd" in f for f in r["fit"]["wmr"])
     alt = [r for r in recs if r["scenario"] == "alt"]
     for r in alt:
@@ -417,12 +434,19 @@ def test_restricted_payload_round_trip_and_pin(tmp_path):
     pay.provenance = {"sha256": fs.PAYLOAD_SHA256, "source": "toy"}
     path = tmp_path / "noise_payload_restricted.json"
     path.write_text(json.dumps(pay.restricted(), sort_keys=True))
-    back = fs.NoisePayload.load_restricted(path)
+    pin = fs.restricted_pin(
+        path, extractor={"script": "toy", "commit": "0" * 40, "sha256": "1" * 64}
+    )
+    back = fs.NoisePayload.load_restricted(path, pin)
     np.testing.assert_array_equal(back.blocks, pay.blocks)
     assert back.donors == pay.donors and back.provenance["restricted_copy_sha256"]
     obj = json.loads(path.read_text())
     for bad in (dict(obj, donor_mean=[0.0]), dict(obj, schema="x"),
                 dict(obj, provenance={"sha256": "0" * 64})):  # fmt: skip
         path.write_text(json.dumps(bad))
+        with pytest.raises(ValueError):  # by digest, and by content against a pin of the bad bytes
+            fs.NoisePayload.load_restricted(path, pin)
         with pytest.raises(ValueError):
-            fs.NoisePayload.load_restricted(path)
+            fs.NoisePayload.load_restricted(
+                path, fs.restricted_pin(path, extractor=pin["extractor"])
+            )

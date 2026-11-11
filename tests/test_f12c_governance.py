@@ -14,7 +14,6 @@ import pytest
 import torch
 
 from scripts import f12_simulation as fs
-
 from tests.test_f12_simulation import small_matrix, toy_payload
 
 torch.set_num_threads(1)
@@ -32,7 +31,9 @@ IDS = {
     "tokens_matrix_sha256": "a" * 64,
     "tokens_synthetic": False,
     "payload_restricted_sha256": PINNED_RESTRICTED,
-    "code_sha256": {"scripts/f12_simulation.py": "c" * 64},
+    "code_sha256": {
+        "scripts/f12_simulation.py": fs.sha256_file(fs.ROOT / "scripts/f12_simulation.py")
+    },
 }
 
 
@@ -200,7 +201,9 @@ def _st(binding, raw_np=10, raw_nf=0, vci=0, point=False, strict_valid=False, ow
     }  # fmt: skip
 
 
-def rec(cfg, scen, k, r, decision="unresolved", lo=-0.1, hi=0.3, valid=True, C=0.1, st=None, A=None):
+def rec(
+    cfg, scen, k, r, decision="unresolved", lo=-0.1, hi=0.3, valid=True, C=0.1, st=None, A=None
+):
     out = {"k": k, "scenario": scen, "r": r, "seed": fs.replicate_seed(cfg, scen, k, r), "valid": valid,
            "decision": decision, "C_WM": _contrast(valid, lo, hi, C, st), "C_WM_S": _contrast(valid, lo, hi, C, st),
            "A": A or {"F3": 1.0, "WM": 0.9, "S": 0.95, "oracle": 0.85}}  # fmt: skip
@@ -245,7 +248,15 @@ def test_expected_row_sum_target_with_mc_se_and_fail_closed():
     recs = []
     for s, k, r in planned:
         f3 = 1.0 + rng.random()
-        recs.append(rec(TG, s, k, r, A={"F3": f3, "WM": 0.97 * f3 + 0.01 * rng.normal(), "S": f3, "oracle": f3}))
+        recs.append(
+            rec(
+                TG,
+                s,
+                k,
+                r,
+                A={"F3": f3, "WM": 0.97 * f3 + 0.01 * rng.normal(), "S": f3, "oracle": f3},
+            )
+        )
     t = fs.expected_row_sum_target(recs, planned, TG)
     wm = np.array([x["A"]["WM"] for x in recs])
     f3 = np.array([x["A"]["F3"] for x in recs])
@@ -286,7 +297,9 @@ def test_coverage_of_six_intervals_at_the_expected_row_sum_target():
             recs.append(rec(S2, "null", k, r, lo=-0.1, hi=0.2))
     cov = fs.coverage_summary(recs, target, S2)
     cw = cov["C_WM"]
-    assert set(cw) == {f"{p}_{m}" for p in ("conditional", "joint") for m in ("bootstrap_t", "bca", "percentile")}
+    assert set(cw) == {
+        f"{p}_{m}" for p in ("conditional", "joint") for m in ("bootstrap_t", "bca", "percentile")
+    }
     jb = cw["joint_bootstrap_t"]
     assert jb["lower_tail_error"]["count"] == 45 and jb["upper_tail_error"]["count"] == 35
     # coverage at the point target 0.02: 40 (lo 0.015 <= 0.02) cover, 30 (hi 0.025 >= 0.02) cover
@@ -306,7 +319,9 @@ def test_coverage_of_six_intervals_at_the_expected_row_sum_target():
 def test_summary_reports_ratio_of_sums_stress_label_and_marginal_rates():
     k = 87
     recs = [rec(S2, "null", k, r, lo=-0.1) for r in range(10)]
-    recs += [rec(S2, "alt", k, r, decision="correction_detected", lo=0.01, C=0.2) for r in range(10)]
+    recs += [
+        rec(S2, "alt", k, r, decision="correction_detected", lo=0.01, C=0.2) for r in range(10)
+    ]
     s = fs.summarise(recs, S2, target=_target())[str(k)]
     assert s["null"]["label"] == fs.STRESS_LABEL == "linear-signal / ridge-bias stress scenario"
     assert "stress_rates" in s["null"] and "size_rates" not in s["null"]
@@ -328,7 +343,11 @@ def test_summary_reports_ratio_of_sums_stress_label_and_marginal_rates():
 
 def test_upper_bound_decision_code_is_provisional():
     def c(C, lo, hi):
-        return {"valid": True, "C": C, "intervals": {f"{p}_bootstrap_t": [lo, hi] for p in ("conditional", "joint")}}
+        return {
+            "valid": True,
+            "C": C,
+            "intervals": {f"{p}_bootstrap_t": [lo, hi] for p in ("conditional", "joint")},
+        }
 
     assert fs.f12_decision(c(0.0, -0.1, 0.049), c(-0.3, -0.5, 0.0)) == "none_detectable_provisional"
 
@@ -385,16 +404,28 @@ def test_stage1_report_verified_and_selection_frozen(tmp_path):
         (lambda r: r["records"][3].update(seed=1), "seed"),
         (lambda r: r["records"][3].pop("decision"), "complete"),
         (lambda r: r["summary"]["0"]["alt"]["power"].update(count=40), "summary"),
-        (lambda r: r.update(config=fs.load_config(fs.F12B_CONFIGS["stage1"])[0].as_dict()), "config"),
+        (
+            lambda r: r.update(config=fs.load_config(fs.F12B_CONFIGS["stage1"])[0].as_dict()),
+            "config",
+        ),
         (lambda r: r["config_file"].update(sha256="0" * 64), "config"),
         (lambda r: r["identities"].update(tokens_synthetic=True), "synthetic"),
         (lambda r: r["identities"].update(tokens_matrix_sha256="f" * 64), "identit"),
-        (lambda r: r["identities"]["code_sha256"].update({"scripts/f12_simulation.py": "e" * 64}), "identit"),
+        (
+            lambda r: r["identities"]["code_sha256"].update(
+                {"scripts/f12_simulation.py": "e" * 64}
+            ),
+            "identit",
+        ),
         (lambda r: r.update(k_grid=[0, 29]), "k grid"),
     ],
 )
 def test_stage1_verifier_rejects_wrong_provenance_or_counts(tmp_path, mutate, match):
-    rep = json.loads(json.dumps(_report(S1, S1_SHA, _stage1_records(), list(fs.K_GRID)), default=fs._json_default))
+    rep = json.loads(
+        json.dumps(
+            _report(S1, S1_SHA, _stage1_records(), list(fs.K_GRID)), default=fs._json_default
+        )
+    )
     mutate(rep)
     p = _write(tmp_path / "stage1.json", rep)
     with pytest.raises(ValueError, match=match):
@@ -403,7 +434,9 @@ def test_stage1_verifier_rejects_wrong_provenance_or_counts(tmp_path, mutate, ma
 
 def test_synthetic_stage1_never_selects_a_governed_run(tmp_path):
     ids = {**IDS, "tokens_synthetic": True}
-    p = _write(tmp_path / "s1.json", _report(S1, S1_SHA, _stage1_records(), list(fs.K_GRID), ids=ids))
+    p = _write(
+        tmp_path / "s1.json", _report(S1, S1_SHA, _stage1_records(), list(fs.K_GRID), ids=ids)
+    )
     with pytest.raises(ValueError, match="synthetic"):
         fs.verify_stage1_report(p, identities=ids)
     sel = fs.verify_stage1_report(p, identities=ids, allow_synthetic=True)
@@ -443,7 +476,7 @@ def _governed(tmp_path, k=58):
         "pilot_acceptance": {"schema": fs.PILOT_ACCEPTANCE_SCHEMA, "chair_accepted": True,
                              "all_in_ceiling_cpu_h": 185.0},
         "coverage_target": json.loads(json.dumps(target_report, default=fs._json_default)),
-        "c1_code_hashes": {"schema": fs.C1_SCHEMA, "status": "C1 frozen", "files": {}},
+        "c1_code_hashes": {"schema": fs.C1_SCHEMA, "status": "C1 frozen", "files": dict(IDS["code_sha256"])},
     }  # fmt: skip
     return json.loads(json.dumps(report, default=fs._json_default)), sel, prereqs
 
@@ -471,7 +504,12 @@ def test_execution_validator_passes_only_a_complete_governed_run(tmp_path):
         (lambda r, s, p: r["identities"].update(tokens_synthetic=True), "synthetic"),
         (lambda r, s, p: r["records"].pop(), "planned"),
         (lambda r, s, p: r["records"].append(copy.deepcopy(r["records"][-1])), "planned"),
-        (lambda r, s, p: r.update(records=[x for x in r["records"] if x["scenario"] != "null_var2"]), "planned"),
+        (
+            lambda r, s, p: r.update(
+                records=[x for x in r["records"] if x["scenario"] != "null_var2"]
+            ),
+            "planned",
+        ),
         (lambda r, s, p: r.update(k_grid=[87]), "k"),
         (lambda r, s, p: r["config_file"].update(sha256="0" * 64), "config"),
         (lambda r, s, p: r.update(config_registered=None, config=fs.Config().as_dict()), "config"),
@@ -479,7 +517,12 @@ def test_execution_validator_passes_only_a_complete_governed_run(tmp_path):
         (lambda r, s, p: p.pop("noise_check"), "noise_check"),
         (lambda r, s, p: p["noise_check"].update(f12a4d_check=False, panels=500), "noise_check"),
         (lambda r, s, p: p["pilot_acceptance"].update(chair_accepted=False), "pilot"),
-        (lambda r, s, p: p["c1_code_hashes"].update(status="draft, pending Board A C1 verification"), "C1"),
+        (
+            lambda r, s, p: p["c1_code_hashes"].update(
+                status="draft, pending Board A C1 verification"
+            ),
+            "C1",
+        ),
         (lambda r, s, p: p["coverage_target"]["records"].pop(), "coverage_target"),
         (lambda r, s, p: r["coverage_target"]["C_WM"].update(target=0.5), "coverage target"),
         (lambda r, s, p: s.update(synthetic=True), "selection"),
@@ -506,7 +549,9 @@ def test_report_assembly_across_invocations_preserves_provenance(tmp_path):
         parts.append(_write(tmp_path / f"part_{scen}.json", part))
     whole = fs.assemble_reports(parts)
     assert whole["records"] == json.loads(json.dumps(recs, default=fs._json_default))
-    assert [x["sha256"] for x in whole["parts"]] == [hashlib.sha256(p.read_bytes()).hexdigest() for p in parts]
+    assert [x["sha256"] for x in whole["parts"]] == [
+        hashlib.sha256(p.read_bytes()).hexdigest() for p in parts
+    ]
     assert whole["summary"] == report["summary"] and whole["part"] is None
     # overlapping planned ids, foreign provenance -> refused
     dup = _write(tmp_path / "dup.json", json.loads(parts[0].read_text()))
@@ -556,7 +601,7 @@ def test_schedule_run_end_to_end_reduced(tmp_path):
     pay = toy_payload(n_comp=10, per=3, seed=5)
     k = 10
     tasks = fs.planned_ids(TINY_C, [k])
-    recs, times = fs.simulate(m, pay, TINY_C, tasks=tasks, workers=1)
+    recs, _ = fs.simulate(m, pay, TINY_C, tasks=tasks, workers=1)
     assert [(x["scenario"], x["k"], x["r"]) for x in recs] == tasks
     for x in recs:
         assert x["seed"] == fs.replicate_seed(TINY_C, x["scenario"], k, x["r"])
@@ -607,11 +652,17 @@ def test_rules_text_states_only_the_effective_rules():
 
 def _toy_restricted(tmp_path):
     pay = toy_payload(n_comp=4, per=2, seed=3)
-    pay.provenance = {"sha256": fs.PAYLOAD_SHA256, "source": "toy", "fields_read": list(fs.PAYLOAD_FIELDS)}
+    pay.provenance = {
+        "sha256": fs.PAYLOAD_SHA256,
+        "source": "toy",
+        "fields_read": list(fs.PAYLOAD_FIELDS),
+    }
     pay.window_ids = [str(i) for i in range(64)]
     path = tmp_path / "noise_payload_restricted.json"
     path.write_bytes(json.dumps(pay.restricted(), sort_keys=True).encode())
-    pin = fs.restricted_pin(path, extractor={"script": "toy", "commit": "0" * 40, "sha256": "1" * 64})
+    pin = fs.restricted_pin(
+        path, extractor={"script": "toy", "commit": "0" * 40, "sha256": "1" * 64}
+    )
     return path, pin
 
 
@@ -695,7 +746,7 @@ def test_noise_check_fails_closed():
     assert out["status"] == "fail" and any("zero plug-in" in f for f in out["failures"])
 
     def independent_items(payload, comp_codes, row_ids, rng):  # breaks the common block index
-        E, donors, _ = fs.draw_panel_noise(payload, comp_codes, rng, order="f12a", row_ids=row_ids)
+        _, donors, _ = fs.draw_panel_noise(payload, comp_codes, rng, order="f12a", row_ids=row_ids)
         b = rng.integers(0, 32, size=(len(comp_codes), 32))
         return payload.blocks[donors[:, None], b].mean(1)
 
@@ -713,7 +764,11 @@ def test_code_hashes_c1_draft_pins_current_bytes():
     assert obj["status"] == "draft, pending Board A C1 verification"
     root = fs.ROOT
     listed = set(obj["files"])
-    for pat in ("scripts/f12*.py", "tests/test_f12*.py", "docs/prereg/f12_manifests/f12*_config.json"):
+    for pat in (
+        "scripts/f12*.py",
+        "tests/test_f12*.py",
+        "docs/prereg/f12_manifests/f12*_config.json",
+    ):
         for p in root.glob(pat):
             assert str(p.relative_to(root)) in listed, p
     for dep in ("scripts/a5_build_panels.py", "scripts/a5_simulation.py", "scripts/tfv1_requalify.py",

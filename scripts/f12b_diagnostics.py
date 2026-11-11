@@ -360,7 +360,7 @@ def main(argv=None):
     torch.set_num_threads(1)
     fs.guard_out(Path(a.out))
     Path(a.out).mkdir(parents=True, exist_ok=True)
-    payload = fs.NoisePayload.load_restricted(a.payload)
+    payload = fs.NoisePayload.load_restricted(a.payload, fs.RESTRICTED_PIN)
     t0, w0 = cpu(), time.time()
     res = {"gamma": run_gamma, "head": run_head, "smoke": run_smoke}[a.command](a, payload)
     res["cpu_seconds_total"] = cpu() - t0

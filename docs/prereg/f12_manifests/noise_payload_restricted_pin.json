@@ -1,0 +1,54 @@
+{
+ "contents": {
+  "all_windows_masked_in": true,
+  "donor_components_sha256": "d2b8a06cfe7bf5929ddca850c858e46df33076382ec65b414a41de4ac7a37fdb",
+  "donor_ids_sha256": "c1747b55dda168eeebe16b9b319b91e54f90a708b8fb732fea182f294953ef38",
+  "families": {
+   "LoRA": 25,
+   "chain": 116
+  },
+  "n_components": 63,
+  "n_donors": 141,
+  "window_ids_sha256": "4549d421d3907e16ae48782c351a816ca157fd94244d66a90af83d5c4304b295",
+  "windows": 64
+ },
+ "extractor": {
+  "commit": "07e1dc286a16e87926de92ddd84868c6cfbce7ed",
+  "functions": "NoisePayload.load (allowlist PAYLOAD_FIELDS / DONOR_FIELDS) then json.dumps(NoisePayload.restricted(), sort_keys=True)",
+  "reserialisation_check": "load_restricted re-serialises the copy through the current restricted() and requires identical bytes",
+  "script": "scripts/f12_simulation.py",
+  "sha256": "ae76dbfe5c6842568f2c174d5c3bcf7ecb106457d1b15dc5cb918d2dc6b01ee8",
+  "written": "11 Nov 2026 13:25 UTC by the F12 synthetic smoke run (scripts/f12_simulation.py at 07e1dc2; wsp-data/runs/a5/f12_sim_dryrun/aborted_run1), into wsp-data/runs/a5/f12_sim_dryrun/"
+ },
+ "notes": [
+  "The copy holds donors[j].{id, component, family}; it does not hold the eligible flag that F12a.4(e) lists. Eligibility is evidenced only by the 141 donors with all 64 windows masked-in and finite (F12a.4(b)'s expected 141 in 63 components). Whether to re-extract with eligible (which changes these bytes and this pin) is for Board A at the C1 freeze.",
+  "This pin is a draft. It becomes a C1 file only when MANIFEST_C1.sha256 is committed (F12a.6(c) item 6); until then it may be regenerated, and every change is disclosed."
+ ],
+ "provenance_in_copy": {
+  "donor_fields_read": [
+   "id",
+   "component",
+   "family"
+  ],
+  "fields_read": [
+   "centred_noise",
+   "window_mask",
+   "window_ids",
+   "donors"
+  ],
+  "not_read": "donor_mean and every other field",
+  "sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+  "source": "/home/ubuntu/projects/wsp-lab/.worktrees/feat/f12-simulation/data/runs/a5/nullsize/inputs.json"
+ },
+ "restricted_copy": {
+  "bytes": 279252,
+  "path": "/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/noise_payload_restricted.json",
+  "sha256": "a21f426f0f8aef616d4bedca19603ed4cf8b7acd4823383acf749ba3d8f4a972"
+ },
+ "schema": "f12c-restricted-payload-pin-v1",
+ "source": {
+  "path": "/home/ubuntu/projects/wsp-lab/.worktrees/feat/f12-simulation/data/runs/a5/nullsize/inputs.json",
+  "sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
+ },
+ "status": "draft, pending Board A C1 verification"
+}

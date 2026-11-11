@@ -8,7 +8,11 @@ deterministic synthetic generator below, keyed by component) and the F8a.2 quali
 ``data/evals`` file and no Part A payload is read. Writes a deterministic JSON report (+ a ``.time``
 sidecar with wall-clock timings, kept out of the report so the report is byte-reproducible).
 
-Fixed rules implemented here (each also written into the report under ``rules``):
+The bullet list below describes **F12 as drafted** (the ``Config()`` defaults, never registered). The
+governed rules are those of the committed F12c configurations (A5 note F12c; ``F12C_CONFIGS``), written
+into every report as ``rules.effective`` (``effective_rules``); where the list below differs, they govern.
+
+Drafted rules (defaults; reports of the drafted config label them ``drafted_not_registered``):
 
 * **Population and folds (F12.2).** S_k = existing components + the first k purchasable components in
   ascending sha256(``20261111:f12:purchase:`` + component id). Stratum = family (``mixed`` if a component
@@ -81,16 +85,30 @@ variance; F12a.4(h) calibration with a convexity bracket and a +-0.02 validation
 F12a.4(b) noise draw order; the F12a.5 six-rate gates; single-seed StatNN tree-count selection; and the
 two-stage k selection (``select_stage2_k``).
 
-Usage::
+F12c governance (Board A F12b review conditions 2-7): the joint studentiser rejects non-finite terms
+and requires a finite positive V_comp at the point and in every draw; per-contrast validity / binding
+reports; the expected-row-sum coverage target and coverage qualification; the exact schedules
+(stage 1: 40 + 40 at six k; stage 2: 1,000 stress + 1,000 alternative + 200 variance-x2 at the frozen
+k*; coverage target: 200 stress at k*; pilot: 10 alternatives at k = 145) with distinct planned ids;
+a frozen, verified stage-1 selection; report assembly across invocations; a fail-closed execution
+validator whose release field is numerical eligibility pending Board A acceptance; the byte-pinned
+restricted payload; the F12a.4(d) noise check; at most two workers.
 
-    python scripts/f12_simulation.py --synthetic --out /home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun \\
-        --replicates 200 --seed 20261107 --k-grid 145 --scenarios null,alt --workers 4
-    # F12b stage 1 (k-range pilot), then stage 2 at the selected k:
-    python scripts/f12_simulation.py --tokens X.npz --restricted-payload P.json --out OUT1 \\
-        --config docs/prereg/f12_manifests/f12b_stage1_config.json
-    python scripts/f12_simulation.py --tokens X.npz --restricted-payload P.json --out OUT2 \\
-        --config docs/prereg/f12_manifests/f12b_stage2_config.json --stage1-report OUT1/report.json \\
-        --scenarios null,alt
+Usage (OUT under /home/ubuntu/wsp-data; never docs/, data/evals)::
+
+    python scripts/f12_simulation.py noisecheck --tokens X.npz --restricted-payload P.json --out OUT0
+    python scripts/f12_simulation.py run --tokens X.npz --restricted-payload P.json --out OUTP \\
+        --config docs/prereg/f12_manifests/f12c_pilot_config.json --workers 2
+    python scripts/f12_simulation.py run --tokens X.npz --restricted-payload P.json --out OUT1 \\
+        --config docs/prereg/f12_manifests/f12c_stage1_config.json --workers 2
+    python scripts/f12_simulation.py select --stage1-report OUT1/report.json   # freezes k*
+    python scripts/f12_simulation.py run ... --config docs/prereg/f12_manifests/f12c_target_config.json \\
+        --stage1-report OUT1/report.json --selection docs/prereg/f12_manifests/f12c_stage2_selection.json
+    python scripts/f12_simulation.py run ... --config docs/prereg/f12_manifests/f12c_stage2_config.json \\
+        --stage1-report OUT1/report.json --selection ... --coverage-target-report OUTT/report.json \\
+        [--part null] [--prereq noise_check=OUT0/noise_check.json --prereq ...]
+    python scripts/f12_simulation.py assemble OUT2a/report.json OUT2b/report.json --out OUT2 ...
+    python scripts/f12_simulation.py c1-draft   # rewrites docs/prereg/f12_manifests/code_hashes_c1.json
 """
 
 from __future__ import annotations
@@ -243,7 +261,9 @@ class Config:
     calibration: str = "f12"  # "f12" (as drafted) | "f12b" (F12a.4(h) grid, F12b.3 tolerance)
     cal_bisect_tol: float = 0.001  # f12b: bisection target on the calibration panels
     cal_halvings: int = 100  # f12b registers 50 (F12a.4(h))
-    cal_monotone: str = "f12a"  # "f12a" (grid + 5-point non-decreasing check gates) | "convex" (F12b.3)
+    cal_monotone: str = (
+        "f12a"  # "f12a" (grid + 5-point non-decreasing check gates) | "convex" (F12b.3)
+    )
     noise_draw: str = "f12"  # "f12" (as drafted) | "f12a" (F12a.4(b) draw order)
     gating: str = "f12"  # "f12" (4 rates, size among valid) | "f12a" (F12a.5(b)-(d): 6 rates)
     replicates: int = 1000
@@ -252,10 +272,20 @@ class Config:
     stage: int = 0  # 0 = single-stage F12; 1 = F12b k-range pilot; 2 = F12b registered run
     stage1_power_min: float = 0.90  # F12b.4 selection rule (stage 1 only)
     stage1_size_max: float = 0.07
-    statnn_select_seeds: tuple = (0, 1, 2)  # F12b.5: seeds averaged in the inner tree-count selection
+    statnn_select_seeds: tuple = (
+        0,
+        1,
+        2,
+    )  # F12b.5: seeds averaged in the inner tree-count selection
+    # ---- F12c (Board A F12b review conditions 3, 5, 6). Empty schedule = legacy (scenarios x replicates).
+    schedule: tuple = ()  # ((scenario, planned replicates), ...) per k, r = offset .. offset + n - 1
+    k_rule: str = "cli"  # "all" (six k) | "selected" (frozen stage-1 k*) | "145" | "cli" (legacy)
+    seed_key: str = "{tag}:{scenario}:{k}:{r}"  # replicate panel seed key (pilot: "{tag}:{r}")
+    cov_se_mult: float = 2.0  # coverage qualification: target -/+ this many Monte Carlo SE
+    cov_error_limit: float = 0.07  # one-sided CP upper bound on each tail error rate
 
     def registered(self) -> bool:
-        return registered_name(self) == "f12b_stage2"
+        return governed_name(self) == "f12c_stage2"
 
     def as_dict(self) -> dict:
         d = dataclasses.asdict(self)
@@ -271,7 +301,8 @@ CONFIG_CHOICES = {
     "noise_draw": ("f12", "f12a"),
     "gating": ("f12", "f12a"),
     "cal_monotone": ("f12a", "convex"),
-    "stage": (0, 1, 2),
+    "stage": (0, 1, 2, 3, 4),  # 3 = F12c coverage-target run, 4 = F12a.5(f) timing pilot
+    "k_rule": ("cli", "all", "selected", "145"),
 }
 F12B_CONFIGS = {
     "stage1": ROOT / "docs/prereg/f12_manifests/f12b_stage1_config.json",
@@ -281,6 +312,30 @@ F12B_CONFIG_SHA256 = {
     "stage1": "a3946ebb7250de7b45433605d7934bace7498c6d325cb70bdf1dccd779964a81",
     "stage2": "13e59899a90aa8c44457dfe757bce4d118dfb6d51eefb43e3b437d476580f65c",
 }
+# F12c (A5 note F12c): the governed configurations; the F12b ones are superseded (kept, not governed).
+F12C_CONFIGS = {
+    name: ROOT / f"docs/prereg/f12_manifests/f12c_{name}_config.json"
+    for name in ("stage1", "stage2", "target", "pilot")
+}
+F12C_CONFIG_SHA256 = {
+    "stage1": "7cb10a83a6a2fb0e7e92ee14b2bea21d3efea42d49510e1625e9bcb9df204b01",
+    "stage2": "ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f",
+    "target": "be372fc56657bc4e6a62732e0e7bbce1701027197635b846efee6e8f4948e29c",
+    "pilot": "5e8c8c2aef6bdb049c9470757f5847e406fbc908384abb0c83cf4e1b2254b24e",
+}
+SCENARIO_LABELS = {
+    "null": "linear-signal / ridge-bias stress scenario",
+    "alt": "token-function alternative calibrated against F3 (oracle C = 0.15)",
+    "null_var2": "variance-x2 stress scenario (descriptive)",
+    "alt_var2": "variance-x2 alternative (not registered)",
+}
+STRESS_LABEL = SCENARIO_LABELS["null"]
+FAILURE_WORDING = (
+    "The registered two-comparator decision did not meet its power qualification under this "
+    "alternative; it does not establish absence of a K+F correction."
+)
+RELEASE_FIELD = "numerical eligibility pending Board A acceptance"
+MAX_WORKERS = 2  # F12c.7: at most two single-thread workers on the shared 8-core machine
 
 
 def config_from_dict(d) -> Config:
@@ -292,6 +347,11 @@ def config_from_dict(d) -> Config:
     for k in ("seeds", "tree_grid", "statnn_select_seeds"):
         if k in d:
             d[k] = tuple(d[k])
+    if "schedule" in d:
+        d["schedule"] = tuple((str(sc), int(n)) for sc, n in d["schedule"])
+        for sc, n in d["schedule"]:
+            if sc not in SCENARIOS or n < 1:
+                raise ValueError(f"bad schedule entry {(sc, n)!r}")
     if "lgbm" in d:
         d["lgbm"] = tuple(dict(d["lgbm"]).items())
     for k, allowed in CONFIG_CHOICES.items():
@@ -309,15 +369,54 @@ def load_config(path):
     return config_from_dict(obj["config"]), hashlib.sha256(raw).hexdigest()
 
 
+_PINNED = {}
+
+
+def _pinned_configs():
+    """{name: Config} of the committed configs whose bytes match their pinned sha256 (cached)."""
+    if not _PINNED:
+        for prefix, paths, shas in (
+            ("f12c", F12C_CONFIGS, F12C_CONFIG_SHA256),
+            ("f12b", F12B_CONFIGS, F12B_CONFIG_SHA256),
+        ):
+            for stage, path in paths.items():
+                if path.exists():
+                    ref, sha = load_config(path)
+                    if sha == shas[stage]:
+                        _PINNED[f"{prefix}_{stage}"] = ref
+    return _PINNED
+
+
 def registered_name(cfg):
-    """'f12b_stage1' / 'f12b_stage2' if cfg equals that committed, sha256-pinned config, else None."""
-    for stage, path in F12B_CONFIGS.items():
-        if not path.exists():
-            continue
-        ref, sha = load_config(path)
-        if sha == F12B_CONFIG_SHA256[stage] and cfg == ref:
-            return f"f12b_{stage}"
+    """'f12c_<stage>' or (superseded) 'f12b_<stage>' if cfg equals that committed, sha256-pinned
+    config, else None."""
+    for name, ref in _pinned_configs().items():
+        if cfg == ref:
+            return name
     return None
+
+
+def governed_name(cfg):
+    """The F12c config name if cfg is one of the governed F12c configs (F12b's are superseded)."""
+    name = registered_name(cfg)
+    return name if name and name.startswith("f12c_") else None
+
+
+def replicate_seed(cfg, scenario, k, r):
+    """PCG64 seed of replicate panel (scenario, k, r): seed("20261111:f12:", cfg.seed_key)."""
+    key = cfg.seed_key.format(tag=cfg.seed_tag, scenario=scenario, k=k, r=r)
+    return domain_seed(FOLD_DOMAIN, key)
+
+
+def planned_ids(cfg, k_values):
+    """Every planned (scenario, k, r) of cfg's schedule at the given k, in execution-report order."""
+    if not cfg.schedule:
+        raise ValueError("config has no registered schedule")
+    out = []
+    for k in k_values:
+        for sc, n in cfg.schedule:
+            out += [(sc, int(k), r) for r in range(cfg.replicate_offset, cfg.replicate_offset + n)]
+    return out
 
 
 # ------------------------------------------------------------------- population and folds
@@ -989,6 +1088,8 @@ class NoisePayload:
 
     @classmethod
     def load(cls, path=DEFAULT_PAYLOAD, expected_sha256=PAYLOAD_SHA256):
+        """Raw F8a.2 payload, allowlisted fields only. Extraction / non-governed diagnostics only: never
+        a governed fallback (F12c.6; ``main`` refuses it whenever a config is given)."""
         path = Path(path)
         raw = path.read_bytes()
         digest = hashlib.sha256(raw).hexdigest()
@@ -1009,25 +1110,58 @@ class NoisePayload:
         )
 
     RESTRICTED_SCHEMA = "f12-noise-payload-restricted-v1"
-    RESTRICTED_KEYS = {"schema", "provenance", "window_ids", "donors", "centred_noise", "window_mask"}
+    RESTRICTED_KEYS = {
+        "schema",
+        "provenance",
+        "window_ids",
+        "donors",
+        "centred_noise",
+        "window_mask",
+    }
 
     @classmethod
-    def load_restricted(cls, path):
-        """The restricted copy written by ``restricted()`` (F12a.4(e)): exactly the allowlisted keys,
-        provenance pinned to the F8a.2 payload sha256; anything else fails closed."""
+    def load_restricted(cls, path, pin):
+        """The restricted copy (F12a.4(e)), verified against its byte pin (F12c.6): the sha256 of the
+        restricted bytes, the source digest, the contents (donor ids, components, families, window
+        ids, counts) and the extractor (the bytes must be exactly what the pinned extractor's
+        ``restricted()`` + ``json.dumps(sort_keys=True)`` writes for them). ``pin`` is mandatory (a
+        dict or the path of a pin manifest); any mismatch fails closed."""
+        if not isinstance(pin, dict):
+            pin = json.loads(Path(pin).read_text())
         raw = Path(path).read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest != pin["restricted_copy"]["sha256"]:
+            raise ValueError(
+                f"restricted copy digest {digest} != pinned {pin['restricted_copy']['sha256']}"
+            )
         obj = json.loads(raw)
         if set(obj) != cls.RESTRICTED_KEYS or obj["schema"] != cls.RESTRICTED_SCHEMA:
             raise ValueError("not a restricted f12 noise payload (unexpected keys or schema)")
-        if obj["provenance"].get("sha256") != PAYLOAD_SHA256:
+        if (
+            obj["provenance"].get("sha256") != PAYLOAD_SHA256
+            or pin["source"]["sha256"] != PAYLOAD_SHA256
+        ):
             raise ValueError("restricted payload provenance is not the pinned F8a.2 payload")
         for d in obj["donors"]:
             if not set(d) <= set(DONOR_FIELDS):
                 raise ValueError("donor record outside the allowlist")
-        prov = dict(obj["provenance"])
-        prov["restricted_copy"] = str(path)
-        prov["restricted_copy_sha256"] = hashlib.sha256(raw).hexdigest()
-        return cls(obj["centred_noise"], obj["window_mask"], obj["donors"], obj["window_ids"], prov)
+        got = restricted_contents(obj)
+        for key, want in pin["contents"].items():
+            if got.get(key) != want:
+                raise ValueError(
+                    f"restricted copy contents differ from the pin: {key.replace('_', ' ')}"
+                )
+        for key in ("script", "commit", "sha256"):
+            if not pin.get("extractor", {}).get(key):
+                raise ValueError(f"pin lacks extractor provenance ({key})")
+        pay = cls(obj["centred_noise"], obj["window_mask"], obj["donors"], obj["window_ids"],
+                  dict(obj["provenance"]))  # fmt: skip
+        if json.dumps(pay.restricted(), sort_keys=True).encode() != raw:
+            raise ValueError("restricted bytes are not the pinned extractor's serialisation")
+        pay.provenance["restricted_copy"] = str(path)
+        pay.provenance["restricted_copy_sha256"] = digest
+        pay.provenance["pin_status"] = pin.get("status")
+        return pay
 
     def restricted(self) -> dict:
         return {
@@ -1038,6 +1172,58 @@ class NoisePayload:
             "centred_noise": self.noise.tolist(),
             "window_mask": self.mask.tolist(),
         }
+
+
+RESTRICTED_PIN = ROOT / "docs/prereg/f12_manifests/noise_payload_restricted_pin.json"
+RESTRICTED_PIN_SCHEMA = "f12c-restricted-payload-pin-v1"
+
+
+def _sha_json(x) -> str:
+    return hashlib.sha256(json.dumps(x).encode()).hexdigest()
+
+
+def restricted_contents(obj) -> dict:
+    """Identity summary of a restricted payload object (counts and hashes; no noise values)."""
+    donors = obj["donors"]
+    fams = {}
+    for d in donors:
+        fams[d.get("family")] = fams.get(d.get("family"), 0) + 1
+    return {
+        "n_donors": len(donors),
+        "n_components": len({d["component"] for d in donors}),
+        "windows": len(obj["window_ids"]) if obj.get("window_ids") is not None else None,
+        "window_ids_sha256": _sha_json(obj.get("window_ids")),
+        "donor_ids_sha256": _sha_json([d["id"] for d in donors]),
+        "donor_components_sha256": _sha_json([[d["id"], d["component"]] for d in donors]),
+        "families": dict(sorted(fams.items())),
+        "all_windows_masked_in": bool(np.asarray(obj["window_mask"], dtype=bool).all()),
+    }
+
+
+def restricted_pin(path, extractor) -> dict:
+    """Byte pin of a restricted payload copy (F12c.6): digest, source, extractor, contents."""
+    raw = Path(path).read_bytes()
+    obj = json.loads(raw)
+    return {
+        "schema": RESTRICTED_PIN_SCHEMA,
+        "status": "draft, pending Board A C1 verification",
+        "restricted_copy": {
+            "path": str(path),
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "bytes": len(raw),
+        },
+        "source": {
+            "path": obj["provenance"].get("source"),
+            "sha256": obj["provenance"].get("sha256"),
+        },
+        "provenance_in_copy": obj["provenance"],
+        "extractor": dict(extractor),
+        "contents": restricted_contents(obj),
+    }
+
+
+def load_restricted_pin(path=RESTRICTED_PIN) -> dict:
+    return json.loads(Path(path).read_text())
 
 
 def draw_panel_noise(payload, comp_codes, rng, scale=1.0, order="f12", row_ids=None):
@@ -1380,25 +1566,37 @@ def joint_parts(D, qa, qb, comp, mult):
 
 
 def joint_variance(parts, rule):
-    """Joint studentising variance under the registered rule (F12b.2).
+    """Joint studentising variance under the registered rule (F12b.2; F12c.2 enforcement).
 
-    strict: V = V_comp + V_item - V_both (A5.4.2; V <= 0 makes the draw invalid).
+    strict: V = V_comp + V_item - V_both (A5.4.2 as written; V <= 0 or non-finite: invalid draw).
     floor_vcomp: V = max(V_comp + V_item - V_both, V_comp), V_comp the draw's component-only term.
-    floor_one_way: V = max(V_comp + V_item - V_both, V_comp, V_item), the same rule in every draw and
-    at the point: the two-way variance is never below either one-way (component-only or item-only)
-    variance of the same draw, and is otherwise unchanged. No draw is dropped or replaced."""
-    raw = parts["v_comp"] + parts["v_item"] - parts["v_both"]
-    bad = ~(np.isfinite(raw) & (raw > 0))
+    floor_one_way: V = max(V_comp + V_item - V_both, V_comp, V_item) (descriptive sensitivity only).
+    F12c.2: a draw with any non-finite term (V_comp, V_item or V_both) is invalid under every rule:
+    the non-finite raw value is rejected, never replaced by the floor. Under the floor rules a draw is
+    also invalid unless V_comp itself is finite and > 0 (F12b.2's requirement, checked separately,
+    not only through the final variance). Invalid draws get NaN; no draw is dropped or replaced.
+    Info counts: raw_nonfinite (some term non-finite), raw_nonpositive (all terms finite, raw <= 0),
+    vcomp_invalid (V_comp non-finite or <= 0), floor_binding (valid draws whose variance is the floor)."""
+    vc, vi, vb = (np.asarray(parts[k], dtype=float) for k in ("v_comp", "v_item", "v_both"))
+    finite = np.isfinite(vc) & np.isfinite(vi) & np.isfinite(vb)
+    with np.errstate(invalid="ignore"):
+        raw = np.where(finite, vc + vi - vb, np.nan)
+        vc_ok = np.isfinite(vc) & (vc > 0)
+    info = {
+        "raw_nonfinite": int((~finite).sum()),
+        "raw_nonpositive": int((finite & ~(raw > 0)).sum()),
+        "vcomp_invalid": int((~vc_ok).sum()),
+    }
     if rule == "strict":
-        return raw, {"raw_nonpositive": int(bad.sum()), "floor_binding": 0}
+        var = np.where(finite & (raw > 0), raw, np.nan)
+        return var, {**info, "floor_binding": 0}
     if rule in ("floor_one_way", "floor_vcomp"):
-        floor = parts["v_comp"]
-        if rule == "floor_one_way":
-            floor = np.maximum(floor, parts["v_item"])
+        floor = vc if rule == "floor_vcomp" else np.maximum(vc, vi)
+        ok = finite & vc_ok
         with np.errstate(invalid="ignore"):
-            binding = ~(raw >= floor)
-        var = np.where(binding, floor, raw)
-        return var, {"raw_nonpositive": int(bad.sum()), "floor_binding": int(binding.sum())}
+            binding = ok & (raw < floor)
+            var = np.where(ok, np.where(binding, floor, raw), np.nan)
+        return var, {**info, "floor_binding": int(binding.sum())}
     raise ValueError(f"unknown joint studentiser rule {rule!r}")
 
 
@@ -1445,6 +1643,13 @@ def a542_contrast(D, qa, qb, comp, mults, rule="strict"):
     ln_j = parts["ln"]
     with np.errstate(invalid="ignore"):
         se_j = np.sqrt(np.where(var_j > 0, var_j, np.nan))
+    terms_finite = (
+        np.isfinite(parts["v_comp"]) & np.isfinite(parts["v_item"]) & np.isfinite(parts["v_both"])
+    )
+    with np.errstate(invalid="ignore"):
+        vcomp_ok = np.isfinite(parts["v_comp"]) & (parts["v_comp"] > 0)
+    if rule == "strict":
+        vcomp_ok = np.ones_like(vcomp_ok)  # A5.4.2 as written: only the two-way value is checked
     v = jj @ D.T / BLOCKS
     rm = jc[:, comp]
     sa_j = (rm * np.abs(v - qa)).sum(1)
@@ -1455,6 +1660,8 @@ def a542_contrast(D, qa, qb, comp, mults, rule="strict"):
         & (sb_j / rows_j > DENOM_TOL)
         & ((jc > 0).sum(1) >= 2)
         & np.isfinite(ln_j)
+        & terms_finite
+        & vcomp_ok
         & np.isfinite(se_j)
         & (se_j > 0)
     )
@@ -1464,9 +1671,14 @@ def a542_contrast(D, qa, qb, comp, mults, rule="strict"):
         se0 = np.sqrt(np.where(var0 > 0, var0, np.nan))
     out["studentiser"] = {
         "rule": rule,
+        "draws": len(ln_j),
         "raw_nonpositive": sinfo["raw_nonpositive"],
+        "raw_nonfinite": sinfo["raw_nonfinite"],
+        "vcomp_invalid": sinfo["vcomp_invalid"],
         "floor_binding": sinfo["floor_binding"],
         "point_raw_nonpositive": bool(pinfo["raw_nonpositive"]),
+        "point_raw_nonfinite": bool(pinfo["raw_nonfinite"]),
+        "point_vcomp_invalid": bool(pinfo["vcomp_invalid"]),
         "point_floor_binding": bool(pinfo["floor_binding"]),
     }
     out["n_failed"] = {"conditional": int((~ok_c).sum()), "joint": int((~ok_j).sum())}
@@ -1481,12 +1693,21 @@ def a542_contrast(D, qa, qb, comp, mults, rule="strict"):
 
     out["failure_reasons"] = {
         "conditional": reasons(sa, sb, rows_n, cond, ln_c, se_c),
-        "joint": reasons(sa_j, sb_j, rows_j, jc, ln_j, se_j),
+        "joint": {
+            **reasons(sa_j, sb_j, rows_j, jc, ln_j, se_j),
+            "two_way_term_nonfinite": int((~terms_finite).sum()),
+            "v_comp_nonpositive_or_nonfinite": int((~vcomp_ok).sum()),
+        },
     }
     if not ok_c.all():
         failures.append("conditional draws invalid")
     if not ok_j.all():
         failures.append("joint draws invalid")
+    pt_terms = all(np.isfinite(pt[x][0]) for x in ("v_comp", "v_item", "v_both"))
+    if rule != "strict" and not (np.isfinite(pt["v_comp"][0]) and pt["v_comp"][0] > 0):
+        failures.append("joint point V_comp")
+    elif not pt_terms:
+        failures.append("joint point term non-finite")
     if not (np.isfinite(se0[0]) and se0[0] > 0):
         failures.append("joint point studentiser")
     if failures:
@@ -1516,7 +1737,9 @@ def f12_decision(wm, wms):
     if wm["C"] >= 0.05 and wms["C"] >= 0.05 and lower:
         return "correction_detected"
     if all(iv[f"{p}_bootstrap_t"][1] < 0.05 for p in ("conditional", "joint")):
-        return "none_detectable_bounds"
+        # provisional: an upper-bound code is not a qualified label until the power gate and the
+        # F12c.3 upper-tail coverage qualification pass for the analysed population
+        return "none_detectable_provisional"
     return "unresolved"
 
 
@@ -1603,7 +1826,7 @@ def run_replicate(ctx, scenario, r):
     alt, var = SCENARIOS[scenario]
     cfg = ctx.cfg
     rec = {"scenario": scenario, "k": ctx.k, "r": r}
-    rec["seed"] = domain_seed(FOLD_DOMAIN, f"{cfg.seed_tag}:{scenario}:{ctx.k}:{r}")
+    rec["seed"] = replicate_seed(cfg, scenario, ctx.k, r)
     gamma, h = 0.0, np.zeros(len(ctx.a))
     if alt:
         try:
@@ -1643,9 +1866,20 @@ def run_replicate(ctx, scenario, r):
             for rule in STUDENTISER_RULES:
                 if rule != cfg.joint_studentiser:
                     alt_c = a542_contrast(D, wm, qb, ctx.comp, ctx.mults, rule=rule)
+                    st = alt_c.get("studentiser", {})
                     c["studentiser"]["sensitivity"][rule] = {
                         "valid": alt_c["valid"],
                         "joint_bootstrap_t": alt_c["intervals"].get("joint_bootstrap_t"),
+                        **{
+                            x: st.get(x)
+                            for x in (
+                                "floor_binding",
+                                "raw_nonpositive",
+                                "raw_nonfinite",
+                                "vcomp_invalid",
+                                "point_floor_binding",
+                            )
+                        },
                     }
     rec["C_WM"], rec["C_WM_S"] = cw, cs
     rec["decision"] = f12_decision(cw, cs)
@@ -1705,99 +1939,319 @@ def replicates_needed(p, limit, kind, alpha_one_sided, n_max=200_000):
     return None
 
 
-def summarise(records, cfg):
-    """Per k: gating rates, MC bounds, gates. Size counts reject only for valid replicates;
-    power counts invalid replicates as failures."""
+CONTRASTS = ("C_WM", "C_WM_S")
+INTERVAL_KEYS = tuple(
+    f"{p}_{m}" for p in ("conditional", "joint") for m in ("bootstrap_t", "bca", "percentile")
+)
+BOOT_T_KEYS = ("conditional_bootstrap_t", "joint_bootstrap_t")
+STAGE2_REQUIRED = {"null": 1000, "alt": 1000, "null_var2": 200}
+
+
+def _dist(values):
+    v = np.asarray([x for x in values if x is not None], dtype=float)
+    if not len(v):
+        return {"n": 0}
+    return {
+        "n": len(v),
+        "min": float(v.min()),
+        "q25": float(np.quantile(v, 0.25)),
+        "median": float(np.median(v)),
+        "q75": float(np.quantile(v, 0.75)),
+        "max": float(v.max()),
+    }
+
+
+def _lower_pos(con, key):
+    return bool(con and con.get("valid") and con["intervals"][key][0] > 0)
+
+
+def studentiser_summary(recs, cfg):
+    """F12c.2 report, per contrast, over the planned replicates of one scenario at one k: amended
+    (registered rule) and strict validity with the planned denominator, the one-way-max sensitivity's
+    validity, raw non-positive / non-finite draw counts, the floor's draw-binding fraction and its
+    distribution over replicates, the point-binding rate, the sensitivities' joint lower bounds and
+    binding fractions on the identical draws, and failed guards by cause."""
+    n = len(recs)
+    out = {}
+    for c in CONTRASTS:
+        valid = strict = one_way = point = 0
+        raw_np, raw_nf, vci, frac = [], [], [], []
+        sens_lo = {"strict": 0, "floor_one_way": 0}
+        sens_frac = {"strict": [], "floor_one_way": []}
+        causes = {}
+        for x in recs:
+            con = x.get(c)
+            if con is None:
+                why = x.get("failure") or "no contrast computed"
+                causes[f"replicate: {why}"] = causes.get(f"replicate: {why}", 0) + 1
+                continue
+            valid += bool(con.get("valid"))
+            if not con.get("valid"):
+                for f in con.get("failures", []):
+                    causes[f"contrast: {f}"] = causes.get(f"contrast: {f}", 0) + 1
+                for proc, d in con.get("failure_reasons", {}).items():
+                    for why, cnt in d.items():
+                        if cnt:
+                            key = f"{proc}: {why}"
+                            causes[key] = causes.get(key, 0) + int(cnt)
+            st = con.get("studentiser")
+            if not st:
+                continue
+            draws = st.get("draws") or cfg.draws
+            raw_np.append(st.get("raw_nonpositive"))
+            raw_nf.append(st.get("raw_nonfinite"))
+            vci.append(st.get("vcomp_invalid"))
+            frac.append(st.get("floor_binding", 0) / draws)
+            point += bool(st.get("point_floor_binding"))
+            sens = st.get("sensitivity", {})
+            for rule in ("strict", "floor_one_way"):
+                if rule == st.get("rule"):
+                    ok = bool(con.get("valid"))
+                    lo_pos = _lower_pos(con, "joint_bootstrap_t")
+                    fb = st.get("floor_binding", 0)
+                else:
+                    s_r = sens.get(rule) or {}
+                    ok = bool(s_r.get("valid"))
+                    iv = s_r.get("joint_bootstrap_t")
+                    lo_pos = bool(ok and iv is not None and iv[0] > 0)
+                    fb = s_r.get("floor_binding")
+                if rule == "strict":
+                    strict += ok
+                else:
+                    one_way += ok
+                sens_lo[rule] += lo_pos
+                if fb is not None:
+                    sens_frac[rule].append(fb / draws)
+
+        def tot(v):
+            v = [int(a) for a in v if a is not None]
+            return {"total": int(sum(v)), "replicates_with_any": int(sum(a > 0 for a in v)),
+                    "per_replicate": _dist(v)}  # fmt: skip
+
+        out[c] = {
+            "rule": cfg.joint_studentiser,
+            "planned": n,
+            "amended_valid": mc_bounds(valid, n, cfg),
+            "strict_valid": mc_bounds(strict, n, cfg),
+            "one_way_max_valid": mc_bounds(one_way, n, cfg),
+            "raw_nonpositive_draws": tot(raw_np),
+            "raw_nonfinite_draws": tot(raw_nf),
+            "vcomp_invalid_draws": tot(vci),
+            "floor_binding_fraction": _dist(frac),
+            "point_binding": {"count": int(point), "n": n, "rate": point / n if n else None},
+            "sensitivity_joint_lower_positive": sens_lo,
+            "sensitivity_floor_binding_fraction": {k: _dist(v) for k, v in sens_frac.items()},
+            "failed_guards_by_cause": dict(sorted(causes.items())),
+            "note": "rates over the planned replicates; strict = A5.4.2 as written on the identical draws",
+        }
+    return out
+
+
+def expected_row_sum_target(records, planned, cfg):
+    """F12c.3 coverage target: per contrast, the expected-row-sum risk ratio of the frozen procedure,
+    C-bar = 1 - Sum_r A_WM,r / Sum_r A_ref,r over the planned, independent target replicates (seed tag
+    'target'), with its delta-method Monte Carlo SE and the conservative band target -/+ cov_se_mult SE.
+    Fail closed: a missing, duplicated or unplanned replicate, or any fit failure, leaves no target."""
+    ids = [(x.get("scenario"), x.get("k"), x.get("r")) for x in records]
+    if len(ids) != len(set(ids)) or set(ids) != set(planned):
+        return {"status": "failed: target replicates missing, duplicated or unplanned"}
+    for x in records:
+        A = x.get("A")
+        if not A or not all(np.isfinite(A.get(a, np.nan)) for a in ("WM", "F3", "S")):
+            why = x.get("failure", "no losses")
+            return {"status": f"failed: fit failure in target replicate {x.get('r')} ({why})"}
+    n = len(records)
+    out = {
+        "status": "ok",
+        "n": n,
+        "estimand": "ratio of expected row sums over independent target replicates (all planned; no "
+        "valid-only conditioning: contrast validity is not required for the losses)",
+    }
+    wm = np.array([x["A"]["WM"] for x in records])
+    for c, ref in (("C_WM", "F3"), ("C_WM_S", "S")):
+        den = np.array([x["A"][ref] for x in records])
+        R = wm.sum() / den.sum()
+        infl = (wm - R * den) / den.mean()
+        se = float(np.sqrt((infl**2).sum() / (n * (n - 1)))) if n > 1 else float("nan")
+        t = float(1 - R)
+        out[c] = {
+            "target": t,
+            "se": se,
+            "lo": t - cfg.cov_se_mult * se,
+            "hi": t + cfg.cov_se_mult * se,
+        }
+    return out
+
+
+def coverage_summary(recs, target, cfg):
+    """F12c.3 coverage / error qualification at the expected-row-sum target, planned denominator.
+    For each contrast and each of the six A4.4 intervals: coverage of the point target, lower-tail
+    error (lower bound > target - cov_se_mult SE) and upper-tail error (upper bound < target +
+    cov_se_mult SE); an invalid replicate is an error in both tails and does not cover. Gates (each a
+    one-sided CP upper bound at alpha 0.05/36, <= cov_error_limit): the lower tail of the conditional
+    and joint bootstrap-t intervals of both contrasts (purchase qualification) and their upper tail
+    (required only for the upper-bound labels)."""
+    gates = {"n_bounds": 2 * len(CONTRASTS) * len(BOOT_T_KEYS),
+             "alpha_each": cfg.mc_alpha / cfg.bonferroni_m,
+             "limit": cfg.cov_error_limit, "lower_tail_pass": False, "upper_tail_pass": False}  # fmt: skip
+    if not target or target.get("status") != "ok":
+        why = (target or {}).get("status", "none supplied")
+        return {"status": f"failed: no valid coverage target ({why})", "gates": gates}
+    n = len(recs)
+    out = {"status": "ok", "n": n, "target": {c: target[c] for c in CONTRASTS}}
+    for c in CONTRASTS:
+        T = target[c]
+        out[c] = {}
+        for key in INTERVAL_KEYS:
+            cover = lo_err = hi_err = 0
+            for x in recs:
+                con = x.get(c)
+                if not con or not con.get("valid"):
+                    lo_err += 1
+                    hi_err += 1
+                    continue
+                lo, hi = con["intervals"][key]
+                cover += lo <= T["target"] <= hi
+                lo_err += lo > T["lo"]
+                hi_err += hi < T["hi"]
+            out[c][key] = {
+                "covers_target": mc_bounds(cover, n, cfg),
+                "lower_tail_error": mc_bounds(lo_err, n, cfg),
+                "upper_tail_error": mc_bounds(hi_err, n, cfg),
+            }
+    lim = cfg.cov_error_limit
+    gates["lower_tail_pass"] = all(
+        out[c][k]["lower_tail_error"]["bonferroni_upper"] <= lim
+        for c in CONTRASTS
+        for k in BOOT_T_KEYS
+    )
+    gates["upper_tail_pass"] = all(
+        out[c][k]["upper_tail_error"]["bonferroni_upper"] <= lim
+        for c in CONTRASTS
+        for k in BOOT_T_KEYS
+    )
+    out["gates"] = gates
+    return out
+
+
+def _scenario_summary(name, recs, cfg, target):
+    n = len(recs)
+    valid = [x for x in recs if x["valid"]]
+    s = {
+        "label": SCENARIO_LABELS.get(name, name),
+        "n": n,
+        "invalid": n - len(valid),
+        "decisions": {
+            d: sum(x["decision"] == d for x in recs) for d in sorted({x["decision"] for x in recs})
+        },
+    }
+    if cfg.stage == 4:  # F12a.5(f) pilot: timing, memory and validity only; no gate rate
+        s["invalid_by_cause"] = _invalid_causes([x for x in recs if not x["valid"]])
+        return s
+    s["detected"] = mc_bounds(sum(x["decision"] == "correction_detected" for x in recs), n, cfg)
+    s["cond_lower_pos"] = mc_bounds(
+        sum(_lower_pos(x.get("C_WM"), BOOT_T_KEYS[0]) for x in valid), n, cfg
+    )
+    s["joint_lower_pos"] = mc_bounds(
+        sum(_lower_pos(x.get("C_WM"), BOOT_T_KEYS[1]) for x in valid), n, cfg
+    )
+    six = {}
+    for contrast in CONTRASTS:
+        for key in INTERVAL_KEYS:
+            cnt = sum(x[contrast]["intervals"][key][0] > 0 for x in valid)
+            six[f"{contrast}:{key}"] = {"count": cnt, "rate": cnt / n if n else None}
+    s["lower_bound_positive_rates_A4.4"] = six
+
+    def marginal(c):
+        return sum(
+            bool(
+                x.get(c, {}).get("valid")
+                and x[c]["C"] >= 0.05
+                and all(_lower_pos(x[c], k) for k in BOOT_T_KEYS)
+            )
+            for x in recs
+        )
+
+    s["marginal_detection"] = {
+        "note": "descriptive marginal detection rates (point C >= 0.05 and both bootstrap-t lower bounds "
+        "> 0 for that contrast alone), planned denominator; not a purchase route (F12c.4)",
+        **{c: mc_bounds(marginal(c), n, cfg) for c in CONTRASTS},
+    }
+    if valid:
+        sums = {a: sum(x["A"][a] for x in valid) for a in ("F3", "WM", "S", "oracle")}
+        s["learned_C"] = {
+            "estimand": "ratio of expected row sums: 1 - Sum_r A_x,r / Sum_r A_ref,r (no mean of "
+            "replicate ratios)",
+            "conditioning": f"valid-only: the {len(valid)} replicates of {n} planned with both "
+            "contrasts valid",
+            "n_valid": len(valid),
+            "C_WM_ratio_of_sums": float(1 - sums["WM"] / sums["F3"]),
+            "C_WM_S_ratio_of_sums": float(1 - sums["WM"] / sums["S"]),
+            "C_S_F3_ratio_of_sums": float(1 - sums["S"] / sums["F3"]),
+            "C_oracle_F3_ratio_of_sums": float(1 - sums["oracle"] / sums["F3"]),
+        }
+    cal = [x["calibration"] for x in recs if "calibration" in x]
+    if cal:
+        okc = [c for c in cal if c.get("status") == "ok"]
+        vals = [c["C_validation"] for c in okc]
+        s["calibration"] = {
+            "n": len(cal),
+            "ok": len(okc),
+            "failed": len(cal) - len(okc),
+            "gamma_median": float(np.median([c["gamma"] for c in okc])) if okc else None,
+            "C_validation_median": float(np.median(vals)) if vals else None,
+            "C_validation_range": [float(min(vals)), float(max(vals))] if vals else None,
+            "C_validation_within_tol": sum(abs(v - TARGET_C) <= cfg.cal_tol for v in vals),
+        }
+    if cfg.gating == "f12a":
+        s.update(f12a_rates(recs, cfg))
+    s["studentiser"] = studentiser_summary(recs, cfg)
+    if name == "null":
+        s["coverage"] = (
+            coverage_summary(recs, target, cfg)
+            if target is not None
+            else {"status": "not computed: no coverage target supplied (F12c.3)"}
+        )
+    else:
+        s["coverage"] = {
+            "status": "not computed: no registered coverage target for this scenario (F12c.3)"
+        }
+    return s
+
+
+def summarise(records, cfg, target=None):
+    """Per k and scenario: planned-denominator rates, the F12a.5 rates and gates, studentiser and
+    coverage reports (F12c.2-3). ``target``: the F12c.3 expected-row-sum target of the stress scenario."""
     out = {}
     by_k = {}
     for rec in records:
         by_k.setdefault(rec["k"], {}).setdefault(rec["scenario"], []).append(rec)
     for k, scen in sorted(by_k.items()):
-        row = {}
-        for name, recs in sorted(scen.items()):
-            n = len(recs)
-            valid = [x for x in recs if x["valid"]]
-
-            def lower_pos(x, proc):
-                return x["C_WM"]["intervals"][f"{proc}_bootstrap_t"][0] > 0
-
-            s = {
-                "n": n,
-                "invalid": n - len(valid),
-                "decisions": {
-                    d: sum(x["decision"] == d for x in recs)
-                    for d in sorted({x["decision"] for x in recs})
-                },
-                "detected": mc_bounds(
-                    sum(x["decision"] == "correction_detected" for x in recs), n, cfg
-                ),
-                "cond_lower_pos": mc_bounds(
-                    sum(lower_pos(x, "conditional") for x in valid), n, cfg
-                ),
-                "joint_lower_pos": mc_bounds(sum(lower_pos(x, "joint") for x in valid), n, cfg),
-            }
-            six = {}
-            for contrast in ("C_WM", "C_WM_S"):
-                for method in ("bootstrap_t", "bca", "percentile"):
-                    for proc in ("conditional", "joint"):
-                        key = f"{proc}_{method}"
-                        cnt = sum(x[contrast]["intervals"][key][0] > 0 for x in valid)
-                        six[f"{contrast}:{key}"] = {"count": cnt, "rate": cnt / n if n else None}
-            s["lower_bound_positive_rates_A4.4"] = six
-            if valid:
-                cw = np.array([x["C_WM"]["C"] for x in valid])
-                cs = np.array([x["C_WM_S"]["C"] for x in valid])
-                af3 = sum(x["A"]["F3"] for x in valid)
-                s["learned_C"] = {
-                    "C_WM_mean": float(cw.mean()),
-                    "C_WM_S_mean": float(cs.mean()),
-                    "C_WM_ratio_of_sums": float(1 - sum(x["A"]["WM"] for x in valid) / af3),
-                    "C_WM_S_ratio_of_sums": float(
-                        1 - sum(x["A"]["WM"] for x in valid) / sum(x["A"]["S"] for x in valid)
-                    ),
-                    "C_S_F3_ratio_of_sums": float(1 - sum(x["A"]["S"] for x in valid) / af3),
-                    "C_oracle_F3_ratio_of_sums": float(
-                        1 - sum(x["A"]["oracle"] for x in valid) / af3
-                    ),
-                }
-            cal = [x["calibration"] for x in recs if "calibration" in x]
-            if cal:
-                okc = [c for c in cal if c.get("status") == "ok"]
-                s["calibration"] = {
-                    "n": len(cal),
-                    "ok": len(okc),
-                    "failed": len(cal) - len(okc),
-                    "gamma_median": float(np.median([c["gamma"] for c in okc])) if okc else None,
-                    "C_validation_mean": float(np.mean([c["C_validation"] for c in okc]))
-                    if okc
-                    else None,
-                    "C_validation_within_tol": sum(
-                        abs(c["C_validation"] - TARGET_C) <= cfg.cal_tol for c in okc
-                    ),
-                }
-            if cfg.gating == "f12a":
-                s.update(f12a_rates(recs, cfg))
-            row[name] = s
-        gates = {}
-        if cfg.gating == "f12a":
-            row["gates"] = f12a_gates(row, cfg)
-            out[str(k)] = row
-            continue
-        if "null" in row:
-            nul = row["null"]
-            sizes = [nul["cond_lower_pos"], nul["joint_lower_pos"], nul["detected"]]
-            gates["size_pass"] = all(b["bonferroni_upper"] <= cfg.size_limit for b in sizes)
-            gates["size_point_pass"] = all(b["rate"] <= cfg.size_limit for b in sizes)
-        if "alt" in row:
-            gates["power_pass"] = row["alt"]["detected"]["bonferroni_lower"] >= cfg.power_limit
-            gates["power_point_pass"] = row["alt"]["detected"]["rate"] >= cfg.power_limit
-        gates["both_pass"] = bool(gates.get("size_pass") and gates.get("power_pass"))
-        row["gates"] = gates
+        row = {
+            name: _scenario_summary(name, recs, cfg, target) for name, recs in sorted(scen.items())
+        }
+        if cfg.stage != 4:
+            row["gates"] = f12a_gates(row, cfg) if cfg.gating == "f12a" else _legacy_gates(row, cfg)
         out[str(k)] = row
     return out
 
 
-SIZE_RATES = {  # F12a.5(b) rates (2)-(5): name -> (contrast, procedure)
+def _legacy_gates(row, cfg):
+    """F12 as drafted (gating 'f12'; not registered): three size rates among valid replicates."""
+    gates = {}
+    if "null" in row:
+        nul = row["null"]
+        sizes = [nul["cond_lower_pos"], nul["joint_lower_pos"], nul["detected"]]
+        gates["size_pass"] = all(b["bonferroni_upper"] <= cfg.size_limit for b in sizes)
+        gates["size_point_pass"] = all(b["rate"] <= cfg.size_limit for b in sizes)
+    if "alt" in row:
+        gates["power_pass"] = row["alt"]["detected"]["bonferroni_lower"] >= cfg.power_limit
+        gates["power_point_pass"] = row["alt"]["detected"]["rate"] >= cfg.power_limit
+    gates["both_pass"] = bool(gates.get("size_pass") and gates.get("power_pass"))
+    return gates
+
+
+STRESS_RATES = {  # F12a.5(b) rates (2)-(5), now stress-scenario safety requirements: name -> (contrast, proc)
     "C_WM_cond_lower": ("C_WM", "conditional"),
     "C_WM_joint_lower": ("C_WM", "joint"),
     "C_WM_S_cond_lower": ("C_WM_S", "conditional"),
@@ -1805,49 +2259,58 @@ SIZE_RATES = {  # F12a.5(b) rates (2)-(5): name -> (contrast, procedure)
 }
 
 
-def f12a_rates(recs, cfg):
-    """F12a.5(b)-(d): five size rates and the power rate over all planned replicates; an invalid
-    replicate is a rejection for every size rate and a failure (no detection) for power."""
-    n = len(recs)
-    bad = [x for x in recs if not x["valid"]]
-    good = [x for x in recs if x["valid"]]
-    out = {}
-    for name, (contrast, proc) in SIZE_RATES.items():
-        cnt = sum(x[contrast]["intervals"][f"{proc}_bootstrap_t"][0] > 0 for x in good)
-        out[name] = mc_bounds(cnt + len(bad), n, cfg)
-    det = sum(x["decision"] == "correction_detected" for x in recs)
+def _invalid_causes(bad):
     causes = {}
     for x in bad:
         why = x.get("failure") or "; ".join(
             f"{c}: {', '.join(x[c].get('failures', []))}"
-            for c in ("C_WM", "C_WM_S")
+            for c in CONTRASTS
             if c in x and not x[c].get("valid", True)
         )
         causes[why] = causes.get(why, 0) + 1
+    return dict(sorted(causes.items()))
+
+
+def f12a_rates(recs, cfg):
+    """F12a.5(b)-(d): the five stress-scenario rates and the power rate over all planned replicates;
+    an invalid replicate is a rejection for every stress rate and a failure (no detection) for power.
+    F12c.3: the five rates are operational safety requirements, not type-I size certification."""
+    n = len(recs)
+    bad = [x for x in recs if not x["valid"]]
+    good = [x for x in recs if x["valid"]]
+    out = {}
+    for name, (contrast, proc) in STRESS_RATES.items():
+        cnt = sum(x[contrast]["intervals"][f"{proc}_bootstrap_t"][0] > 0 for x in good)
+        out[name] = mc_bounds(cnt + len(bad), n, cfg)
+    det = sum(x["decision"] == "correction_detected" for x in recs)
     return {
-        "size_rates": {**out, "detected": mc_bounds(det + len(bad), n, cfg)},
+        "stress_rates": {**out, "detected": mc_bounds(det + len(bad), n, cfg)},
         "power": mc_bounds(det, n, cfg),
-        "invalid_by_cause": dict(sorted(causes.items())),
+        "invalid_by_cause": _invalid_causes(bad),
     }
 
 
 def f12a_gates(row, cfg):
     g = {}
     if "null" in row:
-        sz = row["null"]["size_rates"]
-        g["size_pass"] = all(b["bonferroni_upper"] <= cfg.size_limit for b in sz.values())
-        g["size_point_pass"] = all(b["rate"] <= cfg.size_limit for b in sz.values())
+        sz = row["null"]["stress_rates"]
+        g["stress_pass"] = all(b["bonferroni_upper"] <= cfg.size_limit for b in sz.values())
+        g["stress_point_pass"] = all(b["rate"] <= cfg.size_limit for b in sz.values())
+        cg = row["null"].get("coverage", {}).get("gates")
+        g["coverage_lower_pass"] = bool(cg["lower_tail_pass"]) if cg else None
+        g["coverage_upper_pass"] = bool(cg["upper_tail_pass"]) if cg else None
     if "alt" in row:
         g["power_pass"] = row["alt"]["power"]["bonferroni_lower"] >= cfg.power_limit
         g["power_point_pass"] = row["alt"]["power"]["rate"] >= cfg.power_limit
-    g["both_pass"] = bool(g.get("size_pass") and g.get("power_pass"))
+    g["both_pass"] = bool(g.get("stress_pass") and g.get("power_pass"))
+    g["qualification_pass"] = bool(g["both_pass"] and g.get("coverage_lower_pass") is True)
     return g
 
 
 def select_stage2_k(summary, cfg):
     """F12b.4 stage-1 rule (deterministic; outcome-free simulation output only). With the pilot's
     replicates per k: k* = the smallest k of the six whose pilot power rate >= stage1_power_min and
-    whose five pilot size rates are each <= stage1_size_max. Stage 2 runs at {k*} only; if no k
+    whose five pilot stress rates are each <= stage1_size_max. Stage 2 runs at {k*} only; if no k
     qualifies, at {145} only."""
     if sorted(int(k) for k in summary) != sorted(K_GRID):
         raise ValueError("the stage-1 summary must hold all six k values")
@@ -1857,13 +2320,13 @@ def select_stage2_k(summary, cfg):
         if "null" not in row or "alt" not in row:
             raise ValueError(f"stage 1 needs null and alt at k = {k}")
         p = row["alt"]["power"]["rate"]
-        smax = max(b["rate"] for b in row["null"]["size_rates"].values())
+        smax = max(b["rate"] for b in row["null"]["stress_rates"].values())
         ok = p >= cfg.stage1_power_min and smax <= cfg.stage1_size_max
-        checks.append({"k": k, "power_rate": p, "size_rate_max": smax, "meets": ok})
+        checks.append({"k": k, "power_rate": p, "stress_rate_max": smax, "meets": ok})
     met = [c["k"] for c in checks if c["meets"]]
     k_star = met[0] if met else None
     return {
-        "rule": f"smallest k with pilot power >= {cfg.stage1_power_min} and every pilot size rate "
+        "rule": f"smallest k with pilot power >= {cfg.stage1_power_min} and every pilot stress rate "
         f"<= {cfg.stage1_size_max}; stage 2 at that k only, else at 145 only",
         "checks": checks,
         "rule_met_at": k_star,
@@ -1878,7 +2341,7 @@ def replicate_requirements(summary, cfg):
             str(p): replicates_needed(p, cfg.power_limit, "power", a1)
             for p in (0.84, 0.85, 0.9, 0.95)
         },
-        "size": {
+        "stress": {
             str(p): replicates_needed(p, cfg.size_limit, "size", a1)
             for p in (0.03, 0.04, 0.05, 0.06)
         },
@@ -1886,16 +2349,16 @@ def replicate_requirements(summary, cfg):
     observed = {}
     for k, row in summary.items():
         o = {}
-        if "alt" in row:
+        if "detected" in row.get("alt", {}):
             o["power"] = replicates_needed(
                 row["alt"]["detected"]["rate"], cfg.power_limit, "power", a1
             )
-        if "null" in row:
+        if "detected" in row.get("null", {}):
             worst = max(
                 row["null"][x]["rate"] for x in ("cond_lower_pos", "joint_lower_pos", "detected")
             )
-            o["size_worst_rate"] = worst
-            o["size"] = replicates_needed(worst, cfg.size_limit, "size", a1)
+            o["stress_worst_rate"] = worst
+            o["stress"] = replicates_needed(worst, cfg.size_limit, "size", a1)
         observed[k] = o
     return {
         "rule": "smallest n (step 10 below 10,000) at which a run observing exactly the given rate passes the "
@@ -1905,32 +2368,427 @@ def replicate_requirements(summary, cfg):
     }
 
 
-def release_decision(summary, cfg, k_grid, replicates, registered, selected_k=None):
-    """Binding only for the registered run. F12 single stage (registered is True): the six-k grid at
-    >= 1,000 replicates. F12b (registered == 'f12b_stage2'): exactly the stage-1-selected k values at
-    the registered replicate count. A stage-1 pilot or any other config never decides a gate."""
-    passing = [int(k) for k, row in summary.items() if row["gates"].get("both_pass")]
-    smallest = min(passing) if passing else None
-    if registered == "f12b_stage2":
-        binding = (
-            selected_k is not None
-            and sorted(k_grid) == sorted(selected_k)
-            and replicates == cfg.replicates
+# ---------------------------------------------- F12c: selection freeze, validator, assembly
+
+SELECTION_SCHEMA = "f12c-stage2-selection-v1"
+STAGE2_SELECTION = ROOT / "docs/prereg/f12_manifests/f12c_stage2_selection.json"
+NOISE_CHECK_SCHEMA = "f12c-noise-check-v1"
+PILOT_ACCEPTANCE_SCHEMA = "f12c-pilot-acceptance-v1"
+C1_SCHEMA = "f12-code-hashes-c1-v1"
+CODE_HASHES_C1 = ROOT / "docs/prereg/f12_manifests/code_hashes_c1.json"
+C1_DEPENDENCIES = (
+    "scripts/a5_build_panels.py",
+    "scripts/a5_simulation.py",
+    "scripts/tfv1_requalify.py",
+)
+CODE_IDENTITY_FILES = ("scripts/f12_simulation.py",) + C1_DEPENDENCIES
+PREREQUISITES = ("noise_check", "pilot_acceptance", "coverage_target", "c1_code_hashes")
+
+
+def _norm(x):
+    return json.loads(json.dumps(x, sort_keys=True, default=_json_default))
+
+
+def current_code_identity():
+    return {rel: sha256_file(ROOT / rel) for rel in CODE_IDENTITY_FILES}
+
+
+def _check_records(records, cfg, planned, what):
+    got = [(x.get("scenario"), x.get("k"), x.get("r")) for x in records]
+    if len(got) != len(set(got)):
+        raise ValueError(
+            f"{what}: a replicate id occurs more than once (planned ids must be unique)"
         )
-    elif registered is True:
-        binding = tuple(sorted(k_grid)) == K_GRID and replicates >= 1000
+    missing, extra = set(planned) - set(got), set(got) - set(planned)
+    if missing or extra:
+        raise ValueError(
+            f"{what}: records do not match the planned ids ({len(missing)} missing, {len(extra)} unplanned)"
+        )
+    for x in records:
+        sid = (x["scenario"], x["k"], x["r"])
+        if x.get("seed") != replicate_seed(cfg, *sid):
+            raise ValueError(f"{what}: replicate seed mismatch at {sid}")
+        if "decision" not in x or "valid" not in x:
+            raise ValueError(f"{what}: replicate {sid} is not complete")
+
+
+def make_report(*, cfg, config_file, records, k_grid, identities, selection=None, target=None,
+                part=None, inputs=None):  # fmt: skip
+    """The F12 simulation report (F12c layout). Its release field is computed with the execution
+    validator not run, so it is never eligible; ``main`` re-computes it for a complete governed
+    stage-2 report when the prerequisites are supplied."""
+    planned = planned_ids(cfg, k_grid) if cfg.schedule else None
+    summary = summarise(records, cfg, target)
+    validation = {
+        "passed": False,
+        "failures": ["execution validator not run (prerequisites not supplied)"],
+    }
+    synthetic = identities.get("tokens_synthetic") is not False
+    report = {
+        "schema": REPORT_SCHEMA,
+        "status": "synthetic dry run, not a gate" if synthetic else "simulation",
+        "config": cfg.as_dict(),
+        "config_file": config_file,
+        "config_registered": registered_name(cfg),
+        "identities": identities,
+        "k_grid": [int(k) for k in k_grid],
+        "planned": None if planned is None else {"n": len(planned), "sha256": _sha_json(planned)},
+        "part": part,
+        "stage1_selection": selection,
+        "coverage_target": target,
+        "rules": rules_text(cfg),
+        "summary": summary,
+        "release": release_decision(summary, cfg, validation),
+        "records": records,
+    }
+    if inputs is not None:
+        report["inputs"] = inputs
+    return report
+
+
+def verify_stage1_report(path, identities=None, allow_synthetic=False):
+    """F12c.5 / F12c.6: verify a complete, immutable stage-1 report and recompute k* from its records.
+
+    Checks: schema; the config equals the pinned F12c stage-1 config (bytes sha256 too); non-synthetic
+    inputs unless ``allow_synthetic`` (then the selection is labelled synthetic and can never select a
+    governed run); token / payload / code identities equal ``identities`` when given; the k grid is
+    all six k; exactly the 480 planned (scenario, k, r) records, each with its registered seed and
+    complete; the stored summary equals the summary recomputed from the records. Returns the
+    selection record that ``write_selection`` freezes."""
+    raw = Path(path).read_bytes()
+    rep = json.loads(raw)
+    if rep.get("schema") != REPORT_SCHEMA:
+        raise ValueError("stage-1 report schema is not " + REPORT_SCHEMA)
+    ref = _pinned_configs().get("f12c_stage1")
+    try:
+        cfg = config_from_dict(rep["config"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"stage-1 report config unreadable: {exc}") from exc
+    if ref is None or cfg != ref:
+        raise ValueError("stage-1 report config is not the registered F12c stage-1 config")
+    if (rep.get("config_file") or {}).get("sha256") != F12C_CONFIG_SHA256["stage1"]:
+        raise ValueError("stage-1 report config file sha256 is not the pinned F12c stage-1 config")
+    ids = rep.get("identities") or {}
+    synthetic = ids.get("tokens_synthetic") is not False
+    if synthetic and not allow_synthetic:
+        raise ValueError("stage-1 report is on synthetic tokens: it cannot select a governed run")
+    if identities is not None and _norm(ids) != _norm(identities):
+        raise ValueError(
+            "stage-1 report identities (tokens / payload / code) differ from this run's"
+        )
+    if sorted(rep.get("k_grid") or []) != sorted(K_GRID):
+        raise ValueError("stage-1 k grid must be exactly the six k")
+    _check_records(rep["records"], cfg, planned_ids(cfg, K_GRID), "stage 1")
+    summ = _norm(summarise(rep["records"], cfg))
+    if summ != _norm(rep.get("summary")):
+        raise ValueError("stage-1 summary does not match the summary recomputed from its records")
+    sel = select_stage2_k(summ, cfg)
+    return _norm({
+        "schema": SELECTION_SCHEMA,
+        "stage1_report_sha256": hashlib.sha256(raw).hexdigest(),
+        "stage1_config_sha256": F12C_CONFIG_SHA256["stage1"],
+        "identities": ids,
+        "synthetic": bool(synthetic),
+        "selection": sel,
+        "k_star": sel["k"][0],
+        "frozen_by": "scripts/f12_simulation.py select (verify_stage1_report + write_selection)",
+    })  # fmt: skip
+
+
+def write_selection(sel, path=STAGE2_SELECTION):
+    """Freeze the stage-1 selection (immutable; written before any stage-2 replicate)."""
+    path = Path(path)
+    if sel.get("synthetic") is not False and path.resolve() == STAGE2_SELECTION.resolve():
+        raise ValueError("a synthetic selection cannot be written to the governed selection file")
+    data = json.dumps(sel, indent=1, sort_keys=True, default=_json_default) + "\n"
+    if path.exists():
+        if path.read_text() == data:
+            return path
+        raise ValueError(f"{path} exists and is immutable (frozen stage-2 selection)")
+    path.write_text(data)
+    return path
+
+
+def verify_selection(path, stage1_path, identities=None, allow_synthetic=False):
+    """Stage 2 / target: the frozen selection file must equal the selection recomputed from the
+    stage-1 report (and the identities must equal this run's). Returns the frozen selection."""
+    stored = json.loads(Path(path).read_text())
+    fresh = verify_stage1_report(stage1_path, identities, allow_synthetic)
+    if _norm(stored) != fresh:
+        raise ValueError(
+            "frozen stage-2 selection file differs from the selection recomputed from the stage-1 report"
+        )
+    return stored
+
+
+def verify_code_hashes(obj):
+    """Files listed in a code-hash manifest whose current bytes differ from the pinned sha256."""
+    bad = []
+    for rel, sha in sorted(obj.get("files", {}).items()):
+        p = ROOT / rel
+        if not p.exists() or sha256_file(p) != sha:
+            bad.append(rel)
+    return bad
+
+
+def _check_target_report(tr, sel, ids):
+    """The coverage-target prerequisite: a complete governed f12c_target report at k*."""
+    fails = []
+    try:
+        tcfg = config_from_dict(tr["config"])
+    except (KeyError, TypeError, ValueError):
+        return ["prerequisite coverage_target: config unreadable"], None
+    if (
+        governed_name(tcfg) != "f12c_target"
+        or (tr.get("config_file") or {}).get("sha256") != F12C_CONFIG_SHA256["target"]
+    ):
+        fails.append("prerequisite coverage_target: not the registered F12c target config")
+    if _norm(tr.get("identities")) != _norm(ids):
+        fails.append("prerequisite coverage_target: identities differ from the stage-2 run's")
+    if sel is None or tr.get("k_grid") != [sel.get("k_star")]:
+        fails.append("prerequisite coverage_target: k grid is not the selected k*")
+    if sel is not None and _norm(tr.get("stage1_selection")) != _norm(sel):
+        fails.append("prerequisite coverage_target: selection differs from the frozen selection")
+    try:
+        planned = planned_ids(tcfg, tr.get("k_grid") or [])
+        _check_records(tr["records"], tcfg, planned, "target")
+    except ValueError as exc:
+        fails.append(f"prerequisite coverage_target: {exc}")
+        return fails, None
+    return fails, expected_row_sum_target(tr["records"], planned, tcfg)
+
+
+def validate_execution(report, *, selection, prereqs):
+    """F12c.6 fail-closed execution validator for a stage-2 report. Every check must pass for the
+    report's numbers to be eligible for Board A's review; the validator never grants purchase
+    authority. Checks: the pinned F12c stage-2 config; non-synthetic tokens; the pinned restricted
+    payload; the verified frozen selection (non-synthetic, identical in the report, same identities,
+    k grid exactly [k*]); exactly the planned 1,000 / 1,000 / 200 records with their seeds, complete;
+    the summary recomputed from the records; the prerequisites (F12a.4(d) noise check, chair-accepted
+    pilot projection, coverage-target report reproducing the report's target, C1 code hashes)."""
+    F = []
+    cfg = None
+    try:
+        cfg = config_from_dict(report["config"])
+    except (KeyError, TypeError, ValueError):
+        F.append("config unreadable")
+    if cfg is None or governed_name(cfg) != "f12c_stage2":
+        F.append("config is not the registered F12c stage-2 config")
+    if (report.get("config_file") or {}).get("sha256") != F12C_CONFIG_SHA256["stage2"]:
+        F.append("config file sha256 is not the pinned F12c stage-2 config")
+    if cfg is not None and dict(cfg.schedule) != STAGE2_REQUIRED:
+        F.append("config schedule is not the registered 1,000 / 1,000 / 200")
+    ids = report.get("identities") or {}
+    if ids.get("tokens_synthetic") is not False:
+        F.append("synthetic (or unlabelled) token inputs")
+    if ids.get("payload_restricted_sha256") != load_restricted_pin()["restricted_copy"]["sha256"]:
+        F.append("payload identity is not the pinned restricted copy")
+    if not selection:
+        F.append("no verified stage-2 selection")
     else:
-        binding = False
+        if selection.get("synthetic") is not False:
+            F.append("stage-2 selection was made on synthetic inputs")
+        if _norm(report.get("stage1_selection")) != _norm(selection):
+            F.append("the report's stage1_selection differs from the verified frozen selection")
+        if _norm(selection.get("identities")) != _norm(ids):
+            F.append("token / payload / code identities differ from the stage-1 selection's")
+        if report.get("k_grid") != [selection.get("k_star")]:
+            F.append(
+                f"k grid {report.get('k_grid')} is not exactly the selected k* {selection.get('k_star')}"
+            )
+    if cfg is not None and cfg.schedule and report.get("k_grid"):
+        try:
+            _check_records(
+                report.get("records", []), cfg, planned_ids(cfg, report["k_grid"]), "stage 2"
+            )
+        except ValueError as exc:
+            F.append(str(exc))
+        if report.get("part") is not None:
+            F.append("a partial (single-invocation) report: assemble the parts first")
+        try:
+            again = summarise(report["records"], cfg, report.get("coverage_target"))
+            if _norm(again) != _norm(report.get("summary")):
+                F.append("summary does not match the summary recomputed from the records")
+        except (KeyError, TypeError, ValueError) as exc:
+            F.append(f"summary not recomputable: {exc}")
+    P = prereqs or {}
+    nc = P.get("noise_check")
+    if not nc:
+        F.append("prerequisite noise_check missing")
+    else:
+        sub = {
+            k: ids.get(k)
+            for k in ("tokens_matrix_sha256", "tokens_synthetic", "payload_restricted_sha256")
+        }
+        if not (nc.get("schema") == NOISE_CHECK_SCHEMA and nc.get("status") == "pass" and nc.get("f12a4d_check") is True
+                and nc.get("panels") == 10_000 and nc.get("k") == 145):  # fmt: skip
+            F.append(
+                "prerequisite noise_check: not a passed F12a.4(d) check (10,000 panels at k = 145)"
+            )
+        if _norm(nc.get("identities")) != _norm(sub):
+            F.append("prerequisite noise_check: identities differ from the stage-2 run's")
+    pa = P.get("pilot_acceptance")
+    if (
+        not pa
+        or pa.get("schema") != PILOT_ACCEPTANCE_SCHEMA
+        or pa.get("chair_accepted") is not True
+    ):
+        F.append("prerequisite pilot_acceptance: chair acceptance of the pilot projection missing")
+    tr = P.get("coverage_target")
+    if not tr:
+        F.append("prerequisite coverage_target missing")
+    else:
+        fails, tgt = _check_target_report(tr, selection, ids)
+        F += fails
+        if tgt is not None and _norm(tgt) != _norm(report.get("coverage_target")):
+            F.append(
+                "coverage target in the report differs from the target recomputed from the coverage_target prerequisite"
+            )
+    c1 = P.get("c1_code_hashes")
+    if not c1 or c1.get("schema") != C1_SCHEMA:
+        F.append("prerequisite C1 code hashes missing")
+    else:
+        if "draft" in str(c1.get("status", "draft")).lower():
+            F.append(
+                f"prerequisite C1 code hashes: status {c1.get('status')!r} is not a verified C1 freeze"
+            )
+        bad = verify_code_hashes(c1)
+        if bad:
+            F.append(f"prerequisite C1 code hashes: current bytes differ for {bad}")
+        code = ids.get("code_sha256") or {}
+        if not code or any(c1.get("files", {}).get(rel) != sha for rel, sha in code.items()):
+            F.append(
+                "prerequisite C1 code hashes: the run's code identity is not the C1-pinned code"
+            )
+    return {"passed": not F, "failures": F, "board_a_acceptance": "pending (not checkable by code)"}
+
+
+def release_decision(summary, cfg, validation):
+    """F12c.6: numerical eligibility only, pending Board A acceptance; never purchase authority."""
+    out = {
+        "field": RELEASE_FIELD,
+        "authority": "none: purchase requires Board A's acceptance of the committed stage-2 report "
+        "(F12b.4(d)); this field records numerical eligibility only",
+        "validator": validation,
+        "eligible": False,
+        "wording": None,
+    }
+    if not validation or not validation.get("passed"):
+        fails = (validation or {}).get("failures") or ["validator not run"]
+        out["numerical_eligibility"] = (
+            "none: execution validator did not pass (" + "; ".join(fails[:6]) + ")"
+        )
+        return out
+    if len(summary) != 1:
+        out["numerical_eligibility"] = "none: a stage-2 report holds exactly one k"
+        return out
+    ((k, row),) = summary.items()
+    g = row["gates"]
+    if g.get("qualification_pass"):
+        out["eligible"] = True
+        out["numerical_eligibility"] = (
+            f"eligible: S_{k} passed the power, stress and coverage requirements at k* = {k}; "
+            "pending Board A acceptance"
+        )
+        return out
+    words = []
+    if not g.get("power_pass"):
+        words.append(FAILURE_WORDING)
+    if not g.get("stress_pass"):
+        words.append(f"The {STRESS_LABEL} requirements failed at k* = {k}; purchase is blocked.")
+    if g.get("coverage_lower_pass") is not True:
+        words.append(
+            f"The coverage qualification at the expected-row-sum target failed at k* = {k}; purchase is blocked."
+        )
+    out["wording"] = " ".join(words)
+    out["numerical_eligibility"] = (
+        f"not eligible at k* = {k}: unresolved - not powered or not qualified"
+    )
+    return out
+
+
+def assemble_reports(paths):
+    """F12c.6: assemble stage-2 (or target) parts run in separate invocations into one report.
+    Every part must carry identical provenance (schema, config and its file sha256, registration,
+    identities, k grid, frozen selection, coverage target, planned-id hash); each planned id may occur
+    once across parts; the summary is recomputed from the union, records in planned order."""
+    parts = []
+    for p in paths:
+        raw = Path(p).read_bytes()
+        parts.append((Path(p), hashlib.sha256(raw).hexdigest(), json.loads(raw)))
+    keys = ("schema", "config", "config_file", "config_registered", "identities", "k_grid",
+            "stage1_selection", "coverage_target", "planned")  # fmt: skip
+    base = parts[0][2]
+    for p, _, rep in parts[1:]:
+        for key in keys:
+            if _norm(rep.get(key)) != _norm(base.get(key)):
+                raise ValueError(f"part {p} provenance differs from the first part in {key!r}")
+    cfg = config_from_dict(base["config"])
+    planned = planned_ids(cfg, base["k_grid"])
+    index = {t: i for i, t in enumerate(planned)}
+    seen, recs = set(), []
+    for p, _, rep in parts:
+        for x in rep["records"]:
+            sid = (x["scenario"], x["k"], x["r"])
+            if sid in seen:
+                raise ValueError(f"planned id {sid} occurs more than once across parts")
+            if sid not in index:
+                raise ValueError(f"unplanned id {sid} in part {p}")
+            seen.add(sid)
+            recs.append(x)
+    recs.sort(key=lambda x: index[(x["scenario"], x["k"], x["r"])])
+    report = make_report(cfg=cfg, config_file=base["config_file"], records=recs, k_grid=base["k_grid"],
+                         identities=base["identities"], selection=base.get("stage1_selection"),
+                         target=base.get("coverage_target"), part=None, inputs=base.get("inputs"))  # fmt: skip
+    report["parts"] = [
+        {"path": str(p), "sha256": sha, "n_records": len(rep["records"]), "part": rep.get("part")}
+        for p, sha, rep in parts
+    ]
+    report["complete"] = seen == set(planned)
+    return _norm(report)
+
+
+def project_cpu(by_k):
+    """F12c.7 CPU projection of the F12c schedule from measured per-replicate process CPU seconds
+    {str(k): {scenario: seconds}}; unmeasured k are linearly interpolated (clamped) in k, and
+    variance-x2 falls back to the stress scenario's time when unmeasured."""
+    measured = sorted(int(k) for k in by_k)
+
+    def at(scen, k):
+        xs = [m for m in measured if by_k[str(m)].get(scen) is not None]
+        if not xs:
+            return None
+        return float(np.interp(k, xs, [by_k[str(m)][scen] for m in xs]))
+
+    has_var2 = any(by_k[str(m)].get("null_var2") is not None for m in measured)
+    stage2 = {}
+    for k in K_GRID:
+        nul, alt = at("null", k), at("alt", k)
+        var2 = at("null_var2", k) if has_var2 else nul
+        stage2[str(k)] = {
+            "null_s": nul, "alt_s": alt, "null_var2_s": var2,
+            "null_var2_from": "measured" if has_var2 else "null",
+            "interpolated": k not in measured,
+            "cpu_h": (STAGE2_REQUIRED["null"] * nul + STAGE2_REQUIRED["alt"] * alt
+                      + STAGE2_REQUIRED["null_var2"] * var2) / 3600,
+        }  # fmt: skip
+    stage1 = 40 * sum(at("null", k) + at("alt", k) for k in K_GRID) / 3600
+    target = {str(k): 200 * at("null", k) / 3600 for k in K_GRID}
+    worst2 = max(v["cpu_h"] for v in stage2.values())
     return {
-        "binding": bool(binding),
-        "note": None
-        if binding
-        else "non-registered run (config, stage, k grid or replicate count): "
-        "a smoke/dry/pilot run, NOT a gate result",
-        "smallest_passing_k": smallest,
-        "outcome": (f"release S_{smallest}" if smallest is not None else "unresolved - not powered")
-        if binding
-        else "no gate decision",
+        "basis": "process CPU seconds per replicate measured in this run; F12c schedule: stage 1 = 40 "
+        "stress + 40 alternative at each of six k; stage 2 = 1,000 stress + 1,000 alternative + 200 "
+        "variance-x2 at k*; coverage target = 200 stress at k*; pilot = 10 alternative at k = 145",
+        "stage2_by_k": stage2,
+        "stage2_worst_cpu_h": worst2,
+        "stage1_cpu_h": stage1,
+        "coverage_target_by_k_cpu_h": target,
+        "coverage_target_worst_cpu_h": max(target.values()),
+        "pilot_cpu_h": 10 * at("alt", 145) / 3600,
+        "replicates_total_worst_cpu_h": worst2
+        + stage1
+        + max(target.values())
+        + 10 * at("alt", 145) / 3600,
     }
 
 
@@ -1965,11 +2823,22 @@ def _task(args):
     return rec, (dt, dc, _maxrss_mb())
 
 
-def simulate(matrix, payload, cfg, k_grid, scenarios, replicates, workers=1, progress=False):
-    # executed replicate-major (scenarios interleave); reported in (k, scenario, r) order
-    reps = range(cfg.replicate_offset, cfg.replicate_offset + replicates)
-    tasks = [(s, k, r) for k in k_grid for r in reps for s in scenarios]
-    order = {t: i for i, t in enumerate((s, k, r) for k in k_grid for s in scenarios for r in reps)}
+def simulate(matrix, payload, cfg, k_grid=None, scenarios=None, replicates=None, workers=1,
+             progress=False, tasks=None):  # fmt: skip
+    """Run replicate tasks (scenario, k, r). ``tasks`` (F12c: planned ids of a schedule, or a part of
+    them) are executed and reported in the given order; otherwise the legacy grid k_grid x
+    scenarios x replicates (executed replicate-major, reported in (k, scenario, r) order)."""
+    if workers > MAX_WORKERS:
+        raise ValueError(f"at most {MAX_WORKERS} workers (F12c worker-count rule)")
+    if tasks is None:
+        reps = range(cfg.replicate_offset, cfg.replicate_offset + replicates)
+        tasks = [(s, k, r) for k in k_grid for r in reps for s in scenarios]
+        order = {
+            t: i for i, t in enumerate((s, k, r) for k in k_grid for s in scenarios for r in reps)
+        }
+    else:
+        tasks = [tuple(t) for t in tasks]
+        order = {t: i for i, t in enumerate(tasks)}
     if workers <= 1:
         _init_worker(matrix, payload, cfg, progress)
         results = [_task(t) for t in tasks]
@@ -2003,34 +2872,87 @@ def git_head():
 
 
 def rules_text(cfg):
-    rules = _rules_f12(cfg)
-    if cfg.stage:
-        rules["F12b"] = f12b_rules_text(cfg)
-    return rules
+    """The rules the report's configuration actually executes (F12c.6): one 'effective' block for the
+    registered (F12b/F12c) configurations, with no drafted statements beside it; the drafted F12
+    defaults are labelled as such."""
+    if cfg.stage == 0:
+        return {"drafted_not_registered": _rules_f12(cfg)}
+    return {"effective": effective_rules(cfg)}
 
 
-def f12b_rules_text(cfg):
-    """The F12b repairs active in cfg (PREREG_H1_TF A5 amendment F12b)."""
+def effective_rules(cfg):
+    lg = dict(cfg.lgbm)
+    sched = (
+        ", ".join(f"{n} {s}" for s, n in cfg.schedule)
+        + f" per k (r = {cfg.replicate_offset} + 0..n-1)"
+        if cfg.schedule
+        else f"legacy: {cfg.replicates} per requested scenario and k"
+    )
+    k_rule = {
+        "all": "all six k {0, 29, 58, 87, 116, 145}",
+        "selected": "exactly the frozen stage-1 k* (f12c_stage2_selection.json); no fallback k, no extension",
+        "145": "k = 145 only",
+        "cli": "as requested on the command line (not registered)",
+    }[cfg.k_rule]
     return {
-        "head": f"output weights zero-initialised: {cfg.head_zero_init}; residual target divided by its "
-        f"training-row SD (ddof 0) per fit, prediction multiplied back: {cfg.target_standardise}; "
-        "token standardisation unchanged (present-token mean/SD on the fit's training rows); "
-        "h = 0 at the zero edit",
-        "joint_studentiser": f"{cfg.joint_studentiser}: floor_vcomp V = max(V_comp + V_item - V_both, V_comp) "
-        "(floor_one_way also max with V_item) in every draw and at the point; conditional procedure "
-        "unchanged; no draw dropped; the other rules reported descriptively",
-        "calibration": f"{cfg.calibration}: grid {{0}} U tau 2^(-8..12); bracket C(0) < 0.15 <= C(g*); "
-        f"monotonicity {cfg.cal_monotone}; bisection to |C_cal - 0.15| <= {cfg.cal_bisect_tol} "
-        f"(<= {cfg.cal_halvings} halvings) on {cfg.cal_draws} panels seed 'cal:<k>:<r>:<d>'; "
-        f"validation |C_val - 0.15| <= {cfg.cal_tol} on {cfg.val_draws} panels seed "
-        "'calval:<k>:<r>:<d>' else failed qualification",
-        "noise_draw": f"{cfg.noise_draw} (F12a.4(b) order)",
-        "gating": f"{cfg.gating}: six rates (power; C_WM and C_WM,S cond/joint lower > 0; detected), "
-        f"Bonferroni alpha {cfg.mc_alpha}/{cfg.bonferroni_m}; invalid = rejection (size) / failure (power)",
-        "stage": f"{cfg.stage}: replicates {cfg.replicates}, offset {cfg.replicate_offset}, seed tag "
-        f"'{cfg.seed_tag}'; stage-1 rule power >= {cfg.stage1_power_min}, size <= {cfg.stage1_size_max}",
-        "statnn": f"tree count selected with seeds {list(cfg.statnn_select_seeds)} averaged; refit "
-        f"seeds {list(cfg.seeds)} averaged; LightGBM n_jobs {dict(cfg.lgbm)['n_jobs']}",
+        "config": f"{cfg.name} (stage {cfg.stage})",
+        "population": "S_k = existing + first k purchasable components by sha256('20261111:f12:purchase:'+id)",
+        "outer_folds": "5; stratum = family or mixed; sha256('20261111:f12:'+id) within stratum; strata "
+        "abliteration, chain, lora_sft, mixed, random_dir; round-robin; recomputed per S_k",
+        "inner_folds": "4; outer-training components by sha256('20261110:lol-inner:'+id); round-robin",
+        "F3": f"ridge, lambda {cfg.ridge_lambda} on training-standardised [Sum a, Sum q], intercept "
+        "unpenalised; refitted on each fit's training rows",
+        "WM-R": f"F3 + K+F head ({head_param_count()} nominal parameters, {N_COLS} columns); output weights "
+        f"zero-initialised: {cfg.head_zero_init}; residual target divided by its training-row SD per "
+        f"fit (prediction multiplied back): {cfg.target_standardise}; L1, AdamW lr {cfg.lr} wd "
+        f"{cfg.weight_decay} batch {cfg.batch}, <= {cfg.max_epochs} epochs, patience {cfg.patience}, refit "
+        f"floor((e2+e3)/2); epoch selection with seeds {list(cfg.seeds)}; refit seeds averaged; frozen for "
+        "simulation and analysis (F12b.1, F12c.1)",
+        "StatNN": f"F3 + LightGBM (A5.8.4; n_jobs {lg['n_jobs']}) on v4 + 186 x (42 + presence); trees "
+        f"{list(cfg.tree_grid)} chosen by mean inner L1 with seed {', '.join(map(str, cfg.statnn_select_seeds))} "
+        f"only; outer refit averages seeds {list(cfg.seeds)}; frozen for simulation and analysis (F12b.5, F12c.1)",
+        "noise": f"{cfg.noise_draw}: per simulated component one integers(0, 63) payload component; its rows "
+        "by ascending id take choice(n_c, m, replace=m > n_c) donors sorted by id; one common "
+        "integers(0, 32, size=32) block index for the panel; restricted payload copy only, byte-pinned",
+        "h_star": "untrained WM-R head under torch.manual_seed(seed('20261111:f12:','hstar:<r>')), "
+        "zero-edit subtracted, / its population SD over S_k; SD <= 1e-12 fails qualification",
+        "calibration": f"grid {{0}} U tau 2^(-8..12); bracket C(0) < 0.15 <= C(g*); monotonicity "
+        f"{cfg.cal_monotone} (reported, not gating); bisection to |C_cal - 0.15| <= {cfg.cal_bisect_tol} "
+        f"(<= {cfg.cal_halvings} halvings) on {cfg.cal_draws} panels 'cal:<k>:<r>:<d>'; validation on "
+        f"{cfg.val_draws} panels 'calval:<k>:<r>:<d>' within {cfg.cal_tol} of 0.15, else failed qualification",
+        "scenarios": f"null = {STRESS_LABEL} (gamma = 0; not a no-correction null for C_WM: ridge-1 "
+        f"shrinkage is learnable); alt = {SCENARIO_LABELS['alt']}; null_var2 = {SCENARIO_LABELS['null_var2']}",
+        "schedule": f"{sched}; k: {k_rule}; panel seeds seed('20261111:f12:', '{cfg.seed_key}') with tag "
+        f"'{cfg.seed_tag}'",
+        "joint_studentiser": {
+            "floor_vcomp": "max(V_comp + V_item - V_both, V_comp) at the point and in every joint draw "
+            "(C_WM and C_WM,S only); a draw or the point is invalid if V_comp is non-finite or <= 0 or "
+            "any term is non-finite (never replaced); strict and one-way-max rules reported on the "
+            "identical draws",
+            "strict": "V_comp + V_item - V_both (A5.4.2 as written); <= 0 or non-finite invalid",
+            "floor_one_way": "max(V_comp + V_item - V_both, V_comp, V_item) (not registered)",
+        }[cfg.joint_studentiser],
+        "intervals": f"A5.4.2 conditional + joint bootstrap-t, BCa and percentile, {cfg.draws} draws, "
+        f"PCG64({cfg.boot_seed}) multiplicities shared by both contrasts; all guards; all draws valid",
+        "decision": "unresolved_validity > correction_detected > none_detectable_provisional > "
+        "unresolved; upper-bound codes are provisional until the power gate and the upper-tail "
+        "coverage qualification pass",
+        "gates": f"power: lower Bonferroni CP bound >= {cfg.power_limit} for 'correction detected' "
+        f"(alternative); {STRESS_LABEL}: five rates (C_WM and C_WM,S conditional / joint lower > 0, "
+        f"detected) each with upper bound <= {cfg.size_limit} as operational safety requirements, not "
+        f"type-I size certification; one-sided alpha {cfg.mc_alpha}/{cfg.bonferroni_m} = "
+        f"{cfg.mc_alpha / cfg.bonferroni_m:.6g} each; invalid replicates count as failures / rejections "
+        "with the planned denominator",
+        "coverage": f"stress scenario: six intervals' coverage of the expected-row-sum target (target "
+        f"run, tag 'target'); qualification: lower-tail error (lower > target - {cfg.cov_se_mult} SE) of "
+        f"the two bootstrap-t intervals of both contrasts, each upper bound <= {cfg.cov_error_limit} at "
+        f"alpha {cfg.mc_alpha}/{cfg.bonferroni_m} (purchase); upper-tail error likewise (upper-bound "
+        "labels only)",
+        "estimand": "every learned or calibrated C is a ratio of expected row sums; no mean of replicate ratios",
+        "release": f"'{RELEASE_FIELD}': fail-closed execution validator; never purchase authority",
+        "failure_wording": FAILURE_WORDING,
+        "gauge_audit": "not run on synthetic tokens (no factors); the real token builder supplies "
+        "gauge-transformed tokens",
     }
 
 
@@ -2058,13 +2980,181 @@ def _rules_f12(cfg):
         "independent panels ('gamma-val:<k>:<r>'); variance-x2 reuses gamma",
         "intervals": "A5.4.2 conditional + joint bootstrap-t (BCa, percentile alongside), 4,000 draws, "
         "PCG64(20261107) multiplicities shared by both contrasts; all guards; all draws valid",
-        "decision": "unresolved_validity > correction_detected > none_detectable_bounds > unresolved",
+        "decision": "unresolved_validity > correction_detected > none_detectable_provisional > unresolved",
         "gates": f"size: one-sided Bonferroni CP upper <= {cfg.size_limit} for cond-lower>0, joint-lower>0, "
         f"detected (gamma 0); power: lower >= {cfg.power_limit} for detected (invalid = failure); "
         f"alpha {cfg.mc_alpha}/{cfg.bonferroni_m} each; no point-estimate release",
         "replicate_seeds": "seed('20261111:f12:', 'sim:<scenario>:<k>:<r>'), PCG64",
-        "gauge_audit": "not run on synthetic tokens (no factors); the real token builder supplies "
-        "gauge-transformed tokens",
+        "gauge_audit": "not run on synthetic tokens (no factors)",
+    }
+
+
+# --------------------------------------------------------- F12a.4(d) noise check (F12c.7)
+
+NOISE_CHECK_PANELS, NOISE_CHECK_K, NOISE_CHECK_SE = 10_000, 145, 4.0
+
+
+def noise_check_panel(payload, comp, row_ids, d, draw=None):
+    """Row noise eps of check panel d from its own stream seed('20261111:f12:', 'noisecheck:<d>'),
+    drawn in the F12a.4(b) order (``draw`` overrides the generator; tests only)."""
+    rng = np.random.default_rng(domain_seed(FOLD_DOMAIN, f"noisecheck:{d}"))
+    if draw is not None:
+        return np.asarray(draw(payload, comp, row_ids, rng), dtype=float)
+    return draw_panel_noise(payload, comp, rng, order="f12a", row_ids=row_ids)[0].mean(1)
+
+
+def noise_plug_ins(payload, comp):
+    """Plug-in second moments of eps under the F12a.4(b) generator (no model, no outcome).
+
+    Donor d has block means e_d (32); with one common block index b of 32 uniform draws,
+    E[eps_i eps_i' | d, d'] = (1/32) S_dd' + (31/32) m_d m_d', S_dd' = (1/32) Sum_l e_dl e_d'l and m_d
+    = mean_l e_dl (0 for centred donors up to centring tolerance). A row's donor is uniform over the
+    63 payload components and uniform within its component; rows of one simulated component share
+    the component and take distinct donors (with replacement when m > n_c)."""
+    e = payload.blocks
+    m = e.mean(1)
+    M2 = (e @ e.T) / BLOCKS / BLOCKS + (BLOCKS - 1) / BLOCKS * np.outer(m, m)
+    members = payload.members_by_id
+    C = len(members)
+    p = np.zeros(len(e))
+    for mem in members:
+        p[mem] += 1.0 / (C * len(mem))
+    var = float(np.sum(p * np.diag(M2)))
+    cross = float(p @ M2 @ p)
+    comp = np.asarray(comp)
+    sizes = np.bincount(comp)
+    num = den = 0.0
+    for msz in sizes[sizes >= 2]:
+        acc = 0.0
+        for mem in members:
+            block = M2[np.ix_(mem, mem)]
+            nc = len(mem)
+            if msz > nc:  # with replacement: iid uniform donors (same donor possible)
+                acc += block.sum() / nc**2
+            else:  # without replacement: uniform over ordered distinct pairs
+                acc += (block.sum() - np.trace(block)) / (nc * (nc - 1))
+        num += msz * (msz - 1) * acc / C
+        den += msz * (msz - 1)
+    within = float(num / den) if den else None
+    return {
+        "variance": var,
+        "within": within,
+        "cross": cross,
+        "donor_variance": np.diag(M2),
+        "donor_mean": m,
+    }
+
+
+def noise_check(payload, comp, row_ids, k, panels, draw=None, governed_inputs=False):
+    """F12a.4(d): ``panels`` noise-only panels from seeds 'noisecheck:<d>' at the rows of S_k; empirical
+    (i) variance of eps, (ii) within-component covariance and (iii) cross-component (common-item)
+    covariance against their plug-in values, each with a Monte Carlo SE over independent panels.
+    Fails closed if any donor's plug-in panel-mean variance is zero (every payload donor can be
+    drawn) or if an empirical quantity differs from its plug-in by more than 4 Monte Carlo SE. It is
+    the registered check only at 10,000 panels, k = 145, on governed inputs."""
+    t0 = time.process_time()
+    comp = np.asarray(comp)
+    row_ids = np.asarray(row_ids)
+    n = len(comp)
+    sizes = np.bincount(comp)
+    n_within = float(np.sum(sizes * (sizes - 1)))
+    n_cross = float(n * n - np.sum(sizes**2))
+    stats = np.zeros((panels, 3))
+    for d in range(panels):
+        eps = noise_check_panel(payload, comp, row_ids, d, draw)
+        tot = eps.sum()
+        csum = np.bincount(comp, eps, len(sizes))
+        sq = float(np.sum(eps**2))
+        within_sum = float(np.sum(csum**2) - sq)
+        stats[d] = (
+            sq / n,
+            within_sum / n_within if n_within else np.nan,
+            (tot**2 - np.sum(csum**2)) / n_cross,
+        )
+    plug = noise_plug_ins(payload, comp)
+    checks, failures = {}, []
+    for j, (key, pv) in enumerate((("panel_mean_variance", plug["variance"]),
+                                    ("within_component_covariance", plug["within"]),
+                                    ("cross_component_covariance", plug["cross"]))):  # fmt: skip
+        if pv is None:
+            checks[key] = {"plug_in": None, "note": "no simulated component with two or more rows"}
+            continue
+        col = stats[:, j]
+        emp = float(col.mean())
+        se = float(col.std(ddof=1) / np.sqrt(panels))
+        z = (emp - pv) / se if se > 0 and np.isfinite(se) else float("inf")
+        checks[key] = {"empirical": emp, "plug_in": float(pv), "mc_se": se, "z": float(z),
+                       "correlation_plug_in": float(pv / plug["variance"]) if plug["variance"] > 0 else None}  # fmt: skip
+        if not (np.isfinite(z) and abs(z) <= NOISE_CHECK_SE):
+            failures.append(
+                f"{key}: empirical differs from plug-in by {z:.3g} Monte Carlo SE (> {NOISE_CHECK_SE})"
+            )
+    dv = plug["donor_variance"]
+    if not np.all(dv > 0):
+        failures.append(f"zero plug-in panel-mean variance for {int(np.sum(~(dv > 0)))} donor(s)")
+    full = panels == NOISE_CHECK_PANELS and k == NOISE_CHECK_K
+    return {
+        "schema": NOISE_CHECK_SCHEMA,
+        "status": "pass" if not failures else "fail",
+        "failures": failures,
+        "f12a4d_check": bool(full and governed_inputs and draw is None),
+        "label": "F12a.4(d) noise check"
+        if full
+        else "smoke: reduced F12a.4(d) noise check, not the registered check",
+        "panels": int(panels),
+        "k": int(k),
+        "rows": int(n),
+        "components": len(sizes),
+        "seeds": f"seed('20261111:f12:', 'noisecheck:<d>'), d = 0..{panels - 1}",
+        "draw_order": "F12a.4(b)" if draw is None else "custom (test)",
+        "criterion": f"|empirical - plug-in| <= {NOISE_CHECK_SE} Monte Carlo SE for each quantity; every "
+        "donor's plug-in panel-mean variance > 0",
+        "checks": checks,
+        "donor_plug_in_variance_min": float(dv.min()),
+        "donor_block_mean_abs_max": float(np.abs(plug["donor_mean"]).max()),
+        "cpu_seconds": time.process_time() - t0,
+    }
+
+
+# ------------------------------------------------------------------ C1 draft code hashes
+
+
+def c1_draft_inventory():
+    """F12c.7: the draft C1 pin (``code_hashes_c1.json``): sha256 of every F12 script, test and config,
+    the F12 dependencies, the restricted-payload byte pin and resource plan, with runtime versions."""
+    pats = ("scripts/f12*.py", "tests/test_f12*.py", "docs/prereg/f12_manifests/f12*_config.json")
+    files = {str(p.relative_to(ROOT)) for pat in pats for p in ROOT.glob(pat)}
+    files |= set(C1_DEPENDENCIES)
+    files |= {str(RESTRICTED_PIN.relative_to(ROOT))}
+    plan = ROOT / "docs/prereg/f12_manifests/f12c_resource_plan.json"
+    if plan.exists():
+        files.add(str(plan.relative_to(ROOT)))
+    pin = load_restricted_pin()
+    import platform
+
+    import scipy
+
+    return {
+        "schema": C1_SCHEMA,
+        "status": "draft, pending Board A C1 verification",
+        "note": "Draft of F12a.6(c) item 11. Not a C1 file until MANIFEST_C1.sha256 is committed; it is "
+        "regenerated (python scripts/f12_simulation.py c1-draft) after any change to a listed file. "
+        "Missing for C1: the token builder's C1 outputs, population/folds/schemas/models/intervals/"
+        "f12i/resources files, the C1 verifier and exposure_c1.json.",
+        "files": {rel: sha256_file(ROOT / rel) for rel in sorted(files)},
+        "restricted_payload": {
+            "sha256": pin["restricted_copy"]["sha256"],
+            "source_sha256": pin["source"]["sha256"],
+            "pin": str(RESTRICTED_PIN.relative_to(ROOT)),
+            "extractor": pin["extractor"],
+        },
+        "versions": {
+            "python": platform.python_version(),
+            "numpy": np.__version__,
+            "torch": torch.__version__,
+            "lightgbm": _lgbm_version(),
+            "scipy": scipy.__version__,
+        },
     }
 
 
@@ -2076,21 +3166,68 @@ def guard_out(out: Path):
     return out
 
 
+def _load_matrix_arg(a, out=None):
+    if a.synthetic:
+        matrix = synthetic_token_matrix()
+        src = {"synthetic": True}
+        if out is not None:
+            save_matrix(out / "synthetic_tokens.npz", matrix)
+            src["path"] = str(out / "synthetic_tokens.npz")
+    else:
+        matrix = load_matrix(a.tokens)
+        src = {"synthetic": False, "path": str(a.tokens), "file_sha256": sha256_file(a.tokens)}
+    src["matrix_sha256"] = matrix_sha256(matrix)
+    return matrix, src
+
+
+def _parse_prereqs(items):
+    out = {}
+    for item in items or []:
+        key, _, path = item.partition("=")
+        if key not in PREREQUISITES or not path:
+            raise SystemExit(f"--prereq must be one of {PREREQUISITES} as KEY=PATH")
+        out[key] = json.loads(Path(path).read_text())
+    return out
+
+
 def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    commands = {"run": main_run, "select": main_select, "assemble": main_assemble,
+                "noisecheck": main_noisecheck, "c1-draft": main_c1_draft}  # fmt: skip
+    if argv and not argv[0].startswith("-"):
+        if argv[0] not in commands:
+            raise SystemExit(f"unknown command {argv[0]!r}; one of {sorted(commands)}")
+        return commands[argv[0]](argv[1:])
+    return main_run(argv)
+
+
+def main_run(argv):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     src = p.add_mutually_exclusive_group(required=True)
     src.add_argument("--tokens", type=Path, help="frozen f12-token-matrix-v1 .npz")
     src.add_argument("--synthetic", action="store_true", help="synthetic token matrix (dry runs)")
-    p.add_argument("--payload", type=Path, default=DEFAULT_PAYLOAD)
     p.add_argument(
-        "--restricted-payload", type=Path, default=None,
-        help="read only this restricted payload copy (F12a.4(e)) instead of --payload",
-    )  # fmt: skip
-    p.add_argument("--out", type=Path, required=True)
-    p.add_argument("--config", type=Path, default=None, help="committed config JSON (F12b)")
-    p.add_argument(
-        "--stage1-report", type=Path, default=None, help="stage-1 report (F12b stage 2: k from it)"
+        "--payload", type=Path, default=DEFAULT_PAYLOAD, help="raw payload: drafted runs only"
     )
+    p.add_argument(
+        "--restricted-payload", type=Path, default=None, help="pinned restricted copy (F12a.4(e))"
+    )
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--config", type=Path, default=None, help="committed config JSON (F12c)")
+    p.add_argument("--stage1-report", type=Path, default=None, help="complete stage-1 report")
+    p.add_argument("--selection", type=Path, default=None, help="frozen stage-2 selection file")
+    p.add_argument(
+        "--part",
+        default=None,
+        help="run only these scheduled scenarios, e.g. 'null' or 'alt,null_var2'",
+    )
+    p.add_argument(
+        "--coverage-target-report", type=Path, default=None, help="assembled f12c_target report"
+    )
+    p.add_argument(
+        "--prereq", action="append", default=[], help=f"KEY=PATH, KEY in {PREREQUISITES}"
+    )
+    p.add_argument("--schedule", default=None, help="override, e.g. null=2,alt=1 (non-registered)")
     p.add_argument("--replicates", type=int, default=None)
     p.add_argument("--seed", type=int, default=None, help="A5.4.2 bootstrap PCG64 seed")
     p.add_argument("--k-grid", default=None)
@@ -2102,28 +3239,19 @@ def main(argv=None):
         "--tree-grid", default=None, help="StatNN tree counts, e.g. 100 (non-registered)"
     )
     a = p.parse_args(argv)
+    if a.workers > MAX_WORKERS:
+        raise SystemExit(
+            f"--workers {a.workers}: the F12c worker-count rule allows at most {MAX_WORKERS} on this machine"
+        )
     out = guard_out(a.out)
-    out.mkdir(parents=True, exist_ok=True)
     base, config_sha = (Config(), None) if a.config is None else load_config(a.config)
-    selection = None
-    if a.stage1_report is not None:
-        s1 = json.loads(Path(a.stage1_report).read_text())
-        s1_cfg = config_from_dict(s1["config"])
-        if registered_name(s1_cfg) != "f12b_stage1":
-            raise SystemExit("the stage-1 report was not produced under the registered stage-1 config")
-        selection = select_stage2_k(s1["summary"], s1_cfg)
-        selection["stage1_report_sha256"] = sha256_file(a.stage1_report)
-    if a.k_grid is not None:
-        k_grid = [int(x) for x in a.k_grid.split(",") if x != ""]
-    elif selection is not None:
-        k_grid = list(selection["k"])
-    else:
-        k_grid = list(K_GRID)
-    replicates = base.replicates if a.replicates is None else a.replicates
-    scenarios = [s for s in a.scenarios.split(",") if s]
-    for s in scenarios:
-        if s not in SCENARIOS:
-            raise SystemExit(f"unknown scenario {s}")
+    if a.config is not None and a.restricted_payload is None:
+        raise SystemExit("a configured run reads only the byte-pinned restricted payload copy "
+                         "(--restricted-payload); the raw-payload loader is not a governed fallback")  # fmt: skip
+    if base.schedule and a.replicates is not None:
+        raise SystemExit(
+            "--replicates override is not available for a scheduled config (use --schedule; non-registered)"
+        )
     over = {} if a.seed is None else {"boot_seed": a.seed}
     if a.draws is not None:
         over["draws"] = a.draws
@@ -2131,27 +3259,80 @@ def main(argv=None):
         over["max_epochs"] = a.max_epochs
     if a.tree_grid is not None:
         over["tree_grid"] = tuple(int(x) for x in a.tree_grid.split(","))
+    if a.schedule is not None:
+        if not a.synthetic:
+            raise SystemExit("--schedule override is for synthetic dry runs only")
+        over["schedule"] = tuple(
+            (s, int(n)) for s, n in (x.split("=") for x in a.schedule.split(","))
+        )
     cfg = dataclasses.replace(base, **over)
-    reg = registered_name(cfg)
-    if a.synthetic:
-        matrix = synthetic_token_matrix()
-        save_matrix(out / "synthetic_tokens.npz", matrix)
-        token_src = {"synthetic": True, "path": str(out / "synthetic_tokens.npz")}
-    else:
-        matrix = load_matrix(a.tokens)
-        token_src = {
-            "synthetic": False,
-            "path": str(a.tokens),
-            "file_sha256": sha256_file(a.tokens),
-        }
-    token_src["matrix_sha256"] = matrix_sha256(matrix)
+    gname = governed_name(cfg)
+    if gname in ("f12c_stage2", "f12c_target"):
+        if a.k_grid is not None:
+            raise SystemExit("the k grid of a governed stage-2 / target run comes only from the frozen "
+                             "stage-1 selection (--k-grid refused)")  # fmt: skip
+        if a.selection is None or a.stage1_report is None:
+            raise SystemExit("a governed stage-2 / target run needs --selection (the frozen stage-1 "
+                             "selection file) and --stage1-report")  # fmt: skip
+    elif gname in ("f12c_stage1", "f12c_pilot") and a.k_grid is not None:
+        raise SystemExit(f"the k grid of {gname} is fixed by its config (--k-grid refused)")
+    out.mkdir(parents=True, exist_ok=True)
+    matrix, token_src = _load_matrix_arg(a, out)
     if a.restricted_payload is not None:
-        payload = NoisePayload.load_restricted(a.restricted_payload)
+        try:
+            payload = NoisePayload.load_restricted(a.restricted_payload, RESTRICTED_PIN)
+        except (OSError, ValueError, KeyError) as exc:
+            raise SystemExit(f"restricted payload refused: {exc}") from exc
         restricted = Path(a.restricted_payload)
     else:
         payload = NoisePayload.load(a.payload)
         restricted = out / "noise_payload_restricted.json"
         restricted.write_text(json.dumps(payload.restricted(), sort_keys=True))
+    code = current_code_identity()
+    identities = {
+        "tokens_matrix_sha256": token_src["matrix_sha256"],
+        "tokens_synthetic": bool(matrix["synthetic"]),
+        "payload_restricted_sha256": sha256_file(restricted),
+        "code_sha256": code,
+    }
+    selection = None
+    try:
+        if gname in ("f12c_stage2", "f12c_target"):
+            selection = verify_selection(a.selection, a.stage1_report, identities=identities)
+        elif a.stage1_report is not None:
+            selection = verify_stage1_report(a.stage1_report, allow_synthetic=True)
+    except (OSError, ValueError, KeyError) as exc:
+        raise SystemExit(f"stage-1 selection refused: {exc}") from exc
+    if cfg.k_rule == "all":
+        k_grid = list(K_GRID)
+    elif cfg.k_rule == "145":
+        k_grid = [145]
+    elif cfg.k_rule == "selected" and selection is not None and a.k_grid is None:
+        k_grid = [selection["k_star"]]
+    elif a.k_grid is not None:
+        k_grid = [int(x) for x in a.k_grid.split(",") if x != ""]
+    else:
+        k_grid = list(K_GRID)
+    if cfg.schedule:
+        planned = planned_ids(cfg, k_grid)
+        keep = set(a.part.split(",")) if a.part else None
+        tasks = [t for t in planned if keep is None or t[0] in keep]
+        scenarios = sorted({t[0] for t in tasks})
+        replicates = None
+    else:
+        replicates = cfg.replicates if a.replicates is None else a.replicates
+        scenarios = [s for s in a.scenarios.split(",") if s]
+        for s in scenarios:
+            if s not in SCENARIOS:
+                raise SystemExit(f"unknown scenario {s}")
+        tasks = None
+    target = None
+    if a.coverage_target_report is not None:
+        tr = json.loads(Path(a.coverage_target_report).read_text())
+        fails, target = _check_target_report(tr, selection, identities)
+        if fails or target is None:
+            raise SystemExit(f"coverage-target report refused: {fails}")
+    ru0 = _rusage_cpu()
     t0 = time.perf_counter()
     contexts = {k: Context(matrix, payload, k, cfg) for k in k_grid}
     last = contexts[k_grid[-1]]
@@ -2160,92 +3341,177 @@ def main(argv=None):
         order=cfg.noise_draw, row_ids=last.ids,
     )  # fmt: skip
     diag["draw_order"] = cfg.noise_draw
+    diag["note"] = (
+        "descriptive 2,000-panel diagnostic; not the F12a.4(d) check (subcommand noisecheck)"
+    )
     records, times = simulate(
-        matrix, payload, cfg, k_grid, scenarios, replicates, a.workers, progress=True
+        matrix, payload, cfg, k_grid, scenarios, replicates, a.workers, progress=True, tasks=tasks
     )
     wall = time.perf_counter() - t0
-    summary = summarise(records, cfg)
-    code = {
-        "scripts/f12_simulation.py": sha256_file(__file__),
-        "scripts/tfv1_requalify.py": sha256_file(ROOT / "scripts/tfv1_requalify.py"),
-        "scripts/a5_simulation.py": sha256_file(ROOT / "scripts/a5_simulation.py"),
-        "scripts/a5_build_panels.py": sha256_file(ROOT / "scripts/a5_build_panels.py"),
-    }
-    report = {
-        "schema": REPORT_SCHEMA,
-        "status": "synthetic dry run, not a gate" if matrix["synthetic"] else "simulation",
-        "git_head": git_head(),
-        "config": cfg.as_dict(),
-        "config_file": None if a.config is None else {"path": str(a.config), "sha256": config_sha},
-        "config_registered": reg,
-        "stage1_selection": selection,
-        "rules": rules_text(cfg),
-        "inputs": {
-            "tokens": token_src,
-            "payload": payload.provenance,
-            "payload_restricted_copy": {"path": str(restricted), "sha256": sha256_file(restricted)},
-            "code_sha256": code,
-            "versions": {
-                "numpy": np.__version__,
-                "torch": torch.__version__,
-                "lightgbm": _lgbm_version(),
-            },
+    inputs = {
+        "tokens": token_src,
+        "payload": payload.provenance,
+        "payload_restricted_copy": {"path": str(restricted), "sha256": sha256_file(restricted)},
+        "versions": {
+            "numpy": np.__version__,
+            "torch": torch.__version__,
+            "lightgbm": _lgbm_version(),
         },
-        "k_grid": k_grid,
-        "scenarios": scenarios,
-        "replicates": replicates,
+        "git_head": git_head(),
+        "noise_diagnostics": diag,
         "populations": {str(k): c.fold_manifest() for k, c in contexts.items()},
         "head_parameters": head_param_count(),
-        "noise_diagnostics": diag,
-        "summary": summary,
-        "replicate_requirements": replicate_requirements(summary, cfg),
-        "release": release_decision(
-            summary, cfg, k_grid, replicates, reg, None if selection is None else selection["k"]
-        ),
-        "records": records,
     }
+    report = make_report(cfg=cfg, config_file=None if a.config is None else {"path": str(a.config), "sha256": config_sha},
+                         records=records, k_grid=k_grid, identities=identities, selection=selection,
+                         target=target, part=a.part, inputs=inputs)  # fmt: skip
+    if gname == "f12c_stage2" and a.prereq and not a.part:
+        validation = validate_execution(
+            report, selection=selection, prereqs=_parse_prereqs(a.prereq)
+        )
+        report["release"] = release_decision(report["summary"], cfg, validation)
+    if cfg.stage != 4:
+        report["replicate_requirements"] = replicate_requirements(report["summary"], cfg)
     (out / "report.json").write_text(
         json.dumps(report, sort_keys=True, indent=1, default=_json_default)
     )
-    n_tasks = len(times)
-    walls = [t[0] for t in times]
+    _write_timing(out, a, records, times, wall, ru0, k_grid)
+    print(json.dumps({"summary_k": list(report["summary"]), "release": report["release"]}, indent=1,
+                     default=_json_default))  # fmt: skip
+    return 0
+
+
+def _rusage_cpu():
+    import resource
+
+    s = resource.getrusage(resource.RUSAGE_SELF)
+    c = resource.getrusage(resource.RUSAGE_CHILDREN)
+    return {"self": s.ru_utime + s.ru_stime, "children": c.ru_utime + c.ru_stime}
+
+
+def _write_timing(out, a, records, times, wall, ru0, k_grid):
+    ru1 = _rusage_cpu()
     cpus = [t[1] for t in times]
-    per = float(np.mean(cpus)) if times else float("nan")
-    projected = per * 1000 * len(K_GRID) * 2
-    by_k = {
-        str(k): {
-            sc: {
-                "n": len(sel),
-                "cpu_mean": float(np.mean([t[1] for t in sel])) if sel else None,
-                "wall_mean": float(np.mean([t[0] for t in sel])) if sel else None,
-            }
-            for sc in scenarios
-            for sel in [[t for rec, t in zip(records, times) if rec["k"] == k and rec["scenario"] == sc]]
-        }
-        for k in k_grid
+    total = (ru1["self"] - ru0["self"]) + (ru1["children"] - ru0["children"])
+    by_k = {}
+    for rec, t in zip(records, times):
+        by_k.setdefault(str(rec["k"]), {}).setdefault(rec["scenario"], []).append(t[1])
+    means = {k: {s: float(np.mean(v)) for s, v in d.items()} for k, d in by_k.items()}
+    proj = project_cpu(means) if any("null" in d and "alt" in d for d in means.values()) else None
+    (out / "report.time").write_text(json.dumps({
+        "wall_seconds": wall,
+        "workers": a.workers,
+        "replicate_tasks": len(times),
+        "cpu_seconds_per_replicate_mean": float(np.mean(cpus)) if cpus else None,
+        "cpu_seconds_per_replicate_max": float(np.max(cpus)) if cpus else None,
+        "cpu_seconds_replicates_sum": float(np.sum(cpus)) if cpus else 0.0,
+        "cpu_seconds_total_process_tree": total,
+        "cpu_seconds_overhead": total - (float(np.sum(cpus)) if cpus else 0.0),
+        "worker_max_rss_mb": float(max(t[2] for t in times)) if times else None,
+        "rss_max_mb_parent": _maxrss_mb(),
+        "per_replicate_cpu_by_k_and_scenario": {k: {s: {"n": len(v), "cpu_mean": float(np.mean(v))}
+                                                    for s, v in d.items()} for k, d in by_k.items()},
+        "projection_f12c_schedule": proj,
+        "k_grid": k_grid,
+    }, indent=1))  # fmt: skip
+
+
+def main_select(argv):
+    p = argparse.ArgumentParser(description="F12c.5: verify the stage-1 report and freeze k*")
+    p.add_argument("--stage1-report", type=Path, required=True)
+    p.add_argument("--out-selection", type=Path, default=STAGE2_SELECTION)
+    p.add_argument(
+        "--allow-synthetic", action="store_true", help="dry runs; never the governed file"
+    )
+    a = p.parse_args(argv)
+    try:
+        sel = verify_stage1_report(a.stage1_report, allow_synthetic=a.allow_synthetic)
+        if _norm(sel["identities"].get("code_sha256")) != _norm(current_code_identity()):
+            raise ValueError("stage-1 report code identity differs from the current code")
+        write_selection(sel, a.out_selection)
+    except (OSError, ValueError, KeyError) as exc:
+        raise SystemExit(f"selection refused: {exc}") from exc
+    print(json.dumps({"k_star": sel["k_star"], "file": str(a.out_selection)}))
+    return 0
+
+
+def main_assemble(argv):
+    p = argparse.ArgumentParser(
+        description="F12c.6: assemble stage-2 / target parts into one report"
+    )
+    p.add_argument("parts", nargs="+", type=Path)
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument(
+        "--prereq", action="append", default=[], help=f"KEY=PATH, KEY in {PREREQUISITES}"
+    )
+    p.add_argument("--selection", type=Path, default=None)
+    p.add_argument("--stage1-report", type=Path, default=None)
+    a = p.parse_args(argv)
+    out = guard_out(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    try:
+        report = assemble_reports(a.parts)
+        cfg = config_from_dict(report["config"])
+        if governed_name(cfg) == "f12c_stage2" and a.prereq:
+            sel = verify_selection(a.selection, a.stage1_report, identities=report["identities"])
+            v = validate_execution(report, selection=sel, prereqs=_parse_prereqs(a.prereq))
+            report["release"] = _norm(release_decision(report["summary"], cfg, v))
+    except (OSError, ValueError, KeyError) as exc:
+        raise SystemExit(f"assembly refused: {exc}") from exc
+    (out / "report.json").write_text(json.dumps(report, sort_keys=True, indent=1))
+    print(json.dumps({"complete": report["complete"], "release": report["release"]}, indent=1))
+    return 0
+
+
+def main_noisecheck(argv):
+    p = argparse.ArgumentParser(description="F12a.4(d) noise-only check (F12c.7)")
+    src = p.add_mutually_exclusive_group(required=True)
+    src.add_argument("--tokens", type=Path)
+    src.add_argument("--synthetic", action="store_true")
+    p.add_argument("--restricted-payload", type=Path, required=True)
+    p.add_argument("--k", type=int, default=NOISE_CHECK_K)
+    p.add_argument("--panels", type=int, default=NOISE_CHECK_PANELS)
+    p.add_argument("--out", type=Path, required=True)
+    a = p.parse_args(argv)
+    out = guard_out(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    matrix, token_src = _load_matrix_arg(a)
+    try:
+        payload = NoisePayload.load_restricted(a.restricted_payload, RESTRICTED_PIN)
+    except (OSError, ValueError, KeyError) as exc:
+        raise SystemExit(f"restricted payload refused: {exc}") from exc
+    rows = s_k_rows(matrix, a.k)
+    m = subset_matrix(matrix, rows)
+    comps = m["component"]
+    code = {c: i for i, c in enumerate(sorted(set(comps.tolist())))}
+    comp = np.asarray([code[c] for c in comps])
+    res = noise_check(
+        payload, comp, m["row_ids"], a.k, a.panels, governed_inputs=not matrix["synthetic"]
+    )
+    res["identities"] = {
+        "tokens_matrix_sha256": token_src["matrix_sha256"],
+        "tokens_synthetic": bool(matrix["synthetic"]),
+        "payload_restricted_sha256": sha256_file(a.restricted_payload),
     }
-    (out / "report.time").write_text(
+    res["code_sha256"] = current_code_identity()
+    res["rss_max_mb"] = _maxrss_mb()
+    (out / "noise_check.json").write_text(json.dumps(res, sort_keys=True, indent=1))
+    print(
         json.dumps(
-            {
-                "wall_seconds": wall,
-                "workers": a.workers,
-                "replicate_tasks": n_tasks,
-                "cpu_seconds_per_replicate_mean": per,
-                "cpu_seconds_per_replicate_max": float(np.max(cpus)) if times else None,
-                "wall_seconds_per_replicate_mean": float(np.mean(walls)) if times else None,
-                "worker_max_rss_mb": float(max(t[2] for t in times)) if times else None,
-                "projected_cpu_hours_registered_run (1000 x 6 k x null+alt)": projected / 3600,
-                "per_replicate_by_k_and_scenario": by_k,
-                "rss_max_mb_parent": _maxrss_mb(),
-            },
+            {k: res[k] for k in ("status", "label", "panels", "k", "cpu_seconds", "failures")},
             indent=1,
         )
     )
-    print(
-        json.dumps(
-            {"summary": summary, "release": report["release"]}, indent=1, default=_json_default
-        )
+    return 0
+
+
+def main_c1_draft(argv):
+    argparse.ArgumentParser(description="write the draft code_hashes_c1.json (F12c.7)").parse_args(
+        argv
     )
+    obj = c1_draft_inventory()
+    CODE_HASHES_C1.write_text(json.dumps(obj, indent=1, sort_keys=True) + "\n")
+    print(json.dumps({"files": len(obj["files"]), "path": str(CODE_HASHES_C1)}))
     return 0
 
 
