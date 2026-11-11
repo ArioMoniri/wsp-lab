@@ -83,7 +83,7 @@
   },
   "scripts/a5_build_manifests.py": {
    "role": "builder",
-   "sha256": "1549438d912b8dbf5e3024146c66c06462e4020bb0e7e23d4c71f11cabe1ccd8"
+   "sha256": "7983074cc4f013b17241514fcd858784fdb4657a90863922a387287e7e707a7c"
   },
   "scripts/a5_build_panels.py": {
    "role": "builder",
@@ -132,6 +132,10 @@
   "scripts/part_a_predictions.py": {
    "role": "Part A frozen prediction rows (field contractions on staged realised deltas)",
    "sha256": "d312967e317e330a3a7beff73a74f47c8da4ebbaaf110f763f2d7f36a8233847"
+  },
+  "scripts/part_a_score_launch.sh": {
+   "role": "two-phase Part A scoring launcher (proofs-only stop; strict checks)",
+   "sha256": "92a3dee4b5da0d0124678deb7ebbbffee392b97765c317567564557dc393753b"
   },
   "scripts/part_a_synthetic_binding.py": {
    "role": "synthetic input-binding check of the analysis (no outcomes)",
@@ -313,6 +317,10 @@
    "role": "test",
    "sha256": "22dd6d1087ad99abec7287f95a0e37301e0e19fc258221e932a9271caffc5c39"
   },
+  "tests/test_part_a_score_launch.py": {
+   "role": "test",
+   "sha256": "479bb14e49f8b730dac5a3e6f9d6d280ccf1a6f8f703bbb39c7fe49c88cc3dd3"
+  },
   "tests/test_response_intervention.py": {
    "role": "test",
    "sha256": "d029c69852dae486120b137ab7105bb98b7ee55a41c4fe641e7cdb02eb0b7eb1"
@@ -322,7 +330,7 @@
    "sha256": "7570224a0b4c0dd8e9f1b0aacdaa930e2170d97fa1d1e9c6864bd60d13869325"
   }
  },
- "git_sha": "d84fd936cdd35970feda4e664412294902984cf4",
+ "git_sha": "acc32511073fbf7fd1aac50cd92314de6e15c038",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

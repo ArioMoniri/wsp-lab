@@ -843,3 +843,9 @@ frozen and hashed). Fix task opened; secret scan clean; pins match at HEAD.
 test changed the float32 matmul path; conftest now restores the thread count); re-pin (xxv) committed through the hook with the
 full suite green (1203 passed). Pre-scoring inventory 2 in flight; Board A explicit release next; then phase 1 (proofs-only) and
 phase 2 (GPU).
+
+**11 Nov 2026, 11:26 UTC.** Pre-scoring inventory 2 merged (719a595; 33 gates met, 14 awaiting Board A, 6 at execution, 4 partial,
+4 open). Chair actions on its findings: launcher pinned after hardening (phase-1 no-GPU record; phase-2 GPU exclusivity, exit 10;
+41 tests) — re-pin (xxvi); replay record enriched; inventory-1 and -2 hash entries appended to A5; attestations 24–29 (chair
+extension 3; the two report authors; two Board A reviewers' lines; the launch-hardening builder; the inventory-2 session). Board A
+explicit release review requested next. Scoring held.

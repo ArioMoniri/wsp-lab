@@ -473,3 +473,46 @@ scoring, and read no score, response or contrast. No Part A outcome exists.
 - Its report to the chair is on record only through this entry and `docs/PROGRESS.md`. It notes that fields.json rebuilt its own
   rotations (R_eff hashes differ; signs agree 25/25; values within 1.4 %) and that ladder predictions follow A5.3 and the analysis code
   (y(W + sΔ) − y(W) at the predecessor).
+
+## 24. Chair — extension 3 (11 Nov 2026, 11:26 UTC): from the replay through the release preparation
+
+From 10:16 UTC to the time of this entry I merged the analysis F11 path, the launch hardening, the predictions file, the test-order fix
+and the two pre-scoring inventories; wrote F11d and the hash entries; hardened the launcher (phase-1 no-GPU record, phase-2 GPU
+exclusivity) and pinned it (re-pin xxvi); enriched the replay record. I opened no file under `data/evals` for any variant,
+supplementary edit or missing reference, ran no scoring, and read no score, response or contrast. No Part A outcome exists. I will
+be the launcher of both scoring phases; no other session is involved in the scoring phase.
+
+## 25. F10 re-stage report author (added by the chair from the committed report, 11 Nov 2026)
+
+- **Role:** author of `part_a/RESTAGE_REPORT.md` and `RESTAGE_A512_NOTE.md` (commit dd31847). **Session:** Claude Opus 5.5
+  (claude_umut), branch `report/f10-restage`, 10 Nov 23:40 – 11 Nov 00:50 UTC (system clock).
+- **Statement (report §7, quoted):** "nothing was opened under `data/evals`; I only tested whether paths exist."
+
+## 26. F11 staging report author (added by the chair from the committed report)
+
+- **Role:** author of `part_a/SUPPLEMENT_REPORT.md` and `SUPPLEMENT_A512_NOTE.md` (ff81181). **Session:** Claude Opus 5.5
+  (claude_umut), branch `report/f11-staging`, 09:28–10:00 UTC. **Statement (report §8):** no evaluation record opened; path
+  existence checks only; the 12 supplementary originals' evaluation paths exist and were not opened.
+
+## 27. Board A reviewers of the re-stage report and of the staging/calibration (lines copied from their review files)
+
+- `docs/reviews/council/board-a-f10-restage-2026-11-11.md`: "No commits, GPU use, data writes or evaluation-content access"
+  (Codex GPT-6.1 Sol, worktree `review/board-a-f10-restage`).
+- `docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md`, Board A exposure attestation (verbatim in the file): read
+  registration/review documents, construction/audit metadata, code, source identities, environment facts, logs and
+  development-proxy calibration output; received/read no affected G3, rotation, ladder or missing-reference outcome (Codex GPT-6.1
+  Sol, worktree `review/board-a-f11-staging-cal`).
+
+## 28. Scoring-launch hardening builder (added by the chair from its report)
+
+- **Role:** author of the two-phase launcher, `score --proofs-only/--require-proofs/--max-minutes`, the 52-edit test fix and
+  `tests/test_part_a_score_launch.py` (77ee786). **Session:** Claude Opus 5.5 (claude_umut), branch `feat/score-launch-hardening`,
+  about 10:15–11:05 UTC. **Statement (report, quoted):** "No GPU, evaluation-data access, staging or commits" for the review of its
+  work; the builder's own aborted first test run read staged deltas only ("never reached `score`, never used the GPU, and wrote
+  nothing"); its test briefly set `core.bare=true` in the shared repository (repaired; disclosed in re-pin (xxiii)).
+
+## 29. Pre-scoring inventory 2 session (from `PRESCORE2_A512_NOTE.md`'s proposed entry, adopted)
+
+- **Role:** author of `PRESCORE_INVENTORY_2.{json,md}` and `PRESCORE2_A512_NOTE.md` (719a595). **Session:** Claude Opus 5.5
+  (claude_umut), branch `prereg/prescore-inventory-2`, about 11:00–11:25 UTC. **Statement (report, quoted):** "I opened nothing
+  under `data/evals` (existence checks only) and used no GPU."

@@ -125,7 +125,10 @@ def _make_launch(tmp_path):
     mbytes = json.dumps(man, indent=1).encode()
     _w(repo / MANIFEST, mbytes)
     bin_dir = tmp_path / "bin"
-    _w(bin_dir / "nvidia-smi", f'#!/bin/sh\necho "{GPU}"\n').chmod(0o755)
+    _w(
+        bin_dir / "nvidia-smi",
+        f'#!/bin/sh\ncase "$*" in *compute-apps*) exit 0 ;; *) echo "{GPU}" ;; esac\n',
+    ).chmod(0o755)
     _git(repo, "init", "-q")
     top = _git(repo, "rev-parse", "--show-toplevel").strip()
     assert Path(top).resolve() == repo.resolve(), top  # never touch any other repository
@@ -338,3 +341,14 @@ def test_phase_2_refuses_without_a_gpu_identity(launch):
     assert len(calls) == 1 and "--dry-run" in calls[0]
     assert not (launch["repo"] / "data" / "evals").exists()
     assert not (launch["repo"] / RECORD).exists()
+
+
+def test_phase_2_refuses_when_the_gpu_is_not_exclusive(launch):
+    """Any compute process reported by nvidia-smi refuses phase 2 with exit 10 before the launch record is written."""
+    _w(
+        launch["bin"] / "nvidia-smi",
+        '#!/bin/sh\ncase "$*" in *compute-apps*) echo "4242, python, 308 MiB" ;; *) echo "NVIDIA TEST GPU, 1.0, 1 MiB, GPU-0000-test" ;; esac\n',
+    ).chmod(0o755)
+    r, _calls = launch["run"](launch["sha"], "--phase", "score", "--max-minutes", "231.4")
+    assert r.returncode == 10 and "GPU NOT EXCLUSIVE" in r.stderr
+    assert not (launch["repo"] / "docs/prereg/a5_manifests/part_a/score_launch.json").exists()

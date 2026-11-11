@@ -17,7 +17,8 @@
 #
 # Every refusal exits non-zero before any scoring command and before the launch record is written; nothing under
 # data/evals is written by any refusal. Exit codes: 64 usage, 2 tree, 3 pins, 4 manifest hash, 5 re-hash, 6 proof step,
-# 7 proof/price gate, 8 launch record exists, 9 no GPU identity; otherwise the scorer's exit code.
+# 7 proof/price gate, 8 launch record exists, 9 no GPU identity, 10 GPU not exclusive; otherwise the scorer's exit code.
+# Phase 1 runs with CUDA_VISIBLE_DEVICES= (no GPU) and writes score_phase1_launch.json.
 set -u
 ROOT=$(cd "$(dirname "$0")/.." && pwd) && cd "$ROOT" || exit 1
 PY=.venv/bin/python
@@ -96,8 +97,13 @@ SCORE=(-m wsp.eval.response_intervention score --stage "$STAGE" --manifest "$M" 
 checks
 
 if [ "$PHASE" = proofs ]; then
-    echo "PHASE 1 proofs only: start $(date -u +%Y-%m-%dT%H:%M:%SZ), HEAD $(git rev-parse HEAD)"
-    PYTHONPATH=src $PY "${SCORE[@]}" --proofs-only || refuse 6 "PROOF STEP FAILED"
+    P1=docs/prereg/a5_manifests/part_a/score_phase1_launch.json
+    P1START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    echo "PHASE 1 proofs only: start $P1START, HEAD $(git rev-parse HEAD)"
+    CUDA_VISIBLE_DEVICES= PYTHONPATH=src $PY "${SCORE[@]}" --proofs-only; P1RC=$?
+    printf '{"schema":"a5-part-a-score-phase1-record-v1","start_utc":"%s","end_utc":"%s","execution_sha":"%s","manifest_sha256":"%s","cuda_visible_devices":"","exit_code":%s}\n' \
+        "$P1START" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(git rev-parse HEAD)" "$EXPECT" "$P1RC" > "$P1"
+    [ "$P1RC" = 0 ] || refuse 6 "PROOF STEP FAILED"
     echo "PHASE 1 end $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "STOP: nothing scored. Commit docs/prereg/a5_manifests/part_a/reference_proofs_f11.json, have the repriced plan"
     echo "above accepted, then run: $0 $EXPECT --phase score --max-minutes <accepted threshold>"
@@ -109,6 +115,8 @@ PYTHONPATH=src $PY "${SCORE[@]}" --require-proofs --max-minutes "$MAXMIN" --dry-
     || refuse 7 "PROOF/PRICE GATE FAILED (absent or incomplete proof record, or price above $MAXMIN min)"
 GPU=$(nvidia-smi --query-gpu=name,driver_version,memory.total,uuid --format=csv,noheader 2>/dev/null | head -1)
 [ -n "$GPU" ] || refuse 9 "NO GPU IDENTITY (nvidia-smi)"
+OTHER=$(nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader 2>/dev/null | grep -v '^\s*$' || true)
+[ -z "$OTHER" ] || refuse 10 "GPU NOT EXCLUSIVE: other compute processes present: $OTHER"
 SHA=$(git rev-parse HEAD); START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 CMD="env PYTHONPATH=src $PY ${SCORE[*]} --require-proofs --max-minutes $MAXMIN"
 $PY - "$R" <<PY

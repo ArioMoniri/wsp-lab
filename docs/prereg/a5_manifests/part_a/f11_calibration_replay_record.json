@@ -1,6 +1,7 @@
 {
  "availability_digest": "171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a",
  "basis": "A5 note F11d (single replay exception); Board A board-a-f11-staging-cal-2026-11-11.md conditions 1\u20132",
+ "board_a_review_sha256": "9f91596408dd2f4f37745300ad0ab00889bd02d6f958428cbe215c6a43d0ef6e",
  "byte_identical": true,
  "command": "identical to the Board A frozen command except --output (sole authorised substitution)",
  "dirty_at_launch": {
@@ -8,7 +9,9 @@
   "file": "scripts/part_a_f11_calibration_replay.sh (untracked copy of the launch script, committed at 890f6e6 immediately after launch; not an input of the run)"
  },
  "end_utc": "2026-11-11T10:16:02Z",
+ "environment": {},
  "execution_sha": "759ef241c86e7c398ddcc2c9ab32cde932d76d25",
+ "exit_code": 0,
  "gates": {
   "label": "slot-masked (F10.6); supplemented (F11.4)",
   "passed": true,
@@ -30,6 +33,15 @@
    ]
   }
  },
+ "input_provenance": {
+  "data/runs/a5/nullsize/inputs.json": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+  "data/runs/a5/power/fields.json": "85843ed28d3fd3ba5dc71e2ba8943fd022924cbc4f0b62dddbfb001cb2bcf3b9",
+  "docs/prereg/a5_manifests/part_a/slot_mask_f11.json": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+  "docs/prereg/a5_manifests/power/registered_donors.json": "6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5",
+  "docs/prereg/a5_manifests/selection_f11.json": "ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c"
+ },
+ "launch_script_frozen_before_run": false,
+ "launch_script_note": "the replay wrapper scripts/part_a_f11_calibration_replay.sh was copied into the tree at launch and committed immediately after (890f6e6); its sha256 is recorded; it was not hashed before the run (disclosed)",
  "launch_script_sha256": "f41b72b25f06ad9c5ae3a2eef7fe486daa958b4c823fb60fcd17bb23beae9229",
  "log_path": "/home/ubuntu/agent-logs/a5-f11-replay-20261111-100853.log",
  "log_sha256": "7d0f11b3305c557e5506a08f437fe9ab38dd3be2d9e4da0d64d0edb8cbc5dc41",

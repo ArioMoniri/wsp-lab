@@ -120,6 +120,8 @@ CODE_FILES = {
     "tests/test_response_intervention.py": "test",
     "scripts/a5_f11_supplement.py": "F11.2 supplementary selection builder",
     "scripts/part_a_predictions.py": "Part A frozen prediction rows (field contractions on staged realised deltas)",
+    "scripts/part_a_score_launch.sh": "two-phase Part A scoring launcher (proofs-only stop; strict checks)",
+    "tests/test_part_a_score_launch.py": "test",
     "scripts/part_a_synthetic_binding.py": "synthetic input-binding check of the analysis (no outcomes)",
     "tests/test_part_a_predictions.py": "test",
     "docs/prereg/a5_manifests/part_a/predictions_f11.json": "frozen Part A prediction rows (F8.3-style; before any scoring)",
