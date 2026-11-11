@@ -549,3 +549,11 @@ none decisive; no simulation rerun needed at 40/40, slot-masked power run if few
 non-root chain picks as the registered ladder with Δ_t substituted by its realised form, flagged; **no Part A entry is scored before
 Board A accepts F10** (ladder outcomes would decide A5.5 step 2 and reveal response sizes, making F10 post-outcome under F8a.1(c)).
 F10 text in flight.
+
+**11 Nov 2026, 01:00 UTC.** F10 merged (4fe4379). Board A accepted F10 with seven conditions (`docs/reviews/council/board-a-f10-2026-11-11.md`):
+before the code merge, freeze methodological clarifications and per-decision-maker exposure attestations, and provide executable
+arithmetic, rank-boundary and on-disk replay tests; before the re-stage, freeze execution settings and complete re-pin (xvi) with
+pins verified; before scoring, Board A accepts the outcome-free re-stage report; if yield < 40, pass the slot-masked calibration
+(failed rotation slots masked, valid ladder slots retained); freeze all F10.5 sensitivities and interpretation limits before scoring;
+**all scoring, including ladders and references, is held until the applicable gates pass.** F10 code (tests, dry run on three edits)
+in flight.
