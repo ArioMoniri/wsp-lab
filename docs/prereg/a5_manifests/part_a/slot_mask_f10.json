@@ -1,0 +1,210 @@
+{
+ "available": {
+  "0027efdf2eae7405": [
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "00f8111cbad8218f": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "014f8a9ec78db2be": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "05531ce1db4df63f": [
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "0559051354691a70": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "057dcfbedea3251f": [
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "0712caa1d248514a": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "07f9a50b29a7ef5c": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "0a841d4082532e8b": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "0bc0a0c4ad0520e0": [
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "0d055869527177b4": [
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "13b02fe2673cc296": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "14cdaabee246493b": [
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "15a53586efc72a50": [
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "19d9a98cfb2db6e2": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "1ab850a41051fe45": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "1b2b671e5da5d625": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "1fc51f7164052d50": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "2233954b0cc3edc0": [
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "22659cefc904e29f": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "2971f30e5276edd9": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "2d1de332e36d8f00": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "2d7f5f78fac4a9ae": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "2f61a4086395b719": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "2fb8d03d2547f357": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "3499f7dcc5968d96": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "34e407b92a902282": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "3996bea032c24200": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "453d8c08966438e0": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "455b881d5de4e6e0": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "4f918f6bbd264b34": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "5abd76a640cc2b9d": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "5f80bd482d092938": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "61d1f61e25212068": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "649bd035e79488e5": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "72d3756e968e3209": [
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "7d03d89c0b0299e6": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "85366c308158ea48": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "8cfc1393b97300ab": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ],
+  "983c5e13c59e0022": [
+   "rotation",
+   "ladder_0.25",
+   "ladder_0.5"
+  ]
+ },
+ "basis": "F10.6 / F10a; rotation pairs with pair_verdict != pass under audit_rule f10 at re-stage execution SHA 7bacec1",
+ "masked_edit_ids": [
+  "0027efdf2eae7405",
+  "05531ce1db4df63f",
+  "057dcfbedea3251f",
+  "0bc0a0c4ad0520e0",
+  "0d055869527177b4",
+  "14cdaabee246493b",
+  "15a53586efc72a50",
+  "2233954b0cc3edc0",
+  "72d3756e968e3209"
+ ],
+ "n_rotation_masked": 9,
+ "schema": "a5-slot-mask-v1",
+ "source_manifest_sha256": "59d839e351824fa154a665fcf105284ce5fdeed8423a5c0a2b7a60687b0d3b06"
+}

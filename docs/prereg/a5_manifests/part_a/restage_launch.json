@@ -1,0 +1,12 @@
+{
+ "schema": "a5-f10-restage-launch-v1",
+ "start_utc": "2026-11-11T02:44:00Z",
+ "execution_sha": "7bacec12604f1090168a79a6c6d55d4f548af4ec",
+ "dirty_files": 0,
+ "cwd": "/home/ubuntu/projects/wsp-lab",
+ "command": "env CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 HF_HUB_OFFLINE=1 PYTHONPATH=src .venv/bin/python -m wsp.eval.response_intervention prepare --rotation-only --audit-rule f10 --staged-manifest docs/prereg/a5_manifests/part_a/manifest.json --zoo data/zoo/qwen3.5-0.8b --selection docs/prereg/a5_manifests/selection.json --references docs/prereg/a5_manifests/references.json --out data/runs/a5/part_a --manifest-out docs/prereg/a5_manifests/part_a/manifest.json",
+ "nproc": 8,
+ "load_at_start": "5.18 5.58 7.44",
+ "end_utc": "2026-11-11T06:22:28Z",
+ "exit_code": 0
+}
