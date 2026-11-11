@@ -697,3 +697,12 @@ priced 135.2 min; calibration FAIL 0.7514 [0.7428, 0.7598]. Chair rulings append
 a different derivation (code's is authoritative; environment identical), the freeze's empty base revision was a script error (run
 records `2fc06364…`), NULL-SIZE equality was never a gate, and the 3 rounding-bound exclusions are gross (thousands of spacings),
 not the equality case. Board A review of the re-stage report requested (condition 4).
+
+**11 Nov 2026, 08:50 UTC.** Board A accepted F11 with conditions (`docs/reviews/council/board-a-f11-2026-11-11.md`): before
+staging — complete attestations, state that the fallback waives power only (never size) and preserve the full NULL-SIZE payload,
+review/test/re-pin the `prepare` supplement support and the selection builder, preserve the original 40 with no replacement; before
+calibration — accept staging evidence, review/test/re-pin the 52-slot simulation support, freeze and hash the actual mask and
+mapping; before scoring — accept one registered-scale calibration (power ≥ 0.80 and size ≤ 0.07; only a power failure permits the
+screen fallback), fix the manifest binding and review/test/re-pin the 52-component analysis and registered-40 sensitivity; release
+only after the F10 re-stage report and all standing gates are discharged. An F11a clarification note (fallback waives power only;
+NULL-SIZE payload preserved; attestations for the F11 drafter and metrology member) is next.
