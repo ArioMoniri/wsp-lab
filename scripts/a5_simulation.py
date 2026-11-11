@@ -56,6 +56,30 @@ output records under ``slot_mask`` the label "slot-masked (F10.6)", the file pat
 canonical mapping sha256, per-contrast available slot counts, masked ids, per-cell counts, and the
 gates (ordered go power >= 0.80; ordered go and each two-sided size <= 0.07) on the masked run.
 Without ``--slot-mask`` the output is byte-for-byte what it was.
+`--supplement FILE` (A5 amendment F11.4) extends the simulated Part A design from 40 to 52 slots with
+the frozen F11.2 supplementary selection (``docs/prereg/a5_manifests/selection_f11.json``, schema
+``a5-f11-supplement-v1``: k = 12, four ids in each of LoRA-high, chain-low and chain-high). The file is
+validated on its own (schema, k, cells, ids, sorted-id sha256, no overlap with and no replacement of
+the registered forty) and against the payload: its registered picks must be the payload's selected ids
+of each cell, and every supplementary id must be an eligible component representative of the stated
+(family, tertile) cell under the frozen cutpoints and not already selected. Slots 0-39 stay the
+registered slots in the frozen order above; the twelve are appended as slots 40-51 in cell order
+(quota family order, tertile 0-2) and edit id ascending within a cell, so per-cell slots become LoRA
+10/10/14 and chain 8/3/7. A supplementary slot uses the registered per-slot machinery unchanged: one
+donor drawn uniformly from its cell's pool (the full payload for NULL-SIZE, the ``--donor-ids`` pool
+for POWER-AND-YIELD) and the drawn donor's fields predictions for its signs. The donor pools are not
+changed (F11.5): the supplementary edits' own donor rows stay in both pools, as the 21 registered
+forty that are donors do; a slot is never tied to its own edit's donor row. The ordered decision,
+the >= 15 resolved-pair yield rule, quotas, cutpoints, seeds and streams are unchanged in form (the
+streams are consumed for 52 slots). With ``--supplement``, ``--slot-mask`` requires exactly the 52
+ids; F11.4 also masks supplementary ladder exclusions, so a supplementary id may omit a ladder
+contrast, while the registered forty's ladders must stay available (F10.6). The output records under
+``supplement`` the label "supplemented (F11.4)", the file path and sha256, the 52-slot table and the
+per-cell counts; the slot-mask label becomes "slot-masked (F10.6); supplemented (F11.4)".
+`--registered-40-sensitivity` (F11.5; needs ``--supplement`` and the 52-id ``--slot-mask``) validates
+both, then runs the registered 40-slot design with that frozen mask restricted to the forty, labelled
+as a descriptive sensitivity without decision authority (it reproduces the plain 40-slot run with the
+same restricted mask). Without ``--supplement`` the output is byte-for-byte what it was.
 No project data discovery or access is performed.
 """
 
@@ -96,6 +120,14 @@ MEAN_MODES = ("donor", "family_constant")
 CONTRASTS = ("rotation", "ladder_0.25", "ladder_0.5")  # order of SCALES, audit[3] and fields
 SLOT_MASK_SCHEMA = "a5-slot-mask-v1"
 SLOT_MASK_LABEL = "slot-masked (F10.6)"
+SUPPLEMENT_SCHEMA = "a5-f11-supplement-v1"
+SUPPLEMENT_LABEL = "supplemented (F11.4)"
+SUPPLEMENT_SLOT_MASK_LABEL = f"{SLOT_MASK_LABEL}; {SUPPLEMENT_LABEL}"
+REGISTERED_40_LABEL = "registered-40 sensitivity (F11.5); descriptive, no decision authority"
+# selection.json / selection_f11.json family name -> payload family name
+SUPPLEMENT_FAMILIES = {"lora_sft": "LoRA", "chain": "chain"}
+SUPPLEMENT_CELLS = ("lora_sft:2", "chain:0", "chain:2")  # F11.2 depleted cells, frozen
+SUPPLEMENT_K, SUPPLEMENT_PER_CELL, REGISTERED_N = 12, 4, 40
 
 
 def family_constants(cells, inputs):
@@ -239,13 +271,168 @@ def restricted_donor_cells(donors, boundaries, donor_ids, fields=None):
     return cells, report
 
 
-def slot_mask_matrix(mask, slot_ids, slot_cells):
+def load_supplement(obj):
+    """Validate a frozen ``a5-f11-supplement-v1`` selection on its own (F11.2; module docstring).
+
+    Returns {"cells": {(payload family, tertile): [ids ascending]} in file cell order,
+    "registered_ids": sorted forty, "registered_picks": {(family, tertile): [ids]},
+    "ids_sorted_sha256": str}.
+    """
+    if not isinstance(obj, dict):
+        raise ValueError("supplement must be a JSON object")  # noqa: TRY004 (input check)
+    if obj.get("schema") != SUPPLEMENT_SCHEMA:
+        raise ValueError(f"supplement schema must be {SUPPLEMENT_SCHEMA!r}")
+    if obj.get("k") != SUPPLEMENT_K or obj.get("per_cell") != SUPPLEMENT_PER_CELL:
+        raise ValueError(f"supplement k must be {SUPPLEMENT_K}, {SUPPLEMENT_PER_CELL} per cell")
+    if obj.get("replaces_registered") is not False or obj.get("no_top_up") is not True:
+        raise ValueError("supplement must not replace registered edits (no top-up, F11.2)")
+    if obj.get("frozen_cells") != list(SUPPLEMENT_CELLS):
+        raise ValueError(f"supplement frozen_cells must be {list(SUPPLEMENT_CELLS)}")
+    rows = obj.get("cells")
+    if not isinstance(rows, list) or [r.get("cell") for r in rows] != list(SUPPLEMENT_CELLS):
+        raise ValueError(f"supplement cells must be {list(SUPPLEMENT_CELLS)} in that order")
+    cells, picks = {}, {}
+    for row in rows:
+        family, tertile = row.get("family"), row.get("tertile")
+        if family not in SUPPLEMENT_FAMILIES:
+            raise ValueError(f"supplement cell {row['cell']}: unknown family {family!r}")
+        if row["cell"] != f"{family}:{tertile}":
+            raise ValueError(f"supplement cell {row['cell']} disagrees with {family}:{tertile}")
+        ids = row.get("selected")
+        if (
+            not isinstance(ids, list)
+            or len(ids) != SUPPLEMENT_PER_CELL
+            or not all(isinstance(i, str) for i in ids)
+        ):
+            raise ValueError(f"supplement cell {row['cell']} must select four id strings")
+        registered = row.get("registered_picks")
+        if not isinstance(registered, list) or not all(isinstance(i, str) for i in registered):
+            raise ValueError(f"supplement cell {row['cell']}: registered_picks must list ids")
+        key = (SUPPLEMENT_FAMILIES[family], tertile)
+        cells[key], picks[key] = sorted(ids), registered
+    ids = [i for row in rows for i in row["selected"]]
+    if len(set(ids)) != len(ids):
+        raise ValueError("supplement lists duplicate ids")
+    if obj.get("supplement_ids") != ids:
+        raise ValueError("supplement_ids must be the cells' selected ids in cell order")
+    if obj.get("supplement_ids_sorted") != sorted(ids):
+        raise ValueError("supplement_ids_sorted must be the sorted supplement ids")
+    digest = hashlib.sha256(json.dumps(sorted(ids)).encode()).hexdigest()
+    if obj.get("supplement_ids_sorted_sha256") != digest:
+        raise ValueError(f"supplement_ids_sorted_sha256 does not match the ids ({digest})")
+    forty = obj.get("registered_edit_ids_sorted")
+    if (
+        not isinstance(forty, list)
+        or len(forty) != REGISTERED_N
+        or len(set(forty)) != REGISTERED_N
+        or forty != sorted(forty)
+    ):
+        raise ValueError("registered_edit_ids_sorted must list the 40 registered ids, sorted")
+    overlap = sorted(set(ids) & set(forty))
+    if overlap:
+        raise ValueError(f"supplement ids overlap the registered forty: {overlap}")
+    return {
+        "cells": cells,
+        "registered_ids": forty,
+        "registered_picks": picks,
+        "ids_sorted_sha256": digest,
+    }
+
+
+def supplement_slots(inventory, selected, boundaries, supplement):
+    """Bind a supplement to the payload selection; returns (slot ids, slot cells, report) of the 12.
+
+    The supplementary slots follow the registered ones in cell order (``selected`` key order, i.e.
+    quota family order and tertile 0-2), edit id ascending within a cell (module docstring).
+    """
+    loaded = load_supplement(supplement)
+    selected_ids = sorted(r["id"] for rows in selected.values() for r in rows)
+    if loaded["registered_ids"] != selected_ids:
+        raise ValueError("supplement registered_edit_ids_sorted differ from the payload selection")
+    representatives = {}
+    for row in sorted(inventory, key=lambda x: x["id"]):
+        if row.get("eligible", True):
+            representatives.setdefault(row["component"], row)
+    rep_ids = {r["id"] for r in representatives.values()}
+    by_id = {r["id"]: r for r in inventory if r.get("eligible", True)}
+    for key, ids in loaded["cells"].items():
+        if key not in selected:
+            raise ValueError(f"supplement cell {key[0]}:{key[1]} is not a selection cell")
+        if loaded["registered_picks"][key] != [r["id"] for r in selected[key]]:
+            raise ValueError(f"supplement registered picks of {key[0]}:{key[1]} differ")
+        for edit_id in ids:
+            row = by_id.get(edit_id)
+            if row is None:
+                raise ValueError(f"supplement id {edit_id} is not an eligible inventory row")
+            if edit_id not in rep_ids:
+                raise ValueError(f"supplement id {edit_id} is not its component's representative")
+            family = row["family"]
+            tertile = (
+                sum((row["norm"], row["id"]) >= e for e in boundaries[family])
+                if family in boundaries
+                else None
+            )
+            if (family, tertile) != key:
+                raise ValueError(f"supplement id {edit_id} is not in its cell {key[0]}:{key[1]}")
+    ids, cells = [], []
+    for key in selected:
+        for edit_id in loaded["cells"].get(key, []):
+            ids.append(edit_id)
+            cells.append(key)
+    registered_slots = [(r["id"], key) for key, rows in selected.items() for r in rows]
+    report = {
+        "label": SUPPLEMENT_LABEL,
+        "schema": SUPPLEMENT_SCHEMA,
+        "k": len(ids),
+        "ids_sorted_sha256": loaded["ids_sorted_sha256"],
+        "applies_to": ["null_size", "power_yield"],
+        "slot_order": "slots 0-39: registered, frozen A5.3.1 order; slots 40-51: supplements "
+        "appended in cell order (quota family order, tertile 0-2), edit id ascending within a cell",
+        "n_slots": len(registered_slots) + len(ids),
+        "cells": {
+            f"{f}:{t}": {
+                "registered": len(selected[f, t]),
+                "supplement": len(loaded["cells"].get((f, t), [])),
+                "slots": len(selected[f, t]) + len(loaded["cells"].get((f, t), [])),
+            }
+            for (f, t) in selected
+        },
+        "slots": [
+            {"slot": s, "edit_id": i, "cell": f"{key[0]}:{key[1]}", "origin": origin}
+            for s, (i, key, origin) in enumerate(
+                [(i, k, "registered") for i, k in registered_slots]
+                + [(i, k, "supplement") for i, k in zip(ids, cells)]
+            )
+        ],
+    }
+    return ids, cells, report
+
+
+def supplement_overlap(ids, null_cells, power_cells, fields):
+    """Donor status of the supplementary ids; the pools are not changed (F11.5, module docstring)."""
+
+    def drawable(pool):
+        return sorted({r["id"] for rows in pool.values() for r in rows} & set(ids))
+
+    return {
+        "policy": "unchanged donor pools (F11.5): the supplementary edits' own donor rows stay "
+        "in the NULL-SIZE payload pool and the POWER-AND-YIELD pool, as for the registered forty; "
+        "every slot draws a donor uniformly from its cell's pool and uses that donor's predictions",
+        "supplement_ids_in_null_size_pool": drawable(null_cells),
+        "supplement_ids_in_power_pool": drawable(power_cells) if fields is not None else None,
+        "supplement_ids_with_fields": (
+            sorted(i for i in ids if i in fields) if fields is not None else None
+        ),
+    }
+
+
+def slot_mask_matrix(mask, slot_ids, slot_cells, *, label=SLOT_MASK_LABEL, ladder_maskable=()):
     """Contrast availability [n_slots, 3] from a frozen ``a5-slot-mask-v1`` mask (F10.6).
 
     ``slot_ids`` are the selected edit ids in slot order and ``slot_cells`` their (family, tertile)
     selection cells; the format is frozen in the module docstring. Every selected id must be listed
-    exactly once, contrasts must be known and unique, and both ladder contrasts must stay available.
-    Returns (available, report).
+    exactly once, contrasts must be known and unique, and both ladder contrasts must stay available
+    except for ids in ``ladder_maskable`` (the F11.4 supplements). Returns (available, report).
     """
     if not isinstance(mask, dict) or not isinstance(mask.get("available"), dict):
         # ValueError like every other input check of this script (the CLI fails on any of them).
@@ -273,7 +460,9 @@ def slot_mask_matrix(mask, slot_ids, slot_cells):
         if bad:
             raise ValueError(f"slot mask {edit_id}: unknown contrast(s) {bad}; use {CONTRASTS}")
         available[s] = [c in names for c in CONTRASTS]
-    ladder_masked = sorted(i for s, i in enumerate(slot_ids) if not available[s, 1:].all())
+    ladder_masked = sorted(
+        i for s, i in enumerate(slot_ids) if not available[s, 1:].all() and i not in ladder_maskable
+    )
     if ladder_masked:
         raise ValueError(
             f"F10.6 masks rotation slots only; ladder slots must stay available for {ladder_masked}"
@@ -288,7 +477,7 @@ def slot_mask_matrix(mask, slot_ids, slot_cells):
         for c, name in enumerate(CONTRASTS):
             cell["available"][name] += int(available[s, c])
     report = {
-        "label": SLOT_MASK_LABEL,
+        "label": label,
         "schema": SLOT_MASK_SCHEMA,
         "mapping_sha256": hashlib.sha256(
             json.dumps(canonical, sort_keys=True).encode()
@@ -314,7 +503,7 @@ def slot_mask_matrix(mask, slot_ids, slot_cells):
     return available, report
 
 
-def slot_mask_gates(reports, replicates):
+def slot_mask_gates(reports, replicates, label=SLOT_MASK_LABEL):
     """F10.6 / A5.3.2 gates on the slot-masked run: size <= 0.07 (FP2) and ordered power >= 0.80."""
     null = reports["null_size"]
     size = {
@@ -338,7 +527,7 @@ def slot_mask_gates(reports, replicates):
             "passed": bool(power_report["accepted"]),
         }
     return {
-        "label": SLOT_MASK_LABEL,
+        "label": label,
         "size": size,
         "power": power,
         "passed": size["passed"] and power["passed"],
@@ -451,6 +640,8 @@ def simulate(
     cell_overrides=None,
     donor_ids=None,
     slot_mask=None,
+    supplement=None,
+    slot_mask_label=None,
 ):
     """Null without fields; optional power at the registered .75 sign alternative.
 
@@ -469,6 +660,10 @@ def simulate(
     ``slot_mask`` (A5 amendment F10.6) is a parsed ``a5-slot-mask-v1`` object (module docstring):
     masked rotation slots fail that contrast's audit in every NULL-SIZE and POWER-AND-YIELD replicate;
     ladder slots, donor pools and every random stream are unchanged (:func:`slot_mask_matrix`).
+    ``supplement`` (A5 amendment F11.4) is a parsed ``a5-f11-supplement-v1`` object: its twelve ids are
+    appended as slots 40-51 of their cells (:func:`supplement_slots`) with the per-slot machinery
+    unchanged and the donor pools unchanged; ``slot_mask`` then maps the 52 ids. ``slot_mask_label``
+    overrides the slot-mask label (the F11.5 registered-40 sensitivity).
     Controls/Part B are outside this Part A calibration and cannot be inferred here.
     Replicate/draw/quota overrides are for synthetic tests, never registered runs.
     """
@@ -486,10 +681,23 @@ def simulate(
     streams = np.random.SeedSequence(20261107).spawn(3)
     panels, signs, res_rng = [np.random.Generator(np.random.PCG64(s)) for s in streams]
     slots = [key for key, rows in selected.items() for _ in rows]
+    slot_ids = [r["id"] for rows in selected.values() for r in rows]
+    supplement_report, extra_ids, label = None, [], SLOT_MASK_LABEL
+    if supplement is not None:
+        extra_ids, extra_cells, supplement_report = supplement_slots(
+            payload["inventory"], selected, boundaries, supplement
+        )
+        slots, slot_ids = slots + extra_cells, slot_ids + extra_ids
+        label = SUPPLEMENT_SLOT_MASK_LABEL
+        supplement_report["donor_overlap"] = supplement_overlap(
+            extra_ids, cells, power_cells, fields
+        )
     available, slot_report = None, None
     if slot_mask is not None:
-        slot_ids = [r["id"] for rows in selected.values() for r in rows]
-        available, slot_report = slot_mask_matrix(slot_mask, slot_ids, slots)
+        label = slot_mask_label or label
+        available, slot_report = slot_mask_matrix(
+            slot_mask, slot_ids, slots, label=label, ladder_maskable=set(extra_ids)
+        )
     donors = payload["donors"]
     inputs = donor_inputs(payload, noise_scale, unavailable_audit)
     sensitivity = {}
@@ -618,7 +826,7 @@ def simulate(
             ),
         }
     if slot_report is not None:
-        slot_report["gates"] = slot_mask_gates(reports, replicates)
+        slot_report["gates"] = slot_mask_gates(reports, replicates, label)
     return {
         "replicates": replicates,
         "resolution_draws": draws,
@@ -647,6 +855,8 @@ def simulate(
         **({"donor_pool": donor_pool} if donor_pool is not None else {}),
         # Present only with slot_mask (A5 amendment F10.6), so earlier raw outputs stay reproducible.
         **({"slot_mask": slot_report} if slot_report is not None else {}),
+        # Present only with supplement (A5 amendment F11.4), so earlier raw outputs stay reproducible.
+        **({"supplement": supplement_report} if supplement_report is not None else {}),
         "reports": reports,
     }
 
@@ -807,9 +1017,25 @@ def main():
         help="a5-slot-mask-v1 JSON (edit id -> available contrasts) masking failed rotation slots "
         "in NULL-SIZE and POWER-AND-YIELD (A5 amendment F10.6); ladder slots are retained",
     )
+    parser.add_argument(
+        "--supplement",
+        type=Path,
+        help="frozen a5-f11-supplement-v1 selection (selection_f11.json): append its 12 ids as "
+        "slots 40-51 of their cells (A5 amendment F11.4); --slot-mask then maps the 52 ids",
+    )
+    parser.add_argument(
+        "--registered-40-sensitivity",
+        action="store_true",
+        help="F11.5 descriptive sensitivity: validate --supplement and the 52-id --slot-mask, then "
+        "run the registered 40-slot design with that mask restricted to the forty",
+    )
     args = parser.parse_args()
     if args.donor_ids and not args.fields:
         parser.error("--donor-ids restricts the POWER-AND-YIELD pool and requires --fields")
+    if args.registered_40_sensitivity and not args.supplement:
+        parser.error("--registered-40-sensitivity requires --supplement")
+    if args.registered_40_sensitivity and not args.slot_mask:
+        parser.error("--registered-40-sensitivity requires the 52-id --slot-mask")
     if args.inputs.suffix == ".npz":
         with np.load(args.inputs, allow_pickle=False) as archive:
             payload = json.loads(str(archive["payload"].item()))
@@ -829,19 +1055,53 @@ def main():
         listed = json.loads(args.donor_ids.read_text())
         donor_ids = listed["donor_ids"] if isinstance(listed, dict) else listed
     mask_kwargs = {}
+    selected, boundaries = selection_cells(payload["inventory"])
+    slot_ids = [r["id"] for rows in selected.values() for r in rows]
+    slot_cells = [key for key, rows in selected.items() for _ in rows]
+    extra_ids = []
+    if args.supplement:
+        mask_kwargs["supplement"] = json.loads(args.supplement.read_text())
+        # Validate the supplement against the payload before the registered-scale simulation.
+        extra_ids, extra_cells, _ = supplement_slots(
+            payload["inventory"], selected, boundaries, mask_kwargs["supplement"]
+        )
+        slot_ids, slot_cells = slot_ids + extra_ids, slot_cells + extra_cells
     if args.slot_mask:
         mask_kwargs["slot_mask"] = json.loads(args.slot_mask.read_text())
         # Validate the mapping before the registered-scale simulation starts.
-        selected, _ = selection_cells(payload["inventory"])
         slot_mask_matrix(
-            mask_kwargs["slot_mask"],
-            [r["id"] for rows in selected.values() for r in rows],
-            [key for key, rows in selected.items() for _ in rows],
+            mask_kwargs["slot_mask"], slot_ids, slot_cells, ladder_maskable=set(extra_ids)
         )
+    if args.registered_40_sensitivity:
+        # F11.5: the registered 40-slot design under the frozen 52-id mask restricted to the forty.
+        forty = slot_ids[: len(slot_ids) - len(extra_ids)]
+        mask = mask_kwargs.pop("slot_mask")
+        mask_kwargs = {
+            "slot_mask": {
+                "schema": mask["schema"],
+                "available": {i: mask["available"][i] for i in forty},
+            },
+            "slot_mask_label": f"{SLOT_MASK_LABEL}; {REGISTERED_40_LABEL}",
+        }
     result = simulate(
         payload, fields, donor_ids=donor_ids, **mask_kwargs, **SCENARIOS[args.scenario]
     )
     result["scenario"] = args.scenario
+    if args.supplement:
+        supplement_sha256 = hashlib.sha256(args.supplement.read_bytes()).hexdigest()
+        if args.registered_40_sensitivity:
+            result["slot_mask"]["gates"]["decision_authority"] = False
+            result["registered_40_sensitivity"] = {
+                "label": REGISTERED_40_LABEL,
+                "supplement_path": str(args.supplement),
+                "supplement_sha256": supplement_sha256,
+                "mask_restricted_to": len(forty),
+                "note": "registered 40-slot design (no supplementary slots); the 52-id mask "
+                "restricted to the forty; gates reported without decision authority (F11.5)",
+            }
+        else:
+            result["supplement"]["path"] = str(args.supplement)
+            result["supplement"]["sha256"] = supplement_sha256
     if args.donor_ids:
         result["donor_pool"]["path"] = str(args.donor_ids)
     if args.slot_mask:
@@ -852,6 +1112,7 @@ def main():
         for path in [args.inputs, *([args.fields] if args.fields else [])]
         + ([args.donor_ids] if args.donor_ids else [])
         + ([args.slot_mask] if args.slot_mask else [])
+        + ([args.supplement] if args.supplement else [])
     }
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     return 0
