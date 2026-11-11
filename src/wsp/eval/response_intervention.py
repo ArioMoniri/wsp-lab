@@ -43,14 +43,21 @@ CLI::
         --staged-manifest M_staged --zoo Z --selection selection.json --text-groups text_groups.json \
         --out O --manifest-out M [--reference-proofs]
     python -m wsp.eval.response_intervention slot-mask --manifest M --out slot_mask.json
+    python -m wsp.eval.response_intervention score --stage O/<zoo name> --manifest M \
+        --text-groups text_groups.json [--evals E] --proofs-only
     python -m wsp.eval.response_intervention score --stage O/<zoo name> [--manifest M] \
-        [--text-groups text_groups.json] [--evals E] [--dry-run]
+        [--max-minutes T] [--require-proofs | --no-require-proofs] [--dry-run]
 
 ``--selection`` stages the registered picks of a committed ``selection.json`` instead of re-running the
 selection; ``--references`` names the bytes holder of every alias-only predecessor (its state is loaded from
 the holder's stored bytes and the scoring plan checks the holder's bytes against the alias's record);
 ``--text-groups`` adds the primary-record and 64-window checks of the A5 F3(i) reuse proof to every reused
 reference. ``score --manifest`` also scores the references the plan lists as missing, on the source zoo.
+Scoring runs in two phases: ``score --proofs-only`` runs the deferred proof step of the supplementary
+originals, writes ``reference_proofs_f11.json`` beside the manifest, prints the repriced count and stops;
+the scoring phase then requires that record (``--require-proofs``, the default; :func:`load_reference_proofs`)
+and refuses above a stop-and-reprice threshold (``--max-minutes``). ``--no-require-proofs`` keeps the
+single call that proves and then scores.
 
 ``prepare`` stages under ``O/<zoo name>`` so the TF-v1 output directory of ``wsp.eval.batch``
 (``data/evals/<zoo name>/tf_v1``) is shared with the canonical references. ``score`` only runs the existing
@@ -2756,6 +2763,7 @@ def score_reference_proofs(manifest_path, stage, config, evals=None, text_groups
         "proofs": proofs,
         "proven": sorted(i for i in unproven if by_id[i]["verdict"]),
         "to_score_as_references": to_score,
+        "priced": priced_after_proofs(sc, to_score),
     }
     if write:
         text = json.dumps(rotation.json_safe(record), indent=1, sort_keys=True) + "\n"
@@ -2776,14 +2784,98 @@ def score_reference_proofs(manifest_path, stage, config, evals=None, text_groups
     return to_score, record
 
 
+def priced_after_proofs(sc, to_score):
+    """The priced count once the proof step has run: every staged variant, every missing predecessor, and
+    the missing originals together with the originals whose proof failed (``to_score``), at the manifest's
+    minutes per entry. Retries are not priced."""
+    originals = sorted(set(sc["missing_originals"]) | set(to_score))
+    refs = len(originals) + len(sc["missing_predecessors"])
+    n = sc["n_variants"] + refs
+    return {
+        "entries": n,
+        "minutes": round(n * sc.get("minutes_per_entry", MINUTES_PER_ENTRY), 4),
+        "n_variants": sc["n_variants"],
+        "references_to_score": refs,
+        "failed_proofs": len(to_score),
+    }
+
+
+def load_reference_proofs(manifest_path):
+    """``score --require-proofs`` (the default): the retained record of the proofs-only phase instead of a
+    second proof step, so the scoring phase reads no evaluation record and scores exactly the accepted,
+    repriced plan. Refuses (``SystemExit``) when the manifest leaves originals unproven and the record is
+    absent, has another schema, was made for other manifest bytes, does not give every unproven original
+    exactly one boolean verdict (and no other id), or lists proven / to-score sets that disagree with its
+    verdicts. Returns (originals to score, record); ([], None) when nothing was left unproven."""
+    manifest_path = Path(manifest_path)
+    manifest_bytes = manifest_path.read_bytes()
+    unproven = list(json.loads(manifest_bytes)["scoring"].get("unproven_originals") or [])
+    if not unproven:
+        return [], None
+    path = manifest_path.with_name(REFERENCE_PROOFS_FILE)
+    if not path.exists():
+        raise SystemExit(
+            f"refusing to score: no proof record {path} for the unproven originals {unproven}; run "
+            "score --proofs-only, retain the record and accept the repriced plan first"
+        )
+    rec = json.loads(path.read_text())
+    if rec.get("schema") != REFERENCE_PROOFS_SCHEMA:
+        raise SystemExit(f"refusing to score: proof record schema {rec.get('schema')!r}")
+    if rec.get("manifest_sha256") != hashlib.sha256(manifest_bytes).hexdigest():
+        raise SystemExit("refusing to score: the proof record was made for another manifest")
+    proofs = rec.get("proofs") or []
+    by_id = {p.get("id"): p for p in proofs}
+    bad = sorted(
+        {i for i in unproven if not isinstance(by_id.get(i, {}).get("verdict"), bool)}
+        | (set(by_id) - set(unproven))
+    )
+    if bad or len(proofs) != len(unproven):
+        raise SystemExit(
+            f"refusing to score: originals unproven in the proof record (or not in the manifest) {bad}"
+        )
+    proven = sorted(i for i in unproven if by_id[i]["verdict"])
+    to_score = sorted(i for i in unproven if not by_id[i]["verdict"])
+    if rec.get("proven") != proven or rec.get("to_score_as_references") != to_score:
+        raise SystemExit(
+            "refusing to score: the proof record's proven/to-score lists are inconsistent"
+        )
+    return to_score, rec
+
+
 def score(args):
+    proofs_only = getattr(args, "proofs_only", False)
+    max_minutes = getattr(args, "max_minutes", None)
+    if (proofs_only or max_minutes is not None) and not args.manifest:
+        raise SystemExit("--proofs-only and --max-minutes need --manifest")
     refs = ()
     if args.manifest:
         sc = json.loads(Path(args.manifest).read_text())["scoring"]
-        proved_missing, _ = score_reference_proofs(
-            args.manifest, args.stage, args.config, getattr(args, "evals", None),
-            getattr(args, "text_groups", None), write=not args.dry_run,
-        )  # fmt: skip
+        if proofs_only or not getattr(args, "require_proofs", True):
+            proved_missing, _ = score_reference_proofs(
+                args.manifest, args.stage, args.config, getattr(args, "evals", None),
+                getattr(args, "text_groups", None), write=not args.dry_run,
+            )  # fmt: skip
+        else:
+            proved_missing, _ = load_reference_proofs(args.manifest)
+        price = priced_after_proofs(sc, proved_missing)
+        print(
+            f"PRICE entries={price['entries']} minutes={price['minutes']} "
+            f"(variants {price['n_variants']}, references {price['references_to_score']}, "
+            f"failed proofs {price['failed_proofs']})",
+            flush=True,
+        )
+        if proofs_only:
+            print(
+                "proofs only: nothing scored; retain the proof record and accept the repriced plan "
+                "before the scoring phase",
+                flush=True,
+            )
+            return 0
+        if max_minutes is not None and price["minutes"] > max_minutes:
+            raise SystemExit(
+                f"refusing to score: priced {price['minutes']} min exceeds the stop-and-reprice "
+                f"threshold {max_minutes} min; stop and reprice"
+            )
         originals = sorted(set(sc["missing_originals"]) | set(proved_missing))
         refs = tuple(originals) + tuple(sc["missing_predecessors"])
     cmds = score_commands(args.stage, args.config, refs)
@@ -2866,6 +2958,33 @@ def main(argv=None):
         "--text-groups", help="text_groups.json: window check of the proof step (F11 originals)"
     )
     s.add_argument("--dry-run", action="store_true")
+    s.add_argument(
+        "--proofs-only",
+        action="store_true",
+        help="--manifest: run only the deferred proof step of the unproven (F11 supplementary) "
+        "originals, write reference_proofs_f11.json beside the manifest, print the repriced count "
+        "and exit without scoring",
+    )
+    req = s.add_mutually_exclusive_group()
+    req.add_argument(
+        "--require-proofs",
+        dest="require_proofs",
+        action="store_true",
+        default=True,
+        help="(default) score from the retained proof record of --proofs-only; refuse if it is "
+        "absent, made for another manifest, or leaves any original unproven; no evaluation read",
+    )
+    req.add_argument(
+        "--no-require-proofs",
+        dest="require_proofs",
+        action="store_false",
+        help="prove the unproven originals and score in one call (no stop before GPU work)",
+    )
+    s.add_argument(
+        "--max-minutes",
+        type=float,
+        help="stop-and-reprice threshold: refuse to score if the priced minutes exceed it",
+    )
     m = sub.add_parser("slot-mask", help="write the a5-slot-mask-v1 mask of a Part A manifest")
     m.add_argument("--manifest", required=True, help="Part A manifest.json (pair verdicts)")
     m.add_argument("--out", required=True)

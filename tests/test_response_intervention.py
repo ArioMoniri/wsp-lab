@@ -1958,7 +1958,9 @@ def test_supplement_proof_flags_are_exclusive(tmp_path, monkeypatch):
 
 def _score_args(s, **kw):
     return argparse.Namespace(**({"stage": s["stage"], "config": str(s["cfg"]), "manifest": s["man"],
-                                  "dry_run": False, "evals": None, "text_groups": str(s["tg"])} | kw))  # fmt: skip
+                                  "dry_run": False, "evals": None, "text_groups": str(s["tg"]),
+                                  "proofs_only": False, "require_proofs": True, "max_minutes": None}
+                                 | kw))  # fmt: skip
 
 
 def test_score_proves_supplementary_originals_before_scoring(tmp_path, monkeypatch):
@@ -1969,13 +1971,13 @@ def test_score_proves_supplementary_originals_before_scoring(tmp_path, monkeypat
     manifest_bytes = s["man"].read_bytes()
     calls = []
     monkeypatch.setattr(ri, "score_commands", lambda st, cfg, refs=(): calls.append(refs) or [])
-    # dry run: proofs computed (logged), nothing written
-    assert ri.score(_score_args(s, dry_run=True)) == 0
+    # --no-require-proofs (one call, proofs then scoring). Dry run: proofs computed (logged), nothing written
+    assert ri.score(_score_args(s, dry_run=True, require_proofs=False)) == 0
     assert not s["man"].with_name("reference_proofs_f11.json").exists()
     want = sorted(m["scoring"]["missing_originals"] + ["c0_x3"])
     assert list(calls[-1]) == want
     # real run: the proof record beside the manifest; the manifest itself never rewritten
-    assert ri.score(_score_args(s)) == 0
+    assert ri.score(_score_args(s, require_proofs=False)) == 0
     assert list(calls[-1]) == want and s["man"].read_bytes() == manifest_bytes
     rec = json.loads(s["man"].with_name("reference_proofs_f11.json").read_text())
     assert rec["schema"] == "a5-f11-reference-proofs-v1"
@@ -1993,7 +1995,7 @@ def test_score_refuses_while_a_supplementary_original_is_unproven(tmp_path, monk
     calls = []
     monkeypatch.setattr(ri, "score_commands", lambda *a, **k: calls.append(a) or [])
     with pytest.raises(SystemExit, match="text-groups"):  # the proof step cannot run: refuse
-        ri.score(_score_args(s, text_groups=None))
+        ri.score(_score_args(s, text_groups=None, proofs_only=True))
     real = ri.supplement_reference_proofs
 
     def partial(evals, config, zoo, ids, *a, **k):
@@ -2001,14 +2003,133 @@ def test_score_refuses_while_a_supplementary_original_is_unproven(tmp_path, monk
         return proofs[1:], touched, identity
 
     monkeypatch.setattr(ri, "supplement_reference_proofs", partial)
-    with pytest.raises(SystemExit, match="still unproven"):
-        ri.score(_score_args(s))
+    for kw in ({"proofs_only": True}, {"require_proofs": False}):
+        with pytest.raises(SystemExit, match="still unproven"):
+            ri.score(_score_args(s, **kw))
     monkeypatch.setattr(ri, "supplement_reference_proofs", real)
     other = tmp_path / "other.yaml"
     other.write_text(json.dumps(CFG | {"generation": CFG["generation"] | {"seed": 2}}))
     with pytest.raises(SystemExit, match="identity"):
-        ri.score(_score_args(s, config=str(other)))
+        ri.score(_score_args(s, config=str(other), proofs_only=True))
     assert calls == []  # nothing scored
+    assert not s["man"].with_name("reference_proofs_f11.json").exists()
+
+
+def _proof_phase_setup(tmp_path, monkeypatch):
+    s = _f11_setup(tmp_path, monkeypatch)
+    _real_evals_guard(monkeypatch)
+    assert ri.main(s["argv"]) == 0  # staged; proofs deferred
+    calls = []
+    monkeypatch.setattr(ri, "score_commands", lambda st, cfg, refs=(): calls.append(refs) or [])
+    sc = json.loads(s["man"].read_text())["scoring"]
+    want = sorted(sc["missing_originals"] + ["c0_x3"])  # c0_x3: the failing proof
+    n = sc["n_variants"] + len(want) + len(sc["missing_predecessors"])
+    return s, calls, sc, want, {"entries": n, "minutes": round(n * sc["minutes_per_entry"], 4)}
+
+
+def test_score_proofs_only_writes_the_record_prints_the_price_and_scores_nothing(
+    tmp_path, monkeypatch, capsys
+):
+    import subprocess
+
+    s, calls, sc, want, price = _proof_phase_setup(tmp_path, monkeypatch)
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: calls.append(("run", a)))
+    manifest_bytes = s["man"].read_bytes()
+    capsys.readouterr()
+    assert ri.score(_score_args(s, proofs_only=True)) == 0
+    out = capsys.readouterr().out
+    assert calls == []  # no scoring command built or run
+    assert s["man"].read_bytes() == manifest_bytes
+    rec = json.loads(s["man"].with_name("reference_proofs_f11.json").read_text())
+    assert rec["to_score_as_references"] == ["c0_x3"]
+    assert rec["priced"]["entries"] == price["entries"]
+    assert rec["priced"]["minutes"] == price["minutes"]
+    assert rec["priced"]["references_to_score"] == len(want) + len(sc["missing_predecessors"])
+    assert f"PRICE entries={price['entries']} minutes={price['minutes']}" in out
+    assert "nothing scored" in out
+    # unproven originals all failed would price n_variants + references + 12; all proven, - 12 + failed
+    assert price["entries"] == sc["n_priced"] - len(SUPP_IDS) + 1
+    with pytest.raises(SystemExit, match="--manifest"):
+        ri.score(_score_args(s, proofs_only=True, manifest=None))
+
+
+def test_score_cli_proofs_only_and_require_proofs_flags(tmp_path, monkeypatch, capsys):
+    s, calls, _, want, price = _proof_phase_setup(tmp_path, monkeypatch)
+    base = ["score", "--stage", str(s["stage"]), "--config", str(s["cfg"]),
+            "--manifest", str(s["man"]), "--text-groups", str(s["tg"])]  # fmt: skip
+    with pytest.raises(SystemExit, match="no proof record"):  # --require-proofs is the default
+        ri.main(base)
+    assert ri.main(base + ["--proofs-only"]) == 0 and calls == []
+    assert f"PRICE entries={price['entries']}" in capsys.readouterr().out
+    assert ri.main(base + ["--require-proofs", "--max-minutes", str(price["minutes"])]) == 0
+    assert list(calls[-1]) == want
+    with pytest.raises(SystemExit):
+        ri.main(base + ["--require-proofs", "--no-require-proofs"])
+
+
+def test_score_requires_the_retained_proof_record_and_reads_no_evaluation_record(
+    tmp_path, monkeypatch
+):
+    s, calls, _, want, _ = _proof_phase_setup(tmp_path, monkeypatch)
+    rec_path = s["man"].with_name("reference_proofs_f11.json")
+    with pytest.raises(SystemExit, match="no proof record"):
+        ri.score(_score_args(s))
+    with pytest.raises(SystemExit, match="no proof record"):
+        ri.score(_score_args(s, dry_run=True))
+    assert calls == [] and not rec_path.exists()
+    assert ri.score(_score_args(s, proofs_only=True)) == 0
+    good = rec_path.read_text()
+
+    def no_reads(*a, **k):
+        raise AssertionError("the scoring phase re-ran the proof step")
+
+    monkeypatch.setattr(ri, "supplement_reference_proofs", no_reads)
+    monkeypatch.setattr(ri, "reuse_proof", no_reads)
+    assert ri.score(_score_args(s, dry_run=True)) == 0
+    assert ri.score(_score_args(s)) == 0
+    assert [list(c) for c in calls] == [want, want]
+
+    def tampered(mutate, match):
+        rec = json.loads(good)
+        mutate(rec)
+        rec_path.write_text(json.dumps(rec))
+        n = len(calls)
+        with pytest.raises(SystemExit, match=match):
+            ri.score(_score_args(s))
+        assert len(calls) == n  # nothing scored
+        rec_path.write_text(good)
+
+    tampered(lambda r: r.update(proofs=r["proofs"][1:]), "unproven")
+    tampered(lambda r: r["proofs"][0].update(verdict=None), "unproven")
+    tampered(lambda r: r.update(proofs=[*r["proofs"], {"id": "zz", "verdict": True}]), "unproven")
+    tampered(lambda r: r.update(manifest_sha256="0" * 64), "another manifest")
+    tampered(lambda r: r.update(schema="v0"), "schema")
+    tampered(lambda r: r.update(to_score_as_references=[]), "inconsistent")
+    tampered(lambda r: r.update(proven=sorted(SUPP_IDS)), "inconsistent")
+
+
+def test_score_stops_and_reprices_above_the_threshold(tmp_path, monkeypatch):
+    s, calls, _, want, price = _proof_phase_setup(tmp_path, monkeypatch)
+    assert ri.score(_score_args(s, proofs_only=True)) == 0
+    for dry in (True, False):
+        with pytest.raises(SystemExit, match="reprice"):
+            ri.score(_score_args(s, dry_run=dry, max_minutes=price["minutes"] - 0.01))
+    assert calls == []
+    assert ri.score(_score_args(s, max_minutes=price["minutes"])) == 0
+    assert list(calls[-1]) == want
+    with pytest.raises(SystemExit, match="--manifest"):
+        ri.score(_score_args(s, manifest=None, max_minutes=1000.0))
+
+
+def test_score_without_unproven_originals_needs_no_proof_record(tmp_path, monkeypatch):
+    s = _f11_setup(tmp_path, monkeypatch)  # the staged forty: nothing left unproven
+    calls = []
+    monkeypatch.setattr(ri, "score_commands", lambda st, cfg, refs=(): calls.append(refs) or [])
+    sc = json.loads(s["man"].read_text())["scoring"]
+    assert not sc.get("unproven_originals")
+    assert ri.score(_score_args(s)) == 0
+    assert list(calls[-1]) == sorted(sc["missing_originals"]) + sc["missing_predecessors"]
+    assert not s["man"].with_name("reference_proofs_f11.json").exists()
 
 
 def test_supplement_seeds_are_the_registered_rule_and_deterministic(tmp_path, monkeypatch):

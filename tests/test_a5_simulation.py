@@ -594,10 +594,22 @@ def test_frozen_f11_selection_loads_and_validates():
     }
     ids = [i for v in loaded["cells"].values() for i in v]
     assert len(ids) == len(set(ids)) == 12
-    forty = json.loads((REPO / "docs/prereg/a5_manifests/part_a/manifest.json").read_text())
-    assert len(forty["edit_ids"]) == 40
-    assert not set(ids) & set(forty["edit_ids"])
-    assert loaded["registered_ids"] == sorted(forty["edit_ids"])
+    # The Part A execution manifest after the F11 staging: the 40 registered edits plus the 12
+    # supplementary ones (52), the registered forty unchanged.
+    part_a = json.loads((REPO / "docs/prereg/a5_manifests/part_a/manifest.json").read_text())
+    supplementary = part_a["supplement"]["ids"]
+    registered = [i for i in part_a["edit_ids"] if i not in set(supplementary)]
+    assert len(part_a["edit_ids"]) == len(set(part_a["edit_ids"])) == 52
+    assert sorted(supplementary) == sorted(ids) and len(supplementary) == 12
+    assert set(supplementary) <= set(part_a["edit_ids"])
+    assert len(registered) == 40
+    flagged = [r["edit_id"] for r in part_a["selections"] if r.get("supplementary")]
+    assert sorted(flagged) == sorted(ids)
+    assert loaded["registered_ids"] == sorted(registered)
+    pre_f11 = json.loads(
+        (REPO / "docs/prereg/a5_manifests/part_a/manifest_pre_f11.json").read_text()
+    )
+    assert sorted(pre_f11["edit_ids"]) == sorted(registered)
     assert loaded["cells"]["chain", 0] == [
         "342a1be080049e8f",
         "388347cfb0b7fafa",
