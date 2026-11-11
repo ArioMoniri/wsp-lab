@@ -875,3 +875,10 @@ outcome-free power simulation before purchase, ≈ 2.55 GPU-h) with **F12-I**, a
 predicts exactly zero. JEPAWG-style latent dynamics not recommended (M3 already built: ρ 0.15/0.13 on 25 pairs; the weight transition
 is known exactly). Corrections: 689 TF-v1 records; chain 675 entries / 93 components; only 147 development roots scorable without
 spending G7 freshness. F12 text in flight; Board A review next. Part A remains held by the user.
+
+**11 Nov 2026, 12:21 UTC.** F12 appended and merged (49fec4a → 9b66569) with the round-6 synthesis and member reports.
+Drafter's reproduction: 689 TF-v1 records (688 entries + base); chain 675 / 93 components; 123 existing roots outside Part A (89
+components; 44 of them chain roots in 37 confirmatory components already scored by the G6 census — Board A to rule between "no
+confirmatory entry newly scored" (270 / 234) and literal exclusion (226 / 197)); 147 purchasable development roots only under the
+filter "components holding no TF-v1 record" (else 194 / 181); 45 alias-bytes roots; three shared-delta pairs; one mixed stratum;
+571 unscored entries (not 565). WM-R = 1,185 parameters with three probe columns. Board A review of F12 requested. Part A held.
