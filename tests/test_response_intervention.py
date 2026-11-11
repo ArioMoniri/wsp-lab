@@ -703,6 +703,43 @@ def _low_kappa_delta():
     return {"a.weight": a @ b * (2**-7 * 0.8) / 4}
 
 
+def _flips():
+    perm = torch.randperm(48, generator=torch.Generator().manual_seed(0))
+    flips = torch.zeros(48, 48)
+    flips[torch.arange(48), perm] = 2**-7
+    return flips
+
+
+def _meta(v):
+    return json.loads((v.entry_dir / "variant.json").read_text())
+
+
+def _staged_rows(stage):
+    return {
+        r["id"]
+        for r in map(json.loads, (stage / "manifest.jsonl").read_text().splitlines())
+        if "id" in r
+    }
+
+
+def _assert_pair_excluded(rot, ladders, stage):
+    """Excluded pair: ledger entry kept, no bytes, no staged row; its ladders stay eligible."""
+    assert rot.excluded and (rot.entry_dir / "variant.json").exists()
+    for name in ("delta.safetensors", "increment.safetensors", "edit.json"):
+        assert not (rot.entry_dir / name).exists()
+    assert rot.variant_id not in _staged_rows(stage)
+    assert _meta(rot)["coverage"]["n_rotated"] == 0
+    for v in ladders:
+        assert not v.excluded and (v.entry_dir / "delta.safetensors").exists()
+        assert v.variant_id in _staged_rows(stage)
+    sel = [ri.Selection(rot.source_id, "K", "lora_sft", 0, 0, 1.0, rot.predecessor_id)]
+    man = ri.manifest_for(sel, [rot, *ladders], code_sha="x")
+    assert (
+        rot.variant_id in man["excluded_variant_ids"] and rot.variant_id not in man["delta_sha256"]
+    )
+    assert {v.variant_id for v in ladders} <= set(man["variant_ids"])
+
+
 def test_audit_rule_switch_records_rule_and_f10_keeps_low_kappa_pair(tmp_path):
     base = _grid_base()
     entry = _entry(tmp_path / "zoo", "k1", _low_kappa_delta())
@@ -711,16 +748,14 @@ def test_audit_rule_switch_records_rule_and_f10_keeps_low_kappa_pair(tmp_path):
     new = ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "b", strengths=())[0]
     assert old.excluded and old.exclusions == [{"tensor": "a.weight", "reason": "audit_failed"}]
     assert not new.excluded and new.exclusions == []
-    m_old = json.loads((old.entry_dir / "variant.json").read_text())
-    m_new = json.loads((new.entry_dir / "variant.json").read_text())
+    m_old, m_new = _meta(old), _meta(new)
     assert (m_old["audit_rule"], m_new["audit_rule"]) == ("a533", "f10")
     assert ri.DEFAULT_AUDIT_RULE == "f10"
-    # the a533 path is the registered audit, unchanged
-    assert set(m_old["tensor_audits"]["a.weight"]) >= set(ri.AUDIT_FIELDS)
+    assert set(m_old["tensor_audits"]["a.weight"]) >= set(ri.AUDIT_FIELDS)  # a533 path unchanged
     t = m_new["tensor_audits"]["a.weight"]
     assert t["passes"] is True and t["s31_passes"] is False and t["failed_checks"] == []
     e = m_new["edit_audit"]
-    assert e["passes"] and e["energy_guard"]["passes"]
+    assert e["passes"] and e["sub_resolution_guard"]["passes"] and e["exclusions"] == []
     assert e["log_energy_ratio"] == pytest.approx(math.log(t["energy_ratio"]), rel=1e-9)
     assert e["pooled_norm_mismatch"] == pytest.approx(abs(t["norm_mismatch_signed"]), rel=1e-9)
     assert e["noise_calibrated_passes"] is t["noise_calibrated_passes"]
@@ -733,38 +768,126 @@ def test_audit_rule_switch_records_rule_and_f10_keeps_low_kappa_pair(tmp_path):
     sel = [ri.Selection("k1", "K", "lora_sft", 0, 0, 1.0, "base")]
     man = ri.manifest_for(sel, [new], code_sha="x")
     assert man["audit_rule"] == "f10" and man["variants"][0]["audit_rule"] == "f10"
-    assert man["f10_subsets"] == {"pooled_norm_le_2e-2": sorted(["k1"] if e["in_subset_pooled_norm_2e-2"] else []),
+    assert man["f10_subsets"] == {"pooled_norm_le_2e-2": ["k1"] if e["in_subset_pooled_norm_2e-2"] else [],
                                   "noise_calibrated": ["k1"] if e["noise_calibrated_passes"] else []}  # fmt: skip
     assert ri.manifest_for(sel, [old], code_sha="x")["audit_rule"] == "a533"
 
 
-def test_f10_sub_resolution_guard_excludes_the_pair(tmp_path):
-    """All energy in sparse single-ulp flips: every tensor check passes, rounding removes R, the pair goes."""
+def test_f10_logs_the_complete_a533_verdict_without_using_it(tmp_path):
     base = _grid_base()
-    perm = torch.randperm(48, generator=torch.Generator().manual_seed(0))
-    flips = torch.zeros(48, 48)
-    flips[torch.arange(48), perm] = 2**-7
-    entry = _entry(tmp_path / "zoo", "s1", {"b.weight": flips})
-    rot = ri.build_variants(entry, base, seed=4, stage_root=tmp_path / "st", strengths=())[0]
-    meta = json.loads((rot.entry_dir / "variant.json").read_text())
+    delta = _low_kappa_delta() | {"b.weight": _lowrank((48, 48), range(48), range(48), 30, 4, 0.5)}
+    entry = _entry(tmp_path / "zoo", "k2", delta)
+    old = ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "a", strengths=(),
+                            audit_rule="a533")[0]  # fmt: skip
+    new = ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "b", strengths=())[0]
+    m_old, m_new = _meta(old), _meta(new)
+    assert old.excluded and not new.excluded
+    for k, a in m_old["tensor_audits"].items():  # the logged verdict is the explicit a533 run's
+        logged = m_new["tensor_audits"][k]["a533"]
+        for f in ri.A533_FIELDS:
+            assert logged[f] == pytest.approx(a[f], rel=1e-6, abs=1e-12), (k, f)
+        assert logged["criteria"]["norm"] is (a["norm_mismatch"] <= 2e-2)
+    assert m_new["tensor_audits"]["a.weight"]["a533"]["passes"] is False
+    assert m_new["tensor_audits"]["b.weight"]["a533"]["passes"] is True
+    d = m_new["edit_audit"]["a533_diagnostic"]
+    assert d["passes"] is m_old["edit_audit"]["passes"] is False
+    assert d["would_exclude"] == old.exclusions and d["failing_tensors"] == ["a.weight"]
+    rows = ri.audit_rows([new], {k: v.shape for k, v in base.items()})
+    assert [r["a533_passes"] for r in rows] == [False, True] and all(
+        r["verdict"] == "pass" for r in rows
+    )
+
+
+def test_original_reconstruction_only_failure_stays_visible_under_f10(tmp_path, monkeypatch):
+    """The fp32 SVD reconstruction artefact of the staging (1.05e-5 to 1.40e-5) fails a533 alone."""
+    real = ri.rotation.block_svd
+
+    def fp32_artefact(D, rows, cols, rank_rtol=1e-3):
+        u, s, vh, rank = real(D, rows, cols, rank_rtol)
+        return u, s * (1 + 2e-5), vh, rank
+
+    monkeypatch.setattr(ri.rotation, "block_svd", fp32_artefact)
+    base, delta = _base(), _root_delta()
+    entry = _entry(tmp_path / "zoo", "e9", delta)
+    old = ri.build_variants(entry, base, seed=7, stage_root=tmp_path / "a", strengths=(),
+                            audit_rule="a533")[0]  # fmt: skip
+    new = ri.build_variants(entry, base, seed=7, stage_root=tmp_path / "b", strengths=())[0]
+    assert old.excluded and all(a["s31_passes"] for a in _meta(old)["tensor_audits"].values())
+    assert not new.excluded
+    for a in _meta(new)["tensor_audits"].values():
+        assert a["passes"] and a["s31_passes"] and a["reconstruction_residual"] < 1e-12
+        assert a["a533"]["passes"] is False and a["a533"]["s31_passes"] is True
+        assert [c for c, ok in a["a533"]["criteria"].items() if not ok] == ["reconstruction"]
+    d = _meta(new)["edit_audit"]["a533_diagnostic"]
+    assert d["passes"] is False and d["s31_passes"] is True
+    assert d["criterion_failures"]["reconstruction"] == 2 and d["criterion_failures"]["norm"] == 0
+
+
+def test_f10_sub_resolution_guard_excludes_the_pair(tmp_path):
+    """All of R in sparse single-ulp flips: every tensor check passes, rounding removes R, the pair goes."""
+    base = _grid_base()
+    stage = tmp_path / "st"
+    rot, *ladders = ri.build_variants(_entry(tmp_path / "zoo", "s1", {"b.weight": _flips()}), base,
+                                      seed=4, stage_root=stage)  # fmt: skip
+    meta = _meta(rot)
     assert meta["tensor_audits"]["b.weight"]["passes"] is True
-    assert rot.excluded and rot.exclusions == [{"tensor": None, "reason": "sub_resolution"}]
-    assert meta["edit_audit"]["energy_guard"]["ratio"] < 0.5 and not meta["edit_audit"]["passes"]
-    assert not (rot.entry_dir / "delta.safetensors").exists()
-    # a large tensor in the same edit carries the pooled energy: the guard passes
+    assert rot.exclusions == [{"tensor": None, "reason": "sub_resolution"}]
+    g = meta["edit_audit"]["sub_resolution_guard"]
+    assert g["mismatch_signed"] < -0.5 and not meta["edit_audit"]["passes"]
+    _assert_pair_excluded(rot, ladders, stage)
+    t = meta["tensor_audits"]["b.weight"]  # logged on the exclusion too
+    assert {"logged_d", "logged_r", "nonzero_d", "nonzero_r"} <= set(t)
+    summary = ri.edit_audit_summary([rot])["s1"]
+    assert summary["pair_verdict"] == "excluded" and summary["unrotated_tensors"] == 1
+
+
+def test_f10_guard_pools_unequal_tensors_and_lets_a_small_one_round_away(tmp_path):
+    base = _grid_base()
     g = torch.Generator().manual_seed(5)
     big = torch.randn(40, 3, generator=g) @ torch.randn(3, 56, generator=g) * 0.05
-    entry2 = _entry(tmp_path / "zoo", "s2", {"a.weight": big, "b.weight": flips})
-    rot2 = ri.build_variants(entry2, base, seed=4, stage_root=tmp_path / "st", strengths=())[0]
-    assert not rot2.excluded
+    delta = {"a.weight": big, "b.weight": _flips()}
+    rot = ri.build_variants(_entry(tmp_path / "zoo", "s2", delta), base, seed=4,
+                            stage_root=tmp_path / "st", strengths=())[0]  # fmt: skip
+    assert not rot.excluded
+    t, e = _meta(rot)["tensor_audits"], _meta(rot)["edit_audit"]
+    assert t["b.weight"]["energy_ratio"] < 0.25  # alone, this tensor would fail the guard
+    # independent pooled reference from the stored states and the written bytes
+    written = load_file(rot.entry_dir / "delta.safetensors")
+    D = {
+        k: (base[k].float() + delta[k]).to(torch.bfloat16).float() - base[k].float() for k in delta
+    }
+    d = torch.cat([D[k].flatten() for k in sorted(D)]).double().norm()
+    r = torch.cat([written[k].flatten() for k in sorted(D)]).double().norm()
+    assert e["sub_resolution_guard"]["mismatch_signed"] == pytest.approx(
+        float((r - d) / d), rel=1e-12
+    )
+    assert e["pooled_energy_ratio"] == pytest.approx(float(r**2 / d**2), rel=1e-12)
+    assert e["log_energy_ratio"] == pytest.approx(math.log(float(r**2 / d**2)), rel=1e-12)
 
 
-def test_f10_tensor_failure_is_listed_with_its_reason(tmp_path, monkeypatch):
+def test_f10_guard_excludes_on_the_upper_side(tmp_path, monkeypatch):
+    real = ri.rotation.f10_tensor_audit
+
+    def inflated(*a, **k):
+        out = real(*a, **k)
+        return out | {"r_eff_norm": out["d_norm"] * 1.6}
+
+    monkeypatch.setattr(ri.rotation, "f10_tensor_audit", inflated)
+    stage = tmp_path / "st"
+    rot, *ladders = ri.build_variants(_entry(tmp_path / "zoo", "u1", _root_delta()), _base(),
+                                      seed=7, stage_root=stage)  # fmt: skip
+    assert rot.exclusions == [{"tensor": None, "reason": "sub_resolution"}]
+    assert _meta(rot)["edit_audit"]["sub_resolution_guard"]["mismatch_signed"] == pytest.approx(0.6)
+    _assert_pair_excluded(rot, ladders, stage)
+
+
+def test_f10_rounding_failure_is_listed_with_its_reason(tmp_path, monkeypatch):
+    """A wrong grid for one tensor (its rounding moved by one ulp in construction and replay alike):
+    the replay agrees, the rounding bound does not."""
     base, delta = _base(), _root_delta()
-    entry = _entry(tmp_path / "zoo", "f1", delta)
     real = ri.rotation.apply_and_round
 
-    def nudged(W, X):  # a wrong grid for one tensor: bf16(W + R) moved by one ulp at one coordinate
+    def nudged(W, X):
         new, eff = real(W, X)
         if W.shape == (6, 6):
             new = new.clone()
@@ -773,47 +896,344 @@ def test_f10_tensor_failure_is_listed_with_its_reason(tmp_path, monkeypatch):
         return new, eff
 
     monkeypatch.setattr(ri.rotation, "apply_and_round", nudged)
-    rot = ri.build_variants(entry, base, seed=7, stage_root=tmp_path / "st", strengths=())[0]
-    assert rot.excluded
-    assert rot.exclusions == [{"tensor": "layers.0.v.weight", "reason": "replay_failed"}]
-    t = json.loads((rot.entry_dir / "variant.json").read_text())["tensor_audits"]
-    assert set(t["layers.0.v.weight"]["failed_checks"]) == {"replay", "rounding_bound"}
+    stage = tmp_path / "st"
+    rot, *ladders = ri.build_variants(_entry(tmp_path / "zoo", "f1", delta), base, seed=7,
+                                      stage_root=stage)  # fmt: skip
+    assert rot.exclusions == [{"tensor": "layers.0.v.weight", "reason": "rounding_bound_failed"}]
+    t = _meta(rot)["tensor_audits"]
+    assert t["layers.0.v.weight"]["failed_checks"] == ["rounding_bound"]
+    assert t["layers.0.v.weight"]["rounding_bound_violations"] == 1
     assert t["layers.0.q.weight"]["passes"]
+    _assert_pair_excluded(rot, ladders, stage)
 
 
-def test_chain_ladders_are_flagged_realised_increment(tmp_path):
+# --- replay against the written, reloaded bytes
+
+
+def _chain_case(tmp_path, *, same_tensor=True):
+    """A chain step whose predecessor changed the edited tensor itself (same_tensor) and another tensor
+    that the step carries bitwise."""
     base = _base()
-    cum_p = {"layers.1.o.weight": _lowrank((6, 6), [0, 1], [2, 3], 1, 20)}
     pred = dict(base)
-    pred["layers.1.o.weight"] = (base["layers.1.o.weight"].float() + cum_p["layers.1.o.weight"]).to(
-        torch.bfloat16
-    )
+    pred["layers.1.o.weight"] = (base["layers.1.o.weight"].float()
+                                 + _lowrank((6, 6), [0, 1], [2, 3], 1, 20)).to(torch.bfloat16)  # fmt: skip
+    if same_tensor:
+        pred["layers.0.q.weight"] = (base["layers.0.q.weight"].float()
+                                     + _lowrank((8, 6), [2, 3, 4], [1, 2], 1, 22)).to(torch.bfloat16)  # fmt: skip
+    cum_p = {
+        k: pred[k].float() - base[k].float() for k in base if not torch.equal(pred[k], base[k])
+    }
     succ_q = (pred["layers.0.q.weight"].float() + _lowrank((8, 6), [1, 2, 3], [0, 1, 2], 2, 21)).to(
         torch.bfloat16
     )
-    cum_e = {
-        "layers.1.o.weight": pred["layers.1.o.weight"].float() - base["layers.1.o.weight"].float(),
-        "layers.0.q.weight": succ_q.float() - base["layers.0.q.weight"].float(),
-    }
+    cum_e = cum_p | {"layers.0.q.weight": succ_q.float() - base["layers.0.q.weight"].float()}
     zoo = tmp_path / "zoo"
     _entry(zoo, "p1", cum_p, family="chain", cumulative=True)
     entry = _entry(zoo, "c1", cum_e, family="chain", parent="p1", cumulative=True)
-    chain = ri.build_variants(
-        entry, pred, seed=3, stage_root=tmp_path / "st", base_state=base, predecessor_id="p1"
+    kw = {"base_state": base, "predecessor_id": "p1"}
+    return base, pred, entry, kw
+
+
+def test_f10_chain_replay_reloads_written_files_and_checks_the_successor(tmp_path):
+    base, pred, entry, kw = _chain_case(tmp_path)
+    assert not torch.equal(pred["layers.0.q.weight"], base["layers.0.q.weight"])
+    rot = ri.build_variants(entry, pred, seed=3, stage_root=tmp_path / "st", strengths=(), **kw)[0]
+    assert not rot.excluded
+    meta = _meta(rot)
+    assert meta["edited_tensors"] == ["layers.0.q.weight"]
+    assert meta["carried_roundtrip"]["layers.1.o.weight"]["passes"]
+    a = meta["tensor_audits"]["layers.0.q.weight"]
+    assert a["replay_bits_equal"] and a["scorer_delta_bits_equal"] and a["replay_threads"] == 4
+    env = meta["replay_environment"]
+    assert (
+        env["replay_threads"] == 4
+        and env["torch_threads"] == 4
+        and env["torch"] == torch.__version__
     )
+    # independent: fresh seed, rotate, round at the predecessor, compare with the reloaded bytes
+    inc = load_file(rot.entry_dir / "increment.safetensors")
+    cum = load_file(rot.entry_dir / "delta.safetensors")
+    q = "layers.0.q.weight"
+    D = pred[q].float()  # recompute D_t from the stored states
+    D = (base[q].float() + load_file(entry / "delta.safetensors")[q]).to(torch.bfloat16).float() - D
+    rows, cols = ri.rotation.changed_block(D)
+    R = ri.rotation.rotate_block(D, rows, cols, 3)
+    state, eff = ri.rotation.apply_and_round(pred[q], R)
+    assert ri.rotation.bits_equal(inc[q], eff)
+    assert ri.rotation.bits_equal((base[q].float() + cum[q]).to(torch.bfloat16), state)
+    o = "layers.1.o.weight"
+    assert ri.rotation.bits_equal((base[o].float() + cum[o]).to(torch.bfloat16), pred[o])
+
+
+def _corrupting_save(monkeypatch, target_vid, name, corrupt):
+    real = ri.save_file
+
+    def save(tensors, path, *a, **k):
+        real(tensors, path, *a, **k)
+        p = Path(path)
+        if p.parent.name == target_vid and p.name == name:
+            corrupt(p)
+
+    monkeypatch.setattr(ri, "save_file", save)
+
+
+def _signed_zero(key):
+    def corrupt(p):
+        x = load_file(p)
+        t = x[key].clone()
+        idx = (t == 0).nonzero()[0]
+        t[tuple(idx)] = -0.0
+        save_file(x | {key: t}, str(p))
+
+    return corrupt
+
+
+def _edit_tensor(key, f):
+    def corrupt(p):
+        x = load_file(p)
+        out = f(x[key])
+        save_file(
+            x | {key: out} if out is not None else {k: v for k, v in x.items() if k != key}, str(p)
+        )
+
+    return corrupt
+
+
+def _nudge(t):
+    t = t.clone()
+    i = (t != 0).nonzero()[0]
+    t[tuple(i)] = t[tuple(i)] * 2
+    return t
+
+
+CORRUPTIONS = {
+    "signed_zero": None,  # filled per key
+    "value": lambda t: _nudge(t),
+    "missing_key": lambda t: None,
+    "dtype": lambda t: t.to(torch.bfloat16),
+    "shape": lambda t: t[:-1].contiguous(),
+}
+
+
+def _corruption(kind, key):
+    if kind == "signed_zero":
+        return _signed_zero(key)
+    if kind == "missing_file":
+        return lambda p: p.unlink()
+    return _edit_tensor(key, CORRUPTIONS[kind])
+
+
+@pytest.mark.parametrize(
+    "kind", ["signed_zero", "value", "missing_key", "dtype", "shape", "missing_file"]
+)
+@pytest.mark.parametrize(
+    "target", ["root:delta", "chain:increment", "chain:delta", "chain:carried"]
+)
+def test_post_save_corruption_excludes_the_pair_as_replay_failed(
+    tmp_path, monkeypatch, target, kind
+):
+    family, name = target.split(":")
+    if family == "root":
+        base, entry, kw, pred = _base(), _entry(tmp_path / "zoo", "r1", _root_delta()), {}, None
+        key, source, file = "layers.0.v.weight", "r1", "delta.safetensors"
+        pred = base
+    else:
+        base, pred, entry, kw = _chain_case(tmp_path)
+        source = "c1"
+        key = "layers.1.o.weight" if name == "carried" else "layers.0.q.weight"
+        file = "increment.safetensors" if name == "increment" else "delta.safetensors"
+    if kind == "missing_file" and name == "carried":
+        pytest.skip("the carried tensor lives in the cumulative delta file, covered by chain:delta")
+    vid = ri.variant_id(source, "rotation", 1.0, 3)
+    _corrupting_save(monkeypatch, vid, file, _corruption(kind, key))
+    stage = tmp_path / "st"
+    rot, *ladders = ri.build_variants(entry, pred, seed=3, stage_root=stage, **kw)
+    assert rot.variant_id == vid
+    assert rot.exclusions and {x["reason"] for x in rot.exclusions} == {"replay_failed"}
+    if name == "carried":
+        assert rot.exclusions == [
+            {"tensor": key, "reason": "replay_failed", "detail": "carried_roundtrip"}
+        ]
+    else:
+        assert key in {x["tensor"] for x in rot.exclusions}
+        a = _meta(rot)["tensor_audits"][key]
+        assert {"replay", "scorer_roundtrip"} & set(a["failed_checks"])
+        assert a["reason"] == "replay_failed"
+    _assert_pair_excluded(rot, ladders, stage)
+
+
+# --- failing closed on incomplete or nonfinite audit information
+
+
+def _tamper_audits(monkeypatch, f):
+    real = ri.rotation.f10_tensor_audit
+
+    def wrapped(D, *a, **k):
+        return f(real(D, *a, **k), D)
+
+    monkeypatch.setattr(ri.rotation, "f10_tensor_audit", wrapped)
+
+
+def _first_tensor(out, D):
+    return D.shape == (8, 6)  # layers.0.q.weight in _root_delta
+
+
+TAMPERS = {
+    "one_audit_missing": lambda out, D: None if _first_tensor(out, D) else out,
+    "all_audits_missing": lambda out, D: None,
+    "metric_deleted": lambda out, D: (
+        {k: v for k, v in out.items() if k != "orthogonality_error"}
+        if _first_tensor(out, D)
+        else out
+    ),
+    "metric_nonfinite": lambda out, D: (
+        out | {"rounding_bound_violations": float("nan")} if _first_tensor(out, D) else out
+    ),
+    "norm_nonfinite": lambda out, D: (
+        out | {"d_norm": float("inf")} if _first_tensor(out, D) else out
+    ),
+    "check_not_boolean": lambda out, D: (
+        out | {"checks": out["checks"] | {"support": 1}} if _first_tensor(out, D) else out
+    ),
+}
+
+
+@pytest.mark.parametrize("tamper", sorted(TAMPERS))
+def test_incomplete_or_nonfinite_audits_exclude_the_pair(tmp_path, monkeypatch, tamper):
+    _tamper_audits(monkeypatch, TAMPERS[tamper])
+    stage = tmp_path / "st"
+    rot, *ladders = ri.build_variants(_entry(tmp_path / "zoo", "x1", _root_delta()), _base(),
+                                      seed=7, stage_root=stage)  # fmt: skip
+    _assert_pair_excluded(rot, ladders, stage)
+    q = "layers.0.q.weight"
+    reasons = {x["tensor"]: x for x in rot.exclusions}
+    want = {
+        "one_audit_missing": "construction_failed",
+        "all_audits_missing": "construction_failed",
+        "metric_deleted": "construction_failed",
+        "metric_nonfinite": "rounding_bound_failed",
+        "check_not_boolean": "support_failed",
+    }
+    if tamper == "norm_nonfinite":
+        assert reasons[None] == {
+            "tensor": None,
+            "reason": "sub_resolution",
+            "detail": "guard_incomplete",
+        }
+    else:
+        assert reasons[q]["reason"] == want[tamper] and reasons[q]["detail"]
+    if tamper == "all_audits_missing":
+        assert set(reasons) == {q, "layers.0.v.weight", None}
+        assert reasons[None]["detail"] == "guard_incomplete"
+    meta = _meta(rot)  # strict JSON: no NaN was written
+    json.dumps(meta, allow_nan=False)
+    assert meta["edit_audit"]["passes"] is False and meta["exclusions"] == rot.exclusions
+
+
+# --- F10.4 pooled diagnostics
+
+
+def test_f10_pooled_diagnostics_are_independent_aggregates(tmp_path):
+    base = {"a.weight": _w((40, 56), 3), "b.weight": _w((12, 20), 4)}
+    delta = {"a.weight": _lowrank((40, 56), range(40), range(56), 8, 5, 0.02),
+             "b.weight": _lowrank((12, 20), range(3, 12), range(20), 2, 6, 0.004)}  # fmt: skip
+    rot = ri.build_variants(_entry(tmp_path / "zoo", "p9", delta), base, seed=13,
+                            stage_root=tmp_path / "st", strengths=())[0]  # fmt: skip
+    assert not rot.excluded
+    e, t = _meta(rot)["edit_audit"], _meta(rot)["tensor_audits"]
+    written = load_file(rot.entry_dir / "delta.safetensors")
+    D, R, ulp2 = {}, {}, 0.0
+    for k in sorted(delta):
+        D[k] = (base[k].float() + delta[k]).to(torch.bfloat16).float() - base[k].float()
+        rows, cols = ri.rotation.changed_block(D[k])
+        R[k] = ri.rotation.rotate_block(D[k], rows, cols, 13)
+        ulp2 += float((ri.rotation.ulp_bf16(base[k][rows[:, None], cols]) ** 2).sum())
+    cat = lambda x: torch.cat([x[k].flatten().double() for k in sorted(delta)])
+    dn = float(cat(D).norm())
+    assert e["pooled_d_norm"] == pytest.approx(dn, rel=1e-12)
+    assert e["pooled_r_eff_norm"] == pytest.approx(float(cat(written).norm()), rel=1e-12)
+    assert e["pooled_rounding_error_rel"] == pytest.approx(
+        float((cat(written) - cat(R)).norm()) / dn, rel=1e-9
+    )
+    assert e["pooled_noise_floor"] == pytest.approx(math.sqrt(ulp2 / 12), rel=1e-12)
+    assert e["pooled_kappa"] == pytest.approx(dn / math.sqrt(ulp2), rel=1e-12)
+    assert e["pooled_eps_hat"] == pytest.approx(min(1, math.sqrt(ulp2 / 12) / dn), rel=1e-12)
+    raw = {k: delta[k] for k in sorted(delta)}
+    assert e["pooled_eps_D"] == pytest.approx(float((cat(D) - cat(raw)).norm()) / dn, rel=1e-9)
+    assert e["eps_D_status"] == "root_stored_delta"
+    sd = {k: torch.linalg.svdvals(D[k]) for k in D}
+    sr = {k: torch.linalg.svdvals(written[k]) for k in D}
+    num = sum(float((sr[k] - sd[k]).double().norm()) ** 2 for k in D)
+    den = sum(float(sd[k].double().norm()) ** 2 for k in D)
+    assert e["pooled_spectrum_mismatch"] == pytest.approx(math.sqrt(num / den), rel=1e-6)
+    for f in (
+        "rank_d",
+        "rank_r",
+        "noise_rank_d",
+        "noise_rank_r",
+        "prerounding_rank_d",
+        "rank_n_near",
+    ):
+        key = "sum_" + f
+        assert e[key] == sum(t[k][f] for k in t)
+    assert e["tau_by_tensor"] == {k: t[k]["tau"] for k in sorted(t)}
+    assert e["noise_calibrated_passes"] is all(t[k]["noise_calibrated_passes"] for k in t)
+    assert set(ri.F10_POOLED_DEFINITIONS) == set(e["aggregation"])
+    rows = ri.audit_rows([rot], {k: v.shape for k, v in base.items()})
+    for r in rows:
+        assert set(ri.F10_AUDIT_FIELDS) - {"fail_closed_detail"} <= set(r)
+        assert r["audit_rule"] == "f10" and "a533_passes" in r
+
+
+def test_f10_non_root_eps_D_is_unavailable(tmp_path):
+    _base_state, pred, entry, kw = _chain_case(tmp_path)
+    rot = ri.build_variants(entry, pred, seed=3, stage_root=tmp_path / "st", strengths=(), **kw)[0]
+    e, t = _meta(rot)["edit_audit"], _meta(rot)["tensor_audits"]
+    assert e["pooled_eps_D"] is None and e["eps_D_status"] == "unavailable_non_root"
+    assert all(a["eps_D"] is None for a in t.values())
+
+
+# --- F10.9 ladders
+
+
+def test_chain_ladders_are_flagged_realised_increment(tmp_path):
+    base, pred, entry, kw = _chain_case(tmp_path, same_tensor=False)
+    zoo = tmp_path / "zoo"
+    chain = ri.build_variants(entry, pred, seed=3, stage_root=tmp_path / "st", **kw)
     root = ri.build_variants(
         _entry(zoo, "r1", _root_delta()), base, seed=3, stage_root=tmp_path / "st"
     )
-    for v in chain + root:
-        meta = json.loads((v.entry_dir / "variant.json").read_text())
+    q = "layers.0.q.weight"
+    root_chain_delta = {q: _lowrank((8, 6), [1, 2, 3], [0, 1, 2], 2, 31)}
+    rc = ri.build_variants(_entry(zoo, "rc", root_chain_delta, family="chain", cumulative=True), base,
+                           seed=3, stage_root=tmp_path / "st")  # fmt: skip
+    for v in chain + root + rc:
+        meta = _meta(v)
         if v.kind == "scale":
             assert meta["realised_increment_ladder"] is (v.source_id == "c1")
             assert v.realised_increment_ladder is (v.source_id == "c1")
         else:
             assert "realised_increment_ladder" not in meta
+    # non-root: exactly bf16(W_t + s D_t) - W_t per strength, D_t the realised increment
+    D = (base[q].float() + load_file(entry / "delta.safetensors")[q]).to(torch.bfloat16).float()
+    D = D - pred[q].float()
+    for v in chain[1:]:
+        inc = load_file(v.entry_dir / "increment.safetensors")[q]
+        want = (pred[q].float() + v.strength * D).to(torch.bfloat16).float() - pred[q].float()
+        assert ri.rotation.bits_equal(inc, want), v.strength
+    # roots scale the stored raw delta, not the realised increment (they differ here)
+    for v in root[1:]:
+        k = "layers.0.v.weight"
+        raw = _root_delta()[k]
+        Dk = (base[k].float() + raw).to(torch.bfloat16).float() - base[k].float()
+        got = load_file(v.entry_dir / "delta.safetensors")[k]
+        want = (base[k].float() + v.strength * raw).to(torch.bfloat16).float() - base[k].float()
+        alt = (base[k].float() + v.strength * Dk).to(torch.bfloat16).float() - base[k].float()
+        assert ri.rotation.bits_equal(got, want) and not torch.equal(got, alt)
     sel = [ri.Selection("c1", "K1", "chain", 0, 0, 1.0, "p1"),
-           ri.Selection("r1", "K2", "lora_sft", 0, 0, 1.0, "base")]  # fmt: skip
-    man = ri.manifest_for(sel, chain + root, code_sha="x")
+           ri.Selection("r1", "K2", "lora_sft", 0, 0, 1.0, "base"),
+           ri.Selection("rc", "K3", "chain", 0, 0, 1.0, "base")]  # fmt: skip
+    man = ri.manifest_for(sel, chain + root + rc, code_sha="x")
     flagged = {v["variant_id"] for v in man["variants"] if v.get("realised_increment_ladder")}
     assert flagged == {v.variant_id for v in chain if v.kind == "scale"}
     assert man["realised_increment_ladder_variant_ids"] == sorted(flagged)
@@ -822,6 +1242,8 @@ def test_chain_ladders_are_flagged_realised_increment(tmp_path):
 
 
 def test_f10_chain_rotation_that_cannot_round_trip_is_excluded_not_raised(tmp_path):
+    """Chair ruling: a scorer round-trip failure of the `0027efdf` type is an F10 exclusion
+    (`replay_failed`), not an error."""
     base = _base()
     q = base["layers.0.q.weight"].clone()
     q[1, 0] = 1e5  # large base value that the predecessor sets to exactly zero
@@ -838,10 +1260,194 @@ def test_f10_chain_rotation_that_cannot_round_trip_is_excluded_not_raised(tmp_pa
                    parent="p1", cumulative=True)  # fmt: skip
     kw = {"stage_root": tmp_path / "st", "base_state": base, "predecessor_id": "p1"}
     rot = ri.build_variants(entry, pred, seed=3, strengths=(), **kw)[0]
-    assert rot.excluded
     assert rot.exclusions == [{"tensor": "layers.0.q.weight", "reason": "replay_failed"}]
-    t = json.loads((rot.entry_dir / "variant.json").read_text())["tensor_audits"]
-    assert t["layers.0.q.weight"]["failed_checks"] == ["scorer_roundtrip"]
+    t = _meta(rot)["tensor_audits"]["layers.0.q.weight"]
+    assert t["failed_checks"] == ["scorer_roundtrip"] and t["replay_bits_equal"]
+    _assert_pair_excluded(rot, [], tmp_path / "st")
     with pytest.raises(RuntimeError, match="round-trip"):  # the registered path is unchanged
         ri.build_variants(entry, pred, seed=3, strengths=(), audit_rule="a533",
                           **kw | {"stage_root": tmp_path / "st2"})  # fmt: skip
+
+
+# --- F10.7 rotation-only preparation: no evaluation reads, ladders untouched
+
+
+def _staged_part_a(tmp_path, monkeypatch):
+    """A registered two-edit staging (as Part A was staged: a533, scoring plan from records)."""
+    from wsp.eval import batch
+    from wsp.features import extract
+
+    base, _pred, zoo, holder, _chain = _alias_zoo(tmp_path)
+    _entry(zoo, "r1", _root_delta())
+    sel = tmp_path / "selection.json"
+    sel.write_text(json.dumps(_selection_doc(
+        [_sel_row("r1", "lora_sft", "K1"), _sel_row("c1", "chain", "K2", pred="A")], 1, 1)))  # fmt: skip
+    refs = tmp_path / "references.json"
+    refs.write_text(json.dumps({"rows": [
+        {"edit_id": "r1", "predecessor_id": "base", "original": {"id": "r1", "bytes_holder": "r1"},
+         "predecessor": {"id": "base", "bytes_holder": None}},
+        {"edit_id": "c1", "predecessor_id": "A", "original": {"id": "c1", "bytes_holder": "c1"},
+         "predecessor": {"id": "A", "bytes_holder": "H"}}]}))  # fmt: skip
+    evals = tmp_path / "evals"
+    _record(evals, "base")
+    _record(evals, "A", hashes={"delta.safetensors": _sha(holder / "delta.safetensors")})
+    cfg = tmp_path / "cfg.yaml"
+    cfg.write_text(json.dumps(CFG))
+    monkeypatch.setattr(extract, "load_base_state", lambda m, r: (dict(base), r))
+    monkeypatch.setattr(batch, "provenance", lambda: {"git_sha": "g", "source_hash": "s"})
+    out, man = tmp_path / "runs", tmp_path / "pkg" / "manifest.json"
+    common = ["--zoo", str(zoo), "--selection", str(sel), "--references", str(refs), "--out", str(out),
+              "--n-lora", "1", "--n-chain", "1"]  # fmt: skip
+    argv = ["prepare", *common, "--manifest-out", str(man), "--config", str(cfg), "--evals", str(evals),
+            "--audit-rule", "a533"]  # fmt: skip
+    assert ri.main(argv) == 0
+    return {"zoo": zoo, "evals": evals, "out": out, "man": man, "common": common}
+
+
+def _forbid_evaluation_access(monkeypatch, evals_dirs):
+    import builtins
+    import io
+    import os
+    import subprocess
+
+    roots = [Path(p).resolve() for p in evals_dirs]
+    opened = []
+
+    def guard(path):
+        if isinstance(path, int):
+            return
+        p = Path(os.fsdecode(path)).resolve()
+        if any(p == r or r in p.parents for r in roots):
+            opened.append(p)
+            raise AssertionError(f"evaluation path opened: {p}")
+
+    def wrap(f):
+        def inner(path, *a, **k):
+            guard(path)
+            return f(path, *a, **k)
+
+        return inner
+
+    for mod, name in (
+        (builtins, "open"),
+        (io, "open"),
+        (os, "open"),
+        (os, "listdir"),
+        (os, "scandir"),
+    ):
+        monkeypatch.setattr(mod, name, wrap(getattr(mod, name)))
+
+    def no_scoring(*a, **k):
+        raise AssertionError("scorer or scoring plan invoked")
+
+    for name in (
+        "scoring_summary",
+        "plan_scoring",
+        "_stage",
+        "score",
+        "score_commands",
+        "reuse_proof",
+    ):
+        if hasattr(ri, name):
+            monkeypatch.setattr(ri, name, no_scoring)
+    monkeypatch.setattr(subprocess, "run", no_scoring)
+    return opened
+
+
+def _tree_bytes(d):
+    return {p.relative_to(d): (p.read_bytes(), p.stat().st_mtime_ns) for p in sorted(Path(d).rglob("*"))
+            if p.is_file()}  # fmt: skip
+
+
+def test_rotation_only_prepare_restages_rotations_and_reads_no_evaluations(tmp_path, monkeypatch):
+    from wsp.eval import batch
+
+    s = _staged_part_a(tmp_path, monkeypatch)
+    staged = json.loads(s["man"].read_text())
+    staged_bytes = s["man"].read_bytes()
+    staged_audits = (s["man"].parent / "rotation_audits.jsonl").read_bytes()
+    stage = s["out"] / "zoo"
+    ladders = [v["variant_id"] for v in staged["variants"] if v["kind"] == "scale"]
+    before = {vid: _tree_bytes(stage / vid) for vid in ladders}
+    monkeypatch.setenv("OMP_NUM_THREADS", "4")
+    monkeypatch.setenv("MKL_NUM_THREADS", "4")
+    opened = _forbid_evaluation_access(monkeypatch, [s["evals"], batch.REPO / "data" / "evals"])
+    argv = ["prepare", "--rotation-only", "--staged-manifest", str(s["man"]), *s["common"],
+            "--manifest-out", str(s["man"])]  # fmt: skip
+    assert ri.main(argv) == 0
+    assert opened == []
+    # ladders: bytes and mtimes untouched, re-hashed equal to the staged manifest
+    assert {vid: _tree_bytes(stage / vid) for vid in ladders} == before
+    m = json.loads(s["man"].read_text())
+    re = m["restage"]
+    assert re["mode"] == "rotation_only" and re["ladders_rehashed"]["all_equal_staged"]
+    assert re["ladders_rehashed"]["n"] == len(ladders) == 4
+    # the original staging manifest and audit file are preserved byte for byte, with their hashes
+    keep = s["man"].with_name("manifest_a533.json")
+    assert keep.read_bytes() == staged_bytes
+    assert (
+        re["preserved"]["manifest_a533.json"]["sha256"] == hashlib.sha256(staged_bytes).hexdigest()
+    )
+    assert s["man"].with_name("rotation_audits_a533.jsonl").read_bytes() == staged_audits
+    # the new manifest: F10 verdicts, ladders carried, unchanged rotation bytes where both rules pass
+    assert m["audit_rule"] == "f10" and m["scored"] is False
+    assert all(e["audit_rule"] == "f10" for e in m["edit_audits"].values())
+    assert {v["variant_id"] for v in m["variants"]} == {v["variant_id"] for v in staged["variants"]}
+    for vid in ladders:
+        assert m["delta_sha256"][vid] == staged["delta_sha256"][vid]
+        assert m["variant_json_sha256"][vid] == staged["variant_json_sha256"][vid]
+    assert re["staged_pass_bitwise"] and all(x["equal"] for x in re["staged_pass_bitwise"].values())
+    assert m["scoring"]["missing_originals"] == staged["scoring"]["missing_originals"]
+    assert m["scoring"]["reuse_proofs"] == staged["scoring"]["reuse_proofs"]
+    assert (
+        m["scoring"]["n_priced"]
+        == len(m["variant_ids"]) + m["scoring"]["n_P"] + m["scoring"]["n_D"]
+    )
+    assert re["thread_env"] == {"OMP_NUM_THREADS": "4", "MKL_NUM_THREADS": "4"}
+    audits = [
+        json.loads(x) for x in s["man"].with_name("rotation_audits.jsonl").read_text().splitlines()
+    ]
+    assert {a["audit_rule"] for a in audits} == {"f10"} and m["rotation_audits"]["n_tensors"] == 3
+    # idempotent on the preserved files: a second run keeps manifest_a533.json and refuses nothing
+    assert ri.main(argv[:3] + [str(keep)] + argv[4:]) == 0
+    assert keep.read_bytes() == staged_bytes
+
+
+def test_rotation_only_prepare_refuses_unsafe_states(tmp_path, monkeypatch, capsys):
+    s = _staged_part_a(tmp_path, monkeypatch)
+    argv = ["prepare", "--rotation-only", "--staged-manifest", str(s["man"]), *s["common"],
+            "--manifest-out", str(tmp_path / "pkg2" / "manifest.json")]  # fmt: skip
+    monkeypatch.setenv("OMP_NUM_THREADS", "2")
+    monkeypatch.setenv("MKL_NUM_THREADS", "4")
+    assert ri.main(argv) == 2 and "OMP_NUM_THREADS" in capsys.readouterr().err
+    monkeypatch.setenv("OMP_NUM_THREADS", "4")
+    assert ri.main(argv + ["--audit-rule", "a533"]) == 2
+    staged = json.loads(s["man"].read_text())
+    ladder = next(v["variant_id"] for v in staged["variants"] if v["kind"] == "scale")
+    f = s["out"] / "zoo" / ladder / "delta.safetensors"
+    good = f.read_bytes()
+    f.write_bytes(good[:-1] + bytes([good[-1] ^ 1]))  # one flipped bit in a staged ladder
+    assert ri.main(argv) == 2 and "ladder" in capsys.readouterr().err
+    assert not (tmp_path / "pkg2" / "manifest.json").exists()
+    f.write_bytes(good)
+    (tmp_path / "pkg2").mkdir()
+    (tmp_path / "pkg2" / "manifest_a533.json").write_text("{}")  # never overwritten
+    assert ri.main(argv) == 2 and "overwrite" in capsys.readouterr().err
+    assert (tmp_path / "pkg2" / "manifest_a533.json").read_text() == "{}"
+
+
+def test_dryrun_entrypoint_writes_only_under_its_scratch_root(tmp_path):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "a5_f10_dryrun", Path(__file__).resolve().parents[1] / "scripts" / "a5_f10_dryrun.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    root = tmp_path / "scratch"
+    root.mkdir()
+    assert mod.scratch_dir(root / "f10", root) == (root / "f10").resolve()
+    for bad in (tmp_path / "elsewhere", root / ".." / "escape", Path("/tmp")):
+        with pytest.raises(SystemExit, match="scratch"):
+            mod.scratch_dir(bad, root)
+    assert mod.DEFAULT_SCRATCH.endswith("runs/a5/f10_dryrun")

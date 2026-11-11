@@ -7,23 +7,36 @@ chain-ladder flag, ladder bytes against the staged sha256, rotation determinism)
 tensor with its staged audit row and every written delta with ``manifest.json:delta_sha256``.
 
 Reads only zoo bytes, the committed Part A manifest and audit rows, and the registered selection and
-references. Never reads ``data/evals`` or any score. Writes only under ``--out``. CPU only.
+references. Never reads ``data/evals`` or any score. Writes only under ``--out``, which must resolve inside
+the scratch root (default ``data/runs/a5/f10_dryrun``; :func:`scratch_dir`). CPU only, at the staged thread
+settings (OMP_NUM_THREADS = MKL_NUM_THREADS = 4, checked).
 
-    OMP_NUM_THREADS=4 PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python scripts/a5_f10_dryrun.py \\
-        --out data/runs/a5/f10_dryrun --edits 00f8111cbad8218f 0a841d4082532e8b 0027efdf2eae7405 \\
-        --ladder-edits 00f8111cbad8218f 0027efdf2eae7405
+    OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python \\
+        scripts/a5_f10_dryrun.py --out data/runs/a5/f10_dryrun/<run> \\
+        --edits 00f8111cbad8218f 0a841d4082532e8b 0027efdf2eae7405
 """
 
 import argparse
 import hashlib
 import json
+import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 import torch
 
 PKG = Path("docs/prereg/a5_manifests")
+DEFAULT_SCRATCH = "data/runs/a5/f10_dryrun"
+
+
+def scratch_dir(out, root=DEFAULT_SCRATCH):
+    """``out`` resolved, if it lies inside the scratch ``root`` (symlinks resolved); otherwise exit."""
+    out, root = Path(out).resolve(), Path(root).resolve()
+    if out != root and root not in out.parents:
+        raise SystemExit(f"--out {out} is outside the scratch root {root}")
+    return out
 
 
 def sha256(path):
@@ -75,6 +88,17 @@ def summarise(eid, sel, v, meta, staged, seconds):
     for a in ta.values():
         for c in a["failed_checks"]:
             failed[c] = failed.get(c, 0) + 1
+    keys = (
+        "pooled_norm_mismatch_signed", "pooled_energy_ratio", "log_energy_ratio",
+        "pooled_rounding_error_rel", "pooled_kappa", "pooled_eps_hat", "pooled_eps_D", "eps_D_status",
+        "pooled_spectrum_mismatch", "pooled_prerounding_spectrum_mismatch", "noise_calibrated_passes",
+        "n_tensors_failing_noise_calibrated", "in_subset_pooled_norm_2e-2", "in_subset_noise_calibrated",
+        "realised_s31_passes", "a533_diagnostic", "max_orthogonality_error", "max_reconstruction_residual",
+        "max_prerounding_norm_mismatch", "max_prerounding_spectrum_mismatch", "max_construction_residual",
+        "max_abs_prerounding_rank_difference", "sum_rank_n_near", "all_replay", "all_support_identical",
+        "max_rounding_bound_ratio", "max_rounding_excess_fp32_spacings", "n_rounding_bound_violations",
+        "n_double_rounding", "n_exceed_half_ulp_w",
+    )  # fmt: skip
     return {
         "edit_id": eid,
         "family": sel.family,
@@ -86,35 +110,17 @@ def summarise(eid, sel, v, meta, staged, seconds):
         "exclusions": v.exclusions,
         "n_tensors": e["n_tensors"],
         "failed_checks": failed,
-        "energy_guard_ratio": e["energy_guard"]["ratio"],
-        "log_energy_ratio": e["log_energy_ratio"],
-        "pooled_norm_mismatch_signed": e["pooled_norm_mismatch_signed"],
-        "pooled_rounding_error_rel": e["pooled_rounding_error_rel"],
-        "noise_calibrated_passes": e["noise_calibrated_passes"],
-        "n_tensors_failing_noise_calibrated": sum(
-            not a["noise_calibrated_passes"] for a in ta.values()
+        "rounding_bound_failing_tensors": sorted(
+            k for k, a in ta.items() if "rounding_bound" in a["failed_checks"]
         ),
-        "in_subset_pooled_norm_2e-2": e["in_subset_pooled_norm_2e-2"],
-        "in_subset_noise_calibrated": e["in_subset_noise_calibrated"],
-        "realised_s31_passes": e["realised_s31_passes"],
-        "n_tensors_failing_realised_s31": sum(not a["s31_passes"] for a in ta.values()),
-        "max_orthogonality_error": e["max_orthogonality_error"],
-        "max_reconstruction_residual": e["max_reconstruction_residual"],
-        "max_prerounding_norm_mismatch": e["max_prerounding_norm_mismatch"],
-        "max_prerounding_spectrum_mismatch": e["max_prerounding_spectrum_mismatch"],
-        "prerounding_rank_equal": all(
-            a["prerounding_rank_d"] == a["prerounding_rank_r"] for a in ta.values()
-        ),
-        "max_construction_residual": max(a["construction_residual"] for a in ta.values()),
-        "all_replay": e["all_replay"],
-        "all_support_identical": e["all_support_identical"],
-        "max_rounding_bound_ratio": e["max_rounding_bound_ratio"],
-        "n_entries_exceed_half_ulp_w": sum(a["n_exceed_half_ulp_w"] for a in ta.values()),
+        "sub_resolution_guard": e["sub_resolution_guard"],
+        "a533_diagnostic_passes": e["a533_diagnostic"]["passes"],
+        "rank_budget_used": sum(a["prerounding_rank_difference"] != 0 for a in ta.values()),
         "min_energy_ratio_tensor": min(a["energy_ratio"] for a in ta.values()),
         "kappa_range": [min(a["kappa"] for a in ta.values()), max(a["kappa"] for a in ta.values())],
         "reproduces_staged_realised_audit": compare_rows(eid, meta, staged),
         "seconds": seconds,
-    }
+    } | {k: e[k] for k in keys}
 
 
 def main():
@@ -123,14 +129,18 @@ def main():
     from wsp.zoo.apply import load_edited_model
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--out", required=True, help="inside --scratch-root")
+    ap.add_argument("--scratch-root", default=DEFAULT_SCRATCH)
     ap.add_argument("--zoo", default="data/zoo/qwen3.5-0.8b")
     ap.add_argument("--edits", nargs="+", required=True)
     ap.add_argument("--ladder-edits", nargs="*", default=[])
     args = ap.parse_args()
+    out, zoo = scratch_dir(args.out, args.scratch_root), Path(args.zoo)
+    threads = {v: os.environ.get(v) for v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS")}
+    if any(x != "4" for x in threads.values()):
+        sys.exit(f"F10.3(iii): run with OMP_NUM_THREADS = MKL_NUM_THREADS = 4, not {threads}")
     torch.set_grad_enabled(False)
-
-    out, zoo = Path(args.out), Path(args.zoo)
+    torch.set_num_threads(4)
     out.mkdir(parents=True, exist_ok=True)
     man = json.loads((PKG / "part_a/manifest.json").read_text())
     selections, _ = ri.load_registered_selection(PKG / "selection.json")
@@ -174,6 +184,8 @@ def main():
         "src_sha256": src_sha,
         "base_load_seconds": base_seconds,
         "threads": torch.get_num_threads(),
+        "thread_env": threads,
+        "replay_environment": ri._replay_environment(),
         "edits": {},
     }
     variants = []
