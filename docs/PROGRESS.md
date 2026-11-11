@@ -741,3 +741,9 @@ format and apply the F11.2 filter (roots, exact-gradient donors, not alias-only)
 expected the alias-only `7bc62b9f`); and reference proofs for the 12 supplementary originals, which read TF-v1 records including
 score rows, are deferred to scoring time (`--no-reference-proofs` default; `score --manifest` proves first and refuses unproven
 supplementary variants), so staging touches no evaluation record. Analysis F11-path corrections in flight.
+
+**11 Nov 2026, 11:15 UTC.** `prepare --supplement` fixes committed (bef5396): loader bound to the frozen `selection_f11.json` (exact
+key set; sorted-id sha256 recomputed and pinned; inputs re-hashed) and the F11.2 rule reproduces the 12 ids with `7bc62b9f` skipped
+`alias_only`; reuse proofs deferred to `score --manifest` (proven originals reused, failed ones scored as references; refuses unproven
+supplementary variants); `supplementary: true` on selections and edit audits; default priced count ≤ 178 entries. Board A review of
+the staging mode requested (F11 condition 2). Analysis F11-path corrections still in flight.
