@@ -662,3 +662,15 @@ unchanged) but **ordered power 0.7514 < 0.80**. Under F10.6 and Board A F10 cond
 is required; ladders may not be scored early. Chair: outcome-free sizing runs launched (synthetic masks unmasking subsets of the
 excluded cells, labelled sizing, not registered) to size a supplementary-selection amendment (F11) before council metrology and
 Board A are asked. A first mask file with provenance keys inside it was rejected by the frozen schema; mapping unchanged.
+
+**11 Nov 2026, 07:20 UTC. Chair decision on resizing (F11).** Metrology (`docs/council/2026-11-11/f11-metrology.md`, branch
+`council/f11-resize`): registered-scale sizing 31 → 0.7514, 34 → 0.7722, 37 → 0.8251, 39 → 0.8453 (40 → 0.8540); per-slot
+resolution probability ≈ 1.00 LoRA, 0.91 chain-high, 0.66 chain-middle, 0.57 chain-low, so power depends on where slots sit; 36
+slots reach 0.80 only for high-cell-heavy allocations, 38 for every allocation; candidates exist in the three depleted cells
+(LoRA-high 10 unselected roots, chain-low 5 roots, chain-high 6 roots), all base-exact roots so the scorer round-trip cannot fail;
+LoRA-high passed F10 at 7/10. Chair adopts **Option A: supplementary procedural selection of k = 12, four per depleted cell
+(LoRA-high, chain-low roots, chain-high roots), in the frozen next-in-cell canonical-ID order, fixed k, no top-up, full F10 staging
+(rotation + two ladders), one registered-scale masked calibration on the supplemented slot set required ≥ 0.80 before scoring, a
+registered-40 sensitivity report, and Option B (screen) as the fallback if the calibration fails again.** Cost: CPU staging 1.5–2.6 h,
+calibration 22 min, GPU scoring ≤ 36 added entries (37.44 min; total 172.64 min). F11 text and the frozen supplementary ID list in
+flight; Board A review follows; scoring held.
