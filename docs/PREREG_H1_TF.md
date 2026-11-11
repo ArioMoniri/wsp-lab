@@ -3394,3 +3394,159 @@ this block): it read only `docs/`, `src/`, `scripts/` text and committed metadat
 not compute, score or receive any G3, rotation, ladder, missing-TF-v1-reference or sealed outcome or a summary of one, used no GPU and
 wrote no data. The older 6 November D3 development records classified by A5.3 and by Board A's ruling are unaffected and not opened.
 It attests only to its own session; the attestation ledger is not edited here and condition A1 remains open.
+
+#### A5 note F10c (11 Nov 2026, before any G3 outcome): adoption of the Part A analysis implementation's operational choices
+
+This block is appended; earlier text is not rewritten. It is the dated A5 note that Board A's re-review of the corrected Part A
+analysis code (`docs/reviews/council/board-a-part-a-analysis-2-2026-11-11.md`, "the re-review"; verdict ACCEPT WITH CONDITIONS;
+reviewed commit `2b03bda571bc46bce00b4b8aaf6b9c9c07424139`) requires in its condition 1: "Adopt the operational choices before
+scoring. Append a dated A5 note explicitly adopting the three requested behaviours, sealed-ledger v2 and producer/evidence contract,
+resolution stream, exact flat-step tie-break, `audit_missing`, whole-run subset-hash refusal, and validity/Part B/masked-report
+interfaces. Carry the supplied-versus-computed Part B distinction and all existing F10b interpretation restrictions. No
+retrospective choice from outcomes." It adopts the "Choices pending adopting note" listed in the module docstring of
+`src/wsp/eval/part_a_analysis.py` and the items the builder listed in `docs/PROGRESS.md` (11 Nov 2026, 03:45 and 04:30 UTC), each
+prospectively, in the numbered clauses below, with the re-review's disposition quoted where it ruled. The first review
+(`docs/reviews/council/board-a-part-a-analysis-2026-11-11.md`, verdict REJECT, six corrections) is the earlier round; its
+corrections are the ones the re-review found addressed. Everything below is read together with F10b, whose interpretation
+restrictions (F10b.2–F10b.4: descriptive authority, no decision authority for any sensitivity output, 3 × 2 sign tables, units of
+nats per valid next token) are carried unchanged.
+
+**F10c.1 — Missing Part B leaves A5.5 step 1 unresolved.** Adopted. Board A: "A5.5 step 1 is unresolved. There is no Part A decision
+without the mandatory Part B inference/control validity information. This tool retains supplied Part B; it does not fit it. Absence
+is not eligibility and must not be represented as a computed Part B report." Consequently, when `--part-b` is not supplied, or the
+supplied object has a false `valid` flag, a missing, nonfinite, reversed or malformed point or interval, failed or missing draws,
+fewer than two distinct components or ineligible destruction controls, step 1 is unresolved and every later step (ladder
+alternative, Part A evidence, Part B eligibility, funding) is unresolved with it. The supplied Part B object, its validity flags and
+its evidence are printed in the JSON and Markdown on every branch, labelled as supplied and not computed by the tool. The
+registered hard stop of G2 pending a new amendment is the stated consequence of a failed `g2_predecessor_audit`. No sensitivity
+statistic enters validity.
+
+**F10c.2 — A masked-calibration report supplied at 40/40 is refused.** Adopted. Board A: "Masked report at 40/40: refuse, rather
+than silently ignore it. This prevents an inapplicable run from being mistaken for operative calibration. Below 40/40, require the
+correctly bound masked report and preserve its gates and extra NULL-SIZE row." Operationally (`--masked-calibration`): at a
+re-stage yield of 40/40 the registered F2/F7 simulations stand and a supplied masked report stops the run; below 40/40 a hashed,
+separately labelled report from `scripts/a5_simulation.py --slot-mask` is mandatory, its rotation-mask ids and canonical mapping
+sha256 must equal the re-stage exclusions, its hash must appear in the `null_size` validity evidence, its embedded NULL-SIZE row is
+appended to the five frozen F5.7 rows without replacing one, and a failed calibration gate leaves step 1 unresolved (F10.6: "A
+failure makes Part A not decisive"). The tool ingests and provenance-checks this report; it does not perform a calibration run.
+
+**F10c.3 — Sealed-ledger schema `a5-part-a-sealed-ledger-v2`; fields and prediction rows.** Adopted. Board A: "Sealed ledger v2:
+accept the exact ordered-window/block/token-hash and re-stage provenance contract described above. An outcome-free producer must
+certify scoring identity and alignment; adoption does not make self-asserted hashes independent evidence." The schema is the one
+documented in the module docstring: `schema`, `sealed`, `manifest_sha256`, `fields_sha256`, `text_groups_sha256` (the A5.1.2 digest
+`f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1`), `window_ids` equal to the string item ids `"0"` to `"63"` of
+`text_groups.json` in registered order (ids 0–63 in order), `two_window_blocks` equal to its 32 adjacent two-window blocks
+`[0,1]` … `[62,63]`, `window_token_ids_hashes` (64 per-window `token_ids_hash` values aligned with `window_ids`),
+`restage_provenance` (hashes of the re-stage manifest, audit file and README), `references`, `variants` and `restage`
+(per edit: `f10_3_verdict`, `pre_audit_exclusions`, `f10_3_exclusions`, `registered_realised_verdict`, nonempty `diagnostics`,
+`variant_json_sha256`, `pooled_rho`, per-tensor moments). A re-stage entry that is absent, empty, partial or malformed, or a ledger
+without complete `restage_provenance`, excludes the rotation pair as `audit_missing` (clause 6); a contradictory verdict or an
+unknown reason code refuses the analysis; missing covariates drop a row from the complete-case covariate models only, with no
+imputation. The fields file maps every selected edit id to three predictions in [rotation, ladder 0.25, ladder 0.5] order (A5.3.2),
+optionally wrapped as `{"predictions": {...}}`; a missing row or a nonfinite or missing prediction fails the run, except an explicit
+`null` prediction for an excluded variant. `mean_nll` is TF-v1 WikiText `extra.mean_nll` per window in nats per valid next token.
+Adoption fixes the format, not the evidence: the ledger producer must be outcome-free and must certify scoring identity and array
+alignment, and the trusted pre-score input inventory (clause 11) must bind the producer's inputs; a hash repeated inside the ledger
+and the validity file does not by itself establish freezing.
+
+**F10c.4 — Resolution stream: PCG64(20261107), one shared `[4000, 32]` index array.** Adopted. Board A: "Resolution stream: accept
+PCG64(20261107) with one shared `[4000, 32]` index matrix across all analysed pairs/arms/contrasts, using paired differences and
+linear percentile endpoints. `resolve` calls `sim.resolution` once on the stacked columns. The existing exact-degenerate fast path
+returns identical endpoints without generating indices when every block column is constant; this is mathematically equivalent and
+involves no alternative seed or retuning." The analysis draws one index array from `numpy.random.Generator(numpy.random.PCG64(
+20261107))` and applies it to every pair, arm and contrast; 4,000 draws, 32 two-window blocks, linear .025/.975 percentiles; a
+pair is resolved only if its interval strictly excludes zero. This is **not** the simulation's stream: `scripts/a5_simulation.py` derives its generators from `numpy.random.SeedSequence(20261107)
+.spawn(3)`, which shares the integer 20261107 but not the generator state, so the analysis' index array is not bit-identical to
+any index array the simulations drew. That is acceptable because the observed-data resolution is a single registered computation
+whose only requirements are a fixed seed and draw count chosen before any outcome, common draws across pairs, arms and contrasts,
+and the registered 32-block, 4,000-draw, linear-percentile procedure (`sim.resolution` itself is reused); nothing in A5.3, A5.5 or
+the NULL-SIZE gates relies on the simulated and observed draws coinciding, and resampling the paired difference with common
+indices is algebraically equivalent to common arm/reference draws for these linear contrasts. Board A did not require alignment
+with the simulation's stream, so none is required or adopted; no alternative seed is permitted.
+
+**F10c.5 — The λ = 1 solver's flat-step tie-break.** Adopted. Board A: "Flat-step solver tie-break: accept the existing numerical
+refinement: normal objective decrease is accepted; a floating-point-flat step within `8 * eps * max(1, abs(f))` is accepted only if
+maximum absolute gradient decreases. Fixed objective, lambda, tolerance, iteration limit and failure counting remain unchanged. The
+objective comparison to sklearn and the new failure tests support this acceptance; this is not permission to tune a solver after
+outcomes." The fit agrees with `sklearn.linear_model.LogisticRegression(penalty="l2", C=1.0)` to 1e-6 on the tests' synthetic
+problems. It is the F10b.2 item 2 model (summed log loss, λ = 1, unpenalised intercept, train-only population-SD standardisation in
+every full, leave-one-out and bootstrap fit); nothing about it is tunable.
+
+**F10c.6 — `audit_missing` as a fail-closed exclusion code.** Adopted. Board A: "`audit_missing`: accept as the fail-closed F10.3
+rotation exclusion reason for absent/incomplete audit evidence. It remains visible in pair/subset ledgers and contributes to the
+yield requiring masked calibration. It neither supplies missing covariates nor silently repairs an audit." It implements F10.3's
+"A missing audit fails closed".
+
+**F10c.7 — A wrong subset hash stops the run.** Adopted. Board A: "Wrong subset hash: stop the whole analysis before summarising
+outcomes or writing reports. Frozen S30/S34 membership must not be replaced or silently omitted. The S30 mutation test deliberately
+verifies refusal; the same guard covers S34. S34 remains acceptance of a frozen list, not independent reproduction of its historical
+audit." The hashes are those of F10b.2 item 4 (S30 `3da5f44f…267c`, S34 `fb1c34e6…dfa0`), unchanged.
+
+**F10c.8 — Part B contrasts and the seven A5.5 step-1 validity checks are supplied inputs.** Adopted, with the re-stated limit that
+the tool retains and checks supplied Part B and never fits it (clause 1). Part B contrasts C, C_abl, C_rand and C_perm are supplied
+by the Part B pipeline as precomputed conditional and joint intervals plus points, validity flags, per-procedure diagnostics (4,000
+draws, failed draws, minimum distinct components ≥ 2), destruction-control eligibility and an evidence list, through `--part-b`.
+The seven A5.5.1 step-1 predicates (`registration_pinned`, `source_closure`, `qualification`, `allocation`,
+`g2_predecessor_audit`, `selection_and_audits`, `null_size`) are supplied through `--validity` as `{pass, evidence: [{path,
+sha256}]}`; a predicate certifies step 1 only with `pass: true` and a non-empty, well-formed evidence list linking its required pins
+(specification, staged manifest, text groups, fields and NULL-SIZE hashes for `registration_pinned`; the three re-stage provenance
+hashes for `selection_and_audits`; the NULL-SIZE report and, below 40/40, the masked-calibration report hash for `null_size`).
+Board A: "Missing Part B … must not be represented as a computed Part B report." The tool checks structure and hash links; it does
+not re-derive the supplied evidence.
+
+**F10c.9 — Runtime `--spec-sha256` check; staged correlations printed, not recomputed.** Adopted. Before reading any other input
+the CLI hashes the specification bytes and requires them to equal the F10b.1 hash `8624e063…98d4` recorded in this registration,
+the module constant and the required `--spec-sha256` argument; a mismatch, missing spec or missing flag stops the run with no
+output. Board A: "`verify_spec` reads the file bytes and binds their SHA256 to F10b.1, the module constant and the required CLI
+`--spec-sha256`." The staged ln ρ values and tertile cut keys are the frozen manifest values of F10b.2 item 3, printed as staged
+and verified against the manifest hash; re-stage ln ρ values are printed beside them and are not used to move any id. The re-review
+records no separate disposition for this point beyond its confirmation of the corrected report contents (its item 4); the
+first review accepted that energy tertiles "verify the frozen cut keys and member IDs; re-stage drift is flagged without moving
+IDs".
+
+**F10c.10 — `cell_drift` for edit `057dcfbedea3251f` on ln ρ cut 1.** Adopted as already registered in F10b.2 item 3: edit
+`057dcfbedea3251f` is the cut-1 member (staged ln ρ 0.01010406252666643); any downward re-stage drift that would carry it, or any
+other pair, across a cut is flagged `cell_drift` and never moved. The flag has no decision authority.
+
+**F10c.11 — Pin list and input inventory.** The analysis execution bytes to be pinned are, with the role and exact sha256 Board A
+confirmed in the re-review ("Independently computed SHA256 values match all four builder prefixes") and which I recomputed for this
+note:
+
+| File | SHA256 | Role |
+|---|---|---|
+| `src/wsp/eval/part_a_analysis.py` | `419dc07486279a4fe16cdefd90973042596ca12f65028e466172aa7d7d1d9bc9` | Part A analysis implementation |
+| `scripts/part_a_analyse.py` | `a47a72f8b6485363b4c9ba8fc600b8564c31dfcb02e0c1a1106ffe734f07395d` | Part A CLI |
+| `tests/test_part_a_analysis.py` | `5adaeaf8ea66d8b64ef1e9cfd6964006eaea363ba58d1214d1d03befc6a48b4f` | Analysis and fail-closed tests |
+| `docs/design/F10_SENSITIVITY_SPEC.md` | `8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4` | Adopted analysis specification (F10b.1) |
+
+The existing pin of `scripts/a5_simulation.py` (`c4f0c55fd8e8c9bc5bb6521539f58db996f23e1a3cb37d99a19403e134d2fdf2`) is retained. The
+four rows are **not** yet in `docs/prereg/a5_manifests/code_hashes.json`; adding them to it and to the builder's pin list, re-running
+the targeted CPU suite and Ruff, and `scripts/a5_build_manifests.py --verify-pins HEAD` at the actual accepted execution commit are
+the re-review's condition 2 and are done in the subsequent re-pin, not here. If any of the four files changes, the pins are
+recomputed and a material change is reviewed again. Board A: "`text_groups.json`, the frozen Part A manifest and the NULL-SIZE
+report belong in **A5.1.2's input inventory**, rather than being added as analysis-code rows to `code_hashes.json`." They are bound
+there with their hashes, which I recomputed from the committed bytes and which match the re-review:
+
+| Input | SHA256 |
+|---|---|
+| `docs/prereg/a5_manifests/text_groups.json` | `f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1` |
+| `docs/prereg/a5_manifests/part_a/manifest.json` | `d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6` |
+| `docs/prereg/a5_manifests/nullsize/report.json` | `1bed2c9531e4230864a1ebbe7e4023e0ffafcf704a59c40e93f9a75bd469dfa6` |
+
+The accepted re-stage report, manifest and README, the per-edit variant metadata, the frozen prediction file, the scoring, panel and
+configuration identity and any applicable mask or calibration inputs also require trusted pre-score inventory binding; keeping data
+inputs outside the code-file map does not permit them to remain unfrozen.
+
+**F10c.12 — Scope.** F10c changes no selection (A5.3.1, `selection.json`), seed (`control_seeds.json`, A5.3.3), prediction,
+resolution, yield or decision rule (A5.3, A5.5), simulation gate, cap or allocation (A5.3.4), and no pin: no file pinned in A5.1.2
+changes with this block. It authorises **no scoring**. Conditions 2 and 3 of the re-review (merge, re-test and pin the accepted
+bytes; the other release conditions: attestations, outcome-free re-stage acceptance, applicable F10.6 calibration and every
+remaining F10/F10a gate, including F10.10, conditions 2–7 of the original Board A F10 review and condition A1 of the F10a review)
+remain open and hold every Part A entry, including the 80 ladders and the 19 missing originals. Nothing here is a choice made from
+an outcome.
+
+*Exposure attestation of the drafter of this note* (role: pre-registration drafting sub-agent; session: worktree `prereg/f10c`,
+11 Nov 2026, from its creation until the commit of this block): it read only `docs/`, `src/`, `scripts/` and `tests/` text and
+committed metadata (including the sha256 of the committed files listed above); it did not open anything under `data/evals`, did not
+compute, score or receive any G3, rotation, ladder, missing-TF-v1-reference or sealed outcome or a summary of one, used no GPU and
+wrote no data. It attests only to its own session; the attestation ledger is not edited here.
