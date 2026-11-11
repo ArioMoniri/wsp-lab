@@ -5855,3 +5855,249 @@ C1 pin (`code_hashes_c1.json`) is verified by Board A; and Board A reviews F12c 
 by the programme owner; nothing has been scored.
 (c) *Disclosure noted.* The F12c implementer's one-time parse of the raw F8a.2 payload's allowlisted fields by a baseline test is
 recorded in `docs/prereg/f12_attestations.md`; no outcome field was read; the test now reads the restricted copy.
+
+#### A5 note F12d (11 Nov 2026, before any G3 outcome): response to Board A's F12c conditions 1, 6 and 7 (code and inputs)
+
+This block is appended; earlier text is not rewritten. It responds to Board A's review of note F12c
+(`docs/reviews/council/board-a-f12c-2026-11-11.md`, added by commit `9b8b1caea3424afdc3d83d6ed7f1d04cfce776ca`, file sha256
+`ffa97d119581d168dfa6cceff3a7c9f0ad9e45ceb330cfd9c50bf391f70b9cb5`; "the review"). The review's verdict is "**ACCEPT WITH
+CONDITIONS as a prospective methods amendment; REJECT release of stage 1 at this freeze.**" F12d carries out step 2 of the
+review's "Ordered path to stage 1" for the code and inputs: condition 6 (the restricted payload re-extracted with the donor flag;
+the validator's residual provenance gaps; the C1 package skeleton), condition 7 (auditable budget stops) and this session's part of
+condition 1. Conditions 2–5 are unchanged. The note was written on branch `prereg/f12d` (main `6e3fe0b`) while Part A is staged,
+frozen, released with conditions, unscored and held, and before any G3, rotation, ladder, sealed, F8 or F9 outcome had been read.
+Commits: `3f03b74` (tests first), `5a135d1` (the extractor alone, so that the extraction records a committed extractor),
+`a1bb98b` (implementation, re-pinned bytes, C1 skeleton, resource plan) and this note's commit. Every number below is
+arithmetic, toy or synthetic test evidence, or a count from the restricted re-extraction; no real F12 token was read.
+**F12d releases nothing.** The registered noise check, the timing pilot, stage 1, the coverage target and stage 2 were not run. C1
+is not marked verified. Part A remains held by the programme owner.
+
+**F12d.1 — Restricted payload re-extracted with the original `eligible` flag (condition 6, "Missing donor flag").** The chair
+authorised this session as the extractor for this step.
+- *Source.* The pinned committed copy `docs/prereg/f8_manifests/floor_payload/nullsize_inputs.json`, committed in `11543d3`
+  (git blob `a8e1cdef6106990411b4bf88056f0f5609b89e3d`), sha256 `67da223c…3de`, byte-identical to
+  `data/runs/a5/nullsize/inputs.json`. The digest is checked on the raw bytes before anything is parsed. The CLI refuses any other
+  source, an uncommitted source or extractor, and an output inside the repository.
+- *Allowlist and method* (`scripts/f12_payload_extract.py`, committed alone in `5a135d1`, sha256
+  `5de91001e242a5687c3fb97988f7093f2d552cf553cdb92f6c2c0f4cb0fa79dd`). Only the top-level `window_ids`, `donors`, `centred_noise`
+  and `window_mask` are decoded (`scan_allowlisted`). Every other top-level value is skipped by a string-aware bracket matcher and
+  is never decoded into a value: these were `donor_mean`, `donor_source`, `inventory`, `provenance`, `schema` and `spec` (key names
+  only are reported). Donor objects keep `id`, `component`, `family` and `eligible`; their other keys are dropped as each object
+  closes (`_donor_hook`). No `donor_mean` or other non-allowlisted value was selected, printed, retained or used. This answers the
+  review's point that "no outcome field was read" must mean that no such value was selected, surfaced, retained or used.
+- *Rule, applied explicitly* (`ELIGIBILITY_RULE`). F12a.4(b),(e): a donor is used iff its original `eligible` flag is the boolean
+  true and all 64 windows are masked in with finite centred noise. The flag is read from the source and never derived from
+  finiteness. A missing or non-boolean flag fails extraction closed.
+- *Verification.* The extractor checks 64 distinct window ids equal to the registered order of
+  `docs/prereg/a5_manifests/nullsize_inputs.json` (`payload_schema.window_item_ids`), with the 32 blocks (2j, 2j + 1) in that
+  order. It checks that every mask agrees with its noise value (masked in iff finite; masked out iff null), and that donor ids are
+  unique. It cross-checks every donor's id, component, family and flag, in order, against the committed metadata extract
+  `docs/prereg/a5_manifests/nullsize/inputs_provenance.json`, which holds no numeric arrays and records the same payload sha256.
+- *Result and disclosure against the old copy.*
+
+| | superseded v1 copy (F12 smoke run, 13:25 UTC) | v2 copy (F12d, 22:06 UTC) |
+|---|---|---|
+| donors / components | 141 / 63 | 141 / 63 |
+| families | chain 116, LoRA 25 | chain 116, LoRA 25 |
+| original `eligible` flag | not carried | true for all 141 (0 false, 0 missing) |
+| excluded by the rule | (not applied) | none (0 flag false, 0 incomplete windows) |
+| donor ids, order, components | — | identical |
+| centred noise, masks, window ids | — | identical for all 141 donors |
+| bytes sha256 | `a21f426f…a972` (279,252 bytes) | `44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5` (282,436 bytes) |
+
+  No donor changed membership, component or eligibility, so the generator's inputs are unchanged, including F12a.4(b)'s
+  `integers(0, 63)` over 63 payload components. Only the bytes change: they now carry the flag and the new provenance.
+- *Re-pin.* `docs/prereg/f12_manifests/noise_payload_restricted_pin.json` now has schema `f12d-restricted-payload-pin-v2` and
+  status "draft, pending Board A C1 verification". It records:
+  - the v2 bytes (path `/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/noise_payload_restricted_v2.json`, sha256, size);
+  - the source (path, sha256, git blob, committing commit);
+  - the extractor (script, commit `5a135d1f5cd5bfdfc76853e7a7ca93101b8c5d71`, sha256, functions, command line, extraction
+    report path and sha256);
+  - the contents (counts, flag counts, hashes of window ids, donor ids, donor-component pairs and full donor records);
+  - the rule and its counts, the selected and not-selected fields and the membership comparison;
+  - the old pin verbatim under `superseded`.
+
+  `code_hashes_c1.json` was regenerated and now lists 28 files, the new scripts and tests included.
+- *Loader* (`NoisePayload.load_restricted`). It requires the v2 pin schema and the v2 copy, and every donor record must be exactly
+  {id, component, family, eligible} with eligible `true`. It refuses the v1 copy, the v1 pin, a missing, false or string flag, and
+  a constructed payload holding an ineligible donor (`test_loader_requires_the_eligible_flag`,
+  `test_loader_refuses_the_superseded_v1_copy_and_pin`, `test_constructor_refuses_a_donor_flagged_ineligible`).
+- *Raw-load barrier.* `NoisePayload.load` (the raw F8a.2 loader) refuses unless called with `allow_raw=True`, which `main` passes
+  only for an unconfigured (drafted) run. `--payload` is refused whenever `--config` is given. The regression test
+  `test_configured_execution_can_never_load_the_raw_payload` runs `run` under each of the four F12c and two F12b configurations, and
+  `noisecheck`, with the raw loader replaced by a failing stub and every file read recorded. It asserts that neither the raw loader
+  nor a read of `data/runs/a5/nullsize/inputs.json` or of the committed source occurs.
+- *Old outputs.* The F12 smoke run, the F12b reduced runs and diagnostics, and the F12c reduced check and noise smoke used the v1
+  bytes. They remain diagnostics of the old bytes; none becomes the registered noise check or gate evidence (pin `superseded`
+  record).
+
+**F12d.2 — Prerequisite identity binding (condition 6, residual provenance gaps).** The prerequisites are now loaded with the
+sha256 of their file bytes (`load_prereqs`). `validate_execution` checks the following.
+- *Noise check.* Besides the passed 10,000-panel k = 145 check and its token and payload identities, the noise check's recorded
+  `code_sha256` must equal the stage-2 run's code identity; a missing or stale code identity fails.
+- *Pilot acceptance* (schema `f12d-pilot-acceptance-v2`; the bare `f12c-pilot-acceptance-v1` record holding only `chair_accepted`
+  is refused).
+  - The record must be chair-accepted and signed (`signed_by`).
+  - Its `pilot_report_sha256` and `pilot_timing_sha256` must equal the sha256 of the supplied pilot report and timing files, and
+    the timing sidecar must name that report's sha256.
+  - The pilot report must be under the registered F12c pilot config (file sha256), on non-synthetic tokens, with exactly the 10
+    planned complete records, and its identities and the record's must equal the stage-2 run's token, payload and code
+    identities.
+  - The record's all-in projection must equal `all_in_projection` recomputed from the pilot timing and the noise-check report
+    (F12d.4), and the recomputed projection must be at most 190 CPU-h. The ceiling field must be exactly 190.
+  - Chronology: the noise check finishes before the pilot starts, and the acceptance is dated after the pilot finishes. Timing
+    sidecars and noise-check reports now carry `started_utc` and `finished_utc`.
+
+  `make_pilot_acceptance` builds the record for the chair from the three files. It refuses an acceptance dated before the pilot
+  finished and a projection over 190 CPU-h. Signing the record remains the chair's act.
+- *C1.* The supplied `c1_code_hashes` prerequisite is withdrawn. The validator verifies the committed C1 itself
+  (`scripts/f12_c1.py`, `verify_c1`):
+  - a committed, unmodified `MANIFEST_C1.sha256` holding exactly H0–H11, with H0 = `e0619f6a…5301` and the chain recomputing
+    over the F12a.6(c) files in order;
+  - every C1 file committed, unmodified, equal to its manifest digest, and neither a draft nor awaiting inputs;
+  - `code_hashes_c1.json` not a draft, every listed file at its pinned bytes, and the run's code identity among them;
+  - a Board A verification record `c1_board_a_verification.json` naming the manifest's sha256 and a committed review under
+    `docs/reviews/` whose bytes match the record, which cites that sha256 and states "C1 VERIFIED", committed in a later commit
+    that descends from the manifest's commit.
+
+  A status string or flag inside a C1 file never verifies itself. Code can check binding and chronology, not authorship, so
+  Board A's verification is recognised only through its committed review.
+- *Negative tests* (`tests/test_f12d_prereqs.py`, temporary git repositories). They cover: stale or missing noise-check code; the
+  superseded pilot record; mismatched report and timing hashes; mismatched identities in the record or the report; an incomplete
+  or re-configured pilot report; an over-ceiling or altered projection; a wrong ceiling; acceptance before the pilot; a noise check
+  after the pilot start; an unsigned record. On the C1 side: no manifest; a draft code pin; an "awaiting" file; a dropped manifest
+  line; a rewritten or uncommitted C1 file; stale code bytes; an uncovered code identity; self-asserted verification fields; a
+  review that does not cite the manifest or lacks the verdict; a record naming another manifest; a manifest touched after the
+  review. The real repository's draft C1 never passes. The F12c validator tests now use these bound prerequisites; their C1-draft
+  case moved here.
+
+**F12d.3 — The C1 package skeleton (review step 2).** `python scripts/f12_simulation.py c1-draft` now also writes the C1 package
+skeleton to `docs/prereg/f12_manifests/c1_draft/` (never the governed C1 paths) with `scripts/f12_c1.py build_draft`. It holds the
+eleven F12a.6(c) files in chain order, and every file is labelled "draft skeleton, not a C1 file". Built now:
+- the exposure requirement and register pointer;
+- the population (selector, `population.json` and its sha256, 270 rows / 234 components, id and row hashes);
+- the fold rules, the outer fold manifest, every S_k fold-manifest hash and the purchase order hash;
+- the endpoint configuration, the token schema (42 columns, 186 slots), the base revision and the token builder;
+- the stage-2 training and selection fields with 1,185 head parameters;
+- the restricted-payload pin with its sha256;
+- the four F12c configurations (and the superseded F12b ones);
+- the six interval procedures with their code;
+- F12-I's own chain anchor (`7ba2957b…`), construction script and its 16 LoRA roots;
+- the resources: 190 CPU-h, the budget barrier, workers, threads, memory and GPU caps;
+- the draft code pin.
+
+Marked "**awaiting the token manifest**" (`docs/prereg/a5_manifests/f12/tokens_manifest.json`):
+- row eligibility (F12a.2(e));
+- the eligible-row outer, inner and leave-one-family-out folds;
+- the token input hashes, the full G2 manifest and probe-cache identities and the 24 `down_proj` tensor hashes;
+- the gauge and control audits;
+- F12-I's parent, support and tensor hashes.
+
+`MANIFEST_C1.sha256` is not written: C1 is not frozen. `python scripts/f12_c1.py verify` reports "C1 manifest MANIFEST_C1.sha256
+missing".
+
+**F12d.4 — Auditable budget stops (condition 7).**
+- *Ledger and barrier* (`scripts/f12_budget.py`). An append-only, fsynced JSON-lines ledger
+  (`/home/ubuntu/wsp-data/runs/a5/f12_budget/ledger.jsonl`) records every launch, checkpoint, end and stop. Each event carries the
+  job, kind, attempt, responsible operator, UTC time, the attempt's cumulative process-tree CPU, done and planned replicates, the
+  checkpoint frequency and the projection.
+- *What is counted.* Process-tree CPU is the parent's own and reaped-children CPU plus every live descendant's (the workers) from
+  `/proc`. Every attempt of every kind counts: noise check, pilot, stage 1, coverage target, stage-2 parts, assembly, verification
+  and other work, failed and aborted attempts included.
+- *The barrier.* At launch and at every checkpoint, `Meter` requires that spent CPU plus projected remaining CPU stays within 190
+  CPU-h. Projected remaining is: the planned items not completed; the running item's remaining replicates at the larger of the
+  planned and the observed per-replicate CPU (failed attempts are spent but never count as done; stage-2 parts count toward the
+  2,200); and the overhead less the overhead already spent.
+- *A stop.* On a projected breach the run raises `BudgetStop` before further work. Queued replicates are cancelled, so at most the
+  two in flight finish. No report or summary is written, only `budget_stop.json`, and the stop event says that no count or draw is
+  reduced and no decision is taken from the partial run. The run then waits for a dated prospective repricing.
+- *Checkpoint frequency.* Every 10 completed replicates and at least every 900 s.
+- *Plans.* Before the pilot the plan is the resource plan's synthetic items (163.63 CPU-h). After it, the plan is the chair-signed
+  `pilot_acceptance` projection.
+- *Enforcement.* `run` and `noisecheck` on real tokens under an F12c configuration refuse to start without `--budget-ledger`,
+  `--budget-plan` and `--operator`. `assemble` charges its CPU when given a ledger.
+- *`project_cpu`* takes separate stress and alternative costs and returns an all-in total, `items_by_kind_cpu_h` and
+  `units_by_kind`, including the noise check and overhead (measured when given, else the resource plan's 0.005 and 0.042 CPU-h,
+  labelled as projections). Its disclosed conservative extrapolations:
+  - unmeasured stress at the measured alternative cost (synthetic stress/alternative ratios 0.89–0.92);
+  - every k below the smallest measured k at that k's cost (synthetic cost rises with k);
+  - unmeasured variance-×2 at max(stress, alternative), replacing F12c's stress-time assumption (the F12c reduced run measured
+    variance-×2 above stress);
+  - an unmeasured alternative at stress / 0.8875.
+
+  A pilot-only projection is labelled "stress timing extrapolated from the alternative-only pilot (not measured stress timing)".
+  `all_in_projection` combines the measured noise-check CPU, the pilot's measured process-tree CPU and 15 × its measured
+  per-invocation overhead with that projection, reproducibly from the committed files.
+- *`_write_timing`* now gives a schedule projection whenever any stress or alternative cost was measured, so an alternative-only
+  pilot is projected. It records `report_sha256`, `started_utc` and `finished_utc`.
+- *Resource plan reconciled* (`f12c_resource_plan.json`). The stale status "requesting chair repricing" is replaced. The plan now
+  records the chair's 18:55 UTC acceptance of 190 CPU-h (`ceiling_acceptance`). It states that `pilot_acceptance` is "not written"
+  and that nothing is backdated, keeps the old status under `status_history`, and adds `items_by_kind_cpu_h`, `units_by_kind`,
+  the `pilot_projection_rule` and the `budget_barrier` parameters.
+- *Consequence, synthetic arithmetic only (not a measurement).* Under the conservative rule a ten-alternative pilot measuring the
+  F12b.6 synthetic 218.6 CPU-s per alternative projects 175.5 CPU-h all-in. Measuring the F12c loaded-machine 234.6 CPU-s projects
+  188.4 CPU-h. Pilot acceptance therefore needs a measured alternative cost of at most about 236.6 CPU-s per replicate (with 10
+  CPU-s overhead per invocation). Above that the chair's ruling requires a dated repricing. The ceiling is not changed here. A
+  less conservative extrapolation would itself need a dated prospective amendment before the pilot.
+
+*Incident during this work (disclosed; repaired before any F12d commit used it).* The first attempt to commit the
+implementation ran the repository's pre-commit hook. Git exports `GIT_DIR` and `GIT_INDEX_FILE` to hooks, and the C1 test
+fixtures' `git -C <temporary directory>` calls inherited them. As a result:
+- the fixtures committed 58 commits of toy C1 files onto `prereg/f12d` (22:12 UTC);
+- their `git init` set `core.bare = true` in the shared repository configuration, so for about four minutes the canonical
+  checkout and the worktrees refused work-tree git commands.
+
+The hook's test run failed and that commit was not made. The session restored `core.bare = false` at about 22:16 UTC and reset
+`prereg/f12d` to `5a135d1`, leaving the working tree untouched. No other ref moved: `main` stayed at `6e3fe0b`, and nothing was
+pushed. The fixtures and `f12_c1`'s git calls now drop inherited `GIT_*` variables, and
+`test_temporary_repositories_ignore_an_inherited_hook_environment` checks this against a decoy repository. No outcome, token or
+payload value was involved.
+
+**F12d.5 — Attestations (condition 1).** This session's entry (12) is in `docs/prereg/f12_attestations.md` with statements (i),
+(ii) and (iii). No other session's entry was written or changed. The rows still PENDING, and the session that must fill each:
+
+| row | what is pending | who must fill it |
+|---|---|---|
+| 2 | council round 6 chair and members: (i), (ii), (iii) | each round-6 session (the chair's own part may be covered by entry 10's renewal only for the chair session) |
+| 3 | Board A F12/F12-I reviewer: (i), (ii), (iii) | that reviewer session |
+| 5 | F12 inputs implementer (`f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`) and the token-run sessions `f12-tokens2`, `f12-tokens3`: (i), (ii), (iii) | the inputs implementer session and the session(s) that launched and monitor the token run |
+| 6 | F12 simulation implementer at `07e1dc2` (writer of the superseded v1 copy): (i), (ii), (iii) | that implementer session |
+| 7 | F12b drafter: (iii) | the F12b drafting session |
+| 8 | Board A F12b reviewer: (i), (iii) | that reviewer session |
+| 9 | F12c implementer: the confirmation Board A asks for on the raw-loader disclosure (exact test and code version, accessed path, output and log handling, no non-allowlisted value used, no new-outcome summary) | the F12c implementation session |
+| 10 | chair: renewal from 21:50 UTC to the C1 freeze | the chair session |
+| 11 | every later C1/C2 builder, analyst and Board A reviewer (including the F12c-review session, whose own attestation is in its review but has no register row yet, and the step-3 to step-8 sessions) | each of those sessions |
+
+**F12d.6 — Status by condition, and what remains (steps 3–8 of the review's ordered path).**
+
+| condition | status | done in F12d, where | what remains |
+|---|---|---|---|
+| 1 attestations, raw-loader disclosure | partially | entry 12; PENDING table above; raw-load barrier test | the PENDING rows by their own sessions; the F12c implementer's confirmation of the raw-loader account |
+| 6 donor flag | done (draft pin) | F12d.1; `f12_payload_extract.py`; v2 copy and pin; loader; barrier test | Board A verifies the bytes, extractor and pin at C1 (step 7) |
+| 6 provenance gaps | done (code) | F12d.2; `validate_execution`, `make_pilot_acceptance`, `f12_c1.verify_c1`; negative tests | real noise-check, pilot and C1 records exist only after steps 3–7 |
+| 6 C1 package | partially | F12d.3; `c1_draft/` skeleton, `verify_c1`, `write_manifest` | token-dependent parts await the token manifest (step 1); then actual-token population, eligibility, fold, schema, nesting and gauge qualification (step 3); then the freeze and Board A verification (step 7) |
+| 7 budget stops | done (code and plan) | F12d.4; `f12_budget.py`; `project_cpu`, `_write_timing`, resource plan | the ledger starts with the registered noise check (step 4); the pilot (step 5); the chair's `pilot_acceptance` within 190 CPU-h (step 6) |
+
+Steps still to come, unchanged from the review:
+1. The token run completes and its manifest is committed.
+2. Step 3: the frozen actual tokens and population are qualified.
+3. Step 4: the 10,000-panel k = 145 noise check runs on the v2 bytes, under the ledger and pinned code, and must pass before the
+   pilot.
+4. Step 5: the ten-alternative pilot runs under the ledger and its report and timing are committed.
+5. Step 6: the chair signs the pilot acceptance with `make_pilot_acceptance`.
+6. Step 7: the final attestations and candidate C1 hashes are completed, `MANIFEST_C1.sha256` is written, and Board A records its
+   C1 verification.
+7. Step 8: stage 1 runs only then, followed by selection, target, stage 2, assembly, validation and Board A's acceptance.
+
+If code or inputs change after steps 4–5, they are re-pinned and stale evidence is not carried forward.
+
+*No-exposure attestation (implementation session, 11 Nov 2026, about 21:45 UTC to this commit).* Entry 12 of
+`docs/prereg/f12_attestations.md` is this session's full attestation (Claude Opus 5.5 implementation sub-agent, worktree
+`.worktrees/prereg/f12d`):
+- (i) It saw no TF-v1 record, ledger outcome or D3 outcome. It handled centred qualification noise only through the allowlisted
+  extractor, the restricted copies and tests, and printed no noise value.
+- (ii) It saw no G3, rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A score. It opened nothing under
+  `data/evals`, read no real F12 token and used no GPU.
+- (iii) It read F12a.1's account of the prescore audits and the register's entries, not the audits.
+
+It attests to this session only.

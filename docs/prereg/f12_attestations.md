@@ -33,6 +33,7 @@ round-6 member reports. They are predictions and simulation outputs, not outcome
 | 9 | F12c implementer (this file's author) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12c`, worktree `.worktrees/prereg/f12c`, 11 Nov 2026 about 18:10 UTC to the F12c commit | F12c note, code, tests, manifests, synthetic checks | see below | none | see below | below | given (this session only) |
 | 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11 Nov 2026 | through 21:50 UTC 11 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entry 10 below | given to 21:50 UTC; **renewal PENDING** at C1 |
 | 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** |
+| 12 | F12d implementer and v2 restricted-payload extractor (chair-authorised for that step) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12d`, worktree `.worktrees/prereg/f12d`, 11 Nov 2026 about 21:45 UTC to the F12d note commit | F12d note, code, tests, v2 restricted copy and pin, C1 skeleton, resource plan | none seen; handled centred qualification noise (see below) | none | read F12a.1's account and entries 9-10, not the audits | entry 12 below | given (this session only) |
 
 PENDING cells are blank on purpose. Nothing is inferred from a session's role, branch or timing.
 
@@ -99,3 +100,52 @@ F12c before the token run produced its first row at 16:46 UTC.
 
 *Decisions this entry covers.* The F12b repairs brief, the F12c brief, the 190 CPU-h all-in repricing (18:55 UTC) and the
 ordering that keeps stage 1 held. None of them used a Part A, F8, F9 or F12 outcome.
+
+## Entry 12: F12d implementer and restricted-payload extractor (given)
+
+*Session.* An implementation sub-agent session (Claude Opus 5.5) working only in `.worktrees/prereg/f12d` on branch `prereg/f12d`,
+from main `6e3fe0b`, on 11 Nov 2026 from about 21:45 UTC until the commit adding note F12d. The chair authorised it as the extractor
+of the v2 restricted payload copy (Board A F12c review, condition 6). It attests to this session only and writes no other entry.
+
+*What it read.*
+- Committed files: Board A's F12c and F12b reviews; notes F12a, F12c, amendment F12b and the chair ruling on F12c in
+  `docs/PREREG_H1_TF.md`; this register; `scripts/f12_simulation.py` and the F12 tests; the F12 manifests; the head and argument
+  lists of `scripts/f12_population.py`, `scripts/f12_tokens.py` and `scripts/f12_additivity_prepare.py`; the `materialise` and
+  `inputs_provenance` functions of `scripts/a5_nullsize_inputs.py` (to learn the payload layout) and
+  `scripts/a5_simulation.py:donor_block`; `docs/prereg/f8_manifests/floor_payload/README.md`; the key names, counts and rules of
+  `docs/prereg/a5_manifests/f12/population.json`; the committed metadata extract
+  `docs/prereg/a5_manifests/nullsize/inputs_provenance.json` and the window order of
+  `docs/prereg/a5_manifests/nullsize_inputs.json`. From the metadata extract it printed only the donor and inventory counts by
+  eligibility flag and family, the component count, the number of donors with masked windows (0) and the window ids. It did not
+  print norms or audit fields, and the file holds no noise values.
+- `data/`: it listed the entries of `data/runs/a5/nullsize/` (file names, sizes, dates) and computed the sha256 of
+  `data/runs/a5/nullsize/inputs.json` without parsing it, to confirm byte identity with the committed source. It opened no other
+  file under `data/`.
+- Noise payloads:
+  - It ran the committed extractor once on the committed source. The extractor decoded only `window_ids`, `donors` (id,
+    component, family, eligible) and the centred noise and masks; every other value, `donor_mean` included, was skipped
+    undecoded. The output was the v2 copy and a report of counts, donor ids of exclusions (none) and key names.
+  - It read the superseded v1 copy and the v2 copy (allowlisted fields only) for the membership comparison and the loader check.
+    The comparison tested equality of arrays; no noise value was printed.
+- Synthetic and dry-run evidence: it listed `wsp-data/runs/a5/f12_sim_dryrun/` and used only its own test outputs. It did not open
+  the F12b or F12c synthetic reports.
+- Test runs: it ran the F12 test files serially (OMP 2), and the repository's pre-commit hook ran the full test suite at its code
+  commit. The suite's collection-time file access was not audited, as Board A noted for its own session; no test output showing an
+  outcome was seen.
+
+*Incident.* Its first implementation commit attempt ran the pre-commit hook, whose inherited `GIT_DIR` / `GIT_INDEX_FILE` sent the
+C1 test fixtures' git commands to this worktree's repository. They made 58 toy commits on `prereg/f12d` and set `core.bare = true`
+in the shared configuration for about four minutes. The session reset its branch and restored the setting (note F12d). No file
+content of interest to F12 exposure was read or written by that incident.
+
+*(i) Old development outcomes.* The session saw no TF-v1 record, no G0/G1/G6 ledger outcome and no D3 outcome. It handled centred,
+donor-mean-free qualification noise derived from old development records only through the allowlisted extractor, the restricted
+copies and tests, and printed none of it.
+
+*(ii) New outcomes.* None. The session opened nothing under `data/evals`. It saw no G3, rotation, ladder, missing-reference,
+sealed, F8 or F9 outcome and no Part A score, and received no summary of one. It did not list or read the real F12 token directory,
+used no GPU, and ran no registered noise check, timing pilot, stage 1, coverage target, stage 2 or real-token job.
+
+*(iii) Prescore audits.* The session read F12a.1's account of the disclosed pre-score audits and entries 9 and 10 of this register,
+which describe them. It did not open the Part A prediction or calibration files, the prescore inventories, the round-6 member
+reports or `SYNTHESIS-r6.md`.
