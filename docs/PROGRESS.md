@@ -791,3 +791,12 @@ size passes (ordered go 0.0175; two-sided 0.0348 / 0.0378 / 0.0378 ≤ 0.07); al
 Record `part_a/f11_calibration_record.json`. Part A is decisive on the 52-edit design subject to Board A's acceptance of the staging
 report and calibration (F11 conditions 3–4). Pre-scoring inventory (F11b.6; Board A analysis-4 condition 3) in preparation; staging
 report in flight. Scoring still held until those are accepted.
+
+**11 Nov 2026, 10:01 UTC.** Pre-scoring inventory merged (`part_a/PRESCORE_INVENTORY.{json,md}`, a4ffc0a): 23 of 52
+release gates met; population, masks, calibration (PASS), inputs, pins (all match at 079e60b) and staged bytes verified. Gaps and
+actions: no frozen prediction rows for the 52 edits (the analysis refuses without them) → `scripts/part_a_predictions.py` building
+`predictions_f11.json` from the frozen G2 WikiText field on the staged realised deltas (CPU, agent-tmux) plus a synthetic
+input-binding run of the analysis; the launch script's single-call proofs+scoring, lenient re-hash and missing manifest/pin checks →
+two-phase script with `score --proofs-only`; `tests/test_a5_simulation.py:598` (expects 40 edits) → updated for 52; slot mapping
+written post-run (`slot_mapping_f11.json`, disclosed; mapping hash matches); run records enriched (516d9c9); F11.8 clarification,
+disclosures and attestations 15–21 → A5 note F11c. Staging report in flight. Scoring held.
