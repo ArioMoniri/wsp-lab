@@ -732,3 +732,12 @@ REJECTED closing F11 condition 5 pending four corrections (supplements in the F1
 and root/non-root splits; per-contrast masks incl. supplementary ladders; F11a screen route with size-failure priority) — in flight
 on the same branch. `prepare --supplement` staging mode still in flight. Order: staging code → Board A → merge + re-pin (xx) →
 stage the 12 → frozen F11.4 calibration → report → Board A → (analysis merge + re-pin) → scoring.
+
+**11 Nov 2026, 10:50 UTC.** `prepare --supplement` committed (c914270, `feat/f11-supplement-stage`; 133 tests on the two files; dry
+run on one unselected LoRA root: rotation + two ladders 581 s under load 17–23; re-hash of the 40's 249 staged files 895 s, all
+matching; mask builder reproduces `slot_mask_f10.json` byte for byte; seeds derive from `control_seeds.json:rotation` by canonical
+id exactly as for the 40). Two chair fixes ordered before Board A review: the loader must read the committed `selection_f11.json`
+format and apply the F11.2 filter (roots, exact-gradient donors, not alias-only) so it reproduces the frozen 12 (the builder's check
+expected the alias-only `7bc62b9f`); and reference proofs for the 12 supplementary originals, which read TF-v1 records including
+score rows, are deferred to scoring time (`--no-reference-proofs` default; `score --manifest` proves first and refuses unproven
+supplementary variants), so staging touches no evaluation record. Analysis F11-path corrections in flight.
