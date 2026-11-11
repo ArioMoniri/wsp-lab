@@ -613,3 +613,9 @@ flat-step tie-break in the λ = 1 solver (accepted only if it reduces the gradie
 and fields formats (`a5-part-a-sealed-ledger-v1`); `audit_missing` as a fail-closed exclusion code; a wrong subset hash stops the run
 rather than voiding the subset; frozen staged correlations printed, not recomputed; edit `057dcfbedea3251f` sits on ln ρ cut 1 and
 will be flagged `cell_drift` on any downward re-stage drift (never moved).
+
+**11 Nov 2026, 04:00 UTC.** Board A REJECTED the Part A analysis code 91d976b under condition 6 with six corrections
+(`docs/reviews/council/board-a-part-a-analysis-2026-11-11.md`): validity-first A5.5 ordering with Part B reporting preserved;
+runtime verification of the adopted specification hash; frozen window-order validation and complete re-stage audit evidence;
+complete ledgers, 3×2 sign tables and fit diagnostics; conditional masked-calibration disclosure; re-test and pin before scoring.
+Corrections in flight on the same branch. Both code branches (F10 rule, analysis) are now in their second round; scoring held.
