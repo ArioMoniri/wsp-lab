@@ -535,3 +535,17 @@ per-tensor audit file, `score --manifest`). Conflicts were append-only (A5 appen
 re-pin (xv)). Priced Part A scoring after exclusions: 81 variants + 19 references = 100 entries ≈ 1.73 GPU-h. Open chair decision
 flagged by the staging: for the 8 chain picks with a non-base predecessor the ladder scales the realised increment D because no
 per-step Δ is stored (A5.3 says "not by scaling D_t"); referred to the F10 analysis. Scoring remains on hold.
+
+**11 Nov 2026, 00:20 UTC. Rotation yield: diagnosis and chair rulings.** `docs/design/ROTATION_YIELD_2026-11-11.md` (merged ca7ea4b;
+CPU only; all 2,534 tensors rebuilt and the 535 registered passes reproduced) shows the realised mismatch is bf16 rounding of W at
+the rotation's scale: the rotation's rounding error equals the edit's own (median ratio 1.0003 on 2,188 root tensors), so the
+registered realised audit selects edits by effective norm, not by construction quality; the 1e-3 rank tolerance sits inside the bf16
+noise floor; the five reconstruction failures are fp32 artefacts (fp64 residual ≤ 4e-15). Remedy yields computed on CPU: iterative
+rounding-aware construction 2/14 tensors (and no longer rotations); rotating the raw Δ 16/32 root edits; noise-calibrated tolerances
+34/40 but unstable (17–39) with constants; partial rotation 1/40; registered reading 1/40; remedy (d) 40/40. Chair rulings: adopt
+(d) as F10 (construction unchanged; exclusion on exact fp64 construction checks, support, bitwise replay, the round-to-nearest bound
+and a half-norm guard; realised norm/spectrum/rank reported as diagnostics and a nuisance covariate; two pre-listed subsets reported,
+none decisive; no simulation rerun needed at 40/40, slot-masked power run if fewer); accept the realised-increment ladder for the 8
+non-root chain picks as the registered ladder with Δ_t substituted by its realised form, flagged; **no Part A entry is scored before
+Board A accepts F10** (ladder outcomes would decide A5.5 step 2 and reveal response sizes, making F10 post-outcome under F8a.1(c)).
+F10 text in flight.
