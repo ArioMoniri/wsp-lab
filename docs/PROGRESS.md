@@ -777,3 +777,10 @@ assignment, `f11a_screen_route` input and who may issue it, forty-only size refu
 supplements, supplement row conditions, twelve-ID binding by hash) per Board A analysis review 4 condition 1; attestation entry 14.
 Changes no selection, seed, rule, cap or pin; nothing scored. Review condition 2 (final-bytes verification) and condition 3
 (pre-score inventory) remain open.
+
+**11 Nov 2026, 09:27 UTC. F11 supplementary staging complete (exit 0).** Execution SHA 8211ecf, clean tree, 08:06–09:26 UTC
+(1 h 20 min CPU). All 12 supplementary rotations pass F10: **43 of 52 rotation pairs available** (the 9 exclusions are the original
+ones); 3,069 tensors edited, 2,519 rotated; the forty's bytes re-hashed before and after, unchanged; `manifest_pre_f11.json` and
+`rotation_audits_pre_f11.jsonl` preserved; proofs deferred (12 unproven originals listed); priced 185.12 min. The F11.4 52-id slot
+mask is built by the accepted builder (schema-only) and frozen; the registered-scale calibration launches now with Board A's frozen
+command (agent-tmux `a5-f11-calibration`). Staging report and A5.1.2 entries in preparation.
