@@ -4339,3 +4339,32 @@ under `data/evals/`, wrote nothing under `data/`, used no GPU and ran no scoring
 G3, rotation, ladder, reference or sealed outcome or a summary of one; none exists. It chose nothing: the clauses copy the
 inventory, Board A's rulings and the chair's threshold. This attests this session only; it is also entry 21 of
 `docs/prereg/f10_attestations.md`.
+
+#### A5 note F11d (11 Nov 2026, 10:08 UTC, before any G3 outcome): procedural ruling on the F11.4 calibration ordering departure and the single replay exception
+
+Board A accepted the F11 supplementary staging evidence and accepted the F11.4 calibration with conditions
+(`docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md`). The chair rules as follows, before any replay. **F11d.1 — the
+departure.** The registered-scale F11.4 calibration (09:28–09:34 UTC, execution SHA 92b0338) was executed by the chair after the
+supplementary staging completed but before the staging report existed and before Board A's acceptance of the staging evidence,
+and the explicit slot-mapping file was written from the output afterwards. This departed from Board A's F11 sim condition 2 and
+staging condition 3 (acceptance and a frozen mapping first). The departure is accepted as a disclosed procedural exception; it
+cannot make the original run compliant; the original output remains on record as the first execution. **F11d.2 — single replay
+exception.** As a narrow exception to the single-execution / no-rerun language, exactly one replay of the identical frozen Board A
+command (CPU only, agent-tmux, unchanged input path strings, source bytes, seeds, pools, order, 10,000 / 4,000 settings and
+environment) is authorised, with the sole substitution of the output destination to a scratch path under
+`/home/ubuntu/wsp-data/runs/a5/f11_sim_dryrun/boarda/`; the replay must be byte-identical to the original output (sha256
+`8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb`) apart from any self-referential output-path field, which must
+be the only difference if one exists; any other difference voids the calibration and requires a new amendment. **F11d.3 — frozen
+inputs of the replay.** Accepted staging report `a88cfe7b6280169f68c301a0fdce4e98ac37ba6b3c9ec5a8ea3f913b1c2bc656`; final manifest
+`71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6`; audits `9412eb0d4d60f5587c4c5d19e9afcda86c6c45faa38a37b3ab937008d505c45a`; supplement file
+`ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c` (sorted-id `1848fe4c…`); schema mask `5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4`;
+explicit mapping file `1e2155adaf606b61ba7d325ff15a6970cee92ec0a5ef03ec7d48c3fdc7146862` (independently rebuilt by Board A from the
+NULL-SIZE inventory and the frozen selection without RNG execution; equal to the saved mapping and the output table); availability
+digest `171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a`; ordered-table sha256 recorded in the replay record;
+NULL-SIZE inputs `67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de`; fields `85843ed2…`; registered donors
+`6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5`; simulator `scripts/a5_simulation.py` `4ce3faa5…` (re-pin xix). **F11d.4 —
+hash-history reconciliation (Board A condition 3).** The staging report and SUPPLEMENT_A512_NOTE describe the pre-enrichment launch
+and calibration records; the enriched records at 516d9c9 supersede them: `supplement_launch.json` now
+`d20a4ab36faa47864bf5c5c1a724e2c4d7e096bbadb5631bc8c95bca6954fdbb`, `f11_calibration_record.json` now
+`3de71f022af7b8d94930a1d6f8c8b6ba428ba78f8637f921c71aba329f5548d7`; the pre-score inventory is updated at release. **F11d.5 — scope.**
+No selection, seed, decision rule, cap or pin changes; no scoring is authorised; the replay reads no evaluation record.
