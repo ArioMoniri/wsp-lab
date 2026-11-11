@@ -654,3 +654,11 @@ real tensors beyond the dry-run three; no retuning under F10a). 1,984 of 2,534 e
 9 rotation slots masked, all ladder slots kept). Slot-masked registered-scale calibration (10,000 replicates, 61-donor pool) launched
 under agent-tmux `a5-slotmask-f10`. Priced scoring after exclusions: 135.2 min. Re-stage report in preparation for Board A; scoring
 held.
+
+**11 Nov 2026, 06:40 UTC. Slot-masked calibration FAILED the power gate.** Registered-scale run (10,000 replicates, 61-donor pool,
+mask `86fa27a5…` masking the 9 F10-excluded rotation slots; `data/runs/a5/power/power_slotmask_f10.json`, record
+`part_a/slotmask_calibration_record.json`): size passes (ordered go 0.0192; two-sided 0.0377 / 0.0372 / 0.0372; alternative 0.1939
+unchanged) but **ordered power 0.7514 < 0.80**. Under F10.6 and Board A F10 condition 5 the scoring hold stays and a new amendment
+is required; ladders may not be scored early. Chair: outcome-free sizing runs launched (synthetic masks unmasking subsets of the
+excluded cells, labelled sizing, not registered) to size a supplementary-selection amendment (F11) before council metrology and
+Board A are asked. A first mask file with provenance keys inside it was rejected by the frozen schema; mapping unchanged.

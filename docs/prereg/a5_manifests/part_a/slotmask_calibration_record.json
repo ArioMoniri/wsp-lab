@@ -1,0 +1,57 @@
+{
+ "available_slots": {
+  "ladder_0.25": 40,
+  "ladder_0.5": 40,
+  "rotation": 31
+ },
+ "gates": {
+  "label": "slot-masked (F10.6)",
+  "passed": false,
+  "power": {
+   "ordered_go_rate": 0.7514,
+   "passed": false,
+   "threshold": 0.8
+  },
+  "size": {
+   "alternative_rate": 0.1939,
+   "applies_to": "ordered go and each individual two-sided test (FP2); not the funding-only alternative branch (F5.7)",
+   "ordered_go_rate": 0.0192,
+   "passed": true,
+   "threshold": 0.07,
+   "two_sided_rejection_rates": [
+    0.0377,
+    0.0372,
+    0.0372
+   ]
+  }
+ },
+ "label": "slot-masked (F10.6)",
+ "mapping_sha256": "b7724a69315d8c8692a128504126251ac16945cf7b741ec60b3cdb6daa5cb329",
+ "mask_path": "docs/prereg/a5_manifests/part_a/slot_mask_f10.json",
+ "mask_sha256": "86fa27a5c1838d0c0bd88ef530feba22eceafac698d0ec4506fbf05df83b698e",
+ "masked_ids": {
+  "ladder_0.25": [],
+  "ladder_0.5": [],
+  "rotation": [
+   "0027efdf2eae7405",
+   "05531ce1db4df63f",
+   "057dcfbedea3251f",
+   "0bc0a0c4ad0520e0",
+   "0d055869527177b4",
+   "14cdaabee246493b",
+   "15a53586efc72a50",
+   "2233954b0cc3edc0",
+   "72d3756e968e3209"
+  ]
+ },
+ "output_path": "data/runs/a5/power/power_slotmask_f10.json",
+ "output_sha256": "b14756828bc27cbbe14e1e590226820371a65ef5f83ad9622b2e6ccf04a3450a",
+ "run": {
+  "end_utc": "2026-11-11T06:36:01Z",
+  "execution_sha": "cf3eae8",
+  "first_attempt": "06:24 UTC at 848d7a5 rejected the mask file for unknown keys (schema); mapping unchanged; rerun on the schema-conformant mask",
+  "start_utc": "2026-11-11T06:25:29Z"
+ },
+ "schema": "a5-slotmask-calibration-record-v1",
+ "verdict": "FAIL: ordered power 0.7514 < 0.80 (size passed); scoring hold remains (F10.6; Board A F10 condition 5); a new amendment is required"
+}
