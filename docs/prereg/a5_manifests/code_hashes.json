@@ -187,7 +187,7 @@
   },
   "src/wsp/eval/response_intervention.py": {
    "role": "selection, tertiles, reference identity (imported)",
-   "sha256": "e52ea009740751a38c9445dfb6a63767a9535cd22ce343c240371269e55d4d79"
+   "sha256": "47a1c6d129b5a84d51b3797c4d40f9ace824533969c05db713490d91940642b2"
   },
   "src/wsp/eval/run.py": {
    "role": "WikiText window construction (perplexity)",
@@ -287,7 +287,7 @@
   },
   "tests/test_a5_simulation.py": {
    "role": "test",
-   "sha256": "d231c8b0264d48e7e75b991b5bf82ee2f71b846c0364063800bbea84920d2833"
+   "sha256": "62755edd1766ed69c73d8453e9ab445af97ae552786b9f4daf12044bf74f0c32"
   },
   "tests/test_a5_snapshot.py": {
    "role": "test",
@@ -299,14 +299,14 @@
   },
   "tests/test_response_intervention.py": {
    "role": "test",
-   "sha256": "c7f202369469f56ac02403986b14c9ce25393c48df69a9741224a1c2397965bc"
+   "sha256": "00eed546891da97a2b9a346a6bc74b7e945006ffa2a212ae542258e7cd518b95"
   },
   "tests/test_rotation.py": {
    "role": "test",
    "sha256": "7570224a0b4c0dd8e9f1b0aacdaa930e2170d97fa1d1e9c6864bd60d13869325"
   }
  },
- "git_sha": "c6972ba11cfa59e224f5674c6f5d09b9459d92b8",
+ "git_sha": "1a56c5ea484df21722f3051655ca3dddc27592be",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

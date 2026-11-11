@@ -822,3 +822,9 @@ single authorised replay is running under agent-tmux `a5-f11-replay` with the id
 sha256 `68b8b01d…`, availability digest `171dfd20…`. Record `part_a/f11_calibration_replay_record.json`; attestation 22. Board A
 conditions 1–3 of the staging/calibration review are discharged on paper; conditions 4–7 wait on the predictions file, the
 two-phase launch, the inventory update and explicit release.
+
+**11 Nov 2026, 10:38 UTC.** Scoring-launch hardening merged (77ee786; re-pin (xxiii)): two-phase launch with
+`score --proofs-only` stop and `--require-proofs`/`--max-minutes`; strict re-hash; manifest-hash and pin checks; the 52-edit test
+fix; 40 launch tests. Incident disclosed in A5.1.2 (a test briefly set `core.bare=true` in the shared repository; repaired; main
+unaffected). Phase-1 invocation (after Board A release): `scripts/part_a_score_launch.sh 71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6`;
+phase 2: the same with `--phase score --max-minutes 231.4`. Predictions build still running (agent-tmux `part-a-predictions`).

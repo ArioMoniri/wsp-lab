@@ -4368,3 +4368,23 @@ and calibration records; the enriched records at 516d9c9 supersede them: `supple
 `d20a4ab36faa47864bf5c5c1a724e2c4d7e096bbadb5631bc8c95bca6954fdbb`, `f11_calibration_record.json` now
 `3de71f022af7b8d94930a1d6f8c8b6ba428ba78f8637f921c71aba329f5548d7`; the pre-score inventory is updated at release. **F11d.5 — scope.**
 No selection, seed, decision rule, cap or pin changes; no scoring is authorised; the replay reads no evaluation record.
+
+*A5.1.2 re-pin (xxiii) (11 Nov 2026, 10:38 UTC; merge of `feat/score-launch-hardening`; before any G3 outcome).*
+`score` gained `--proofs-only` (deferred proof step, writes `reference_proofs_f11.json` with the price, scores nothing),
+`--require-proofs` (default: the scoring phase consumes the retained proof record and re-reads no evaluation record; refuses on a
+missing, mismatched or incomplete record) and `--max-minutes` (stop-and-reprice refusal); `scripts/part_a_score_launch.sh` is
+two-phase (phase 1: clean tree, pins, frozen manifest hash, strict re-hash of all 165 delta/increment and 156 variant.json files,
+then proofs-only and STOP; phase 2: the same checks, price gate, GPU identity with UUID, launch record, timed scoring; refusals
+with distinct exit codes write nothing under `data/evals`); `tests/test_a5_simulation.py` now asserts 52 = 40 registered + 12
+supplementary with the registered-40 check against `manifest_pre_f11.json`; new `tests/test_part_a_score_launch.py` (40 bash-level
+tests in a temporary repository, with every `GIT_*` variable stripped). Builder re-run with `--pin-worktree` into a copy; only
+`code_hashes.json` and the package README copied back. Rows: `src/wsp/eval/response_intervention.py`
+`47a1c6d129b5a84d…` (old `e52ea009…`, xx); `tests/test_response_intervention.py`
+`00eed546891da97a…`; `tests/test_a5_simulation.py` `62755edd1766ed69…` (old `d231c8b0…`, xix);
+`docs/prereg/a5_manifests/code_hashes.json` `c23bb7d232013090…` (old `5dcf2eee…`, xxii);
+`docs/prereg/a5_manifests/README.md` `efd7b92407e6b2dc…`. Incident disclosed: during this branch's
+test development a test inherited the pre-commit hook's `GIT_*` variables and briefly set `core.bare=true` in the shared
+repository (about 10:19–10:2x UTC) and made a toy commit on the feature branch only; the builder repaired the config and reset its
+branch; main, its refs and the canonical checkout were unaffected (`git fsck` clean; main at 90c6e9f before this merge); the tests
+now strip every `GIT_*` variable and include a regression test. The staged bytes were only read by the aborted first test run.
+Nothing scored.
