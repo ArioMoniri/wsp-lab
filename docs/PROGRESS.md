@@ -565,3 +565,11 @@ originals have no TF-v1 record, but each has an older fast-tier evaluation reach
 (6 Nov, D3 suite). Chair ruling: those are development records already known to the registration (the D3 fast-tier suite that the
 A5 selection was built on; A5.3 treats development outcomes as known); they are not G3/TF-v1 outcomes and do not affect the
 pre-outcome status of F10/F10a. Board A to confirm at the re-stage report acceptance.
+
+**11 Nov 2026, 02:10 UTC.** Board A accepted F10a (wording; the D3 development-record ruling confirmed; condition 1 stays open only
+for the code builder's attestation) and the F10.5 sensitivity specification (`docs/design/F10_SENSITIVITY_SPEC.md`, commit e577c67,
+subset hashes 3da5f44f… (30 pairs) and fb1c34e6… (34 pairs)) with conditions: adopt the spec by dated A5 note and exact hash
+confirming its operational choices (v4 differences = the five logged moments; penalty 1 = λ = 1 with unpenalised intercept; two
+tertile sets); implement, test and pin it before scoring; report the sign table as 3×2 and units as nats per valid next token
+(`docs/reviews/council/board-a-f10a-2026-11-11.md`). Scoring remains held. Waiting on the F10 code (condition 2) and the slot-mask
+path (condition 5).
