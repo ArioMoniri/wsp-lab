@@ -148,3 +148,17 @@ exists. A pre-TF-v1 record of each missing original exists in the zoo and is rea
 Sessions that start after this file, for example the one on branch `design/f10-sensitivity` (created 11 Nov 2026 01:18:34 UTC),
 are not covered. Any session that makes or approves a further F10 choice before scoring adds its own attestation here (review
 condition 7), and the scoring record adds one for the interval up to the scoring campaign.
+
+## 8. F10.5 sensitivity-specification drafter (added by the chair, 11 Nov 2026)
+
+- **Role:** author of `docs/design/F10_SENSITIVITY_SPEC.md` (Board A F10 condition 6 specification).
+- **Session identity:** delegated session, Claude Opus 5.5 (claude_umut instance), branch `design/f10-sensitivity`, worktree
+  `.worktrees/design/f10-sensitivity`; created 01:18:34 UTC 11 Nov 2026 (git reflog); commit `e577c67` (merged to main as 2ee94c7,
+  content identical except the root README status block).
+- **Read and ran:** Board A's F10 review, the F10 block, the rotation-yield note, A5.4/A5.5/A5.3.2/F5.7/F7, the staged Part A
+  manifest (`edit_audits`), the null-size report. CPU only; recomputed the 30-pair subset from `manifest.json`; took the 34-pair list
+  as written in F10.5(e).
+- **Statement (from its report to the chair, quoted):** "No GPU was used, nothing under `data/` was written, and nothing under
+  `data/evals` was opened."
+- **Coverage:** 01:18 UTC to the time of its report (about 01:55 UTC), 11 Nov 2026. Its report to the chair is on record only through
+  this entry.
