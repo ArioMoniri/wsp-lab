@@ -4403,3 +4403,12 @@ file. Builder re-run with `--pin-worktree` into a copy; only `code_hashes.json` 
 `code_hashes.json` `e0a2c7793c255433…` (old xxiii), README
 `26abc287dfe210fe…`. No selection, seed, decision rule or cap changed; nothing scored; no
 evaluation record opened (the synthetic responses are random).
+
+*A5.1.2 re-pin (xxv) (11 Nov 2026, 11:19 UTC; merge of `fix/f10-diagnostic-test-order`; tests only; before any G3 outcome).*
+Root cause of the two order-dependent failures: `tests/test_part_a_predictions.py` left the process pinned to one Torch thread, and at
+one thread Torch's float32 matrix path differs from the registered four-thread construction by a few rounding units; the two F10
+diagnostic tests now build their references under the registered `F10_THREADS = 4` and `tests/conftest.py` restores the thread count
+after every test. No production module changed; `tests/test_response_intervention.py` (pinned) changed:
+`d029c69852dae486…` (old `00eed546…`, xxiii).
+Builder re-run with `--pin-worktree` into a copy; only `code_hashes.json` and the package README copied back. Full suite 1203 passed
+in both orders. Nothing scored.
