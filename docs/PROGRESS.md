@@ -549,3 +549,50 @@ none decisive; no simulation rerun needed at 40/40, slot-masked power run if few
 non-root chain picks as the registered ladder with Δ_t substituted by its realised form, flagged; **no Part A entry is scored before
 Board A accepts F10** (ladder outcomes would decide A5.5 step 2 and reveal response sizes, making F10 post-outcome under F8a.1(c)).
 F10 text in flight.
+
+**11 Nov 2026, 01:00 UTC.** F10 merged (4fe4379). Board A accepted F10 with seven conditions (`docs/reviews/council/board-a-f10-2026-11-11.md`):
+before the code merge, freeze methodological clarifications and per-decision-maker exposure attestations, and provide executable
+arithmetic, rank-boundary and on-disk replay tests; before the re-stage, freeze execution settings and complete re-pin (xvi) with
+pins verified; before scoring, Board A accepts the outcome-free re-stage report; if yield < 40, pass the slot-masked calibration
+(failed rotation slots masked, valid ladder slots retained); freeze all F10.5 sensitivities and interpretation limits before scoring;
+**all scoring, including ladders and references, is held until the applicable gates pass.** F10 code (tests, dry run on three edits)
+in flight.
+
+**11 Nov 2026, 01:40 UTC.** F10a merged (d2a4660): Board A's rank-budget and chain-ladder wording adopted verbatim; F10 thresholds
+recorded as fixed before outcomes, not before audits; no-retuning rule; `docs/prereg/f10_attestations.md` with six attestations (code
+builder's pending its report; the sensitivity-spec session to be added). Disclosure from the F10a drafter: the 19 "missing" lora_sft
+originals have no TF-v1 record, but each has an older fast-tier evaluation reachable through `data/evals/qwen3.5-0.8b/<id>` symlinks
+(6 Nov, D3 suite). Chair ruling: those are development records already known to the registration (the D3 fast-tier suite that the
+A5 selection was built on; A5.3 treats development outcomes as known); they are not G3/TF-v1 outcomes and do not affect the
+pre-outcome status of F10/F10a. Board A to confirm at the re-stage report acceptance.
+
+**11 Nov 2026, 02:10 UTC.** Board A accepted F10a (wording; the D3 development-record ruling confirmed; condition 1 stays open only
+for the code builder's attestation) and the F10.5 sensitivity specification (`docs/design/F10_SENSITIVITY_SPEC.md`, commit e577c67,
+subset hashes 3da5f44f… (30 pairs) and fb1c34e6… (34 pairs)) with conditions: adopt the spec by dated A5 note and exact hash
+confirming its operational choices (v4 differences = the five logged moments; penalty 1 = λ = 1 with unpenalised intercept; two
+tertile sets); implement, test and pin it before scoring; report the sign table as 3×2 and units as nats per valid next token
+(`docs/reviews/council/board-a-f10a-2026-11-11.md`). Scoring remains held. Waiting on the F10 code (condition 2) and the slot-mask
+path (condition 5).
+
+**11 Nov 2026, 02:45 UTC.** Merged: `feat/a5-slot-mask` (`--slot-mask` for the F10.6 slot-masked calibration; 18 simulator tests;
+A5.1.2 re-pin (xvi), pins match) and `prereg/f10b` (F10.5 specification adopted by hash with Board A's operational confirmations and
+reporting corrections). The F10 exclusion-rule implementation (commit e177ce6 on `feat/f10-rotation-audit`: F10.3 checks, F10.4
+diagnostics, a533/f10 audit-rule switch, realised-increment ladder flag, dry-run script) is under Board A review for condition 2
+before merge; the code builder's attestation and the Part A analysis code (A5.4/A5.5 outputs plus F10.5 reports, synthetic-tested)
+are in flight. Scoring held.
+
+**11 Nov 2026, 03:00 UTC. F10 code dry run: two rulings.** Commit e177ce6 (`feat/f10-rotation-audit`; 14 new tests; full suite 839
+passed) implements F10.3–F10.4. Dry run on three staged edits (scratch only, nothing scored): `00f8111c` (chain) and `0a841d40`
+(lora_sft) pass F10 with construction checks far inside 1e-5 and byte-identical rebuilt deltas; `0027efdf` (chain, predecessor
+`b7edbb9f`) is **excluded** under F10.3(iii): the predecessor holds exact zeros where the base is about ±1e-4, the rotated state there
+is about 1e-10, and the scorer's chain convention bf16(base + (state − base)) cannot carry it in fp32 (19 entries, 13 of 32 tensors;
+reason `replay_failed`, check `scorer_roundtrip`). Chair ruling 1: the exclusion stands as implemented; changing the chain storage or
+apply convention is outside F10.3 and would be a new post-audit amendment; all 8 non-root chain picks are at risk, so the F10
+yield may fall below 40 and the F10.6 slot-masked calibration (implemented, re-pin xvi) then applies. The rotation-yield note's 40/40
+covered only the measured items (F10 table), so this is not a contradiction of the registration. Chair ruling 2: check (iv) must
+match the F10/F10a text (½ ulp of the rounded value W + R_eff, which the draft states, with a slack of one fp32 spacing at W + R);
+the builder used a slack of 2·ulp_fp32(|W| + |R|) and reports the literal half-ulp(W) count separately; Board A's code review (in
+flight) rules whether the factor-two slack is accepted; if so it enters as a disclosed F10c note with the measured justification
+before the re-stage, otherwise the code is corrected before merge. Re-stage price measured: about 2 h 11 min to 3 h 32 min CPU for
+the 40 rotations (4 threads), +35.8 GB; `prepare` needs a rotation-only mode that preserves the staged ladders and the original
+manifest (Board A condition 3), to be added with Board A's code conditions. Attestation 5 completed from the builder's report.

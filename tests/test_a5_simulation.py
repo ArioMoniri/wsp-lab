@@ -323,3 +323,193 @@ def test_donor_ids_cli_records_pool_and_provenance(tmp_path, monkeypatch):
     )
     for trace in result["reports"]["power_yield"]["traces"]:
         assert set(trace["donor_representatives"]) <= set(keep)
+
+
+# --- F10.6 slot mask (Board A F10 condition 5) ------------------------------------------------
+
+
+def selected_ids(payload, quotas=None):
+    """Selected edit ids in frozen slot order (the ID mapping of ``--slot-mask``)."""
+    selected, _ = selection_cells(payload["inventory"], quotas)
+    return [r["id"] for rows in selected.values() for r in rows]
+
+
+def rotation_mask(ids, masked):
+    from scripts.a5_simulation import SLOT_MASK_SCHEMA
+
+    full = ["rotation", "ladder_0.25", "ladder_0.5"]
+    return {
+        "schema": SLOT_MASK_SCHEMA,
+        "available": {i: full[1:] if i in masked else full for i in ids},
+    }
+
+
+def test_slot_mask_masks_rotation_slots_and_keeps_ladders():
+    payload, fields = toy(40, noise_sd=0.3, mean_range=(0.2, 0.4), seed=11)
+    quotas = {"LoRA": (13, 13, 14)}
+    kwargs = {"replicates": 30, "draws": 200, "quotas": quotas}
+    ids = selected_ids(payload, quotas)
+    masked = set(ids[::4]) | set(ids[1::4]) | set(ids[2::4])  # 30 of 40 rotation slots
+    assert len(masked) == 30
+    positions = np.asarray([i in masked for i in ids])
+    base = simulate(payload, fields, **kwargs)
+    slot = simulate(payload, fields, slot_mask=rotation_mask(ids, masked), **kwargs)
+    for mode in ("null_size", "power_yield"):
+        b, s = base["reports"][mode], slot["reports"][mode]
+        for tb, ts in zip(b["traces"], s["traces"]):
+            # Same streams, draws and signs: the mask removes pairs, it never resamples.
+            assert tb["donor_representatives"] == ts["donor_representatives"]
+            assert tb["component_signs"] == ts["component_signs"]
+            rb, rs = np.asarray(tb["resolved"]), np.asarray(ts["resolved"])
+            # Ladder slots of masked edits are retained unchanged.
+            assert (rb[:, 1:] == rs[:, 1:]).all()
+            assert tb["resolved_counts"][1:] == ts["resolved_counts"][1:]
+            assert tb["agreement_counts"][1:] == ts["agreement_counts"][1:]
+            # Masked rotation slots contribute no pair; kept rotation slots are unchanged.
+            assert not rs[positions, 0].any()
+            assert (rs[~positions, 0] == rb[~positions, 0]).all()
+            assert ts["resolved_counts"][0] <= 10
+            ok = np.asarray(ts["audit_finite"])
+            assert not ok[positions, 0].any() and ok[:, 1:].all()
+        assert s["yield_rates"][0] == 0.0 and s["ordered_go_rate"] == 0.0
+        assert s["yield_rates"][1:] == b["yield_rates"][1:]
+        assert s["two_sided_rejection_rates"][1:] == b["two_sided_rejection_rates"][1:]
+        assert s["decisions"]["alternative"] == b["decisions"]["alternative"]  # step 2 stays active
+        assert s["audit_or_nonfinite_counts"] == [
+            b["audit_or_nonfinite_counts"][0] + 30 * 30,
+            *b["audit_or_nonfinite_counts"][1:],
+        ]
+    report = slot["slot_mask"]
+    assert report["label"] == "slot-masked (F10.6)"
+    assert report["available_slots"] == {"rotation": 10, "ladder_0.25": 40, "ladder_0.5": 40}
+    assert report["masked_ids"]["rotation"] == sorted(masked)
+    assert report["masked_ids"]["ladder_0.25"] == report["masked_ids"]["ladder_0.5"] == []
+    assert report["applies_to"] == ["null_size", "power_yield"]
+    assert [row["edit_id"] for row in report["slots"]] == ids
+    assert [row["slot"] for row in report["slots"]] == list(range(40))
+    assert report["slots"][0]["cell"] == "LoRA:0"
+    assert report["cells"]["LoRA:0"]["slots"] == 13
+    assert sum(c["available"]["rotation"] for c in report["cells"].values()) == 10
+    gates = report["gates"]
+    assert gates["label"] == "slot-masked (F10.6)"
+    assert gates["power"]["ordered_go_rate"] == 0.0 and gates["power"]["threshold"] == 0.80
+    assert gates["power"]["passed"] is False and gates["passed"] is False
+
+
+def test_slot_mask_all_available_reproduces_unmasked_run():
+    payload, fields = toy(40, noise_sd=0.3, mean_range=(0.2, 0.4), seed=12)
+    quotas = {"LoRA": (13, 13, 14)}
+    kwargs = {"replicates": 25, "draws": 200, "quotas": quotas}
+    ids = selected_ids(payload, quotas)
+    for f in (None, fields):
+        base = simulate(payload, f, **kwargs)
+        slot = simulate(payload, f, slot_mask=rotation_mask(ids, set()), **kwargs)
+        assert "slot_mask" not in base  # earlier raw outputs keep their exact schema
+        report = slot.pop("slot_mask")
+        assert slot == base
+        assert report["available_slots"] == {"rotation": 40, "ladder_0.25": 40, "ladder_0.5": 40}
+    # The mask composes with the F7 donor-pool restriction without changing it.
+    _, edges = selection_cells(payload["inventory"], quotas)
+    keep = [r["id"] for t in range(3) for r in donor_cells(payload["donors"], edges)["LoRA", t][:2]]
+    part = simulate(payload, fields, donor_ids=keep, **kwargs)
+    both = simulate(payload, fields, donor_ids=keep, slot_mask=rotation_mask(ids, set()), **kwargs)
+    both.pop("slot_mask")
+    assert both == part
+
+
+def test_slot_mask_gates_follow_masked_reports():
+    payload, fields = toy(120)
+    quotas = {"LoRA": (40, 40, 40)}
+    ids = selected_ids(payload, quotas)
+    kwargs = {"replicates": 200, "draws": 200, "quotas": quotas}
+    result = simulate(payload, fields, slot_mask=rotation_mask(ids, set(ids[:5])), **kwargs)
+    null, power = result["reports"]["null_size"], result["reports"]["power_yield"]
+    gates = result["slot_mask"]["gates"]
+    assert gates["size"]["threshold"] == 0.07
+    assert gates["size"]["ordered_go_rate"] == null["ordered_go_rate"]
+    assert gates["size"]["two_sided_rejection_rates"] == null["two_sided_rejection_rates"]
+    assert gates["size"]["alternative_rate"] == null["decisions"]["alternative"] / 200
+    assert gates["size"]["passed"] is null["accepted"]
+    assert gates["power"]["ordered_go_rate"] == power["ordered_go_rate"] > 0.9
+    assert gates["power"]["passed"] is True
+    assert gates["passed"] is (null["accepted"] and True)
+    # NULL-SIZE only (no fields): the power gate is not evaluated and the F10.6 gates do not pass.
+    null_only = simulate(payload, slot_mask=rotation_mask(ids, set(ids[:5])), **kwargs)
+    assert null_only["slot_mask"]["gates"]["power"]["status"] == "not run (no fields)"
+    assert null_only["slot_mask"]["gates"]["passed"] is False
+
+
+def test_slot_mask_validation():
+    from scripts.a5_simulation import SLOT_MASK_SCHEMA
+
+    payload, fields = toy(40, seed=13)
+    quotas = {"LoRA": (13, 13, 14)}
+    kwargs = {"replicates": 2, "draws": 20, "quotas": quotas}
+    ids = selected_ids(payload, quotas)
+    good = rotation_mask(ids, {ids[0]})
+
+    def bad(mutate, match):
+        mask = {"schema": good["schema"], "available": dict(good["available"])}
+        mutate(mask)
+        with pytest.raises(ValueError, match=match):
+            simulate(payload, fields, slot_mask=mask, **kwargs)
+
+    bad(lambda m: m.update(schema="v0"), "schema")
+    bad(lambda m: m["available"].pop(ids[3]), r"missing selected edit id\(s\)")
+    bad(lambda m: m["available"].update(zzz=["rotation"]), r"not selected edit id\(s\)")
+    bad(lambda m: m["available"].update({ids[2]: ["rotation", "ladder_1"]}), "unknown contrast")
+    bad(lambda m: m["available"].update({ids[2]: ["ladder_0.25"] * 2}), "duplicate")
+    bad(lambda m: m["available"].update({ids[2]: "rotation"}), "list")
+    bad(lambda m: m["available"].update({ids[2]: ["rotation", "ladder_0.5"]}), "ladder")
+    bad(lambda m: m.update(extra=1), "unknown key")
+    bad(lambda m: m.pop("available"), "available")
+    assert SLOT_MASK_SCHEMA == "a5-slot-mask-v1"
+
+
+def test_slot_mask_cli_records_hashes_and_matches_unmasked(tmp_path, monkeypatch):
+    import functools
+    import hashlib
+    import json
+    import sys
+
+    from scripts import a5_simulation
+
+    payload, fields = two_family_toy()
+    ids = selected_ids(payload)
+    paths = {}
+    masks = {"none": rotation_mask(ids, set()), "some": rotation_mask(ids, set(ids[:3]))}
+    for name, obj in (("inputs", payload), ("fields", fields), *masks.items()):
+        paths[name] = tmp_path / f"{name}.json"
+        paths[name].write_text(json.dumps(obj))
+    small = functools.partial(a5_simulation.simulate, replicates=4, draws=20)
+    monkeypatch.setattr(a5_simulation, "simulate", small)
+
+    def run(name, *extra):
+        out = tmp_path / f"{name}.out.json"
+        argv = ["a5_simulation.py", str(paths["inputs"]), "--fields", str(paths["fields"])]
+        monkeypatch.setattr(sys, "argv", [*argv, "--output", str(out), *extra])
+        assert a5_simulation.main() == 0
+        return json.loads(out.read_text())
+
+    plain = run("plain")
+    none = run("none", "--slot-mask", str(paths["none"]))
+    some = run("some", "--slot-mask", str(paths["some"]))
+    assert "slot_mask" not in plain
+    digest = hashlib.sha256(paths["some"].read_bytes()).hexdigest()
+    assert some["slot_mask"]["path"] == str(paths["some"])
+    assert some["slot_mask"]["sha256"] == digest
+    assert some["input_provenance"][str(paths["some"])] == digest
+    assert some["slot_mask"]["available_slots"]["rotation"] == 37
+    # An all-available mask leaves every non-mask field of the output unchanged.
+    none.pop("slot_mask")
+    none["input_provenance"].pop(str(paths["none"]))
+    assert none == plain
+    # An invalid mask is refused before the simulation starts, and no output is written.
+    paths["bad"] = tmp_path / "bad.json"
+    paths["bad"].write_text(json.dumps(rotation_mask(ids[1:], set())))
+    out = tmp_path / "bad.out.json"
+    argv = [str(paths["inputs"]), "--output", str(out), "--slot-mask", str(paths["bad"])]
+    monkeypatch.setattr(sys, "argv", ["a5_simulation.py", *argv])
+    with pytest.raises(ValueError, match="missing selected edit id"):
+        a5_simulation.main()
+    assert not out.exists()
