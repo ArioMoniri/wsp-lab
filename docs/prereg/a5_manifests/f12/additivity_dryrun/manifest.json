@@ -1,0 +1,314 @@
+{
+ "base": {
+  "model": {
+   "repo": "Qwen/Qwen3.5-0.8B",
+   "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+  },
+  "state_hash": "18f07d70a89aa63125e7e95535ff2730eb54bae4ee846d72f183e004a740d982"
+ },
+ "basis": "PREREG_H1_TF F12.6 (F12-I constructions); Board A F12 review conditions 8 (supports, bitwise sum, no-op halves, Astra only if qualified) and 9 (linear versus quadratic forecasts; zero-edit-centred)",
+ "code": {
+  "scripts/a5_power_fields.py": "bcf7d15d679e819d17f7784262bb22fbe10fece33bbb6757e8e08b44d3e592a8",
+  "scripts/f12_additivity_prepare.py": "ac7aee71c3f29da98f55366574f291cd5c461ac78648259f58e8b54521601f16",
+  "scripts/part_a_predictions.py": "d312967e317e330a3a7beff73a74f47c8da4ebbaaf110f763f2d7f36a8233847",
+  "src/wsp/features/response_field.py": "98d81bbc300e715fe27a02e04711c0d036ae7ef9342d6bddbcaa227d91f725bc",
+  "src/wsp/features/rotation.py": "8ac459934b0b145f62a3f0c81f68980c1f57d0ef7663d16e9ce1f693be376dba",
+  "src/wsp/zoo/apply.py": "4dbeb10e9d7024508baa376b915a90072170428f87663b32865ff4543cd72005"
+ },
+ "entries": [
+  {
+   "I_defined": true,
+   "bitwise_sum_verified": true,
+   "component": "F12.6(a)",
+   "disjoint_tensors": true,
+   "files": {
+    "653e375cbcfec535": {
+     "delta.safetensors": "c923f956bb409a19cd183353d593934cf0ccbf2086a81571b5a0f484cf17a4a8",
+     "variant.json": "391c4580dea6b6c2293998f089985ab67b0cdd925902686d25a3bb074fd011fd"
+    },
+    "d7b3baf07d027c05": {
+     "delta.safetensors": "e17ea81dd2af1d5300eee62a8a8240b4d75714d865184d875eca2886cd61c320",
+     "variant.json": "2bbf05f561a84ec721e6bca3ebc3e73fcddea959128e8437ad392b77f5267abe"
+    }
+   },
+   "forecast": {
+    "I_a_numerical": 0.0,
+    "I_a_numerical_fp64": 0.0,
+    "I_q_numerical": 0.0,
+    "forecast_linear_I": 0.0,
+    "forecast_linear_rule": "a is linear in D: a(full) - a(p1) - a(p2) = 0 exactly for every split",
+    "forecast_quadratic_I": 0.0,
+    "forecast_quadratic_rule": "disjoint tensor sets: q is additive across tensors, so I_q = 0 exactly",
+    "forecast_zero_fit_quadratic_I": 0.0,
+    "full": {
+     "a": -0.20023063179110068,
+     "a_fp64": -0.20023063152497447,
+     "q": 0.0011698847662842127,
+     "q_partial": false
+    },
+    "parts": [
+     {
+      "a": -0.18502323268330656,
+      "a_fp64": -0.18502323200029563,
+      "q": 0.00046011102477905297,
+      "q_partial": false
+     },
+     {
+      "a": -0.015207399107794117,
+      "a_fp64": -0.01520739952467885,
+      "q": 0.0007097737415051597,
+      "q_partial": false
+     }
+    ],
+    "seconds": 256.1640932559967
+   },
+   "full_id": "64b10bbaef2b726d",
+   "full_increment_sha256": "c6daa89b812f84710a313cea5cb91700ba9e484fef1c606c2c23f71baf9fdc1b",
+   "kind": "lora_layer_split",
+   "n_full_tensors": 72,
+   "parts": [
+    {
+     "I_status": "defined",
+     "increment_sha256": "8fe55054ce02fc64305ee8ed4ba784e2aceea61374877f7b579450553cd1456c",
+     "label": "early",
+     "n_tensors": 36,
+     "noop": false,
+     "part_id": "653e375cbcfec535",
+     "support": {
+      "columns": {},
+      "tensors": [
+       "model.layers.0.mlp.down_proj.weight",
+       "model.layers.0.mlp.up_proj.weight",
+       "model.layers.1.mlp.down_proj.weight",
+       "model.layers.1.mlp.up_proj.weight",
+       "model.layers.10.mlp.down_proj.weight",
+       "model.layers.10.mlp.up_proj.weight",
+       "model.layers.11.mlp.down_proj.weight",
+       "model.layers.11.mlp.up_proj.weight",
+       "model.layers.11.self_attn.k_proj.weight",
+       "model.layers.11.self_attn.o_proj.weight",
+       "model.layers.11.self_attn.q_proj.weight",
+       "model.layers.11.self_attn.v_proj.weight",
+       "model.layers.2.mlp.down_proj.weight",
+       "model.layers.2.mlp.up_proj.weight",
+       "model.layers.3.mlp.down_proj.weight",
+       "model.layers.3.mlp.up_proj.weight",
+       "model.layers.3.self_attn.k_proj.weight",
+       "model.layers.3.self_attn.o_proj.weight",
+       "model.layers.3.self_attn.q_proj.weight",
+       "model.layers.3.self_attn.v_proj.weight",
+       "model.layers.4.mlp.down_proj.weight",
+       "model.layers.4.mlp.up_proj.weight",
+       "model.layers.5.mlp.down_proj.weight",
+       "model.layers.5.mlp.up_proj.weight",
+       "model.layers.6.mlp.down_proj.weight",
+       "model.layers.6.mlp.up_proj.weight",
+       "model.layers.7.mlp.down_proj.weight",
+       "model.layers.7.mlp.up_proj.weight",
+       "model.layers.7.self_attn.k_proj.weight",
+       "model.layers.7.self_attn.o_proj.weight",
+       "model.layers.7.self_attn.q_proj.weight",
+       "model.layers.7.self_attn.v_proj.weight",
+       "model.layers.8.mlp.down_proj.weight",
+       "model.layers.8.mlp.up_proj.weight",
+       "model.layers.9.mlp.down_proj.weight",
+       "model.layers.9.mlp.up_proj.weight"
+      ]
+     }
+    },
+    {
+     "I_status": "defined",
+     "increment_sha256": "5737e9a4938bde0a7504aad7a5e7c1461e0c9aecf1d31e82ec7b958cdb25c8cd",
+     "label": "late",
+     "n_tensors": 36,
+     "noop": false,
+     "part_id": "d7b3baf07d027c05",
+     "support": {
+      "columns": {},
+      "tensors": [
+       "model.layers.12.mlp.down_proj.weight",
+       "model.layers.12.mlp.up_proj.weight",
+       "model.layers.13.mlp.down_proj.weight",
+       "model.layers.13.mlp.up_proj.weight",
+       "model.layers.14.mlp.down_proj.weight",
+       "model.layers.14.mlp.up_proj.weight",
+       "model.layers.15.mlp.down_proj.weight",
+       "model.layers.15.mlp.up_proj.weight",
+       "model.layers.15.self_attn.k_proj.weight",
+       "model.layers.15.self_attn.o_proj.weight",
+       "model.layers.15.self_attn.q_proj.weight",
+       "model.layers.15.self_attn.v_proj.weight",
+       "model.layers.16.mlp.down_proj.weight",
+       "model.layers.16.mlp.up_proj.weight",
+       "model.layers.17.mlp.down_proj.weight",
+       "model.layers.17.mlp.up_proj.weight",
+       "model.layers.18.mlp.down_proj.weight",
+       "model.layers.18.mlp.up_proj.weight",
+       "model.layers.19.mlp.down_proj.weight",
+       "model.layers.19.mlp.up_proj.weight",
+       "model.layers.19.self_attn.k_proj.weight",
+       "model.layers.19.self_attn.o_proj.weight",
+       "model.layers.19.self_attn.q_proj.weight",
+       "model.layers.19.self_attn.v_proj.weight",
+       "model.layers.20.mlp.down_proj.weight",
+       "model.layers.20.mlp.up_proj.weight",
+       "model.layers.21.mlp.down_proj.weight",
+       "model.layers.21.mlp.up_proj.weight",
+       "model.layers.22.mlp.down_proj.weight",
+       "model.layers.22.mlp.up_proj.weight",
+       "model.layers.23.mlp.down_proj.weight",
+       "model.layers.23.mlp.up_proj.weight",
+       "model.layers.23.self_attn.k_proj.weight",
+       "model.layers.23.self_attn.o_proj.weight",
+       "model.layers.23.self_attn.q_proj.weight",
+       "model.layers.23.self_attn.v_proj.weight"
+      ]
+     }
+    }
+   ],
+   "source": {
+    "entry_dir": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/64b10bbaef2b726d",
+    "files": {
+     "edit.json": "f783a7e08f1cef448caf25da02bcd6636bad8c29ef1766d9a3a7ade4270a37c1",
+     "lora/adapter_config.json": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9",
+     "lora/adapter_model.safetensors": "dd91c0106e4e33e79937f34aa4e08e72499867c3736be00d3d6274775ec68c87"
+    }
+   },
+   "split_rule": "layers 0-11 (early) versus 12-23 (late)"
+  },
+  {
+   "I_defined": true,
+   "bitwise_sum_verified": true,
+   "component": "F12.6(c) mechanics only (C4 not constructed)",
+   "disjoint_tensors": false,
+   "files": {
+    "1a0941b73f4bcf0c": {
+     "delta.safetensors": "19399dcce9efe176092f6246257e6685c3c635132a731c92fa3a85130defc7dd",
+     "variant.json": "9c17738816cb9f3e96a268548fd6355b7372d90e5cf525286ec6e08d907c6f76"
+    },
+    "de2e586878889883": {
+     "delta.safetensors": "44c8240611946f2b2546ff879150ab491f9b786763afa07339fe407bafe3ffb7",
+     "variant.json": "288805907478a85c42dc981c0da77fa8994e48c11e670568c9b72ea6c98e1da5"
+    }
+   },
+   "forecast": {
+    "I_a_numerical": 5.820766091346741e-11,
+    "I_a_numerical_fp64": 0.0,
+    "I_q_numerical": 9.404043339600321e-07,
+    "cross_term_fp64": 9.404043311830357e-07,
+    "forecast_linear_I": 0.0,
+    "forecast_linear_rule": "a is linear in D: a(full) - a(p1) - a(p2) = 0 exactly for every split",
+    "forecast_quadratic_I": 9.404043339600321e-07,
+    "forecast_quadratic_rule": "within-tensor split: q(full) - q(p1) - q(p2) = tr(G D1 A D2^T) cross term",
+    "forecast_zero_fit_quadratic_I": 9.404043339600321e-07,
+    "full": {
+     "a": -0.0012653751764446497,
+     "a_fp64": -0.0012653751163533844,
+     "q": 3.499450485833222e-06,
+     "q_partial": false
+    },
+    "parts": [
+     {
+      "a": -0.0009896736592054367,
+      "a_fp64": -0.0009896735196902834,
+      "q": 2.2153624286147533e-06,
+      "q_partial": false
+     },
+     {
+      "a": -0.0002757015754468739,
+      "a_fp64": -0.00027570159666310103,
+      "q": 3.4368372325843666e-07,
+      "q_partial": false
+     }
+    ],
+    "seconds": 4.763444185256958
+   },
+   "full_id": "stand-in:64b10bbaef2b726d:model.layers.12.mlp.down_proj.weight",
+   "full_increment_sha256": "8115ff999aabc629e9a6bf7fad5333728b6189f74ef4c8f956ad6392b5f2bd2a",
+   "kind": "column_split_stand_in",
+   "n_full_tensors": 1,
+   "parts": [
+    {
+     "I_status": "defined",
+     "increment_sha256": "21c145996b4b3700ffd46d142cc7cb21be9431eb1bdcb8b49086b143b4845cff",
+     "label": "cols_lo",
+     "n_tensors": 1,
+     "noop": false,
+     "part_id": "1a0941b73f4bcf0c",
+     "support": {
+      "columns": {
+       "model.layers.12.mlp.down_proj.weight": [
+        0,
+        1792
+       ]
+      },
+      "tensors": [
+       "model.layers.12.mlp.down_proj.weight"
+      ]
+     }
+    },
+    {
+     "I_status": "defined",
+     "increment_sha256": "4f5cd0d7a23bcc5972e28c8025a5a89ac2bd67b86cc2c4a05f4ce9c8af5b83a2",
+     "label": "cols_hi",
+     "n_tensors": 1,
+     "noop": false,
+     "part_id": "de2e586878889883",
+     "support": {
+      "columns": {
+       "model.layers.12.mlp.down_proj.weight": [
+        1792,
+        3584
+       ]
+      },
+      "tensors": [
+       "model.layers.12.mlp.down_proj.weight"
+      ]
+     }
+    }
+   ],
+   "source": {
+    "entry_dir": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/64b10bbaef2b726d",
+    "files": {
+     "edit.json": "f783a7e08f1cef448caf25da02bcd6636bad8c29ef1766d9a3a7ade4270a37c1",
+     "lora/adapter_config.json": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9",
+     "lora/adapter_model.safetensors": "dd91c0106e4e33e79937f34aa4e08e72499867c3736be00d3d6274775ec68c87"
+    },
+    "restricted_to": "model.layers.12.mlp.down_proj.weight"
+   },
+   "split_rule": "weight [out, in]; input columns j < in//2 versus j >= in//2",
+   "stand_in_for": "C4 (awaiting F8 C1 construction)"
+  }
+ ],
+ "field": {
+  "field_files": {
+   "manifest.json": "38e26b16b08ba542b1d1a58f4bb1b93d79c87e657d346c58cb712c64e15e5eee",
+   "tensors.pt": "dac704239ae0fbd0e6da719c8c41030676d5514dd2e5b9e4522b293d089c3614"
+  },
+  "g2_manifest_sha256": "c4ec7390aaf118ed785c390ce337a4077936a31204f97da54341bcfa54fd09ff",
+  "identity_sha256": "6fab5b29c1fb70f5b08e1ae09f098088467b3bc649a234a5b12f4bc91223a87e",
+  "loading": "torch.load(mmap=True); file sha256 = G2 manifest; per-tensor content hash checked on use",
+  "state_hash": "18f07d70a89aa63125e7e95535ff2730eb54bae4ee846d72f183e004a740d982"
+ },
+ "mode": "dry-run",
+ "outcomes_read": "none",
+ "population_json_sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5",
+ "rules": {
+  "floor": "F8a floor h* = 0.00493967211805284 nats/token (floor_recompute_2026-11-11.json); above floor iff |I| > h* strictly; reported beside I, not a significance threshold",
+  "forecasts": "zero-fit, zero-edit-centred (no intercept): linear I = 0 for every split; quadratic I = 0 for disjoint-tensor splits and q(full) - q(p1) - q(p2) for the within-tensor column split",
+  "noop": "a part with zero realised increment is not written or scored; its entry's I is undefined",
+  "part": "full stored delta restricted to a disjoint support, applied to the base and rounded in bf16; realised parts sum bitwise to the full realised increment (verified, fails closed)",
+  "part_id": "sha256(UTF-8 '20261111:f12-i:part:' + full id + ':' + label)[:16]",
+  "statistic": "I = Delta y(full) - Delta y(part1) - Delta y(part2) on the common base reference (F12.6)"
+ },
+ "schema": "f12-additivity-v1",
+ "summary": {
+  "awaiting": {},
+  "n_built": 2,
+  "n_noop_parts": 0,
+  "n_parts": 4,
+  "n_planned_full": 18,
+  "threads": 2,
+  "wall_seconds": 387.20478796958923
+ }
+}

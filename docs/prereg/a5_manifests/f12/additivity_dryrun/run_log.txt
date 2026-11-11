@@ -1,0 +1,5 @@
+[23:46:25] start 47ca987
+[23:52:52] 64b10bbaef2b726d lora_layer_split: I_a=0.000e+00 I_q=0.000e+00 (256s)
+[23:52:57] stand-in:64b10bbaef2b726d:model.layers.12.mlp.down_proj.weight column_split_stand_in: I_a=5.821e-11 I_q=9.404e-07 (5s)
+[23:52:57] wrote /home/ubuntu/wsp-data/runs/a5/f12_inputs/additivity_dryrun/manifest.json sha256 1c59c5f3deaabbbfa595c1474fe4ee63d5a705a84b22a7c4cf97cd4747a7e461
+DRYRUN_EXIT=0
