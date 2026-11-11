@@ -903,3 +903,16 @@ ran its 40 tests (pass), committed its scripts and the frozen population (`docs/
 234 components reproduced; ids sha256 `bd695b4e…`; one mixed component; purchase order and s_k recorded; outcomes read: none) and
 merged. F12-I dry runs not yet performed (the delegate died first); to be done before C1. Memory: 17 of 30 GB in use with the
 simulation-code task also running. Part A held.
+
+**11 Nov 2026, 13:47 UTC. F12 simulation code merged (07e1dc2; 14 tests); the synthetic smoke run exposes design faults in
+F12 as drafted, before any real token or outcome is used.** Findings (synthetic tokens, k = 145, 100-tree StatNN, 7 + 7 replicates
+before the chair stopped the 9-hour run): power 0 — WM-R far worse than F3 (C_WM −5.8 to −34) because (1) the F5-pinned K+F head at
+PyTorch default initialisation outputs ≈ 10 nats (sum pooling over ≈ 130 tokens) against F3 residuals ≈ 0.001 nats, and with lr
+1e-3 / ≤ 300 epochs its held-out error stays ≈ 26× the residual; (2) the joint studentiser V_comp + V_item − V_both is ≤ 0 in 5–109
+of 4,000 draws, invalidating nearly every replicate under the all-draws-valid rule; (3) the γ calibration tolerance ±0.005 is
+unattainable with the common panel-mean term (validated C 0.119–0.175, SE ≈ 0.027 on 100 panels); (4) a registered 1,000 × 6 k × 2
+run with the {100, 300, 600}-tree grid prices at ≈ 1,900 CPU-h. The noise repair behaves (panel-mean SD 0.0036 nats; cross-component
+ρ 0.48; within 0.87). Precision table: 1,000 replicates clear power ≥ 0.80 only if observed ≥ 0.84; size ≤ 0.07 needs ≥ 1,280
+replicates at observed 0.05. This is what the outcome-free simulation is for; no real data touched. Amendment F12b (head scaling,
+studentiser validity, γ tolerance, prospective two-stage k selection within a CPU budget) in flight for Board A before any re-run.
+Token run (real inputs) continues under agent-tmux `f12-tokens`. Part A held.
