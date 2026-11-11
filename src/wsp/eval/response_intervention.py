@@ -14,9 +14,11 @@
    ``prepare --supplement`` (F11) stages only a frozen list of supplementary root edits (rotation and the
    two ladders, F10 rule, registered seeds) into the staged zoo, re-hashes the staged edits' files before
    and after, carries their manifest entries byte for byte, keeps the staged manifest as
-   ``manifest_pre_f11.json`` and merges both sets into one manifest (:func:`prepare_supplement`); its only
-   evaluation-record reads are the supplementary originals' reuse proofs
-   (:func:`supplement_reference_proofs`, skipped by ``--no-reference-proofs``). ``slot-mask`` writes the
+   ``manifest_pre_f11.json`` and merges both sets into one manifest (:func:`prepare_supplement`). The list
+   is the frozen ``selection_f11.json`` (:func:`load_supplement_selection`; the F11.2 rule is recomputed
+   from its hashed inputs by :func:`f11_rule`). By default it reads no evaluation record: the
+   supplementary originals' reuse proofs (:func:`supplement_reference_proofs`) run in ``score
+   --manifest`` (:func:`score_reference_proofs`), or at staging only with ``--reference-proofs``. ``slot-mask`` writes the
    ``a5-slot-mask-v1`` mask of a Part A manifest from its pair verdicts (:func:`slot_mask`).
 3. :func:`manifest_for` — the A5.11 pieces computable from the staged zoo.
 4. :func:`plan_scoring` / :func:`scoring_summary` — which predecessor and original references are on file
@@ -39,9 +41,10 @@ CLI::
         --zoo Z --selection selection.json --references references.json --out O --manifest-out M
     python -m wsp.eval.response_intervention prepare --supplement selection_f11.json \
         --staged-manifest M_staged --zoo Z --selection selection.json --text-groups text_groups.json \
-        --out O --manifest-out M [--no-reference-proofs]
+        --out O --manifest-out M [--reference-proofs]
     python -m wsp.eval.response_intervention slot-mask --manifest M --out slot_mask.json
-    python -m wsp.eval.response_intervention score --stage O/<zoo name> [--manifest M] [--dry-run]
+    python -m wsp.eval.response_intervention score --stage O/<zoo name> [--manifest M] \
+        [--text-groups text_groups.json] [--evals E] [--dry-run]
 
 ``--selection`` stages the registered picks of a committed ``selection.json`` instead of re-running the
 selection; ``--references`` names the bytes holder of every alias-only predecessor (its state is loaded from
@@ -1852,97 +1855,302 @@ def _cell_key(family, tertile):
     return f"{family}:{int(tertile)}"
 
 
-def load_supplement_selection(path, registered, zoo_rows, staged):
-    """The frozen F11 supplementary list, checked against the F11.1 rule (never re-selected).
+F11_SELECTION_SCHEMA = "a5-f11-supplement-v1"
+F11_SUPPLEMENT_IDS_SHA256 = "1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9"
+F11_FROZEN_CELLS = ("lora_sft:2", "chain:0", "chain:2")
+F11_PER_CELL = 4
+F11_SELECTION_KEYS = frozenset(
+    {
+        "schema", "k", "per_cell", "rule", "order_key", "frozen_cells", "cells", "supplements",
+        "supplement_ids", "supplement_ids_sorted", "supplement_ids_sorted_sha256", "ids_sha256_rule",
+        "registered_edit_ids_sorted", "registered_rotation_exclusions", "replaces_registered",
+        "no_top_up", "inputs", "outcomes_read", "basis",
+    }
+)  # fmt: skip
+F11_INPUT_KEYS = (
+    "selection",
+    "components",
+    "fields_manifest",
+    "registered_donors",
+    "part_a_manifest",
+)
+F11_CELL_KEYS = (
+    "cell",
+    "family",
+    "tertile",
+    "quota",
+    "registered_picks",
+    "registered_rotation_excluded",
+    "candidate_order",
+    "selected",
+)
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
-    ``path``: ``selection_f11.json``, a ``supplement`` block (or the same keys at top level) with
-    ``edit_ids`` (or ``ids``), ``selected`` (rows as ``selection.json:registered.selected``: ``edit_id``,
-    ``component_id``, ``family``, ``tertile``, ``effective_norm``, ``predecessor_id``; optional ``rank``,
-    ``tertile_label``, ``bytes_via_alias``) and optional ``cells`` (``{"family:tertile": [ids]}``).
-    ``registered``: the parsed registered ``selection.json`` (its ``registered.ledger.families`` cells,
-    quotas and family order). ``zoo_rows``: the canonical zoo manifest rows (``parent_id``).
 
-    Refuses unless: the ids are unique and equal the rows; none is a registered or staged edit or shares
-    a staged component; every id is a root (predecessor base, zoo ``parent_id`` null); each sits in its
-    declared ledger cell, with its rank in the ledger's family order; the cells are exactly the cells that
-    lost a rotation pair in the staged manifest, with equal counts; and within each cell the ids are the
-    first roots of ``sorted(cell)[quota:]`` (next-in-cell canonical-id order, roots only, no root skipped).
-    Returns (selections sorted by id, {"ids", "cells"}, {alias id: bytes holder})."""
+def _ids_sha256(ids):
+    """F7.1 convention: sha256 of ``json.dumps(sorted(ids))`` (Python default separators)."""
+    return hashlib.sha256(json.dumps(sorted(ids)).encode()).hexdigest()
+
+
+def f11_depleted_cells(manifest):
+    """{"family:tertile": sorted excluded rotation source ids} of a Part A manifest (variants of kind
+    ``rotation`` with ``excluded`` true), as ``scripts/a5_f11_supplement.py:depleted_cells``."""
+    cell_of = {s["edit_id"]: _cell_key(s["family"], s["tertile"]) for s in manifest["selections"]}
+    out = {}
+    for v in manifest["variants"]:
+        if v.get("kind") == "rotation" and v.get("excluded"):
+            out.setdefault(cell_of[v["source_id"]], []).append(v["source_id"])
+    return {c: sorted(ids) for c, ids in sorted(out.items())}
+
+
+def _f11_reasons(eid, rows, donors, pool, registered, used_components):
+    """The F11.2 filters of one candidate (empty: it passes). A disagreement between components.jsonl and
+    fields_manifest on root-ness or own bytes refuses (as the selection script stops)."""
+    r = rows.get(eid)
+    if r is None:
+        raise SupplementRefused(f"{eid}: no components.jsonl row")
+    reasons = []
+    if not (
+        r.get("eligibility") == "eligible"
+        and r.get("closure_certified") is True
+        and r.get("component_status") == "development"
+    ):
+        reasons.append("not_eligible")
+    d = donors.get(eid)
+    root = r.get("parent_id") is None
+    if d is not None and bool(d.get("predecessor_is_base")) != root:
+        raise SupplementRefused(f"{eid}: components.jsonl parent_id disagrees with fields_manifest")
+    if not root:
+        reasons.append("not_root")
+    if not (
+        d is not None
+        and d.get("gradient_source") == "base_field"
+        and not d.get("flags")
+        and eid in pool
+    ):
+        reasons.append("not_exact_gradient")
+    alias = (not r.get("bytes_present")) or r.get("bytes_via_alias") is not None
+    if d is not None and bool(d.get("donor_via_alias")) != alias:
+        raise SupplementRefused(f"{eid}: components.jsonl own bytes disagree with fields_manifest")
+    if alias:
+        reasons.append("alias_only")
+    if eid in registered:
+        reasons.append("registered_forty")
+    if r.get("component_id") in used_components:
+        reasons.append("component_already_represented")
+    return reasons
+
+
+def f11_rule(registered_doc, rows, donors, pool, depleted, per_cell=F11_PER_CELL):
+    """The registered F11.2 selection, recomputed (PREREG_H1_TF F11.2; scripts/a5_f11_supplement.py).
+
+    For each depleted cell (``depleted``: {"family:tertile": excluded rotation ids}, in
+    :data:`F11_FROZEN_CELLS` order), the candidates are ``sorted(cell)[quota:]`` of the registered ledger
+    cell (``sorted(cell)[:quota]`` must be the registered picks of that cell), and the first ``per_cell``
+    that are eligible development rows with certified closure, roots, exact-gradient donors (fields_manifest
+    ``gradient_source`` base_field, no flags, in ``pool`` = power/registered_donors.json), not alias-only
+    (``components.jsonl`` ``bytes_present`` true and ``bytes_via_alias`` null; ``donor_via_alias`` false),
+    not among the registered forty and of a component not already represented, are selected; later
+    candidates are ``reserve_unreached``. A shortage refuses (no cross-cell replacement or top-up).
+    ``rows``: components.jsonl rows by id; ``donors``: fields_manifest donors by id. Returns the cell
+    records in the ``selection_f11.json:cells`` shape (:data:`F11_CELL_KEYS`)."""
+    fams = registered_doc["registered"]["ledger"]["families"]
+    reg = set(registered_doc["procedural_freeze"]["registered_edit_ids"])
+    used = {rows[i]["component_id"] for i in reg if i in rows}
+    out = []
+    for name in F11_FROZEN_CELLS:
+        family, t = name.split(":")
+        t = int(t)
+        fam = fams[family]
+        cell, quota = sorted(fam["cells"][t]), fam["quotas"][t]
+        picks = cell[:quota]
+        if picks != sorted(i for i in cell if i in reg):
+            raise SupplementRefused(
+                f"{name}: registered picks are not the sorted prefix of the cell"
+            )
+        listed, chosen = [], []
+        for pos, eid in enumerate(cell[quota:], start=quota):
+            if len(chosen) == per_cell:
+                listed.append({"id": eid, "position": pos, "status": "reserve_unreached"})
+                continue
+            reasons = _f11_reasons(eid, rows, donors, pool, reg, used)
+            listed.append({"id": eid, "position": pos, "reasons": reasons,
+                           "status": "skipped" if reasons else "selected"})  # fmt: skip
+            if not reasons:
+                chosen.append(eid)
+                used.add(rows[eid]["component_id"])
+        if len(chosen) < per_cell:
+            raise SupplementRefused(
+                f"{name}: only {len(chosen)} of {per_cell} candidates pass F11.2 (no replacement)"
+            )
+        out.append({"cell": name, "family": family, "tertile": t, "quota": quota,
+                    "registered_picks": picks, "registered_rotation_excluded": depleted.get(name),
+                    "candidate_order": listed, "selected": chosen})  # fmt: skip
+    return out
+
+
+def load_supplement_selection(
+    path, registered_path, staged_bytes, root=REPO_ROOT, expected_ids_sha256=None
+):
+    """The frozen F11 supplementary list (``selection_f11.json``, schema ``a5-f11-supplement-v1`` as written
+    by ``scripts/a5_f11_supplement.py``), checked and never re-selected.
+
+    Refuses unless: the file has exactly the frozen keys (:data:`F11_SELECTION_KEYS`); its recomputed
+    ``sha256(json.dumps(sorted(supplement_ids)))`` equals both its recorded ``supplement_ids_sorted_sha256``
+    and ``expected_ids_sha256`` (default :data:`F11_SUPPLEMENT_IDS_SHA256`, the Board-A-accepted list);
+    ``k`` = 12, four per frozen cell, no top-up, no registered edit replaced; the registered selection
+    (``registered_path``) and the staged manifest (``staged_bytes``) are the bytes its ``inputs`` record,
+    and its other inputs (components.jsonl, fields_manifest, registered_donors, paths relative to ``root``)
+    re-hash to their recorded sha256; its registered ids and rotation exclusions equal the staged
+    manifest's; and :func:`f11_rule`, recomputed on those inputs, gives exactly its ``cells`` (every
+    candidate's position, status and reasons), ``supplement_ids`` and ``supplements``. Every
+    supplementary id is then a root with its own bytes, outside the staged edits and components.
+    Returns (selections sorted by id, {"ids", "ids_in_order", "cells", "ids_sha256"})."""
     try:
-        return _check_supplement(json.loads(Path(path).read_text()), registered, zoo_rows, staged)
-    except (KeyError, TypeError, ValueError, AttributeError) as e:
+        doc = json.loads(Path(path).read_text())
+        return _check_supplement(
+            doc,
+            Path(registered_path).read_bytes(),
+            staged_bytes,
+            Path(root),
+            expected_ids_sha256 or F11_SUPPLEMENT_IDS_SHA256,
+        )
+    except (KeyError, TypeError, ValueError, AttributeError, IndexError) as e:
         raise SupplementRefused(f"supplement list malformed: {type(e).__name__}: {e}") from e
 
 
-def _check_supplement(doc, registered, zoo_rows, staged):
-    block = doc.get("supplement", doc)
-    rows = sorted(block.get("selected") or [], key=lambda r: r["edit_id"])
-    ids = sorted(block.get("edit_ids") or block.get("ids") or [])
-    fams = registered["registered"]["ledger"]["families"]
-    reg_ids = set(registered["registered"]["edit_ids"])
-    parent = {r["id"]: r.get("parent_id") for r in zoo_rows if "id" in r}
-    staged_ids, staged_comps = set(staged["edit_ids"]), set(staged["component_ids"])
-    sel_cell = {s["edit_id"]: _cell_key(s["family"], s["tertile"]) for s in staged["selections"]}
-    depleted = sorted(
-        {sel_cell[i] for i, e in staged["edit_audits"].items() if e["pair_verdict"] != "pass"}
-    )
+def _check_supplement(doc, registered_bytes, staged_bytes, root, expected_sha):
+    if not isinstance(doc, dict) or set(doc) != F11_SELECTION_KEYS:
+        got = set(doc) if isinstance(doc, dict) else set()
+        raise ValueError(
+            f"not the frozen selection_f11.json format: missing {sorted(F11_SELECTION_KEYS - got)}, "
+            f"unexpected {sorted(got - F11_SELECTION_KEYS)}"
+        )
     problems = []
-    if not ids or [r["edit_id"] for r in rows] != ids or len(set(ids)) != len(ids):
-        problems.append("supplement rows differ from its edit ids (or ids empty / duplicated)")
-    sels, holders, cells = [], {}, {}
-    for r in rows:
-        i, fam, t = r["edit_id"], r.get("family"), int(r.get("tertile", -1))
-        if i in reg_ids or i in staged_ids:
-            problems.append(f"{i}: already a registered / staged edit")
-        if r.get("component_id") in staged_comps:
-            problems.append(f"{i}: component already staged")
-        if (
-            (r.get("predecessor_id") or "base") != "base"
-            or i not in parent
-            or parent[i] is not None
-        ):
-            problems.append(f"{i}: not a root edit (predecessor base, zoo parent_id null)")
-        if fam not in fams or not 0 <= t < 3 or i not in fams[fam]["cells"][t]:
-            problems.append(f"{i}: not in the registered ledger cell {fam}:{t}")
-            continue
-        rank = fams[fam]["ordered"].index(i)
-        if r.get("rank") not in (None, rank):
-            problems.append(f"{i}: rank {r.get('rank')} differs from the ledger order ({rank})")
-        if r.get("tertile_label") not in (None, ("low", "middle", "high")[t]):
-            problems.append(f"{i}: tertile label")
-        cells.setdefault(_cell_key(fam, t), []).append(i)
-        if r.get("bytes_via_alias"):
-            holders[i] = r["bytes_via_alias"]
-        sels.append(
-            Selection(i, r["component_id"], fam, t, rank, float(r["effective_norm"]), "base")
-        )
-    if len({s.component_id for s in sels}) != len(sels):
-        problems.append("supplementary components not distinct")
-    if sorted(cells) != depleted:
+    ids = list(doc["supplement_ids"])
+    got_sha = _ids_sha256(ids)
+    if doc["schema"] != F11_SELECTION_SCHEMA:
+        problems.append(f"schema {doc['schema']!r}")
+    if len(set(ids)) != len(ids) or doc["supplement_ids_sorted"] != sorted(ids):
         problems.append(
-            f"supplement cells {sorted(cells)} differ from the depleted cells {depleted}"
+            "supplement_ids duplicated or supplement_ids_sorted is not their sorted list"
         )
-    if len({len(v) for v in cells.values()}) > 1:
-        problems.append(f"unequal supplement counts per cell {[len(v) for v in cells.values()]}")
-    for key, got in cells.items():
-        fam, t = key.split(":")
-        t = int(t)
-        cell, quota = sorted(fams[fam]["cells"][t]), fams[fam]["quotas"][t]
-        nxt = [i for i in cell[quota:] if i in parent and parent[i] is None]
-        if sorted(got) != nxt[: len(got)]:
-            problems.append(f"{key}: {sorted(got)} are not the next roots in cell order {nxt}")
-    cells = {k: sorted(v) for k, v in sorted(cells.items())}
-    if (
-        block.get("cells") is not None
-        and {k: sorted(v) for k, v in block["cells"].items()} != cells
-    ):
-        problems.append("declared cells differ from the rows' cells")
-    for i, h in holders.items():
-        if h in reg_ids or h in staged_ids or h in ids:
-            problems.append(f"{i}: bytes holder {h} is itself a selected edit")
+    if doc["supplement_ids_sorted_sha256"] != got_sha:
+        problems.append(
+            f"recorded ids sha256 {doc['supplement_ids_sorted_sha256']} != recomputed {got_sha}"
+        )
+    if got_sha != expected_sha:
+        problems.append(f"ids sha256 {got_sha} is not the frozen list's {expected_sha}")
+    n = F11_PER_CELL * len(F11_FROZEN_CELLS)
+    if (doc["k"], doc["per_cell"], len(ids)) != (n, F11_PER_CELL, n):
+        problems.append(
+            f"k {doc['k']} / per_cell {doc['per_cell']} / {len(ids)} ids, expected {n} / 4"
+        )
+    if list(doc["frozen_cells"]) != list(F11_FROZEN_CELLS):
+        problems.append(f"frozen cells {doc['frozen_cells']}")
+    if doc["no_top_up"] is not True or doc["replaces_registered"] is not False:
+        problems.append("no_top_up must be true and replaces_registered false")
+    inputs = doc["inputs"]
+    if sorted(inputs) != sorted(F11_INPUT_KEYS):
+        problems.append(f"inputs {sorted(inputs)}")
+    held = {"selection": registered_bytes, "part_a_manifest": staged_bytes}
+    data = {}
+    for k in F11_INPUT_KEYS:
+        rec = inputs[k]
+        if k in held:
+            b = held[k]
+        else:
+            p = root / rec["path"]
+            b = p.read_bytes() if p.is_file() else None
+        if b is None or hashlib.sha256(b).hexdigest() != rec["sha256"]:
+            what = (
+                "--selection"
+                if k == "selection"
+                else "--staged-manifest"
+                if k in held
+                else rec["path"]
+            )
+            problems.append(f"input {k} ({what}) does not hash to the recorded {rec['sha256']}")
+        data[k] = b
     if problems:
         raise SupplementRefused("supplement list refused: " + "; ".join(problems))
-    return sorted(sels, key=lambda s: s.edit_id), {"ids": ids, "cells": cells}, holders
+
+    registered = json.loads(data["selection"])
+    staged = json.loads(data["part_a_manifest"])
+    rows = {}
+    for line in data["components"].decode().splitlines():
+        if line.strip():
+            r = json.loads(line)
+            rows[r["id"]] = r
+    donors = json.loads(data["fields_manifest"])["donors"]
+    pool = set(json.loads(data["registered_donors"])["donor_ids"])
+    reg_ids = sorted(registered["procedural_freeze"]["registered_edit_ids"])
+    if not (
+        doc["registered_edit_ids_sorted"]
+        == reg_ids
+        == sorted(registered["registered"]["edit_ids"])
+        == staged["edit_ids"]
+    ):
+        problems.append(
+            "registered ids differ between the list, selection.json and the staged manifest"
+        )
+    depleted = f11_depleted_cells(staged)
+    excl = doc["registered_rotation_exclusions"]
+    if sorted(depleted) != sorted(F11_FROZEN_CELLS) or excl != {
+        "by_cell": depleted,
+        "n": sum(map(len, depleted.values())),
+    }:
+        problems.append(f"rotation exclusions {excl} differ from the staged manifest's {depleted}")
+    if problems:
+        raise SupplementRefused("supplement list refused: " + "; ".join(problems))
+
+    rule = f11_rule(registered, rows, donors, pool, depleted)
+    file_cells = {c["cell"]: c for c in doc["cells"]}
+    if sorted(file_cells) != sorted(F11_FROZEN_CELLS) or len(doc["cells"]) != len(F11_FROZEN_CELLS):
+        problems.append(f"cells {sorted(file_cells)}")
+    for c in rule:
+        fc = file_cells.get(c["cell"], {})
+        bad = [k for k in F11_CELL_KEYS if fc.get(k) != c[k]]
+        if bad:
+            problems.append(
+                f"{c['cell']}: {bad} differ from the recomputed F11.2 rule ({c['selected']})"
+            )
+    rule_ids = [i for c in rule for i in c["selected"]]
+    if ids != rule_ids:
+        problems.append(f"supplement_ids {ids} are not the F11.2 selection {rule_ids}")
+    cell_of = {i: c["cell"] for c in rule for i in c["selected"]}
+    supp_rows = {s["id"]: s for s in doc["supplements"]}
+    if [s["id"] for s in doc["supplements"]] != ids:
+        problems.append("supplements rows are not the supplement_ids in order")
+    staged_ids, staged_comps = set(staged["edit_ids"]), set(staged["component_ids"])
+    fams = registered["registered"]["ledger"]["families"]
+    sels = []
+    for i in ids:
+        r, s = rows.get(i, {}), supp_rows.get(i, {})
+        if (s.get("cell"), s.get("component_id"), s.get("effective_norm")) != (
+            cell_of.get(i),
+            r.get("component_id"),
+            r.get("effective_norm"),
+        ) or s.get("predecessor_id") != "base":
+            problems.append(f"{i}: supplements row differs from components.jsonl / its cell")
+        if r.get("parent_id") is not None or not r.get("bytes_present") or r.get("bytes_via_alias"):
+            problems.append(f"{i}: not a root with its own bytes")
+        if i in staged_ids or r.get("component_id") in staged_comps:
+            problems.append(f"{i}: already a staged edit or component")
+        if i not in cell_of:
+            continue
+        family, t = cell_of[i].split(":")
+        sels.append(
+            Selection(i, r["component_id"], family, int(t), fams[family]["ordered"].index(i),
+                      float(r["effective_norm"]), "base")
+        )  # fmt: skip
+    if len({s.component_id for s in sels}) != len(sels):
+        problems.append("supplementary components not distinct")
+    if problems:
+        raise SupplementRefused("supplement list refused: " + "; ".join(problems))
+    cells = {c["cell"]: sorted(c["selected"]) for c in sorted(rule, key=lambda c: c["cell"])}
+    info = {"ids": sorted(ids), "ids_in_order": ids, "cells": cells, "ids_sha256": got_sha}
+    return sorted(sels, key=lambda s: s.edit_id), info
 
 
 def _stage_rows(stage):
@@ -1999,9 +2207,10 @@ def supplement_reference_proofs(
     id) and, with ``windows``, ``<evals>/<id>/records.jsonl`` (the WikiText rows, of which it keeps item ids
     and token-id hashes). This computes the same proofs for the supplementary originals only, with an
     alias's bytes holder as the entry-bytes source; the base predecessor's proof is carried, not
-    recomputed. Each path it opens or probes is logged through ``log`` and returned. ``prepare
-    --supplement --no-reference-proofs`` skips this function entirely (then no evaluation path is touched).
-    Returns (proofs, sorted paths touched, identity)."""
+    recomputed. Each path it opens or probes is logged through ``log`` and returned. By default (chair
+    ruling, F11) it runs at scoring time, in ``score --manifest`` (:func:`score_reference_proofs`), not at
+    staging: ``prepare --supplement`` calls it only with the explicit opt-in ``--reference-proofs``, and
+    otherwise touches no evaluation path. Returns (proofs, sorted paths touched, identity)."""
     from wsp.eval.batch import effective_config_hash
 
     log = log or (lambda msg: print(msg, file=sys.stderr, flush=True))
@@ -2029,8 +2238,10 @@ def supplement_reference_proofs(
 def _supplement_scoring(staged_scoring, merged, new_ids, proofs):
     """The pre-F11 scoring summary extended to the merged set. The forty's plan entries, missing references
     and reuse proofs are carried; the supplementary variants' plan entries use the carried proof of their
-    predecessor (base); their originals use ``proofs`` (None: not computed, so each is listed as unproven
-    and priced as a reference to score, the plan's "absent identity proof counts as needed")."""
+    predecessor (base); their originals use ``proofs`` (None, the default: not computed at staging, so each
+    is listed in ``unproven_originals`` and priced as an entry "to be proven or scored", the plan's "absent
+    identity proof counts as needed"; ``score --manifest`` proves them first and refuses to score while
+    any stays unproven)."""
     carried = {p["id"]: p for p in staged_scoring["reuse_proofs"]}
     if "base" not in carried:
         raise SupplementRefused("the staged scoring carries no reuse proof of the base predecessor")
@@ -2077,6 +2288,10 @@ def _supplement_scoring(staged_scoring, merged, new_ids, proofs):
             "reuse_proofs",
         ],
         "priced_unproven_as_references": len(unproven),
+        "originals_to_prove_or_score": unproven,
+        "unproven_rule": "each unproven original is priced as one entry to be proven or scored; score "
+        "--manifest runs the reuse proofs first (proven: reused; failed: scored as a reference) and "
+        "refuses to score any variant while its original stays unproven",
     }
 
 
@@ -2176,8 +2391,10 @@ def prepare_supplement(args):
     audit file are kept beside ``--manifest-out`` as ``manifest_pre_f11.json`` and
     ``rotation_audits_pre_f11.jsonl``; the merged audit file is the pre-F11 file's bytes followed by the
     supplementary rows. Coverage, exclusions, subsets, the scoring plan and the priced count are
-    recomputed over the union. The only evaluation-record reads are the supplementary originals' reuse
-    proofs (:func:`supplement_reference_proofs`), skipped with ``--no-reference-proofs``."""
+    recomputed over the union; the supplementary selection rows and edit audits carry ``supplementary:
+    true``. By default no evaluation record is read: the supplementary originals are priced as entries to
+    be proven or scored and their reuse proofs run in ``score --manifest``; ``--reference-proofs`` opts in
+    to computing them here (:func:`supplement_reference_proofs`, every path logged)."""
     from wsp.eval.batch import provenance
     from wsp.features.extract import load_base_state
 
@@ -2219,15 +2436,27 @@ def prepare_supplement(args):
     stage = Path(args.out) / zoo.name
     if stage.resolve() != Path(staged["staged_zoo"]).resolve():
         raise SupplementRefused(f"{stage} is not the staged zoo {staged['staged_zoo']}")
-    registered_doc = json.loads(Path(args.selection).read_text())
     reg, _ = load_registered_selection(args.selection, args.n_lora, args.n_chain)
     if sorted(s.edit_id for s in reg) != staged["edit_ids"]:
         raise SupplementRefused("the registered selection differs from the staged edits")
     rows = [json.loads(x) for x in (zoo / "manifest.jsonl").read_text().splitlines() if x.strip()]
     supp_path = Path(args.supplement)
-    selections, info, holders = load_supplement_selection(supp_path, registered_doc, rows, staged)
+    selections, info = load_supplement_selection(supp_path, args.selection, staged_bytes)
     ids = [s.edit_id for s in selections]
-    proofs_wanted = not args.no_reference_proofs
+    zoo_parent = {r["id"]: r.get("parent_id", "absent") for r in rows if "id" in r}
+    not_root = [i for i in ids if zoo_parent.get(i, "absent") is not None]
+    if not_root:
+        raise SupplementRefused(f"supplementary ids not root entries of the zoo: {not_root}")
+    # F11.2 admits no alias-only edit, so a valid list never needs a bytes holder for its own delta; the
+    # holder path of build_variants stays as defensive code, and an entry without its own bytes refuses.
+    holders = {}
+    no_bytes = [i for i in ids if not ((zoo / i / "delta.safetensors").exists()
+                                       or (zoo / i / "lora").is_dir())]  # fmt: skip
+    if no_bytes:
+        raise SupplementRefused(
+            f"supplementary zoo entries without their own bytes (alias-only, excluded by F11.2): {no_bytes}"
+        )
+    proofs_wanted = bool(getattr(args, "reference_proofs", False))
     window_check = bool(staged["scoring"].get("window_check"))
     if proofs_wanted and window_check and not args.text_groups:
         raise SupplementRefused(
@@ -2333,7 +2562,11 @@ def prepare_supplement(args):
             "amendment": SUPPLEMENT_AMENDMENT,
             "selection_file": str(supp_path),
             "sha256": _sha256(supp_path),
+            "selection_schema": F11_SELECTION_SCHEMA,
             "ids": ids,
+            "ids_in_selection_order": info["ids_in_order"],
+            "ids_sorted_sha256": info["ids_sha256"],
+            "rule": "F11.2 recomputed from the selection's hashed inputs (f11_rule): equal",
             "cells": info["cells"],
             "n": len(ids),
             "source_bytes_holders": dict(sorted(holders.items())),
@@ -2356,12 +2589,17 @@ def prepare_supplement(args):
                 "identity": identity,
                 "paths_touched": touched,
                 "carried": ["base (predecessor of every supplementary edit)"],
+                "deferred_to": None
+                if proofs_wanted
+                else "score --manifest (score_reference_proofs)",
             },
             "thread_env": threads_env,
             "replay_environment": _replay_environment(),
-            "evaluation_reads": "reuse proofs of the supplementary originals only (paths_touched)"
+            "evaluation_reads": "reuse proofs of the supplementary originals only (--reference-proofs; "
+            "paths_touched)"
             if proofs_wanted
-            else "none: no evaluation record opened, no scorer run (--no-reference-proofs)",
+            else "none: no evaluation record opened, no scorer run (default; the supplementary "
+            "originals' reuse proofs are established at scoring time by score --manifest)",
         },
     }
     audit_path.write_bytes(audit_bytes)
@@ -2446,15 +2684,108 @@ def _coverage(per_edit, selections):
     }
 
 
+REFERENCE_PROOFS_SCHEMA = "a5-f11-reference-proofs-v1"
+REFERENCE_PROOFS_FILE = "reference_proofs_f11.json"
+
+
+def score_reference_proofs(manifest_path, stage, config, evals=None, text_groups=None, write=True):
+    """The proof step of ``score --manifest`` for the supplementary originals left unproven at staging
+    (F11: their reuse proofs are established at scoring time, not by ``prepare --supplement``).
+
+    Runs :func:`supplement_reference_proofs` (EVALUATION-RECORD READS, every path logged) on the
+    manifest's ``scoring.unproven_originals``, which must be supplementary ids, under the staged scoring
+    identity (``config`` must give the carried base proof's config hash; with the staged window check,
+    ``text_groups`` is required). A proven original is reused; a failed proof makes it a reference to
+    score. Refuses (``SystemExit``) when the step cannot run, and when any original stays without a
+    proof, so no supplementary variant is scored while its original is unproven. The manifest is never
+    rewritten: with ``write`` the result goes to ``reference_proofs_f11.json`` beside it (a differing
+    earlier file is kept as ``reference_proofs_f11.prev-<sha12>.json``). Returns (originals to score,
+    record)."""
+    manifest_path = Path(manifest_path)
+    manifest_bytes = manifest_path.read_bytes()
+    man = json.loads(manifest_bytes)
+    sc, sup = man["scoring"], man.get("supplement") or {}
+    unproven = list(sc.get("unproven_originals") or [])
+    if not unproven:
+        return [], None
+    stray = sorted(set(unproven) - set(sup.get("ids") or []))
+    if stray:
+        raise SystemExit(
+            f"refusing to score: unproven originals outside the F11 supplement {stray}"
+        )
+    windows = None
+    if sc.get("window_check"):
+        if not text_groups:
+            raise SystemExit(
+                f"refusing to score: originals {unproven} are unproven and the staged proofs carry the "
+                "window check; give --text-groups so score can prove them first"
+            )
+        windows = registered_windows(text_groups)
+    source_zoo = Path(json.loads((Path(stage) / "stage.json").read_text())["source_zoo"])
+    revisions = {
+        json.loads((source_zoo / i / "edit.json").read_text())["base_revision"] for i in unproven
+    }
+    if len(revisions) != 1:
+        raise SystemExit(
+            f"refusing to score: unproven originals span revisions {sorted(revisions)}"
+        )
+    from wsp.eval.batch import effective_config_hash
+
+    carried = next((p for p in sc["reuse_proofs"] if p["id"] == "base"), {}).get("config_hash")
+    if carried not in (None, effective_config_hash(_load_config(config))):
+        raise SystemExit(
+            "refusing to score: --config gives another identity than the staged proofs"
+        )
+    proofs, touched, identity = supplement_reference_proofs(
+        evals or sc["evals_dir"], config, source_zoo, unproven,
+        sup.get("source_bytes_holders") or {}, revisions.pop(), windows,
+    )  # fmt: skip
+    by_id = {p["id"]: p for p in proofs}
+    still = [i for i in unproven if i not in by_id]
+    if still:
+        raise SystemExit(
+            f"refusing to score: originals still unproven after the proof step {still}"
+        )
+    to_score = sorted(i for i in unproven if not by_id[i]["verdict"])
+    record = {
+        "schema": REFERENCE_PROOFS_SCHEMA,
+        "manifest": str(manifest_path),
+        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        "identity": identity,
+        "paths_touched": touched,
+        "proofs": proofs,
+        "proven": sorted(i for i in unproven if by_id[i]["verdict"]),
+        "to_score_as_references": to_score,
+    }
+    if write:
+        text = json.dumps(rotation.json_safe(record), indent=1, sort_keys=True) + "\n"
+        out = manifest_path.with_name(REFERENCE_PROOFS_FILE)
+        if out.exists() and out.read_text() != text:
+            old = out.read_bytes()
+            out.rename(
+                out.with_name(
+                    f"reference_proofs_f11.prev-{hashlib.sha256(old).hexdigest()[:12]}.json"
+                )
+            )
+        out.write_text(text)
+    print(
+        f"reference proofs: {len(record['proven'])} proven, {len(to_score)} to score as references "
+        f"{to_score}",
+        flush=True,
+    )
+    return to_score, record
+
+
 def score(args):
     refs = ()
     if args.manifest:
         sc = json.loads(Path(args.manifest).read_text())["scoring"]
-        if sc.get("unproven_originals"):
-            raise SystemExit(
-                f"references unproven (prepare --no-reference-proofs): {sc['unproven_originals']}"
-            )
-        refs = tuple(sc["missing_originals"]) + tuple(sc["missing_predecessors"])
+        proved_missing, _ = score_reference_proofs(
+            args.manifest, args.stage, args.config, getattr(args, "evals", None),
+            getattr(args, "text_groups", None), write=not args.dry_run,
+        )  # fmt: skip
+        originals = sorted(set(sc["missing_originals"]) | set(proved_missing))
+        refs = tuple(originals) + tuple(sc["missing_predecessors"])
     cmds = score_commands(args.stage, args.config, refs)
     for cmd in cmds:
         print(" ".join(cmd), flush=True)
@@ -2508,16 +2839,31 @@ def main(argv=None):
         help="F11: frozen supplementary list (selection_f11.json); stage only those roots (F10 rule, "
         "rotation + ladders) into the staged zoo and merge them into --staged-manifest",
     )
-    p.add_argument(
-        "--no-reference-proofs",
+    proofs = p.add_mutually_exclusive_group()
+    proofs.add_argument(
+        "--reference-proofs",
+        dest="reference_proofs",
         action="store_true",
-        help="--supplement: skip the supplementary originals' reuse proofs (no evaluation record read)",
+        default=False,
+        help="--supplement: opt in to computing the supplementary originals' reuse proofs at staging "
+        "(reads TF-v1 records; every path logged)",
+    )
+    proofs.add_argument(
+        "--no-reference-proofs",
+        dest="reference_proofs",
+        action="store_false",
+        help="--supplement (default): no evaluation record read at staging; the proofs run in score "
+        "--manifest",
     )
     s = sub.add_parser("score", help="run wsp.eval.batch on the staged zoo (inside agent-tmux)")
     s.add_argument("--stage", required=True, help="staged zoo directory (OUT/<zoo name>)")
     s.add_argument("--config", default=DEFAULT_CONFIG)
     s.add_argument(
         "--manifest", help="prepare's manifest: also score its missing references (source zoo)"
+    )
+    s.add_argument("--evals", help="TF-v1 evals dir for the proof step (default: the manifest's)")
+    s.add_argument(
+        "--text-groups", help="text_groups.json: window check of the proof step (F11 originals)"
     )
     s.add_argument("--dry-run", action="store_true")
     m = sub.add_parser("slot-mask", help="write the a5-slot-mask-v1 mask of a Part A manifest")
