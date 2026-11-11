@@ -1,0 +1,59 @@
+{
+ "available_slots": {
+  "ladder_0.25": 52,
+  "ladder_0.5": 52,
+  "rotation": 43
+ },
+ "gates": {
+  "label": "slot-masked (F10.6); supplemented (F11.4)",
+  "passed": true,
+  "power": {
+   "ordered_go_rate": 0.8722,
+   "passed": true,
+   "threshold": 0.8
+  },
+  "size": {
+   "alternative_rate": 0.2576,
+   "applies_to": "ordered go and each individual two-sided test (FP2); not the funding-only alternative branch (F5.7)",
+   "ordered_go_rate": 0.0175,
+   "passed": true,
+   "threshold": 0.07,
+   "two_sided_rejection_rates": [
+    0.0348,
+    0.0378,
+    0.0378
+   ]
+  }
+ },
+ "label": "slot-masked (F10.6); supplemented (F11.4)",
+ "mapping_sha256": "171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a",
+ "mask_path": "docs/prereg/a5_manifests/part_a/slot_mask_f11.json",
+ "mask_sha256": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+ "masked_ids": {
+  "ladder_0.25": [],
+  "ladder_0.5": [],
+  "rotation": [
+   "0027efdf2eae7405",
+   "05531ce1db4df63f",
+   "057dcfbedea3251f",
+   "0bc0a0c4ad0520e0",
+   "0d055869527177b4",
+   "14cdaabee246493b",
+   "15a53586efc72a50",
+   "2233954b0cc3edc0",
+   "72d3756e968e3209"
+  ]
+ },
+ "output_path": "data/runs/a5/power/power_slotmask_f11.json",
+ "output_sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+ "run": {
+  "command": "Board A frozen command (board-a-f11-sim-2026-11-11.md), run via /tmp/a5_f11_calibration.sh under agent-tmux a5-f11-calibration",
+  "dirty_files": 0,
+  "end_utc": "2026-11-11T09:34:03Z",
+  "execution_sha": "92b0338",
+  "start_utc": "2026-11-11T09:28:04Z"
+ },
+ "schema": "a5-f11-calibration-record-v1",
+ "supplement": "ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c",
+ "verdict": "PASS: ordered power 0.8722 >= 0.80 and size 0.0175 <= 0.07 (two-sided 0.0348/0.0378/0.0378); alternative rate 0.2576 reported, not gated (F5.7). Part A is decisive on the supplemented 52-edit design (F11.4); Board A acceptance required before scoring."
+}

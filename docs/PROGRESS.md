@@ -784,3 +784,10 @@ ones); 3,069 tensors edited, 2,519 rotated; the forty's bytes re-hashed before a
 `rotation_audits_pre_f11.jsonl` preserved; proofs deferred (12 unproven originals listed); priced 185.12 min. The F11.4 52-id slot
 mask is built by the accepted builder (schema-only) and frozen; the registered-scale calibration launches now with Board A's frozen
 command (agent-tmux `a5-f11-calibration`). Staging report and A5.1.2 entries in preparation.
+
+**11 Nov 2026, 09:34 UTC. F11.4 calibration PASSED.** Registered-scale slot-masked, supplemented run (Board A's frozen command;
+execution SHA 92b0338, clean; 09:28–09:34 UTC; mask `5f4e7701…`, 43 rotation / 52 ladder slots): **ordered power 0.8722 ≥ 0.80**;
+size passes (ordered go 0.0175; two-sided 0.0348 / 0.0378 / 0.0378 ≤ 0.07); alternative rate 0.2576 reported, not gated (F5.7).
+Record `part_a/f11_calibration_record.json`. Part A is decisive on the 52-edit design subject to Board A's acceptance of the staging
+report and calibration (F11 conditions 3–4). Pre-scoring inventory (F11b.6; Board A analysis-4 condition 3) in preparation; staging
+report in flight. Scoring still held until those are accepted.
