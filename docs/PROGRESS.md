@@ -557,3 +557,11 @@ pins verified; before scoring, Board A accepts the outcome-free re-stage report;
 (failed rotation slots masked, valid ladder slots retained); freeze all F10.5 sensitivities and interpretation limits before scoring;
 **all scoring, including ladders and references, is held until the applicable gates pass.** F10 code (tests, dry run on three edits)
 in flight.
+
+**11 Nov 2026, 01:40 UTC.** F10a merged (d2a4660): Board A's rank-budget and chain-ladder wording adopted verbatim; F10 thresholds
+recorded as fixed before outcomes, not before audits; no-retuning rule; `docs/prereg/f10_attestations.md` with six attestations (code
+builder's pending its report; the sensitivity-spec session to be added). Disclosure from the F10a drafter: the 19 "missing" lora_sft
+originals have no TF-v1 record, but each has an older fast-tier evaluation reachable through `data/evals/qwen3.5-0.8b/<id>` symlinks
+(6 Nov, D3 suite). Chair ruling: those are development records already known to the registration (the D3 fast-tier suite that the
+A5 selection was built on; A5.3 treats development outcomes as known); they are not G3/TF-v1 outcomes and do not affect the
+pre-outcome status of F10/F10a. Board A to confirm at the re-stage report acceptance.
