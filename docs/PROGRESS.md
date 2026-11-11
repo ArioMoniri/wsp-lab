@@ -828,3 +828,7 @@ two-phase launch, the inventory update and explicit release.
 fix; 40 launch tests. Incident disclosed in A5.1.2 (a test briefly set `core.bare=true` in the shared repository; repaired; main
 unaffected). Phase-1 invocation (after Board A release): `scripts/part_a_score_launch.sh 71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6`;
 phase 2: the same with `--phase score --max-minutes 231.4`. Predictions build still running (agent-tmux `part-a-predictions`).
+
+**11 Nov 2026, 10:58 UTC.** Frozen prediction rows merged (`part_a/predictions_f11.json`; re-pin (xxiv)): 52 edits, 9 rotation
+abstentions, 33/33, 33/33 and 25/25 sign agreement with fields.json, synthetic binding check all passed. Remaining before scoring:
+update the pre-score inventory with the final hashes, Board A explicit release, then phase 1 (proofs-only) and phase 2 (GPU).

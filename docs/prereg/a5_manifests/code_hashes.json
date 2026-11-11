@@ -53,6 +53,10 @@
    "role": "frozen F10.5 specification (adopted by F10b)",
    "sha256": "8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4"
   },
+  "docs/prereg/a5_manifests/part_a/predictions_f11.json": {
+   "role": "frozen Part A prediction rows (F8.3-style; before any scoring)",
+   "sha256": "50c378000b424346438de03bf2ad2881a1d10706dfc28b18d0f2130ab5e7a7bb"
+  },
   "docs/prereg/panel_manifest.json": {
    "role": "certified source closure / panel components (selection input)",
    "sha256": "7c72bfd3280954a82de1161e640a870da5f3a876c03b22247656701ed6af2c67"
@@ -79,7 +83,7 @@
   },
   "scripts/a5_build_manifests.py": {
    "role": "builder",
-   "sha256": "85bdee0b8192b9a4e73b7a08bcf791ea16262681f4f73bda4ddc3a39b9d8d981"
+   "sha256": "1549438d912b8dbf5e3024146c66c06462e4020bb0e7e23d4c71f11cabe1ccd8"
   },
   "scripts/a5_build_panels.py": {
    "role": "builder",
@@ -124,6 +128,14 @@
   "scripts/part_a_analyse.py": {
    "role": "Part A analysis CLI",
    "sha256": "74bcff0f9f25be7aacf8cfadb3b0f2cdbef044455e2313f1dd6e52f40bce0b32"
+  },
+  "scripts/part_a_predictions.py": {
+   "role": "Part A frozen prediction rows (field contractions on staged realised deltas)",
+   "sha256": "d312967e317e330a3a7beff73a74f47c8da4ebbaaf110f763f2d7f36a8233847"
+  },
+  "scripts/part_a_synthetic_binding.py": {
+   "role": "synthetic input-binding check of the analysis (no outcomes)",
+   "sha256": "01b7937c92767b5adacccfd0803c00e9886700f595d6a6dffbf20e97bb7f3687"
   },
   "scripts/scale4b_build_edits.py": {
    "role": "F5.3 4B Gaussian edit builder (support, radius, bf16 diagnostics)",
@@ -297,6 +309,10 @@
    "role": "test",
    "sha256": "829932c50ac8a8cef3236102e7e9ce6a92f3aff705d8ad625e3111412e8f5e69"
   },
+  "tests/test_part_a_predictions.py": {
+   "role": "test",
+   "sha256": "22dd6d1087ad99abec7287f95a0e37301e0e19fc258221e932a9271caffc5c39"
+  },
   "tests/test_response_intervention.py": {
    "role": "test",
    "sha256": "00eed546891da97a2b9a346a6bc74b7e945006ffa2a212ae542258e7cd518b95"
@@ -306,7 +322,7 @@
    "sha256": "7570224a0b4c0dd8e9f1b0aacdaa930e2170d97fa1d1e9c6864bd60d13869325"
   }
  },
- "git_sha": "1a56c5ea484df21722f3051655ca3dddc27592be",
+ "git_sha": "1e01a26bbcd103c7a362eb33636927e288327e0d",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

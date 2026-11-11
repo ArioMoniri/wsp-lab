@@ -4388,3 +4388,18 @@ repository (about 10:19–10:2x UTC) and made a toy commit on the feature branch
 branch; main, its refs and the canonical checkout were unaffected (`git fsck` clean; main at 90c6e9f before this merge); the tests
 now strip every `GIT_*` variable and include a regression test. The staged bytes were only read by the aborted first test run.
 Nothing scored.
+
+*A5.1.2 re-pin (xxiv) (11 Nov 2026, 10:58 UTC; merge of `feat/part-a-predictions`; before any G3 outcome).* Frozen Part A
+prediction rows for all 52 edits, `docs/prereg/a5_manifests/part_a/predictions_f11.json`
+(`50c378000b424346438de03bf2ad2881a1d10706dfc28b18d0f2130ab5e7a7bb`; rows sha256 `079f19c1…`), computed on CPU
+(agent-tmux `part-a-predictions`, 10:10–10:54 UTC, 2,658 s, max RSS 13.4 GB) by `scripts/part_a_predictions.py` from the frozen G2
+WikiText field (base field for 42 edits, chain_exact for the 10 chain picks) on the staged realised bf16 deltas: per edit and
+contrast a, q, κ, signs at each scale and the registered contrast predictions; 9 rotation abstentions (the pairs excluded at staging);
+0 partial-q rows; comparison with `data/runs/a5/power/fields.json` on the 33 shared edits: sign agreement 33/33 (ladder 0.25),
+33/33 (ladder 0.5), 25/25 (rotation), no disagreement. Synthetic input-binding run of the analysis
+(`scripts/part_a_synthetic_binding.py`, random seeded responses in /tmp only): intact case bound all five hashes (ledger, manifest,
+fields, spec, masked calibration); tamper cases refused; all passed. Pin map gained the two scripts, the test and the predictions
+file. Builder re-run with `--pin-worktree` into a copy; only `code_hashes.json` and the package README copied back:
+`code_hashes.json` `e0a2c7793c255433…` (old xxiii), README
+`26abc287dfe210fe…`. No selection, seed, decision rule or cap changed; nothing scored; no
+evaluation record opened (the synthetic responses are random).
