@@ -808,3 +808,11 @@ now pinned, re-pin (xxii); launch records enriched; **ordering violation disclos
 and Board A's acceptance, and the slot mapping was written afterwards; remedy offered: re-run the frozen command after acceptance
 and require byte-identical output; Torch-hash reproduction commands recorded). Board A review of staging evidence + calibration
 requested. In flight: predictions file (CPU), two-phase launch hardening, F11c note. Scoring held.
+
+**11 Nov 2026, 10:09 UTC.** Board A accepted the F11 staging evidence and the calibration with conditions
+(`board-a-f11-staging-cal-2026-11-11.md`): prospective ruling on the ordering departure and a single replay exception; one
+byte-identical replay after acceptance; hash-history reconciliation; frozen predictions and the test fix; proofs-only stop and
+accepted repricing before GPU; F11c and attestations through the final freeze; inventory update and explicit release; seal the
+ledger before analysis. F11c merged (1aa50c9); F11d (procedural ruling, frozen inputs, reconciliation) appended (759ef24); the
+single authorised replay is running under agent-tmux `a5-f11-replay` with the identical frozen command to a scratch output
+(script `scripts/part_a_f11_calibration_replay.sh`). Predictions file and two-phase launch still in flight.
