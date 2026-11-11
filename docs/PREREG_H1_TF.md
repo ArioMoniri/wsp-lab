@@ -4259,3 +4259,83 @@ re-run is required. (5) The F10 Torch-hash explanation: the chair reproduced bot
 HF_HUB_OFFLINE=1` → `07f0372b…`); the report author could not reproduce the plain value by unsetting the thread variables alone,
 which suggests another environment difference (e.g. CUDA visibility) also enters `torch.__config__.show()`; the binding value
 remains the frozen-environment one. Nothing scored.
+
+#### A5 note F11c (11 Nov 2026, before any G3 outcome): F11.8 clarification and disclosures
+
+This block is appended; earlier text is not rewritten. It records one clarification of F11.8 that the pre-scoring inventory found
+open (`docs/prereg/a5_manifests/part_a/PRESCORE_INVENTORY.md`, gate row "ST-1 dated F11.8 clarification (deferred proofs, 178,
+stop-and-reprice)") and four disclosures about the F11.3 staging and the F11.4 calibration records. It is dated before any G3
+outcome. Nothing has been scored, and no G3, rotation, ladder, reference or sealed outcome exists (`part_a/manifest.json:scored`
+false).
+
+**F11c.1 — F11.8 clarified: deferred proofs, the conservative priced count and the stop-and-reprice threshold.**
+- (a) *Proofs are deferred to the scoring phase.* F11.8 says the planning value n_D = 0 "holds subject to the A5.3.4 reuse proofs
+  built at staging". As executed, `prepare --supplement` ran with `--no-reference-proofs` (re-pin (xx); `supplement_launch.json`
+  command), because the proof reads TF-v1 `eval.json` and `records.jsonl` of the twelve supplementary originals, and Board A's
+  staging review rules that parsing them is exposure, not an outcome-blind exception under F8a.1(c)
+  (`docs/reviews/council/board-a-f11-stage-2026-11-11.md`). So the reuse proofs of the 12 supplementary originals were **not**
+  built at staging: `manifest.supplement.reference_proofs` records `computed` false, `paths_touched` empty and `deferred_to`
+  "score --manifest (score_reference_proofs)". Wherever F11.8 reads "built at staging", it is read as "built in the scoring phase".
+- (b) *How they are established.* The proofs are established by the proofs-only call `score --proofs-only` (the deferred proof
+  step, `score_reference_proofs(..., write=True)`), run **before any GPU scoring** and only after the final methodological freeze
+  and the exposure attestations through it (Board A stage review: it is "the first authorized scoring-phase action"). The record it
+  writes is retained. A proven original is reused. A failed one is scored as a reference at 1.04 min and keeps its id (the twelve ids
+  never change). `score --manifest` refuses to score any variant while its original stays unproven.
+- (c) *Conservative priced count.* Until the proofs exist, the plan is priced on the assumption that all twelve originals must be
+  scored: **178 entries = 147 variants + 19 references + 12 originals to prove or score**, at 1.04 min each (`part_a/manifest.json:scoring`:
+  `n_variants` 147, `references_to_score` 19, `priced_unproven_as_references` 12, `n_priced` 178), **185.12 min**. If all twelve proofs
+  succeed, the count falls to 166 entries, 172.64 min, the figure in F11.8 and in its table row. That is the lower bound, not the plan.
+  Retries are **unpriced** (A5.3.4, F11.8, the stage review).
+- (d) *Stop-and-reprice.* The chair sets the threshold at **1.25 × 185.12 = 231.4 min**. After the proofs-only call, the price is
+  recomputed from its record. If it exceeds 231.4 min, scoring **halts**, and it resumes only after a dated reprice note appended to
+  this file before any GPU command. At or below 231.4 min, the repriced plan is still recorded and accepted before GPU commands, as the
+  stage review and the inventory (§6, §7) require. Exceeding any cap stops and reprices and never silently cuts coverage (A5.3.4,
+  F11.8). Retries stay unpriced. The threshold changes no cap, count or selection: it is the point at which a price change needs a
+  dated note rather than a plain record.
+- (e) *Open gap.* `scripts/part_a_score_launch.sh` does not implement the proofs-only stop (inventory finding LS-1). It must do so, or
+  the proofs-only call must be run separately, before any GPU scoring. This note does not authorise running it.
+
+**F11c.2 — Disclosure: the F11.4 slot mapping was not a separate frozen file before the run.** Board A's simulation review
+(`board-a-f11-sim-2026-11-11.md`, condition 2) required the explicit `slot_mask.slots` table to be saved and hashed as
+`part_a/slot_mapping_f11.json` before RNG execution ("A mapping emitted only after simulation is too late"). That file was not written
+before the F11.4 run (09:28–09:34 UTC, execution SHA `92b0338`). The mask `slot_mask_f11.json` (sha256 `5f4e7701…bbfc4`) was frozen and
+committed before the run, as were the manifest, the audits and `selection_f11.json`. The slot mapping is a deterministic function of
+those three inputs (the execution manifest, `selection_f11.json` and the mask). The inventory recomputed the mask's per-contrast
+availability from the execution manifest (rotation 43, ladder_0.25 52, ladder_0.5 52), and the `mapping_sha256`
+`171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a` equals the calibration record and the simulator output (inventory
+checks C1, C3). The slot table of the output (`json.dumps(slots, sort_keys=True)` sha256 `68b8b01d…620e`) was copied after the run into
+`slot_mapping_f11.json` (its `note` says so). Board A rules whether this suffices for condition 2 and for the F11.4 gate. This note
+does not rule on it, and the calibration stays unaccepted until Board A does.
+
+**F11c.3 — Disclosure: main advanced during the staging run; the manifest's code SHA.** The supplementary staging was launched at
+08:06:02 UTC (system clock) from a clean checkout at `8211ecf` and ended at 09:26:07 UTC, exit 0 (`supplement_launch.json`:
+`execution_sha` `8211ecf4…`, `dirty_files` 0). The canonical checkout was merged forward during the run: main moved from `8211ecf` to
+`887a514` (the merge of `prereg/f11b`, 08:28 UTC). `git diff 8211ecf..887a514` touches the analysis module, its script and tests, the pin
+file and package README of re-pin (xxi), `docs/PREREG_H1_TF.md`, `docs/PROGRESS.md`, `docs/prereg/f10_attestations.md`, the root
+README and the analysis-4 review. It touches no staging, `prepare`, rotation or audit module. The Python process had loaded its code
+at its start: the pinned bytes of re-pin (xx), unaffected by the later merges (re-pin (xxi) already says the run "does not import
+the analysis module"). The execution manifest records `code_sha` and `provenance.git_sha` `887a5146…`, because `prepare` reads
+`HEAD` at write time (09:26 UTC). The run's identity is therefore `8211ecf` (launch record, freeze), and the manifest's code SHA is
+the HEAD at write time. Neither is a change to the staged bytes: the forty's 249 files were re-hashed equal before and after.
+
+**F11c.4 — Disclosure: the run records were enriched after the fact.** The launch and calibration records were first written without
+some fields. At `516d9c9` (after both runs) they were completed. `supplement_launch.json` gained the command line, the log path and
+log sha256, the launch-script path and sha256 and the output hashes (execution manifest and audit file). `f11_calibration_record.json`
+gained the log path and log sha256, the launch-script sha256, the input hashes (`input_provenance`: five files), the mapping-file path
+and an `environment` block, which is **empty** (`{}`); the Python, NumPy and thread settings of the F11.4 run are not in the record.
+The additions identify things that existed before. They record no new run, and the run, its command and its outputs did not change.
+They were made after the fact, not at launch. The launch wrappers, which were run from `/tmp`, were committed at `516d9c9` as
+`scripts/part_a_f11_supplement_launch.sh` (sha256 `1dcc133a…92e4`) and `scripts/part_a_f11_calibration_launch.sh` (sha256
+`00c3a8bb…b19b`). Both are byte-identical to the `/tmp` files that ran, and were not frozen or committed before the runs.
+
+**F11c.5 — What this note does not do.** It changes no selection (the frozen twelve of `selection_f11.json` and the forty), seed,
+decision rule, cap or pin, and makes no re-pin. It authorises no staging, calibration, proof read or scoring. It accepts neither the
+staging report nor the F11.4 calibration, and releases no gate of the inventory. Scoring stays held for every Part A entry until
+Board A's acceptances, the final methodological freeze and the attestations through it are on file.
+
+*No-exposure attestation (this session, 11 Nov 2026).* The drafter of F11c is Claude Sonnet 5.5, branch `prereg/f11c` (worktree
+`.worktrees/prereg/f11c`), delegated by the chair. It read the documents named above and wrote only under `docs/`. It opened nothing
+under `data/evals/`, wrote nothing under `data/`, used no GPU and ran no scoring, staging, simulation or test suite. It has seen no
+G3, rotation, ladder, reference or sealed outcome or a summary of one; none exists. It chose nothing: the clauses copy the
+inventory, Board A's rulings and the chair's threshold. This attests this session only; it is also entry 21 of
+`docs/prereg/f10_attestations.md`.
