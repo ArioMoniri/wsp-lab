@@ -304,3 +304,151 @@ has not been run.
   and wrote nothing under `data/`. I have seen no G3, rotation, ladder, reference or sealed outcome, or a summary of one. None
   exists. I made no methodological choice: F11b copies Board A's rulings and the builder's recorded decisions. This attests this
   session only; it does not prove other sessions' histories.
+
+## F11 execution entries (added by the F11c drafter, 11 Nov 2026, after the staging, the calibration and the pre-scoring inventory)
+
+Entries 15 to 21 complete the pending list in `PRESCORE_INVENTORY.md` §5. Entries 16–18 rest only on the chair's PROGRESS record:
+the three implementers' own reports are not in the repository, and the chair's entries carry no exposure line for them. They are
+therefore on record **only through the chair**, and they quote what that record says. Where the record is silent, this file says so
+and does not fill the gap. PROGRESS labels from "09:45 UTC" to "11:40 UTC" are estimates ("Timestamp note 2"); the commit times given
+here are from git.
+
+## 15. Pre-scoring inventory session (copied from `PRESCORE_A512_NOTE.md`; added 11 Nov 2026)
+
+- **Role:** built the Part A pre-scoring inventory (`PRESCORE_INVENTORY.json`/`.md`) and its A5.1.2 note.
+- **Session identity:** Claude Opus 5.5 (claude_umut instance), branch `prereg/prescore-inventory` (worktree
+  `.worktrees/prereg/prescore-inventory`), delegated by the chair. It started from main `079e60b` on 11 Nov 2026 at 09:35:06 UTC
+  (git reflog).
+- **Coverage:** from branch creation through the commit that adds those files.
+- **Read and ran:** the F10/F11/F11a/F11b text and re-pins (xviii)–(xxi) of `docs/PREREG_H1_TF.md`; the Board A reviews (F10,
+  F10-code-2, re-stage, F11, F11-stage, F11-sim, analysis-4); `f10_attestations.md`; the `part_a/` manifests, audits, masks and
+  records; `selection_f11.json`; `code_hashes.json`; `scripts/part_a_score_launch.sh`; PROGRESS entries. It re-hashed staged bytes
+  under `data/runs/a5/part_a/` and the simulation outputs and inputs under `data/runs/a5/power/` and `data/runs/a5/nullsize/`. It
+  ran `--verify-pins HEAD` and `nvidia-smi` queries (identity only), on CPU only.
+- **Attestation (quoted from `PRESCORE_A512_NOTE.md`):**
+
+> Under `data/evals` I ran existence (`lexists`) and name-walk checks only and opened nothing. I opened no zoo `eval.json`,
+> `records.jsonl` or `summary.json`, and wrote nothing under `data/`. I used no GPU for computation and ran no scoring, staging,
+> simulation or analysis. I have seen no G3, rotation, ladder, reference or sealed outcome, or a summary of one; none exists. I made
+> no methodological choice. This attests this session only.
+
+## 16. Simulator `--supplement` implementer (added by the F11c drafter from the chair's PROGRESS record; 11 Nov 2026)
+
+- **Role:** built `--supplement`, `--registered-40-sensitivity` and the 52-id `--slot-mask` rules in `scripts/a5_simulation.py`
+  (26 simulator tests).
+- **Session identity:** branch `feat/a5-sim-supplement`, commit `54f17fc` (11 Nov 2026 07:34:59 UTC, git); merged after Board A's
+  acceptance (`board-a-f11-sim-2026-11-11.md`) and pinned as re-pin (xix). The model and session id are not in the chair's record.
+- **Coverage:** through commit `54f17fc`.
+- **What the chair's record says** (PROGRESS, "11 Nov 2026, 09:45 UTC"):
+
+> Simulator `--supplement` committed (54f17fc, `feat/a5-sim-supplement`; 26 simulator tests; byte-identical without the option,
+> golden-hash regression; `--registered-40-sensitivity`; supplementary slots 40–51 appended in cell order; the supplementary edits'
+> own donor rows stay in the pools per F11.5 — slots draw cell donors at random, never their own edit). Smoke run (200 replicates,
+> synthetic 52-id mask with the 9 F10 exclusions masked): ordered power 0.86 [0.80, 0.91], null ordered go 0.02, null alternative
+> 0.255 (reported, not gated); registered-40 sensitivity 0.73.
+
+- **Exposure:** the record describes a smoke run on a synthetic mask over pre-G3 inputs. It states no exposure line for this
+  implementer. Board A's review of the commit (entry 20) states that it read development-proxy simulation evidence and opened nothing
+  under `data/evals`. This file does not prove the implementer's own history, and records that the statement is on file only through
+  the chair.
+
+## 17. `prepare --supplement` implementer (added by the F11c drafter from the chair's PROGRESS record; 11 Nov 2026)
+
+- **Role:** built `prepare --supplement` in `src/wsp/eval/response_intervention.py` (loader bound to the frozen `selection_f11.json`,
+  forty re-hashed before and after, merged 52-id manifest, `*_pre_f11.*` preserved, deferred reuse proofs) and the slot-mask builder.
+- **Session identity:** branch `feat/f11-supplement-stage`, commits `c914270` (07:46:50 UTC) and `bef5396` (07:58:28 UTC, git); merged
+  after Board A's acceptance (`board-a-f11-stage-2026-11-11.md`) and pinned as re-pin (xx). The model and session id are not in the
+  chair's record.
+- **Coverage:** through commit `bef5396`.
+- **What the chair's record says** (PROGRESS, "11 Nov 2026, 10:50 UTC"):
+
+> `prepare --supplement` committed (c914270, `feat/f11-supplement-stage`; 133 tests on the two files; dry run on one unselected
+> LoRA root: rotation + two ladders 581 s under load 17–23; re-hash of the 40's 249 staged files 895 s, all matching; mask builder
+> reproduces `slot_mask_f10.json` byte for byte; seeds derive from `control_seeds.json:rotation` by canonical id exactly as for the
+> 40). [...] reference proofs for the 12 supplementary originals, which read TF-v1 records including score rows, are deferred to
+> scoring time (`--no-reference-proofs` default; `score --manifest` proves first and refuses unproven supplementary variants), so
+> staging touches no evaluation record.
+
+  and (PROGRESS, "11 Nov 2026, 11:15 UTC"): "`prepare --supplement` fixes committed (bef5396): loader bound to the frozen
+  `selection_f11.json` [...]; reuse proofs deferred to `score --manifest` [...]; default priced count ≤ 178 entries."
+- **Exposure:** the record says staging touches no evaluation record. It does not say what the implementer opened while building. It
+  ran a dry run on one unselected LoRA root and re-hashed the forty's staged files; where that wrote is not stated. Board A's staging
+  review (entry 20) found no outcome read. The statement is on file only through the chair.
+
+## 18. Part A analysis builder (added by the F11c drafter from the chair's PROGRESS record; 11 Nov 2026)
+
+- **Role:** built the manifest-binding repair and the F11 path of `src/wsp/eval/part_a_analysis.py` and `scripts/part_a_analyse.py`
+  (supplements in the F10.5 reports, registered-40 report, per-contrast masks, F11a screen route).
+- **Session identity:** branch `fix/part-a-analysis-manifest-binding`, commits `aef0a83` (07:38:36 UTC) and `f57b70a` (08:05:49 UTC,
+  git); merged after Board A's acceptance (`board-a-part-a-analysis-4-2026-11-11.md`) and pinned as re-pin (xxi). The model and
+  session id are not in the chair's record.
+- **Coverage:** through commit `f57b70a`.
+- **What the chair's record says** (PROGRESS, "11 Nov 2026, 08:06 UTC"):
+
+> Analysis F11-path corrections committed (f57b70a on `fix/part-a-analysis-manifest-binding`; 172 analysis tests; full suite 1110
+> passed): supplements join the covariate, sign, comparator and tertile reports with the forty's frozen cells and S30/S34 unchanged;
+> registered-40 descriptive report with availability-vs-resolved and root/non-root splits; per-contrast masks (supplementary ladder
+> masks accepted); F11a screen route with size-failure priority and the F11.7 validity wording tested against the registration.
+> Builder decisions for the adopting note: forty-only size failure now refuses; the screen route needs an `f11a_screen_route`
+> acceptance input bound to the calibration-report hash; the 52-slot calibration is always required when supplements exist;
+> supplement cell assignment and the acceptance-input format are conventions to adopt.
+
+  and (PROGRESS, "11 Nov 2026, 10:20 UTC") that Board A "judged the analysis manifest-binding repair sound (aef0a83)".
+- **Exposure:** the record states no exposure line. The tests used synthetic fixtures. Board A analysis-4 (entry 20) notes that
+  temporary synthetic fixture trees named `data/evals` in the full suite are not repository evaluation artifacts. The statement is on
+  file only through the chair. The builder's decisions were adopted before any outcome in F11b.
+
+## 19. Chair — extension 2 (added by the F11c drafter from the chair's statement; 11 Nov 2026)
+
+Quoted verbatim from the chair:
+
+> Chair extension 2. From about 09:20 UTC to the time of this note I launched the supplementary staging (08:06 UTC by the system
+> clock, execution SHA 8211ecf) and the F11.4 calibration (09:28 UTC, SHA 92b0338) through launch scripts I wrote (committed at
+> 516d9c9), wrote the slot-mapping record after the calibration, enriched the run records, merged the inventory, and committed the
+> gated scoring launch script. I opened no file under data/evals for any variant, supplementary edit or missing reference, ran no
+> scoring, and read no score, response or contrast. No Part A outcome exists.
+
+The statement extends entry 1 and its first extension. The staging launch time (08:06 UTC) precedes "about 09:20 UTC" because
+PROGRESS labels before 08:12 UTC were estimates (Timestamp note 2); the system-clock times govern. The gated scoring launch script is
+`scripts/part_a_score_launch.sh` (commit `1b954a6`, 09:29:04 UTC, not executed).
+
+## 20. Board A reviewers, F11 chain (copied verbatim from their review files; added by the F11c drafter, 11 Nov 2026)
+
+Each line attests only its own session. F11a.4 already incorporated the first by reference. Quotations are from the final lines of
+the named files.
+
+1. `docs/reviews/council/board-a-f11-2026-11-11.md` (session `review/board-a-f11`):
+
+> **Board A exposure attestation:** role ML methods/pre-registration reviewer; session/worktree `review/board-a-f11`, this review turn on 11 November 2026, through completion of this document. I have not opened, computed, scored or received any G3, rotation, ladder, missing-reference or sealed response outcome, or a summary of one. I read the supplied task and repository methodological, code, committed metadata and simulation-report evidence described above. I opened nothing under `data/evals`, used no GPU and wrote nothing under `data/`. This line attests only this reviewer/session; it does not prove other decision-makers' histories.
+
+2. `docs/reviews/council/board-a-f11-sim-2026-11-11.md` (session `review/board-a-f11-sim`):
+
+> **Board A exposure attestation:** ML methods/pre-registration reviewer; session/worktree `review/board-a-f11-sim`, this review turn on 11 November 2026 through completion of this document. I received/read no G3, rotation, ladder, missing-reference or sealed response outcome or summary. I read methodological/code/metadata and development-proxy simulation evidence only, opened nothing under `data/evals`, and used no GPU. This attests only to this session; it does not certify anyone else's exposure history.
+
+3. `docs/reviews/council/board-a-f11-stage-2026-11-11.md` (session `review/board-a-f11-stage`):
+
+> **Board A exposure attestation:** ML methods/pre-registration reviewer, session/worktree `review/board-a-f11-stage`, 11 November 2026 through completion of this report. I read code, tests, registration/review documents, metadata and construction-only scratch timing/identity evidence. I received/read no affected G3, rotation, ladder, missing-reference or sealed response outcome or summary, opened nothing under `data/evals`, and used no GPU. Synthetic test outcomes are fixtures, not experiment outcomes. This attestation covers this reviewer session only.
+
+4. `docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md` (session `review/board-a-part-a-analysis-4`):
+
+> **Exposure attestation:** Board A ML methods/pre-registration reviewer, session/worktree `review/board-a-part-a-analysis-4`, 11 November 2026 through this report's completion. No new G3, rotation, ladder, missing-reference or sealed response outcome, or summary of one, was opened, computed, scored or received. Repository evidence inspected here was methodological text, code, tests and committed outcome-free metadata/calibration evidence. No GPU use, repository data writes or repository `data/evals` access. Temporary synthetic fixture trees named `data/evals` in the full suite are not repository evaluation artifacts. This attests only this reviewer/session, not other decision-makers.
+
+The re-stage reviewer's line (`board-a-f10-restage-2026-11-11.md`) is not copied here; the inventory lists that reviewer as pending too,
+and the chair did not name that file for this entry.
+
+## 21. F11c drafter (this drafting session; added 11 Nov 2026)
+
+- **Role:** wrote note F11c (F11.8 clarification and the slot-mapping, main-advance and record-enrichment disclosures) and entries
+  15–21 of this file.
+- **Session identity:** Claude Sonnet 5.5, branch `prereg/f11c` (worktree `.worktrees/prereg/f11c`), delegated by the chair; created
+  from main `516d9c9` at 11 Nov 2026, about 10:00 UTC (system clock).
+- **Coverage:** from branch creation through the commit that adds this entry.
+- **Read and ran:** `PRESCORE_INVENTORY.md`, `PRESCORE_A512_NOTE.md`, the F11, F11a and F11b blocks and re-pins (xx) and (xxi) of
+  `docs/PREREG_H1_TF.md`, this file, `docs/PROGRESS.md` (the 11 Nov entries from 08:06 UTC onward), the four Board A reviews named in
+  entry 20 (their attestation lines and the passages quoted above), and `supplement_launch.json`, `f11_calibration_record.json` and
+  `slot_mapping_f11.json` (committed metadata). It ran git commands and `scripts/secret_scan.sh`. It ran no scoring, GPU job,
+  simulation, staging or test suite, and wrote only under `docs/`.
+- **Attestation:** I opened nothing under `data/evals/`, opened no zoo `eval.json`, `records.jsonl` or `summary.json`, used no GPU,
+  and wrote nothing under `data/`. I have seen no G3, rotation, ladder, reference or sealed outcome, or a summary of one. None
+  exists. I made no methodological choice: F11c copies the inventory, Board A's rulings and the chair's threshold and statements.
+  This attests this session only; it does not prove other sessions' histories.
