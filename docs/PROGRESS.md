@@ -631,3 +631,11 @@ by dated note; merge, re-test, pin, verify at the execution commit, bind input e
 Merged; pin map extended; A5.1.2 re-pin (xvii); F10c adopting note in flight. Remaining before scoring: the corrected F10 rule
 code (second round, in flight) → Board A → merge + re-pin (xviii) → rotation-only re-stage (CPU, ≈ 2–3.5 h) → re-stage report →
 Board A acceptance → masked calibration if yield < 40 → score 139 entries → seal.
+
+**11 Nov 2026, 05:20 UTC.** Corrected F10 rule code committed (060cc60 on `feat/f10-rotation-audit`; 121 F10 tests, full suite 921
+passed): F10a rank budget; exactly one fp32 spacing of slack (0 of 110 dry-run tensors violate it; the worst entry on `0a841d40`
+sits exactly at one spacing, so no disclosed slack note is needed); the F10.3(v) pooled guard as registered (|‖R_eff‖ − ‖D‖| / ‖D‖
+≤ 0.5, not the half-energy form in the chair's brief); bit-pattern replay against reloaded files with four threads; fail-closed
+missing/non-finite audits with `detail` fields under the F10a reason codes; complete a533 verdict as a diagnostic; pooled F10.4
+diagnostics; `prepare --rotation-only` carrying the staged reuse proofs unchanged (no evaluation reads). Dry run: `00f8111c` pass
+(bytes identical), `0a841d40` pass, `0027efdf` excluded `replay_failed` (scorer round-trip, as ruled). Under Board A re-review.

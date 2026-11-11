@@ -108,7 +108,7 @@ exists. A pre-TF-v1 record of each missing original exists in the zoo and is rea
 ## 5. F10 code builder (completed by the chair from its report, 11 Nov 2026)
 
 - **Role:** implementer of the F10.3 checks, F10.4 diagnostics, the `--audit-rule a533|f10` switch, the realised-increment ladder flag
-  and `scripts/a5_f10_dryrun.py` (commit e177ce6 on `feat/f10-rotation-audit`; under Board A review for condition 2; not merged).
+  and `scripts/a5_f10_dryrun.py` (commit e177ce6, rejected by Board A under condition 2; corrected as commit 060cc60 on the same branch with the eight corrections and the rotation-only preparation mode; under Board A re-review; not merged).
 - **Session identity:** delegated session, Claude Opus 5.5 (claude_umut instance), branch `feat/f10-rotation-audit`, worktree
   `.worktrees/feat/f10-rotation-audit`; coverage from 01:03:12 UTC to about 02:50 UTC, 11 Nov 2026.
 - **Read and ran:** the rotation-yield note, the F10 text, the staging README/manifest, `rotation.py` and `response_intervention.py`;
@@ -117,7 +117,8 @@ exists. A pre-TF-v1 record of each missing original exists in the zoo and is rea
 - **Statement (from its report to the chair, quoted):** "Dry-run verdicts (scratch only; nothing scored)". It opened no file under
   `data/evals`; its inputs are stored weights and the staged variants, not outcomes. The dry-run verdicts (two passes, one
   `replay_failed` exclusion) are audit results, not outcomes.
-- Its report to the chair is on record only through this entry and `docs/PROGRESS.md`.
+- Second-round statement (from its report on 060cc60, quoted): "I opened nothing under `data/evals` and wrote only to the scratch directory" (`data/runs/a5/f10_dryrun/condition2/`, 1.3 GB; 4 threads). Coverage extended to about 05:20 UTC, 11 Nov 2026.
+- Its reports to the chair are on record only through this entry and `docs/PROGRESS.md`.
 
 ## 6. Board A
 
