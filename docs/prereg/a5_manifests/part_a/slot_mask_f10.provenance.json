@@ -1,0 +1,19 @@
+{
+ "basis": "F10.6 / F10a; rotation pairs with pair_verdict != pass under audit_rule f10 at re-stage execution SHA 7bacec1",
+ "mask_file": "docs/prereg/a5_manifests/part_a/slot_mask_f10.json",
+ "mask_sha256": "86fa27a5c1838d0c0bd88ef530feba22eceafac698d0ec4506fbf05df83b698e",
+ "masked_edit_ids": [
+  "0027efdf2eae7405",
+  "05531ce1db4df63f",
+  "057dcfbedea3251f",
+  "0bc0a0c4ad0520e0",
+  "0d055869527177b4",
+  "14cdaabee246493b",
+  "15a53586efc72a50",
+  "2233954b0cc3edc0",
+  "72d3756e968e3209"
+ ],
+ "n_rotation_masked": 9,
+ "note": "first mask file (sha256 a2ed6ae7\u2026) carried these provenance keys inside the mask and was rejected by the frozen schema a5-slot-mask-v1 (unknown keys); the mapping is unchanged; provenance moved to this sidecar",
+ "source_manifest_sha256": "59d839e351824fa154a665fcf105284ce5fdeed8423a5c0a2b7a60687b0d3b06"
+}
