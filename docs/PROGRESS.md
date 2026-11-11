@@ -882,3 +882,9 @@ components; 44 of them chain roots in 37 confirmatory components already scored 
 confirmatory entry newly scored" (270 / 234) and literal exclusion (226 / 197)); 147 purchasable development roots only under the
 filter "components holding no TF-v1 record" (else 194 / 181); 45 alias-bytes roots; three shared-delta pairs; one mixed stratum;
 571 unscored entries (not 565). WM-R = 1,185 parameters with three probe columns. Board A review of F12 requested. Part A held.
+
+**11 Nov 2026, 12:26 UTC.** Board A accepted F12 and F12-I with ten conditions (`board-a-f12-2026-11-11.md`): keep 270 rows /
+234 components; before the simulation repair the noise generation, nested fitting and Monte Carlo gates and pin the F12 code;
+separate acceptances before purchase and before scoring; F12-I: correct the column-split quadratic claim, freeze supports,
+paired inference, forecasts and the all-in budget. Unfiltered purchase metadata reproduces as 194 rows / 179 components (drafter said
+181). Next: F12 tooling (simulation code, field tokens for the 270 roots, F12-I constructions) under those conditions. Part A held.
