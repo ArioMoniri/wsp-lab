@@ -778,9 +778,12 @@ def test_f10_logs_the_complete_a533_verdict_without_using_it(tmp_path):
     base = _grid_base()
     delta = _low_kappa_delta() | {"b.weight": _lowrank((48, 48), range(48), range(48), 30, 4, 0.5)}
     entry = _entry(tmp_path / "zoo", "k2", delta)
-    old = ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "a", strengths=(),
-                            audit_rule="a533")[0]  # fmt: skip
-    new = ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "b", strengths=())[0]
+    # The a533 path constructs at the ambient thread count, F10 at F10_THREADS; the fp32 a533 fields
+    # (prerounding_norm_mismatch ~ 1e-9) match only under the same arithmetic, so pin it for both.
+    with ri.rotation.torch_threads(ri.rotation.F10_THREADS):
+        old = ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "a", strengths=(),
+                                audit_rule="a533")[0]  # fmt: skip
+        new = ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "b", strengths=())[0]
     m_old, m_new = _meta(old), _meta(new)
     assert old.excluded and not new.excluded
     for k, a in m_old["tensor_audits"].items():  # the logged verdict is the explicit a533 run's
@@ -1147,7 +1150,8 @@ def test_f10_pooled_diagnostics_are_independent_aggregates(tmp_path):
     for k in sorted(delta):
         D[k] = (base[k].float() + delta[k]).to(torch.bfloat16).float() - base[k].float()
         rows, cols = ri.rotation.changed_block(D[k])
-        R[k] = ri.rotation.rotate_block(D[k], rows, cols, 13)
+        with ri.rotation.torch_threads(ri.rotation.F10_THREADS):  # the construction's thread count
+            R[k] = ri.rotation.rotate_block(D[k], rows, cols, 13)
         ulp2 += float((ri.rotation.ulp_bf16(base[k][rows[:, None], cols]) ** 2).sum())
     cat = lambda x: torch.cat([x[k].flatten().double() for k in sorted(delta)])
     dn = float(cat(D).norm())

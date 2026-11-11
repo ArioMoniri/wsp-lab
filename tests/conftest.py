@@ -6,6 +6,16 @@ torch.set_num_threads(min(2, torch.get_num_threads()))
 
 
 @pytest.fixture(autouse=True)
+def _restore_torch_threads():
+    """Undo any test's global ``torch.set_num_threads`` (e.g. a script's ``run(--threads 1)``), so a
+    later test never inherits it: fp32 matmul results depend on the intra-op thread count."""
+    before = torch.get_num_threads()
+    yield
+    if torch.get_num_threads() != before:
+        torch.set_num_threads(before)
+
+
+@pytest.fixture(autouse=True)
 def pinned_base_revision(monkeypatch):
     """Zoo builds pin the base to a resolved commit; never hit the Hub in CPU tests.
 
