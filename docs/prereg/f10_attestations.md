@@ -162,3 +162,15 @@ condition 7), and the scoring record adds one for the interval up to the scoring
   `data/evals` was opened."
 - **Coverage:** 01:18 UTC to the time of its report (about 01:55 UTC), 11 Nov 2026. Its report to the chair is on record only through
   this entry.
+
+## 9. Slot-mask path builder (added by the chair, 11 Nov 2026)
+
+- **Role:** implementer of `--slot-mask` in `scripts/a5_simulation.py` (Board A F10 condition 5), merged as b3bd276 with re-pin (xvi).
+- **Session identity:** delegated session, Claude Opus 5.5 (claude_umut instance), branch `feat/a5-slot-mask`; commit a8a84af
+  (content identical to the merged a03d2d2 except the root README status block).
+- **Read and ran:** the F10 review condition 5, F10.6, F7 and the registered power run's command, the Part A manifest (edit ids and
+  tertiles), the simulator tests; CPU only; one 200-replicate smoke run on the real inputs with a synthetic 39-slot mask written to
+  `data/runs/a5/slot_mask_dryrun/`; the registered-scale 10,000-replicate slot-masked run was NOT executed (it is gated).
+- **Statement (from its report to the chair, quoted):** "I did not run the 10,000-replicate registered run." It opened no file under
+  `data/evals`; its inputs are the null-size payload and the sign predictions, not outcomes.
+- **Coverage:** about 01:20 to 02:40 UTC, 11 Nov 2026. Its report to the chair is on record only through this entry.
