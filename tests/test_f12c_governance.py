@@ -461,29 +461,16 @@ def _stage2_records(k, detected=900, stress=10):
 
 
 def _governed(tmp_path, k=58):
-    s1 = _write(tmp_path / "s1.json", _report(S1, S1_SHA, _stage1_records(), list(fs.K_GRID)))
-    sel = fs.verify_stage1_report(s1, identities=IDS)
-    assert sel["k_star"] == k
-    tg_recs = [rec(TG, s, kk, r, A={"F3": 1.0, "WM": 0.98, "S": 0.99, "oracle": 0.9})
-               for s, kk, r in fs.planned_ids(TG, [k])]  # fmt: skip
-    target_report = _report(TG, TG_SHA, tg_recs, [k], selection=sel)
-    target = fs.expected_row_sum_target(tg_recs, fs.planned_ids(TG, [k]), TG)
-    report = _report(S2, S2_SHA, _stage2_records(k), [k], selection=sel, target=target)
-    prereqs = {
-        "noise_check": {"schema": fs.NOISE_CHECK_SCHEMA, "status": "pass", "f12a4d_check": True,
-                        "panels": 10000, "k": 145, "identities": {k2: IDS[k2] for k2 in
-                        ("tokens_matrix_sha256", "tokens_synthetic", "payload_restricted_sha256")}},
-        "pilot_acceptance": {"schema": fs.PILOT_ACCEPTANCE_SCHEMA, "chair_accepted": True,
-                             "all_in_ceiling_cpu_h": 185.0},
-        "coverage_target": json.loads(json.dumps(target_report, default=fs._json_default)),
-        "c1_code_hashes": {"schema": fs.C1_SCHEMA, "status": "C1 frozen", "files": dict(IDS["code_sha256"])},
-    }  # fmt: skip
-    return json.loads(json.dumps(report, default=fs._json_default)), sel, prereqs
+    """F12d: the bound prerequisites (noise check with code identity, pilot report / timing / acceptance,
+    coverage target) and a complete committed C1 with a Board A record in a temporary repository."""
+    from tests.test_f12d_prereqs import governed
+
+    return governed(tmp_path, k)
 
 
 def test_execution_validator_passes_only_a_complete_governed_run(tmp_path):
-    report, sel, prereqs = _governed(tmp_path)
-    v = fs.validate_execution(report, selection=sel, prereqs=prereqs)
+    report, sel, prereqs, kw = _governed(tmp_path)
+    v = fs.validate_execution(report, selection=sel, prereqs=prereqs, **kw)
     assert v["passed"], v["failures"]
     rel = fs.release_decision(report["summary"], S2, v)
     assert rel["field"] == "numerical eligibility pending Board A acceptance"
@@ -493,7 +480,7 @@ def test_execution_validator_passes_only_a_complete_governed_run(tmp_path):
     bad = json.loads(json.dumps(_report(S2, S2_SHA, _stage2_records(58, detected=800), [58],
                                         selection=sel, target=report["coverage_target"]),
                                 default=fs._json_default))  # fmt: skip
-    v2 = fs.validate_execution(bad, selection=sel, prereqs=prereqs)
+    v2 = fs.validate_execution(bad, selection=sel, prereqs=prereqs, **kw)
     rel2 = fs.release_decision(bad["summary"], S2, v2)
     assert v2["passed"] and not rel2["eligible"] and fs.FAILURE_WORDING in rel2["wording"]
 
@@ -517,12 +504,7 @@ def test_execution_validator_passes_only_a_complete_governed_run(tmp_path):
         (lambda r, s, p: p.pop("noise_check"), "noise_check"),
         (lambda r, s, p: p["noise_check"].update(f12a4d_check=False, panels=500), "noise_check"),
         (lambda r, s, p: p["pilot_acceptance"].update(chair_accepted=False), "pilot"),
-        (
-            lambda r, s, p: p["c1_code_hashes"].update(
-                status="draft, pending Board A C1 verification"
-            ),
-            "C1",
-        ),
+        (lambda r, s, p: p["noise_check"].update(code_sha256={}), "noise_check"),
         (lambda r, s, p: p["coverage_target"]["records"].pop(), "coverage_target"),
         (lambda r, s, p: r["coverage_target"]["C_WM"].update(target=0.5), "coverage target"),
         (lambda r, s, p: s.update(synthetic=True), "selection"),
@@ -531,16 +513,16 @@ def test_execution_validator_passes_only_a_complete_governed_run(tmp_path):
     ],
 )
 def test_execution_validator_fails_closed(tmp_path, mutate, match):
-    report, sel, prereqs = _governed(tmp_path)
+    report, sel, prereqs, kw = _governed(tmp_path)
     mutate(report, sel, prereqs)
-    v = fs.validate_execution(report, selection=sel, prereqs=prereqs)
+    v = fs.validate_execution(report, selection=sel, prereqs=prereqs, **kw)
     assert not v["passed"] and any(match in f for f in v["failures"]), v["failures"]
     rel = fs.release_decision(report["summary"], S2, v)
     assert rel["eligible"] is False and rel["numerical_eligibility"].startswith("none")
 
 
 def test_report_assembly_across_invocations_preserves_provenance(tmp_path):
-    report, sel, _ = _governed(tmp_path)
+    report, sel, _, _ = _governed(tmp_path)
     recs = report["records"]
     parts = []
     for scen in ("null", "alt", "null_var2"):
@@ -622,9 +604,10 @@ def test_timing_projection_follows_the_f12c_schedule():
             "145": {"null": 202.0, "alt": 219.0}}  # fmt: skip
     pr = fs.project_cpu(by_k)
     w = pr["stage2_by_k"]["145"]
-    assert w["cpu_h"] == pytest.approx((1000 * 202 + 1000 * 219 + 200 * 202) / 3600)
-    assert w["null_var2_from"] == "null"
-    assert pr["stage2_worst_cpu_h"] == pytest.approx(128.1667, abs=1e-3)
+    # F12d: unmeasured variance-x2 is projected at max(stress, alternative), not at the stress time
+    assert w["cpu_h"] == pytest.approx((1000 * 202 + 1000 * 219 + 200 * 219) / 3600)
+    assert w["null_var2_from"] == "max(stress, alternative)"
+    assert pr["stage2_worst_cpu_h"] == pytest.approx(129.1111, abs=1e-3)
     assert pr["stage1_cpu_h"] == pytest.approx(23.78, abs=0.01)
     assert pr["coverage_target_worst_cpu_h"] == pytest.approx(200 * 202 / 3600)
     assert pr["pilot_cpu_h"] == pytest.approx(10 * 219 / 3600)
@@ -652,6 +635,8 @@ def test_rules_text_states_only_the_effective_rules():
 
 def _toy_restricted(tmp_path):
     pay = toy_payload(n_comp=4, per=2, seed=3)
+    for d in pay.donors:
+        d["eligible"] = True  # F12d: the restricted copy carries the original flag
     pay.provenance = {
         "sha256": fs.PAYLOAD_SHA256,
         "source": "toy",
@@ -661,7 +646,8 @@ def _toy_restricted(tmp_path):
     path = tmp_path / "noise_payload_restricted.json"
     path.write_bytes(json.dumps(pay.restricted(), sort_keys=True).encode())
     pin = fs.restricted_pin(
-        path, extractor={"script": "toy", "commit": "0" * 40, "sha256": "1" * 64}
+        path,
+        extractor={"script": "toy", "commit": "0" * 40, "sha256": "1" * 64, "functions": "toy"},
     )
     return path, pin
 
@@ -695,6 +681,9 @@ def test_restricted_loader_verifies_pinned_bytes_contents_and_extractor(tmp_path
 def test_committed_restricted_pin_matches_the_restricted_copy():
     pin = json.loads(fs.RESTRICTED_PIN.read_text())
     assert pin["status"] == "draft, pending Board A C1 verification"
+    assert (
+        pin["schema"] == fs.RESTRICTED_PIN_SCHEMA
+    )  # F12d: the v2 pin (eligible flag); v1 superseded
     assert pin["source"]["sha256"] == fs.PAYLOAD_SHA256
     assert pin["contents"]["n_donors"] == 141 and pin["contents"]["n_components"] == 63
     assert pin["contents"]["windows"] == 64
