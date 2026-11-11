@@ -603,3 +603,13 @@ pooled half-norm guard; bit-pattern replay against reloaded files with four thre
 support; the complete a533 verdict as a diagnostic; pooled F10.4 diagnostics with deliberate-failure tests; an audit-only
 (rotation-only) preparation path with no evaluation reads. Corrections in flight on the same branch (merging main first). Nothing
 merged; scoring held.
+
+**11 Nov 2026, 03:45 UTC.** Part A analysis code committed (`feat/f10-sensitivity-reports`, 91d976b; `src/wsp/eval/part_a_analysis.py`,
+`scripts/part_a_analyse.py`, 53 synthetic tests; subset and tertile hashes reproduce from the manifest; fail-closed CLI). Under Board A
+review. Items the adopting note must rule on, from the builder's report: Part B contrasts are supplied as precomputed intervals via
+`--part-b` (funding unresolved if absent); seven A5.5 step-1 validity checks come from a `--validity` evidence file (gate unresolved if
+absent); resolution seed PCG64(20261107) with one shared [4000, 32] index array (not the simulation's SeedSequence stream); a
+flat-step tie-break in the λ = 1 solver (accepted only if it reduces the gradient norm; matches sklearn C=1 to 1e-6); the sealed-ledger
+and fields formats (`a5-part-a-sealed-ledger-v1`); `audit_missing` as a fail-closed exclusion code; a wrong subset hash stops the run
+rather than voiding the subset; frozen staged correlations printed, not recomputed; edit `057dcfbedea3251f` sits on ln ρ cut 1 and
+will be flagged `cell_drift` on any downward re-stage drift (never moved).
