@@ -11,6 +11,13 @@
    ``prepare --rotation-only`` (F10.7) re-stages only the rotations of a staged Part A under F10, re-hashes
    the staged ladders without rebuilding them, keeps the staged manifest as ``manifest_a533.json`` and
    opens no evaluation record.
+   ``prepare --supplement`` (F11) stages only a frozen list of supplementary root edits (rotation and the
+   two ladders, F10 rule, registered seeds) into the staged zoo, re-hashes the staged edits' files before
+   and after, carries their manifest entries byte for byte, keeps the staged manifest as
+   ``manifest_pre_f11.json`` and merges both sets into one manifest (:func:`prepare_supplement`); its only
+   evaluation-record reads are the supplementary originals' reuse proofs
+   (:func:`supplement_reference_proofs`, skipped by ``--no-reference-proofs``). ``slot-mask`` writes the
+   ``a5-slot-mask-v1`` mask of a Part A manifest from its pair verdicts (:func:`slot_mask`).
 3. :func:`manifest_for` — the A5.11 pieces computable from the staged zoo.
 4. :func:`plan_scoring` / :func:`scoring_summary` — which predecessor and original references are on file
    with the same scoring identity (A5.3.4), and the priced count at 1.04 min per entry.
@@ -30,6 +37,10 @@ CLI::
         --references references.json --text-groups text_groups.json --out O --manifest-out M
     python -m wsp.eval.response_intervention prepare --rotation-only --staged-manifest M_staged \
         --zoo Z --selection selection.json --references references.json --out O --manifest-out M
+    python -m wsp.eval.response_intervention prepare --supplement selection_f11.json \
+        --staged-manifest M_staged --zoo Z --selection selection.json --text-groups text_groups.json \
+        --out O --manifest-out M [--no-reference-proofs]
+    python -m wsp.eval.response_intervention slot-mask --manifest M --out slot_mask.json
     python -m wsp.eval.response_intervention score --stage O/<zoo name> [--manifest M] [--dry-run]
 
 ``--selection`` stages the registered picks of a committed ``selection.json`` instead of re-running the
@@ -53,6 +64,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -595,6 +607,7 @@ def build_variants(
     predecessor_id=None,
     predecessor_holder=None,
     audit_rule=DEFAULT_AUDIT_RULE,
+    source_bytes_holder=None,
 ):
     """Rotation (s = 1) and scaled variants of one edit, staged under ``stage_root/<variant id>``.
 
@@ -619,6 +632,10 @@ def build_variants(
     ``realised_increment_ladder: true``.
     ``predecessor_holder`` records the zoo entry whose stored bytes gave ``predecessor_state`` when the
     predecessor is an alias without bytes of its own; the scoring plan checks the holder's bytes.
+    ``source_bytes_holder`` does the same for the edit itself (F11: a supplementary root whose canonical
+    entry is an alias holding only ``edit.json``): its stored delta is read from the holder's entry in the
+    same zoo, everything else (``edit.json``, id, seed, variant ids) is the alias's, and ``variant.json``
+    records the holder. Without it nothing in ``variant.json`` changes.
     """
     from wsp.zoo.apply import load_entry_delta
 
@@ -648,7 +665,12 @@ def build_variants(
     base = predecessor_state if root else base_state
     W = predecessor_state
 
-    stored = load_entry_delta(entry_dir, base)
+    if source_bytes_holder is None:
+        stored = load_entry_delta(entry_dir, base)
+    else:
+        if (entry_dir / "delta.safetensors").exists() or (entry_dir / "lora").exists():
+            raise ValueError(f"{source_id}: has bytes of its own but a bytes holder was given")
+        stored = load_entry_delta(canonical / source_bytes_holder, base)
     keys = set(stored)
     pred_changed = set() if root else {k for k in W if not torch.equal(W[k], base[k])}
     D, S = {}, {}
@@ -694,6 +716,8 @@ def build_variants(
             "n_stored_tensors": len(keys),
         },
     }
+    if source_bytes_holder is not None:
+        common["source_bytes_holder"] = source_bytes_holder
 
     def write(kind, strength, states, meta, excluded, exclusions, post_write=None):
         """Stage one variant. Without ``post_write`` the registered staging check applies: every written
@@ -1449,6 +1473,12 @@ def _du(path):
 
 
 def prepare(args):
+    if getattr(args, "supplement", None):
+        try:
+            return prepare_supplement(args)
+        except SupplementRefused as e:
+            print(f"supplementary staging refused: {e}", file=sys.stderr)
+            return 2
     if getattr(args, "rotation_only", False):
         try:
             return prepare_rotation_only(args)
@@ -1791,6 +1821,608 @@ def prepare_rotation_only(args):
     return 0
 
 
+# ------------------------------------------------------------------------- F11 supplementary staging
+
+
+class SupplementRefused(RuntimeError):
+    """A precondition of the F11 supplementary staging is violated; the staged forty stay untouched."""
+
+
+SUPPLEMENT_AMENDMENT = "F11"
+SUPPLEMENT_SEED_RULE = (
+    "rotation_seed(canonical edit id) of control_seeds.json:rotation (A5.3.3): SHA256 of the UTF-8 bytes "
+    "'20261107:rotation:' + id, first eight bytes big-endian, mod 2^63; the registered rule of the forty, "
+    "keyed by the supplementary id (no new domain, counter or offset); one torch generator per edit, "
+    "shared across its tensors in sorted-name order; the ladders carry the same seed"
+)
+SUPPLEMENT_CARRIED_KEYS = ("delta_sha256", "variant_json_sha256", "edit_audits", "rotation_seeds")
+SUPPLEMENT_CARRIED_SCORING = (
+    "config",
+    "evals_dir",
+    "predecessor_bytes_holders",
+    "missing_predecessors",
+    "n_P",
+    "minutes_per_entry",
+    "window_check",
+)
+SLOT_MASK_SCHEMA = "a5-slot-mask-v1"
+
+
+def _cell_key(family, tertile):
+    return f"{family}:{int(tertile)}"
+
+
+def load_supplement_selection(path, registered, zoo_rows, staged):
+    """The frozen F11 supplementary list, checked against the F11.1 rule (never re-selected).
+
+    ``path``: ``selection_f11.json``, a ``supplement`` block (or the same keys at top level) with
+    ``edit_ids`` (or ``ids``), ``selected`` (rows as ``selection.json:registered.selected``: ``edit_id``,
+    ``component_id``, ``family``, ``tertile``, ``effective_norm``, ``predecessor_id``; optional ``rank``,
+    ``tertile_label``, ``bytes_via_alias``) and optional ``cells`` (``{"family:tertile": [ids]}``).
+    ``registered``: the parsed registered ``selection.json`` (its ``registered.ledger.families`` cells,
+    quotas and family order). ``zoo_rows``: the canonical zoo manifest rows (``parent_id``).
+
+    Refuses unless: the ids are unique and equal the rows; none is a registered or staged edit or shares
+    a staged component; every id is a root (predecessor base, zoo ``parent_id`` null); each sits in its
+    declared ledger cell, with its rank in the ledger's family order; the cells are exactly the cells that
+    lost a rotation pair in the staged manifest, with equal counts; and within each cell the ids are the
+    first roots of ``sorted(cell)[quota:]`` (next-in-cell canonical-id order, roots only, no root skipped).
+    Returns (selections sorted by id, {"ids", "cells"}, {alias id: bytes holder})."""
+    try:
+        return _check_supplement(json.loads(Path(path).read_text()), registered, zoo_rows, staged)
+    except (KeyError, TypeError, ValueError, AttributeError) as e:
+        raise SupplementRefused(f"supplement list malformed: {type(e).__name__}: {e}") from e
+
+
+def _check_supplement(doc, registered, zoo_rows, staged):
+    block = doc.get("supplement", doc)
+    rows = sorted(block.get("selected") or [], key=lambda r: r["edit_id"])
+    ids = sorted(block.get("edit_ids") or block.get("ids") or [])
+    fams = registered["registered"]["ledger"]["families"]
+    reg_ids = set(registered["registered"]["edit_ids"])
+    parent = {r["id"]: r.get("parent_id") for r in zoo_rows if "id" in r}
+    staged_ids, staged_comps = set(staged["edit_ids"]), set(staged["component_ids"])
+    sel_cell = {s["edit_id"]: _cell_key(s["family"], s["tertile"]) for s in staged["selections"]}
+    depleted = sorted(
+        {sel_cell[i] for i, e in staged["edit_audits"].items() if e["pair_verdict"] != "pass"}
+    )
+    problems = []
+    if not ids or [r["edit_id"] for r in rows] != ids or len(set(ids)) != len(ids):
+        problems.append("supplement rows differ from its edit ids (or ids empty / duplicated)")
+    sels, holders, cells = [], {}, {}
+    for r in rows:
+        i, fam, t = r["edit_id"], r.get("family"), int(r.get("tertile", -1))
+        if i in reg_ids or i in staged_ids:
+            problems.append(f"{i}: already a registered / staged edit")
+        if r.get("component_id") in staged_comps:
+            problems.append(f"{i}: component already staged")
+        if (
+            (r.get("predecessor_id") or "base") != "base"
+            or i not in parent
+            or parent[i] is not None
+        ):
+            problems.append(f"{i}: not a root edit (predecessor base, zoo parent_id null)")
+        if fam not in fams or not 0 <= t < 3 or i not in fams[fam]["cells"][t]:
+            problems.append(f"{i}: not in the registered ledger cell {fam}:{t}")
+            continue
+        rank = fams[fam]["ordered"].index(i)
+        if r.get("rank") not in (None, rank):
+            problems.append(f"{i}: rank {r.get('rank')} differs from the ledger order ({rank})")
+        if r.get("tertile_label") not in (None, ("low", "middle", "high")[t]):
+            problems.append(f"{i}: tertile label")
+        cells.setdefault(_cell_key(fam, t), []).append(i)
+        if r.get("bytes_via_alias"):
+            holders[i] = r["bytes_via_alias"]
+        sels.append(
+            Selection(i, r["component_id"], fam, t, rank, float(r["effective_norm"]), "base")
+        )
+    if len({s.component_id for s in sels}) != len(sels):
+        problems.append("supplementary components not distinct")
+    if sorted(cells) != depleted:
+        problems.append(
+            f"supplement cells {sorted(cells)} differ from the depleted cells {depleted}"
+        )
+    if len({len(v) for v in cells.values()}) > 1:
+        problems.append(f"unequal supplement counts per cell {[len(v) for v in cells.values()]}")
+    for key, got in cells.items():
+        fam, t = key.split(":")
+        t = int(t)
+        cell, quota = sorted(fams[fam]["cells"][t]), fams[fam]["quotas"][t]
+        nxt = [i for i in cell[quota:] if i in parent and parent[i] is None]
+        if sorted(got) != nxt[: len(got)]:
+            problems.append(f"{key}: {sorted(got)} are not the next roots in cell order {nxt}")
+    cells = {k: sorted(v) for k, v in sorted(cells.items())}
+    if (
+        block.get("cells") is not None
+        and {k: sorted(v) for k, v in block["cells"].items()} != cells
+    ):
+        problems.append("declared cells differ from the rows' cells")
+    for i, h in holders.items():
+        if h in reg_ids or h in staged_ids or h in ids:
+            problems.append(f"{i}: bytes holder {h} is itself a selected edit")
+    if problems:
+        raise SupplementRefused("supplement list refused: " + "; ".join(problems))
+    return sorted(sels, key=lambda s: s.edit_id), {"ids": ids, "cells": cells}, holders
+
+
+def _stage_rows(stage):
+    path = Path(stage) / "manifest.jsonl"
+    rows = (
+        [json.loads(x) for x in path.read_text().splitlines() if x.strip()] if path.exists() else []
+    )
+    return {r["id"]: r for r in rows if "id" in r}
+
+
+def rehash_staged(stage, staged):
+    """Re-hash every staged file of a manifest's variants: delta/increment bytes against ``delta_sha256``
+    (an excluded variant must hold none), each ``variant.json`` against ``variant_json_sha256``, and the
+    staged-zoo ``manifest.jsonl`` row of every staged variant (present, ``reuse_key`` = delta sha256;
+    absent for an excluded one). Returns a summary whose ``all_equal`` is the verdict."""
+    stage = Path(stage)
+    rows, differ, by_variant = _stage_rows(stage), [], {}
+    for v in staged["variants"]:
+        vid, d = v["variant_id"], stage / v["variant_id"]
+        files = _entry_files(d)
+        vjson = _sha256(d / "variant.json") if (d / "variant.json").exists() else None
+        if files != staged["delta_sha256"].get(vid, {}):
+            differ.append(f"{vid}:files")
+        if vjson is None or vjson != staged["variant_json_sha256"].get(vid):
+            differ.append(f"{vid}:variant.json")
+        by_variant[vid] = {"files": files, "variant_json": vjson}
+    for vid in staged["variant_ids"]:
+        r = rows.get(vid)
+        if r is None or r.get("reuse_key") != staged["delta_sha256"][vid].get("delta.safetensors"):
+            differ.append(f"{vid}:manifest.jsonl")
+    differ += [f"{vid}:manifest.jsonl" for vid in staged["excluded_variant_ids"] if vid in rows]
+    carried_rows = [rows[v] for v in sorted(staged["variant_ids"]) if v in rows]
+    return {
+        "n_variants": len(staged["variants"]),
+        "n_files": sum(len(x["files"]) + 1 for x in by_variant.values()),
+        "all_equal": not differ,
+        "differ": differ,
+        "staged_rows_sha256": hashlib.sha256(
+            json.dumps(carried_rows, sort_keys=True).encode()
+        ).hexdigest(),
+        "by_variant_sha256": hashlib.sha256(
+            json.dumps(by_variant, sort_keys=True).encode()
+        ).hexdigest(),
+    }
+
+
+def supplement_reference_proofs(
+    evals_dir, config, zoo, ids, holders, revision, windows=None, log=None
+):
+    """EVALUATION-RECORD READS, isolated: the A5 F3(i) reuse proofs of the supplementary originals.
+
+    The original staging computed every reference's proof with :func:`reuse_proof`, which opens
+    ``<evals>/<id>/eval.json`` (status, config hash, model revision, counts, entry hashes, repeat id, run
+    id) and, with ``windows``, ``<evals>/<id>/records.jsonl`` (the WikiText rows, of which it keeps item ids
+    and token-id hashes). This computes the same proofs for the supplementary originals only, with an
+    alias's bytes holder as the entry-bytes source; the base predecessor's proof is carried, not
+    recomputed. Each path it opens or probes is logged through ``log`` and returned. ``prepare
+    --supplement --no-reference-proofs`` skips this function entirely (then no evaluation path is touched).
+    Returns (proofs, sorted paths touched, identity)."""
+    from wsp.eval.batch import effective_config_hash
+
+    log = log or (lambda msg: print(msg, file=sys.stderr, flush=True))
+    cfg = _load_config(config)
+    identity = {
+        "config_hash": effective_config_hash(cfg),
+        "model_revision": revision,
+        "counts": {k: v.get("n", v.get("n_windows")) for k, v in cfg["benchmarks"].items()},
+    }
+    proofs, touched = [], []
+    for i in ids:
+        paths = [Path(evals_dir) / i / "eval.json"]
+        if windows is not None:
+            paths.append(Path(evals_dir) / i / "records.jsonl")
+        for p in paths:
+            log(f"reference proof (evaluation record) {p}")
+            touched.append(str(p))
+        holder = holders.get(i)
+        proofs.append(
+            reuse_proof(evals_dir, i, Path(zoo) / (holder or i), identity, windows, holder)
+        )
+    return proofs, sorted(touched), identity
+
+
+def _supplement_scoring(staged_scoring, merged, new_ids, proofs):
+    """The pre-F11 scoring summary extended to the merged set. The forty's plan entries, missing references
+    and reuse proofs are carried; the supplementary variants' plan entries use the carried proof of their
+    predecessor (base); their originals use ``proofs`` (None: not computed, so each is listed as unproven
+    and priced as a reference to score, the plan's "absent identity proof counts as needed")."""
+    carried = {p["id"]: p for p in staged_scoring["reuse_proofs"]}
+    if "base" not in carried:
+        raise SupplementRefused("the staged scoring carries no reuse proof of the base predecessor")
+    need = {vid: n for vid, n in staged_scoring["plan"]}
+    plan = [
+        [vid, need[vid] if vid in need else not carried["base"]["verdict"]]
+        for vid in merged["variant_ids"]
+    ]
+    new_proofs = {p["id"]: p for p in proofs or []}
+    unproven = sorted(i for i in new_ids if i not in new_proofs)
+    missing_o = sorted(
+        set(staged_scoring["missing_originals"])
+        | {i for i, p in new_proofs.items() if not p["verdict"]}
+    )
+    n_P, n_D = staged_scoring["n_P"], len(missing_o)
+    n = len(plan) + n_P + n_D + len(unproven)
+    return {k: staged_scoring[k] for k in SUPPLEMENT_CARRIED_SCORING} | {
+        "plan": plan,
+        "n_variants": len(plan),
+        "excluded_variants": merged["excluded_variant_ids"],
+        "predecessors": sorted(set(staged_scoring["predecessors"]) | {"base"}),
+        "originals": sorted(set(staged_scoring["originals"]) | set(new_ids)),
+        "missing_originals": missing_o,
+        "unproven_originals": unproven,
+        "n_D": n_D,
+        "references_to_score": n_P + n_D,
+        "n_priced": n,
+        "minutes": round(n * MINUTES_PER_ENTRY, 4),
+        "reuse_proofs": sorted([*carried.values(), *new_proofs.values()], key=lambda p: p["id"]),
+        "carried_from_pre_f11": list(SUPPLEMENT_CARRIED_SCORING)
+        + ["plan entries, missing_originals and reuse_proofs of the forty"],
+        "recomputed": [
+            "plan",
+            "n_variants",
+            "excluded_variants",
+            "predecessors",
+            "originals",
+            "missing_originals",
+            "unproven_originals",
+            "n_D",
+            "references_to_score",
+            "n_priced",
+            "minutes",
+            "reuse_proofs",
+        ],
+        "priced_unproven_as_references": len(unproven),
+    }
+
+
+def _selection_from_row(r):
+    return Selection(
+        r["edit_id"], r["component_id"], r["family"], int(r["tertile"]), int(r["rank"]),
+        float(r["effective_norm"]), r.get("predecessor_id") or "base",
+    )  # fmt: skip
+
+
+def merge_supplement(staged, selections, variants, holders, code_sha):
+    """The merged Part A manifest body: every entry of ``staged`` carried unchanged, the supplementary
+    edits added (``supplementary: true`` on their selection rows and edit audits), and the set-level fields
+    (ids, variants, exclusions, subsets, coverage) recomputed over the union. Scoring, audit-file and
+    supplement records are added by the caller."""
+    new = manifest_for(selections, variants, code_sha)
+    per_edit = edit_audit_summary(variants)
+    for i, e in per_edit.items():
+        e |= {"supplementary": True, "source_bytes_holder": holders.get(i)}
+    sel_rows = sorted(staged["selections"] + [asdict(s) | {"supplementary": True} for s in selections],
+                      key=lambda r: r["edit_id"])  # fmt: skip
+    edit_ids = sorted(set(staged["edit_ids"]) | set(new["edit_ids"]))
+    rows = sorted(staged["variants"] + new["variants"], key=lambda v: v["variant_id"])
+    sources = {v["source_id"] for v in rows}
+    preds = sorted(set(staged["predecessor_ids"]) | set(new["predecessor_ids"]))
+    edit_audits = dict(sorted((staged["edit_audits"] | per_edit).items()))
+    merged = dict(staged) | {
+        "code_sha": code_sha,
+        "realised_increment_ladder_variant_ids": sorted(
+            set(staged["realised_increment_ladder_variant_ids"])
+            | set(new["realised_increment_ladder_variant_ids"])
+        ),
+        "edit_ids": edit_ids,
+        "component_ids": sorted(staged["component_ids"] + new["component_ids"]),
+        "predecessor_ids": preds,
+        "selections": sel_rows,
+        "variant_ids": sorted(staged["variant_ids"] + new["variant_ids"]),
+        "excluded_variant_ids": sorted(
+            staged["excluded_variant_ids"] + new["excluded_variant_ids"]
+        ),
+        "variants": rows,
+        "delta_sha256": dict(sorted((staged["delta_sha256"] | new["delta_sha256"]).items())),
+        "reference_ids_needed": {"predecessors": preds, "originals": edit_ids},
+        "selected_without_variants": sorted(set(edit_ids) - sources),
+        "variants_without_selection": sorted(sources - set(edit_ids)),
+        "f10_subsets": {
+            k: sorted(set(staged["f10_subsets"][k]) | set(new["f10_subsets"][k]))
+            for k in staged["f10_subsets"]
+        },
+        "rotation_seeds": dict(
+            sorted(
+                (
+                    staged["rotation_seeds"]
+                    | {s.edit_id: rotation_seed(s.edit_id) for s in selections}
+                ).items()
+            )
+        ),
+        "edit_audits": edit_audits,
+        "coverage": _coverage(edit_audits, [_selection_from_row(r) for r in sel_rows]),
+        "variant_json_sha256": dict(
+            sorted(
+                (
+                    staged["variant_json_sha256"]
+                    | {v.variant_id: _sha256(v.entry_dir / "variant.json") for v in variants}
+                ).items()
+            )
+        ),
+    }
+    if len(set(merged["component_ids"])) != len(merged["component_ids"]):
+        raise SupplementRefused("a supplementary component is already staged")
+    if len(set(merged["variant_ids"])) != len(merged["variant_ids"]):
+        raise SupplementRefused("a supplementary variant id collides with a staged one")
+    return merged
+
+
+def carried_identical(staged, merged):
+    """Every per-entry record of the staged forty serialises identically in the merged manifest."""
+    dump = lambda x: json.dumps(x, sort_keys=True)
+    bad = [f"{k}:{i}" for k in SUPPLEMENT_CARRIED_KEYS for i, v in staged[k].items()
+           if dump(merged[k].get(i)) != dump(v)]  # fmt: skip
+    for k in ("selections", "variants"):
+        have = {dump(r) for r in merged[k]}
+        bad += [f"{k}:{n}" for n, r in enumerate(staged[k]) if dump(r) not in have]
+    bad += [k for k in ("restage", "selection_ledger", "predecessor_bytes_holders", "staged_zoo")
+            if dump(staged.get(k)) != dump(merged.get(k))]  # fmt: skip
+    return bad
+
+
+def prepare_supplement(args):
+    """F11 supplementary staging: stage only the supplementary root edits (rotation at the base and the
+    ladders s = 0.25, 0.5, under the F10 rule at 4 threads, registered seeds) into the staged zoo, and
+    merge them into the staged Part A manifest.
+
+    The staged forty are never rebuilt or rewritten: all their files are re-hashed against the staged
+    manifest before anything is written and again after staging (any difference refuses), and every
+    per-entry record of theirs is carried byte for byte (checked before writing). The staged manifest and
+    audit file are kept beside ``--manifest-out`` as ``manifest_pre_f11.json`` and
+    ``rotation_audits_pre_f11.jsonl``; the merged audit file is the pre-F11 file's bytes followed by the
+    supplementary rows. Coverage, exclusions, subsets, the scoring plan and the priced count are
+    recomputed over the union. The only evaluation-record reads are the supplementary originals' reuse
+    proofs (:func:`supplement_reference_proofs`), skipped with ``--no-reference-proofs``."""
+    from wsp.eval.batch import provenance
+    from wsp.features.extract import load_base_state
+
+    if getattr(args, "rotation_only", False):
+        raise SupplementRefused("--supplement and --rotation-only are exclusive")
+    if args.audit_rule != "f10":
+        raise SupplementRefused("--supplement stages under the F10 rule only")
+    threads_env = {v: os.environ.get(v) for v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS")}
+    if any(x != str(rotation.F10_THREADS) for x in threads_env.values()):
+        raise SupplementRefused(
+            f"F10.3(iii) needs OMP_NUM_THREADS = MKL_NUM_THREADS = 4, got {threads_env}"
+        )
+    if not (args.staged_manifest and args.selection):
+        raise SupplementRefused("--supplement needs --staged-manifest and --selection")
+    staged_path = Path(args.staged_manifest)
+    staged_bytes = staged_path.read_bytes()
+    staged = json.loads(staged_bytes)
+    if staged.get("schema") != "a5-part-a-launch-v1" or staged.get("scored") is not False:
+        raise SupplementRefused(
+            "the staged manifest is not an unscored a5-part-a-launch-v1 staging"
+        )
+    if staged.get("audit_rule") != "f10":
+        raise SupplementRefused("the staged manifest is not under the F10 rule")
+    if "supplement" in staged:
+        raise SupplementRefused("the staged manifest is already supplemented")
+    ladder_strengths = sorted({v["strength"] for v in staged["variants"] if v["kind"] == "scale"})
+    if sorted(float(s) for s in args.strengths) != ladder_strengths:
+        raise SupplementRefused(f"--strengths must be the staged ladders {ladder_strengths}")
+    audits_bytes = None
+    for name in (staged["rotation_audits"]["file"], "rotation_audits_pre_f11.jsonl"):
+        p = staged_path.with_name(name)
+        data = p.read_bytes() if p.exists() else b""
+        if hashlib.sha256(data).hexdigest() == staged["rotation_audits"]["sha256"]:
+            audits_bytes = data
+            break
+    if audits_bytes is None:
+        raise SupplementRefused("no audit file beside the staged manifest matches its hash")
+    zoo = Path(args.zoo)
+    stage = Path(args.out) / zoo.name
+    if stage.resolve() != Path(staged["staged_zoo"]).resolve():
+        raise SupplementRefused(f"{stage} is not the staged zoo {staged['staged_zoo']}")
+    registered_doc = json.loads(Path(args.selection).read_text())
+    reg, _ = load_registered_selection(args.selection, args.n_lora, args.n_chain)
+    if sorted(s.edit_id for s in reg) != staged["edit_ids"]:
+        raise SupplementRefused("the registered selection differs from the staged edits")
+    rows = [json.loads(x) for x in (zoo / "manifest.jsonl").read_text().splitlines() if x.strip()]
+    supp_path = Path(args.supplement)
+    selections, info, holders = load_supplement_selection(supp_path, registered_doc, rows, staged)
+    ids = [s.edit_id for s in selections]
+    proofs_wanted = not args.no_reference_proofs
+    window_check = bool(staged["scoring"].get("window_check"))
+    if proofs_wanted and window_check and not args.text_groups:
+        raise SupplementRefused(
+            "the staged reuse proofs carry the window check: give --text-groups"
+        )
+    new_vids = {
+        variant_id(i, k, st, rotation_seed(i))
+        for i in ids
+        for k, st in [("rotation", 1.0)] + [("scale", s) for s in ladder_strengths]
+    }
+    if new_vids & {v["variant_id"] for v in staged["variants"]}:
+        raise SupplementRefused("a supplementary variant id collides with a staged one")
+
+    before = rehash_staged(stage, staged)
+    if not before["all_equal"]:
+        raise SupplementRefused(
+            f"staged files of the forty differ from the staged manifest: {before['differ'][:8]}"
+        )
+    out = Path(args.manifest_out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    preserved = {}
+    for key, name, data in (("manifest", "manifest_pre_f11.json", staged_bytes),
+                            ("rotation_audits", "rotation_audits_pre_f11.jsonl", audits_bytes)):  # fmt: skip
+        p = out.with_name(name)
+        if p.exists() and p.read_bytes() != data:
+            raise SupplementRefused(f"{p} exists with other content; refusing to overwrite it")
+        p.write_bytes(data)
+        preserved[key] = {"file": name, "sha256": hashlib.sha256(data).hexdigest()}
+
+    header = next(r for r in reversed(rows) if r.get("type") == "header")
+    revisions = {json.loads((zoo / i / "edit.json").read_text())["base_revision"] for i in ids}
+    if len(revisions) != 1:
+        raise SupplementRefused(f"supplementary edits span base revisions {sorted(revisions)}")
+    revision = revisions.pop()
+    if revision != header.get("base_revision"):
+        raise SupplementRefused("supplementary edits are not at the zoo's base revision")
+    base, _ = load_base_state(header["base_model"], revision)
+    shapes = {k: tuple(v.shape) for k, v in base.items()}
+    variants = []
+    for s in selections:
+        t0 = time.monotonic()
+        built = build_variants(
+            zoo / s.edit_id,
+            base,
+            rotation_seed(s.edit_id),
+            tuple(ladder_strengths),
+            stage_root=stage,
+            predecessor_id="base",
+            audit_rule="f10",
+            source_bytes_holder=holders.get(s.edit_id),
+        )
+        variants += built
+        print(
+            f"supplement staged {s.edit_id}: {[v.variant_id for v in built]} rotation "
+            f"{'excluded' if built[0].excluded else 'pass'} ({time.monotonic() - t0:.1f} s)",
+            flush=True,
+        )
+    after = rehash_staged(stage, staged)
+    if after != before:
+        raise SupplementRefused(
+            "staged files of the forty changed during the supplementary staging"
+        )
+
+    proofs, touched, identity = None, [], None
+    if proofs_wanted:
+        windows = registered_windows(args.text_groups) if window_check else None
+        proofs, touched, identity = supplement_reference_proofs(
+            args.evals or staged["scoring"]["evals_dir"], args.config, zoo, ids, holders, revision,
+            windows,
+        )  # fmt: skip
+        carried_hash = next(p for p in staged["scoring"]["reuse_proofs"] if p["id"] == "base").get(
+            "config_hash"
+        )
+        if carried_hash not in (None, identity["config_hash"]):
+            raise SupplementRefused(
+                "--config gives another scoring identity than the staged proofs"
+            )
+
+    origin = provenance()
+    merged = merge_supplement(staged, selections, variants, holders, origin["git_sha"])
+    audits = audit_rows(variants, shapes)
+    audit_path = out.with_name("rotation_audits.jsonl")
+    audit_bytes = (
+        audits_bytes + "".join(json.dumps(r, sort_keys=True) + "\n" for r in audits).encode()
+    )
+    merged["scoring"] = _supplement_scoring(staged["scoring"], merged, ids, proofs)
+    bad = carried_identical(staged, merged)
+    if bad:
+        raise SupplementRefused(f"merged manifest does not carry the forty unchanged: {bad[:8]}")
+    merged |= {
+        "provenance": origin,
+        "rotation_audits": {
+            "file": audit_path.name,
+            "sha256": hashlib.sha256(audit_bytes).hexdigest(),
+            "n_tensors": staged["rotation_audits"]["n_tensors"] + len(audits),
+            "n_pass": staged["rotation_audits"]["n_pass"]
+            + sum(r["verdict"] == "pass" for r in audits),
+            "layout": "pre-F11 file bytes, then the supplementary rows (edit id order)",
+        },
+        "disk_bytes": _du(stage),
+        "scored": False,
+        "supplement": {
+            "amendment": SUPPLEMENT_AMENDMENT,
+            "selection_file": str(supp_path),
+            "sha256": _sha256(supp_path),
+            "ids": ids,
+            "cells": info["cells"],
+            "n": len(ids),
+            "source_bytes_holders": dict(sorted(holders.items())),
+            "audit_rule": "f10",
+            "strengths": ladder_strengths,
+            "seed_rule": SUPPLEMENT_SEED_RULE,
+            "pre_f11": preserved
+            | {"code_sha": staged.get("code_sha"), "provenance": staged.get("provenance")},
+            "carried": {
+                "n_edits": len(staged["edit_ids"]),
+                "rehash_before": {k: v for k, v in before.items() if k != "differ"},
+                "rehash_after": {k: v for k, v in after.items() if k != "differ"},
+                "entries_byte_identical": True,
+                "keys": list(SUPPLEMENT_CARRIED_KEYS)
+                + ["selections", "variants", "restage", "selection_ledger"],
+            },
+            "reference_proofs": {
+                "computed": proofs_wanted,
+                "function": "supplement_reference_proofs",
+                "identity": identity,
+                "paths_touched": touched,
+                "carried": ["base (predecessor of every supplementary edit)"],
+            },
+            "thread_env": threads_env,
+            "replay_environment": _replay_environment(),
+            "evaluation_reads": "reuse proofs of the supplementary originals only (paths_touched)"
+            if proofs_wanted
+            else "none: no evaluation record opened, no scorer run (--no-reference-proofs)",
+        },
+    }
+    audit_path.write_bytes(audit_bytes)
+    out.write_text(
+        json.dumps(rotation.json_safe(merged), indent=1, sort_keys=True, allow_nan=False) + "\n"
+    )
+    c, sc = merged["coverage"], merged["scoring"]
+    print(
+        f"merged {len(merged['edit_ids'])} edits: rotation pairs {c['n_rotation_pairs_staged']} pass, "
+        f"{c['n_rotation_pairs_excluded']} excluded; priced {sc['n_priced']} entries "
+        f"({sc['minutes']} min); unproven originals {len(sc['unproven_originals'])}"
+    )
+    return 0
+
+
+def slot_mask(manifest):
+    """The slot mask (schema ``a5-slot-mask-v1``: ``schema`` and ``available`` only) of a Part A manifest:
+    one entry per ``edit_ids`` id listing ``rotation`` iff its pair verdict is pass, then ``ladder_<s>`` for
+    each of its staged scale variants in strength order. The pair verdict must agree with the rotation
+    variant's ``excluded`` flag. Used for the F10.6 mask (forty ids) and the F11 mask (fifty-two)."""
+    rot, ladders = {}, {i: [] for i in manifest["edit_ids"]}
+    for v in manifest["variants"]:
+        if v["kind"] == "rotation":
+            rot[v["source_id"]] = not v["excluded"]
+        elif not v["excluded"]:
+            ladders[v["source_id"]].append(float(v["strength"]))
+    available = {}
+    for i in manifest["edit_ids"]:
+        verdict = manifest["edit_audits"][i]["pair_verdict"]
+        if (verdict == "pass") is not rot.get(i):
+            raise ValueError(f"{i}: pair verdict {verdict!r} disagrees with its rotation variant")
+        available[i] = (["rotation"] if verdict == "pass" else []) + [
+            f"ladder_{s!r}" for s in sorted(ladders[i])
+        ]
+    return {"schema": SLOT_MASK_SCHEMA, "available": available}
+
+
+def slot_mask_text(mask):
+    """The committed serialisation of a slot mask (as ``part_a/slot_mask_f10.json``)."""
+    return json.dumps(mask, indent=1, sort_keys=True)
+
+
+def write_slot_mask(args):
+    mask = slot_mask(json.loads(Path(args.manifest).read_text()))
+    text = slot_mask_text(mask)
+    Path(args.out).write_text(text)
+    masked = sorted(i for i, a in mask["available"].items() if "rotation" not in a)
+    print(
+        json.dumps(
+            {
+                "mask": str(args.out),
+                "sha256": hashlib.sha256(text.encode()).hexdigest(),
+                "n_ids": len(mask["available"]),
+                "rotation_masked": masked,
+            },
+            indent=1,
+        )
+    )
+    return 0
+
+
 def _coverage(per_edit, selections):
     return {
         "n_edits": len(per_edit),
@@ -1818,6 +2450,10 @@ def score(args):
     refs = ()
     if args.manifest:
         sc = json.loads(Path(args.manifest).read_text())["scoring"]
+        if sc.get("unproven_originals"):
+            raise SystemExit(
+                f"references unproven (prepare --no-reference-proofs): {sc['unproven_originals']}"
+            )
         refs = tuple(sc["missing_originals"]) + tuple(sc["missing_predecessors"])
     cmds = score_commands(args.stage, args.config, refs)
     for cmd in cmds:
@@ -1864,7 +2500,19 @@ def main(argv=None):
         help="F10.7: re-stage only the rotations under F10 in the staged zoo; ladders re-hashed, not "
         "rebuilt; the staged manifest is kept as manifest_a533.json; no evaluation reads, no scoring",
     )
-    p.add_argument("--staged-manifest", help="--rotation-only: the staged Part A manifest.json")
+    p.add_argument(
+        "--staged-manifest", help="--rotation-only / --supplement: the staged Part A manifest.json"
+    )
+    p.add_argument(
+        "--supplement",
+        help="F11: frozen supplementary list (selection_f11.json); stage only those roots (F10 rule, "
+        "rotation + ladders) into the staged zoo and merge them into --staged-manifest",
+    )
+    p.add_argument(
+        "--no-reference-proofs",
+        action="store_true",
+        help="--supplement: skip the supplementary originals' reuse proofs (no evaluation record read)",
+    )
     s = sub.add_parser("score", help="run wsp.eval.batch on the staged zoo (inside agent-tmux)")
     s.add_argument("--stage", required=True, help="staged zoo directory (OUT/<zoo name>)")
     s.add_argument("--config", default=DEFAULT_CONFIG)
@@ -1872,8 +2520,11 @@ def main(argv=None):
         "--manifest", help="prepare's manifest: also score its missing references (source zoo)"
     )
     s.add_argument("--dry-run", action="store_true")
+    m = sub.add_parser("slot-mask", help="write the a5-slot-mask-v1 mask of a Part A manifest")
+    m.add_argument("--manifest", required=True, help="Part A manifest.json (pair verdicts)")
+    m.add_argument("--out", required=True)
     args = parser.parse_args(argv)
-    return {"prepare": prepare, "score": score}[args.command](args)
+    return {"prepare": prepare, "score": score, "slot-mask": write_slot_mask}[args.command](args)
 
 
 if __name__ == "__main__":
