@@ -3565,3 +3565,8 @@ an outcome.
 committed metadata (including the sha256 of the committed files listed above); it did not open anything under `data/evals`, did not
 compute, score or receive any G3, rotation, ladder, missing-TF-v1-reference or sealed outcome or a summary of one, used no GPU and
 wrote no data. It attests only to its own session; the attestation ledger is not edited here.
+
+*A5 note F10c addendum (chair, 11 Nov 2026, about 05:10 UTC).* F10c clause 11 was written on a branch cut before re-pin (xvii) and says
+the four analysis-code rows are not yet in `code_hashes.json`. They are: re-pin (xvii) (above) added `src/wsp/eval/part_a_analysis.py`
+`419dc074…`, `scripts/part_a_analyse.py` `a47a72f8…`, `tests/test_part_a_analysis.py` `5adaeaf8…` and
+`docs/design/F10_SENSITIVITY_SPEC.md` `8624e063…`, the same bytes F10c.11 cites. Nothing else in F10c changes.
