@@ -625,3 +625,9 @@ ordering with Part B always reported; runtime spec-hash check (`--spec-sha256`);
 against `text_groups.json`; complete re-stage evidence per pair (`audit_missing` fail-closed); complete ledgers, 3×2 sign tables,
 fit diagnostics; F10.6 masked-calibration disclosure (refused at 40/40, required below). Under Board A re-review. Pin list proposed:
 `src/wsp/eval/part_a_analysis.py`, `scripts/part_a_analyse.py`, `tests/test_part_a_analysis.py`, `docs/design/F10_SENSITIVITY_SPEC.md`.
+
+**11 Nov 2026, 04:50 UTC.** Board A accepted the corrected Part A analysis code (2b03bda) with conditions (adopt operational choices
+by dated note; merge, re-test, pin, verify at the execution commit, bind input evidence; complete attestations and F10 gates).
+Merged; pin map extended; A5.1.2 re-pin (xvii); F10c adopting note in flight. Remaining before scoring: the corrected F10 rule
+code (second round, in flight) → Board A → merge + re-pin (xviii) → rotation-only re-stage (CPU, ≈ 2–3.5 h) → re-stage report →
+Board A acceptance → masked calibration if yield < 40 → score 139 entries → seal.

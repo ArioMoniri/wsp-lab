@@ -3394,3 +3394,18 @@ this block): it read only `docs/`, `src/`, `scripts/` text and committed metadat
 not compute, score or receive any G3, rotation, ladder, missing-TF-v1-reference or sealed outcome or a summary of one, used no GPU and
 wrote no data. The older 6 November D3 development records classified by A5.3 and by Board A's ruling are unaffected and not opened.
 It attests only to its own session; the attestation ledger is not edited here and condition A1 remains open.
+
+*A5.1.2 re-pin (xvii) (11 Nov 2026, about 04:50 UTC; merge of `feat/f10-sensitivity-reports` after Board A's acceptance with
+conditions, `docs/reviews/council/board-a-part-a-analysis-2-2026-11-11.md`; before any G3 outcome).* The pin map in
+`scripts/a5_build_manifests.py` gained four entries (`src/wsp/eval/part_a_analysis.py`, `scripts/part_a_analyse.py`,
+`tests/test_part_a_analysis.py`, `docs/design/F10_SENSITIVITY_SPEC.md`); the builder was re-run with `--pin-worktree` into a copy and
+only `code_hashes.json` and the package README were copied back. Rows: `src/wsp/eval/part_a_analysis.py`
+`419dc07486279a4fe16cdefd90973042596ca12f65028e466172aa7d7d1d9bc9` (new); `scripts/part_a_analyse.py`
+`a47a72f8b6485363b4c9ba8fc600b8564c31dfcb02e0c1a1106ffe734f07395d` (new); `tests/test_part_a_analysis.py`
+`5adaeaf8ea66d8b64ef1e9cfd6964006eaea363ba58d1214d1d03befc6a48b4f` (new); `docs/design/F10_SENSITIVITY_SPEC.md`
+`8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4` (new; equals the F10b hash); `scripts/a5_build_manifests.py`
+`2ac41aab35df6838…` (changed: pin map only); `docs/prereg/a5_manifests/code_hashes.json`
+`c8c3a048d5dee5444957e7dc9b11e79029edf1ea7bccf90e442a031de816e246` (old `67b1517b…`, xvi); `docs/prereg/a5_manifests/README.md`
+`558aae097b19121926be96bd75602c61450e91e2a39cd27ce43485bfd4e9a55e` (old `12f54157…`, xvi). Input-inventory bindings for the analysis
+(`text_groups.json`, the Part A manifest, the NULL-SIZE report) are recorded by hash in A5 note F10c. No selection, seed, control,
+panel or decision file changed; nothing has been scored.

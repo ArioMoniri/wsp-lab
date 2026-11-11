@@ -49,6 +49,10 @@
    "role": "fitting settings (A5.8.4: n_splits, seed, scaling, neural settings)",
    "sha256": "c217b5a5b012689475609782bfb68d862cbfb4864b1233093be7d355a7e04cfe"
   },
+  "docs/design/F10_SENSITIVITY_SPEC.md": {
+   "role": "frozen F10.5 specification (adopted by F10b)",
+   "sha256": "8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4"
+  },
   "docs/prereg/panel_manifest.json": {
    "role": "certified source closure / panel components (selection input)",
    "sha256": "7c72bfd3280954a82de1161e640a870da5f3a876c03b22247656701ed6af2c67"
@@ -75,7 +79,7 @@
   },
   "scripts/a5_build_manifests.py": {
    "role": "builder",
-   "sha256": "c7dfedb1201307314059c03249905eeabbb4cbe4262a6370c3e84f1103ac0e05"
+   "sha256": "2ac41aab35df683844cfc58ab123dc405344bb9277cfd27690cd647b792131f8"
   },
   "scripts/a5_build_panels.py": {
    "role": "builder",
@@ -108,6 +112,10 @@
   "scripts/lambda_job_scale4b.sh": {
    "role": "F5.3/FP4 4B Lambda H100 job",
    "sha256": "45a59075ecbc986706a660839e0e4ab25e13c712b2c6072288512d98624b41a2"
+  },
+  "scripts/part_a_analyse.py": {
+   "role": "Part A analysis CLI",
+   "sha256": "a47a72f8b6485363b4c9ba8fc600b8564c31dfcb02e0c1a1106ffe734f07395d"
   },
   "scripts/scale4b_build_edits.py": {
    "role": "F5.3 4B Gaussian edit builder (support, radius, bf16 diagnostics)",
@@ -156,6 +164,10 @@
   "src/wsp/eval/metadata.py": {
    "role": "transitive wsp import of a pinned module",
    "sha256": "d6f97b9317d394e8f4c19dc6f098021cbfc4ff27aa5f2b2cf380b5afcde313c7"
+  },
+  "src/wsp/eval/part_a_analysis.py": {
+   "role": "Part A analysis: A5.4/A5.5 outputs and F10.5 reports (Board A condition 6)",
+   "sha256": "419dc07486279a4fe16cdefd90973042596ca12f65028e466172aa7d7d1d9bc9"
   },
   "src/wsp/eval/refusal.py": {
    "role": "transitive wsp import of a pinned module",
@@ -268,9 +280,13 @@
   "tests/test_a5_snapshot.py": {
    "role": "test",
    "sha256": "85d27f488d489934e703bc77336614ef7882120f39c0de6ec346264a99ac5dcc"
+  },
+  "tests/test_part_a_analysis.py": {
+   "role": "test",
+   "sha256": "5adaeaf8ea66d8b64ef1e9cfd6964006eaea363ba58d1214d1d03befc6a48b4f"
   }
  },
- "git_sha": "b3bd27616c15e5e11183b65bf6c89ac2b508bf00",
+ "git_sha": "f41d6753c107db6715aae8fcb800b9f2c613f550",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",
