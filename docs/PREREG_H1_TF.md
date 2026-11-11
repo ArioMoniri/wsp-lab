@@ -5839,3 +5839,19 @@ the restricted copy and, once, through a baseline test that parsed the raw F8a.2
 rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A score, opened nothing under `data/evals`, read no real
 F12 token and used no GPU. (iii) It read F12a.1's account of the prescore audits, not the audits. It attests to this session only.
 
+
+#### A5 chair ruling on F12c (11 Nov 2026, 18:55 UTC, before any G3 outcome): all-in CPU ceiling accepted; stage 1 still held
+
+(a) *Repricing accepted.* The chair accepts F12c's prospective all-in ceiling of **190 CPU-h** for the whole F12 simulation
+programme (noise check, timing pilot, stage 1, coverage target, stage 2 with its 200 variance-×2 replicates, measured overhead),
+replacing F12b.6's stage-2-only 150 CPU-h statement. It is CPU time on the shared machine only; no GPU budget, Part A, G5, G7, F8
+or F9 allocation is touched. The two-worker rule stands, so the worst-case wall time is about 100 h; that wall time is disclosed to
+the programme owner as the cost of this acceptance. The `pilot_acceptance` record (schema `f12c-pilot-acceptance-v1`) is written
+only after the timing pilot's measured real-token projection and only if that projection is within 190 CPU-h; a projected breach
+at any later point stops the run for a new dated repricing. Fixed replicate counts, draws and qualification work never change.
+(b) *Ordering unchanged.* Stage 1 remains held until: the F12 token run completes and its manifest is committed; the 10,000-panel
+noise check (F12a.4(d), `noisecheck`) passes on real tokens; the ten-alternative timing pilot runs under `pilot:<r>` streams; the
+C1 pin (`code_hashes_c1.json`) is verified by Board A; and Board A reviews F12c against its seven F12b conditions. Part A stays held
+by the programme owner; nothing has been scored.
+(c) *Disclosure noted.* The F12c implementer's one-time parse of the raw F8a.2 payload's allowlisted fields by a baseline test is
+recorded in `docs/prereg/f12_attestations.md`; no outcome field was read; the test now reads the restricted copy.
