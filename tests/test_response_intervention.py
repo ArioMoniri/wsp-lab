@@ -3,6 +3,7 @@
 Synthetic manifest rows and tiny bf16 state dicts only: no model, no data/, CPU.
 """
 
+import argparse
 import hashlib
 import json
 import math
@@ -1451,3 +1452,765 @@ def test_dryrun_entrypoint_writes_only_under_its_scratch_root(tmp_path):
         with pytest.raises(SystemExit, match="scratch"):
             mod.scratch_dir(bad, root)
     assert mod.DEFAULT_SCRATCH.endswith("runs/a5/f10_dryrun")
+
+
+# --- F11 supplementary staging: 12 roots merged into the staged 40, no evaluation reads by default
+
+SUPP = {  # (family, tertile) -> next-in-cell candidates after the registered picks, in canonical order
+    ("lora_sft", 2): ["l2_x1", "l2_x2", "l2_x3", "l2_x4", "l2_x5"],  # l2_x5: reserve
+    ("chain", 0): ["c0_x1", "c0_x2", "c0_x3", "c0_x4", "c0_x5"],  # c0_x1: not a root (skipped)
+    ("chain", 2): ["c2_x1", "c2_x2", "c2_x3", "c2_x4", "c2_x5"],  # c2_x3: alias-only (skipped)
+}
+NOT_ROOT = {"c0_x1"}
+ALIAS_ONLY = {"c2_x3": "H2"}
+SUPP_IDS = sorted(
+    i for c in SUPP.values() for i in [x for x in c if x not in NOT_ROOT | set(ALIAS_ONLY)][:4]
+)
+FAILS_F10 = "l2_x2"
+WINDOWS = [(str(k), f"h{k}") for k in range(4)]
+F11_IDS_SHA256 = "1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9"
+PKG = Path(__file__).resolve().parents[1] / "docs" / "prereg" / "a5_manifests"
+
+
+def _f11_script():
+    from scripts import a5_f11_supplement
+
+    return a5_f11_supplement
+
+
+def _registered_40():
+    """30 LoRA (10/10/10) and 10 chain (4/3/3) registered ids, by (family, tertile)."""
+    picks = {("lora_sft", t): [f"l{t}_{k:02d}" for k in range(10)] for t in range(3)}
+    picks |= {("chain", t): [f"c{t}_{k}" for k in range(n)] for t, n in enumerate((4, 3, 3))}
+    return picks
+
+
+def _supp_delta(seed):
+    return {
+        "layers.0.q.weight": _lowrank((8, 6), [1, 2, 3, 5], [0, 1, 2, 4], 2, seed),
+        "layers.0.v.weight": _lowrank((6, 6), [0, 2, 3], [1, 3, 4, 5], 2, seed + 1),
+    }
+
+
+def _fake_staged_40(stage, picks, excluded):
+    """A staged Part A of the 40 in the a5-part-a-launch-v1 shape: real files and hashes, fake bytes."""
+    stage.mkdir(parents=True)
+    sels, variants, rows, audit_lines = [], [], [], []
+    for (fam, t), ids in sorted(picks.items()):
+        for i in ids:
+            sels.append(ri.Selection(i, f"K-{i}", fam, t, 0, 1.0, "base"))
+            seed = ri.rotation_seed(i)
+            for kind, s in (("rotation", 1.0), ("scale", 0.25), ("scale", 0.5)):
+                vid = ri.variant_id(i, kind, s, seed)
+                d = stage / vid
+                d.mkdir()
+                exc = kind == "rotation" and i in excluded
+                ex = [{"tensor": None, "reason": "replay_failed"}] if exc else []
+                meta = {
+                    "kind": kind,
+                    "source_id": i,
+                    "excluded": exc,
+                    "exclusions": ex,
+                    "seed": seed,
+                }
+                if kind == "rotation":
+                    meta |= {"audit_rule": "f10", "edited_tensors": ["t"], "tensor_audits": {},
+                             "predecessor_bytes_holder": None, "delta_convention": "x", "lineage": {},
+                             "coverage": {"n_edited": 1, "n_rotated": 0 if exc else 1,
+                                          "n_excluded": int(exc), "fraction": 0.0 if exc else 1.0},
+                             "edit_audit": {"passes": not exc, "in_subset_pooled_norm_2e-2": True,
+                                            "in_subset_noise_calibrated": not exc}}  # fmt: skip
+                    audit_lines.append(
+                        json.dumps({"edit_id": i, "verdict": "x" if exc else "pass"})
+                    )
+                (d / "variant.json").write_text(json.dumps(meta, sort_keys=True))
+                if not exc:
+                    save_file(
+                        {"t": torch.full((2, 2), float(len(variants)))},
+                        str(d / "delta.safetensors"),
+                    )
+                    rows.append({"id": vid, "variant_of": i, "parent_id": None, "base_revision": REV,
+                                 "reuse_key": _sha(d / "delta.safetensors")})  # fmt: skip
+                variants.append(ri.Variant(vid, kind, s, seed, i, "base", d, exc, ex,
+                                           "f10" if kind == "rotation" else None,
+                                           False if kind == "scale" else None))  # fmt: skip
+    header = {"type": "header", "base_model": "m", "base_revision": REV}
+    (stage / "manifest.jsonl").write_text(
+        "".join(
+            json.dumps(r, sort_keys=True) + "\n"
+            for r in [header, *sorted(rows, key=lambda r: r["id"])]
+        )
+    )
+    return sels, variants, "".join(x + "\n" for x in audit_lines)
+
+
+def _f11_metadata(meta, picks):
+    """components.jsonl, fields_manifest.json and power/registered_donors.json for the synthetic pool."""
+    meta.mkdir()
+    rows, donors, pool = [], {}, []
+    for ids in picks.values():
+        rows += [{"id": i, "component_id": f"K-{i}", "parent_id": None, "bytes_present": True,
+                  "bytes_via_alias": None, "eligibility": "eligible", "closure_certified": True,
+                  "component_status": "development", "effective_norm": 1.0, "exactness": "bitwise"}
+                 for i in ids]  # fmt: skip
+    for (fam, t), cand in SUPP.items():
+        for k, i in enumerate(cand):
+            root, alias = i not in NOT_ROOT, ALIAS_ONLY.get(i)
+            rows.append({"id": i, "component_id": f"S-{i}", "parent_id": None if root else "p0",
+                         "bytes_present": alias is None, "bytes_via_alias": alias,
+                         "eligibility": "eligible", "closure_certified": True,
+                         "component_status": "development", "effective_norm": 1.5 + k + t / 10,
+                         "exactness": "bitwise"})  # fmt: skip
+            donors[i] = {"gradient_source": "base_field", "predecessor_is_base": root,
+                         "flags": [] if root else ["base-approximation-unvalidated"],
+                         "donor_via_alias": alias is not None}  # fmt: skip
+            if root:
+                pool.append(
+                    i
+                )  # the alias-only root is an exact-gradient donor: F11.2 still skips it
+    paths = {
+        "components": meta / "components.jsonl",
+        "fields_manifest": meta / "fields_manifest.json",
+        "registered_donors": meta / "registered_donors.json",
+    }
+    paths["components"].write_text("".join(json.dumps(r) + "\n" for r in rows))
+    paths["fields_manifest"].write_text(json.dumps({"donors": donors}))
+    paths["registered_donors"].write_text(json.dumps({"donor_ids": sorted(pool)}))
+    return paths
+
+
+def _rewrite_f11(path, doc):
+    """Write a changed selection_f11.json with consistent sorted ids and sha (the rule check must catch it)."""
+    doc["supplement_ids_sorted"] = sorted(doc["supplement_ids"])
+    doc["supplement_ids_sorted_sha256"] = ri._ids_sha256(doc["supplement_ids"])
+    path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n")
+    return doc["supplement_ids_sorted_sha256"]
+
+
+def _f11_setup(tmp_path, monkeypatch):
+    from wsp.eval import batch
+    from wsp.features import extract
+
+    base = _base()
+    zoo = tmp_path / "zoo"
+    zoo.mkdir(parents=True)
+    picks = _registered_40()
+    excluded = {"l2_00", "c0_0", "c2_0"}  # one lost rotation per depleted cell
+    zrows = [{"type": "header", "base_model": "m", "base_revision": REV}]
+    for (fam, t), cand in SUPP.items():
+        for k, i in enumerate(cand):
+            zrows.append({"id": i, "family": fam, "parent_id": "p0" if i in NOT_ROOT else None})
+            if i in ALIAS_ONLY:
+                _entry(zoo, ALIAS_ONLY[i], _supp_delta(300), family="random_dir")
+                (zoo / i).mkdir()
+                (zoo / i / "edit.json").write_text(json.dumps(
+                    {"id": i, "family": fam, "parent_id": None, "base_revision": REV}))  # fmt: skip
+            elif i in SUPP_IDS:
+                _entry(
+                    zoo, i, _supp_delta(100 + 10 * k + 3 * t), family=fam, cumulative=fam == "chain"
+                )
+    (zoo / "manifest.jsonl").write_text("".join(json.dumps(r) + "\n" for r in zrows))
+
+    out, pkg = tmp_path / "runs", tmp_path / "pkg"
+    stage = out / "zoo"
+    pkg.mkdir()
+    sels, variants, audit_text = _fake_staged_40(stage, picks, excluded)
+    (stage / "stage.json").write_text(json.dumps({"source_zoo": str(zoo.resolve())}))
+    (pkg / "rotation_audits.jsonl").write_text(audit_text)
+    staged = ri.manifest_for(sels, variants, "staged-sha")
+    per_edit = ri.edit_audit_summary(variants)
+    vids = staged["variant_ids"]
+    evals = tmp_path / "evals"
+    missing = sorted(s.edit_id for s in sels)[:5]
+    staged |= {
+        "provenance": {"git_sha": "staged-sha", "source_hash": "s0", "dirty": False},
+        "selection_ledger": {"source": "registered"},
+        "scoring": {
+            "config": "cfg",
+            "evals_dir": str(evals),
+            "plan": [[v, False] for v in vids],
+            "n_variants": len(vids),
+            "excluded_variants": staged["excluded_variant_ids"],
+            "predecessors": ["base"],
+            "originals": staged["edit_ids"],
+            "predecessor_bytes_holders": {},
+            "missing_predecessors": [],
+            "missing_originals": missing,
+            "n_P": 0,
+            "n_D": 5,
+            "references_to_score": 5,
+            "n_priced": len(vids) + 5,
+            "minutes_per_entry": 1.04,
+            "minutes": round((len(vids) + 5) * 1.04, 4),
+            "reuse_proofs": [
+                {
+                    "id": "base",
+                    "verdict": True,
+                    "bytes_holder": None,
+                    "config_hash": effective_config_hash(CFG),
+                }
+            ],
+            "window_check": True,
+        },
+        "staged_zoo": str(stage),
+        "rotation_seeds": {s.edit_id: ri.rotation_seed(s.edit_id) for s in sels},
+        "predecessor_bytes_holders": {},
+        "edit_audits": per_edit,
+        "rotation_audits": {
+            "file": "rotation_audits.jsonl",
+            "sha256": _sha(pkg / "rotation_audits.jsonl"),
+            "n_tensors": 40,
+            "n_pass": 37,
+        },
+        "coverage": ri._coverage(per_edit, sels),
+        "variant_json_sha256": {v.variant_id: _sha(v.entry_dir / "variant.json") for v in variants},
+        "disk_bytes": 1,
+        "scored": False,
+        "restage": {"mode": "rotation_only", "audit_rule": "f10", "note": "carried"},
+    }
+    man = pkg / "manifest.json"
+    man.write_text(json.dumps(staged, indent=1, sort_keys=True) + "\n")
+
+    # registered selection.json with the full ledger cells (registered picks first in canonical order)
+    reg_rows = [_sel_row(s.edit_id, s.family, s.component_id, tertile=s.tertile) for s in sels]
+    doc = _selection_doc(reg_rows, 30, 10)
+    doc["procedural_freeze"]["registered_edit_ids"] = doc["registered"]["edit_ids"]
+    cells = {f: [[] for _ in range(3)] for f in ri.FAMILIES}
+    for (fam, t), ids in picks.items():
+        cells[fam][t] = ids + SUPP.get((fam, t), [])
+    doc["registered"]["ledger"] = {"families": {
+        f: {"cells": cells[f], "quotas": [len(picks[(f, t)]) for t in range(3)],
+            "ordered": [i for c in cells[f] for i in c]} for f in ri.FAMILIES}}  # fmt: skip
+    sel = tmp_path / "selection.json"
+    sel.write_text(json.dumps(doc))
+
+    # the frozen-format list, written by the registered selection script itself (absolute input paths)
+    meta = _f11_metadata(tmp_path / "meta", picks)
+    supp = tmp_path / "selection_f11.json"
+    built = _f11_script().build(sel, meta["components"], meta["fields_manifest"],
+                                meta["registered_donors"], man)  # fmt: skip
+    supp.write_text(json.dumps(built, indent=2, sort_keys=True) + "\n")
+    assert built["supplement_ids_sorted"] == SUPP_IDS
+    monkeypatch.setattr(ri, "F11_SUPPLEMENT_IDS_SHA256", built["supplement_ids_sorted_sha256"])
+
+    # TF-v1 reference records of the supplementary originals (one missing), with the 64-window check
+    for i in SUPP_IDS:
+        if i == "c0_x3":
+            continue
+        _record(evals, i, hashes={"delta.safetensors": _sha(zoo / i / "delta.safetensors")})
+        _records(evals, i, WINDOWS)
+    tg = tmp_path / "text_groups.json"
+    tg.write_text(
+        json.dumps({"windows": [{"item_id": w, "token_ids_hash": h} for w, h in WINDOWS]})
+    )
+    cfg = tmp_path / "cfg.yaml"
+    cfg.write_text(json.dumps(CFG))
+
+    monkeypatch.setattr(extract, "load_base_state", lambda m, r: (dict(base), r))
+    monkeypatch.setattr(batch, "provenance", lambda: {"git_sha": "g11", "source_hash": "s11"})
+    monkeypatch.setenv("OMP_NUM_THREADS", "4")
+    monkeypatch.setenv("MKL_NUM_THREADS", "4")
+    real = ri.rotation.f10_tensor_audit
+    bad_seed = ri.rotation_seed(FAILS_F10)
+
+    def audit(*a, **k):  # one supplementary edit fails F10 (upper-side sub-resolution guard)
+        out_ = real(*a, **k)
+        return out_ | {"r_eff_norm": out_["d_norm"] * 1.6} if a[6] == bad_seed else out_
+
+    monkeypatch.setattr(ri.rotation, "f10_tensor_audit", audit)
+    argv = ["prepare", "--supplement", str(supp), "--staged-manifest", str(man), "--zoo", str(zoo),
+            "--selection", str(sel), "--out", str(out), "--manifest-out", str(man), "--config", str(cfg),
+            "--evals", str(evals), "--text-groups", str(tg)]  # fmt: skip
+    return {"argv": argv, "man": man, "stage": stage, "evals": evals, "zoo": zoo, "supp": supp,
+            "staged": staged, "vids40": [v.variant_id for v in variants], "meta": meta, "sel": sel,
+            "cfg": cfg, "tg": tg, "built": built}  # fmt: skip
+
+
+def _carried_identical(m, staged):
+    for key in ("delta_sha256", "variant_json_sha256", "edit_audits", "rotation_seeds"):
+        for k, v in staged[key].items():
+            assert json.dumps(m[key][k], sort_keys=True) == json.dumps(v, sort_keys=True), (key, k)
+    for key in ("selections", "variants"):
+        merged = {json.dumps(r, sort_keys=True) for r in m[key]}
+        assert all(json.dumps(r, sort_keys=True) in merged for r in staged[key])
+    for key in ("restage", "selection_ledger", "predecessor_bytes_holders", "staged_zoo"):
+        assert m[key] == staged[key]
+
+
+def _real_evals_guard(monkeypatch):
+    """Tests that run the proof step on synthetic records must never reach the repository's data/evals."""
+    import builtins
+    import os
+
+    from wsp.eval import batch
+
+    root = (batch.REPO / "data" / "evals").resolve()
+
+    def wrap(f):
+        def inner(path, *a, **k):
+            if not isinstance(path, int):
+                p = Path(os.fsdecode(path)).resolve()
+                assert p != root and root not in p.parents, f"data/evals opened: {p}"
+            return f(path, *a, **k)
+
+        return inner
+
+    for name in ("open",):
+        monkeypatch.setattr(builtins, name, wrap(getattr(builtins, name)))
+
+
+def test_supplement_merges_twelve_roots_into_the_staged_forty(tmp_path, monkeypatch):
+    s = _f11_setup(tmp_path, monkeypatch)
+    staged, stage = s["staged"], s["stage"]
+    staged_bytes, audits_bytes = (
+        s["man"].read_bytes(),
+        s["man"].with_name("rotation_audits.jsonl").read_bytes(),
+    )
+    before = {vid: _tree_bytes(stage / vid) for vid in s["vids40"]}
+    assert ri.main(s["argv"]) == 0
+    m = json.loads(s["man"].read_text())
+    # the 40: files untouched, every manifest entry carried byte for byte, pre-F11 copy preserved
+    assert {vid: _tree_bytes(stage / vid) for vid in s["vids40"]} == before
+    _carried_identical(m, staged)
+    pre = s["man"].with_name("manifest_pre_f11.json")
+    assert pre.read_bytes() == staged_bytes
+    sup = m["supplement"]
+    assert sup["pre_f11"]["manifest"] == {
+        "file": "manifest_pre_f11.json",
+        "sha256": hashlib.sha256(staged_bytes).hexdigest(),
+    }
+    assert s["man"].with_name("rotation_audits_pre_f11.jsonl").read_bytes() == audits_bytes
+    merged_audits = s["man"].with_name("rotation_audits.jsonl").read_bytes()
+    assert merged_audits.startswith(audits_bytes) and m["rotation_audits"]["sha256"] == _sha(
+        s["man"].with_name("rotation_audits.jsonl")
+    )
+    assert m["rotation_audits"]["n_tensors"] == 40 + 2 * 12
+    assert (
+        sup["carried"]["rehash_before"]["all_equal"] and sup["carried"]["rehash_after"]["all_equal"]
+    )
+    assert sup["carried"]["entries_byte_identical"] is True
+    # the supplement record, bound to the frozen-format list
+    assert sup["amendment"] == "F11" and sup["ids"] == SUPP_IDS
+    assert sup["selection_schema"] == "a5-f11-supplement-v1"
+    assert sup["ids_sorted_sha256"] == s["built"]["supplement_ids_sorted_sha256"]
+    assert sup["ids_in_selection_order"] == s["built"]["supplement_ids"]
+    assert sup["sha256"] == _sha(s["supp"]) and sup["selection_file"] == str(s["supp"])
+    assert sup["cells"] == {"chain:0": ["c0_x2", "c0_x3", "c0_x4", "c0_x5"],
+                            "chain:2": ["c2_x1", "c2_x2", "c2_x4", "c2_x5"],
+                            "lora_sft:2": ["l2_x1", "l2_x2", "l2_x3", "l2_x4"]}  # fmt: skip
+    assert sup["source_bytes_holders"] == {}
+    # merged counts over 52; supplementary flags where the analysis reads them (selections[].supplementary)
+    assert len(m["edit_ids"]) == 52 and m["edit_ids"] == sorted(m["edit_ids"])
+    assert len(m["selections"]) == 52 and len(m["component_ids"]) == 52
+    flagged = {r["edit_id"]: r.get("supplementary") for r in m["selections"]}
+    assert sorted(i for i, f in flagged.items() if f is True) == SUPP_IDS
+    assert all("supplementary" not in r for r in m["selections"] if r["edit_id"] not in SUPP_IDS)
+    assert (
+        sorted(i for i, e in m["edit_audits"].items() if e.get("supplementary") is True) == SUPP_IDS
+    )
+    rows = {r["edit_id"]: r for r in m["selections"]}
+    assert (
+        rows["c2_x4"]["effective_norm"] == 1.5 + 3 + 0.2
+        and rows["c2_x4"]["predecessor_id"] == "base"
+    )
+    assert rows["c2_x4"]["component_id"] == "S-c2_x4" and rows["c2_x4"]["tertile"] == 2
+    assert len(m["variants"]) == 156
+    bad_rot = ri.variant_id(FAILS_F10, "rotation", 1.0, ri.rotation_seed(FAILS_F10))
+    assert m["excluded_variant_ids"] == sorted(staged["excluded_variant_ids"] + [bad_rot])
+    assert len(m["variant_ids"]) == len(staged["variant_ids"]) + 35
+    assert m["edit_audits"][FAILS_F10]["pair_verdict"] == "excluded"
+    assert m["edit_audits"][FAILS_F10]["exclusions"] == [
+        {"tensor": None, "reason": "sub_resolution"}
+    ]
+    assert all(m["edit_audits"][i]["pair_verdict"] == "pass" for i in SUPP_IDS if i != FAILS_F10)
+    c = m["coverage"]
+    assert (
+        c["n_edits"] == 52
+        and c["n_rotation_pairs_staged"] == 48
+        and c["n_rotation_pairs_excluded"] == 4
+    )
+    assert c["by_family"] == {"lora_sft": {"edits": 34, "pairs_excluded": 2},
+                              "chain": {"edits": 18, "pairs_excluded": 2}}  # fmt: skip
+    assert m["reference_ids_needed"]["originals"] == m["edit_ids"]
+    assert m["selected_without_variants"] == [] and m["variants_without_selection"] == []
+    assert set(SUPP_IDS) <= set(m["f10_subsets"]["pooled_norm_le_2e-2"]) | {FAILS_F10}
+    assert m["rotation_seeds"] == staged["rotation_seeds"] | {
+        i: ri.rotation_seed(i) for i in SUPP_IDS
+    }
+    assert (
+        m["scored"] is False and m["schema"] == "a5-part-a-launch-v1" and m["audit_rule"] == "f10"
+    )
+    assert m["provenance"]["git_sha"] == "g11" and sup["pre_f11"]["code_sha"] == "staged-sha"
+    # scoring plan and priced count over 52; by default the 12 originals are "to be proven or scored"
+    sc = m["scoring"]
+    assert [v for v, _ in sc["plan"]] == m["variant_ids"] and sc["n_variants"] == len(
+        m["variant_ids"]
+    )
+    assert sc["unproven_originals"] == SUPP_IDS == sc["originals_to_prove_or_score"]
+    assert sc["missing_originals"] == staged["scoring"]["missing_originals"]
+    assert sc["n_D"] == 5 and sc["n_P"] == 0
+    assert sc["n_priced"] == sc["n_variants"] + 5 + 12 and sc["minutes"] == round(
+        sc["n_priced"] * 1.04, 4
+    )
+    assert sc["excluded_variants"] == m["excluded_variant_ids"]
+    rp = sup["reference_proofs"]
+    assert rp["computed"] is False and rp["paths_touched"] == []
+    assert rp["deferred_to"].startswith("score --manifest")
+    # the new variants: staged rows and files
+    staged_rows = _staged_rows(stage)
+    assert set(m["variant_ids"]) <= staged_rows and bad_rot not in staged_rows
+    for vid, files in m["delta_sha256"].items():
+        assert files["delta.safetensors"] == _sha(stage / vid / "delta.safetensors")
+    rot = ri.variant_id("c2_x4", "rotation", 1.0, ri.rotation_seed("c2_x4"))
+    assert "source_bytes_holder" not in json.loads((stage / rot / "variant.json").read_text())
+    # the slot mask over the 52 ids (schema a5-slot-mask-v1: schema and available only)
+    mask_path = tmp_path / "slot_mask_f11.json"
+    assert ri.main(["slot-mask", "--manifest", str(s["man"]), "--out", str(mask_path)]) == 0
+    mask = json.loads(mask_path.read_text())
+    assert set(mask) == {"schema", "available"} and mask["schema"] == "a5-slot-mask-v1"
+    assert sorted(mask["available"]) == m["edit_ids"]
+    no_rot = sorted(i for i, a in mask["available"].items() if "rotation" not in a)
+    assert no_rot == sorted(["l2_00", "c0_0", "c2_0", FAILS_F10])
+    assert all(a[-2:] == ["ladder_0.25", "ladder_0.5"] for a in mask["available"].values())
+
+
+def test_supplement_refuses_when_a_staged_file_of_the_forty_differs(tmp_path, monkeypatch, capsys):
+    s = _f11_setup(tmp_path, monkeypatch)
+    staged_bytes = s["man"].read_bytes()
+    listing = sorted(p.name for p in s["stage"].iterdir())
+    ladder = next(v["variant_id"] for v in s["staged"]["variants"] if v["kind"] == "scale")
+    f = s["stage"] / ladder / "delta.safetensors"
+    good = f.read_bytes()
+    f.write_bytes(good[:-1] + bytes([good[-1] ^ 1]))
+    assert ri.main(s["argv"]) == 2 and "differ" in capsys.readouterr().err
+    assert s["man"].read_bytes() == staged_bytes
+    assert not s["man"].with_name("manifest_pre_f11.json").exists()
+    assert sorted(p.name for p in s["stage"].iterdir()) == listing  # nothing staged
+    f.write_bytes(good)
+    excluded_rot = s["staged"]["excluded_variant_ids"][0]
+    vj = s["stage"] / excluded_rot / "variant.json"
+    vj.write_text(vj.read_text() + " ")
+    assert ri.main(s["argv"]) == 2 and "differ" in capsys.readouterr().err
+    assert s["man"].read_bytes() == staged_bytes
+
+
+@pytest.mark.parametrize("flag", [[], ["--no-reference-proofs"]])
+def test_supplement_reads_no_evaluation_record_by_default(tmp_path, monkeypatch, flag):
+    from wsp.eval import batch
+
+    s = _f11_setup(tmp_path, monkeypatch)
+    called = []
+    monkeypatch.setattr(ri, "supplement_reference_proofs", lambda *a, **k: called.append(a))
+    opened = _forbid_evaluation_access(monkeypatch, [s["evals"], batch.REPO / "data" / "evals"])
+    assert ri.main(s["argv"] + flag) == 0
+    assert opened == [] and called == []
+    m = json.loads(s["man"].read_text())
+    sc, rp = m["scoring"], m["supplement"]["reference_proofs"]
+    assert rp["computed"] is False and rp["paths_touched"] == [] and rp["identity"] is None
+    assert m["supplement"]["evaluation_reads"].startswith("none")
+    assert sc["unproven_originals"] == SUPP_IDS
+    assert sc["missing_originals"] == s["staged"]["scoring"]["missing_originals"]
+    assert sc["reuse_proofs"] == s["staged"]["scoring"]["reuse_proofs"]  # carried, none added
+    assert sc["n_priced"] == sc["n_variants"] + sc["n_P"] + sc["n_D"] + len(SUPP_IDS)
+
+
+def test_supplement_reference_proofs_opt_in_touch_only_the_logged_paths(tmp_path, monkeypatch):
+    import builtins
+    import io
+    import os
+
+    s = _f11_setup(tmp_path, monkeypatch)
+    _real_evals_guard(monkeypatch)
+    root = s["evals"].resolve()
+    seen = set()
+
+    def wrap(f):
+        def inner(path, *a, **k):
+            if not isinstance(path, int):
+                p = Path(os.fsdecode(path)).resolve()
+                if root in p.parents:
+                    seen.add(str(p))
+            return f(path, *a, **k)
+
+        return inner
+
+    for mod, name in ((builtins, "open"), (io, "open"), (os, "open")):
+        monkeypatch.setattr(mod, name, wrap(getattr(mod, name)))
+    assert ri.main(s["argv"] + ["--reference-proofs"]) == 0
+    m = json.loads(s["man"].read_text())
+    rp, sc = m["supplement"]["reference_proofs"], m["scoring"]
+    assert rp["computed"] is True and rp["deferred_to"] is None
+    logged = {str(Path(p).resolve()) for p in rp["paths_touched"]}
+    assert logged == {str(root / i / n) for i in SUPP_IDS for n in ("eval.json", "records.jsonl")}
+    assert seen and seen <= logged
+    assert sc["unproven_originals"] == [] and sc["n_D"] == 6
+    assert sc["missing_originals"] == sorted(
+        s["staged"]["scoring"]["missing_originals"] + ["c0_x3"]
+    )
+    assert sc["n_priced"] == sc["n_variants"] + 6
+
+
+def test_supplement_proof_flags_are_exclusive(tmp_path, monkeypatch):
+    s = _f11_setup(tmp_path, monkeypatch)
+    with pytest.raises(SystemExit):
+        ri.main(s["argv"] + ["--reference-proofs", "--no-reference-proofs"])
+
+
+def _score_args(s, **kw):
+    return argparse.Namespace(**({"stage": s["stage"], "config": str(s["cfg"]), "manifest": s["man"],
+                                  "dry_run": False, "evals": None, "text_groups": str(s["tg"])} | kw))  # fmt: skip
+
+
+def test_score_proves_supplementary_originals_before_scoring(tmp_path, monkeypatch):
+    s = _f11_setup(tmp_path, monkeypatch)
+    _real_evals_guard(monkeypatch)
+    assert ri.main(s["argv"]) == 0  # default: proofs deferred to scoring
+    m = json.loads(s["man"].read_text())
+    manifest_bytes = s["man"].read_bytes()
+    calls = []
+    monkeypatch.setattr(ri, "score_commands", lambda st, cfg, refs=(): calls.append(refs) or [])
+    # dry run: proofs computed (logged), nothing written
+    assert ri.score(_score_args(s, dry_run=True)) == 0
+    assert not s["man"].with_name("reference_proofs_f11.json").exists()
+    want = sorted(m["scoring"]["missing_originals"] + ["c0_x3"])
+    assert list(calls[-1]) == want
+    # real run: the proof record beside the manifest; the manifest itself never rewritten
+    assert ri.score(_score_args(s)) == 0
+    assert list(calls[-1]) == want and s["man"].read_bytes() == manifest_bytes
+    rec = json.loads(s["man"].with_name("reference_proofs_f11.json").read_text())
+    assert rec["schema"] == "a5-f11-reference-proofs-v1"
+    assert rec["manifest_sha256"] == hashlib.sha256(manifest_bytes).hexdigest()
+    assert rec["proven"] == [i for i in SUPP_IDS if i != "c0_x3"]
+    assert rec["to_score_as_references"] == ["c0_x3"]
+    assert {Path(p).name for p in rec["paths_touched"]} == {"eval.json", "records.jsonl"}
+    assert all(p["window_check"] for p in rec["proofs"] if p["id"] != "c0_x3")
+
+
+def test_score_refuses_while_a_supplementary_original_is_unproven(tmp_path, monkeypatch):
+    s = _f11_setup(tmp_path, monkeypatch)
+    _real_evals_guard(monkeypatch)
+    assert ri.main(s["argv"]) == 0
+    calls = []
+    monkeypatch.setattr(ri, "score_commands", lambda *a, **k: calls.append(a) or [])
+    with pytest.raises(SystemExit, match="text-groups"):  # the proof step cannot run: refuse
+        ri.score(_score_args(s, text_groups=None))
+    real = ri.supplement_reference_proofs
+
+    def partial(evals, config, zoo, ids, *a, **k):
+        proofs, touched, identity = real(evals, config, zoo, ids, *a, **k)
+        return proofs[1:], touched, identity
+
+    monkeypatch.setattr(ri, "supplement_reference_proofs", partial)
+    with pytest.raises(SystemExit, match="still unproven"):
+        ri.score(_score_args(s))
+    monkeypatch.setattr(ri, "supplement_reference_proofs", real)
+    other = tmp_path / "other.yaml"
+    other.write_text(json.dumps(CFG | {"generation": CFG["generation"] | {"seed": 2}}))
+    with pytest.raises(SystemExit, match="identity"):
+        ri.score(_score_args(s, config=str(other)))
+    assert calls == []  # nothing scored
+
+
+def test_supplement_seeds_are_the_registered_rule_and_deterministic(tmp_path, monkeypatch):
+    assert ri.rotation_seed("synthetic-test-vector") == 3336192590354858683  # control_seeds.json
+    runs = []
+    for k in range(2):
+        s = _f11_setup(tmp_path / f"run{k}", monkeypatch)
+        assert ri.main(s["argv"]) == 0
+        m = json.loads(s["man"].read_text())
+        new = {v["variant_id"] for v in m["variants"] if v["source_id"] in SUPP_IDS}
+        runs.append((
+            {i: m["rotation_seeds"][i] for i in SUPP_IDS},
+            {vid: m["delta_sha256"].get(vid) for vid in sorted(new)},
+            {i: m["edit_audits"][i]["seed"] for i in SUPP_IDS},
+        ))  # fmt: skip
+    assert runs[0] == runs[1]
+    assert runs[0][0] == {i: ri.rotation_seed(i) for i in SUPP_IDS} == runs[0][2]
+    for i in SUPP_IDS:
+        seed = ri.rotation_seed(i)
+        assert {ri.variant_id(i, k, st, seed) for k, st in (("rotation", 1.0), ("scale", 0.25),
+                                                             ("scale", 0.5))} <= set(runs[0][1]) | {
+            ri.variant_id(FAILS_F10, "rotation", 1.0, ri.rotation_seed(FAILS_F10))}  # fmt: skip
+
+
+def _swap(doc, cell, old, new):
+    """Replace ``old`` by ``new`` in the list, the cell record and the supplements rows."""
+    doc["supplement_ids"] = [new if i == old else i for i in doc["supplement_ids"]]
+    for c in doc["cells"]:
+        if c["cell"] == cell:
+            c["selected"] = sorted(new if i == old else i for i in c["selected"])
+            for row in c["candidate_order"]:
+                if row["id"] in (old, new):
+                    row |= {"status": "selected" if row["id"] == new else "skipped", "reasons": []}
+    for r in doc["supplements"]:
+        if r["id"] == old:
+            r["id"] = new
+
+
+@pytest.mark.parametrize(
+    "change,match",
+    [
+        ("alias_only_instead_of_next", "F11.2"),
+        ("reserve_instead_of_next", "F11.2"),
+        ("not_root_instead_of_next", "F11.2"),
+        ("registered_instead_of_next", "F11.2"),
+        ("not_the_frozen_ids", "frozen list"),
+        ("recorded_sha_tampered", "recomputed"),
+        ("input_rehash_differs", "does not hash"),
+        ("staged_manifest_not_the_input", "--staged-manifest"),
+        ("exclusions_differ", "rotation exclusions"),
+        ("candidate_reasons_differ", "candidate_order"),
+        ("old_supplement_selected_shape", "malformed"),
+        ("extra_key", "malformed"),
+        ("top_up", "no_top_up"),
+    ],
+)
+def test_supplement_refuses_a_list_that_is_not_the_frozen_f11_selection(
+    tmp_path, monkeypatch, capsys, change, match
+):
+    s = _f11_setup(tmp_path, monkeypatch)
+    doc = json.loads(s["supp"].read_text())
+    swaps = {"alias_only_instead_of_next": ("chain:2", "c2_x4", "c2_x3"),
+             "reserve_instead_of_next": ("lora_sft:2", "l2_x4", "l2_x5"),
+             "not_root_instead_of_next": ("chain:0", "c0_x5", "c0_x1"),
+             "registered_instead_of_next": ("lora_sft:2", "l2_x4", "l2_09")}  # fmt: skip
+    if change in swaps:
+        _swap(doc, *swaps[change])
+        monkeypatch.setattr(ri, "F11_SUPPLEMENT_IDS_SHA256", _rewrite_f11(s["supp"], doc))
+    elif change == "not_the_frozen_ids":
+        monkeypatch.setattr(ri, "F11_SUPPLEMENT_IDS_SHA256", F11_IDS_SHA256)
+    elif change == "recorded_sha_tampered":
+        doc["supplement_ids_sorted_sha256"] = "0" * 64
+        s["supp"].write_text(json.dumps(doc))
+    elif change == "input_rehash_differs":
+        with s["meta"]["components"].open("a") as f:
+            f.write("\n")
+    elif change == "staged_manifest_not_the_input":
+        s["man"].write_text(s["man"].read_text() + "\n")
+    elif change == "exclusions_differ":
+        doc["registered_rotation_exclusions"]["by_cell"]["chain:0"] = []
+        s["supp"].write_text(json.dumps(doc))
+    elif change == "candidate_reasons_differ":
+        doc["cells"][2]["candidate_order"][2]["reasons"] = []
+        s["supp"].write_text(json.dumps(doc))
+    elif change == "old_supplement_selected_shape":
+        s["supp"].write_text(json.dumps({"supplement": {"edit_ids": SUPP_IDS, "selected": []}}))
+    elif change == "extra_key":
+        doc["supplement"] = {"selected": []}
+        s["supp"].write_text(json.dumps(doc))
+    elif change == "top_up":
+        doc["no_top_up"] = False
+        s["supp"].write_text(json.dumps(doc))
+    staged_bytes = s["man"].read_bytes()
+    listing = sorted(p.name for p in s["stage"].iterdir())
+    assert ri.main(s["argv"]) == 2
+    err = capsys.readouterr().err
+    assert "supplement" in err and match in err, err
+    assert s["man"].read_bytes() == staged_bytes
+    assert sorted(p.name for p in s["stage"].iterdir()) == listing
+
+
+def test_supplement_refuses_a_selected_entry_without_its_own_bytes(tmp_path, monkeypatch, capsys):
+    s = _f11_setup(tmp_path, monkeypatch)
+    (s["zoo"] / "l2_x1" / "delta.safetensors").unlink()  # the zoo disagrees with components.jsonl
+    staged_bytes = s["man"].read_bytes()
+    assert ri.main(s["argv"]) == 2 and "own bytes" in capsys.readouterr().err
+    assert s["man"].read_bytes() == staged_bytes
+
+
+def test_source_bytes_holder_path_stages_the_holders_delta(tmp_path):
+    """Defensive: F11.2 admits no alias-only edit, but the holder path of build_variants still stages an
+    alias from its holder's bytes, with the alias's id and seed, recording the holder."""
+    base = _base()
+    delta = _supp_delta(300)
+    own, alias = tmp_path / "own", tmp_path / "alias"
+    _entry(own, "X", delta, family="chain")
+    _entry(alias, "H", delta, family="random_dir")
+    (alias / "X").mkdir()
+    (alias / "X" / "edit.json").write_text((own / "X" / "edit.json").read_text())
+    seed = ri.rotation_seed("X")
+    a = ri.build_variants(own / "X", base, seed, (0.25, 0.5), stage_root=tmp_path / "s1",
+                          predecessor_id="base", audit_rule="f10")  # fmt: skip
+    b = ri.build_variants(alias / "X", base, seed, (0.25, 0.5), stage_root=tmp_path / "s2",
+                          predecessor_id="base", audit_rule="f10", source_bytes_holder="H")  # fmt: skip
+    assert [v.variant_id for v in a] == [v.variant_id for v in b]
+    for va, vb in zip(a, b, strict=True):
+        assert ri._entry_files(va.entry_dir) == ri._entry_files(vb.entry_dir)
+        ma = json.loads((va.entry_dir / "variant.json").read_text())
+        mb = json.loads((vb.entry_dir / "variant.json").read_text())
+        assert mb.pop("source_bytes_holder") == "H" and "source_bytes_holder" not in ma
+    with pytest.raises(ValueError, match="bytes of its own"):
+        ri.build_variants(own / "X", base, seed, (0.25,), stage_root=tmp_path / "s3",
+                          predecessor_id="base", audit_rule="f10", source_bytes_holder="H")  # fmt: skip
+
+
+# --- the committed, Board-A-accepted selection_f11.json (metadata only: no data/, no evaluation file)
+
+
+def _committed_staged_manifest():
+    pre = PKG / "part_a" / "manifest_pre_f11.json"
+    return (pre if pre.exists() else PKG / "part_a" / "manifest.json").read_bytes()
+
+
+def test_loader_accepts_the_committed_selection_f11():
+    sels, info = ri.load_supplement_selection(
+        PKG / "selection_f11.json", PKG / "selection.json", _committed_staged_manifest()
+    )
+    doc = json.loads((PKG / "selection_f11.json").read_text())
+    assert ri.F11_SUPPLEMENT_IDS_SHA256 == F11_IDS_SHA256 == doc["supplement_ids_sorted_sha256"]
+    assert info["ids_sha256"] == F11_IDS_SHA256 == ri._ids_sha256(doc["supplement_ids"])
+    assert info["ids"] == doc["supplement_ids_sorted"] and len(sels) == 12
+    assert info["ids_in_order"] == doc["supplement_ids"]
+    assert info["cells"] == {c["cell"]: sorted(c["selected"]) for c in doc["cells"]}
+    assert "aaf7a0660c6d5a73" in info["cells"]["chain:0"]
+    assert not any(i.startswith("7bc62b9f") for i in info["ids"])
+    reg = json.loads((PKG / "selection.json").read_text())["registered"]
+    for s in sels:
+        assert s.predecessor_id == "base" and f"{s.family}:{s.tertile}" in info["cells"]
+        assert s.edit_id in info["cells"][f"{s.family}:{s.tertile}"]
+        assert reg["ledger"]["families"][s.family]["ordered"][s.rank] == s.edit_id
+    assert set(doc) == ri.F11_SELECTION_KEYS
+
+
+def test_f11_rule_reproduces_the_committed_twelve_on_the_real_metadata():
+    doc = json.loads((PKG / "selection_f11.json").read_text())
+    for k, rec in doc["inputs"].items():
+        if k != "part_a_manifest":
+            assert _sha(PKG.parents[2] / rec["path"]) == rec["sha256"], k
+    staged = json.loads(_committed_staged_manifest())
+    assert (
+        hashlib.sha256(_committed_staged_manifest()).hexdigest()
+        == doc["inputs"]["part_a_manifest"]["sha256"]
+    )
+    registered = json.loads((PKG / "selection.json").read_text())
+    rows = {}
+    for line in (PKG / "components.jsonl").read_text().splitlines():
+        if line.strip():
+            r = json.loads(line)
+            rows[r["id"]] = r
+    donors = json.loads((PKG / "power" / "fields_manifest.json").read_text())["donors"]
+    pool = set(json.loads((PKG / "power" / "registered_donors.json").read_text())["donor_ids"])
+    depleted = ri.f11_depleted_cells(staged)
+    assert depleted == doc["registered_rotation_exclusions"]["by_cell"]
+    rule = ri.f11_rule(registered, rows, donors, pool, depleted)
+    assert [i for c in rule for i in c["selected"]] == doc["supplement_ids"]
+    assert ri._ids_sha256(doc["supplement_ids"]) == F11_IDS_SHA256
+    for c, fc in zip(rule, doc["cells"], strict=True):
+        assert {k: fc[k] for k in ri.F11_CELL_KEYS} == c
+    chain_low = {r["id"]: r for r in rule[1]["candidate_order"]}
+    alias = next(i for i in chain_low if i.startswith("7bc62b9f"))
+    assert chain_low[alias]["reasons"] == ["alias_only"] and chain_low[alias]["status"] == "skipped"
+    assert chain_low["aaf7a0660c6d5a73"]["status"] == "selected"
+    # the earlier roots-only check would have taken the alias-only edit instead
+    fam = registered["registered"]["ledger"]["families"]["chain"]
+    roots = [i for i in sorted(fam["cells"][0])[fam["quotas"][0] :] if rows[i]["parent_id"] is None]
+    assert alias in roots[:4] and "aaf7a0660c6d5a73" not in roots[:4]
+
+
+def test_slot_mask_builder_reproduces_the_frozen_f10_mask():
+    pkg = Path(__file__).resolve().parents[1] / "docs" / "prereg" / "a5_manifests" / "part_a"
+    m = json.loads((pkg / "manifest.json").read_text())
+    if "supplement" in m:
+        pytest.skip("manifest already supplemented")
+    text = ri.slot_mask_text(ri.slot_mask(m))
+    assert hashlib.sha256(text.encode()).hexdigest() == _sha(pkg / "slot_mask_f10.json")
