@@ -3029,3 +3029,178 @@ package on the merged tree and only `code_hashes.json` and the package README we
 `docs/prereg/a5_manifests/README.md` `461905e4e744645501c7ddff01638a334b80738a203f7474b671cf7676d49a16` (old main `f51a290a…`, old
 branch `5c770dbe…`); `scripts/a5_simulation.py` unchanged from F7 (`04f283d8…`); `src/wsp/eval/response_intervention.py` as pinned by
 the staging branch. No selection, seed, control, panel or decision file changed. Nothing has been scored.
+
+#### A5 amendment F10 (11 Nov 2026, before any G3 outcome): rotation exclusion rule, realised diagnostics, chain-ladder convention
+
+This block is appended; earlier text is not rewritten. It records chair rulings F10 (R1: remedy (d) of the design note),
+the chain-ladder convention (R2) and the scoring hold (R3). They were taken after the Part A staging
+(`docs/prereg/a5_manifests/part_a/`, staging code `7f8b453`, merged into main at `008f0af` with A5.1.2 re-pin (xv); audit
+file sha256 `f05fec4265ffd93c8c537100993d23262be95141369240fcad0a7e16ff474d35`; staging README sha256
+`2fcbf517ccf26f2a1fe325ef31300d291bc0f254c7faaacd18154e327bceada1`) and before any G3, rotation, ladder, reference or sealed
+outcome existed. The analysis is `docs/design/ROTATION_YIELD_2026-11-11.md` (added by commit `ccf1e7b`, sha256
+`fad409ccb1c3059fc4b8385252c1e5f883148571a7521f590e350948f0e5719b`; "the note"); F10.1–F10.8 adopt its §3.2 draft with the
+edits listed in F10.12. The trigger is the staged audit yield (1 of 40 rotation pairs), a function of stored bytes and staging
+metadata only. F10 changes no selection (A5.3.1, `selection.json`), seed (`control_seeds.json`, A5.3.3 seed mapping), prediction,
+resolution, yield or decision rule (A5.3, A5.5), simulation gate (A5.3.2), cap or allocation (A5.3.4), and no pin: no file pinned
+in A5.1.2 changes with this block. It changes only the rotation-pair exclusion rule (F10.3), what is reported beside it (F10.4,
+F10.5), when a masked simulation must run (F10.6), and the reading of A5.3's ladder direction for eight chain picks (F10.9). It
+takes effect for execution only after Board A accepts it (F10.10). If Board A rejects it, the registered reading applies
+(remedy (e) of the note): the A5.3/A5.3.3 audit stands, the rotation contrast is unresolved by yield (1 < 15), and the ladders
+and references are scored as staged (100 entries, 104.00 GPU-min, staging README); F10.9 and F10.10 still apply.
+
+**F10.1 — Facts (the note §§1.1–1.4; staging README).** Under the A5.3/A5.3.3 realised audit, 39 of 40 pairs are excluded
+(2,534 tensors, 535 pass; lora_sft 30/30 and chain 9/10 excluded; the only pass is `00f8111cbad8218f`). Per tensor, the realised
+discrepancy ε_R = ‖R_eff − R‖/‖D‖ is the bf16 rounding of the predecessor W at the rotation's scale: it never exceeds
+min(1, 1/(√12κ)) by more than 0.24 %, with κ = ‖D_block‖/√(Σ_block ulp(W)²). On the 2,188 tensors of the 32 root edits it
+equals the edit's own rounding ε_D = ‖D − Δ‖/‖D‖ (median ratio 1.0003, 5–95 % 0.996–1.021). Realised norm and spectrum
+mismatches are bounded by ε_R (Mirsky; holds in 2,534/2,534 rows). The 1e-3 rank counts bf16 noise: rank-16/32 LoRA edits have
+D rank 437–1,024. The registered realised tolerances therefore exclude by effective norm and predecessor grid, not by rotation
+quality. Every drawn rotation is exact to fp32 before rounding (staged maxima: orthogonality 8.7e-7, pre-rounding norm mismatch
+1.43e-7; the five fp32 reconstruction residuals of 1.05e-5–1.40e-5 are 1.4e-15–4.0e-15 in fp64).
+
+**F10.2 — Construction unchanged.** R = Q_out D_block Q_inᵀ (`rotation.rotate_block`), with the registered per-edit seeds, one
+generator per edit whose initial state is cloned for each tensor, the QR sign convention, fp32 construction and rounding at the
+actual predecessor (`rotation.apply_and_round`: fp32 W + R, then bf16) (A5.3, A5.3.3). The scored object bf16(W + R) − W, the
+prediction ⟨g, D_eff − R_eff⟩, the "spectrum-matched (pre-rounding)" wording, the selection, the 40 pairs and their 10/10/10 and
+4/3/3 tertile allocation, the seeds, the resolution rule, the yield rule (≥ 15 resolved), A5.5 and the ladders are unchanged.
+
+**F10.3 — Exclusion audit.** It replaces the exclusion role of A5.3's post-rounding audit, A5.3.3's "all tensors must meet S31's
+norm/spectrum/rank/support criteria", and F3(ii)'s per-tensor pass rule. Each edited tensor passes if and only if (i)–(iv) hold,
+and the edit passes (v). A failure of any tensor or of (v) excludes the pair with its reason, without replacement (A5.3.1); the
+pair stays in the forty-ID ledger. A missing audit fails closed (F3(ii)).
+(i) *Construction*, computed in fp64 from the stored bf16 states and the fp32 construction (Q_out, Q_in and R as `rotate_block`
+produces them): orthogonality error ‖QᵀQ − I‖_F/√n ≤ 1e-5 for each Q (as `_rotation_diagnostics` computes it); full-SVD
+reconstruction residual of the realised block ≤ 1e-5 relative Frobenius; |‖R‖ − ‖D‖|/‖D‖ ≤ 1e-5; ‖σ(R) − σ(D)‖/‖σ(D)‖ ≤ 1e-5
+(sorted singular values); and the numerical rank of R (1e-3 rule, A5.3.3, at R's own σ₁) equals that of D, except that
+|rank R − rank D| may not exceed the number of singular values of D within 1e-5·σ₁(D) of the cut 1e-3·σ₁(D).
+(ii) *Support*: D and R_eff are zero outside the changed block (unchanged rule; actual nonzero masks are reported, A5.3.3).
+(iii) *Replay*: after the variant is written, R is recomputed from `torch.Generator().manual_seed(seed)` with the pinned code,
+the pinned environment and the staged thread settings (`OMP_NUM_THREADS` = `MKL_NUM_THREADS` = 4), rounded with
+`apply_and_round`, and the result must equal the R_eff bytes reloaded from the written `delta.safetensors` (roots) or
+`increment.safetensors` (chain steps) bitwise. The written delta must reproduce the intended bf16 state under the scorer's
+arithmetic bf16(base + delta) (the existing staging check).
+(iv) *Rounding bound*, entrywise in fp64, with R the fp32 construction: |R_eff − R| ≤ min(|R|, ½·ulp(W + R_eff)) + ulp₃₂(W + R).
+ulp is the bf16 spacing at the bf16 value (2^(e−8) for w = m·2^e, m ∈ [½, 1); `scripts/a5_rotation_yield_check.py:ulp_bf16`), and
+ulp₃₂ the fp32 spacing (2^(e−24)) at the fp32 sum. Without the last term this is the round-to-nearest guarantee. The fp32 term
+covers the registered two-step arithmetic (fp32 sum, then bf16), whose double rounding can exceed the single-rounding bound
+by less than one fp32 spacing. A failure means a wrong grid, predecessor, dtype or arithmetic.
+(v) *Sub-resolution guard*, per edit: the pooled realised norm mismatch |‖R_eff‖ − ‖D‖|/‖D‖, with norms pooled over all edited
+tensors (`_edit_audit` `pooled_norm_mismatch`), is ≤ 0.5, so the rotation keeps at least half the edit's norm after rounding.
+It is fixed a priori; the staged maximum is 0.0309 (`61d1f61e25212068`).
+Existing pre-audit reasons (`non_2d`, `non_finite`, `zero_block`, `rank_degenerate`, `not_single_matrix`) are unchanged. New
+reason codes: `construction_failed`, `support_failed`, `replay_failed`, `rounding_bound_failed`, `sub_resolution`. The registered
+realised verdict (A5.3 tolerances) is kept as a logged field, never as a reason code.
+
+**F10.4 — Realised diagnostics (reported, not exclusion criteria).** Per tensor and pooled per edit: the registered realised norm
+mismatch (signed), spectrum mismatch and ranks at 1e-3 of D and R_eff; the ranks above max(1e-3·σ₁, 3τ) of D and R_eff, with
+τ = √(mean_block ulp(W)²/12)·(√m + √n) for an m × n block; ε_R, ε̂ = min(1, 1/(√12κ)), κ, ε_D (roots) and the energy ratio
+ρ = ‖R_eff‖²/‖D‖² (pooled: Σ_t‖R_eff,t‖²/Σ_t‖D_t‖²); the A5.3.3 items (‖R_eff − R‖/‖D‖, reconstruction residual, exact support,
+unrotated-tensor count) and the logged moments as staged. "Spectrum-matched" refers to the pre-rounding construction. The
+realised rotation equals the exact rotation up to bf16 rounding of W, of the same size as the edit's own rounding. No realised
+spectrum match is claimed.
+
+**F10.5 — Sensitivities (descriptive; the decision uses F10.3's set).** (a) The A5.3.3 nuisance-controlled sensitivity adds
+log ρ (pooled per edit) as a covariate, with train-only standardisation and penalty 1 as registered. (b) Agreement and its CP
+interval are reported by norm tertile. (c) They are also reported on the 30 pairs whose staged pooled realised norm mismatch
+(`manifest.json:edit_audits`) is ≤ 2e-2: all except `0a841d4082532e8b`, `0bc0a0c4ad0520e0`, `0d055869527177b4`,
+`1ab850a41051fe45`, `1fc51f7164052d50`, `2d1de332e36d8f00`, `453d8c08966438e0`, `455b881d5de4e6e0`, `61d1f61e25212068`,
+`649bd035e79488e5` (all low tertile). (d) The registered constant-sign comparator is shown next to each. (e) They are also
+reported on the 34 pairs that pass the noise-calibrated realised audit (norm ≤ 2e-2 + ε̂, spectrum ≤ 5e-2 + ε̂, rank above
+max(1e-3·σ₁, 3τ) within ±1; the note §2.1 remedy (b)): all except `00f8111cbad8218f`, `0a841d4082532e8b`, `0bc0a0c4ad0520e0`,
+`1ab850a41051fe45`, `61d1f61e25212068`, `649bd035e79488e5`. None of these is decisive or can change A5.5's outcome; each subset
+uses the ≥ 15 floor only to say whether its descriptive interval is reported as resolved.
+
+**F10.6 — Simulations.** If all 40 pairs pass F10.3, the actual audit state equals the audit assumption of the registered
+NULL-SIZE and POWER-AND-YIELD runs (F2, F7; ordered power 0.8540). They stand without a rerun and remain conditional on the F2
+proxy (Board A F7 conditions 2 and 4). This is not a conversion of simulated yield into audit evidence (condition 4): the
+evidence is the F10 re-stage audit, and the frozen simulation payload is not changed. If any pair is excluded, then before
+scoring, POWER-AND-YIELD (with its NULL-SIZE pass) is rerun as a separately labelled run with those selected slots masked in
+every replicate, on the registered 61-donor pool, seeds and stream order (F7). The ≥ 0.80 ordered-power and ≤ 0.07 size gates
+apply to that run (A5.3.2). It needs a `--slot-mask` option in `scripts/a5_simulation.py` with tests and a re-pin. The F7 runs
+took 21 min 39 s and 22 min 27 s of CPU wall (the note §2.4). A failure makes Part A not decisive and needs a further amendment
+before scoring.
+
+**F10.7 — Execution.** The F10.3 audit and the F10.4 diagnostics are implemented in `src/wsp/eval/response_intervention.py` and
+`src/wsp/features/rotation.py`, with tests, and pinned by A5.1.2 re-pin (xvi) before the re-stage. The note's draft says
+"(xv)"; that number is taken by the `008f0af` merge re-pin. The rotation variants of all 40 edits are rebuilt under that code,
+in a rotation-only mode. The R_eff bytes (`delta.safetensors` and, for chain steps, `increment.safetensors`) of the staged
+passing pair `00f8111cbad8218f` must be bitwise identical to the staged hashes in `manifest.json:delta_sha256`. The 80 ladder
+variants and the reuse proofs are re-hashed against the staged manifest, not rebuilt. The Part A manifest, audit file and README
+are regenerated as a re-stage report, and their hashes enter A5.1.2.
+
+**F10.8 — Exposure.** F10 is pre-outcome only if no decision-maker who drafts or approves it has been exposed to any G3,
+rotation, ladder or reference score, or to a summary of one (F8a.1(c) definition, including messages, documents and log lines).
+Part A scoring, including the 80 ladders and the 19 missing originals, starts only after Board A has ruled on F10 (F10.10).
+
+**F10.9 — Chain-ladder convention (chair ruling R2).** A5.3 builds scaled edits "by applying s·Δ_t at W_t and rounding, not by
+scaling D_t". For the 8 chain picks whose predecessor is not the base (`0027efdf2eae7405`, `00f8111cbad8218f`,
+`05531ce1db4df63f`, `057dcfbedea3251f`, `0bc0a0c4ad0520e0`, `0d055869527177b4`, `13b02fe2673cc296`, `14cdaabee246493b`), no fp32
+per-step Δ_t exists; only cumulative bf16 snapshots are stored (staging README, "Flag (chain ladders)"). The realised increment
+D_t = bf16-state_t − bf16-state_{t−1} (fp32 subtraction) is Δ_t up to one bf16 rounding of W_t. The 16 ladder variants built as
+bf16(W_t + s·D_t) − W_t for these picks (s = 0.25, 0.5; `scale_source: realised_increment` in `variant.json`) are accepted as the
+registered A5.3 ladder, with the realised increment substituted for Δ_t. They are flagged `realised-increment ladder` in the
+regenerated manifest and in the Part A report. The substitution is of rounding scale (same analysis as F10.1): D_t − Δ_t is one
+bf16 rounding of W_t, whose uniform-rounding size relative to ‖D_t‖ is the pooled noise floor ratio √(Σ ulp²/12)/‖D_t‖, 0.066–0.392
+for these eight edits (the note §1.4, column "pooled ε̂"; it overpredicts below κ ≈ 1, the note §4). On the 32 roots, where Δ is
+stored, the measured ε_D tracks this size. Scaling D_t also scales its rounding noise, which the second bf16 rounding then adds
+to, as for the rotation. The 30 lora_sft picks and the 2 root chain picks (`014f8a9ec78db2be`, `0559051354691a70`) scale their
+stored Δ as registered; for the two root chain picks the stored Δ is already the realised increment (ε_D = 0), and they are not
+flagged. The prediction is unchanged: ⟨g, bf16(W_t + s·D_t) − W_t⟩, the realised bf16 subtraction and never s·D_t itself (Board A
+G2 item 2). Resolution, denominators (40 per strength), the step-2 alternative rule and A5.5 are unchanged.
+
+**F10.10 — Order of operations and scoring hold (chair ruling R3; the note §§3.3–3.5).** No Part A entry (ladder, rotation or
+reference) is scored before Board A has accepted F10, or has rejected it so that the registered reading (e) applies. Scoring the
+ladders or the 19 missing originals first would expose the response size per edit, which correlates with every candidate audit
+rule, and the step-2 ladder outcome, which overrides a rotation go (the note §3.5; F8a.1(c)). The order is:
+1. F10 appended (this block) with the attestation in F10.11.
+2. Board A reviews F10: accept, or reject (then (e): no re-stage; go to step 7 with 100 entries, F10.9 flags in the Part A report).
+3. Code, tests and re-pin (xvi) (F10.7); `--slot-mask` only if step 5 needs it.
+4. Re-stage the 40 rotations on CPU under `agent-tmux`, 4 threads, at the priced cost: about 1 h at the measured rate, upper
+   bound 4 h 58 min 33 s (the full staging wall time); +35.8 GB under `data/runs/a5/part_a/` (404 GB free) (the note §3.4).
+5. Re-stage report: F10.3 yield per pair with reasons, F10.4 diagnostics, the `00f8111cbad8218f` bitwise check, re-hashed
+   ladders, the `realised-increment ladder` flags, and the updated priced count (40 − excluded + 80 + 19 entries × 1.04 min).
+6. If fewer than 40 pairs pass: the slot-masked POWER-AND-YIELD run of F10.6 (about 22 min CPU), which must reach ≥ 0.80
+   ordered power before scoring.
+7. Score all entries in one campaign on the exclusive GPU through `agent-tmux`: 40 rotations + 80 ladders + 19 originals =
+   139 entries, 144.56 GPU-min at 40/40 (A5.3.4), with staged bytes re-hashed first.
+8. Close and seal the ledger, then the single analysis (A5.3 "Analysis time").
+
+**F10.11 — Pre-outcome attestation.** Nothing has been scored. The staging manifest records `scored: false`; the scorer has
+not been run; none of the 120 staged or excluded variant ids and none of the 19 missing originals has a directory under
+`data/evals/qwen3.5-0.8b/tf_v1/` (checked by path existence only, 11 Nov 2026; nothing was opened). The staging was merged at
+`008f0af` without scoring. The only persons and sessions that have seen the staging audit are the staging builder (README:
+"No outcome exists"), the session that wrote the note (status: no outcome scored, opened or read), the chair (R1–R3 were taken
+on the note and the staging README), and the session that wrote this block. None of them has seen any G3, rotation, ladder,
+reference or sealed outcome or a summary of one, because none exists. This session read only `docs/`, `src/` and
+`scripts/`, wrote nothing under `data/`, and ran CPU-only synthetic checks of the F10.3(i) and (iv) arithmetic (F10.12). Board A
+adds its own attestation line on review (F8a.1(c)).
+
+**F10.12 — Edits to the note's §3.2 draft, for implementability.** (a) F10.3(i): "the numerical rank of R equals that of D" now
+admits rank differences caused only by singular values within 1e-5·σ₁(D) of the 1e-3 cut. With exact equality, fp32 construction
+noise, far inside the 1e-5 spectrum tolerance, could still flip a singular value that straddles the cut. That would exclude
+pairs by arithmetic, as the five fp32 reconstruction artefacts did. High-κ edits have dense spectra at the cut (D rank
+437–1,024 against LoRA rank 16/32). The pre-rounding spectrum and rank were not computed at staging, so the window is set now,
+at the chair's construction tolerance of 1e-5. (b) F10.3(iii): the replay
+environment is fixed: pinned code and environment, staged thread settings, fresh seeded generator, comparison with the
+reloaded written bytes. (c) F10.3(iv): "+ ulp₃₂(W + R)" is added. `apply_and_round` rounds twice (fp32 sum, then bf16). When the
+fp32 sum lands exactly on a bf16 midpoint, ties-to-even can round away from the bf16 value nearest W + R. The error then exceeds
+min(|R|, ½·ulp) by less than one fp32 spacing (|bf16(y) − y| ≤ min(|W − y|, ½·ulp) and |y − (W + R)| ≤ ½·ulp₃₂ for y the fp32
+sum). Such ties occur at a small but positive rate per entry, and an edit has up to 72 tensors with blocks up to 1024 × 3584
+(staging README; the note §1.3). Without the term, correct code would fail essentially every pair. A synthetic CPU check by this
+session confirmed violations without the term and none with it (not committed; no data read). (d) Header, date and provenance: the staging is cited at its merge `008f0af`. (e) F10.7: the
+re-pin is (xvi), not (xv). (f) The note's staged maximum pooled mismatch "0.031" is given as 0.0309. (g) F10.6 names the 61-donor
+pool and Board A condition 4. (h) F10.9–F10.11 are new (R2, R3, attestation).
+
+| clause | rule changed | yield | simulation effect |
+|---|---|---|---|
+| F10.1 facts | none | registered audit on staged rows: 1/40 pairs, 535/2,534 tensors | none |
+| F10.2 construction | none (R, seeds, rounding, prediction, selection, yield rule, A5.5, ladders) | – | none |
+| F10.3 exclusion audit | A5.3 post-rounding exclusion, A5.3.3 "all tensors must meet S31's criteria" and F3(ii) pass rule → fp64 construction, support, replay, rounding bound, sub-resolution guard | 40/40 on the staged rows for the measured items (orthogonality ≤ 8.7e-7, pre-rounding norm ≤ 1.43e-7, support 2,534/2,534, fp64 reconstruction ≤ 4.0e-15, pooled guard ≤ 0.0309 against 0.5; the note §2.1); pre-rounding spectrum and rank, replay and rounding bound are first computed at the re-stage | none if 40/40 (equals the F2/F7 audit assumption); otherwise F10.6 |
+| F10.4 realised diagnostics | realised norm, spectrum and rank move from exclusion to reporting; adds κ, ε̂, ε_R, ε_D, ρ, noise-referenced rank | none (not exclusion criteria) | none |
+| F10.5 sensitivities | adds log ρ covariate to the registered nuisance sensitivity; adds tertile and two subset reports | descriptive subsets: 30 pairs (pooled norm ≤ 2e-2), 34 pairs (noise-calibrated audit) | none; no decision authority |
+| F10.6 simulations | adds a slot-masked POWER-AND-YIELD rerun (with NULL-SIZE pass) whenever fewer than 40 pairs pass | – | none at 40/40 (registered 0.8540 stands); otherwise one labelled rerun, about 22 min CPU, gates ≥ 0.80 and ≤ 0.07 |
+| F10.7 execution | rotation-only re-stage; re-pin (xvi); bitwise check of `00f8111cbad8218f` | re-stage yield reported per pair | none |
+| F10.8 exposure | none (applies F8a.1(c)) | – | none |
+| F10.9 chain-ladder convention | A5.3 "s·Δ_t" read as s·D_t for the 8 non-root chain picks, flagged `realised-increment ladder` | ladders unchanged: 40 per strength, 16 variants flagged | none (simulated ladder contrasts already scale the realised-edit residual block, A5.3.2) |
+| F10.10 order and hold | no Part A scoring before Board A rules on F10 | – | masked run, if needed, precedes scoring |
+| Fallback (e) on rejection | none | 1/40 (rotation unresolved) | none; the go branch is unreachable |
