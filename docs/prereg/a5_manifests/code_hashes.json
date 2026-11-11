@@ -119,7 +119,7 @@
   },
   "scripts/part_a_analyse.py": {
    "role": "Part A analysis CLI",
-   "sha256": "a47a72f8b6485363b4c9ba8fc600b8564c31dfcb02e0c1a1106ffe734f07395d"
+   "sha256": "74bcff0f9f25be7aacf8cfadb3b0f2cdbef044455e2313f1dd6e52f40bce0b32"
   },
   "scripts/scale4b_build_edits.py": {
    "role": "F5.3 4B Gaussian edit builder (support, radius, bf16 diagnostics)",
@@ -171,7 +171,7 @@
   },
   "src/wsp/eval/part_a_analysis.py": {
    "role": "Part A analysis: A5.4/A5.5 outputs and F10.5 reports (Board A condition 6)",
-   "sha256": "419dc07486279a4fe16cdefd90973042596ca12f65028e466172aa7d7d1d9bc9"
+   "sha256": "5a21e9959511d791337cc16180385f91d6fe2f3ff804ad16b0c5c1febf805ca1"
   },
   "src/wsp/eval/refusal.py": {
    "role": "transitive wsp import of a pinned module",
@@ -287,7 +287,7 @@
   },
   "tests/test_part_a_analysis.py": {
    "role": "test",
-   "sha256": "5adaeaf8ea66d8b64ef1e9cfd6964006eaea363ba58d1214d1d03befc6a48b4f"
+   "sha256": "829932c50ac8a8cef3236102e7e9ce6a92f3aff705d8ad625e3111412e8f5e69"
   },
   "tests/test_response_intervention.py": {
    "role": "test",
@@ -298,7 +298,7 @@
    "sha256": "7570224a0b4c0dd8e9f1b0aacdaa930e2170d97fa1d1e9c6864bd60d13869325"
   }
  },
- "git_sha": "f4c8f05a0c3a7e1c7d4da0564ee649d33f0a53fe",
+ "git_sha": "ade2850e199edadf622a4ac8d1398bb0cbe2b9db",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

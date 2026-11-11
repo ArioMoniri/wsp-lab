@@ -767,3 +767,7 @@ wording tested against the registration. Builder decisions for the adopting note
 route needs an `f11a_screen_route` acceptance input bound to the calibration-report hash; the 52-slot calibration is always
 required when supplements exist; supplement cell assignment and the acceptance-input format are conventions to adopt. Under Board
 A re-review. Supplementary staging running (launched 08:06 UTC).
+
+**11 Nov 2026, 08:16 UTC.** Board A accepted the analysis F11 path with conditions (`board-a-part-a-analysis-4-2026-11-11.md`;
+172 / 1112 tests). Merged (f57b70a); A5.1.2 re-pin (xxi); the full test suite is green on main again. F11b adopting note (the two
+conventions and the builder's decisions) in flight. Supplementary staging running since 08:06 UTC.

@@ -4008,3 +4008,19 @@ record) was computed UNDER the frozen environment this time (Torch build-config 
 input hashes, the originals' manifest (`59d839e3…`) and audit (`4ec0928a…`) hashes and the 81-file staged byte inventory. The
 execution SHA is the clean HEAD at launch, recorded in `supplement_launch.json`. Conservative priced count 178 entries. No
 selection beyond F11.2's committed list, no seed, decision rule, cap or other pin changed; nothing scored.
+
+*A5.1.2 re-pin (xxi) (11 Nov 2026, 08:16 UTC; merge of `fix/part-a-analysis-manifest-binding` after Board A's acceptance with
+conditions, `docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md`; before any G3 outcome).* The Part A analysis now binds
+the frozen subsets, cuts and cells to the preserved a533 manifest (`FROZEN_STAGED_MANIFEST_SHA256` = `d7785b35…`), takes the
+execution manifest by explicit `--manifest-sha256` cross-checked with the sealed ledger, includes supplementary edits in the
+registered contrasts and the F10.5 reports with a `supplementary` marker, produces the registered-40 descriptive report, accepts
+per-contrast calibration masks, and implements the F11a screen route with size-failure priority. Builder re-run with
+`--pin-worktree` into a copy; only `code_hashes.json` and the package README copied back. Rows: `src/wsp/eval/part_a_analysis.py`
+`5a21e9959511d791337cc16180385f91d6fe2f3ff804ad16b0c5c1febf805ca1` (old `419dc074…`, xvii); `scripts/part_a_analyse.py`
+`74bcff0f9f25be7aacf8cfadb3b0f2cdbef044455e2313f1dd6e52f40bce0b32` (old `a47a72f8…`); `tests/test_part_a_analysis.py`
+`829932c50ac8a8cef3236102e7e9ce6a92f3aff705d8ad625e3111412e8f5e69` (old `5adaeaf8…`); `docs/prereg/a5_manifests/code_hashes.json`
+`3447730883fe3030…` (old `46dd5234…`, xx); `docs/prereg/a5_manifests/README.md` `bb6173b11aee2322…` (old `62e68413…`, xx). The
+conventions Board A requires by dated note (supplement cell assignment; screen-route acceptance input; forty-only size failure
+refuses; 52-slot calibration always required with supplements; supplementary row refusals) are adopted in A5 note F11b. No
+selection, seed, decision rule or cap changed; nothing scored. The supplementary staging launched at 08:06 UTC on execution SHA
+8211ecf is unaffected (it does not import the analysis module).
