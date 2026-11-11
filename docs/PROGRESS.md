@@ -674,3 +674,11 @@ LoRA-high passed F10 at 7/10. Chair adopts **Option A: supplementary procedural 
 registered-40 sensitivity report, and Option B (screen) as the fallback if the calibration fails again.** Cost: CPU staging 1.5–2.6 h,
 calibration 22 min, GPU scoring ≤ 36 added entries (37.44 min; total 172.64 min). F11 text and the frozen supplementary ID list in
 flight; Board A review follows; scoring held.
+
+**11 Nov 2026, 07:50 UTC.** Metrology F11 report merged (92fff4e; recommends k = 12: LoRA-high `8d29ac2a`, `af6d608f`, `b5d0ac5d`,
+`c12f6ec6`; chain-low roots `342a1be0`, `388347cf`, `45cd0be9`, `7bc62b9f`; chain-high roots `15cdcf0b`, `17668df1`, `1ac30f3c`,
+`2410c595`; calibration pass probability 0.86–1.00 across the pass-rate grid; discloses that extra ladder slots raise the ladder
+alternative-branch null rate from 0.18 to 0.26, not size-gated). Known breakage on main since the re-stage: `tests/test_part_a_analysis.py`
+(69 failures) pins the a533 manifest hash as the execution manifest; fix in flight (frozen subsets anchored to the preserved
+`manifest_a533.json`, execution manifest bound by explicit hash, supplementary ids handled). Also in flight: F11 text with the frozen
+`selection_f11.json`; `prepare --supplement` staging mode; the F10 re-stage report. Scoring held.
