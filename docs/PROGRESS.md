@@ -718,3 +718,10 @@ payload; no replacement or top-up; attestations 10–13 added (metrology, F11 dr
 metrology report's "data read only" header is corrected by its entry — it wrote scratch files under `data/runs/a5/f11_sizing/`); the
 chair's attestation extended through the F11 decisions. Remaining before supplementary staging: the three code pieces and their
 Board A review, re-pin (xix).
+
+**11 Nov 2026, 09:45 UTC.** Simulator `--supplement` committed (54f17fc, `feat/a5-sim-supplement`; 26 simulator tests; byte-identical
+without the option, golden-hash regression; `--registered-40-sensitivity`; supplementary slots 40–51 appended in cell order; the
+supplementary edits' own donor rows stay in the pools per F11.5 — slots draw cell donors at random, never their own edit). Smoke
+run (200 replicates, synthetic 52-id mask with the 9 F10 exclusions masked): ordered power 0.86 [0.80, 0.91], null ordered go 0.02,
+null alternative 0.255 (reported, not gated); registered-40 sensitivity 0.73. Builder's choice for Board A: ladder masks are allowed
+on supplementary ids (F11.4 "every supplementary rotation or ladder exclusion"), still refused on the 40. Under Board A review.
