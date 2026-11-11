@@ -3570,3 +3570,28 @@ wrote no data. It attests only to its own session; the attestation ledger is not
 the four analysis-code rows are not yet in `code_hashes.json`. They are: re-pin (xvii) (above) added `src/wsp/eval/part_a_analysis.py`
 `419dc074…`, `scripts/part_a_analyse.py` `a47a72f8…`, `tests/test_part_a_analysis.py` `5adaeaf8…` and
 `docs/design/F10_SENSITIVITY_SPEC.md` `8624e063…`, the same bytes F10c.11 cites. Nothing else in F10c changes.
+
+*A5.1.2 re-pin (xviii) (11 Nov 2026, about 05:45 UTC; pre-execution freeze for the F10 rotation-only re-stage; before any G3 outcome).*
+This re-pin supersedes the earlier F10 implementation pin references (re-pins (xvi) and (xvii) were used by the slot-mask and
+analysis merges). Reviewed code: commit `060cc60` (`feat/f10-rotation-audit`), accepted with conditions by Board A
+(`docs/reviews/council/board-a-f10-code-2-2026-11-11.md`); merged into main as `21646f2`; the execution SHA is the clean HEAD at
+launch, recorded by the launch script in `docs/prereg/a5_manifests/part_a/restage_launch.json` and compared with the freeze. Pin map
+extended by `scripts/a5_f10_dryrun.py`, `tests/test_rotation.py`, `tests/test_response_intervention.py`; the builder was re-run with
+`--pin-worktree` into a copy and only `code_hashes.json` and the package README copied back. Rows: `src/wsp/features/rotation.py`
+`8ac459934b0b145f62a3f0c81f68980c1f57d0ef7663d16e9ce1f693be376dba`; `src/wsp/eval/response_intervention.py`
+`694f9f4eab769c731f269f33e1b2382902c505a8958dc0ad719981f00be10433`; `scripts/a5_f10_dryrun.py` `11bbc5f6…531ef`;
+`tests/test_rotation.py` `7570224a…9325`; `tests/test_response_intervention.py` `c971a909…4e14`; `scripts/a5_build_manifests.py`
+(pin map only); `docs/prereg/a5_manifests/code_hashes.json` `74321d76858274d2…` (old `c8c3a048…`, xvii);
+`docs/prereg/a5_manifests/README.md` `692879c7cdada059…` (old `558aae09…`, xvii). Frozen execution: the Board A command verbatim
+(rotation-only, `--audit-rule f10`, `--staged-manifest`, no `--evals`), `CUDA_VISIBLE_DEVICES=` (CPU only), `OMP_NUM_THREADS=4`,
+`MKL_NUM_THREADS=4`, `HF_HUB_OFFLINE=1`, Torch intra-op threads 4 in construction and replay; environment identities (Python 3.12.3,
+Torch 2.15.0+cu132, Torch build-config SHA-256, MKL available, CPU model, x86_64), selection/reference/control-seed/text-group hashes
+and base revision are in `docs/prereg/a5_manifests/part_a/restage_freeze.json`. Preserved before execution: the a533 staging
+manifest `d7785b35de1d7041…` as `part_a/manifest_a533.json` and its audits as `part_a/rotation_audits_a533.jsonl`; the 81 staged
+delta hashes (80 ladders + the prior passing pair's rotation) stay in that manifest. Rulings carried: scorer round-trip failures are
+`replay_failed` exclusions; the F10.3(v) pooled guard as registered; owning-check F10a reason codes with a `detail` field for missing
+or non-finite information; constructor, seeds, selection and ladder bytes unchanged; pooled diagnostics as defined in F10.4. Scratch
+evidence: the dry run under `data/runs/a5/f10_dryrun/condition2/` ran on an uncommitted tree (`src_dirty: true`) and is evidence of
+behaviour only, not the execution pin. The inclusive equality at one fp32 spacing passes the registered rule; no F10c amendment is
+needed (Board A). The regenerated manifest, audit and README hashes are entered after execution, in the re-stage report. Nothing has
+been scored.

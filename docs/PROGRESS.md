@@ -639,3 +639,8 @@ sits exactly at one spacing, so no disclosed slack note is needed); the F10.3(v)
 missing/non-finite audits with `detail` fields under the F10a reason codes; complete a533 verdict as a diagnostic; pooled F10.4
 diagnostics; `prepare --rotation-only` carrying the staged reuse proofs unchanged (no evaluation reads). Dry run: `00f8111c` pass
 (bytes identical), `0a841d40` pass, `0027efdf` excluded `replay_failed` (scorer round-trip, as ruled). Under Board A re-review.
+
+**11 Nov 2026, 05:45 UTC.** Board A accepted the corrected F10 code 060cc60 with conditions (`board-a-f10-code-2-2026-11-11.md`);
+merged (21646f2); pin map extended; A5.1.2 re-pin (xviii); execution freeze written (`part_a/restage_freeze.json`); a533 manifest
+and audits preserved as `manifest_a533.json` / `rotation_audits_a533.jsonl`. Rotation-only re-stage launching under agent-tmux
+`a5-f10-restage` with the Board A command (CPU, 4 threads, ≈ 2–3.5 h). Scoring held until the re-stage report is accepted.

@@ -79,11 +79,15 @@
   },
   "scripts/a5_build_manifests.py": {
    "role": "builder",
-   "sha256": "2ac41aab35df683844cfc58ab123dc405344bb9277cfd27690cd647b792131f8"
+   "sha256": "47844db666dcf1a4d1bfd3f207bedb08d9d0c947dcc0f30948e6d5aad6a8365b"
   },
   "scripts/a5_build_panels.py": {
    "role": "builder",
    "sha256": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534"
+  },
+  "scripts/a5_f10_dryrun.py": {
+   "role": "F10 dry-run script (CPU, scratch only)",
+   "sha256": "11bbc5f66eff80e951c2c66e8954a048a3023fbde7163defffc6794bd9a531ef"
   },
   "scripts/a5_incremental_norms.py": {
    "role": "producer of the incremental-norm input",
@@ -179,7 +183,7 @@
   },
   "src/wsp/eval/response_intervention.py": {
    "role": "selection, tertiles, reference identity (imported)",
-   "sha256": "b511d3d1ccb2c518317b59eafa4eea034df41ee90b85ab53709ef008736e353a"
+   "sha256": "694f9f4eab769c731f269f33e1b2382902c505a8958dc0ad719981f00be10433"
   },
   "src/wsp/eval/run.py": {
    "role": "WikiText window construction (perplexity)",
@@ -219,7 +223,7 @@
   },
   "src/wsp/features/rotation.py": {
    "role": "A5.3.3 rotation (imported)",
-   "sha256": "f3ff12426ad89dac69073b2d06ca034f83de7257edd248d2a8063a194b1897e3"
+   "sha256": "8ac459934b0b145f62a3f0c81f68980c1f57d0ef7663d16e9ce1f693be376dba"
   },
   "src/wsp/features/stats.py": {
    "role": "transitive wsp import of a pinned module",
@@ -284,9 +288,17 @@
   "tests/test_part_a_analysis.py": {
    "role": "test",
    "sha256": "5adaeaf8ea66d8b64ef1e9cfd6964006eaea363ba58d1214d1d03befc6a48b4f"
+  },
+  "tests/test_response_intervention.py": {
+   "role": "test",
+   "sha256": "c971a909916d7a249e97af5a04e51fed6e57875d3b6236006c951df0f1bf4e14"
+  },
+  "tests/test_rotation.py": {
+   "role": "test",
+   "sha256": "7570224a0b4c0dd8e9f1b0aacdaa930e2170d97fa1d1e9c6864bd60d13869325"
   }
  },
- "git_sha": "f41d6753c107db6715aae8fcb800b9f2c613f550",
+ "git_sha": "21646f2ad6ee0481d85ec0c104076efc6df036c4",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",
