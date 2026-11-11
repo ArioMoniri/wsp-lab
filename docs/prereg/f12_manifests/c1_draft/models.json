@@ -1,0 +1,45 @@
+{
+ "F3": "ridge-1 intercept / a / q readout on training rows only (A5.8.3)",
+ "WM-R_head_parameters": 1185,
+ "config": {
+  "path": "docs/prereg/f12_manifests/f12c_stage2_config.json",
+  "sha256": "ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f"
+ },
+ "descriptive_arms": "K (Gaussian-kernel ridge) and M (width-8 GELU MLP), F12a.2(g)",
+ "gauge_and_control_audits": "awaiting the token manifest: F5 gauge audit and permuted-field eligibility on the real tokens",
+ "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A",
+ "training_and_selection": {
+  "batch": 16,
+  "head_zero_init": true,
+  "joint_studentiser": "floor_vcomp",
+  "lgbm": {
+   "colsample_bytree": 0.5,
+   "learning_rate": 0.05,
+   "min_child_samples": 5,
+   "n_jobs": 1,
+   "num_leaves": 8,
+   "reg_lambda": 1.0,
+   "subsample": 0.8,
+   "subsample_freq": 1
+  },
+  "lr": 0.001,
+  "max_epochs": 300,
+  "patience": 30,
+  "ridge_lambda": 1.0,
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "statnn_select_seeds": [
+   0
+  ],
+  "target_standardise": true,
+  "tree_grid": [
+   100,
+   300,
+   600
+  ],
+  "weight_decay": 0.01
+ }
+}

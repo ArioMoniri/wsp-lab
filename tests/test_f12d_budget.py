@@ -194,13 +194,13 @@ def test_write_timing_projects_an_alternative_only_pilot(tmp_path):
     recs = [{"k": 145, "scenario": "alt", "r": 3000 + i} for i in range(3)]
     times = [(10.0, 219.0, 800.0)] * 3
     fs._write_timing(
-        tmp_path, A(), recs, times, 30.0, ru0, [145], started_utc="2026-11-12T10:00:00Z"
+        tmp_path, A(), recs, times, 30.0, ru0, [145], started_utc="2026-01-01T00:00:00Z"
     )
     t = json.loads((tmp_path / "report.time").read_text())
     assert t["schema"] == fs.TIMING_SCHEMA
     assert t["projection_f12c_schedule"] is not None
     assert t["projection_f12c_schedule"]["stress_timing"].startswith("extrapolated")
-    assert t["started_utc"] == "2026-11-12T10:00:00Z" and t["finished_utc"] >= t["started_utc"]
+    assert t["started_utc"] == "2026-01-01T00:00:00Z" and t["finished_utc"] >= t["started_utc"]
     assert t["report_sha256"] == fs.sha256_file(tmp_path / "report.json")
 
 
@@ -224,3 +224,35 @@ def test_resource_plan_status_reconciled_with_the_chair_ruling():
     assert plan["budget_barrier"]["checkpoint_every_units"] == fb.CHECKPOINT_EVERY_UNITS
     assert plan["budget_barrier"]["checkpoint_max_seconds"] == fb.CHECKPOINT_MAX_SECONDS
     assert plan["budget_barrier"]["ceiling_cpu_h"] == 190.0
+
+
+def test_parts_aware_projection_for_stage2_parts(tmp_path):
+    plan = {
+        **PLAN,
+        "units_by_kind": {
+            "noise_check": 1,
+            "pilot": 10,
+            "stage1": 480,
+            "target": 200,
+            "stage2": 2200,
+        },
+    }
+    L = fb.Ledger(tmp_path / "ledger.jsonl")
+    clock = {"cpu": 0.0}
+    part = fb.Meter(L, plan, job="stage2:null", kind="stage2", planned_units=1000, operator="chair",
+                    cpu=lambda: clock["cpu"])  # fmt: skip
+    part.launch()
+    part.end("completed", cpu_s=1000 * 200.0)  # 1,000 of the 2,200 stage-2 replicates done
+    nxt = fb.Meter(L, plan, job="stage2:alt,null_var2", kind="stage2", planned_units=1200, operator="chair",
+                   cpu=lambda: clock["cpu"])  # fmt: skip
+    d = nxt.launch()
+    rate = max(140.0 * 3600 / 2200, 200.0)
+    assert d["remaining_cpu_h"]["stage2"] == pytest.approx(1200 * rate / 3600)
+    assert d["spent_cpu_h"] == pytest.approx(1000 * 200.0 / 3600)
+    # a failed attempt is spent but its units never count as done
+    nxt.end("failed", cpu_s=3600.0)
+    again = fb.Meter(L, plan, job="stage2:alt,null_var2", kind="stage2", planned_units=1200, operator="chair",
+                     cpu=lambda: clock["cpu"])  # fmt: skip
+    d2 = again.launch()
+    assert d2["remaining_cpu_h"]["stage2"] == pytest.approx(1200 * rate / 3600)
+    assert d2["spent_cpu_h"] == pytest.approx(1000 * 200.0 / 3600 + 1.0)

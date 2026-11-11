@@ -434,11 +434,14 @@ def test_f12b_end_to_end_null_and_alt_deterministic():
 
 def test_restricted_payload_round_trip_and_pin(tmp_path):
     pay = toy_payload(n_comp=4, per=2, seed=3)
+    for d in pay.donors:
+        d["eligible"] = True  # F12d: the restricted copy carries the original eligible flag
     pay.provenance = {"sha256": fs.PAYLOAD_SHA256, "source": "toy"}
     path = tmp_path / "noise_payload_restricted.json"
     path.write_text(json.dumps(pay.restricted(), sort_keys=True))
     pin = fs.restricted_pin(
-        path, extractor={"script": "toy", "commit": "0" * 40, "sha256": "1" * 64}
+        path,
+        extractor={"script": "toy", "commit": "0" * 40, "sha256": "1" * 64, "functions": "toy"},
     )
     back = fs.NoisePayload.load_restricted(path, pin)
     np.testing.assert_array_equal(back.blocks, pay.blocks)

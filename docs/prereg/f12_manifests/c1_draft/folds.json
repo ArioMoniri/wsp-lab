@@ -1,0 +1,21 @@
+{
+ "eligible_row_folds": "awaiting the token manifest: outer, inner and leave-one-family-out fold ids over the eligible rows of every S_k are frozen after the eligibility audit",
+ "inner_folds": "outer-training components sorted by sha256('20261110:lol-inner:' + id), round-robin to four folds (F5 pins; scripts/f12_simulation.py inner_folds)",
+ "outer_fold_manifest_sha256": "3fdee6859926e3935d9fa18dc3fac7c4b61a8b30bc60415db27e53585de073de",
+ "purchase_order_sha256": "c8e621716f39fcf134145a00372512876fd7b32f1c4009b9fbe298f58280a281",
+ "rules": {
+  "folds": "within each stratum components ordered by sha256(UTF-8 '20261111:f12:' + component_id) ascending; strata concatenated in the order ['abliteration', 'chain', 'lora_sft', 'mixed', 'random_dir']; round-robin to folds 0-4 by global position",
+  "leave_one_family_out": "the mixed component always trains; its rows are excluded from held-family evaluation (Board A)",
+  "purchase_order": "purchasable components by sha256(UTF-8 '20261111:f12:purchase:' + component_id) ascending",
+  "s_k": "existing components plus the first k purchasable components, k in [0, 29, 58, 87, 116, 145]; folds recomputed on S_k by the same rule"
+ },
+ "s_k_fold_manifest_sha256": {
+  "0": "a72ca5bce5bc430f35a7056e58a007f5f01796697b9e031238eafc24d238250b",
+  "116": "0bf9932af812d60640f1d39595247f7cc46a0dddce6323be1515e0e5648458d9",
+  "145": "3fdee6859926e3935d9fa18dc3fac7c4b61a8b30bc60415db27e53585de073de",
+  "29": "39bd4b94abe56b3b75b9f59cc875cd74c510349ec064dae382956ceb2a418e97",
+  "58": "bbef9f373f194346d02d5ceb5b3c44b56b490585ed06aabef662ed2454e11b50",
+  "87": "6ef9c0bf05cee9c9697fb61755f70746ca735a72d291e7c959aeda36e508bacb"
+ },
+ "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A"
+}

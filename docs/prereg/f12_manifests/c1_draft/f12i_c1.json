@@ -1,0 +1,13 @@
+{
+ "ceiling_gpu_min": 56.16,
+ "construction": {
+  "path": "scripts/f12_additivity_prepare.py",
+  "sha256": "ac7aee71c3f29da98f55366574f291cd5c461ac78648259f58e8b54521601f16"
+ },
+ "lora_root_ids_sha256": "457760f533ff10668d43612bec4578eab05c890dce3d8ce557ee98a43e18d842",
+ "lora_roots": 16,
+ "own_chain_H0": "7ba2957b30755704b670156131cdfe6393fc56051851cb4d094d6ea1d82b961e",
+ "parent_support_tensor_hashes": "awaiting the token manifest and the F12-I constructions: parent, support and base tensor hashes, bitwise part checks",
+ "parts": "LoRA 16 x 2 (layers 0-11 / 12-23), Astra 2 (by tensor), C4 2 (input columns < 1792 / >= 1792)",
+ "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A"
+}

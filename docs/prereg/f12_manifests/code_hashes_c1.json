@@ -3,16 +3,19 @@
   "docs/prereg/f12_manifests/f12b_stage1_config.json": "a3946ebb7250de7b45433605d7934bace7498c6d325cb70bdf1dccd779964a81",
   "docs/prereg/f12_manifests/f12b_stage2_config.json": "13e59899a90aa8c44457dfe757bce4d118dfb6d51eefb43e3b437d476580f65c",
   "docs/prereg/f12_manifests/f12c_pilot_config.json": "5e8c8c2aef6bdb049c9470757f5847e406fbc908384abb0c83cf4e1b2254b24e",
-  "docs/prereg/f12_manifests/f12c_resource_plan.json": "eeb5e91412852a53f011dca7dcb216160f7323198ba3de27603c00ea2bd0a393",
+  "docs/prereg/f12_manifests/f12c_resource_plan.json": "53804434a6a679ebd69a3775f7a26a25a224c397d6f8323c7bec16532221a348",
   "docs/prereg/f12_manifests/f12c_stage1_config.json": "7cb10a83a6a2fb0e7e92ee14b2bea21d3efea42d49510e1625e9bcb9df204b01",
   "docs/prereg/f12_manifests/f12c_stage2_config.json": "ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f",
   "docs/prereg/f12_manifests/f12c_target_config.json": "be372fc56657bc4e6a62732e0e7bbce1701027197635b846efee6e8f4948e29c",
-  "docs/prereg/f12_manifests/noise_payload_restricted_pin.json": "e0e11bfb5afb33b46377cd90ad8e2f74363c8e229d3621d6b66ebe287e8f5efb",
+  "docs/prereg/f12_manifests/noise_payload_restricted_pin.json": "f30dbf3058373e3a52b064eb1b08ff2aa51f3dd9fc0172aedfc5fe41d26b2562",
   "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
   "scripts/a5_simulation.py": "4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a",
   "scripts/f12_additivity_prepare.py": "ac7aee71c3f29da98f55366574f291cd5c461ac78648259f58e8b54521601f16",
+  "scripts/f12_budget.py": "c2df25e58f9cb49e839603c4bfc96de1d45bface60873df67323aff00e538741",
+  "scripts/f12_c1.py": "7d7015477b17521b72c4b96e41d30ebfafc7fe8247b6899924b5d734d6efffbc",
+  "scripts/f12_payload_extract.py": "5de91001e242a5687c3fb97988f7093f2d552cf553cdb92f6c2c0f4cb0fa79dd",
   "scripts/f12_population.py": "7e1c196dcbedd36e2ea7102d6a1ef4e50e23b8381dcc2bbf1cfffce77b2ee45d",
-  "scripts/f12_simulation.py": "dcecbaf447b751062eda2335ecda62716bf372e03b40d35597668d466186dd04",
+  "scripts/f12_simulation.py": "e8b5f75132365a5080e54a50d94bc3db982802bf3e6589ff7e8680435da98522",
   "scripts/f12_tokens.py": "3188c5c54e51110d0fb161f688c8c94832eed674be80b3c757060951a596092a",
   "scripts/f12b_diagnostics.py": "ab54d18c875442639e314864346298d327b29107b8719b166e67b9ad766939db",
   "scripts/tfv1_requalify.py": "46f7ab9a4ab3207990fdc0fa888d9f6164fc156f98a0072f33df51d1432e6249",
@@ -20,21 +23,33 @@
   "tests/test_f12_population.py": "924e73d7c9d8833d9e9a657b9ba61467d7dae3a37a4dc7a3c1afa977fcc937ad",
   "tests/test_f12_simulation.py": "b0ad68b5f93bf51dc90eb6c87925fbf1ccb7b1949145b0f8f33e3d12975e9f5d",
   "tests/test_f12_tokens.py": "b928b504328b0283dcba5d3e9b971f9f295a3fa4a9a42c82110526bf4db03e58",
-  "tests/test_f12b_repairs.py": "9c33d6fa401f05c696ce299e5b66d278377efb2615e2489b3a287c3e56f4c6a2",
-  "tests/test_f12c_governance.py": "15d84f56bc74ff6bb01a2582addbce8f6ab55f5e112397534ee9013dea90c43c"
+  "tests/test_f12b_repairs.py": "9181963cd33c3bbdbe8f05a0af8ca1c285ec92b1685d9446d8fc70fd1c9bb513",
+  "tests/test_f12c_governance.py": "9862f37b8a973e6d6ff5f7e0c901d0b555a9e514f61ea01567fc46490cf246c9",
+  "tests/test_f12d_budget.py": "1df69341d794734ddbd6cde44a8297c43da4e9cfb2ea5a7ef5f59ca87a92114c",
+  "tests/test_f12d_payload.py": "90a76daffcf05ddd54e273051a9650e27a6b0ed3d4887559a9ad8d9d96dbe1c2",
+  "tests/test_f12d_prereqs.py": "bd389584e80b9780802a0010a7692ee3c15834f93b3a40fe11787d1640477487"
  },
  "note": "Draft of F12a.6(c) item 11. Not a C1 file until MANIFEST_C1.sha256 is committed; it is regenerated (python scripts/f12_simulation.py c1-draft) after any change to a listed file. Missing for C1: the token builder's C1 outputs, population/folds/schemas/models/intervals/f12i/resources files, the C1 verifier and exposure_c1.json.",
  "restricted_payload": {
   "extractor": {
-   "commit": "07e1dc286a16e87926de92ddd84868c6cfbce7ed",
-   "functions": "NoisePayload.load (allowlist PAYLOAD_FIELDS / DONOR_FIELDS) then json.dumps(NoisePayload.restricted(), sort_keys=True)",
-   "reserialisation_check": "load_restricted re-serialises the copy through the current restricted() and requires identical bytes",
-   "script": "scripts/f12_simulation.py",
-   "sha256": "ae76dbfe5c6842568f2c174d5c3bcf7ecb106457d1b15dc5cb918d2dc6b01ee8",
-   "written": "11 Nov 2026 13:25 UTC by the F12 synthetic smoke run (scripts/f12_simulation.py at 07e1dc2; wsp-data/runs/a5/f12_sim_dryrun/aborted_run1), into wsp-data/runs/a5/f12_sim_dryrun/"
+   "cli": "python -I scripts/f12_payload_extract.py --out /home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/noise_payload_restricted_v2.json --superseded /home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/noise_payload_restricted.json --report /home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/f12d/extraction_report.json",
+   "commit": "5a135d1f5cd5bfdfc76853e7a7ca93101b8c5d71",
+   "functions": [
+    "scan_allowlisted (top-level key scan; non-allowlisted values skipped undecoded)",
+    "_donor_hook (donor objects keep id, component, family, eligible)",
+    "extract (digest before parse; validation; ELIGIBILITY_RULE; reference cross-check)",
+    "serialise (json.dumps(sort_keys=True))"
+   ],
+   "report": {
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/f12d/extraction_report.json",
+    "sha256": "57fa9ca021d0ebb782aea59a596e3e9aa93dd600bcfff6cdeef32347c183f85c"
+   },
+   "script": "scripts/f12_payload_extract.py",
+   "sha256": "5de91001e242a5687c3fb97988f7093f2d552cf553cdb92f6c2c0f4cb0fa79dd",
+   "written": "11 Nov 2026 22:06 UTC (file mtime) by the F12d implementation session (chair-authorised extractor for this step)"
   },
   "pin": "docs/prereg/f12_manifests/noise_payload_restricted_pin.json",
-  "sha256": "a21f426f0f8aef616d4bedca19603ed4cf8b7acd4823383acf749ba3d8f4a972",
+  "sha256": "44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5",
   "source_sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
  },
  "schema": "f12-code-hashes-c1-v1",

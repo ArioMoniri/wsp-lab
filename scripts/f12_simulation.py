@@ -139,6 +139,7 @@ for _p in (str(ROOT), str(ROOT / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from scripts import f12_budget, f12_c1
 from scripts.a5_build_panels import domain_seed
 from scripts.a5_simulation import cp_interval, donor_block
 from scripts.tfv1_requalify import (
@@ -165,7 +166,8 @@ DENOM_TOL = 1e-12
 PAYLOAD_SHA256 = "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
 DEFAULT_PAYLOAD = ROOT / "data/runs/a5/nullsize/inputs.json"
 PAYLOAD_FIELDS = ("centred_noise", "window_mask", "window_ids", "donors")
-DONOR_FIELDS = ("id", "component", "family")
+# F12d: donors carry the original eligible flag (F12a.4(e))
+DONOR_FIELDS = ("id", "component", "family", "eligible")
 QUALIFICATION_HALF_WIDTH = 0.00487  # tf-v1-requalification-2026-11-06.md, WikiText (i) panel mean
 SCENARIOS = {
     "null": (False, 1.0),
@@ -1067,6 +1069,10 @@ class NoisePayload:
             raise ValueError("masked or non-finite windows: no imputation rule is registered")
         self.noise, self.mask = noise, mask
         self.donors = [{k: d[k] for k in DONOR_FIELDS if k in d} for d in donors]
+        for d in self.donors:  # F12a.4(b): only donors whose original flag is true are ever used
+            if "eligible" in d and d["eligible"] is not True:
+                raise ValueError(f"donor {d.get('id')} is not eligible (flag {d['eligible']!r})")
+        self.schema = self.RESTRICTED_SCHEMA
         self.window_ids = list(window_ids) if window_ids is not None else None
         self.blocks = np.stack([donor_block(noise[j], mask[j]) for j in range(len(donors))])
         comps = sorted({d["component"] for d in self.donors})
@@ -1087,9 +1093,14 @@ class NoisePayload:
         self.provenance = provenance or {}
 
     @classmethod
-    def load(cls, path=DEFAULT_PAYLOAD, expected_sha256=PAYLOAD_SHA256):
-        """Raw F8a.2 payload, allowlisted fields only. Extraction / non-governed diagnostics only: never
-        a governed fallback (F12c.6; ``main`` refuses it whenever a config is given)."""
+    def load(cls, path=DEFAULT_PAYLOAD, expected_sha256=PAYLOAD_SHA256, *, allow_raw=False):
+        """Raw F8a.2 payload, allowlisted fields only, for drafted (unconfigured) diagnostics only: never a
+        governed fallback (F12c.6). F12d barrier: refused unless ``allow_raw=True``, which ``main`` passes only
+        when no config is given; governed extraction is ``scripts/f12_payload_extract.py``."""
+        if not allow_raw:
+            raise ValueError(
+                "raw payload loader refused: configured execution reads only the pinned restricted copy"
+            )
         path = Path(path)
         raw = path.read_bytes()
         digest = hashlib.sha256(raw).hexdigest()
@@ -1109,7 +1120,9 @@ class NoisePayload:
             view["centred_noise"], view["window_mask"], view["donors"], view["window_ids"], prov
         )
 
-    RESTRICTED_SCHEMA = "f12-noise-payload-restricted-v1"
+    # F12d: donors carry the original eligible flag
+    RESTRICTED_SCHEMA = "f12-noise-payload-restricted-v2"
+    SUPERSEDED_SCHEMAS = ("f12-noise-payload-restricted-v1",)
     RESTRICTED_KEYS = {
         "schema",
         "provenance",
@@ -1128,6 +1141,10 @@ class NoisePayload:
         dict or the path of a pin manifest); any mismatch fails closed."""
         if not isinstance(pin, dict):
             pin = json.loads(Path(pin).read_text())
+        if pin.get("schema") != RESTRICTED_PIN_SCHEMA:
+            raise ValueError(
+                f"pin schema {pin.get('schema')!r} is not {RESTRICTED_PIN_SCHEMA} (superseded or unknown)"
+            )
         raw = Path(path).read_bytes()
         digest = hashlib.sha256(raw).hexdigest()
         if digest != pin["restricted_copy"]["sha256"]:
@@ -1135,6 +1152,8 @@ class NoisePayload:
                 f"restricted copy digest {digest} != pinned {pin['restricted_copy']['sha256']}"
             )
         obj = json.loads(raw)
+        if obj.get("schema") in cls.SUPERSEDED_SCHEMAS:
+            raise ValueError("superseded restricted copy (v1 lacks the eligible flag; F12d)")
         if set(obj) != cls.RESTRICTED_KEYS or obj["schema"] != cls.RESTRICTED_SCHEMA:
             raise ValueError("not a restricted f12 noise payload (unexpected keys or schema)")
         if (
@@ -1143,19 +1162,24 @@ class NoisePayload:
         ):
             raise ValueError("restricted payload provenance is not the pinned F8a.2 payload")
         for d in obj["donors"]:
-            if not set(d) <= set(DONOR_FIELDS):
-                raise ValueError("donor record outside the allowlist")
+            if set(d) != set(DONOR_FIELDS):
+                raise ValueError(
+                    "donor record is not exactly the allowlist (id, component, family, eligible flag)"
+                )
+            if d["eligible"] is not True:
+                raise ValueError(f"donor {d['id']}: eligible flag is not true (F12a.4(b),(e))")
         got = restricted_contents(obj)
         for key, want in pin["contents"].items():
             if got.get(key) != want:
                 raise ValueError(
                     f"restricted copy contents differ from the pin: {key.replace('_', ' ')}"
                 )
-        for key in ("script", "commit", "sha256"):
+        for key in ("script", "commit", "sha256", "functions"):
             if not pin.get("extractor", {}).get(key):
                 raise ValueError(f"pin lacks extractor provenance ({key})")
         pay = cls(obj["centred_noise"], obj["window_mask"], obj["donors"], obj["window_ids"],
                   dict(obj["provenance"]))  # fmt: skip
+        pay.schema = obj["schema"]
         if json.dumps(pay.restricted(), sort_keys=True).encode() != raw:
             raise ValueError("restricted bytes are not the pinned extractor's serialisation")
         pay.provenance["restricted_copy"] = str(path)
@@ -1165,7 +1189,7 @@ class NoisePayload:
 
     def restricted(self) -> dict:
         return {
-            "schema": self.RESTRICTED_SCHEMA,
+            "schema": self.schema,
             "provenance": self.provenance,
             "window_ids": self.window_ids,
             "donors": self.donors,
@@ -1175,7 +1199,7 @@ class NoisePayload:
 
 
 RESTRICTED_PIN = ROOT / "docs/prereg/f12_manifests/noise_payload_restricted_pin.json"
-RESTRICTED_PIN_SCHEMA = "f12c-restricted-payload-pin-v1"
+RESTRICTED_PIN_SCHEMA = "f12d-restricted-payload-pin-v2"  # F12d; the f12c v1 pin is superseded
 
 
 def _sha_json(x) -> str:
@@ -1185,9 +1209,11 @@ def _sha_json(x) -> str:
 def restricted_contents(obj) -> dict:
     """Identity summary of a restricted payload object (counts and hashes; no noise values)."""
     donors = obj["donors"]
-    fams = {}
+    fams, flags = {}, {}
     for d in donors:
         fams[d.get("family")] = fams.get(d.get("family"), 0) + 1
+        f = "missing" if "eligible" not in d else json.dumps(d["eligible"])
+        flags[f] = flags.get(f, 0) + 1
     return {
         "n_donors": len(donors),
         "n_components": len({d["component"] for d in donors}),
@@ -1196,6 +1222,8 @@ def restricted_contents(obj) -> dict:
         "donor_ids_sha256": _sha_json([d["id"] for d in donors]),
         "donor_components_sha256": _sha_json([[d["id"], d["component"]] for d in donors]),
         "families": dict(sorted(fams.items())),
+        "eligible_flags": dict(sorted(flags.items())),
+        "donor_records_sha256": _sha_json([[d.get(k) for k in DONOR_FIELDS] for d in donors]),
         "all_windows_masked_in": bool(np.asarray(obj["window_mask"], dtype=bool).all()),
     }
 
@@ -2373,7 +2401,8 @@ def replicate_requirements(summary, cfg):
 SELECTION_SCHEMA = "f12c-stage2-selection-v1"
 STAGE2_SELECTION = ROOT / "docs/prereg/f12_manifests/f12c_stage2_selection.json"
 NOISE_CHECK_SCHEMA = "f12c-noise-check-v1"
-PILOT_ACCEPTANCE_SCHEMA = "f12c-pilot-acceptance-v1"
+PILOT_ACCEPTANCE_SCHEMA = "f12d-pilot-acceptance-v2"  # F12d; the bare f12c v1 record is superseded
+TIMING_SCHEMA = "f12d-timing-v1"
 C1_SCHEMA = "f12-code-hashes-c1-v1"
 CODE_HASHES_C1 = ROOT / "docs/prereg/f12_manifests/code_hashes_c1.json"
 C1_DEPENDENCIES = (
@@ -2382,7 +2411,14 @@ C1_DEPENDENCIES = (
     "scripts/tfv1_requalify.py",
 )
 CODE_IDENTITY_FILES = ("scripts/f12_simulation.py",) + C1_DEPENDENCIES
-PREREQUISITES = ("noise_check", "pilot_acceptance", "coverage_target", "c1_code_hashes")
+# F12d: C1 is no longer a supplied prerequisite; the validator verifies the committed C1 itself (f12_c1.verify_c1).
+PREREQUISITES = (
+    "noise_check",
+    "pilot_report",
+    "pilot_timing",
+    "pilot_acceptance",
+    "coverage_target",
+)
 
 
 def _norm(x):
@@ -2558,14 +2594,17 @@ def _check_target_report(tr, sel, ids):
     return fails, expected_row_sum_target(tr["records"], planned, tcfg)
 
 
-def validate_execution(report, *, selection, prereqs):
+def validate_execution(report, *, selection, prereqs, prereq_sha256=None, c1_root=None):
     """F12c.6 fail-closed execution validator for a stage-2 report. Every check must pass for the
     report's numbers to be eligible for Board A's review; the validator never grants purchase
     authority. Checks: the pinned F12c stage-2 config; non-synthetic tokens; the pinned restricted
     payload; the verified frozen selection (non-synthetic, identical in the report, same identities,
     k grid exactly [k*]); exactly the planned 1,000 / 1,000 / 200 records with their seeds, complete;
-    the summary recomputed from the records; the prerequisites (F12a.4(d) noise check, chair-accepted
-    pilot projection, coverage-target report reproducing the report's target, C1 code hashes)."""
+    the summary recomputed from the records; the prerequisites: the F12a.4(d) noise check bound to the run's
+    identities including its code; the chair's ``pilot_acceptance`` bound to the pilot report and timing (by
+    file sha256 in ``prereq_sha256``), identities, recomputed all-in projection, 190 CPU-h ceiling and
+    chronology (F12d); the coverage-target report reproducing the report's target; and a complete committed
+    C1 verified by Board A (``f12_c1.verify_c1`` on ``c1_root``, default the repository)."""
     F = []
     cfg = None
     try:
@@ -2627,13 +2666,13 @@ def validate_execution(report, *, selection, prereqs):
             )
         if _norm(nc.get("identities")) != _norm(sub):
             F.append("prerequisite noise_check: identities differ from the stage-2 run's")
-    pa = P.get("pilot_acceptance")
-    if (
-        not pa
-        or pa.get("schema") != PILOT_ACCEPTANCE_SCHEMA
-        or pa.get("chair_accepted") is not True
-    ):
-        F.append("prerequisite pilot_acceptance: chair acceptance of the pilot projection missing")
+        if not nc.get("code_sha256") or _norm(nc.get("code_sha256")) != _norm(
+            ids.get("code_sha256")
+        ):
+            F.append(
+                "prerequisite noise_check: code identity (code_sha256) is not the run's current code"
+            )
+    F += _check_pilot_prereqs(P, prereq_sha256 or {}, ids, nc)
     tr = P.get("coverage_target")
     if not tr:
         F.append("prerequisite coverage_target missing")
@@ -2644,22 +2683,9 @@ def validate_execution(report, *, selection, prereqs):
             F.append(
                 "coverage target in the report differs from the target recomputed from the coverage_target prerequisite"
             )
-    c1 = P.get("c1_code_hashes")
-    if not c1 or c1.get("schema") != C1_SCHEMA:
-        F.append("prerequisite C1 code hashes missing")
-    else:
-        if "draft" in str(c1.get("status", "draft")).lower():
-            F.append(
-                f"prerequisite C1 code hashes: status {c1.get('status')!r} is not a verified C1 freeze"
-            )
-        bad = verify_code_hashes(c1)
-        if bad:
-            F.append(f"prerequisite C1 code hashes: current bytes differ for {bad}")
-        code = ids.get("code_sha256") or {}
-        if not code or any(c1.get("files", {}).get(rel) != sha for rel, sha in code.items()):
-            F.append(
-                "prerequisite C1 code hashes: the run's code identity is not the C1-pinned code"
-            )
+    F += f12_c1.verify_c1(
+        ROOT if c1_root is None else c1_root, code_identity=ids.get("code_sha256") or {}
+    )
     return {"passed": not F, "failures": F, "board_a_acceptance": "pending (not checkable by code)"}
 
 
@@ -2748,48 +2774,253 @@ def assemble_reports(paths):
     return _norm(report)
 
 
-def project_cpu(by_k):
-    """F12c.7 CPU projection of the F12c schedule from measured per-replicate process CPU seconds
-    {str(k): {scenario: seconds}}; unmeasured k are linearly interpolated (clamped) in k, and
-    variance-x2 falls back to the stress scenario's time when unmeasured."""
+# F12d (Board A F12c condition 7): disclosed conservative extrapolation constants.
+# F12b.6 synthetic stress / alternative CPU ratios: 0.888 (k=0), 0.912 (k=87), 0.923 (k=145); stress-only
+# timing is scaled up by the smallest ratio for the alternative.
+SYNTH_STRESS_ALT_RATIO_MIN = 121.04 / 136.38
+# F12c resource plan: the 10,000-panel noise check projected from the 500-panel smoke; 15 invocations of the
+# whole programme at 10 CPU-s overhead each (F12c.7(b)).
+NOISE_CPU_H_PROJECTED = 0.005
+PLANNED_INVOCATIONS = 15
+OVERHEAD_CPU_H_PROJECTED = PLANNED_INVOCATIONS * 10 / 3600
+ITEM_UNITS = {"noise_check": 1, "pilot": 10, "stage1": 480, "target": 200, "stage2": 2200}
+CHAIR_CEILING_CPU_H = 190.0  # chair ruling on F12c, 11 Nov 2026 18:55 UTC
+
+
+def project_cpu(by_k, *, noise_cpu_h=None, overhead_cpu_h=None, pilot_cpu_h=None):
+    """F12c.7 / F12d all-in CPU projection of the F12c schedule from per-replicate process CPU seconds
+    {str(k): {scenario: seconds}} with separate stress (``null``) and alternative (``alt``) costs.
+
+    Measured k are interpolated linearly in k. Disclosed conservative extrapolations: a k below the smallest
+    measured k is projected at that k's cost (synthetic per-replicate cost rises with k); unmeasured stress is
+    projected at the alternative's cost (synthetic stress / alternative ratios 0.89-0.92 <= 1); unmeasured
+    alternative at stress / ``SYNTH_STRESS_ALT_RATIO_MIN``; unmeasured variance-x2 at max(stress, alternative).
+    Noise check and overhead are included (measured when given, else the resource plan's projections), so the
+    result is all-in. A pilot-only projection is labelled an extrapolation, never measured stress timing."""
     measured = sorted(int(k) for k in by_k)
+    ext = []
 
-    def at(scen, k):
-        xs = [m for m in measured if by_k[str(m)].get(scen) is not None]
-        if not xs:
-            return None
-        return float(np.interp(k, xs, [by_k[str(m)][scen] for m in xs]))
+    def xs(scen):
+        return [m for m in measured if by_k[str(m)].get(scen) is not None]
 
-    has_var2 = any(by_k[str(m)].get("null_var2") is not None for m in measured)
+    def interp(scen, k):
+        pts = xs(scen)
+        return float(np.interp(k, pts, [by_k[str(m)][scen] for m in pts]))
+
+    has = {sc: bool(xs(sc)) for sc in ("null", "alt", "null_var2")}
+    if not (has["null"] or has["alt"]):
+        raise ValueError("project_cpu needs a measured stress or alternative cost")
+
+    def stress(k):
+        return interp("null", k) if has["null"] else interp("alt", k)
+
+    def alt(k):
+        return interp("alt", k) if has["alt"] else interp("null", k) / SYNTH_STRESS_ALT_RATIO_MIN
+
+    def var2(k):
+        return interp("null_var2", k) if has["null_var2"] else max(stress(k), alt(k))
+
+    if not has["null"]:
+        ext.append("stress cost per replicate extrapolated: projected at the measured alternative cost (synthetic "
+                   "stress / alternative ratios 0.89-0.92, so this is conservative); not measured stress timing")  # fmt: skip
+    if not has["alt"]:
+        ext.append(f"alternative cost per replicate extrapolated: stress cost / {SYNTH_STRESS_ALT_RATIO_MIN:.4f} "
+                   "(the smallest synthetic stress / alternative ratio)")  # fmt: skip
+    lo, hi = min(measured), max(measured)
+    if any(k < lo for k in K_GRID):
+        ext.append(f"every k below k = {lo} projected at the cost measured at k = {lo} (conservative: synthetic "
+                   "per-replicate cost rises with k)")  # fmt: skip
+    if any(k > hi for k in K_GRID):
+        ext.append(f"k above {hi} projected at the cost measured at k = {hi} (not conservative)")
+    if not has["null_var2"]:
+        ext.append("variance-x2 cost per replicate projected at max(stress, alternative)")
     stage2 = {}
     for k in K_GRID:
-        nul, alt = at("null", k), at("alt", k)
-        var2 = at("null_var2", k) if has_var2 else nul
+        nul, al, v2 = stress(k), alt(k), var2(k)
         stage2[str(k)] = {
-            "null_s": nul, "alt_s": alt, "null_var2_s": var2,
-            "null_var2_from": "measured" if has_var2 else "null",
+            "null_s": nul, "alt_s": al, "null_var2_s": v2,
+            "null_var2_from": "measured" if has["null_var2"] else "max(stress, alternative)",
             "interpolated": k not in measured,
-            "cpu_h": (STAGE2_REQUIRED["null"] * nul + STAGE2_REQUIRED["alt"] * alt
-                      + STAGE2_REQUIRED["null_var2"] * var2) / 3600,
+            "cpu_h": (STAGE2_REQUIRED["null"] * nul + STAGE2_REQUIRED["alt"] * al
+                      + STAGE2_REQUIRED["null_var2"] * v2) / 3600,
         }  # fmt: skip
-    stage1 = 40 * sum(at("null", k) + at("alt", k) for k in K_GRID) / 3600
-    target = {str(k): 200 * at("null", k) / 3600 for k in K_GRID}
+    stage1 = 40 * sum(stress(k) + alt(k) for k in K_GRID) / 3600
+    target = {str(k): 200 * stress(k) / 3600 for k in K_GRID}
     worst2 = max(v["cpu_h"] for v in stage2.values())
+    pilot = 10 * alt(145) / 3600 if pilot_cpu_h is None else float(pilot_cpu_h)
+    noise = NOISE_CPU_H_PROJECTED if noise_cpu_h is None else float(noise_cpu_h)
+    over = OVERHEAD_CPU_H_PROJECTED if overhead_cpu_h is None else float(overhead_cpu_h)
+    items = {"noise_check": noise, "pilot": pilot, "stage1": stage1, "target": max(target.values()),
+             "stage2": worst2, "overhead": over}  # fmt: skip
+    all_in = sum(items.values())
     return {
         "basis": "process CPU seconds per replicate measured in this run; F12c schedule: stage 1 = 40 "
         "stress + 40 alternative at each of six k; stage 2 = 1,000 stress + 1,000 alternative + 200 "
-        "variance-x2 at k*; coverage target = 200 stress at k*; pilot = 10 alternative at k = 145",
+        "variance-x2 at k*; coverage target = 200 stress at k*; pilot = 10 alternative at k = 145; plus the "
+        "noise check and overhead; worst case over k*",
+        "label": "projection from measured stress and alternative timing" if has["null"] and has["alt"]
+        else "projection; stress timing extrapolated from the alternative-only pilot (not measured stress timing)"
+        if not has["null"] else "projection; alternative timing extrapolated from stress timing",
+        "stress_timing": "measured" if has["null"] else "extrapolated from the alternative (not measured)",
+        "alternative_timing": "measured" if has["alt"] else "extrapolated from stress (not measured)",
+        "extrapolations": ext,
         "stage2_by_k": stage2,
         "stage2_worst_cpu_h": worst2,
         "stage1_cpu_h": stage1,
         "coverage_target_by_k_cpu_h": target,
         "coverage_target_worst_cpu_h": max(target.values()),
-        "pilot_cpu_h": 10 * at("alt", 145) / 3600,
-        "replicates_total_worst_cpu_h": worst2
-        + stage1
-        + max(target.values())
-        + 10 * at("alt", 145) / 3600,
-    }
+        "pilot_cpu_h": pilot,
+        "pilot_cpu_h_source": "projected (10 x alternative at k = 145)" if pilot_cpu_h is None
+        else "measured process tree",
+        "noise_cpu_h": noise,
+        "noise_cpu_h_source": "projected (resource plan)" if noise_cpu_h is None else "measured",
+        "overhead_cpu_h": over,
+        "overhead_cpu_h_source": "projected (resource plan: 15 invocations x 10 CPU-s)" if overhead_cpu_h is None
+        else "measured per-invocation overhead x planned invocations",
+        "replicates_total_worst_cpu_h": worst2 + stage1 + max(target.values()) + pilot,
+        "items_by_kind_cpu_h": items,
+        "units_by_kind": dict(ITEM_UNITS),
+        "all_in_worst_cpu_h": all_in,
+        "all_in_cpu_h": all_in,
+    }  # fmt: skip
+
+
+def all_in_projection(timing, noise_check):
+    """The reproducible all-in projection from a pilot's timing sidecar and the noise-check report (F12d)."""
+    per = timing["per_replicate_cpu_by_k_and_scenario"]
+    means = {k: {sc: float(v["cpu_mean"]) for sc, v in d.items()} for k, d in per.items()}
+    over = PLANNED_INVOCATIONS * max(float(timing.get("cpu_seconds_overhead") or 0.0), 0.0) / 3600
+    return project_cpu(
+        means,
+        noise_cpu_h=float(noise_check["cpu_seconds"]) / 3600,
+        overhead_cpu_h=over,
+        pilot_cpu_h=float(timing["cpu_seconds_total_process_tree"]) / 3600,
+    )
+
+
+def _utc(x):
+    import datetime as _dt
+
+    return _dt.datetime.strptime(str(x), "%Y-%m-%dT%H:%M:%SZ")
+
+
+def _check_pilot_report(pr, ids):
+    """The pilot report prerequisite: the registered F12c pilot config, complete, non-synthetic, same identities."""
+    F = []
+    try:
+        pcfg = config_from_dict(pr["config"])
+    except (KeyError, TypeError, ValueError):
+        return ["prerequisite pilot report: config unreadable"]
+    if (
+        governed_name(pcfg) != "f12c_pilot"
+        or (pr.get("config_file") or {}).get("sha256") != F12C_CONFIG_SHA256["pilot"]
+    ):
+        F.append("prerequisite pilot report: not the registered F12c pilot config")
+    if (pr.get("identities") or {}).get("tokens_synthetic") is not False:
+        F.append("prerequisite pilot report: synthetic (or unlabelled) token inputs")
+    if ids is not None and _norm(pr.get("identities")) != _norm(ids):
+        F.append("prerequisite pilot report: identities differ from the stage-2 run's")
+    try:
+        _check_records(pr.get("records", []), pcfg, planned_ids(pcfg, [145]), "pilot report")
+    except ValueError as exc:
+        F.append(f"prerequisite {exc}")
+    return F
+
+
+def make_pilot_acceptance(*, pilot_report, pilot_timing, noise_check, signed_by, accepted_utc):
+    """F12d ``pilot_acceptance`` record for the chair to sign after the measured real-token pilot: binds the pilot
+    report and timing hashes, the token / payload / code identities, the recomputed all-in projection and the
+    chair's 190 CPU-h ceiling; refuses a projection over the ceiling and an acceptance dated before the pilot
+    finished. Writing it remains the chair's act (F12c chair ruling (a))."""
+    raw_r, raw_t, raw_n = (Path(x).read_bytes() for x in (pilot_report, pilot_timing, noise_check))
+    rep, tim, nc = json.loads(raw_r), json.loads(raw_t), json.loads(raw_n)
+    F = _check_pilot_report(rep, None)
+    if tim.get("report_sha256") != hashlib.sha256(raw_r).hexdigest():
+        F.append("pilot timing is not the timing of this pilot report")
+    if not signed_by:
+        F.append("pilot acceptance must be signed")
+    if _utc(nc["finished_utc"]) >= _utc(tim["started_utc"]):
+        F.append("chronology: the noise check must finish before the pilot starts")
+    if _utc(accepted_utc) <= _utc(tim["finished_utc"]):
+        F.append("chronology: acceptance dated before the pilot finished")
+    if F:
+        raise ValueError("; ".join(F))
+    proj = all_in_projection(tim, nc)
+    if proj["all_in_cpu_h"] > CHAIR_CEILING_CPU_H:
+        raise ValueError(f"all-in projection {proj['all_in_cpu_h']:.2f} CPU-h exceeds the {CHAIR_CEILING_CPU_H:g} "
+                         "CPU-h ceiling: no pilot acceptance; a new dated repricing is needed")  # fmt: skip
+    return _norm({
+        "schema": PILOT_ACCEPTANCE_SCHEMA,
+        "chair_accepted": True,
+        "signed_by": signed_by,
+        "accepted_utc": accepted_utc,
+        "pilot_report_sha256": hashlib.sha256(raw_r).hexdigest(),
+        "pilot_timing_sha256": hashlib.sha256(raw_t).hexdigest(),
+        "noise_check_sha256": hashlib.sha256(raw_n).hexdigest(),
+        "identities": rep["identities"],
+        "all_in_ceiling_cpu_h": CHAIR_CEILING_CPU_H,
+        "ceiling_source": "PREREG_H1_TF A5 chair ruling on F12c (11 Nov 2026, 18:55 UTC)",
+        "projection": proj,
+    })  # fmt: skip
+
+
+def _check_pilot_prereqs(P, shas, ids, nc):
+    F = []
+    pa = P.get("pilot_acceptance")
+    if not pa:
+        return [
+            "prerequisite pilot_acceptance: chair acceptance of the measured pilot projection missing"
+        ]
+    if pa.get("schema") != PILOT_ACCEPTANCE_SCHEMA:
+        return [(f"prerequisite pilot_acceptance: schema {pa.get('schema')!r} is not "
+                 f"{PILOT_ACCEPTANCE_SCHEMA} (a bare chair_accepted record is superseded)")]  # fmt: skip
+    if pa.get("chair_accepted") is not True:
+        F.append("prerequisite pilot_acceptance: not chair-accepted")
+    if not pa.get("signed_by"):
+        F.append("prerequisite pilot_acceptance: not signed (signed_by empty)")
+    if pa.get("all_in_ceiling_cpu_h") != CHAIR_CEILING_CPU_H:
+        F.append(f"prerequisite pilot_acceptance: ceiling {pa.get('all_in_ceiling_cpu_h')!r} is not the chair's "
+                 "190 CPU-h")  # fmt: skip
+    if _norm(pa.get("identities")) != _norm(ids):
+        F.append("prerequisite pilot_acceptance: identities differ from the stage-2 run's")
+    pr, pt = P.get("pilot_report"), P.get("pilot_timing")
+    if not pr:
+        F.append("prerequisite pilot report missing")
+    else:
+        if shas.get("pilot_report") != pa.get("pilot_report_sha256"):
+            F.append("prerequisite pilot report: sha256 differs from the accepted pilot report")
+        F += _check_pilot_report(pr, ids)
+    if not pt:
+        F.append("prerequisite pilot timing missing")
+        return F
+    if shas.get("pilot_timing") != pa.get("pilot_timing_sha256"):
+        F.append("prerequisite pilot timing: sha256 differs from the accepted pilot timing")
+    if pt.get("report_sha256") != pa.get("pilot_report_sha256"):
+        F.append("prerequisite pilot timing: not the timing of the accepted pilot report")
+    if nc:
+        try:
+            proj = all_in_projection(pt, nc)
+        except (KeyError, TypeError, ValueError) as exc:
+            return F + [f"prerequisite pilot_acceptance: projection not recomputable ({exc})"]
+        got = (pa.get("projection") or {}).get("all_in_cpu_h")
+        if not isinstance(got, (int, float)) or round(got, 6) != round(proj["all_in_cpu_h"], 6):
+            F.append("prerequisite pilot_acceptance: projection differs from the projection recomputed from "
+                     "the pilot timing and noise check")  # fmt: skip
+        if proj["all_in_cpu_h"] > CHAIR_CEILING_CPU_H:
+            F.append(f"prerequisite pilot: recomputed all-in projection {proj['all_in_cpu_h']:.2f} CPU-h is over "
+                     "the 190 CPU-h ceiling")  # fmt: skip
+        try:
+            if _utc(nc["finished_utc"]) >= _utc(pt["started_utc"]):
+                F.append(
+                    "prerequisite chronology: the noise check must finish before the pilot starts"
+                )
+            if _utc(pa["accepted_utc"]) <= _utc(pt["finished_utc"]):
+                F.append(
+                    "prerequisite chronology: pilot acceptance dated before the pilot finished"
+                )
+        except (KeyError, ValueError):
+            F.append("prerequisite chronology: missing or malformed UTC times")
+    return F
 
 
 # ------------------------------------------------------------------------------- runner
@@ -2824,7 +3055,7 @@ def _task(args):
 
 
 def simulate(matrix, payload, cfg, k_grid=None, scenarios=None, replicates=None, workers=1,
-             progress=False, tasks=None):  # fmt: skip
+             progress=False, tasks=None, on_done=None):  # fmt: skip
     """Run replicate tasks (scenario, k, r). ``tasks`` (F12c: planned ids of a schedule, or a part of
     them) are executed and reported in the given order; otherwise the legacy grid k_grid x
     scenarios x replicates (executed replicate-major, reported in (k, scenario, r) order)."""
@@ -2839,9 +3070,13 @@ def simulate(matrix, payload, cfg, k_grid=None, scenarios=None, replicates=None,
     else:
         tasks = [tuple(t) for t in tasks]
         order = {t: i for i, t in enumerate(tasks)}
+    results = []
     if workers <= 1:
         _init_worker(matrix, payload, cfg, progress)
-        results = [_task(t) for t in tasks]
+        for t in tasks:
+            results.append(_task(t))
+            if on_done is not None:  # F12d budget checkpoint (may raise BudgetStop)
+                on_done(len(results))
     else:
         ctx = multiprocessing.get_context("spawn")  # autograd is not fork-safe
         with ProcessPoolExecutor(
@@ -2850,7 +3085,15 @@ def simulate(matrix, payload, cfg, k_grid=None, scenarios=None, replicates=None,
             initializer=_init_worker,
             initargs=(matrix, payload, cfg, progress),
         ) as ex:
-            results = list(ex.map(_task, tasks, chunksize=1))
+            try:
+                for res in ex.map(_task, tasks, chunksize=1):
+                    results.append(res)
+                    if on_done is not None:  # F12d budget checkpoint (may raise BudgetStop)
+                        on_done(len(results))
+            except BaseException:
+                # no queued replicate starts after a stop
+                ex.shutdown(wait=False, cancel_futures=True)
+                raise
     results = [x for _, x in sorted(zip(tasks, results), key=lambda p: order[p[0]])]
     return [r for r, _ in results], [t for _, t in results]
 
@@ -3180,14 +3423,23 @@ def _load_matrix_arg(a, out=None):
     return matrix, src
 
 
+def load_prereqs(paths):
+    """{key: path} -> ({key: object}, {key: sha256 of the file bytes}) (F12d: prerequisites bind by file hash)."""
+    objs, shas = {}, {}
+    for key, path in paths.items():
+        raw = Path(path).read_bytes()
+        objs[key], shas[key] = json.loads(raw), hashlib.sha256(raw).hexdigest()
+    return objs, shas
+
+
 def _parse_prereqs(items):
-    out = {}
+    paths = {}
     for item in items or []:
         key, _, path = item.partition("=")
         if key not in PREREQUISITES or not path:
             raise SystemExit(f"--prereq must be one of {PREREQUISITES} as KEY=PATH")
-        out[key] = json.loads(Path(path).read_text())
-    return out
+        paths[key] = path
+    return load_prereqs(paths)
 
 
 def main(argv=None):
@@ -3207,7 +3459,7 @@ def main_run(argv):
     src.add_argument("--tokens", type=Path, help="frozen f12-token-matrix-v1 .npz")
     src.add_argument("--synthetic", action="store_true", help="synthetic token matrix (dry runs)")
     p.add_argument(
-        "--payload", type=Path, default=DEFAULT_PAYLOAD, help="raw payload: drafted runs only"
+        "--payload", type=Path, default=None, help="raw payload: drafted (unconfigured) runs only"
     )
     p.add_argument(
         "--restricted-payload", type=Path, default=None, help="pinned restricted copy (F12a.4(e))"
@@ -3238,6 +3490,7 @@ def main_run(argv):
     p.add_argument(
         "--tree-grid", default=None, help="StatNN tree counts, e.g. 100 (non-registered)"
     )
+    _budget_args(p)
     a = p.parse_args(argv)
     if a.workers > MAX_WORKERS:
         raise SystemExit(
@@ -3248,6 +3501,9 @@ def main_run(argv):
     if a.config is not None and a.restricted_payload is None:
         raise SystemExit("a configured run reads only the byte-pinned restricted payload copy "
                          "(--restricted-payload); the raw-payload loader is not a governed fallback")  # fmt: skip
+    if a.config is not None and a.payload is not None:
+        raise SystemExit("a configured run never reads the raw payload (--payload refused; F12d raw-load "
+                         "barrier): use --restricted-payload")  # fmt: skip
     if base.schedule and a.replicates is not None:
         raise SystemExit(
             "--replicates override is not available for a scheduled config (use --schedule; non-registered)"
@@ -3276,6 +3532,10 @@ def main_run(argv):
                              "selection file) and --stage1-report")  # fmt: skip
     elif gname in ("f12c_stage1", "f12c_pilot") and a.k_grid is not None:
         raise SystemExit(f"the k grid of {gname} is fixed by its config (--k-grid refused)")
+    budget_kind = {"f12c_pilot": "pilot", "f12c_stage1": "stage1", "f12c_target": "target",
+                   "f12c_stage2": "stage2"}.get(gname, "other")  # fmt: skip
+    plan = _budget_plan(a, governed=gname is not None and not a.synthetic)
+    started_utc = f12_budget.utc_now()
     out.mkdir(parents=True, exist_ok=True)
     matrix, token_src = _load_matrix_arg(a, out)
     if a.restricted_payload is not None:
@@ -3284,8 +3544,8 @@ def main_run(argv):
         except (OSError, ValueError, KeyError) as exc:
             raise SystemExit(f"restricted payload refused: {exc}") from exc
         restricted = Path(a.restricted_payload)
-    else:
-        payload = NoisePayload.load(a.payload)
+    else:  # drafted (unconfigured) diagnostics only: the explicit opt-in of the F12d raw-load barrier
+        payload = NoisePayload.load(a.payload or DEFAULT_PAYLOAD, allow_raw=a.config is None)
         restricted = out / "noise_payload_restricted.json"
         restricted.write_text(json.dumps(payload.restricted(), sort_keys=True))
     code = current_code_identity()
@@ -3332,21 +3592,32 @@ def main_run(argv):
         fails, target = _check_target_report(tr, selection, identities)
         if fails or target is None:
             raise SystemExit(f"coverage-target report refused: {fails}")
+    n_units = len(tasks) if tasks is not None else len(k_grid) * len(scenarios) * replicates
+    meter = None
+    if plan is not None:
+        meter = f12_budget.Meter(
+            f12_budget.Ledger(a.budget_ledger), plan, job=a.job or f"{budget_kind}:{a.part or 'all'}",
+            kind=budget_kind, planned_units=n_units, operator=a.operator,
+        )  # fmt: skip
+        try:
+            meter.launch()
+        except f12_budget.BudgetStop as exc:
+            raise SystemExit(f"budget barrier: launch refused: {exc}") from exc
     ru0 = _rusage_cpu()
     t0 = time.perf_counter()
-    contexts = {k: Context(matrix, payload, k, cfg) for k in k_grid}
-    last = contexts[k_grid[-1]]
-    diag = noise_diagnostics(
-        payload, last.comp, domain_seed(FOLD_DOMAIN, "noise-diagnostics"),
-        order=cfg.noise_draw, row_ids=last.ids,
-    )  # fmt: skip
-    diag["draw_order"] = cfg.noise_draw
-    diag["note"] = (
-        "descriptive 2,000-panel diagnostic; not the F12a.4(d) check (subcommand noisecheck)"
-    )
-    records, times = simulate(
-        matrix, payload, cfg, k_grid, scenarios, replicates, a.workers, progress=True, tasks=tasks
-    )
+    try:
+        records, times, contexts, diag = _run_body(
+            matrix, payload, cfg, k_grid, scenarios, replicates, a.workers, tasks, meter
+        )
+    except f12_budget.BudgetStop as exc:
+        (out / "budget_stop.json").write_text(
+            json.dumps({"stopped": str(exc), "report": None}, indent=1)
+        )
+        raise SystemExit(f"budget barrier: run stopped, no report written: {exc}") from exc
+    except BaseException:
+        if meter is not None:
+            meter.end("failed", done=None)
+        raise
     wall = time.perf_counter() - t0
     inputs = {
         "tokens": token_src,
@@ -3366,8 +3637,9 @@ def main_run(argv):
                          records=records, k_grid=k_grid, identities=identities, selection=selection,
                          target=target, part=a.part, inputs=inputs)  # fmt: skip
     if gname == "f12c_stage2" and a.prereq and not a.part:
+        objs, shas = _parse_prereqs(a.prereq)
         validation = validate_execution(
-            report, selection=selection, prereqs=_parse_prereqs(a.prereq)
+            report, selection=selection, prereqs=objs, prereq_sha256=shas
         )
         report["release"] = release_decision(report["summary"], cfg, validation)
     if cfg.stage != 4:
@@ -3375,10 +3647,58 @@ def main_run(argv):
     (out / "report.json").write_text(
         json.dumps(report, sort_keys=True, indent=1, default=_json_default)
     )
-    _write_timing(out, a, records, times, wall, ru0, k_grid)
+    _write_timing(out, a, records, times, wall, ru0, k_grid, started_utc=started_utc)
+    if meter is not None:
+        meter.end("completed")
     print(json.dumps({"summary_k": list(report["summary"]), "release": report["release"]}, indent=1,
                      default=_json_default))  # fmt: skip
     return 0
+
+
+def _run_body(matrix, payload, cfg, k_grid, scenarios, replicates, workers, tasks, meter):
+    contexts = {k: Context(matrix, payload, k, cfg) for k in k_grid}
+    last = contexts[k_grid[-1]]
+    diag = noise_diagnostics(
+        payload, last.comp, domain_seed(FOLD_DOMAIN, "noise-diagnostics"),
+        order=cfg.noise_draw, row_ids=last.ids,
+    )  # fmt: skip
+    diag["draw_order"] = cfg.noise_draw
+    diag["note"] = (
+        "descriptive 2,000-panel diagnostic; not the F12a.4(d) check (subcommand noisecheck)"
+    )
+    records, times = simulate(
+        matrix, payload, cfg, k_grid, scenarios, replicates, workers, progress=True, tasks=tasks,
+        on_done=None if meter is None else meter.tick,
+    )  # fmt: skip
+    return records, times, contexts, diag
+
+
+def _budget_args(p):
+    p.add_argument(
+        "--budget-ledger", type=Path, default=None, help="F12d budget ledger (JSON lines)"
+    )
+    p.add_argument("--budget-plan", type=Path, default=None,
+                   help="resource plan (pre-pilot) or the chair-signed pilot_acceptance (after the pilot)")  # fmt: skip
+    p.add_argument("--operator", default=None, help="responsible operator recorded in the ledger")
+    p.add_argument("--job", default=None, help="ledger job name (default: kind and part)")
+
+
+def _budget_plan(a, governed):
+    """F12d: governed real-token work cannot start without the budget ledger, a plan and an operator."""
+    given = [a.budget_ledger is not None, a.budget_plan is not None, bool(a.operator)]
+    if governed and not all(given):
+        raise SystemExit("governed real-token work needs --budget-ledger, --budget-plan and --operator "
+                         "(F12d budget barrier, 190 CPU-h all-in ceiling)")  # fmt: skip
+    if not any(given):
+        return None
+    if not all(given):
+        raise SystemExit(
+            "the budget barrier needs all of --budget-ledger, --budget-plan and --operator"
+        )
+    try:
+        return f12_budget.load_plan(a.budget_plan)
+    except (OSError, ValueError, KeyError) as exc:
+        raise SystemExit(f"budget plan refused: {exc}") from exc
 
 
 def _rusage_cpu():
@@ -3389,7 +3709,7 @@ def _rusage_cpu():
     return {"self": s.ru_utime + s.ru_stime, "children": c.ru_utime + c.ru_stime}
 
 
-def _write_timing(out, a, records, times, wall, ru0, k_grid):
+def _write_timing(out, a, records, times, wall, ru0, k_grid, started_utc=None):
     ru1 = _rusage_cpu()
     cpus = [t[1] for t in times]
     total = (ru1["self"] - ru0["self"]) + (ru1["children"] - ru0["children"])
@@ -3397,8 +3717,15 @@ def _write_timing(out, a, records, times, wall, ru0, k_grid):
     for rec, t in zip(records, times):
         by_k.setdefault(str(rec["k"]), {}).setdefault(rec["scenario"], []).append(t[1])
     means = {k: {s: float(np.mean(v)) for s, v in d.items()} for k, d in by_k.items()}
-    proj = project_cpu(means) if any("null" in d and "alt" in d for d in means.values()) else None
+    # F12d: any measured stress or alternative cost gives a schedule projection (an alternative-only pilot
+    # included); extrapolations are labelled as such inside the projection
+    proj = project_cpu(means) if any(("null" in d or "alt" in d) for d in means.values()) else None
+    rp = Path(out) / "report.json"
     (out / "report.time").write_text(json.dumps({
+        "schema": TIMING_SCHEMA,
+        "report_sha256": sha256_file(rp) if rp.exists() else None,
+        "started_utc": started_utc,
+        "finished_utc": f12_budget.utc_now(),
         "wall_seconds": wall,
         "workers": a.workers,
         "replicate_tasks": len(times),
@@ -3446,19 +3773,33 @@ def main_assemble(argv):
     )
     p.add_argument("--selection", type=Path, default=None)
     p.add_argument("--stage1-report", type=Path, default=None)
+    _budget_args(p)
     a = p.parse_args(argv)
     out = guard_out(a.out)
+    plan = _budget_plan(a, governed=False)
+    meter = None
+    # assembly and verification overhead is charged to the all-in budget (F12d)
+    if plan is not None:
+        meter = f12_budget.Meter(f12_budget.Ledger(a.budget_ledger), plan, job=a.job or "assembly",
+                                 kind="assembly", planned_units=1, operator=a.operator)  # fmt: skip
+        try:
+            meter.launch()
+        except f12_budget.BudgetStop as exc:
+            raise SystemExit(f"budget barrier: launch refused: {exc}") from exc
     out.mkdir(parents=True, exist_ok=True)
     try:
         report = assemble_reports(a.parts)
         cfg = config_from_dict(report["config"])
         if governed_name(cfg) == "f12c_stage2" and a.prereq:
             sel = verify_selection(a.selection, a.stage1_report, identities=report["identities"])
-            v = validate_execution(report, selection=sel, prereqs=_parse_prereqs(a.prereq))
+            objs, shas = _parse_prereqs(a.prereq)
+            v = validate_execution(report, selection=sel, prereqs=objs, prereq_sha256=shas)
             report["release"] = _norm(release_decision(report["summary"], cfg, v))
     except (OSError, ValueError, KeyError) as exc:
         raise SystemExit(f"assembly refused: {exc}") from exc
     (out / "report.json").write_text(json.dumps(report, sort_keys=True, indent=1))
+    if meter is not None:
+        meter.end("completed")
     print(json.dumps({"complete": report["complete"], "release": report["release"]}, indent=1))
     return 0
 
@@ -3472,8 +3813,11 @@ def main_noisecheck(argv):
     p.add_argument("--k", type=int, default=NOISE_CHECK_K)
     p.add_argument("--panels", type=int, default=NOISE_CHECK_PANELS)
     p.add_argument("--out", type=Path, required=True)
+    _budget_args(p)
     a = p.parse_args(argv)
     out = guard_out(a.out)
+    plan = _budget_plan(a, governed=not a.synthetic)
+    started_utc = f12_budget.utc_now()
     out.mkdir(parents=True, exist_ok=True)
     matrix, token_src = _load_matrix_arg(a)
     try:
@@ -3485,9 +3829,23 @@ def main_noisecheck(argv):
     comps = m["component"]
     code = {c: i for i, c in enumerate(sorted(set(comps.tolist())))}
     comp = np.asarray([code[c] for c in comps])
-    res = noise_check(
-        payload, comp, m["row_ids"], a.k, a.panels, governed_inputs=not matrix["synthetic"]
-    )
+    meter = None
+    if plan is not None:
+        meter = f12_budget.Meter(f12_budget.Ledger(a.budget_ledger), plan, job=a.job or "noise_check",
+                                 kind="noise_check", planned_units=1, operator=a.operator)  # fmt: skip
+        try:
+            meter.launch()
+        except f12_budget.BudgetStop as exc:
+            raise SystemExit(f"budget barrier: launch refused: {exc}") from exc
+    try:
+        res = noise_check(
+            payload, comp, m["row_ids"], a.k, a.panels, governed_inputs=not matrix["synthetic"]
+        )
+    except BaseException:
+        if meter is not None:
+            meter.end("failed", done=0)
+        raise
+    res["started_utc"], res["finished_utc"] = started_utc, f12_budget.utc_now()
     res["identities"] = {
         "tokens_matrix_sha256": token_src["matrix_sha256"],
         "tokens_synthetic": bool(matrix["synthetic"]),
@@ -3496,6 +3854,8 @@ def main_noisecheck(argv):
     res["code_sha256"] = current_code_identity()
     res["rss_max_mb"] = _maxrss_mb()
     (out / "noise_check.json").write_text(json.dumps(res, sort_keys=True, indent=1))
+    if meter is not None:
+        meter.end("completed" if res["status"] == "pass" else "failed")
     print(
         json.dumps(
             {k: res[k] for k in ("status", "label", "panels", "k", "cpu_seconds", "failures")},
@@ -3511,7 +3871,9 @@ def main_c1_draft(argv):
     )
     obj = c1_draft_inventory()
     CODE_HASHES_C1.write_text(json.dumps(obj, indent=1, sort_keys=True) + "\n")
-    print(json.dumps({"files": len(obj["files"]), "path": str(CODE_HASHES_C1)}))
+    skeleton = f12_c1.write_draft(ROOT)  # F12d: the C1 package skeleton cites the draft pin's bytes
+    print(json.dumps({"files": len(obj["files"]), "path": str(CODE_HASHES_C1),
+                      "skeleton": [str(x.relative_to(ROOT)) for x in skeleton]}))  # fmt: skip
     return 0
 
 

@@ -1,0 +1,25 @@
+{
+ "at_freeze": "the pinned v2 restricted bytes are committed at this path with their provenance (F12a.6(c) item 6)",
+ "extractor": {
+  "cli": "python -I scripts/f12_payload_extract.py --out /home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/noise_payload_restricted_v2.json --superseded /home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/noise_payload_restricted.json --report /home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/f12d/extraction_report.json",
+  "commit": "5a135d1f5cd5bfdfc76853e7a7ca93101b8c5d71",
+  "functions": [
+   "scan_allowlisted (top-level key scan; non-allowlisted values skipped undecoded)",
+   "_donor_hook (donor objects keep id, component, family, eligible)",
+   "extract (digest before parse; validation; ELIGIBILITY_RULE; reference cross-check)",
+   "serialise (json.dumps(sort_keys=True))"
+  ],
+  "report": {
+   "path": "/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/f12d/extraction_report.json",
+   "sha256": "57fa9ca021d0ebb782aea59a596e3e9aa93dd600bcfff6cdeef32347c183f85c"
+  },
+  "script": "scripts/f12_payload_extract.py",
+  "sha256": "5de91001e242a5687c3fb97988f7093f2d552cf553cdb92f6c2c0f4cb0fa79dd",
+  "written": "11 Nov 2026 22:06 UTC (file mtime) by the F12d implementation session (chair-authorised extractor for this step)"
+ },
+ "pin": "docs/prereg/f12_manifests/noise_payload_restricted_pin.json",
+ "pin_sha256": "f30dbf3058373e3a52b064eb1b08ff2aa51f3dd9fc0172aedfc5fe41d26b2562",
+ "restricted_sha256": "44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5",
+ "source_sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+ "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A"
+}

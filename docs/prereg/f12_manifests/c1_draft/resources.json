@@ -1,0 +1,31 @@
+{
+ "budget_barrier": {
+  "ceiling_cpu_h": 190.0,
+  "checkpoint_every_units": 10,
+  "checkpoint_max_seconds": 900.0,
+  "code": "scripts/f12_budget.py (Ledger, Meter, projection); scripts/f12_simulation.py run / noisecheck / assemble --budget-ledger --budget-plan --operator",
+  "counted": "parent and worker process-tree CPU of every attempt of the noise check, pilot, stage 1, coverage target, stage 2 parts, assembly, verification and other F12 simulation work, including failed and aborted attempts",
+  "in_flight_at_stop": "at most two replicates (two workers)",
+  "ledger": "/home/ubuntu/wsp-data/runs/a5/f12_budget/ledger.jsonl (append-only JSON lines, fsynced)",
+  "operator": "named on the command line (--operator) and recorded in every ledger event; the chair or the session the chair assigns to the job",
+  "plan_after_pilot": "the chair-signed pilot_acceptance projection",
+  "plan_before_pilot": "this file's items_by_kind_cpu_h (synthetic, 163.63 CPU-h)",
+  "required_for": "every governed real-token run (noisecheck, pilot, stage 1, target, stage 2): the CLI refuses to start without --budget-ledger, --budget-plan and --operator",
+  "rule": "at launch and at every checkpoint: spent + projected remaining (planned items not completed; the running item's remaining replicates at the larger of planned and observed per-replicate CPU; overhead less overhead spent) must be <= the ceiling, else the run stops before further work, writes no report and waits for a dated prospective repricing; counts, draws and qualification work never change"
+ },
+ "ceiling_cpu_h": 190.0,
+ "ceiling_source": "PREREG_H1_TF A5 chair ruling on F12c (11 Nov 2026, 18:55 UTC)",
+ "gpu_caps": {
+  "F12I_gpu_min": 56.16,
+  "F12_scoring_gpu_h": 3.0
+ },
+ "omp_num_threads": 2,
+ "pilot_acceptance": "written by the chair only after the measured real-token pilot (schema f12d-pilot-acceptance-v2)",
+ "resource_plan": {
+  "path": "docs/prereg/f12_manifests/f12c_resource_plan.json",
+  "sha256": "53804434a6a679ebd69a3775f7a26a25a224c397d6f8323c7bec16532221a348"
+ },
+ "rss_limit_gb": 4,
+ "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A",
+ "workers_max": 2
+}

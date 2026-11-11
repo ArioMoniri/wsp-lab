@@ -190,6 +190,9 @@ def test_membership_diff_against_the_superseded_copy(tmp_path):
 def _v2_copy(tmp_path, raw=None):
     raw = raw or _raw_payload()
     restricted, _ = _extract(_write_raw(tmp_path, raw))
+    restricted["provenance"]["sha256"] = (
+        fs.PAYLOAD_SHA256
+    )  # the toy copy stands in for the pinned source
     path = tmp_path / "restricted_v2.json"
     path.write_bytes(px.serialise(restricted))
     pin = fs.restricted_pin(path, extractor={"script": "scripts/f12_payload_extract.py", "commit": "0" * 40,

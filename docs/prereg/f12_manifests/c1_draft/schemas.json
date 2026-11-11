@@ -1,0 +1,18 @@
+{
+ "base_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+ "down_proj_tensor_hashes": "awaiting the token manifest: the 24 down_proj tensor names and base tensor hashes",
+ "endpoint_config": {
+  "path": "configs/eval_tf_v1.yaml",
+  "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317"
+ },
+ "g2_manifest_and_probe_cache": "awaiting the token manifest: full G2 manifest sha256 and probe-cache identity as recorded",
+ "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A",
+ "token_builder": {
+  "path": "scripts/f12_tokens.py",
+  "sha256": "3188c5c54e51110d0fb161f688c8c94832eed674be80b3c757060951a596092a"
+ },
+ "token_columns": 42,
+ "token_input_hashes": "awaiting the token manifest: realised-delta, SVD, K-frame and probe input hashes",
+ "token_schema": "f12-token-matrix-v1",
+ "token_slots": 186
+}

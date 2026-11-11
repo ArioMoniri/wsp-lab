@@ -1,0 +1,23 @@
+{
+ "code": [
+  {
+   "path": "scripts/f12_simulation.py",
+   "sha256": "e8b5f75132365a5080e54a50d94bc3db982802bf3e6589ff7e8680435da98522"
+  },
+  {
+   "path": "scripts/tfv1_requalify.py",
+   "sha256": "46f7ab9a4ab3207990fdc0fa888d9f6164fc156f98a0072f33df51d1432e6249"
+  }
+ ],
+ "functions": "scripts/f12_simulation.py: a542_contrast, joint_variance, joint_parts; scripts/tfv1_requalify.py: cluster_intervals, theta_interval, jackknife_cluster, linearised_se",
+ "joint_studentiser": "max(V_comp + V_item - V_both, V_comp) for C_WM and C_WM,S only (F12b.2, F12c.2)",
+ "procedures": [
+  "conditional_bootstrap_t",
+  "joint_bootstrap_t",
+  "conditional_bca",
+  "joint_bca",
+  "conditional_percentile",
+  "joint_percentile"
+ ],
+ "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A"
+}

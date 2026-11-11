@@ -1,0 +1,16 @@
+{
+ "components": 234,
+ "eligibility": "awaiting the token manifest (docs/prereg/a5_manifests/f12/tokens_manifest.json): F12a.2(e) rank / finite-SVD / K-frame audit of all 270 rows from the frozen tokens; each S_k is the eligible rows of its components, never topped up",
+ "population": {
+  "path": "docs/prereg/a5_manifests/f12/population.json",
+  "sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+ },
+ "population_ids_sha256": "bd695b4ee6590156d2264b5f4c8dca252a1e63aced35d927a0d940d0eadd6348",
+ "rows": 270,
+ "rows_sha256": "1272c1337b611aeba564085adb86576426e2e6a976722d3702d14853b006fed3",
+ "selector": {
+  "path": "scripts/f12_population.py",
+  "sha256": "7e1c196dcbedd36e2ea7102d6a1ef4e50e23b8381dcc2bbf1cfffce77b2ee45d"
+ },
+ "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A"
+}

@@ -1,0 +1,31 @@
+{
+ "configs": {
+  "pilot": {
+   "path": "docs/prereg/f12_manifests/f12c_pilot_config.json",
+   "sha256": "5e8c8c2aef6bdb049c9470757f5847e406fbc908384abb0c83cf4e1b2254b24e"
+  },
+  "stage1": {
+   "path": "docs/prereg/f12_manifests/f12c_stage1_config.json",
+   "sha256": "7cb10a83a6a2fb0e7e92ee14b2bea21d3efea42d49510e1625e9bcb9df204b01"
+  },
+  "stage2": {
+   "path": "docs/prereg/f12_manifests/f12c_stage2_config.json",
+   "sha256": "ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f"
+  },
+  "target": {
+   "path": "docs/prereg/f12_manifests/f12c_target_config.json",
+   "sha256": "be372fc56657bc4e6a62732e0e7bbce1701027197635b846efee6e8f4948e29c"
+  }
+ },
+ "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A",
+ "superseded": {
+  "stage1": {
+   "path": "docs/prereg/f12_manifests/f12b_stage1_config.json",
+   "sha256": "a3946ebb7250de7b45433605d7934bace7498c6d325cb70bdf1dccd779964a81"
+  },
+  "stage2": {
+   "path": "docs/prereg/f12_manifests/f12b_stage2_config.json",
+   "sha256": "13e59899a90aa8c44457dfe757bce4d118dfb6d51eefb43e3b437d476580f65c"
+  }
+ }
+}

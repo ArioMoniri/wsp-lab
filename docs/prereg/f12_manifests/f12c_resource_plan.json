@@ -1,4 +1,5 @@
 {
+ "accepted_all_in_ceiling_cpu_h": 190,
  "all_in_by_k_star_cpu_h": {
   "0": 109.4,
   "116": 159.91,
@@ -9,6 +10,27 @@
  },
  "all_in_worst_case_cpu_h": 163.63,
  "basis": "synthetic-token process CPU per replicate (F12b.6: k=0 121.04/136.38 s, k=87 189.97/208.28 s, k=145 201.80/218.57 s stress/alternative; other k interpolated); variance-x2 at the stress time; noise check projected from the 500-panel smoke (0.68 CPU-s) plus start-up; overhead measured in the F12c reduced run (9.7 and 7.2 CPU-s per invocation; 10 CPU-s budgeted) for 15 invocations",
+ "budget_barrier": {
+  "ceiling_cpu_h": 190.0,
+  "checkpoint_every_units": 10,
+  "checkpoint_max_seconds": 900.0,
+  "code": "scripts/f12_budget.py (Ledger, Meter, projection); scripts/f12_simulation.py run / noisecheck / assemble --budget-ledger --budget-plan --operator",
+  "counted": "parent and worker process-tree CPU of every attempt of the noise check, pilot, stage 1, coverage target, stage 2 parts, assembly, verification and other F12 simulation work, including failed and aborted attempts",
+  "in_flight_at_stop": "at most two replicates (two workers)",
+  "ledger": "/home/ubuntu/wsp-data/runs/a5/f12_budget/ledger.jsonl (append-only JSON lines, fsynced)",
+  "operator": "named on the command line (--operator) and recorded in every ledger event; the chair or the session the chair assigns to the job",
+  "plan_after_pilot": "the chair-signed pilot_acceptance projection",
+  "plan_before_pilot": "this file's items_by_kind_cpu_h (synthetic, 163.63 CPU-h)",
+  "required_for": "every governed real-token run (noisecheck, pilot, stage 1, target, stage 2): the CLI refuses to start without --budget-ledger, --budget-plan and --operator",
+  "rule": "at launch and at every checkpoint: spent + projected remaining (planned items not completed; the running item's remaining replicates at the larger of planned and observed per-replicate CPU; overhead less overhead spent) must be <= the ceiling, else the run stops before further work, writes no report and waits for a dated prospective repricing; counts, draws and qualification work never change"
+ },
+ "ceiling_acceptance": {
+  "all_in_ceiling_cpu_h": 190,
+  "by": "chair",
+  "scope": "the whole F12 simulation programme: noise check, timing pilot, stage 1, coverage target, stage 2 with its 200 variance-x2 replicates, assembly / verification overhead and failed or aborted attempts; CPU on the shared machine only",
+  "source": "docs/PREREG_H1_TF.md, A5 chair ruling on F12c (11 Nov 2026, 18:55 UTC, before any G3 outcome), accepted by Board A's F12c review (condition 7) as prospective repricing",
+  "utc": "2026-11-11T18:55Z"
+ },
  "coverage_target_by_k_star_cpu_h": {
   "0": 6.72,
   "116": 10.88,
@@ -18,6 +40,14 @@
   "87": 10.55
  },
  "headroom_fraction": 0.15,
+ "items_by_kind_cpu_h": {
+  "noise_check": 0.005,
+  "overhead": 0.042,
+  "pilot": 0.607,
+  "stage1": 23.789,
+  "stage2": 127.981,
+  "target": 11.211
+ },
  "items_cpu_h": {
   "F12a.4(d) noise check (10,000 panels, k = 145)": 0.005,
   "coverage target (200 stress at k*)": 11.211,
@@ -26,6 +56,10 @@
   "stage 2 (1,000 + 1,000 + 200 at k*)": 127.981,
   "timing pilot (10 alternatives, k = 145)": 0.607
  },
+ "pilot_acceptance": {
+  "status": "not written: the chair writes it (schema f12d-pilot-acceptance-v2, scripts/f12_simulation.py make_pilot_acceptance) only after the measured real-token timing pilot, and only if the recomputed all-in projection is within 190 CPU-h. This reconciliation backdates nothing."
+ },
+ "pilot_projection_rule": "project_cpu / all_in_projection (F12d): measured noise-check CPU + measured pilot process-tree CPU + stage 1, coverage target and stage 2 at the worst k*, + 15 x the pilot's measured per-invocation overhead. From the alternative-only pilot, stress is projected at the alternative's cost (synthetic stress / alternative ratios 0.89-0.92), every k at the k = 145 cost (synthetic cost rises with k), variance-x2 at max(stress, alternative). This is an extrapolation, labelled so; it is never measured stress timing.",
  "previous_claim": "F12b.6: worst case 152.6 CPU-h (stage 2 128.2 + stage 1 23.8 + pilot 0.6), withdrawn as an all-in ceiling by Board A",
  "requested_all_in_ceiling_cpu_h": 190,
  "rss_measured_mb": {
@@ -43,12 +77,26 @@
   "58": 106.86,
   "87": 121.18
  },
- "status": "draft, pending Board A C1 verification and the chair's acceptance of the repricing (PREREG A5 note F12c.7(b))",
+ "status": "draft, pending Board A C1 verification. The all-in ceiling of 190 CPU-h was accepted by the chair on 11 Nov 2026 at 18:55 UTC (ceiling_acceptance); no pilot_acceptance exists yet (pilot_acceptance)",
+ "status_history": [
+  {
+   "status": "draft, pending Board A C1 verification and the chair's acceptance of the repricing (PREREG A5 note F12c.7(b))",
+   "superseded_by": "F12d reconciliation, 11 Nov 2026 (after the chair ruling of 18:55 UTC and Board A's F12c review): the repricing request was accepted; the pilot acceptance is still to come"
+  }
+ ],
  "stop_rules": [
   "stage 1 does not start until the chair accepts the all-in ceiling in a pilot_acceptance record (schema f12c-pilot-acceptance-v1, field all_in_ceiling_cpu_h)",
   "after the timing pilot, project_cpu on the measured real-token CPU must project an all-in total within the accepted ceiling, else stop for a dated repricing",
-  "a projected breach during execution stops the run for a dated repricing; fixed replicate counts, draws and qualification work never change"
+  "a projected breach during execution stops the run for a dated repricing; fixed replicate counts, draws and qualification work never change",
+  "F12d: the launch / checkpoint barrier of budget_barrier enforces these rules from the ledger; a stop never reduces counts or draws and never yields a decision from a partial run"
  ],
+ "units_by_kind": {
+  "noise_check": 1,
+  "pilot": 10,
+  "stage1": 480,
+  "stage2": 2200,
+  "target": 200
+ },
  "wall_hours_worst_two_workers_approx": 100,
  "without_coverage_target_and_variance_x2_cpu_h": 141.17,
  "workers_max": 2

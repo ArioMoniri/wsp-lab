@@ -10,6 +10,7 @@ import hashlib
 import json
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -42,10 +43,12 @@ ACCEPTED = "2026-11-12T12:00:00Z"
 
 
 def _git(root, *args):
+    # never inherit GIT_DIR / GIT_INDEX_FILE (exported by commit hooks): they would redirect these commands from the
+    # temporary repository to the hook's repository
     return subprocess.run(
         ["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.invalid",
          "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *args],
-        check=True, capture_output=True, text=True,
+        check=True, capture_output=True, text=True, env=c1.git_env(),
     ).stdout.strip()  # fmt: skip
 
 
@@ -67,6 +70,9 @@ def c1_repo(tmp_path, *, code_status="C1 frozen", draft_file=None, verify=True):
             obj["status"] = "draft skeleton; awaiting the token manifest"
         p.write_text(json.dumps(obj, sort_keys=True) + "\n")
     _git(root, "init", "-q")
+    assert (
+        Path(_git(root, "rev-parse", "--absolute-git-dir")).resolve() == (root / ".git").resolve()
+    )
     c1.write_manifest(root)
     _git(root, "add", "-A")
     _git(root, "commit", "-qm", "C1 freeze")
@@ -343,3 +349,25 @@ def test_c1_draft_skeleton_marks_token_dependent_parts_and_never_verifies(tmp_pa
         p = fs.ROOT / c1.DRAFT_DIR / name
         assert json.loads(p.read_text()) == json.loads(json.dumps(obj)), name
     assert c1.verify_c1(fs.ROOT, code_identity=fs.current_code_identity()) != []
+
+
+def test_temporary_repositories_ignore_an_inherited_hook_environment(tmp_path, monkeypatch):
+    """Regression (F12d incident): inside a commit hook GIT_DIR / GIT_INDEX_FILE point at the real repository; the
+    fixtures and the verifier must still address only the temporary repository."""
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    _git(victim, "init", "-q")
+    (victim / "f.txt").write_text("x\n")
+    _git(victim, "add", "f.txt")
+    _git(victim, "commit", "-qm", "victim")
+    head = _git(victim, "rev-parse", "HEAD")
+    cfg = (victim / ".git/config").read_text()
+    monkeypatch.setenv("GIT_DIR", str(victim / ".git"))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(victim / ".git/index"))
+    root = c1_repo(tmp_path / "c1")
+    assert c1.verify_c1(root, code_identity=IDS["code_sha256"]) == []
+    monkeypatch.delenv("GIT_DIR")
+    monkeypatch.delenv("GIT_INDEX_FILE")
+    assert _git(victim, "rev-parse", "HEAD") == head
+    assert (victim / ".git/config").read_text() == cfg
+    assert _git(victim, "status", "--porcelain") == ""
