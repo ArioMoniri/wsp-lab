@@ -3595,3 +3595,398 @@ evidence: the dry run under `data/runs/a5/f10_dryrun/condition2/` ran on an unco
 behaviour only, not the execution pin. The inclusive equality at one fp32 spacing passes the registered rule; no F10c amendment is
 needed (Board A). The regenerated manifest, audit and README hashes are entered after execution, in the re-stage report. Nothing has
 been scored.
+
+#### A5 amendment F11 (11 Nov 2026, before any G3 outcome): resizing by supplementary procedural selection after the F10.6 calibration failure
+
+This block is appended; earlier text is not rewritten. It records the chair's F11 decision (`docs/PROGRESS.md`, entry "11 Nov 2026,
+07:20 UTC. Chair decision on resizing (F11)": Option A of the council metrology report
+`docs/council/2026-11-11/f11-metrology.md`, branch `council/f11-resize`, "the metrology report" below). It is the "resizing
+amendment … required before G3" of A5.3.2 and the "further amendment before scoring" of F10.6 and Board A F10 condition 5
+(`docs/reviews/council/board-a-f10-2026-11-11.md`). It takes effect for execution only after Board A accepts it. Until then, and
+in every case until F11.4 passes, the scoring hold of F10.10, Board A F10 condition 5 and Board A F10-code condition 4
+(`docs/reviews/council/board-a-f10-code-2-2026-11-11.md`) stays in place for every Part A entry, including ladders and references.
+This commit adds the frozen supplementary list `docs/prereg/a5_manifests/selection_f11.json`, its builder
+`scripts/a5_f11_supplement.py` and the tests `tests/test_a5_f11_supplement.py`. It changes no pinned file and makes no re-pin.
+
+**F11.1 — Trigger and evidence.** All figures below are read from the cited files, and none of them is an outcome.
+(a) *Yield.* The F10 rotation-only re-stage staged **31 of 40** rotation pairs (`docs/prereg/a5_manifests/part_a/manifest.json:coverage`:
+`n_rotation_pairs_staged` 31, `n_rotation_pairs_excluded` 9; sha256 `59d839e351824fa154a665fcf105284ce5fdeed8423a5c0a2b7a60687b0d3b06`).
+The 9 exclusions, by registered cell (`manifest.json:variants`, kind `rotation`, `excluded`; restated in
+`selection_f11.json:registered_rotation_exclusions`), fall in three cells:
+- LoRA-high (`lora_sft:2`), 3 of 10: `15a53586efc72a50`, `2233954b0cc3edc0`, `72d3756e968e3209`, each `rounding_bound_failed` on one tensor.
+- chain-low (`chain:0`), 3 of 4: `057dcfbedea3251f`, `0bc0a0c4ad0520e0`, `0d055869527177b4`, `replay_failed`.
+- chain-high (`chain:2`), 3 of 3: `0027efdf2eae7405`, `05531ce1db4df63f`, `14cdaabee246493b`, `replay_failed`.
+
+LoRA-low, LoRA-middle and chain-middle lost none. All 80 ladder slots were kept.
+(b) *Calibration.* The F10.6 slot-masked registered-scale run (10,000 replicates, 61-donor pool, mask
+`docs/prereg/a5_manifests/part_a/slot_mask_f10.json` sha256 `86fa27a5c1838d0c0bd88ef530feba22eceafac698d0ec4506fbf05df83b698e`;
+record `docs/prereg/a5_manifests/part_a/slotmask_calibration_record.json`; raw `data/runs/a5/power/power_slotmask_f10.json` sha256
+`b14756828bc27cbbe14e1e590226820371a65ef5f83ad9622b2e6ccf04a3450a`) gave **ordered power 0.7514 < 0.80 (fail)**. Size passed:
+ordered go 0.0192; two-sided 0.0377 / 0.0372 / 0.0372 (rotation, 0.25, 0.5). The null alternative rate was 0.1939, which is
+reported and not size-gated (F5.7).
+(c) *Sizing curve.* The chair's sizing runs are outcome-free synthetic masks that unmask subsets of the 9 excluded slots. They used
+the same code, pool, seeds and replicates. They are labelled sizing in `docs/PROGRESS.md` (06:40 UTC entry), although their files
+carry the F10.6 label string. They are not registered gates.
+- `data/runs/a5/power/sizing_slots_34.json` (sha256 `e36a832b4361f34a1595bbe406d5962974a9f62269d6f1e6d6c17f643a4e4da6`): 34 available rotation slots, 0.7722 [0.7639, 0.7804], fail.
+- `sizing_slots_37.json` (`ed039ab5495a6989520c62f9780725d37007bd4cd3bc65fa434ab6548e995adb`): 37 slots, 0.8251 [0.8175, 0.8325], pass.
+- `sizing_slots_39.json` (`71de730fde8ea199d27d601af38e24cb3211c299343351dc46db84ad09dce484`): 39 slots, 0.8453 [0.8381, 0.8523], pass.
+
+Null ordered go in those runs was 0.0156, 0.0180 and 0.0182. The anchors are 31 → 0.7514 (record above) and 40 → 0.8540
+[0.8469, 0.8609] (`docs/prereg/a5_manifests/power/report.json`, `ordered_power`, `ordered_power_cp95`). The 0.80 crossing lies
+between 34 and 37 available slots.
+(d) *Per-cell resolution.* Per-slot resolution probabilities under the registered donor cells are about 1.00 for every LoRA cell,
+0.906 for chain-high, 0.659 for chain-middle and 0.573 for chain-low (metrology report §1.3; result file
+`data/runs/a5/f11_sizing/donor_cell_resolvability.json`, not committed, derived from the NULL-SIZE payload). Power therefore
+depends on which cells hold the available slots, not only on how many there are. The emulator in the same section (planning only,
+not a gate) reaches 0.80 at 36 slots only for high-cell-heavy allocations, and for every allocation at 38 (§1.4).
+(e) *Pass-rate evidence* (`part_a/manifest.json`):
+- LoRA overall 27/30, but LoRA-high 7/10;
+- root chain picks 2/2 (`014f8a9ec78db2be`, `0559051354691a70`);
+- non-root chain picks 2/8.
+
+The `replay_failed` mechanism (scorer round trip on predecessor-zero / base-nonzero entries; PROGRESS 06:30 UTC) needs a
+non-base predecessor and cannot arise for roots. Planning probabilities that the gate passes for k = 12 (4/4/4) are 0.86–1.00
+across the metrology pass-rate grid p_L ∈ {0.7, 0.9}, p_C ∈ {0.5, 0.7, 1.0} (metrology report §2.3, emulator, not a gate).
+A 500-replicate unregistered run with all twelve passing gave 0.872 [0.840, 0.900] (§1.2, `s_l2p4_c0p4_c2p4`).
+
+**F11.2 — Supplementary selection rule (frozen).** Part A adds **k = 12** supplementary components, **four in each depleted cell**.
+A depleted cell is a registered (family, tertile) cell that lost at least one rotation pair at the F10 re-stage. The depleted
+cells are exactly LoRA-high (`lora_sft:2`), chain-low (`chain:0`) and chain-high (`chain:2`); the builder stops if the Part A
+manifest gives a different set.
+
+*Order.* Within each such cell, candidates are taken in the registered next-in-cell order `sorted(cell, key=canonical_edit_id)[quota:]`.
+Here `cell` is the representative list `docs/prereg/a5_manifests/selection.json:registered.ledger.families.<family>.cells[tertile]`
+and `quota` is the registered quota (10, 4 and 3). This is A5.3.1's own selection key, `sort(cell, key=canonical_edit_id)[0:quota]`,
+continued past the quota. The builder checks that the sorted prefix equals the registered picks of each cell.
+
+*Filters.* A candidate is selected if all of the following hold, from metadata only:
+1. It is an eligible development row with certified closure (`components.jsonl`).
+2. It is a **root** (predecessor = base: `components.jsonl:parent_id` null and `power/fields_manifest.json`
+   `predecessor_is_base`; a disagreement between the two stops the builder).
+3. It has an **exact WikiText gradient**: a `fields_manifest.json` donor with `gradient_source` `base_field` and no flags, listed in
+   the F7.1 pool `power/registered_donors.json`. The G2 base field is exact at a root's predecessor (F7.1).
+4. It is **not alias-only**: its own bytes are stored (`bytes_present` true and `bytes_via_alias` null in `components.jsonl`,
+   `donor_via_alias` false in `fields_manifest.json`; a disagreement stops the builder).
+5. It is not one of the registered forty.
+6. Its component is not already represented.
+
+The first four candidates that pass, in that order, are selected. Later candidates are recorded as `reserve_unreached` and are
+never used.
+
+*The list.* Builder: `scripts/a5_f11_supplement.py`. Output: `docs/prereg/a5_manifests/selection_f11.json` (schema
+`a5-f11-supplement-v1`; per-candidate positions and skip reasons; input sha256s, all equal to the registered identities:
+`selection.json` `39353036…0e908c63`, `components.jsonl` `6b4eff8d…46251dec`, `fields_manifest.json` `19e9de84…5e9a6b`,
+`registered_donors.json` `6e77bca6…6babbb5`, `part_a/manifest.json` `59d839e3…0d3b06`; full strings in the file). The twelve ids are:
+- LoRA-high, positions 10–13: `8d29ac2adb7fdda0`, `af6d608f8651fb46`, `b5d0ac5d76c3cad6`, `c12f6ec6bad59ba3`.
+- chain-low: `342a1be080049e8f` (6), `388347cfb0b7fafa` (7), `45cd0be9fea1c139` (8), `aaf7a0660c6d5a73` (11). Skipped: positions
+  4, 5 and 9 as non-roots without an exact gradient, and position 10, `7bc62b9f723359cb`, as alias-only (no `delta.safetensors` of
+  its own; bytes via `b0b6b9cb18e49442`).
+- chain-high: `15cdcf0bb126de17` (3), `17668df17662b3f7` (5), `1ac30f3c7a209fe6` (6), `2410c595817dc20b` (7). Skipped: position 4
+  as a non-root.
+
+Sorted-id sha256 (`sha256(json.dumps(sorted(ids)))`, the F7.1 convention) is
+**`1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9`**. The rerun is byte-identical.
+
+*Fixed.* The list and its hash are fixed by this commit, before any supplementary staging. There is no top-up, substitution or
+reserve use after any supplementary audit, diagnostic or yield has been seen. The forty registered pairs are not replaced:
+- they stay in the ledger with their F10 verdicts;
+- the 9 excluded rotation pairs stay excluded with their reasons (F10.3, "without replacement");
+- the 31 staged rotations and the 80 staged ladders are untouched and are not rebuilt.
+
+A supplementary exclusion is not replaced either.
+
+**F11.3 — Staging under F10.** Each supplement is staged once, under the F10 audit rule (`--audit-rule f10`; F10.3 as read by
+F10a.1). It gets a rotation with its registered A5.3.3 seed (`rotation_seed`, `control_seeds.json:rotation`) and two ladders,
+s ∈ {0.25, 0.5}, built as registered for roots (stored Δ scaled at the base and rounded; no F10.9 flag arises). Exclusions follow
+F10.3 with reason codes and without replacement. A valid ladder is kept whatever its rotation verdict, as for the forty.
+
+Staging runs on CPU (`CUDA_VISIBLE_DEVICES=` empty) under `agent-tmux`, with the freeze and execution-record requirements of
+A5.1.2 re-pin (xviii):
+- the reviewed code is merged and pinned first;
+- a pre-execution freeze file records the environment, threads (`OMP_NUM_THREADS` = `MKL_NUM_THREADS` = 4, Torch intra-op 4),
+  `HF_HUB_OFFLINE=1`, input hashes including `selection_f11.json` and its sorted-id hash, and the command verbatim;
+- a launch record holds the execution SHA (clean tree), start and end times and the exit code;
+- the forty's manifest and audit files are preserved before execution, and any new manifest is written so that the forty's
+  entries are byte-identical.
+
+Staging the supplements needs the `prepare` path to accept `selection_f11.json` as an additional, frozen selection input. That
+is a code change with tests and a re-pin, reviewed by Board A before execution; it is not made here.
+
+Price (metrology report §3, from `part_a/README.md` and `part_a/restage_launch.json`): the full three-variant staging ran at
+7.46 min per edit (4 h 58 min 33 s / 40), and the F10 rotation re-stage at 5.46 min per edit (02:44:00–06:22:28 UTC = 3 h 38 min
+28 s / 40). So the 12 supplements cost about **1.5–2.6 h** of CPU. That is an upper bound, because 8 of the 12 are chain roots
+with fewer edited tensors. The staging report gives per-pair F10.3 verdicts with reasons, F10.4 diagnostics, delta hashes and the
+updated priced count. It contains no score.
+
+**F11.4 — Calibration on the supplemented slot set.** Before any scoring, one separately labelled, registered-scale slot-masked
+NULL-SIZE / POWER-AND-YIELD run is made on the **52-slot** set (the 40 registered and the 12 supplements, in their cells; per-cell
+slots LoRA 10/10/14, chain 8/3/7).
+
+Fixed settings:
+- 10,000 replicates and 4,000 resolution draws;
+- the F7.1 61-donor pool for POWER-AND-YIELD and the full payload for NULL-SIZE (F7.2);
+- `SeedSequence(20261107)`, spawn 3, streams in the order panels, signs, resolution;
+- the registered 0.75 alternative.
+
+*Mask.* The mask is the F10 exclusions among the 52, per contrast: the 9 registered rotation exclusions plus every supplementary
+rotation or ladder exclusion from the F11.3 staging report. It and its id-to-slot mapping are frozen and hashed before the run.
+
+*Gates,* in this order: ordered power ≥ 0.80; then ordered go and each individual two-sided size ≤ 0.07 (A5.3.2; FP2). The null
+rate of the step-2 alternative is reported next to the go rate, not size-gated (F5.7). No seed search, rerun, replicate change or
+mask edit is allowed.
+
+The run needs a supplement option in `scripts/a5_simulation.py`: the frozen `selection_f11.json` ids mapped to their cells,
+slots appended after the registered slots in cell order, and mask ids resolved over all 52. The option needs tests (registered and
+F10.6 outputs unchanged without it) and a re-pin before the run; it is not made here. Expected CPU wall is about 11–22 min (the
+F10.6 run 06:25:29–06:36:01 UTC, `slotmask_calibration_record.json`; the F7 runs 21 min 39 s and 22 min 27 s, F10.6). **A failure
+of either gate invokes F11.7.**
+
+**F11.5 — Analysis.** If F11.4 passes, the registered Part A analysis (A5.3 resolution, yield and CP rules; A5.4; the ordered
+decision function A5.5) runs once on the supplemented set as **the registered Part A**:
+- one pair per component, 52 components;
+- per-contrast denominators of 52 less exclusions, with separate rotation and ladder-strength denominators and no borrowing;
+- the ≥ 15 resolved-pair floor, CP rule and step-2 alternative unchanged;
+- analysis time after all supplemented variant scores and references are on file and the ledger is closed.
+
+The donor pool of every simulation stays the F7.1 61 donors. Reported descriptively, with no decision authority:
+- a **registered-40 sensitivity** with the same analysis on the original forty only (31 rotation pairs, 40 ladder pairs per
+  strength), labelled as such;
+- agreement split into supplements versus the forty and roots versus non-root chain steps (metrology report §3, bias (i));
+- the F10.5 reports on the supplemented set. The subset lists of F10.5(c) and (e) stay as frozen on the forty (F10a.4); the
+  supplements' values of the same predicates are shown beside them and do not enter those subsets.
+
+Analysis-code changes needed for 52 components are code changes with tests and a re-pin, made before scoring.
+
+**F11.6 — Pre-outcome attestation and bias statement.** No G3, rotation, ladder, reference or sealed outcome exists. Nothing has
+been scored (`part_a/manifest.json:scored` false).
+
+*Bias.* k = 12, the four-per-cell allocation and the root filter were chosen after the F10 re-stage yield (31/40), its reasons and
+the F10.6 failure (0.7514) were known. They are **audit-yield-informed and outcome-blind**, the same status F10a.3 gives F10's
+thresholds: "fixed before outcomes, not before audits".
+- The root filter shifts the chain-low and chain-high supplementary slots from chain steps to first-step roots. The rotation
+  contrast there then speaks to roots, not continued-chain increments; F11.5's split reports this.
+- The order is the registered one and is not chosen. Still, the four LoRA-high supplements have effective norms 2.66–4.33
+  (`selection_f11.json:supplements`), against 4.69–6.78 for the three excluded LoRA-high picks (`components.jsonl`). This is
+  disclosed.
+- `aaf7a0660c6d5a73` has re-trained lineage (`exactness` `re-trained`), like three of the forty.
+- The not-alias-only filter is in the chair's F11 brief to this drafter. It moves the fourth chain-low pick from the metrology
+  report's draft list (`7bc62b9f723359cb`, position 10, alias-only) to `aaf7a0660c6d5a73` (position 11). With the alias-only edit
+  the draft list's sorted-id sha256 would be `5e4260b1…a45a41`; the frozen list is the one in F11.2.
+- D3 originals of the supplements are known, as for the forty (A5.3 *Exposure*). They enter only as simulation donors.
+
+*Attestation of this drafting session* (branch `prereg/f11`, worktree `.worktrees/prereg/f11`, 11 Nov 2026). It read:
+- `docs/` (this file, PROGRESS, the metrology report, the Board A F10 and F10-code-2 reviews, `docs/prereg/a5_manifests/`);
+- `scripts/` and `src/`;
+- the zoo manifest `data/zoo/qwen3.5-0.8b/manifest.jsonl` and the `edit.json` files of four candidates, with a directory listing
+  of those four entries;
+- the outputs `data/runs/a5/power/sizing_slots_{34,37,39}.json`.
+
+It opened nothing under `data/evals`, used no GPU, staged nothing, ran no simulation and wrote nothing under `data/`. It has seen
+no G3, rotation, ladder, reference or sealed outcome, or a summary of one. The chair, the metrology member, the stager and Board A
+each add an attestation line (F8a.1(c)) to `docs/prereg/f11_attestations.md` before staging.
+
+**F11.7 — Fallback (Option B).** If F11.4 fails either gate, Part A proceeds as a **screen** without further amendment. The
+rotation contrast is **not decisive** (A5.3.2). Scoring then covers the F10 state plus the supplementary variants already staged,
+and the A5.5 validity row is read with the metrology report's Option B wording:
+
+> The A5.5 validity predicate "applicable power … gates pass" is read as not applicable to the rotation contrast. The step-2
+> ladder alternative keeps its funding-stop role. A rotation interval with lower bound > 0.5 is reported as "Part A rotation:
+> positive screen, not decisive". It is not a Part A go, and it does not count toward G7 ("G3 go and G4 go, never screen", A5.6).
+> Every other outcome is reported as registered.
+
+The failed calibration's power is stated next to any rotation result. Part B is reported but cannot fund without a Part A go
+(A5.5 step 4).
+
+**F11.8 — Cost.**
+- *CPU:* staging about 1.5–2.6 h (F11.3) and calibration about 11–22 min (F11.4).
+- *GPU scoring:* 3 entries × 1.04 min (`part_a/manifest.json:scoring.minutes_per_entry`) per supplement, at most 36 entries =
+  **37.44 min**.
+- *Total:* at most 135.2 + 37.44 = **172.64 GPU-min**. The current priced count is 130 entries, 135.2 min
+  (`part_a/manifest.json:scoring.n_priced`, `minutes`).
+- n_P = 0, because every supplement's predecessor is the base. n_D = 0 is the planning value: all twelve are NULL-SIZE donors with
+  TF-v1 originals (`fields_manifest.json:donors`). It holds subject to the A5.3.4 reuse proofs built at staging (identical
+  effective snapshot, windows and scoring identity), with particular attention to the re-trained lineage `aaf7a0660c6d5a73`. A
+  failed proof adds that original at 1.04 min (stop-and-reprice).
+- Supplementary exclusions lower the GPU count.
+
+**F11.9 — What does not change.**
+- The decision rules (A5.5) and the line-stop rule (F5.5).
+- The H5 success criterion (A5.7).
+- Seeds (`control_seeds.json`; `SeedSequence(20261107)`), the registered 0.75 alternative, the resolution, yield and CP rules,
+  and the ≥ 0.80 and ≤ 0.07 gates.
+- Caps and allocations other than the Part A entry count priced in F11.8.
+- The F7.1 donor pool.
+- F10.3, F10a and the F10.9 flags.
+- The forty registered pairs, their verdicts and staged bytes.
+- `selection.json` and the frozen cutpoints.
+- Every pin, except the re-pin that the F11.3–F11.5 code changes will entail; that re-pin is not made here.
+
+| clause | rule changed | evidence | Board A gate |
+|---|---|---|---|
+| F11.1 trigger | none | 31/40 (`part_a/manifest.json`); 0.7514 (`slotmask_calibration_record.json`); sizing 34/37/39 → 0.7722/0.8251/0.8453 (`data/runs/a5/power/sizing_slots_*.json`); per-cell resolution (metrology §1.3) | accept the evidence as outcome-free |
+| F11.2 selection | A5.3 "40 components" and A5.3.1 quotas extended by addition: +4 in LoRA-high, chain-low and chain-high (roots, exact gradient, not alias-only), next-in-cell canonical-ID order, k fixed | `selection_f11.json` (sorted-id sha256 `1848fe4c…85fdd9`); `scripts/a5_f11_supplement.py`; tests | accept the rule and the frozen list before staging; no top-up |
+| F11.3 staging | none to F10; adds a frozen supplementary selection input to `prepare` | re-pin (xviii) freeze/launch pattern; priced 1.5–2.6 h CPU | review code, tests and re-pin; accept the staging report |
+| F11.4 calibration | F10.6 masked run on 52 slots instead of 40 | F10.6 record; supplement option in `a5_simulation.py` | review code and re-pin; mask frozen before the run; ≥ 0.80 then ≤ 0.07 |
+| F11.5 analysis | registered Part A = 52 components; registered-40 reported descriptively | A5.3, A5.4, A5.5 unchanged | accept the denominators and the sensitivity labels |
+| F11.6 attestation / bias | none (applies F8a.1(c), F10a.3) | this block; `f11_attestations.md` | attestation lines of chair, metrology, drafter, stager and Board A |
+| F11.7 fallback | A5.5 validity row read as not applicable to the rotation contrast, only if F11.4 fails | metrology report Option B | accept the wording now, before any calibration |
+| F11.8 cost | Part A entries ≤ 166 (≤ 172.64 GPU-min) | `part_a/manifest.json:scoring` | accept the price |
+| F11.9 unchanged | none | — | none |
+
+*A5.1.2 hash entries after the F10 re-stage (chair, 11 Nov 2026, about 08:30 UTC; copied from `docs/prereg/a5_manifests/part_a/RESTAGE_A512_NOTE.md`).*
+
+
+This file is not part of `docs/PREREG_H1_TF.md`. The paragraph below is meant to be appended to A5.1.2 after re-pin (xviii). The
+chair appends it. The hashes were re-computed on 11 Nov 2026 at about 07:17 UTC from the files at branch `report/f10-restage`
+(based on main `be02cc3`).
+
+---
+
+*A5.1.2 hash entries for the F10 re-stage (11 Nov 2026, about 07:17 UTC, after execution; the pre-execution freeze is re-pin
+(xviii), 05:45 UTC entry, `restage_freeze.json` written 02:40:50 UTC; before any G3 outcome).*
+
+The rotation-only re-stage ran 02:44:00–06:22:28 UTC at clean execution SHA `7bacec12604f1090168a79a6c6d55d4f548af4ec`
+(exit 0). Its outputs were committed in `848d7a5`. All 71 pins of `code_hashes.json` (`74321d76858274d2…`) match at that SHA and
+at `be02cc3`.
+
+Regenerated and new files under `docs/prereg/a5_manifests/part_a/`:
+
+- `manifest.json` (regenerated): `59d839e351824fa154a665fcf105284ce5fdeed8423a5c0a2b7a60687b0d3b06`
+- `rotation_audits.jsonl` (regenerated; 2,534 rows): `4ec0928a91b5523a400b911f00f8045f267386c2589aa72a58816d565f5c97f3`
+- `restage_launch.json` (launch and end record): `28dcba683dc215fe303d938a1c7b094b5d0856929f19fb720187b75bb1a59a7e`
+- `restage_freeze.json` (pre-execution freeze, (xviii), for reference):
+  `03dfaf2667d0addbd459c0662b8fa87a2304b36a054c36cf64ac29192ca48858`
+- `slot_mask_f10.json`, F10.6 mask as used. Schema `a5-slot-mask-v1`, rewritten in `cf3eae8`. It masks the 9 excluded rotation
+  slots; mapping sha256 `b7724a69315d8c8692a128504126251ac16945cf7b741ec60b3cdb6daa5cb329`. File:
+  `86fa27a5c1838d0c0bd88ef530feba22eceafac698d0ec4506fbf05df83b698e`.
+  - The first mask file, committed in `848d7a5`, was `a2ed6ae7e9ac8e08850ddbaded875f9fda65704ea261bdb50ddb080da1a2fe80`. The
+    simulator rejected it for unknown keys, so nothing was simulated with it.
+- `slot_mask_f10.provenance.json`: `0bb56b4bb05ce0718f48e7fc962a60e4378b06d9c46c9cf08e4b1ef78be08636`
+- `slotmask_calibration_record.json`: `0c5fa8c38da42d63bd5762c307ec1c2254313501fbfd4763b3418eaa3eff6b51`
+- `RESTAGE_REPORT.md` (the re-stage report, which serves as the F10.7 regenerated README):
+  `61294c8666b4bbe4f938e76af7797631ef86613e77d431229bddcaf69d6d5f61`
+
+Unchanged files:
+
+- `README.md` (the a533 staging README): `2fcbf517ccf26f2a1fe325ef31300d291bc0f254c7faaacd18154e327bceada1`
+- `manifest_a533.json`: `d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6`
+- `rotation_audits_a533.jsonl`: `f05fec4265ffd93c8c537100993d23262be95141369240fcad0a7e16ff474d35`
+
+Calibration output: `data/runs/a5/power/power_slotmask_f10.json`,
+`b14756828bc27cbbe14e1e590226820371a65ef5f83ad9622b2e6ccf04a3450a`. Run at `cf3eae8`, 06:25:29–06:36:01 UTC, with
+`scripts/a5_simulation.py` `c4f0c55f…` (re-pin (xvi)). Result: ordered power 0.7514 < 0.80, **FAIL**; size passes.
+
+Yield: 31 / 40 rotation pairs; 1,984 / 2,534 tensors rotated. The 80 ladder variants (96 files) and the prior passing pair's
+delta (`951e8621…`) and increment (`78ec4689…`) are byte-identical to the staged hashes. 16 ladder entries are flagged
+`realised_increment_ladder`. Priced count: 130 entries, 135.2 min.
+
+Recorded discrepancies:
+
+- The emitted Torch build-config SHA-256 (`07f0372b…`) differs from the frozen value (`d1b4e24c…`).
+- The freeze's `base_revision` is empty. All 40 selected edits record `2fc06364…`, the model pin.
+
+Nothing has been scored. The scoring hold remains (F10.6; Board A F10 condition 5).
+
+*Chair rulings on the re-stage report (11 Nov 2026, 08:30 UTC).* (1) Freeze field mismatch: `restage_freeze.json` recorded the Torch
+build-config SHA-256 as the hash of the UTF-8 text of `torch.__config__.show()` (`d1b4e24c…`); the staging code derives it
+differently and the run recorded `07f0372b…`, which recomputes in the same environment; the nine other environment fields match, the
+process environment was the same, and the code's derivation is authoritative from now on; the freeze's empty `base_revision` was a
+wrong key in the chair's script, and the run records `2fc06364…` for all 40 edits, equal to the model pin. Disclosed; no bearing on
+the audits. (2) NULL-SIZE block of the slot-masked run (go 192 / alternative 1939 / unresolved 7869) differs from the registered null
+(180 / 1939 / 7881) only in the masked rotation contrast, as masking must produce; equality was never a gate (F10.6 states the
+gates: size ≤ 0.07 on the masked run, which passed, and ordered power ≥ 0.80, which failed); the chair's 06:30 progress wording
+("NULL-SIZE block equality") is withdrawn. (3) The three lora_sft `rounding_bound_failed` exclusions exceed the bound by thousands of
+fp32 spacings on one entry each; they are not the inclusive-equality case; the 05:20 progress wording is corrected; the exclusions
+stand under the no-retuning rule.
+
+*Chair correction to ruling (1) of 08:30 UTC (11 Nov 2026, about 09:10 UTC; Board A re-stage review condition 1,
+`docs/reviews/council/board-a-f10-restage-2026-11-11.md`).* The "different derivation" explanation is withdrawn. The staging code
+(`src/wsp/features/rotation.py`, `torch_config_sha256 = digest(torch.__config__.show())`) and the chair's freeze script hash the same
+text. The discrepancy arises because `torch.__config__.show()` reports the process's thread configuration: the freeze value
+`d1b4e24c…` was computed by the chair in a shell WITHOUT the frozen environment variables, and the run's value `07f0372b…` is what the
+frozen environment produces. Verified today by recomputing under `CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
+HF_HUB_OFFLINE=1`: `07f0372b…`, equal to the run's `restage.replay_environment.torch_config_sha256`. The discrepancy is therefore a
+chair error in the freeze procedure, not an environment change; the run executed under the frozen settings (threads 4 recorded).
+Ratified: the binding Torch build-config hash is `07f0372b…` computed under the frozen environment; future freezes must be computed
+under the same environment variables as the run. Correction to the re-stage report's §2/§8 (condition 2): 93 tensor rows have
+maximum excess exactly one fp32 spacing and pass the rounding check; 92 of them pass F10 overall; the remaining one
+(`057dcfbedea3251f`, `model.layers.6.mlp.up_proj.weight`) is excluded for replay. The scoring hold and baseline evidence are
+preserved; F11 staging and calibration remain separately gated.
+
+#### A5 note F11a (11 Nov 2026, before any G3 outcome): F11 clarifications (Board A F11 condition 1)
+
+This block is appended; earlier text is not rewritten. It discharges the methodological-freeze part of condition 1 of Board A's F11
+review (`docs/reviews/council/board-a-f11-2026-11-11.md`, "the review"; merged in `7ba776d`). Quotations are copied verbatim from the
+review's sections "Calibration and analysis" and "Fallback" and from its verdict line. F11a clarifies how F11 is read; it changes
+no F11 operational rule except as stated in F11a.1 and F11a.2, where it adopts the review's own wording. Where F11.4, F11.5 or F11.7
+read differently, F11a governs.
+
+**F11a.1 — F11.7 fallback (Option B, screen): power failure only; a size failure holds scoring.** The review's verdict line:
+> F11.7 needs the restricted fallback interpretation below; its literal "either gate" wording does not waive a size failure.
+
+and its section "Fallback":
+> Accept a prospective screen fallback for **power failure with all size and other applicable validity gates passing**. A5.5
+> separately requires development null size ≤0.07; declaring rotation power inapplicable cannot waive that predicate. If either
+> ordered-go size or any applicable individual two-sided size exceeds 0.07, validity stays unresolved and scoring remains held pending
+> a new prospective ruling. Compute/report size even if the power check fails first, so fallback eligibility is known.
+
+Accordingly:
+- (a) The F11.7 fallback (Option B, screen) is available **only** when the F11.4 calibration fails the **POWER** gate (ordered power
+  < 0.80) and every size gate (ordered-go size and each individual two-sided size ≤ 0.07) and every other applicable validity gate
+  passes. F11.4's "A failure of either gate invokes F11.7" and F11.7's "If F11.4 fails either gate" are read in this restricted way.
+- (b) A **SIZE** failure (ordered-go size or any individual two-sided size > 0.07) **never** falls back to the screen. Validity stays
+  unresolved, the scoring hold stays in place for every Part A entry, and only a new amendment, with its own review, can release it.
+- (c) The F11.4 run computes and reports every size rate even when the power gate fails first, so that fallback eligibility is
+  known from the report.
+- (d) *Exception to the introductory hold.* The F11 introduction holds scoring "in every case until F11.4 passes". As the review
+  puts it: "after an accepted power-only failure report the explicitly authorized screen route may release scoring, subject to
+  every other gate." Only that route is excepted. Board A must accept the power-only failure report first.
+- (e) In the screen route only rotation power is waived: "no Part A go, G7 contribution or Part B funding is possible. The step-2
+  ladder alternative retains priority and funding-stop meaning, and the ≥15 resolved floor still applies to a positive screen.
+  Remaining validity checks and unresolved cases retain their registered handling. Report the failed power and all size results beside
+  the screen. 'Every other outcome ... as registered' cannot silently restore step-3 go or downstream funding."
+
+**F11a.2 — NULL-SIZE uses the full registered payload.** F11.5's sentence "The donor pool of every simulation stays the F7.1 61
+donors" is qualified, as the review requires:
+> The fixed 61 donors remain the POWER-AND-YIELD pool even when supplementary edits are members of it. [...] Crucially,
+> **NULL-SIZE keeps the full payload under F7.2**. F11.5's sentence "donor pool of every simulation stays ... 61" must be qualified
+> to POWER-AND-YIELD; F11.4's explicit full-payload NULL-SIZE rule governs.
+
+Accordingly: (a) the NULL-SIZE pass of the F11.4 run uses the full registered payload, all 141 donors, exactly as F7 and the F10.6
+run did. (b) The F7 restriction to the 61-donor pool applies to POWER-AND-YIELD only. (c) The 61 donors are fixed: no donor is added
+or removed, self-membership of supplementary edits is kept, no residual is refitted on new outcomes and no leave-one-out sampling is
+introduced.
+
+**F11a.3 — The original forty are preserved; there is no replacement.** The forty registered pairs keep their IDs, verdicts and
+staged bytes. The 31 staged rotations and the 80 staged ladders are untouched and are not rebuilt; the 9 excluded rotation pairs stay
+excluded with their reasons and are not replaced (F10.3, "without replacement"). Supplementary edits are additions only. There is no
+top-up, substitution, new order, new cutpoint or reserve use after any supplementary audit or diagnostic, and a supplementary
+exclusion is not replaced (review, condition 1; F11.2 "Fixed"). The forty's manifest, audit history and bytes are preserved, and any
+drift is rejected rather than overwritten (review, condition 2). The frozen list stays `selection_f11.json`: twelve IDs, sorted-ID
+sha256 `1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9`, file sha256
+`ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c` (the review regenerated it byte-for-byte). The draft metrology list
+(with `7bc62b9f723359cb`) is superseded and is not a reserve.
+
+**F11a.4 — Attestations.** The F11 exposure attestations are completed in `docs/prereg/f10_attestations.md` (the file carries the
+F10 and F11 record; entries 10–13 are added with this note), not in the `docs/prereg/f11_attestations.md` that F11.6 names, which
+is not created. Board A F11's own line is incorporated by reference (`board-a-f11-2026-11-11.md`, final paragraph, "Board A
+exposure attestation"). Entries for the stager, the implementation sessions and any approving reviewer are added when those sessions
+act, and the attestations are updated through the final methodological freeze before scoring (review, condition 6).
+
+**F11a.5 — What this note does not do.** It changes no selection beyond F11.2's committed list, and no seed, decision rule, cap or
+pin. It authorises no staging, calibration or scoring by itself. Execution still needs the review's conditions 2 to 6: the `prepare`
+supplement path, the 52-slot simulation option and the 52-component analysis with the manifest-binding fix each need Board A review,
+CPU tests and a re-pin, and the accepted F10 re-stage report is a separate gate. Nothing has been scored and no G3, rotation, ladder,
+reference or sealed outcome exists (`part_a/manifest.json:scored` false).
+
+*A5.1.2 re-pin (xix) (11 Nov 2026, about 10:20 UTC; merge of `feat/a5-sim-supplement` after Board A's acceptance with conditions,
+`docs/reviews/council/board-a-f11-sim-2026-11-11.md`; before any G3 outcome).* `scripts/a5_simulation.py` gained `--supplement`
+(52-slot design: slots 40–51 appended in cell order; the 40 unchanged; byte-identical output without the option, golden-hash
+regression), `--registered-40-sensitivity` (descriptive, `decision_authority: false`), and the 52-id `--slot-mask` rules (ladder masks
+allowed for supplementary ids only). Builder re-run with `--pin-worktree` into a copy; only `code_hashes.json` and the package README
+copied back. Rows: `scripts/a5_simulation.py` `4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a` (old `c4f0c55f…`,
+xvi); `tests/test_a5_simulation.py` `d231c8b0264d48e7e75b991b5bf82ee2f71b846c0364063800bbea84920d2833`;
+`docs/prereg/a5_manifests/code_hashes.json` `a0077ab6f0518ec586689b07dc1a203f315d740393506cfa6ae3b74a0fb88d95` (old `74321d76…`,
+xviii); `docs/prereg/a5_manifests/README.md` `26ca1d2da368f321acd4addbefb84a091cbbe8e9c775c5eb2731c96bf2cb034b` (old `692879c7…`,
+xviii). No selection, seed, control, panel or decision file changed; no F11.4 run executed; nothing scored. Further re-pins follow
+the `prepare --supplement` merge (before staging) and the analysis F11-path merge (before scoring).

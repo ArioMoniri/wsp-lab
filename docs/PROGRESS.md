@@ -674,3 +674,61 @@ LoRA-high passed F10 at 7/10. Chair adopts **Option A: supplementary procedural 
 registered-40 sensitivity report, and Option B (screen) as the fallback if the calibration fails again.** Cost: CPU staging 1.5–2.6 h,
 calibration 22 min, GPU scoring ≤ 36 added entries (37.44 min; total 172.64 min). F11 text and the frozen supplementary ID list in
 flight; Board A review follows; scoring held.
+
+**11 Nov 2026, 07:50 UTC.** Metrology F11 report merged (92fff4e; recommends k = 12: LoRA-high `8d29ac2a`, `af6d608f`, `b5d0ac5d`,
+`c12f6ec6`; chain-low roots `342a1be0`, `388347cf`, `45cd0be9`, `7bc62b9f`; chain-high roots `15cdcf0b`, `17668df1`, `1ac30f3c`,
+`2410c595`; calibration pass probability 0.86–1.00 across the pass-rate grid; discloses that extra ladder slots raise the ladder
+alternative-branch null rate from 0.18 to 0.26, not size-gated). Known breakage on main since the re-stage: `tests/test_part_a_analysis.py`
+(69 failures) pins the a533 manifest hash as the execution manifest; fix in flight (frozen subsets anchored to the preserved
+`manifest_a533.json`, execution manifest bound by explicit hash, supplementary ids handled). Also in flight: F11 text with the frozen
+`selection_f11.json`; `prepare --supplement` staging mode; the F10 re-stage report. Scoring held.
+
+**11 Nov 2026, 08:15 UTC.** F11 merged (0a3049d): `selection_f11.json` (12 ids, sorted-id sha256 `1848fe4c…`, file `ce746e71…`),
+`scripts/a5_f11_supplement.py` (11 tests) and the F11 block. Correction to the 07:50 list: chain-low pick `7bc62b9f` is alias-only
+(bytes only via abliteration edit `b0b6b9cb`), so the "not alias-only" filter replaces it with the next root `aaf7a066` (re-trained
+lineage; its n_D = 0 depends on a reuse proof). Ordering = A5.3.1's own key continued past the quota (the registration defines no
+other next-in-cell order; disclosed in F11.2). F11 names three implementation steps before execution: `prepare` supplement
+staging (in flight), a 52-slot option in `a5_simulation.py` (launching), analysis support for 52 components (in the binding fix).
+Board A review of the F11 text requested.
+
+**11 Nov 2026, 08:30 UTC.** F10 re-stage report merged (`part_a/RESTAGE_REPORT.md`, `RESTAGE_A512_NOTE.md`; dd31847): 31/40; 96 ladder
+files byte-identical on disk and in both manifests; `00f8111c` hashes identical; 16 realised-increment ladder flags; 130 entries
+priced 135.2 min; calibration FAIL 0.7514 [0.7428, 0.7598]. Chair rulings appended to A5: the freeze's Torch build-config hash used
+a different derivation (code's is authoritative; environment identical), the freeze's empty base revision was a script error (run
+records `2fc06364…`), NULL-SIZE equality was never a gate, and the 3 rounding-bound exclusions are gross (thousands of spacings),
+not the equality case. Board A review of the re-stage report requested (condition 4).
+
+**11 Nov 2026, 08:50 UTC.** Board A accepted F11 with conditions (`docs/reviews/council/board-a-f11-2026-11-11.md`): before
+staging — complete attestations, state that the fallback waives power only (never size) and preserve the full NULL-SIZE payload,
+review/test/re-pin the `prepare` supplement support and the selection builder, preserve the original 40 with no replacement; before
+calibration — accept staging evidence, review/test/re-pin the 52-slot simulation support, freeze and hash the actual mask and
+mapping; before scoring — accept one registered-scale calibration (power ≥ 0.80 and size ≤ 0.07; only a power failure permits the
+screen fallback), fix the manifest binding and review/test/re-pin the 52-component analysis and registered-40 sensitivity; release
+only after the F10 re-stage report and all standing gates are discharged. An F11a clarification note (fallback waives power only;
+NULL-SIZE payload preserved; attestations for the F11 drafter and metrology member) is next.
+
+**11 Nov 2026, 09:10 UTC.** Board A accepted the F10 re-stage report with conditions (`board-a-f10-restage-2026-11-11.md`): the
+chair's Torch-hash "different derivation" explanation was unsupported and is withdrawn — the real cause, verified by recomputation, is
+that `torch.__config__.show()` depends on the process thread environment and the freeze value was computed outside the frozen
+environment (chair error; the run's `07f0372b…` reproduces under the frozen settings and is ratified as binding); the report's
+equality count corrected (93 rows at one spacing pass the rounding check, 92 pass F10 overall, one replay exclusion). Hold preserved.
+
+**11 Nov 2026, 09:20 UTC.** F11a merged (043458b): fallback waives the power gate only; the NULL-SIZE pass keeps the full 141-donor
+payload; no replacement or top-up; attestations 10–13 added (metrology, F11 drafter, chair's sizing runs, F11a drafter; the
+metrology report's "data read only" header is corrected by its entry — it wrote scratch files under `data/runs/a5/f11_sizing/`); the
+chair's attestation extended through the F11 decisions. Remaining before supplementary staging: the three code pieces and their
+Board A review, re-pin (xix).
+
+**11 Nov 2026, 09:45 UTC.** Simulator `--supplement` committed (54f17fc, `feat/a5-sim-supplement`; 26 simulator tests; byte-identical
+without the option, golden-hash regression; `--registered-40-sensitivity`; supplementary slots 40–51 appended in cell order; the
+supplementary edits' own donor rows stay in the pools per F11.5 — slots draw cell donors at random, never their own edit). Smoke
+run (200 replicates, synthetic 52-id mask with the 9 F10 exclusions masked): ordered power 0.86 [0.80, 0.91], null ordered go 0.02,
+null alternative 0.255 (reported, not gated); registered-40 sensitivity 0.73. Builder's choice for Board A: ladder masks are allowed
+on supplementary ids (F11.4 "every supplementary rotation or ladder exclusion"), still refused on the 40. Under Board A review.
+
+**11 Nov 2026, 10:20 UTC.** Board A accepted the simulator `--supplement` (merged 54f17fc; re-pin (xix)) and gave the frozen F11.4
+command (`board-a-f11-sim-2026-11-11.md` §frozen command). Board A judged the analysis manifest-binding repair sound (aef0a83) but
+REJECTED closing F11 condition 5 pending four corrections (supplements in the F10.5 reports with frozen cells; registered-40 report
+and root/non-root splits; per-contrast masks incl. supplementary ladders; F11a screen route with size-failure priority) — in flight
+on the same branch. `prepare --supplement` staging mode still in flight. Order: staging code → Board A → merge + re-pin (xx) →
+stage the 12 → frozen F11.4 calibration → report → Board A → (analysis merge + re-pin) → scoring.

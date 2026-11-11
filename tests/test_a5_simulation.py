@@ -1,4 +1,6 @@
-"""Synthetic calibration only: no development or project data access."""
+"""Synthetic calibration only; the F11.4 tests also read two committed docs/prereg manifests."""
+
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -513,3 +515,379 @@ def test_slot_mask_cli_records_hashes_and_matches_unmasked(tmp_path, monkeypatch
     with pytest.raises(ValueError, match="missing selected edit id"):
         a5_simulation.main()
     assert not out.exists()
+
+
+# --- F11.4 supplement (52-slot calibration) ----------------------------------------------------
+
+REPO = Path(__file__).resolve().parents[1]
+F11_CELLS = (("lora_sft", "LoRA", 2), ("chain", "chain", 0), ("chain", "chain", 2))
+
+
+def supplement_toy():
+    """Registered quotas with spare representatives: LoRA 14/14/14, chain 8/8/8 (ids sort by norm)."""
+    return two_family_toy(n_lora=42, n_chain=24)
+
+
+def make_supplement(payload):
+    """Synthetic ``a5-f11-supplement-v1`` object: the next four representatives in each F11 cell."""
+    import hashlib
+    import json
+
+    selected, edges = selection_cells(payload["inventory"])
+    cells = []
+    for fam, family, t in F11_CELLS:
+        picks = [r["id"] for r in selected[family, t]]
+        group = sorted(
+            r["id"]
+            for r in payload["inventory"]
+            if r["family"] == family and sum((r["norm"], r["id"]) >= e for e in edges[family]) == t
+        )
+        cells.append(
+            {
+                "cell": f"{fam}:{t}",
+                "family": fam,
+                "tertile": t,
+                "quota": len(picks),
+                "registered_picks": picks,
+                "selected": [i for i in group if i not in picks][:4],
+            }
+        )
+    ids = [i for c in cells for i in c["selected"]]
+    return {
+        "schema": "a5-f11-supplement-v1",
+        "k": 12,
+        "per_cell": 4,
+        "frozen_cells": [c["cell"] for c in cells],
+        "cells": cells,
+        "replaces_registered": False,
+        "no_top_up": True,
+        "registered_edit_ids_sorted": sorted(r["id"] for v in selected.values() for r in v),
+        "supplement_ids": ids,
+        "supplement_ids_sorted": sorted(ids),
+        "supplement_ids_sorted_sha256": hashlib.sha256(
+            json.dumps(sorted(ids)).encode()
+        ).hexdigest(),
+    }
+
+
+SUPPLEMENT_TOY_EXTRA = [
+    *(f"e{i:03}" for i in range(38, 42)),
+    *(f"k{i:03}" for i in range(4, 8)),
+    *(f"k{i:03}" for i in range(19, 23)),
+]
+
+
+def test_frozen_f11_selection_loads_and_validates():
+    import json
+
+    from scripts.a5_simulation import load_supplement
+
+    frozen = json.loads((REPO / "docs/prereg/a5_manifests/selection_f11.json").read_text())
+    loaded = load_supplement(frozen)
+    assert loaded["ids_sorted_sha256"] == (
+        "1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9"
+    )
+    assert {k: len(v) for k, v in loaded["cells"].items()} == {
+        ("LoRA", 2): 4,
+        ("chain", 0): 4,
+        ("chain", 2): 4,
+    }
+    ids = [i for v in loaded["cells"].values() for i in v]
+    assert len(ids) == len(set(ids)) == 12
+    forty = json.loads((REPO / "docs/prereg/a5_manifests/part_a/manifest.json").read_text())
+    assert len(forty["edit_ids"]) == 40
+    assert not set(ids) & set(forty["edit_ids"])
+    assert loaded["registered_ids"] == sorted(forty["edit_ids"])
+    assert loaded["cells"]["chain", 0] == [
+        "342a1be080049e8f",
+        "388347cfb0b7fafa",
+        "45cd0be9fea1c139",
+        "aaf7a0660c6d5a73",
+    ]
+
+
+def test_load_supplement_rejects_malformed_files():
+    import copy
+
+    from scripts.a5_simulation import load_supplement
+
+    payload, _ = supplement_toy()
+    good = make_supplement(payload)
+    load_supplement(good)
+
+    def bad(mutate, match):
+        obj = copy.deepcopy(good)
+        mutate(obj)
+        with pytest.raises(ValueError, match=match):
+            load_supplement(obj)
+
+    bad(lambda o: o.update(schema="v0"), "schema")
+    bad(lambda o: o.update(k=9), "k")
+    bad(lambda o: o["cells"][0]["selected"].pop(), "four")
+    bad(lambda o: o.update(frozen_cells=["lora_sft:2", "chain:0", "chain:1"]), "cells")
+    bad(lambda o: o["cells"][1].update(cell="chain:1"), "cell")
+    bad(lambda o: o["cells"][2].update(family="LoRA"), "family")
+    bad(lambda o: o["cells"].pop(), "cells")
+    bad(lambda o: o.update(supplement_ids_sorted_sha256="0" * 64), "sha256")
+    bad(lambda o: o["supplement_ids"].reverse(), "supplement_ids")
+    bad(
+        lambda o: o.update(
+            registered_edit_ids_sorted=sorted([*o["registered_edit_ids_sorted"][1:], "e038"])
+        ),
+        "overlap",
+    )
+    bad(lambda o: o["registered_edit_ids_sorted"].append("e099"), "40 registered")
+    bad(lambda o: o.update(replaces_registered=True), "replace")
+
+    def duplicate(o):
+        o["cells"][1]["selected"][0] = o["cells"][0]["selected"][0]
+        o["supplement_ids"] = [i for c in o["cells"] for i in c["selected"]]
+
+    bad(duplicate, "duplicate")
+
+
+def test_supplement_appends_twelve_slots_per_cell():
+    payload, fields = supplement_toy()
+    kwargs = {"replicates": 6, "draws": 50}
+    result = simulate(payload, fields, supplement=make_supplement(payload), **kwargs)
+    report = result["supplement"]
+    assert report["label"] == "supplemented (F11.4)"
+    assert report["n_slots"] == 52
+    assert report["cells"] == {
+        "LoRA:0": {"registered": 10, "supplement": 0, "slots": 10},
+        "LoRA:1": {"registered": 10, "supplement": 0, "slots": 10},
+        "LoRA:2": {"registered": 10, "supplement": 4, "slots": 14},
+        "chain:0": {"registered": 4, "supplement": 4, "slots": 8},
+        "chain:1": {"registered": 3, "supplement": 0, "slots": 3},
+        "chain:2": {"registered": 3, "supplement": 4, "slots": 7},
+    }
+    # Registered slots keep slots 0-39 in the frozen order; supplements are appended in cell order.
+    slots = report["slots"]
+    assert [s["edit_id"] for s in slots[:40]] == selected_ids(payload)
+    assert [s["edit_id"] for s in slots[40:]] == SUPPLEMENT_TOY_EXTRA
+    assert {s["origin"] for s in slots[:40]} == {"registered"}
+    assert {s["origin"] for s in slots[40:]} == {"supplement"}
+    assert [s["cell"] for s in slots[40:]] == ["LoRA:2"] * 4 + ["chain:0"] * 4 + ["chain:2"] * 4
+    _, edges = selection_cells(payload["inventory"])
+    pools = donor_cells(payload["donors"], edges)
+    for mode in ("null_size", "power_yield"):
+        for trace in result["reports"][mode]["traces"]:
+            assert np.asarray(trace["resolved"]).shape == (52, 3)
+            assert len(trace["component_signs"]) == 52
+            # Each slot draws from its own cell's (unchanged) donor pool.
+            for s, donor in zip(slots, trace["donor_representatives"]):
+                family, t = s["cell"].split(":")
+                assert donor in {r["id"] for r in pools[family, int(t)]}
+    # The quotas recorded stay the registered ones; the design table carries the supplement.
+    assert result["quotas"] == {"LoRA": (10, 10, 10), "chain": (4, 3, 3)}
+
+
+def test_supplement_keeps_donor_pool_and_its_own_donor_rows():
+    payload, fields = supplement_toy()
+    supplement = make_supplement(payload)
+    _, edges = selection_cells(payload["inventory"])
+    cells = donor_cells(payload["donors"], edges)
+    keep = sorted({r["id"] for key in cells for r in cells[key][:3]} | set(SUPPLEMENT_TOY_EXTRA))
+    kwargs = {"replicates": 40, "draws": 50, "donor_ids": keep}
+    plain = simulate(payload, fields, **kwargs)
+    supp = simulate(payload, fields, supplement=supplement, **kwargs)
+    assert supp["donor_pool"] == plain["donor_pool"]  # F11.5: pool unchanged
+    overlap = supp["supplement"]["donor_overlap"]
+    assert overlap["policy"].startswith("unchanged")
+    assert overlap["supplement_ids_in_null_size_pool"] == sorted(SUPPLEMENT_TOY_EXTRA)
+    assert overlap["supplement_ids_in_power_pool"] == sorted(SUPPLEMENT_TOY_EXTRA)
+    assert overlap["supplement_ids_with_fields"] == sorted(SUPPLEMENT_TOY_EXTRA)
+    drawn = {
+        d for t in supp["reports"]["power_yield"]["traces"] for d in t["donor_representatives"]
+    }
+    assert drawn & set(SUPPLEMENT_TOY_EXTRA)  # supplementary donor rows stay drawable
+
+
+def test_supplement_binds_to_the_payload_selection():
+    import copy
+    import hashlib
+    import json
+
+    payload, fields = supplement_toy()
+    good = make_supplement(payload)
+    kwargs = {"replicates": 2, "draws": 20}
+
+    def bad(mutate, match):
+        obj = copy.deepcopy(good)
+        mutate(obj)
+        with pytest.raises(ValueError, match=match):
+            simulate(payload, fields, supplement=obj, **kwargs)
+
+    def swap(o, cell, old, new):
+        o["cells"][cell]["selected"] = [
+            new if i == old else i for i in o["cells"][cell]["selected"]
+        ]
+        o["supplement_ids"] = [i for c in o["cells"] for i in c["selected"]]
+        o["supplement_ids_sorted"] = sorted(o["supplement_ids"])
+        digest = hashlib.sha256(json.dumps(o["supplement_ids_sorted"]).encode()).hexdigest()
+        o["supplement_ids_sorted_sha256"] = digest
+
+    bad(lambda o: swap(o, 0, "e038", "e010"), "not in its cell")  # LoRA:0 row in LoRA:2
+    bad(lambda o: swap(o, 0, "e038", "zzz"), "not an eligible inventory")
+    bad(lambda o: o["cells"][0]["registered_picks"].reverse(), "registered picks")
+    bad(lambda o: o["registered_edit_ids_sorted"].__setitem__(0, "e099"), "registered")
+    # A non-representative row (its component is already represented) is refused.
+    dup = copy.deepcopy(payload)
+    dup["inventory"].append({"id": "e999", "component": "c039", "family": "LoRA", "norm": 39.5})
+    obj = copy.deepcopy(good)
+    swap(obj, 0, "e039", "e999")
+    with pytest.raises(ValueError, match="representative"):
+        simulate(dup, fields, supplement=obj, **kwargs)
+
+
+def test_supplement_slot_mask_requires_the_52_ids():
+    from scripts.a5_simulation import SLOT_MASK_SCHEMA
+
+    payload, fields = supplement_toy()
+    supplement = make_supplement(payload)
+    kwargs = {"replicates": 4, "draws": 20, "supplement": supplement}
+    forty = selected_ids(payload)
+    fiftytwo = [*forty, *SUPPLEMENT_TOY_EXTRA]
+    masked = {forty[0], forty[35], SUPPLEMENT_TOY_EXTRA[5]}
+    result = simulate(payload, fields, slot_mask=rotation_mask(fiftytwo, masked), **kwargs)
+    report = result["slot_mask"]
+    assert report["label"] == "slot-masked (F10.6); supplemented (F11.4)"
+    assert report["gates"]["label"] == report["label"]
+    assert report["available_slots"] == {"rotation": 49, "ladder_0.25": 52, "ladder_0.5": 52}
+    assert [s["edit_id"] for s in report["slots"]] == fiftytwo
+    assert report["cells"]["chain:0"] == {
+        "slots": 8,
+        "available": {"rotation": 7, "ladder_0.25": 8, "ladder_0.5": 8},
+    }
+    for trace in result["reports"]["power_yield"]["traces"]:
+        ok = np.asarray(trace["audit_finite"])
+        assert not ok[[0, 35, 45], 0].any()
+    # The registered 40-id mask is refused under --supplement (the 12 are missing) ...
+    with pytest.raises(ValueError, match=r"missing selected edit id\(s\)"):
+        simulate(payload, fields, slot_mask=rotation_mask(forty, set()), **kwargs)
+    # ... and the 52-id mask is refused without it.
+    with pytest.raises(ValueError, match=r"not selected edit id\(s\)"):
+        simulate(payload, fields, slot_mask=rotation_mask(fiftytwo, set()), replicates=2, draws=20)
+    # F11.4: a supplementary ladder exclusion may be masked; a registered ladder still may not.
+    full = ["rotation", "ladder_0.25", "ladder_0.5"]
+    avail = {i: full for i in fiftytwo}
+    avail[SUPPLEMENT_TOY_EXTRA[0]] = ["ladder_0.5"]
+    ladder = simulate(
+        payload, fields, slot_mask={"schema": SLOT_MASK_SCHEMA, "available": avail}, **kwargs
+    )
+    assert ladder["slot_mask"]["available_slots"] == {
+        "rotation": 51,
+        "ladder_0.25": 51,
+        "ladder_0.5": 52,
+    }
+    assert ladder["slot_mask"]["masked_ids"]["ladder_0.25"] == [SUPPLEMENT_TOY_EXTRA[0]]
+    avail[forty[0]] = ["rotation", "ladder_0.5"]
+    with pytest.raises(ValueError, match="ladder slots must stay available"):
+        simulate(
+            payload, fields, slot_mask={"schema": SLOT_MASK_SCHEMA, "available": avail}, **kwargs
+        )
+
+
+def test_without_supplement_output_is_byte_identical_to_pre_f11_code():
+    """Golden sha256s of json.dumps(simulate(...), indent=2) from the pre-F11.4 code (f19e3dc)."""
+    import hashlib
+    import json
+
+    payload, fields = two_family_toy()
+    ids = selected_ids(payload)
+    golden = {
+        "null": "569636f8e0208f7f424c83f6f67d345235b44f56c8a479aa6e669650b4adecbc",
+        "power": "a84232c9c95b20a33f90b67bb4ec8a0f832fefadc3c157fccc7a6b25287dc4d9",
+        "mask": "410d1370b86392303b2535d23989bc0c151ef934fa386bc318b97f32d2f462f9",
+    }
+    runs = {
+        "null": simulate(payload, replicates=20, draws=50),
+        "power": simulate(payload, fields, replicates=20, draws=50),
+        "mask": simulate(
+            payload,
+            fields,
+            slot_mask=rotation_mask(ids, set(ids[::5])),
+            replicates=20,
+            draws=50,
+        ),
+    }
+    for name, result in runs.items():
+        digest = hashlib.sha256(json.dumps(result, indent=2).encode()).hexdigest()
+        assert digest == golden[name], name
+        assert "supplement" not in result
+
+
+def test_supplement_cli_records_hash_and_registered_40_sensitivity(tmp_path, monkeypatch):
+    import functools
+    import hashlib
+    import json
+    import subprocess
+    import sys
+
+    from scripts import a5_simulation
+
+    payload, fields = supplement_toy()
+    forty = selected_ids(payload)
+    fiftytwo = [*forty, *SUPPLEMENT_TOY_EXTRA]
+    masked = {forty[0], forty[35], SUPPLEMENT_TOY_EXTRA[5]}
+    paths = {}
+    for name, obj in (
+        ("inputs", payload),
+        ("fields", fields),
+        ("supp", make_supplement(payload)),
+        ("mask52", rotation_mask(fiftytwo, masked)),
+        ("mask40", rotation_mask(forty, masked & set(forty))),
+    ):
+        paths[name] = tmp_path / f"{name}.json"
+        paths[name].write_text(json.dumps(obj))
+    script = REPO / "scripts/a5_simulation.py"
+    base = [sys.executable, str(script), str(paths["inputs"]), "--fields", str(paths["fields"])]
+    base += ["--output", str(tmp_path / "refused.json")]
+    for extra, message in (
+        (["--registered-40-sensitivity"], b"requires --supplement"),
+        (["--supplement", str(paths["supp"]), "--registered-40-sensitivity"], b"--slot-mask"),
+        (["--supplement", str(paths["supp"]), "--slot-mask", str(paths["mask40"])], b"missing"),
+    ):
+        refused = subprocess.run([*base, *extra], capture_output=True, check=False)
+        assert refused.returncode != 0 and message in refused.stderr, extra
+    assert not (tmp_path / "refused.json").exists()
+    small = functools.partial(a5_simulation.simulate, replicates=4, draws=20)
+    monkeypatch.setattr(a5_simulation, "simulate", small)
+
+    def run(name, *extra):
+        out = tmp_path / f"{name}.out.json"
+        argv = ["a5_simulation.py", str(paths["inputs"]), "--fields", str(paths["fields"])]
+        monkeypatch.setattr(sys, "argv", [*argv, "--output", str(out), *extra])
+        assert a5_simulation.main() == 0
+        return json.loads(out.read_text())
+
+    supp = run("supp", "--supplement", str(paths["supp"]), "--slot-mask", str(paths["mask52"]))
+    digest = hashlib.sha256(paths["supp"].read_bytes()).hexdigest()
+    assert supp["supplement"]["path"] == str(paths["supp"])
+    assert supp["supplement"]["sha256"] == digest
+    assert supp["input_provenance"][str(paths["supp"])] == digest
+    assert supp["supplement"]["label"] == "supplemented (F11.4)"
+    assert supp["slot_mask"]["available_slots"]["rotation"] == 49
+    # Registered-40 sensitivity: the 40-slot design with the frozen 52-id mask restricted to the 40.
+    plain40 = run("plain40", "--slot-mask", str(paths["mask40"]))
+    sens = run(
+        "sens",
+        "--supplement",
+        str(paths["supp"]),
+        "--slot-mask",
+        str(paths["mask52"]),
+        "--registered-40-sensitivity",
+    )
+    info = sens.pop("registered_40_sensitivity")
+    assert info["label"] == "registered-40 sensitivity (F11.5); descriptive, no decision authority"
+    assert info["supplement_sha256"] == digest
+    assert info["mask_restricted_to"] == 40
+    assert "supplement" not in sens
+    assert sens["slot_mask"]["gates"]["decision_authority"] is False
+    assert sens["reports"] == plain40["reports"]
+    assert sens["slot_mask"]["mapping_sha256"] == plain40["slot_mask"]["mapping_sha256"]
+    assert sens["slot_mask"]["available_slots"] == {
+        "rotation": 38,
+        "ladder_0.25": 40,
+        "ladder_0.5": 40,
+    }
