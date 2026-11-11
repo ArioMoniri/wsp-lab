@@ -3294,3 +3294,93 @@ The code builder's attestation must be completed from its report before the impl
 resolution, yield or decision rule (A5.3, A5.5), simulation gate (A5.3.2, F10.6), cap or allocation (A5.3.4), and no pin: no file
 pinned in A5.1.2 changes with this block. It does not release scoring: F10.10 and conditions 2–7 of the review still hold every
 Part A entry, including the 80 ladders and the 19 missing originals.
+
+#### A5 note F10b (11 Nov 2026, before any G3 outcome): adoption of the F10.5 sensitivity and interpretation specification
+
+This block is appended; earlier text is not rewritten. It is the dated A5 note that Board A's review of F10a and the F10.5
+specification (`docs/reviews/council/board-a-f10a-2026-11-11.md`, commit `778e250`, sha256
+`0971c06f0a29fa50b0f745e1e63be9abe6978b623d8b63c89e677e0c4413d1a9`; "the review", part B, conditions B1 and B2) and the
+specification's own header (`docs/design/F10_SENSITIVITY_SPEC.md`: "takes effect only when a dated A5 note adopts it by path and
+sha256 before any Part A entry is scored") require. It discharges B1 in full and states how B2 is carried; it changes no statistic.
+
+**F10b.1 — Adoption, by path, hash and commit.** `docs/design/F10_SENSITIVITY_SPEC.md` (453 lines) with
+**sha256 `8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4`** is adopted as the frozen specification of every
+F10.5 report (F10.5(a)–(e) and the interpretation rules Board A attached in condition 6 of its F10 review). Provenance: the
+specification was committed as `e577c67` ("design: F10.5 sensitivity and interpretation specification (Board A F10 condition 6)")
+and reached `main` through merge `2ee94c7` ("merge design/f10-sensitivity"). Chronology, stated so it cannot be misread: the
+second parent of `2ee94c7`, and the commit the review fast-forwarded to and quotes, is the sibling commit `bc15691`; `e577c67` and
+`bc15691` share parent `754b7eb`, carry the same subject, and `git show` of the specification path gives the identical sha256 above
+at both. The only difference between the two commits is a root `README.md` hunk (2 insertions, 2 deletions) that is not part of the
+specification. The adopted object is the file bytes with the sha256 above, which is what the review hashed; either commit id
+identifies those bytes. Any later edit to the specification file requires a new dated A5 note adopting its new exact hash before
+scoring (the review, B2). Report implementations must carry this hash and fail closed on a mismatch.
+
+*Historical registration hash.* The specification's source table (§0) lists the registration `docs/PREREG_H1_TF.md` with sha256
+`be3dcab22b745a04c20b3cd2c433222f1372dc223cd6f35f7dfcd0b44c58111a`. That is the registration as of commit `0af5a66` (the F10
+block), before F10a. It is a historical hash and is not evidence of tampering. It is not the registration in force: F10a (commit
+`9fdd8bb`) was appended after it, and the file at the parent of this commit has sha256
+`898c3587706c3d9e14a7f1e9356eb9aadca0b57a367330872357c0a8c1ac9e59`. The specification's reports are read together with F10a
+(F10a.1 near-cut rank budget; F10a.2 chain-ladder reading; F10a.3 and F10a.4 audit-yield-informed thresholds and the ban on
+retuning), and F10a's qualifications are carried forward into every F10.5 report. The other source-table hashes in §0 match the
+bytes the review reviewed.
+
+**F10b.2 — Operational choices confirmed (the specification's §7.1 points 1–3, and the review's B1).** Board A accepts these
+prospective choices as specified; they are not permission to choose columns, models or cuts after outcomes.
+
+1. *"v4 differences".* The words "logged v4 differences" / "rotated-minus-original v4 differences" (A5.3, A5.3.3) are read as
+   the five logged `_moments` fields `mean`, `std` (unbiased), `frac_pos`, `frac_nonzero` and `cos_to_predecessor`, as
+   rotated-minus-original differences (`logged_r − logged_d`), averaged per edit over its edited tensors **weighted by element
+   count** (the product of the full tensor shape), exactly as specification §1.2. "Directional tokens" are not logged by the pinned
+   code and are **excluded**. The block is five columns, fixed by name now; no other reading (for example v4 StatNN pool features)
+   may be substituted after outcomes.
+2. *"Penalty 1".* λ = 1 on the **summed** log loss, objective Σ_i[−a_i ln p_i − (1−a_i) ln(1−p_i)] + ½·λ·‖β‖², with the
+   **intercept unpenalised**; equivalent to `sklearn.linear_model.LogisticRegression(penalty="l2", C=1.0, fit_intercept=True)`
+   (specification §1.3). Train-only standardisation of all eight columns in every full, leave-one-out and bootstrap fit; fixed
+   folds and common bootstrap draws, as specified. No other λ, solver setting, column, interaction or transformation is tried.
+3. *Two tertile sets.* (i) The **registered norm tertiles**, the A5.3.1 selection cells (`selection.json`; `manifest.json:selections[].tertile`),
+   reported per family cell and pooled, exactly as F10.5(b) states (specification §2.1). (ii) **Additionally**, ln ρ tertiles
+   (specification §2.2), whose **cut points and member ids are frozen from the staged manifest** (cut 1 = (0.01010406252666643,
+   `057dcfbedea3251f`); cut 2 = (0.03502604499592402, `22659cefc904e29f`); rank cells 13 / 13 / 14). Re-stage ln ρ values are printed
+   beside the frozen ids, and **any pair whose re-stage value would cross a cut is flagged `cell_drift`, never moved**. The ln ρ
+   tertiles carry no greater authority than the registered norm tertiles, and no tertile report can reach the ≥ 15 floor; each is
+   labelled `below floor (descriptive)`.
+4. *Subset id-list hashes.* Under the repository's sorted-json convention (sha256 of `json.dumps(sorted(ids))` encoded as UTF-8,
+   default separators; `scripts/a5_build_panels.py:sorted_sha`): **S30** (F10.5(c); staged pooled realised norm mismatch ≤ 2e-2;
+   30 pairs) = `3da5f44f0c10307c2af7336c23fad430d13f6eb9347976e34de5d0810277267c`; **S34** (F10.5(e); noise-calibrated realised
+   audit; 34 pairs) = `fb1c34e68d91c03b67b90ae1c0e867eaad32edadebf2ec4b615ce13515aedfa0`. Both hashes were recomputed from the
+   JSON id lists in specification §3.1 and §3.2 for this note and match. The lists are frozen as ids; subset membership is never
+   recomputed from outcomes or re-stage values; excluded, missing or unresolved pairs are disclosed and never replaced, and no
+   subset becomes another primary denominator. Board A recomputed S30 from the manifest and accepted S34 as a frozen id list, not
+   as an independently reproduced audit; this note claims no more. S30 ∩ S34 has 29 pairs, so the subsets are not independent checks.
+
+**F10b.3 — Board A's two reporting corrections (the review, B2).** Neither changes a statistic or grants decision authority.
+
+1. *Predicted-sign table is 3 × 2.* Board A: "§4.2's stated categories require a **3 × 2** sign table (including zero
+   predictions), despite its '2 × 2' label". The specification states the categories as sign(p_i) ∈ {+, −, 0} by
+   sign(d̂_i) ∈ {+, −}. Every report row that §4.2 requires therefore gives a **3 × 2** table: rows predicted positive / predicted
+   negative / predicted zero (abstain) by columns resolved d̂ positive / d̂ negative. Field agreement is read off the same cells
+   (agree = predicted + with d̂ +, or predicted − with d̂ −; the zero row is disagreement by A5.3), so each report also prints the
+   resolved agree / disagree split of every predicted-sign row beside the counts, and zero-prediction pairs are counted separately
+   inside the disagreements as §2.3 requires. Specification §4.2's "2 × 2" label is superseded by "3 × 2" for this purpose.
+2. *Units.* The endpoint, d̂_i and the first-order forecast p_i of §6.2 (and every other statement of them in the specification)
+   are in **nats per valid next token**, consistent with specification §0, and not unqualified total nats. Every report column
+   and the final report label them so.
+
+**F10b.4 — Status of the reports.** The F10.5 reports must be **implemented, tested and pinned in A5.1.2 before any Part A entry is
+scored** (specification §7.1 point 4; the review, B2): CPU only; synthetic-input tests covering train-only transforms, one-class
+training sets, degenerate columns, missing covariates, failed draws, CP boundary cases and the subset-hash check; code and the
+specification hash pinned like any other Part A analysis code. They are executed **once**, in the single final report, with the
+verbatim limitations paragraph of specification §5, the §4.3 non-superiority sentence and all ledgers (specification §6). They have
+**no A5.5 or F5.5 authority**: no covariate model, tertile row, subset row or comparator can create, remove, rescue or reweight a
+decision under A5.5, F5.5, F5.7 or the registered claim, and none authorises another primary denominator.
+
+**F10b.5 — Scope and attestation.** F10b changes no selection (A5.3.1, `selection.json`), seed (`control_seeds.json`, A5.3.3),
+prediction, resolution, yield or decision rule (A5.3, A5.5), simulation gate, cap or allocation (A5.3.4), and no pin: no file pinned in
+A5.1.2 changes with this block. It does not release scoring: F10.10, conditions 2–7 of the original Board A F10 review and
+condition A1 of the F10a review (completion of the code builder's attestation, entry 5 of the ledger, before the implementation merge)
+all still hold every Part A entry, including the 80 ladders and the 19 missing originals. Exposure attestation of the drafter of this
+note (role: pre-registration drafting sub-agent; session: worktree `prereg/f10b`, 11 Nov 2026, from its creation until the commit of
+this block): it read only `docs/`, `src/`, `scripts/` text and committed metadata; it did not open anything under `data/evals`, did
+not compute, score or receive any G3, rotation, ladder, missing-TF-v1-reference or sealed outcome or a summary of one, used no GPU and
+wrote no data. The older 6 November D3 development records classified by A5.3 and by Board A's ruling are unaffected and not opened.
+It attests only to its own session; the attestation ledger is not edited here and condition A1 remains open.
