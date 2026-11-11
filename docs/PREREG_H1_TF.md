@@ -3294,3 +3294,13 @@ The code builder's attestation must be completed from its report before the impl
 resolution, yield or decision rule (A5.3, A5.5), simulation gate (A5.3.2, F10.6), cap or allocation (A5.3.4), and no pin: no file
 pinned in A5.1.2 changes with this block. It does not release scoring: F10.10 and conditions 2–7 of the review still hold every
 Part A entry, including the 80 ladders and the 19 missing originals.
+
+*A5.1.2 re-pin (xvi) (11 Nov 2026, about 02:30 UTC; merge of `feat/a5-slot-mask`, Board A F10 condition 5 implementation; before any
+G3 outcome).* `scripts/a5_simulation.py` gained `--slot-mask <json>` (contrast-specific slot masking for the F10.6 slot-masked
+NULL-SIZE / POWER-AND-YIELD run; the unmasked run is byte-identical without the option, regression-tested; 18 tests pass). Re-run
+`scripts/a5_build_manifests.py --pin-worktree` into a copy; only `code_hashes.json` and the package README copied back. Rows:
+`scripts/a5_simulation.py` `c4f0c55fd8e8c9bc5bb6521539f58db996f23e1a3cb37d99a19403e134d2fdf2` (old `04f283d8…`, F7);
+`docs/prereg/a5_manifests/code_hashes.json` `67b1517bd61c8ec41f83f688d319a336673a218c9b3c07d266e5d96351cf59e2` (old `016de4c8…`, xv);
+`docs/prereg/a5_manifests/README.md` `12f54157dedd179687880d527fff15b18fe903226b3db5ab2769a0cc4cdd8a74` (old `461905e4…`, xv). No
+selection, seed, control, panel or decision file changed; no slot-masked run has been executed; nothing has been scored. A further
+re-pin follows the F10 exclusion-rule code merge (Board A F10 condition 3).
