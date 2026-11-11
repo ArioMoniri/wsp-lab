@@ -3898,3 +3898,17 @@ gates: size ≤ 0.07 on the masked run, which passed, and ordered power ≥ 0.80
 ("NULL-SIZE block equality") is withdrawn. (3) The three lora_sft `rounding_bound_failed` exclusions exceed the bound by thousands of
 fp32 spacings on one entry each; they are not the inclusive-equality case; the 05:20 progress wording is corrected; the exclusions
 stand under the no-retuning rule.
+
+*Chair correction to ruling (1) of 08:30 UTC (11 Nov 2026, about 09:10 UTC; Board A re-stage review condition 1,
+`docs/reviews/council/board-a-f10-restage-2026-11-11.md`).* The "different derivation" explanation is withdrawn. The staging code
+(`src/wsp/features/rotation.py`, `torch_config_sha256 = digest(torch.__config__.show())`) and the chair's freeze script hash the same
+text. The discrepancy arises because `torch.__config__.show()` reports the process's thread configuration: the freeze value
+`d1b4e24c…` was computed by the chair in a shell WITHOUT the frozen environment variables, and the run's value `07f0372b…` is what the
+frozen environment produces. Verified today by recomputing under `CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
+HF_HUB_OFFLINE=1`: `07f0372b…`, equal to the run's `restage.replay_environment.torch_config_sha256`. The discrepancy is therefore a
+chair error in the freeze procedure, not an environment change; the run executed under the frozen settings (threads 4 recorded).
+Ratified: the binding Torch build-config hash is `07f0372b…` computed under the frozen environment; future freezes must be computed
+under the same environment variables as the run. Correction to the re-stage report's §2/§8 (condition 2): 93 tensor rows have
+maximum excess exactly one fp32 spacing and pass the rounding check; 92 of them pass F10 overall; the remaining one
+(`057dcfbedea3251f`, `model.layers.6.mlp.up_proj.weight`) is excluded for replay. The scoring hold and baseline evidence are
+preserved; F11 staging and calibration remain separately gated.

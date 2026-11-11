@@ -706,3 +706,9 @@ mapping; before scoring — accept one registered-scale calibration (power ≥ 0
 screen fallback), fix the manifest binding and review/test/re-pin the 52-component analysis and registered-40 sensitivity; release
 only after the F10 re-stage report and all standing gates are discharged. An F11a clarification note (fallback waives power only;
 NULL-SIZE payload preserved; attestations for the F11 drafter and metrology member) is next.
+
+**11 Nov 2026, 09:10 UTC.** Board A accepted the F10 re-stage report with conditions (`board-a-f10-restage-2026-11-11.md`): the
+chair's Torch-hash "different derivation" explanation was unsupported and is withdrawn — the real cause, verified by recomputation, is
+that `torch.__config__.show()` depends on the process thread environment and the freeze value was computed outside the frozen
+environment (chair error; the run's `07f0372b…` reproduces under the frozen settings and is ratified as binding); the report's
+equality count corrected (93 rows at one spacing pass the rounding check, 92 pass F10 overall, one replay exclusion). Hold preserved.
