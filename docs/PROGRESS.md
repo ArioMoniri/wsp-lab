@@ -682,3 +682,11 @@ alternative-branch null rate from 0.18 to 0.26, not size-gated). Known breakage 
 (69 failures) pins the a533 manifest hash as the execution manifest; fix in flight (frozen subsets anchored to the preserved
 `manifest_a533.json`, execution manifest bound by explicit hash, supplementary ids handled). Also in flight: F11 text with the frozen
 `selection_f11.json`; `prepare --supplement` staging mode; the F10 re-stage report. Scoring held.
+
+**11 Nov 2026, 08:15 UTC.** F11 merged (0a3049d): `selection_f11.json` (12 ids, sorted-id sha256 `1848fe4c…`, file `ce746e71…`),
+`scripts/a5_f11_supplement.py` (11 tests) and the F11 block. Correction to the 07:50 list: chain-low pick `7bc62b9f` is alias-only
+(bytes only via abliteration edit `b0b6b9cb`), so the "not alias-only" filter replaces it with the next root `aaf7a066` (re-trained
+lineage; its n_D = 0 depends on a reuse proof). Ordering = A5.3.1's own key continued past the quota (the registration defines no
+other next-in-cell order; disclosed in F11.2). F11 names three implementation steps before execution: `prepare` supplement
+staging (in flight), a 52-slot option in `a5_simulation.py` (launching), analysis support for 52 components (in the binding fix).
+Board A review of the F11 text requested.
