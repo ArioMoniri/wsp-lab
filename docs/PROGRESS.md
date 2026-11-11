@@ -690,3 +690,10 @@ lineage; its n_D = 0 depends on a reuse proof). Ordering = A5.3.1's own key cont
 other next-in-cell order; disclosed in F11.2). F11 names three implementation steps before execution: `prepare` supplement
 staging (in flight), a 52-slot option in `a5_simulation.py` (launching), analysis support for 52 components (in the binding fix).
 Board A review of the F11 text requested.
+
+**11 Nov 2026, 08:30 UTC.** F10 re-stage report merged (`part_a/RESTAGE_REPORT.md`, `RESTAGE_A512_NOTE.md`; dd31847): 31/40; 96 ladder
+files byte-identical on disk and in both manifests; `00f8111c` hashes identical; 16 realised-increment ladder flags; 130 entries
+priced 135.2 min; calibration FAIL 0.7514 [0.7428, 0.7598]. Chair rulings appended to A5: the freeze's Torch build-config hash used
+a different derivation (code's is authoritative; environment identical), the freeze's empty base revision was a script error (run
+records `2fc06364…`), NULL-SIZE equality was never a gate, and the 3 rounding-bound exclusions are gross (thousands of spacings),
+not the equality case. Board A review of the re-stage report requested (condition 4).
