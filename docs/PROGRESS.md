@@ -712,3 +712,9 @@ chair's Torch-hash "different derivation" explanation was unsupported and is wit
 that `torch.__config__.show()` depends on the process thread environment and the freeze value was computed outside the frozen
 environment (chair error; the run's `07f0372b…` reproduces under the frozen settings and is ratified as binding); the report's
 equality count corrected (93 rows at one spacing pass the rounding check, 92 pass F10 overall, one replay exclusion). Hold preserved.
+
+**11 Nov 2026, 09:20 UTC.** F11a merged (043458b): fallback waives the power gate only; the NULL-SIZE pass keeps the full 141-donor
+payload; no replacement or top-up; attestations 10–13 added (metrology, F11 drafter, chair's sizing runs, F11a drafter; the
+metrology report's "data read only" header is corrected by its entry — it wrote scratch files under `data/runs/a5/f11_sizing/`); the
+chair's attestation extended through the F11 decisions. Remaining before supplementary staging: the three code pieces and their
+Board A review, re-pin (xix).

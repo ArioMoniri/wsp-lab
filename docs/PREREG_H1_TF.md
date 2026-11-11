@@ -3912,3 +3912,69 @@ under the same environment variables as the run. Correction to the re-stage repo
 maximum excess exactly one fp32 spacing and pass the rounding check; 92 of them pass F10 overall; the remaining one
 (`057dcfbedea3251f`, `model.layers.6.mlp.up_proj.weight`) is excluded for replay. The scoring hold and baseline evidence are
 preserved; F11 staging and calibration remain separately gated.
+
+#### A5 note F11a (11 Nov 2026, before any G3 outcome): F11 clarifications (Board A F11 condition 1)
+
+This block is appended; earlier text is not rewritten. It discharges the methodological-freeze part of condition 1 of Board A's F11
+review (`docs/reviews/council/board-a-f11-2026-11-11.md`, "the review"; merged in `7ba776d`). Quotations are copied verbatim from the
+review's sections "Calibration and analysis" and "Fallback" and from its verdict line. F11a clarifies how F11 is read; it changes
+no F11 operational rule except as stated in F11a.1 and F11a.2, where it adopts the review's own wording. Where F11.4, F11.5 or F11.7
+read differently, F11a governs.
+
+**F11a.1 — F11.7 fallback (Option B, screen): power failure only; a size failure holds scoring.** The review's verdict line:
+> F11.7 needs the restricted fallback interpretation below; its literal "either gate" wording does not waive a size failure.
+
+and its section "Fallback":
+> Accept a prospective screen fallback for **power failure with all size and other applicable validity gates passing**. A5.5
+> separately requires development null size ≤0.07; declaring rotation power inapplicable cannot waive that predicate. If either
+> ordered-go size or any applicable individual two-sided size exceeds 0.07, validity stays unresolved and scoring remains held pending
+> a new prospective ruling. Compute/report size even if the power check fails first, so fallback eligibility is known.
+
+Accordingly:
+- (a) The F11.7 fallback (Option B, screen) is available **only** when the F11.4 calibration fails the **POWER** gate (ordered power
+  < 0.80) and every size gate (ordered-go size and each individual two-sided size ≤ 0.07) and every other applicable validity gate
+  passes. F11.4's "A failure of either gate invokes F11.7" and F11.7's "If F11.4 fails either gate" are read in this restricted way.
+- (b) A **SIZE** failure (ordered-go size or any individual two-sided size > 0.07) **never** falls back to the screen. Validity stays
+  unresolved, the scoring hold stays in place for every Part A entry, and only a new amendment, with its own review, can release it.
+- (c) The F11.4 run computes and reports every size rate even when the power gate fails first, so that fallback eligibility is
+  known from the report.
+- (d) *Exception to the introductory hold.* The F11 introduction holds scoring "in every case until F11.4 passes". As the review
+  puts it: "after an accepted power-only failure report the explicitly authorized screen route may release scoring, subject to
+  every other gate." Only that route is excepted. Board A must accept the power-only failure report first.
+- (e) In the screen route only rotation power is waived: "no Part A go, G7 contribution or Part B funding is possible. The step-2
+  ladder alternative retains priority and funding-stop meaning, and the ≥15 resolved floor still applies to a positive screen.
+  Remaining validity checks and unresolved cases retain their registered handling. Report the failed power and all size results beside
+  the screen. 'Every other outcome ... as registered' cannot silently restore step-3 go or downstream funding."
+
+**F11a.2 — NULL-SIZE uses the full registered payload.** F11.5's sentence "The donor pool of every simulation stays the F7.1 61
+donors" is qualified, as the review requires:
+> The fixed 61 donors remain the POWER-AND-YIELD pool even when supplementary edits are members of it. [...] Crucially,
+> **NULL-SIZE keeps the full payload under F7.2**. F11.5's sentence "donor pool of every simulation stays ... 61" must be qualified
+> to POWER-AND-YIELD; F11.4's explicit full-payload NULL-SIZE rule governs.
+
+Accordingly: (a) the NULL-SIZE pass of the F11.4 run uses the full registered payload, all 141 donors, exactly as F7 and the F10.6
+run did. (b) The F7 restriction to the 61-donor pool applies to POWER-AND-YIELD only. (c) The 61 donors are fixed: no donor is added
+or removed, self-membership of supplementary edits is kept, no residual is refitted on new outcomes and no leave-one-out sampling is
+introduced.
+
+**F11a.3 — The original forty are preserved; there is no replacement.** The forty registered pairs keep their IDs, verdicts and
+staged bytes. The 31 staged rotations and the 80 staged ladders are untouched and are not rebuilt; the 9 excluded rotation pairs stay
+excluded with their reasons and are not replaced (F10.3, "without replacement"). Supplementary edits are additions only. There is no
+top-up, substitution, new order, new cutpoint or reserve use after any supplementary audit or diagnostic, and a supplementary
+exclusion is not replaced (review, condition 1; F11.2 "Fixed"). The forty's manifest, audit history and bytes are preserved, and any
+drift is rejected rather than overwritten (review, condition 2). The frozen list stays `selection_f11.json`: twelve IDs, sorted-ID
+sha256 `1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9`, file sha256
+`ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c` (the review regenerated it byte-for-byte). The draft metrology list
+(with `7bc62b9f723359cb`) is superseded and is not a reserve.
+
+**F11a.4 — Attestations.** The F11 exposure attestations are completed in `docs/prereg/f10_attestations.md` (the file carries the
+F10 and F11 record; entries 10–13 are added with this note), not in the `docs/prereg/f11_attestations.md` that F11.6 names, which
+is not created. Board A F11's own line is incorporated by reference (`board-a-f11-2026-11-11.md`, final paragraph, "Board A
+exposure attestation"). Entries for the stager, the implementation sessions and any approving reviewer are added when those sessions
+act, and the attestations are updated through the final methodological freeze before scoring (review, condition 6).
+
+**F11a.5 — What this note does not do.** It changes no selection beyond F11.2's committed list, and no seed, decision rule, cap or
+pin. It authorises no staging, calibration or scoring by itself. Execution still needs the review's conditions 2 to 6: the `prepare`
+supplement path, the 52-slot simulation option and the 52-component analysis with the manifest-binding fix each need Board A review,
+CPU tests and a re-pin, and the accepted F10 re-stage report is a separate gate. Nothing has been scored and no G3, rotation, ladder,
+reference or sealed outcome exists (`part_a/manifest.json:scored` false).
