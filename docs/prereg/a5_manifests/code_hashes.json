@@ -135,7 +135,7 @@
   },
   "scripts/part_a_score_launch.sh": {
    "role": "two-phase Part A scoring launcher (proofs-only stop; strict checks)",
-   "sha256": "92a3dee4b5da0d0124678deb7ebbbffee392b97765c317567564557dc393753b"
+   "sha256": "19f90aefe0321f418593c605e3ef4372dda79cd35d70d735894442ac77e3ea9a"
   },
   "scripts/part_a_synthetic_binding.py": {
    "role": "synthetic input-binding check of the analysis (no outcomes)",
@@ -319,7 +319,7 @@
   },
   "tests/test_part_a_score_launch.py": {
    "role": "test",
-   "sha256": "479bb14e49f8b730dac5a3e6f9d6d280ccf1a6f8f703bbb39c7fe49c88cc3dd3"
+   "sha256": "291e778321abfd85d7f5e84923a17032855cd008432f1406d1bef4edb32fab4b"
   },
   "tests/test_response_intervention.py": {
    "role": "test",
@@ -330,7 +330,7 @@
    "sha256": "7570224a0b4c0dd8e9f1b0aacdaa930e2170d97fa1d1e9c6864bd60d13869325"
   }
  },
- "git_sha": "acc32511073fbf7fd1aac50cd92314de6e15c038",
+ "git_sha": "e5fd9d2ed82aa5063502ff4158968937cd25fcb0",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",

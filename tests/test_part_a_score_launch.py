@@ -111,6 +111,7 @@ def _make_launch(tmp_path):
     }
     for (vid, fn), b in files.items():
         _w(repo / STAGE / vid / fn, b)
+    _w(repo / STAGE / "manifest.jsonl", '{"type": "header"}\n{"id": "v1"}\n{"id": "v2"}\n')
     man = {
         "staged_zoo": STAGE,
         "delta_sha256": {
@@ -351,4 +352,23 @@ def test_phase_2_refuses_when_the_gpu_is_not_exclusive(launch):
     ).chmod(0o755)
     r, _calls = launch["run"](launch["sha"], "--phase", "score", "--max-minutes", "231.4")
     assert r.returncode == 10 and "GPU NOT EXCLUSIVE" in r.stderr
+    assert not (launch["repo"] / "docs/prereg/a5_manifests/part_a/score_launch.json").exists()
+
+
+def test_phase_2_refuses_when_the_exclusivity_query_fails(launch):
+    """A failing nvidia-smi compute-apps query is not treated as 'no processes' (exit 10, no record)."""
+    _w(
+        launch["bin"] / "nvidia-smi",
+        '#!/bin/sh\ncase "$*" in *compute-apps*) echo "query error" >&2; exit 1 ;; *) echo "NVIDIA TEST GPU, 1.0, 1 MiB, GPU-0000-test" ;; esac\n',
+    ).chmod(0o755)
+    r, _calls = launch["run"](launch["sha"], "--phase", "score", "--max-minutes", "231.4")
+    assert r.returncode == 10 and "QUERY FAILED" in r.stderr
+    assert not (launch["repo"] / "docs/prereg/a5_manifests/part_a/score_launch.json").exists()
+
+
+def test_phase_2_refuses_a_batch_index_that_differs_from_the_manifest(launch):
+    """The staged manifest.jsonl must list exactly the manifest's eligible variants (exit 11, no record)."""
+    _w(launch["repo"] / STAGE / "manifest.jsonl", '{"type": "header"}\n{"id": "v1"}\n')
+    r, _calls = launch["run"](launch["sha"], "--phase", "score", "--max-minutes", "231.4")
+    assert r.returncode == 11 and "BATCH INDEX MISMATCH" in r.stderr
     assert not (launch["repo"] / "docs/prereg/a5_manifests/part_a/score_launch.json").exists()

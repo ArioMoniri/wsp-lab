@@ -849,3 +849,10 @@ phase 2 (GPU).
 41 tests) — re-pin (xxvi); replay record enriched; inventory-1 and -2 hash entries appended to A5; attestations 24–29 (chair
 extension 3; the two report authors; two Board A reviewers' lines; the launch-hardening builder; the inventory-2 session). Board A
 explicit release review requested next. Scoring held.
+
+**11 Nov 2026, 11:37 UTC. Board A RELEASED Part A scoring with conditions** (`board-a-release-2026-11-11.md`; phase 1 and phase 2).
+Chair: release addendum F11e (acceptance; identities; conditional statuses); launcher gained the recorded exclusivity query (fails
+closed) and the batch-index check (re-pin xxvii; 43 tests); attestations 16–18 rewritten with the implementers' own relayed
+statements, 28 corrected, 30–32 added. **Phase 1 (proofs-only, CPU) launching now under agent-tmux `a5-part-a-phase1`.** Phase 2
+needs the committed proof and phase-1 records, the price check, Board A's acceptance if the price differs, and a dated explicit
+authorisation note.

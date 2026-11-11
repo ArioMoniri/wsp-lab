@@ -17,7 +17,8 @@
 #
 # Every refusal exits non-zero before any scoring command and before the launch record is written; nothing under
 # data/evals is written by any refusal. Exit codes: 64 usage, 2 tree, 3 pins, 4 manifest hash, 5 re-hash, 6 proof step,
-# 7 proof/price gate, 8 launch record exists, 9 no GPU identity, 10 GPU not exclusive; otherwise the scorer's exit code.
+# 7 proof/price gate, 8 launch record exists, 9 no GPU identity, 10 GPU not exclusive or query failed, 11 batch index mismatch;
+# otherwise the scorer's exit code.
 # Phase 1 runs with CUDA_VISIBLE_DEVICES= (no GPU) and writes score_phase1_launch.json.
 set -u
 ROOT=$(cd "$(dirname "$0")/.." && pwd) && cd "$ROOT" || exit 1
@@ -115,8 +116,22 @@ PYTHONPATH=src $PY "${SCORE[@]}" --require-proofs --max-minutes "$MAXMIN" --dry-
     || refuse 7 "PROOF/PRICE GATE FAILED (absent or incomplete proof record, or price above $MAXMIN min)"
 GPU=$(nvidia-smi --query-gpu=name,driver_version,memory.total,uuid --format=csv,noheader 2>/dev/null | head -1)
 [ -n "$GPU" ] || refuse 9 "NO GPU IDENTITY (nvidia-smi)"
-OTHER=$(nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader 2>/dev/null | grep -v '^\s*$' || true)
+QTIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+QOUT=$(nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader 2>&1); QRC=$?
+OTHER=$(printf '%s' "$QOUT" | grep -v '^\s*$' || true)
+[ "$QRC" = 0 ] || refuse 10 "GPU EXCLUSIVITY QUERY FAILED (nvidia-smi exit $QRC): $QOUT"
 [ -z "$OTHER" ] || refuse 10 "GPU NOT EXCLUSIVE: other compute processes present: $OTHER"
+PYTHONPATH=src $PY - "$M" "$STAGE/manifest.jsonl" <<'PY' || refuse 11 "BATCH INDEX MISMATCH: staged manifest.jsonl ids differ from the manifest's eligible variants"
+import json, sys
+man = json.load(open(sys.argv[1]))
+eligible = set(man["delta_sha256"])
+rows = [json.loads(l) for l in open(sys.argv[2]) if l.strip()]
+staged = {r["id"] for r in rows if r.get("type") != "header" and "id" in r}
+missing = sorted(eligible - staged); extra = sorted(staged - eligible)
+if missing or extra:
+    print(f"missing from batch index: {missing[:5]} ({len(missing)}); extra in batch index: {extra[:5]} ({len(extra)})", file=sys.stderr); sys.exit(1)
+print(f"batch index ok: {len(staged)} eligible variants")
+PY
 SHA=$(git rev-parse HEAD); START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 CMD="env PYTHONPATH=src $PY ${SCORE[*]} --require-proofs --max-minutes $MAXMIN"
 $PY - "$R" <<PY
@@ -124,7 +139,9 @@ import json, sys
 gpu = """$GPU"""
 json.dump({"schema": "a5-part-a-score-launch-v2", "start_utc": "$START", "execution_sha": "$SHA", "dirty_files": $DIRTY,
            "manifest_sha256": "$EXPECT", "pins": "all pins match", "max_minutes": float("$MAXMIN"),
-           "gpu": gpu, "gpu_uuid": gpu.split(",")[-1].strip(), "command": """$CMD"""}, open(sys.argv[1], "w"), indent=1)
+           "gpu": gpu, "gpu_uuid": gpu.split(",")[-1].strip(), "command": """$CMD""",
+           "gpu_exclusivity": {"query_utc": "$QTIME", "query_exit": $QRC, "compute_apps": "", "exclusive": True}},
+          open(sys.argv[1], "w"), indent=1)
 PY
 /usr/bin/time -v env PYTHONPATH=src $PY "${SCORE[@]}" --require-proofs --max-minutes "$MAXMIN"
 RC=$?; END=$(date -u +%Y-%m-%dT%H:%M:%SZ)

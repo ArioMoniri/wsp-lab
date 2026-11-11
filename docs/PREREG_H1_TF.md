@@ -4615,3 +4615,34 @@ launcher tests pass. Rows: `scripts/part_a_score_launch.sh` `92a3dee4b5da0d01…
 Replay record enriched (exit code, input provenance, environment, Board A review sha256
 `9f91596408dd2f4f…`; the replay wrapper was not hashed before the run — disclosed).
 F11d's citation of the Board A review is bound to that hash. Nothing scored.
+
+#### A5 note F11e (11 Nov 2026, 11:37 UTC, before any G3 outcome): release addendum — chair's acceptance of the Board A release review
+
+**F11e.1 — acceptance.** The chair accepts Board A's release review (`docs/reviews/council/board-a-release-2026-11-11.md`, sha256
+`970df83c0743a977f985e57d9b067fca41217a1568134598f67199a676c4c9d4`): phase 1 and phase 2 are RELEASED WITH CONDITIONS; the
+calibration (with the byte-identical replay) and the frozen predictions are accepted; every disclosed procedural exception (the
+calibration ordering departure and single replay, F11d; the manifest code SHA 887a514 vs execution SHA 8211ecf; the replay wrapper
+not hashed before its run; the predictions built from an uncommitted tree with pinned-script bytes; the first inventory's hash
+entries appended late) is accepted as disclosed, none is cured retroactively, and all are carried into the Part A report.
+**F11e.2 — identities at release (HEAD at this commit).** Execution manifest `71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6`;
+frozen predictions `50c378000b424346438de03bf2ad2881a1d10706dfc28b18d0f2130ab5e7a7bb`; F11 mask `5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4`;
+slot mapping `1e2155adaf606b61ba7d325ff15a6970cee92ec0a5ef03ec7d48c3fdc7146862`; calibration output
+`8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb` (record `3de71f022af7b8d9…`, replay record
+`987ba1d6090043a9…`); launcher `19f90aefe0321f418593c605e3ef4372dda79cd35d70d735894442ac77e3ea9a` (re-pin xxvii: adds a
+recorded GPU-exclusivity query that fails closed on a query error, exit 10, and a batch-index check that the staged
+`manifest.jsonl` lists exactly the manifest's eligible variants, exit 11; 43 launcher tests); `code_hashes.json`
+`5a8b52bc1adf668076d6bd90408833528865531a08960b58d78cae5413c10fea`; attestations file `4f8fd031e303ffb9ccf53fbffb9ca8ae5db97a52710e93265e8126219e6942d0` (entries 1–32;
+16–18 now carry the implementers' own relayed statements; 30 the release reviewer by reference; 31 the test-order contributor; 28
+corrected to the full interval; 32 the chair through the launch of phase 1). **F11e.3 — conditional statuses.** Phase 1 proceeds
+after this commit (release condition 2). Between the phases (conditions 3–5): commit `reference_proofs_f11.json` and
+`score_phase1_launch.json`; inspect only proof identity, coverage, verdicts and price; recompute the price (union of the 19 missing
+originals, failed supplementary proofs and any missing predecessors, plus 147 variants) and check it against the proof record and
+the scorer's PRICE; obtain Board A's acceptance if it differs from the conservative 178 / 185.12 min or the all-proven 166 /
+172.64 min; then record the chair's explicit phase-2 authorisation as a dated A5 note before phase 2. Phase 2 (condition 6): once,
+on the exclusive GPU, with the launcher's full checks and the recorded exclusivity query. Closure (condition 7): charge references,
+failures and retries; seal the ledger; one analysis run. **F11e.4 — scope.** No selection, seed, decision rule, cap or pin other than
+re-pin (xxvii) changes; phase 2 is not authorised by this note.
+
+*A5.1.2 re-pin (xxvii) (11 Nov 2026, 11:37 UTC).* `scripts/part_a_score_launch.sh` `19f90aefe0321f41…` (old `92a3dee4…`,
+xxvi); `tests/test_part_a_score_launch.py` `291e778321abfd85…`; `code_hashes.json` `5a8b52bc1adf6680…` (old
+`6aaef05a…`, xxvi); README `88d12fa5fd823b98…`. Nothing scored.
