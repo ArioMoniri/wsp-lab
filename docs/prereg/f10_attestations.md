@@ -452,3 +452,11 @@ and the chair did not name that file for this entry.
   and wrote nothing under `data/`. I have seen no G3, rotation, ladder, reference or sealed outcome, or a summary of one. None
   exists. I made no methodological choice: F11c copies the inventory, Board A's rulings and the chair's threshold and statements.
   This attests this session only; it does not prove other sessions' histories.
+
+## 22. Chair — F11d ruling and the single authorised calibration replay (11 Nov 2026, 10:16 UTC)
+
+Extending entries 1 and 19: I wrote and committed A5 note F11d (759ef24), launched the single authorised replay of the F11.4
+calibration (agent-tmux `a5-f11-replay`, 10:08–10:16 UTC, execution SHA 759ef24, scratch output under
+`data/runs/a5/f11_sim_dryrun/boarda/`) and compared it with the original output: byte-identical (sha256 `8a1be18f…`). The one
+untracked file at launch was the replay launch script itself, committed at 890f6e6. I opened no file under `data/evals`, ran no
+scoring, and read no score, response or contrast. No Part A outcome exists.

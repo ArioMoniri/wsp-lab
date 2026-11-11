@@ -816,3 +816,9 @@ accepted repricing before GPU; F11c and attestations through the final freeze; i
 ledger before analysis. F11c merged (1aa50c9); F11d (procedural ruling, frozen inputs, reconciliation) appended (759ef24); the
 single authorised replay is running under agent-tmux `a5-f11-replay` with the identical frozen command to a scratch output
 (script `scripts/part_a_f11_calibration_replay.sh`). Predictions file and two-phase launch still in flight.
+
+**11 Nov 2026, 10:16 UTC. Calibration replay byte-identical.** The single authorised replay (F11d.2; 10:08–10:16 UTC, SHA
+759ef24, identical frozen command, scratch output) reproduces the original F11.4 output exactly (sha256 `8a1be18f…`); ordered-table
+sha256 `68b8b01d…`, availability digest `171dfd20…`. Record `part_a/f11_calibration_replay_record.json`; attestation 22. Board A
+conditions 1–3 of the staging/calibration review are discharged on paper; conditions 4–7 wait on the predictions file, the
+two-phase launch, the inventory update and explicit release.

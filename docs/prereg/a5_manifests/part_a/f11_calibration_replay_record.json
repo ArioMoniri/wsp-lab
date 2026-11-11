@@ -1,0 +1,44 @@
+{
+ "availability_digest": "171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a",
+ "basis": "A5 note F11d (single replay exception); Board A board-a-f11-staging-cal-2026-11-11.md conditions 1\u20132",
+ "byte_identical": true,
+ "command": "identical to the Board A frozen command except --output (sole authorised substitution)",
+ "dirty_at_launch": {
+  "count": 1,
+  "file": "scripts/part_a_f11_calibration_replay.sh (untracked copy of the launch script, committed at 890f6e6 immediately after launch; not an input of the run)"
+ },
+ "end_utc": "2026-11-11T10:16:02Z",
+ "execution_sha": "759ef241c86e7c398ddcc2c9ab32cde932d76d25",
+ "gates": {
+  "label": "slot-masked (F10.6); supplemented (F11.4)",
+  "passed": true,
+  "power": {
+   "ordered_go_rate": 0.8722,
+   "passed": true,
+   "threshold": 0.8
+  },
+  "size": {
+   "alternative_rate": 0.2576,
+   "applies_to": "ordered go and each individual two-sided test (FP2); not the funding-only alternative branch (F5.7)",
+   "ordered_go_rate": 0.0175,
+   "passed": true,
+   "threshold": 0.07,
+   "two_sided_rejection_rates": [
+    0.0348,
+    0.0378,
+    0.0378
+   ]
+  }
+ },
+ "launch_script_sha256": "f41b72b25f06ad9c5ae3a2eef7fe486daa958b4c823fb60fcd17bb23beae9229",
+ "log_path": "/home/ubuntu/agent-logs/a5-f11-replay-20261111-100853.log",
+ "log_sha256": "7d0f11b3305c557e5506a08f437fe9ab38dd3be2d9e4da0d64d0edb8cbc5dc41",
+ "mask_sha256": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+ "ordered_table_sha256": "68b8b01db16f9c267943e160fafbd8e6aecb15fa5d820f3eae62a5ecd6b4620e",
+ "original_output_sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+ "replay_output_path": "/home/ubuntu/wsp-data/runs/a5/f11_sim_dryrun/boarda/power_slotmask_f11_replay.json",
+ "replay_output_sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+ "schema": "a5-f11-calibration-replay-record-v1",
+ "start_utc": "2026-11-11T10:08:53Z",
+ "verdict": "replay byte-identical to the original F11.4 output (sha256 8a1be18f\u2026); the output records no self-referential path; condition 2 satisfied"
+}
