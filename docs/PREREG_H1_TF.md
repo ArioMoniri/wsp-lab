@@ -5348,3 +5348,160 @@ above (CP bounds with scipy; chain anchors with hashlib). Old development outcom
 outcome, no D3 outcome). New outcomes: it opened no file under `data/` (no file under `data/evals`, no TF-v1 record, no score, no
 payload values), saw no G3, rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A score, and used no GPU and
 wrote nothing under `data/`.
+
+
+#### A5 amendment F12b (11 Nov 2026, before any G3 outcome): repairs to the F12 simulation design
+
+This block is appended; earlier text is not rewritten. It registers, prospectively, repairs to the F12.5 outcome-free power
+simulation as implemented under F12a, after the implementation's **synthetic** smoke run (`scripts/f12_simulation.py` at
+`07e1dc2`, synthetic token matrix, k = 145; progress log `wsp-data/runs/a5/f12_sim_dryrun/progress.log`, run stopped by the
+chair after 7 + 7 replicates) showed that F12-as-drafted has power zero by construction. No real token, no outcome, no
+`donor_mean`, no file under `data/evals` and no Part A payload was read for it or for this block; every number cited here is
+**synthetic-token evidence** from the restricted copy of the F8a.2 noise payload (`noise_payload_restricted.json`, provenance
+sha256 `67da223c…3de`, fields `centred_noise`, `window_mask`, `window_ids`, `donors[j].{id, component, family}`) and the
+simulation's deterministic synthetic token generator. The evidence, its scripts and its outputs are in
+`docs/design/F12B_REPAIRS.md` ("the design note"), `scripts/f12b_diagnostics.py` and `wsp-data/runs/a5/f12_sim_dryrun/f12b/`.
+It was written on branch `prereg/f12b` (main `2255f5e`) while Part A is staged, frozen, released with conditions, unscored and
+held (F11e), and before any G3, rotation, ladder, sealed, F8 or F9 outcome had been read. Where F12, F12a or A5.4.2 read
+differently **for the F12 simulation and the F12 analysis**, F12b governs; nothing else changes (F12b.8). F12b releases no
+simulation, purchase or scoring: Board A reviews it before stage 1 (F12b.4) runs, and its acceptance is required because
+F12b.2 departs from condition 3's "4,000 valid draws without repairs".
+
+**F12b.0 — Findings repaired (synthetic smoke run, F12-as-drafted).** (a) *Head scale.* The K+F head at PyTorch default
+initialisation sums ≈ 48–132 token embeddings, so its untrained output is ≈ 10 nats against F3 residuals ≈ 0.001–0.002 nats;
+with lr 1e-3 and ≤ 300 epochs it never recovers: C_WM = −5.8 to −34 in all 14 smoke replicates, null and alternative. (b)
+*Joint studentiser.* V_comp + V_item − V_both was non-positive in 5–109 of 4,000 joint draws in 13 of 14 replicates, so under
+"all draws valid" nearly every replicate was "unresolved (validity)". (c) *Calibration error.* With 100 calibration panels the
+achieved oracle C on independent panels is off target by an SD of ≈ 0.02 (validation C 0.119–0.175 in the smoke run), so
+±0.005 cannot be met, and F12a.4(h)'s non-decreasing-grid check fails for 20–50 % of h\* although the root is unique
+(F12b.3(c)). (d) *Cost.* 1,000 replicates × 6 k × 2 scenarios at ≈ 570 s per replicate is ≈ 1,900 CPU-h.
+
+**F12b.1 — WM-R head scaling (repairs (a); amends F12.3 / F12a.2(b) training only).** (a) *Zero-initialised output.* Each head
+is constructed at PyTorch default initialisation under `torch.manual_seed(s)` exactly as before, then its output weights w (16 + 16)
+and the forward-unused output bias are set to exactly 0. Every other tensor keeps its default value. The untrained head is h ≡ 0
+for every input, so WM-R equals F3 before training, and training departs from F3 only as far as the inner-fold L1 early stopping
+supports. The 1,185 nominal parameters, the architecture, the zero-edit subtraction and the F12a.2(j) nesting statement are
+unchanged; h is exactly 0 at the zero edit for all parameters, trained or not. (b) *Target standardisation.* For every fit (each
+inner-training split of the epoch-selection fits and the outer-training refit), the residual target r = Δy − ŷ_F3, with ŷ_F3
+fitted on that fit's training rows, is divided by s = SD(r) (ddof 0) over that fit's **training rows only**; the head is trained
+on r/s with the unchanged F5.1 recipe and early-stopping rule, and its prediction is multiplied by the same s before it is added
+to ŷ_F3. s ≤ 1e-12 or nonfinite is a registered fit failure (the replicate is "unresolved (validity)"; no repair). (c) *Feature
+standardisation* is unchanged: present-token column mean and SD over the fit's training rows (zero-SD columns centred, scale 1),
+absent slots masked to 0. Nothing else is standardised; F3's own standardisation (A5.8.3) is unchanged. These rules apply to the
+simulation and to the F12 analysis alike.
+
+**F12b.2 — Joint studentiser (repairs (b); amends A5.4.2 / F12a.3(a) for C_WM and C_WM,S only).** In every joint draw and at the
+point, the joint studentising variance is **V\* = max(V_comp + V_item − V_both, V_comp)**, V_comp being the same draw's
+component-only term (at the point, exactly the conditional procedure's linearised variance). Rationale: the joint design resamples
+components and, in addition, the common item blocks; the common-item covariance across components in this noise is positive
+(cross-component ρ ≈ 0.48 in the F12 noise checks), so V_item − V_both ≥ 0 in expectation and a two-way value below V_comp is
+finite-sample noise of the subtraction. The floor is applied identically to the point and to every draw (bootstrap-t keeps one
+studentiser rule throughout); no draw is dropped, retried or replaced; the conditional procedure, every loss guard, the
+two-component rule and "all 4,000 draws valid" are unchanged (a draw is still invalid if V_comp is non-positive or nonfinite).
+Each replicate also reports, descriptively, the joint bootstrap-t interval under the strict rule (A5.4.2 as written) and under
+max(V_comp + V_item − V_both, V_comp, V_item), with the number of draws where the raw two-way value is non-positive and where the
+floor binds. A5.4.2's "do not … floor variances" continues to govern every other contrast (C, C_abl, C_rand, C_perm and all
+primary and secondary families outside F12). If Board A declines F12b.2, the stage configurations revert to the strict rule by a
+new committed configuration before stage 1, and the invalid-as-failure rule of F12a.5(d) applies.
+
+**F12b.3 — Oracle calibration (repairs (c); amends F12a.4(h)–(i)).** (a) *Panels.* 4,000 calibration panels
+seed("20261111:f12:", "cal:<k>:<r>:<d>") and 4,000 independent validation panels seed("20261111:f12:", "calval:<k>:<r>:<d>"),
+d = 0…3,999, one PCG64 stream per panel, noise by the F12a.4(b) draw order (replacing 100 + 100). (b) *Bisection* on
+[γ_lo, γ_g\*] of the unchanged grid {0} ∪ {τ·2^g : g = −8…12} with the calibration panels until |C̄_cal − 0.15| ≤ 0.001, at most
+50 halvings (a bracketed continuous curve always reaches it). (c) *Uniqueness replaces the monotonicity gate.* C̄(γ) = 1 −
+N/Σ_d Σ_i |u_di + γv_i| with N = Σ|ε| fixed is an increasing transform of a convex function of γ (a sum of absolute affine
+functions); hence it may dip below C̄(0) before rising, and for 0.15 > C̄(0) the equation C̄ = 0.15 has **exactly one root** on
+γ ≥ 0, inside the first bracketing grid cell. The bracket check (C̄(0) < 0.15 and some grid point with C̄ ≥ 0.15) stays a gate;
+F12a.4(h)'s non-decreasing grid/interior check is computed and reported but no longer fails qualification. (d) *Tolerance.* The
+achieved C̄ on the 4,000 validation panels must satisfy **|C̄_val − 0.15| ≤ 0.02**; otherwise qualification of (k, r) fails
+(counted as a power failure; no substitute h\*, no retry). The validation C̄, its delta-method Monte Carlo SE and the reported
+F12a.4(h) check are printed per k. (e) *Evidence (synthetic, design note §3).* Achieved oracle C̄ measured on 20,000 independent reference panels after calibration on N panels: the SD
+across h\* is 0.017 (k = 0, 20 h\*) and 0.022 (k = 145, 10 h\*) at N = 100; 0.0035 and 0.0044 at N = 4,000, where the
+maximum deviation is 0.009 and validation is within ±0.02 for 30 of 30 h\* (±0.005: 23 of 30). F12a.4(h)'s check would fail
+10 of 20 and 2 of 10 h\* at N = 4,000, each with a unique root. The panels cost ≈ 11 CPU-s per alternative replicate at
+k = 145.
+
+**F12b.4 — Two-stage k selection (repairs (d); amends F12.5 and F12a.5(a), (e)).** (a) *Stage 1 (k-range pilot; selection
+only).* Configuration `docs/prereg/f12_manifests/f12b_stage1_config.json` (sha256 `a3946ebb7250de7b45433605d7934bace7498c6d325cb70bdf1dccd779964a81`): 40 replicates per scenario (γ = 0
+and the calibrated alternative) at each of the six k, replicate indices r = 1,000…1,039 (so h\*, γ calibration and noise streams
+are disjoint from stage 2's r = 0…999), panel seeds seed("20261111:f12:", "f12b-stage1:<scenario>:<k>:<r>"), every other
+setting identical to stage 2 including 4,000 bootstrap draws (the permitted pilot reduction of draws is not used: the intervals
+cost ≈ 0.2 CPU-s of a ≈ 210 CPU-s replicate, and equal settings keep the pilot's rates comparable). (b) *Selection rule,
+frozen.* k\* = the smallest k whose stage-1 "correction detected" rate under the alternative is ≥ 0.90 (≥ 36/40) and whose five
+F12a.5(b) size rates under γ = 0 are each ≤ 0.07 (≤ 2/40; invalid replicates counted as F12a.5(d) prescribes). Stage 2 runs at
+k\* only; if no k qualifies, at k = 145 only. Stage-1 rates are selection statistics, never a gate, and are reported only as such.
+Implemented by `select_stage2_k`. (c) *Stage 2 (the registered run).* Configuration
+`docs/prereg/f12_manifests/f12b_stage2_config.json` (sha256 `13e59899a90aa8c44457dfe757bce4d118dfb6d51eefb43e3b437d476580f65c`): **1,000 replicates per scenario at k\***, seeds
+seed("20261111:f12:", "sim:<scenario>:<k>:<r>"), r = 0…999, 4,000 draws; γ = 0 and the alternative gate; variance-×2 at γ = 0
+runs **200** replicates at k\* (descriptive; F12a.5(a)'s 1,000 is reduced for cost). The F12a.5(c) bounds are unchanged: power
+lower bound ≥ 0.80 and each of the five size upper bounds ≤ 0.07, one-sided Clopper–Pearson at α = 0.05/36 each (still 36 =
+6 k × 6 rates although stage 2 tests one k, which is conservative), 838/1,000 and 46/1,000 as the n = 1,000 thresholds, invalid
+replicates counted per F12a.5(d). (d) *Purchase.* S_{k\*} is purchased iff both gates pass at k\* and Board A accepts the committed
+stage-2 report; otherwise "unresolved — not powered": no other k, no extension, no repeat. A smaller k that was not selected is
+not tested (a cost accepted for the CPU budget). (e) *Pilot and projection.* F12a.5(f)'s 10-replicate timing pilot runs unchanged
+under the stage-2 configuration before stage 1; the chair accepts the projected stage-1 + stage-2 CPU total before stage 1 and a
+projected stage-2 total above 150 CPU-h stops the run for a prospective repricing (no silent change of settings).
+
+**F12b.5 — Cheaper fits (amends F12.3 / F12a.2(f) for the StatNN comparator; applies to simulation and analysis).** (a)
+LightGBM `n_jobs` 2 → 1: identical trees and predictions (verified bit-for-bit on synthetic folds), ≈ 22 % less CPU. (b) StatNN's
+tree count is chosen on the four inner folds from {100, 300, 600} (unchanged) with the inner-fold predictions of **seed 0 only**;
+the outer-training refit at the chosen count still averages seeds 0/1/2 before the loss. This cuts StatNN's cost by ≈ 2/3 (12
+→ 4 inner fits of 600 trees per outer fold); the comparator's inputs, settings, grid and final seed-averaged predictor are
+unchanged. WM-R's epoch selection keeps all three seeds (its cost fell with F12b.1: ≈ 48–60 CPU-s per replicate at k = 145 against ≈ 185 before, median refit epoch 22). Checked and rejected: dropping
+training-constant columns (identical predictions, no saving), `max_bin` 63/31 and column-wise histograms (< 20 % saving and, for
+`max_bin`, different trees).
+
+**F12b.6 — CPU budget.** Measured on synthetic tokens with the registered stage-2 configuration (process CPU per replicate,
+shared machine; design note §6): k = 0: 121 s (γ = 0) / 136 s (alternative); k = 87: 190 / 208 s; k = 145: 202 / 219 s
+(intermediate k interpolated). Stage 2, worst case k\* = 145: 1,000 × 202 + 1,000 × 219 + 200 × 202 s = **128.2 CPU-h**
+(121.1 at k\* = 87, 78.1 at k\* = 0), within the **150 CPU-h** ceiling for the registered run. Stage 1: 40 × Σ_k (null +
+alternative) = 23.8 CPU-h; timing pilot 0.6 CPU-h; worst-case total 152.6 CPU-h, against ≈ 1,900 CPU-h for F12 as drafted.
+Peak memory ≈ 0.9 GB per single-thread worker. The real token matrix may cost differently: the timing pilot re-measures,
+and the F12b.4(e) stop applies.
+
+**F12b.7 — Implementation conformance (no design change).** The F12 simulation code at `07e1dc2` departed from F12a in places
+F12b does not amend; the registered configurations now follow F12a: the F12a.4(b) noise draw order (one `integers(0, 63)` per
+simulated component in id order; one `choice(n_c, size=m, replace=(m > n_c))` per component over donors sorted by id, rows by id;
+one `integers(0, 32, size=32)`); the F12a.5(b)–(d) six gating rates (adding C_WM,S's conditional and joint lower bounds),
+Bonferroni α = 0.05/36 and invalid replicates counted as rejections for size; the simulation reads only the restricted payload
+copy (`NoisePayload.load_restricted`, which refuses any other key, e.g. `donor_mean`). The defaults of the code reproduce F12 as
+drafted; only the two committed, sha256-pinned configurations above are registered (`F12B_CONFIG_SHA256`), and a run under any
+other configuration, k set or replicate count is labelled "not a gate result". F12a.4(d)'s 10,000-panel noise check is not yet
+implemented and remains a precondition of stage 1.
+
+**F12b.8 — What does not change.** The population and its exclusion rules (F12.2, F12a.1; 270 rows / 234 components, S_k by
+ascending sha256(`20261111:f12:purchase:` + id), k ∈ {0, 29, 58, 87, 116, 145}); outer and inner folds; the endpoint and
+Δy; F3 (ridge-1 intercept/a/q, training rows only); WM-R's architecture, 42 columns, 1,185 nominal parameters, optimiser
+(AdamW lr 1e-3, wd 1e-2, batch 16, L1, ≤ 300 epochs, patience 30, refit floor((e₂ + e₃)/2), seeds 0/1/2 averaged) and gauge
+audit; StatNN's inputs, A5.8.4 settings and tree grid; the controls and sensitivity arms; both contrasts, C̄ as the ratio of
+expected row sums, A5.4.2's conditional procedure, guards, component influences, 4,000 draws, PCG64 seed 20261107 and linear
+quantiles; BCa and percentile intervals and the A4.4 publication rule (F12a.3(d)); the decision order and wording (F12.4,
+F12a.3(b)–(c)); h\* (F12a.4(f)), γ ≥ 0 and its grid and bracket, γ = 0 as the exact null; the noise generator (F12a.4(b)–(e));
+condition 5's bounds, Bonferroni allocation, 1,000 replicates per gating scenario at the registered k and invalid-as-failure;
+the purchase and scoring gates, Board A acceptance, F12a.6–F12a.10, F12-I, Part A (held, unscored) and every registered arm,
+decision rule, seed, cap and pin outside F12.
+
+**F12b.9 — Reduced-run evidence (synthetic tokens; design note §5).** With the stage-2 configuration at k = 145, 20 + 20 replicates (not a gate result): under
+γ = 0, C_WM ratio of sums +0.025, median +0.040 (range −0.043 to +0.177); before F12b it was −5.8 to −34. All 20 replicates
+are valid; 1 is "correction detected". Under the alternative, C_WM ratio of sums +0.166, median +0.180 (16 of 20 > 0);
+C_WM,S +0.025; 4 of 20 are "correction detected"; validation C 0.134–0.163. The strict joint rule would have left 0 of 40
+replicates valid: after F12b.1 the raw two-way variance is non-positive in 46–757 of 4,000 draws of every replicate, and the
+F12b.2 floor binds in 99–1,713 draws. **Open item, not repaired here:** under γ = 0, C_WM is positive (conditional lower bound
+> 0 in 7 of 20). On 400 noise-only null panels, ridge-1's estimation shrinkage of Σa (SD 0.152 against a noise SD of
+0.0034) is learnable: OLS improves on F3 by C = +0.036. γ = 0 is therefore not a no-correction null for C_WM, and the size
+gates may fail for this reason alone. Board A is asked to rule on it (F3's penalty, the null data-generating process, or
+acceptance) before stage 1. F12b changes neither F3 nor the null. **Comparator under the alternative
+(for Board A's wording):** under the synthetic alternative the same-input tree captures most of h\* (mean C_WM 0.224 but mean
+C_WM,S 0.057; C_S:F3 ratio of sums 0.145). Because the oracle is calibrated against F3 only, the ordered power of the
+two-comparator conjunction is power to beat a tree that can learn the same signal; it is not power to detect a K+F-specific
+correction. F12b keeps the conjunction and the alternative unchanged. It proposes that every F12 simulation report state: "The
+registered alternative is a token-function alternative calibrated against F3; a failed power gate means not powered against a
+same-input tree." An alternative calibrated on C_WM,S would need a separate amendment and costing.
+
+*No-exposure attestation (drafting session, 11 Nov 2026, about 14:10–18:10 UTC).* This block was drafted by an implementation
+sub-agent session working only in the worktree `.worktrees/prereg/f12b` on branch `prereg/f12b`. It read committed files only
+(this preregistration's A5.4.2, F12 and F12a; the Board A F12 review; `docs/PROGRESS.md`; `scripts/f12_simulation.py`,
+`scripts/tfv1_requalify.py` and their tests), the synthetic smoke-run log, its own synthetic outputs under `wsp-data/runs/a5/f12_sim_dryrun/f12b/`, and the restricted noise payload copy named above
+(allowlisted fields only). It opened no file under `data/` (no file under `data/evals`, no TF-v1 record, no score, no
+`donor_mean`), read no real F12 token, saw no G3, rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A
+score, used no GPU, and wrote nothing under `data/`.

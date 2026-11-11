@@ -73,10 +73,24 @@ Fixed rules implemented here (each also written into the report under ``rules``)
   frozen). Ordinary two-sided 95 % CP intervals are reported too. The smallest passing S_k is the only
   purchase. Point estimates never release.
 
+F12b repairs (PREREG_H1_TF A5 amendment F12b; docs/design/F12B_REPAIRS.md) are config entries whose
+defaults reproduce F12 as drafted; the registered values are the committed, sha256-pinned JSON configs
+``docs/prereg/f12_manifests/f12b_stage{1,2}_config.json`` (``F12B_CONFIGS``): zero-initialised head output
+and training-only residual-target standardisation; the joint studentiser floored at the larger one-way
+variance; F12a.4(h) calibration with a convexity bracket and a +-0.02 validation tolerance; the
+F12a.4(b) noise draw order; the F12a.5 six-rate gates; single-seed StatNN tree-count selection; and the
+two-stage k selection (``select_stage2_k``).
+
 Usage::
 
     python scripts/f12_simulation.py --synthetic --out /home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun \\
         --replicates 200 --seed 20261107 --k-grid 145 --scenarios null,alt --workers 4
+    # F12b stage 1 (k-range pilot), then stage 2 at the selected k:
+    python scripts/f12_simulation.py --tokens X.npz --restricted-payload P.json --out OUT1 \\
+        --config docs/prereg/f12_manifests/f12b_stage1_config.json
+    python scripts/f12_simulation.py --tokens X.npz --restricted-payload P.json --out OUT2 \\
+        --config docs/prereg/f12_manifests/f12b_stage2_config.json --stage1-report OUT1/report.json \\
+        --scenarios null,alt
 """
 
 from __future__ import annotations
@@ -111,8 +125,8 @@ from scripts.a5_build_panels import domain_seed
 from scripts.a5_simulation import cp_interval, donor_block
 from scripts.tfv1_requalify import (
     cluster_intervals,
+    component_pairs,
     jackknife_cluster,
-    joint_replicates,
     linearised_se,
     theta_interval,
 )
@@ -220,14 +234,90 @@ class Config:
         ("reg_lambda", 1.0),
         ("n_jobs", 2),
     )
+    # ---- F12b repairs (amendment F12b; docs/design/F12B_REPAIRS.md). The defaults reproduce F12 as
+    # drafted; the registered values are the committed JSON configs in F12B_CONFIGS.
+    name: str = "f12_drafted"
+    head_zero_init: bool = False  # output weights w (and the unused bias) start at exactly 0
+    target_standardise: bool = False  # residual target / its training-row SD; prediction x SD
+    joint_studentiser: str = "strict"  # "strict" (A5.4.2 as drafted) | "floor_vcomp" (F12b.2) | ...
+    calibration: str = "f12"  # "f12" (as drafted) | "f12b" (F12a.4(h) grid, F12b.3 tolerance)
+    cal_bisect_tol: float = 0.001  # f12b: bisection target on the calibration panels
+    cal_halvings: int = 100  # f12b registers 50 (F12a.4(h))
+    cal_monotone: str = "f12a"  # "f12a" (grid + 5-point non-decreasing check gates) | "convex" (F12b.3)
+    noise_draw: str = "f12"  # "f12" (as drafted) | "f12a" (F12a.4(b) draw order)
+    gating: str = "f12"  # "f12" (4 rates, size among valid) | "f12a" (F12a.5(b)-(d): 6 rates)
+    replicates: int = 1000
+    seed_tag: str = "sim"  # replicate seeds seed("20261111:f12:", "<tag>:<scenario>:<k>:<r>")
+    replicate_offset: int = 0  # stage 1 uses r = 1000.. so h*, gamma and noise differ from stage 2
+    stage: int = 0  # 0 = single-stage F12; 1 = F12b k-range pilot; 2 = F12b registered run
+    stage1_power_min: float = 0.90  # F12b.4 selection rule (stage 1 only)
+    stage1_size_max: float = 0.07
+    statnn_select_seeds: tuple = (0, 1, 2)  # F12b.5: seeds averaged in the inner tree-count selection
 
     def registered(self) -> bool:
-        return self == Config()
+        return registered_name(self) == "f12b_stage2"
 
     def as_dict(self) -> dict:
         d = dataclasses.asdict(self)
         d["lgbm"] = dict(self.lgbm)
         return d
+
+
+CONFIG_SCHEMA = "f12-simulation-config-v1"
+STUDENTISER_RULES = ("strict", "floor_vcomp", "floor_one_way")
+CONFIG_CHOICES = {
+    "joint_studentiser": STUDENTISER_RULES,
+    "calibration": ("f12", "f12b"),
+    "noise_draw": ("f12", "f12a"),
+    "gating": ("f12", "f12a"),
+    "cal_monotone": ("f12a", "convex"),
+    "stage": (0, 1, 2),
+}
+F12B_CONFIGS = {
+    "stage1": ROOT / "docs/prereg/f12_manifests/f12b_stage1_config.json",
+    "stage2": ROOT / "docs/prereg/f12_manifests/f12b_stage2_config.json",
+}
+F12B_CONFIG_SHA256 = {
+    "stage1": "a3946ebb7250de7b45433605d7934bace7498c6d325cb70bdf1dccd779964a81",
+    "stage2": "13e59899a90aa8c44457dfe757bce4d118dfb6d51eefb43e3b437d476580f65c",
+}
+
+
+def config_from_dict(d) -> Config:
+    fields = {f.name for f in dataclasses.fields(Config)}
+    extra = set(d) - fields
+    if extra:
+        raise ValueError(f"unknown config keys {sorted(extra)}")
+    d = dict(d)
+    for k in ("seeds", "tree_grid", "statnn_select_seeds"):
+        if k in d:
+            d[k] = tuple(d[k])
+    if "lgbm" in d:
+        d["lgbm"] = tuple(dict(d["lgbm"]).items())
+    for k, allowed in CONFIG_CHOICES.items():
+        if k in d and d[k] not in allowed:
+            raise ValueError(f"{k} must be one of {allowed}, got {d[k]!r}")
+    return Config(**d)
+
+
+def load_config(path):
+    """(Config, file sha256) from a committed ``f12-simulation-config-v1`` JSON."""
+    raw = Path(path).read_bytes()
+    obj = json.loads(raw)
+    if obj.get("schema") != CONFIG_SCHEMA:
+        raise ValueError(f"config schema must be {CONFIG_SCHEMA}")
+    return config_from_dict(obj["config"]), hashlib.sha256(raw).hexdigest()
+
+
+def registered_name(cfg):
+    """'f12b_stage1' / 'f12b_stage2' if cfg equals that committed, sha256-pinned config, else None."""
+    for stage, path in F12B_CONFIGS.items():
+        if not path.exists():
+            continue
+        ref, sha = load_config(path)
+        if sha == F12B_CONFIG_SHA256[stage] and cfg == ref:
+            return f"f12b_{stage}"
+    return None
 
 
 # ------------------------------------------------------------------- population and folds
@@ -560,10 +650,15 @@ def head_param_count(n_cols=N_COLS) -> int:
 PARAM_NAMES = ("W1", "b1", "E", "W2", "b2", "w", "b0")
 
 
-def init_params(seed, n_cols=N_COLS):
+def init_params(seed, n_cols=N_COLS, zero_out=False):
+    """PyTorch default initialisation under torch.manual_seed(seed) (construction order pinned).
+
+    zero_out (F12b.1): the output weights w and the (forward-unused) output bias start at exactly 0
+    after the default draw, so every other tensor keeps its default value and the untrained head is
+    h == 0 for every input (WM-R == F3 before training)."""
     torch.manual_seed(seed)
     m = KFHead(n_cols)
-    return {
+    p = {
         "W1": m.lin1.weight.detach().T.clone(),
         "b1": m.lin1.bias.detach().clone(),
         "E": m.role.weight.detach().clone(),
@@ -572,6 +667,10 @@ def init_params(seed, n_cols=N_COLS):
         "w": m.out.weight.detach()[0].clone(),
         "b0": m.out.bias.detach().clone(),
     }
+    if zero_out:
+        p["w"] = torch.zeros_like(p["w"])
+        p["b0"] = torch.zeros_like(p["b0"])
+    return p
 
 
 def stack_params(plist):
@@ -733,10 +832,19 @@ def predict_heads(data, P, stats, rows):
         return batched_forward(P, *data.batch(r, mu, sd)).double().numpy()
 
 
-def _seeded(seed):
-    p = init_params(seed)
+def _seeded(seed, zero_out=False):
+    p = init_params(seed, zero_out=zero_out)
     p["_seed"] = seed
     return p
+
+
+def target_scale(r, rows):
+    """F12b.1 target standardisation: SD (ddof 0) of the residual target over the fit's training
+    rows only; <= 1e-12 or non-finite fails closed (registered fit failure)."""
+    s = float(np.std(np.asarray(r)[rows]))
+    if not np.isfinite(s) or s <= 1e-12:
+        raise ValueError(f"residual target SD {s} <= 1e-12")
+    return s
 
 
 def refit_epochs(best4):
@@ -745,36 +853,52 @@ def refit_epochs(best4):
 
 
 def fit_wmr_fold(data, a, q, y, comps, train, test, cfg):
-    """One outer fold of WM-R: nested F3 / standardisation / epoch selection, refit, seed average."""
+    """One outer fold of WM-R: nested F3 / standardisation / epoch selection, refit, seed average.
+
+    F12b.1 (cfg.head_zero_init, cfg.target_standardise): heads start with zero output weights, and
+    each fit's residual target r = y - F3 is divided by its SD over that fit's training rows (inner
+    training for the selection fits, outer training for the refit); the head's prediction is
+    multiplied back by the same SD. Token standardisation (present-token mean / SD) is computed on
+    the same training rows. The head output stays exactly 0 at the zero edit (no present token)."""
+    zero = cfg.head_zero_init
     inner = inner_folds(comps[train].tolist())
     ifold = np.asarray([inner[c] for c in comps[train]])
-    plist, stats, targets, trs, vas = [], [], [], [], []
+    plist, stats, targets, trs, vas, inner_sd = [], [], [], [], [], []
     for s in cfg.seeds:
         for i in range(N_INNER):
             tr, va = train[ifold != i], train[ifold == i]
             if not len(tr) or not len(va):
                 raise ValueError("empty inner fold")
             f3 = f3_operator(a, q, tr, np.arange(len(a)), cfg.ridge_lambda) @ y[tr]
-            plist.append(_seeded(s))
+            r = y - f3
+            sc = target_scale(r, tr) if cfg.target_standardise else 1.0
+            plist.append(_seeded(s, zero))
             stats.append(data.stats(tr))
-            targets.append(y - f3)
+            targets.append(r / sc)
             trs.append(tr)
             vas.append(va)
+            inner_sd.append(sc)
     best, _ = train_heads(data, plist, stats, targets, trs, cfg, val_sets=vas)
     epochs = [refit_epochs(best[j * N_INNER : (j + 1) * N_INNER]) for j in range(len(cfg.seeds))]
     f3_all = f3_operator(a, q, train, np.arange(len(a)), cfg.ridge_lambda) @ y[train]
+    r = y - f3_all
+    sc = target_scale(r, train) if cfg.target_standardise else 1.0
     st = data.stats(train)
     _, P = train_heads(
         data,
-        [_seeded(s) for s in cfg.seeds],
+        [_seeded(s, zero) for s in cfg.seeds],
         [st] * len(cfg.seeds),
-        [y - f3_all] * len(cfg.seeds),
+        [r / sc] * len(cfg.seeds),
         [train] * len(cfg.seeds),
         cfg,
         epochs=epochs,
     )
-    h = predict_heads(data, P, [st] * len(cfg.seeds), test).mean(0)
-    return f3_all[test] + h, {"inner_best": best, "refit_epochs": epochs}
+    h = predict_heads(data, P, [st] * len(cfg.seeds), test).mean(0) * sc
+    info = {"inner_best": best, "refit_epochs": epochs}
+    if cfg.target_standardise:
+        info["target_sd"] = sc
+        info["inner_target_sd"] = inner_sd[:N_INNER]
+    return f3_all[test] + h, info
 
 
 # --------------------------------------------------------------------------- StatNN
@@ -811,10 +935,11 @@ def fit_statnn_fold(F, a, q, y, comps, train, test, cfg):
         tr, va = train[ifold != i], train[ifold == i]
         r = y - f3_operator(a, q, tr, np.arange(len(a)), cfg.ridge_lambda) @ y[tr]
         preds = np.zeros((len(grid), len(va)))
-        for s in cfg.seeds:
+        sel = cfg.statnn_select_seeds
+        for s in sel:
             model = _lgbm(s, top, cfg).fit(F[tr], r[tr])
             for g, nt in enumerate(grid):
-                preds[g] += model.predict(F[va], num_iteration=nt) / len(cfg.seeds)
+                preds[g] += model.predict(F[va], num_iteration=nt) / len(sel)
         l1[i] = np.abs(preds - r[va][None, :]).mean(1)
     mean_l1 = l1.mean(0)
     chosen = grid[int(np.flatnonzero(mean_l1 == mean_l1.min())[0])]  # smaller count on ties
@@ -855,6 +980,11 @@ class NoisePayload:
         self.member_table = np.zeros((len(comps), self.max_members), dtype=np.int64)
         for i, x in enumerate(self.members):
             self.member_table[i, : len(x)] = x
+        # F12a.4(b): payload components sorted by id, their donors sorted by donor id
+        self.members_by_id = [
+            np.asarray(sorted(x.tolist(), key=lambda j: self.donors[j]["id"]), dtype=np.int64)
+            for x in self.members
+        ]
         self.provenance = provenance or {}
 
     @classmethod
@@ -878,9 +1008,30 @@ class NoisePayload:
             view["centred_noise"], view["window_mask"], view["donors"], view["window_ids"], prov
         )
 
+    RESTRICTED_SCHEMA = "f12-noise-payload-restricted-v1"
+    RESTRICTED_KEYS = {"schema", "provenance", "window_ids", "donors", "centred_noise", "window_mask"}
+
+    @classmethod
+    def load_restricted(cls, path):
+        """The restricted copy written by ``restricted()`` (F12a.4(e)): exactly the allowlisted keys,
+        provenance pinned to the F8a.2 payload sha256; anything else fails closed."""
+        raw = Path(path).read_bytes()
+        obj = json.loads(raw)
+        if set(obj) != cls.RESTRICTED_KEYS or obj["schema"] != cls.RESTRICTED_SCHEMA:
+            raise ValueError("not a restricted f12 noise payload (unexpected keys or schema)")
+        if obj["provenance"].get("sha256") != PAYLOAD_SHA256:
+            raise ValueError("restricted payload provenance is not the pinned F8a.2 payload")
+        for d in obj["donors"]:
+            if not set(d) <= set(DONOR_FIELDS):
+                raise ValueError("donor record outside the allowlist")
+        prov = dict(obj["provenance"])
+        prov["restricted_copy"] = str(path)
+        prov["restricted_copy_sha256"] = hashlib.sha256(raw).hexdigest()
+        return cls(obj["centred_noise"], obj["window_mask"], obj["donors"], obj["window_ids"], prov)
+
     def restricted(self) -> dict:
         return {
-            "schema": "f12-noise-payload-restricted-v1",
+            "schema": self.RESTRICTED_SCHEMA,
             "provenance": self.provenance,
             "window_ids": self.window_ids,
             "donors": self.donors,
@@ -889,7 +1040,45 @@ class NoisePayload:
         }
 
 
-def draw_panel_noise(payload, comp_codes, rng, scale=1.0):
+def draw_panel_noise(payload, comp_codes, rng, scale=1.0, order="f12", row_ids=None):
+    if order == "f12a":
+        return draw_panel_noise_f12a(payload, comp_codes, row_ids, rng, scale)
+    if order != "f12":
+        raise ValueError(f"unknown noise draw order {order!r}")
+    return _draw_panel_noise_f12(payload, comp_codes, rng, scale)
+
+
+def draw_panel_noise_f12a(payload, comp_codes, row_ids, rng, scale=1.0):
+    """F12a.4(b) draw order: (i) per simulated component in ascending code (= component-id) order one
+    ``integers(0, n_payload_components)`` over the payload components sorted by id; (ii) per simulated
+    component in the same order, its rows in ascending row id receive donors by one
+    ``choice(n_c, size=m, replace=(m > n_c))`` over that payload component's donors sorted by id;
+    (iii) one ``integers(0, 32, size=32)`` common block index for the whole panel."""
+    if row_ids is None:
+        raise ValueError("the F12a draw order needs the row ids")
+    comp_codes = np.asarray(comp_codes)
+    row_ids = np.asarray(row_ids)
+    n_comp = int(comp_codes.max()) + 1
+    members = payload.members_by_id
+    pick = [int(rng.integers(0, len(members))) for _ in range(n_comp)]
+    donors = np.zeros(len(comp_codes), dtype=np.int64)
+    rows_of = payload_rows_by_component(comp_codes, row_ids)
+    for c in range(n_comp):
+        rows = rows_of[c]
+        mem = members[pick[c]]
+        sel = rng.choice(len(mem), size=len(rows), replace=len(rows) > len(mem))
+        donors[rows] = mem[sel]
+    b = rng.integers(0, BLOCKS, size=BLOCKS)
+    return payload.blocks[donors][:, b] * scale, donors, b
+
+
+def payload_rows_by_component(comp_codes, row_ids):
+    order = np.lexsort((row_ids, comp_codes))
+    bounds = np.r_[0, np.cumsum(np.bincount(comp_codes))]
+    return [order[bounds[c] : bounds[c + 1]] for c in range(len(bounds) - 1)]
+
+
+def _draw_panel_noise_f12(payload, comp_codes, rng, scale=1.0):
     """Repaired generator: rows x 32 noise block values for one simulated panel.
 
     comp_codes: simulated component code per row (0..n_comp-1). Frozen draw order: (i) payload
@@ -915,10 +1104,13 @@ def draw_panel_noise(payload, comp_codes, rng, scale=1.0):
     return payload.blocks[donors][:, b] * scale, donors, b
 
 
-def noise_diagnostics(payload, comp_codes, seed, draws=2000):
+def noise_diagnostics(payload, comp_codes, seed, draws=2000, order="f12", row_ids=None):
     """Outcome-free checks: panel-mean SD, within-component and cross-component (common-item) dependence."""
     rng = np.random.default_rng(seed)
-    eps = np.stack([draw_panel_noise(payload, comp_codes, rng)[0].mean(1) for _ in range(draws)])
+    kw = {"order": order, "row_ids": row_ids}
+    eps = np.stack(
+        [draw_panel_noise(payload, comp_codes, rng, **kw)[0].mean(1) for _ in range(draws)]
+    )
     comp_codes = np.asarray(comp_codes)
     sd = eps.std(0, ddof=1)
     C = np.corrcoef(eps.T)
@@ -927,7 +1119,7 @@ def noise_diagnostics(payload, comp_codes, seed, draws=2000):
     rng0 = np.random.default_rng(seed)
     no_resample = []
     for _ in range(50):
-        _, donors, _ = draw_panel_noise(payload, comp_codes, rng0)
+        _, donors, _ = draw_panel_noise(payload, comp_codes, rng0, **kw)
         no_resample.append(payload.blocks[donors].mean(1))
     return {
         "draws": draws,
@@ -1041,6 +1233,90 @@ def calibrate_gamma(P, a, h, eps_cal, eps_val, cfg, target=TARGET_C):
     return gamma, info
 
 
+def noise_tau(payload):
+    """F12a.4(h) scale: RMS over donors of the plug-in panel-mean noise SD, sqrt((1/32)(1/32) Sum_j e_j^2)
+    with e_j the donor's 32 block means (an outcome-free scalar of the restricted payload)."""
+    e = payload.blocks
+    return float(np.sqrt(np.mean((e**2).sum(1) / BLOCKS / BLOCKS)))
+
+
+def calibration_panels(payload, comp, row_ids, count, kind, k, r, cfg, start=0):
+    """Noise-only panels d = start..start+count-1, each from its own PCG64 stream
+    seed("20261111:f12:", "<kind>:<k>:<r>:<d>") (F12a.4(h) 'cal', F12a.4(i) 'calval'); rows' eps."""
+    out = []
+    for d in range(start, start + count):
+        rng = np.random.default_rng(domain_seed(FOLD_DOMAIN, f"{kind}:{k}:{r}:{d}"))
+        E = draw_panel_noise(payload, comp, rng, order=cfg.noise_draw, row_ids=row_ids)[0]
+        out.append(E.mean(1))
+    return np.stack(out)
+
+
+def ratio_c_with_se(P, a, h, eps, gamma):
+    """C-bar = 1 - Sum|eps| / Sum|(I - P)(a + eps + gamma h)| over panels, delta-method MC SE."""
+    I_P = np.eye(len(a)) - P
+    num = np.abs(eps).sum(1)
+    den = np.abs((a[None, :] + eps + gamma * h[None, :]) @ I_P.T).sum(1)
+    ratio = num.sum() / den.sum()
+    d = len(num)
+    infl = (num - ratio * den) / den.mean()
+    return float(1 - ratio), float(np.sqrt((infl**2).sum() / (d * (d - 1))))
+
+
+def calibrate_gamma_f12b(P, a, h, eps_cal, eps_val, tau, cfg, target=TARGET_C):
+    """F12a.4(h) with the F12b.3 repairs. Grid {0} U {tau 2^g : g = -8..12}; bracket: C(0) < target and
+    a first grid point g* with C >= target; bisection on [gamma_(g*-1), gamma_g*] with the calibration
+    panels until |C_cal - target| <= cal_bisect_tol (<= cal_halvings halvings). Validation (F12b.3):
+    the achieved C-bar on the independent validation panels must satisfy |C_val - target| <= cal_tol.
+
+    Monotonicity (cfg.cal_monotone). C(gamma) = 1 - N / Sum_d Sum_i |u_di + gamma v_i| with N fixed is
+    an increasing transform of a convex function of gamma (a sum of absolute affine functions), so
+    for target > C(0) the equation C = target has exactly one root on gamma >= 0 and the bracket holds
+    it; C may dip below C(0) before rising. 'f12a' keeps F12a.4(h)'s non-decreasing grid / interior
+    check as a gate; 'convex' (F12b) reports it and does not gate on it. Any failure fails
+    qualification of (k, r): no substitute h*, no other bracket, no retry."""
+    grid = np.r_[0.0, tau * 2.0 ** np.arange(-8, 13)]
+    curve = oracle_curve(P, a, h, eps_cal)
+    C = curve(grid)
+    info = {"grid": grid.tolist(), "grid_C": C.tolist(), "tau": tau}
+    above = np.flatnonzero(C >= target)
+    if not C[0] < target or not len(above):
+        info["status"] = "failed: no bracket"
+        return None, info
+    g = int(above[0])
+    lo, hi = float(grid[g - 1]), float(grid[g])
+    inner = curve(np.linspace(lo, hi, 7)[1:-1])
+    seq = np.r_[C[g - 1], inner, C[g]]
+    info["bracket"] = [lo, hi]
+    info["f12a_grid_nondecreasing"] = bool(np.all(np.diff(C[: g + 1]) >= -1e-12))
+    info["f12a_interior_nondecreasing"] = bool(np.all(np.diff(seq) >= -1e-12))
+    info["dip_below_C0"] = bool(np.any(C[1 : g + 1] < C[0]))
+    if cfg.cal_monotone == "f12a" and not (
+        info["f12a_grid_nondecreasing"] and info["f12a_interior_nondecreasing"]
+    ):
+        info["status"] = "failed: non-monotone bracket"
+        return None, info
+    gamma, c_cal, halvings = hi, float(C[g]), 0
+    while abs(c_cal - target) > cfg.cal_bisect_tol:
+        if halvings >= cfg.cal_halvings:
+            info["status"] = "failed: bisection"
+            return None, info
+        gamma = 0.5 * (lo + hi)
+        c_cal = curve(gamma)
+        halvings += 1
+        if c_cal < target:
+            lo = gamma
+        else:
+            hi = gamma
+    info.update(gamma=float(gamma), C_calibration=float(c_cal), halvings=halvings)
+    c_val, se_val = ratio_c_with_se(P, a, h, eps_val, gamma)
+    info["C_validation"], info["C_validation_se"] = c_val, se_val
+    if abs(c_val - target) > cfg.cal_tol:
+        info["status"] = "failed: validation tolerance"
+        return None, info
+    info["status"] = "ok"
+    return float(gamma), info
+
+
 # ----------------------------------------------------------------------------- intervals
 
 
@@ -1053,7 +1329,80 @@ def a542_mults(n_comp, cfg):
     return cond, (jc, jj)
 
 
-def a542_contrast(D, qa, qb, comp, mults):
+def joint_parts(D, qa, qb, comp, mult):
+    """Per joint draw: ln R*, V_comp, V_item and V_both of the A5.4.2 two-way studentiser.
+
+    The algebra is ``scripts/tfv1_requalify.py:joint_replicates`` (kappa 1, uniform observed item
+    weights) with the three terms returned separately instead of sqrt(V_comp + V_item - V_both)
+    (NaN when <= 0). mult = (component multiplicities [B, n_comp], item multiplicities [B, 32])."""
+    comp = np.asarray(comp)
+    order = np.argsort(comp, kind="stable")
+    D, qa, qb, comp = D[order], qa[order], qb[order], comp[order]
+    J = D.shape[1]
+    starts = np.flatnonzero(np.r_[True, comp[1:] != comp[:-1]])
+    n = len(starts)
+    sizes = np.diff(np.r_[starts, len(comp)])
+    comp_idx = np.repeat(np.arange(n), sizes)
+    pi, pj, pw, pstarts = component_pairs(sizes)
+    pairs_d = D[pi] * D[pj]
+    mult_c_all, mult_j_all = mult
+    nn = n * J
+    out = {k: [] for k in ("ln", "v_comp", "v_item", "v_both")}
+    for lo in range(0, len(mult_c_all), 200):
+        mult_c, mult_j = mult_c_all[lo : lo + 200], mult_j_all[lo : lo + 200]
+        v = mult_j @ D.T
+        a, bb = v / J - qa, v / J - qb
+        abs_a, abs_b = np.abs(a), np.abs(bb)
+        row_mult = mult_c[:, comp_idx]
+        sa0, sb0 = (row_mult * abs_a).sum(1), (row_mult * abs_b).sum(1)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            ca = np.add.reduceat(abs_a, starts, axis=1)
+            cb = np.add.reduceat(abs_b, starts, axis=1)
+            u = ca / sa0[:, None] - cb / sb0[:, None]
+            v_comp = n / (n - 1) * (mult_c * u**2).sum(1)
+            g = np.sign(a) / sa0[:, None] - np.sign(bb) / sb0[:, None]
+            lam = (row_mult * g) @ D
+            p = mult_j / J
+            lam_bar = (p * lam).sum(1)
+            v_item = (p * (lam - lam_bar[:, None]) ** 2).sum(1) / (J - 1)
+            h = np.sign(a) * qa / sa0[:, None] - np.sign(bb) * qb / sb0[:, None]
+            h_c = np.add.reduceat(h, starts, axis=1)
+            kernel = mult_j @ pairs_d.T
+            s1 = np.add.reduceat(g[:, pi] * g[:, pj] * kernel * pw, pstarts, axis=1)
+            s2 = np.add.reduceat(g * v, starts, axis=1)
+            inner = s1 - 2 * h_c * s2 + J * h_c**2
+            v_both = nn / (nn - 1) * (mult_c * inner).sum(1) / J**2
+            out["ln"].append(np.log(sa0 / sb0))
+        out["v_comp"].append(v_comp)
+        out["v_item"].append(v_item)
+        out["v_both"].append(v_both)
+    return {k: np.concatenate(x) for k, x in out.items()}
+
+
+def joint_variance(parts, rule):
+    """Joint studentising variance under the registered rule (F12b.2).
+
+    strict: V = V_comp + V_item - V_both (A5.4.2; V <= 0 makes the draw invalid).
+    floor_vcomp: V = max(V_comp + V_item - V_both, V_comp), V_comp the draw's component-only term.
+    floor_one_way: V = max(V_comp + V_item - V_both, V_comp, V_item), the same rule in every draw and
+    at the point: the two-way variance is never below either one-way (component-only or item-only)
+    variance of the same draw, and is otherwise unchanged. No draw is dropped or replaced."""
+    raw = parts["v_comp"] + parts["v_item"] - parts["v_both"]
+    bad = ~(np.isfinite(raw) & (raw > 0))
+    if rule == "strict":
+        return raw, {"raw_nonpositive": int(bad.sum()), "floor_binding": 0}
+    if rule in ("floor_one_way", "floor_vcomp"):
+        floor = parts["v_comp"]
+        if rule == "floor_one_way":
+            floor = np.maximum(floor, parts["v_item"])
+        with np.errstate(invalid="ignore"):
+            binding = ~(raw >= floor)
+        var = np.where(binding, floor, raw)
+        return var, {"raw_nonpositive": int(bad.sum()), "floor_binding": int(binding.sum())}
+    raise ValueError(f"unknown joint studentiser rule {rule!r}")
+
+
+def a542_contrast(D, qa, qb, comp, mults, rule="strict"):
     """A5.4.2 conditional and joint intervals of C = 1 - A_a/A_b (bootstrap-t primary, BCa, percentile).
 
     D rows x 32 block values (row mean = Delta y), qa candidate and qb comparator predictions (fixed),
@@ -1091,11 +1440,11 @@ def a542_contrast(D, qa, qb, comp, mults):
         & (se_c > 0)
     )
     # joint (components x common item blocks), two-way studentiser
-    pop = {"D": D, "qa": qa, "qb": qb}
-    idx = np.arange(n)
-    ln_j, se_j = joint_replicates(
-        pop, idx, comp, n_comp, np.ones(BLOCKS), 1.0, None, 0, mult=(jc, jj)
-    )
+    parts = joint_parts(D, qa, qb, comp, (jc, jj))
+    var_j, sinfo = joint_variance(parts, rule)
+    ln_j = parts["ln"]
+    with np.errstate(invalid="ignore"):
+        se_j = np.sqrt(np.where(var_j > 0, var_j, np.nan))
     v = jj @ D.T / BLOCKS
     rm = jc[:, comp]
     sa_j = (rm * np.abs(v - qa)).sum(1)
@@ -1109,10 +1458,17 @@ def a542_contrast(D, qa, qb, comp, mults):
         & np.isfinite(se_j)
         & (se_j > 0)
     )
-    _, se0 = joint_replicates(
-        pop, idx, comp, n_comp, np.ones(BLOCKS), 1.0, None, 1,
-        mult=(np.ones((1, n_comp)), np.ones((1, BLOCKS))),
-    )  # fmt: skip
+    pt = joint_parts(D, qa, qb, comp, (np.ones((1, n_comp)), np.ones((1, BLOCKS))))
+    var0, pinfo = joint_variance(pt, rule)
+    with np.errstate(invalid="ignore"):
+        se0 = np.sqrt(np.where(var0 > 0, var0, np.nan))
+    out["studentiser"] = {
+        "rule": rule,
+        "raw_nonpositive": sinfo["raw_nonpositive"],
+        "floor_binding": sinfo["floor_binding"],
+        "point_raw_nonpositive": bool(pinfo["raw_nonpositive"]),
+        "point_floor_binding": bool(pinfo["floor_binding"]),
+    }
     out["n_failed"] = {"conditional": int((~ok_c).sum()), "joint": int((~ok_j).sum())}
 
     def reasons(sa, sb, rows, mult, ln, se):
@@ -1189,6 +1545,7 @@ class Context:
         self.F = statnn_features(m)
         self.P = oof_operator(self.a, self.q, self.fold, cfg.ridge_lambda)
         self.payload = payload
+        self.tau = noise_tau(payload)
         full = HeadData(matrix)
         self.pop_stats = full.stats(np.arange(full.n))
         self.mults = a542_mults(len(uniq), cfg)
@@ -1208,6 +1565,11 @@ class Context:
 
     def calibrate(self, h, r):
         cfg = self.cfg
+        if cfg.calibration == "f12b":
+            args = (self.payload, self.comp, self.ids)
+            eps_c = calibration_panels(*args, cfg.cal_draws, "cal", self.k, r, cfg)
+            eps_v = calibration_panels(*args, cfg.val_draws, "calval", self.k, r, cfg)
+            return calibrate_gamma_f12b(self.P, self.a, h, eps_c, eps_v, self.tau, cfg)
         rc = np.random.default_rng(domain_seed(FOLD_DOMAIN, f"gamma-cal:{self.k}:{r}"))
         rv = np.random.default_rng(domain_seed(FOLD_DOMAIN, f"gamma-val:{self.k}:{r}"))
         eps_c = np.stack(
@@ -1239,8 +1601,9 @@ class Context:
 
 def run_replicate(ctx, scenario, r):
     alt, var = SCENARIOS[scenario]
+    cfg = ctx.cfg
     rec = {"scenario": scenario, "k": ctx.k, "r": r}
-    rec["seed"] = domain_seed(FOLD_DOMAIN, f"sim:{scenario}:{ctx.k}:{r}")
+    rec["seed"] = domain_seed(FOLD_DOMAIN, f"{cfg.seed_tag}:{scenario}:{ctx.k}:{r}")
     gamma, h = 0.0, np.zeros(len(ctx.a))
     if alt:
         try:
@@ -1255,7 +1618,9 @@ def run_replicate(ctx, scenario, r):
             return rec
     rec["gamma"] = gamma
     rng = np.random.default_rng(rec["seed"])
-    E, _, _ = draw_panel_noise(ctx.payload, ctx.comp, rng, math.sqrt(var))
+    E, _, _ = draw_panel_noise(
+        ctx.payload, ctx.comp, rng, math.sqrt(var), order=cfg.noise_draw, row_ids=ctx.ids
+    )
     D = (ctx.a + gamma * h)[:, None] + E
     y = D.mean(1)
     try:
@@ -1268,14 +1633,29 @@ def run_replicate(ctx, scenario, r):
     rec["A"] = A
     rec["C_S_F3"] = 1 - A["S"] / A["F3"]
     rec["C_oracle_F3"] = 1 - A["oracle"] / A["F3"]
-    cw = a542_contrast(D, wm, f3, ctx.comp, ctx.mults)
-    cs = a542_contrast(D, wm, st, ctx.comp, ctx.mults)
+    cw = a542_contrast(D, wm, f3, ctx.comp, ctx.mults, rule=cfg.joint_studentiser)
+    cs = a542_contrast(D, wm, st, ctx.comp, ctx.mults, rule=cfg.joint_studentiser)
+    if cfg.stage:  # F12b.2 descriptive sensitivity: the other joint rules on the same draws
+        for c, qb in ((cw, f3), (cs, st)):
+            if "studentiser" not in c:
+                continue
+            c["studentiser"]["sensitivity"] = {}
+            for rule in STUDENTISER_RULES:
+                if rule != cfg.joint_studentiser:
+                    alt_c = a542_contrast(D, wm, qb, ctx.comp, ctx.mults, rule=rule)
+                    c["studentiser"]["sensitivity"][rule] = {
+                        "valid": alt_c["valid"],
+                        "joint_bootstrap_t": alt_c["intervals"].get("joint_bootstrap_t"),
+                    }
     rec["C_WM"], rec["C_WM_S"] = cw, cs
     rec["decision"] = f12_decision(cw, cs)
     rec["valid"] = bool(cw["valid"] and cs["valid"])
     rec["fit"] = {
         "refit_epochs": [i["refit_epochs"] for i in info],
         "trees": [i["trees"] for i in info],
+        "wmr": [
+            {k: i[k] for k in ("inner_best", "refit_epochs", "target_sd") if k in i} for i in info
+        ],
     }
     return rec
 
@@ -1395,8 +1775,14 @@ def summarise(records, cfg):
                         abs(c["C_validation"] - TARGET_C) <= cfg.cal_tol for c in okc
                     ),
                 }
+            if cfg.gating == "f12a":
+                s.update(f12a_rates(recs, cfg))
             row[name] = s
         gates = {}
+        if cfg.gating == "f12a":
+            row["gates"] = f12a_gates(row, cfg)
+            out[str(k)] = row
+            continue
         if "null" in row:
             nul = row["null"]
             sizes = [nul["cond_lower_pos"], nul["joint_lower_pos"], nul["detected"]]
@@ -1409,6 +1795,80 @@ def summarise(records, cfg):
         row["gates"] = gates
         out[str(k)] = row
     return out
+
+
+SIZE_RATES = {  # F12a.5(b) rates (2)-(5): name -> (contrast, procedure)
+    "C_WM_cond_lower": ("C_WM", "conditional"),
+    "C_WM_joint_lower": ("C_WM", "joint"),
+    "C_WM_S_cond_lower": ("C_WM_S", "conditional"),
+    "C_WM_S_joint_lower": ("C_WM_S", "joint"),
+}
+
+
+def f12a_rates(recs, cfg):
+    """F12a.5(b)-(d): five size rates and the power rate over all planned replicates; an invalid
+    replicate is a rejection for every size rate and a failure (no detection) for power."""
+    n = len(recs)
+    bad = [x for x in recs if not x["valid"]]
+    good = [x for x in recs if x["valid"]]
+    out = {}
+    for name, (contrast, proc) in SIZE_RATES.items():
+        cnt = sum(x[contrast]["intervals"][f"{proc}_bootstrap_t"][0] > 0 for x in good)
+        out[name] = mc_bounds(cnt + len(bad), n, cfg)
+    det = sum(x["decision"] == "correction_detected" for x in recs)
+    causes = {}
+    for x in bad:
+        why = x.get("failure") or "; ".join(
+            f"{c}: {', '.join(x[c].get('failures', []))}"
+            for c in ("C_WM", "C_WM_S")
+            if c in x and not x[c].get("valid", True)
+        )
+        causes[why] = causes.get(why, 0) + 1
+    return {
+        "size_rates": {**out, "detected": mc_bounds(det + len(bad), n, cfg)},
+        "power": mc_bounds(det, n, cfg),
+        "invalid_by_cause": dict(sorted(causes.items())),
+    }
+
+
+def f12a_gates(row, cfg):
+    g = {}
+    if "null" in row:
+        sz = row["null"]["size_rates"]
+        g["size_pass"] = all(b["bonferroni_upper"] <= cfg.size_limit for b in sz.values())
+        g["size_point_pass"] = all(b["rate"] <= cfg.size_limit for b in sz.values())
+    if "alt" in row:
+        g["power_pass"] = row["alt"]["power"]["bonferroni_lower"] >= cfg.power_limit
+        g["power_point_pass"] = row["alt"]["power"]["rate"] >= cfg.power_limit
+    g["both_pass"] = bool(g.get("size_pass") and g.get("power_pass"))
+    return g
+
+
+def select_stage2_k(summary, cfg):
+    """F12b.4 stage-1 rule (deterministic; outcome-free simulation output only). With the pilot's
+    replicates per k: k* = the smallest k of the six whose pilot power rate >= stage1_power_min and
+    whose five pilot size rates are each <= stage1_size_max. Stage 2 runs at {k*} only; if no k
+    qualifies, at {145} only."""
+    if sorted(int(k) for k in summary) != sorted(K_GRID):
+        raise ValueError("the stage-1 summary must hold all six k values")
+    checks = []
+    for k in sorted(K_GRID):
+        row = summary[str(k)]
+        if "null" not in row or "alt" not in row:
+            raise ValueError(f"stage 1 needs null and alt at k = {k}")
+        p = row["alt"]["power"]["rate"]
+        smax = max(b["rate"] for b in row["null"]["size_rates"].values())
+        ok = p >= cfg.stage1_power_min and smax <= cfg.stage1_size_max
+        checks.append({"k": k, "power_rate": p, "size_rate_max": smax, "meets": ok})
+    met = [c["k"] for c in checks if c["meets"]]
+    k_star = met[0] if met else None
+    return {
+        "rule": f"smallest k with pilot power >= {cfg.stage1_power_min} and every pilot size rate "
+        f"<= {cfg.stage1_size_max}; stage 2 at that k only, else at 145 only",
+        "checks": checks,
+        "rule_met_at": k_star,
+        "k": [k_star if k_star is not None else max(K_GRID)],
+    }
 
 
 def replicate_requirements(summary, cfg):
@@ -1445,16 +1905,28 @@ def replicate_requirements(summary, cfg):
     }
 
 
-def release_decision(summary, cfg, k_grid, replicates, registered):
+def release_decision(summary, cfg, k_grid, replicates, registered, selected_k=None):
+    """Binding only for the registered run. F12 single stage (registered is True): the six-k grid at
+    >= 1,000 replicates. F12b (registered == 'f12b_stage2'): exactly the stage-1-selected k values at
+    the registered replicate count. A stage-1 pilot or any other config never decides a gate."""
     passing = [int(k) for k, row in summary.items() if row["gates"].get("both_pass")]
     smallest = min(passing) if passing else None
-    binding = registered and tuple(sorted(k_grid)) == K_GRID and replicates >= 1000
+    if registered == "f12b_stage2":
+        binding = (
+            selected_k is not None
+            and sorted(k_grid) == sorted(selected_k)
+            and replicates == cfg.replicates
+        )
+    elif registered is True:
+        binding = tuple(sorted(k_grid)) == K_GRID and replicates >= 1000
+    else:
+        binding = False
     return {
-        "binding": binding,
+        "binding": bool(binding),
         "note": None
         if binding
-        else "non-registered run (config, k grid or replicate count): "
-        "a smoke/dry run, NOT a gate result",
+        else "non-registered run (config, stage, k grid or replicate count): "
+        "a smoke/dry/pilot run, NOT a gate result",
         "smallest_passing_k": smallest,
         "outcome": (f"release S_{smallest}" if smallest is not None else "unresolved - not powered")
         if binding
@@ -1477,9 +1949,10 @@ def _task(args):
     w = _WORKER
     if k not in w["ctx"]:
         w["ctx"][k] = Context(w["matrix"], w["payload"], k, w["cfg"])
-    t0 = time.perf_counter()
+    t0, c0 = time.perf_counter(), time.process_time()
     rec = run_replicate(w["ctx"][k], scenario, r)
     dt = time.perf_counter() - t0
+    dc = time.process_time() - c0
     if w.get("progress"):
         cw, cs = rec.get("C_WM", {}), rec.get("C_WM_S", {})
         why = cw.get("failure_reasons", {}).get("joint") if not cw.get("valid", True) else ""
@@ -1489,18 +1962,14 @@ def _task(args):
             file=sys.stderr,
             flush=True,
         )
-    return rec, dt
+    return rec, (dt, dc, _maxrss_mb())
 
 
 def simulate(matrix, payload, cfg, k_grid, scenarios, replicates, workers=1, progress=False):
     # executed replicate-major (scenarios interleave); reported in (k, scenario, r) order
-    tasks = [(s, k, r) for k in k_grid for r in range(replicates) for s in scenarios]
-    order = {
-        t: i
-        for i, t in enumerate(
-            (s, k, r) for k in k_grid for s in scenarios for r in range(replicates)
-        )
-    }
+    reps = range(cfg.replicate_offset, cfg.replicate_offset + replicates)
+    tasks = [(s, k, r) for k in k_grid for r in reps for s in scenarios]
+    order = {t: i for i, t in enumerate((s, k, r) for k in k_grid for s in scenarios for r in reps)}
     if workers <= 1:
         _init_worker(matrix, payload, cfg, progress)
         results = [_task(t) for t in tasks]
@@ -1534,6 +2003,38 @@ def git_head():
 
 
 def rules_text(cfg):
+    rules = _rules_f12(cfg)
+    if cfg.stage:
+        rules["F12b"] = f12b_rules_text(cfg)
+    return rules
+
+
+def f12b_rules_text(cfg):
+    """The F12b repairs active in cfg (PREREG_H1_TF A5 amendment F12b)."""
+    return {
+        "head": f"output weights zero-initialised: {cfg.head_zero_init}; residual target divided by its "
+        f"training-row SD (ddof 0) per fit, prediction multiplied back: {cfg.target_standardise}; "
+        "token standardisation unchanged (present-token mean/SD on the fit's training rows); "
+        "h = 0 at the zero edit",
+        "joint_studentiser": f"{cfg.joint_studentiser}: floor_vcomp V = max(V_comp + V_item - V_both, V_comp) "
+        "(floor_one_way also max with V_item) in every draw and at the point; conditional procedure "
+        "unchanged; no draw dropped; the other rules reported descriptively",
+        "calibration": f"{cfg.calibration}: grid {{0}} U tau 2^(-8..12); bracket C(0) < 0.15 <= C(g*); "
+        f"monotonicity {cfg.cal_monotone}; bisection to |C_cal - 0.15| <= {cfg.cal_bisect_tol} "
+        f"(<= {cfg.cal_halvings} halvings) on {cfg.cal_draws} panels seed 'cal:<k>:<r>:<d>'; "
+        f"validation |C_val - 0.15| <= {cfg.cal_tol} on {cfg.val_draws} panels seed "
+        "'calval:<k>:<r>:<d>' else failed qualification",
+        "noise_draw": f"{cfg.noise_draw} (F12a.4(b) order)",
+        "gating": f"{cfg.gating}: six rates (power; C_WM and C_WM,S cond/joint lower > 0; detected), "
+        f"Bonferroni alpha {cfg.mc_alpha}/{cfg.bonferroni_m}; invalid = rejection (size) / failure (power)",
+        "stage": f"{cfg.stage}: replicates {cfg.replicates}, offset {cfg.replicate_offset}, seed tag "
+        f"'{cfg.seed_tag}'; stage-1 rule power >= {cfg.stage1_power_min}, size <= {cfg.stage1_size_max}",
+        "statnn": f"tree count selected with seeds {list(cfg.statnn_select_seeds)} averaged; refit "
+        f"seeds {list(cfg.seeds)} averaged; LightGBM n_jobs {dict(cfg.lgbm)['n_jobs']}",
+    }
+
+
+def _rules_f12(cfg):
     return {
         "population": "S_k = existing + first k purchasable components by sha256('20261111:f12:purchase:'+id)",
         "outer_folds": "5; stratum = family or mixed; sha256('20261111:f12:'+id) within stratum; strata "
@@ -1581,10 +2082,18 @@ def main(argv=None):
     src.add_argument("--tokens", type=Path, help="frozen f12-token-matrix-v1 .npz")
     src.add_argument("--synthetic", action="store_true", help="synthetic token matrix (dry runs)")
     p.add_argument("--payload", type=Path, default=DEFAULT_PAYLOAD)
+    p.add_argument(
+        "--restricted-payload", type=Path, default=None,
+        help="read only this restricted payload copy (F12a.4(e)) instead of --payload",
+    )  # fmt: skip
     p.add_argument("--out", type=Path, required=True)
-    p.add_argument("--replicates", type=int, default=1000)
-    p.add_argument("--seed", type=int, default=BOOT_SEED, help="A5.4.2 bootstrap PCG64 seed")
-    p.add_argument("--k-grid", default=",".join(map(str, K_GRID)))
+    p.add_argument("--config", type=Path, default=None, help="committed config JSON (F12b)")
+    p.add_argument(
+        "--stage1-report", type=Path, default=None, help="stage-1 report (F12b stage 2: k from it)"
+    )
+    p.add_argument("--replicates", type=int, default=None)
+    p.add_argument("--seed", type=int, default=None, help="A5.4.2 bootstrap PCG64 seed")
+    p.add_argument("--k-grid", default=None)
     p.add_argument("--scenarios", default="null,alt")
     p.add_argument("--workers", type=int, default=1)
     p.add_argument("--draws", type=int, default=None, help="override (non-registered)")
@@ -1595,19 +2104,35 @@ def main(argv=None):
     a = p.parse_args(argv)
     out = guard_out(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    k_grid = [int(x) for x in a.k_grid.split(",") if x != ""]
+    base, config_sha = (Config(), None) if a.config is None else load_config(a.config)
+    selection = None
+    if a.stage1_report is not None:
+        s1 = json.loads(Path(a.stage1_report).read_text())
+        s1_cfg = config_from_dict(s1["config"])
+        if registered_name(s1_cfg) != "f12b_stage1":
+            raise SystemExit("the stage-1 report was not produced under the registered stage-1 config")
+        selection = select_stage2_k(s1["summary"], s1_cfg)
+        selection["stage1_report_sha256"] = sha256_file(a.stage1_report)
+    if a.k_grid is not None:
+        k_grid = [int(x) for x in a.k_grid.split(",") if x != ""]
+    elif selection is not None:
+        k_grid = list(selection["k"])
+    else:
+        k_grid = list(K_GRID)
+    replicates = base.replicates if a.replicates is None else a.replicates
     scenarios = [s for s in a.scenarios.split(",") if s]
     for s in scenarios:
         if s not in SCENARIOS:
             raise SystemExit(f"unknown scenario {s}")
-    over = {"boot_seed": a.seed}
+    over = {} if a.seed is None else {"boot_seed": a.seed}
     if a.draws is not None:
         over["draws"] = a.draws
     if a.max_epochs is not None:
         over["max_epochs"] = a.max_epochs
     if a.tree_grid is not None:
         over["tree_grid"] = tuple(int(x) for x in a.tree_grid.split(","))
-    cfg = dataclasses.replace(Config(), **over)
+    cfg = dataclasses.replace(base, **over)
+    reg = registered_name(cfg)
     if a.synthetic:
         matrix = synthetic_token_matrix()
         save_matrix(out / "synthetic_tokens.npz", matrix)
@@ -1620,16 +2145,23 @@ def main(argv=None):
             "file_sha256": sha256_file(a.tokens),
         }
     token_src["matrix_sha256"] = matrix_sha256(matrix)
-    payload = NoisePayload.load(a.payload)
-    restricted = out / "noise_payload_restricted.json"
-    restricted.write_text(json.dumps(payload.restricted(), sort_keys=True))
+    if a.restricted_payload is not None:
+        payload = NoisePayload.load_restricted(a.restricted_payload)
+        restricted = Path(a.restricted_payload)
+    else:
+        payload = NoisePayload.load(a.payload)
+        restricted = out / "noise_payload_restricted.json"
+        restricted.write_text(json.dumps(payload.restricted(), sort_keys=True))
     t0 = time.perf_counter()
     contexts = {k: Context(matrix, payload, k, cfg) for k in k_grid}
+    last = contexts[k_grid[-1]]
     diag = noise_diagnostics(
-        payload, contexts[k_grid[-1]].comp, domain_seed(FOLD_DOMAIN, "noise-diagnostics")
-    )
+        payload, last.comp, domain_seed(FOLD_DOMAIN, "noise-diagnostics"),
+        order=cfg.noise_draw, row_ids=last.ids,
+    )  # fmt: skip
+    diag["draw_order"] = cfg.noise_draw
     records, times = simulate(
-        matrix, payload, cfg, k_grid, scenarios, a.replicates, a.workers, progress=True
+        matrix, payload, cfg, k_grid, scenarios, replicates, a.workers, progress=True
     )
     wall = time.perf_counter() - t0
     summary = summarise(records, cfg)
@@ -1644,7 +2176,9 @@ def main(argv=None):
         "status": "synthetic dry run, not a gate" if matrix["synthetic"] else "simulation",
         "git_head": git_head(),
         "config": cfg.as_dict(),
-        "config_registered": cfg.registered(),
+        "config_file": None if a.config is None else {"path": str(a.config), "sha256": config_sha},
+        "config_registered": reg,
+        "stage1_selection": selection,
         "rules": rules_text(cfg),
         "inputs": {
             "tokens": token_src,
@@ -1659,21 +2193,37 @@ def main(argv=None):
         },
         "k_grid": k_grid,
         "scenarios": scenarios,
-        "replicates": a.replicates,
+        "replicates": replicates,
         "populations": {str(k): c.fold_manifest() for k, c in contexts.items()},
         "head_parameters": head_param_count(),
         "noise_diagnostics": diag,
         "summary": summary,
         "replicate_requirements": replicate_requirements(summary, cfg),
-        "release": release_decision(summary, cfg, k_grid, a.replicates, cfg.registered()),
+        "release": release_decision(
+            summary, cfg, k_grid, replicates, reg, None if selection is None else selection["k"]
+        ),
         "records": records,
     }
     (out / "report.json").write_text(
         json.dumps(report, sort_keys=True, indent=1, default=_json_default)
     )
     n_tasks = len(times)
-    per = float(np.mean(times)) if times else float("nan")
+    walls = [t[0] for t in times]
+    cpus = [t[1] for t in times]
+    per = float(np.mean(cpus)) if times else float("nan")
     projected = per * 1000 * len(K_GRID) * 2
+    by_k = {
+        str(k): {
+            sc: {
+                "n": len(sel),
+                "cpu_mean": float(np.mean([t[1] for t in sel])) if sel else None,
+                "wall_mean": float(np.mean([t[0] for t in sel])) if sel else None,
+            }
+            for sc in scenarios
+            for sel in [[t for rec, t in zip(records, times) if rec["k"] == k and rec["scenario"] == sc]]
+        }
+        for k in k_grid
+    }
     (out / "report.time").write_text(
         json.dumps(
             {
@@ -1681,8 +2231,12 @@ def main(argv=None):
                 "workers": a.workers,
                 "replicate_tasks": n_tasks,
                 "cpu_seconds_per_replicate_mean": per,
-                "cpu_seconds_per_replicate_max": float(np.max(times)) if times else None,
+                "cpu_seconds_per_replicate_max": float(np.max(cpus)) if times else None,
+                "wall_seconds_per_replicate_mean": float(np.mean(walls)) if times else None,
+                "worker_max_rss_mb": float(max(t[2] for t in times)) if times else None,
                 "projected_cpu_hours_registered_run (1000 x 6 k x null+alt)": projected / 3600,
+                "per_replicate_by_k_and_scenario": by_k,
+                "rss_max_mb_parent": _maxrss_mb(),
             },
             indent=1,
         )
@@ -1693,6 +2247,12 @@ def main(argv=None):
         )
     )
     return 0
+
+
+def _maxrss_mb():
+    import resource
+
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
 
 
 def _lgbm_version():
