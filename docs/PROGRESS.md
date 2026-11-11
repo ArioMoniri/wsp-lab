@@ -863,3 +863,15 @@ nothing written, nothing scored. The user then held further action. The user's t
 a single first-order "neuron"; at least a model-specific world model is needed. Brief `docs/council/2026-11-11/BRIEF-r6.md` (with the
 table of how each recent paper edits weights and what, if anything, predicted the effect first; new items arXiv 2611.11604 and
 2606.13461); four members dispatched; chair synthesis and any F12 to follow. Part A remains unscored and held.
+
+**11 Nov 2026, 12:07 UTC. Council round 6 closed (chair synthesis `docs/council/2026-11-11/SYNTHESIS-r6.md`).** On the user's
+thesis: upheld in its first half — the registered field is a fixed second-order model of this base read out by ≤ 3 coefficients
+("single neuron" in function class, model-specific in information), which cannot represent cross-tensor interactions (it predicts
+zero interaction for split edits exactly), negative curvature, per-edit gain or path dependence, and has no outcome evidence yet
+(33/33 compares two computations of the same prediction; Part A unscored). Second half converted into a registered test: no
+contrast ever set a learned model-specific predictor against the field head to head; **F12** registers it now, outcome-blind (270
+root rows / 234 components, F5-pinned K+F residual head nested in the field, A5.4.2 intervals vs both the field and augmented StatNN,
+outcome-free power simulation before purchase, ≈ 2.55 GPU-h) with **F12-I**, a 36-entry split-edit additivity panel where the field
+predicts exactly zero. JEPAWG-style latent dynamics not recommended (M3 already built: ρ 0.15/0.13 on 25 pairs; the weight transition
+is known exactly). Corrections: 689 TF-v1 records; chain 675 entries / 93 components; only 147 development roots scorable without
+spending G7 freshness. F12 text in flight; Board A review next. Part A remains held by the user.
