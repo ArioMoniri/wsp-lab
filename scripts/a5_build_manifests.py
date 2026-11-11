@@ -118,6 +118,8 @@ CODE_FILES = {
     "scripts/a5_f10_dryrun.py": "F10 dry-run script (CPU, scratch only)",
     "tests/test_rotation.py": "test",
     "tests/test_response_intervention.py": "test",
+    "scripts/a5_f11_supplement.py": "F11.2 supplementary selection builder",
+    "tests/test_a5_f11_supplement.py": "test",
     "src/wsp/features/response_field.py": "G2 field and registered panel-size consumer check",
     "src/wsp/features/response_chart.py": "A5.8.2 chart",
     "configs/eval_tf_v1.yaml": "resolved TF-v1 config",

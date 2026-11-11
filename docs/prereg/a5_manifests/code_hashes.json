@@ -79,7 +79,7 @@
   },
   "scripts/a5_build_manifests.py": {
    "role": "builder",
-   "sha256": "47844db666dcf1a4d1bfd3f207bedb08d9d0c947dcc0f30948e6d5aad6a8365b"
+   "sha256": "85bdee0b8192b9a4e73b7a08bcf791ea16262681f4f73bda4ddc3a39b9d8d981"
   },
   "scripts/a5_build_panels.py": {
    "role": "builder",
@@ -88,6 +88,10 @@
   "scripts/a5_f10_dryrun.py": {
    "role": "F10 dry-run script (CPU, scratch only)",
    "sha256": "11bbc5f66eff80e951c2c66e8954a048a3023fbde7163defffc6794bd9a531ef"
+  },
+  "scripts/a5_f11_supplement.py": {
+   "role": "F11.2 supplementary selection builder",
+   "sha256": "90dcb312a9e81104dd24167c1e6243af7711a5d4e5ac610d3072cf65ae7764a3"
   },
   "scripts/a5_incremental_norms.py": {
    "role": "producer of the incremental-norm input",
@@ -273,6 +277,10 @@
    "role": "test",
    "sha256": "95ba2f3073ecc3c6f5e89fcc039f02d1d20952ba6266b727460ca976343736e2"
   },
+  "tests/test_a5_f11_supplement.py": {
+   "role": "test",
+   "sha256": "6cf4f07c9281024ebaa529f206fc1bfd9153f9d5cddd4dcc7ee108888251e739"
+  },
   "tests/test_a5_nullsize_inputs.py": {
    "role": "test",
    "sha256": "dfa40c03abbbce67f790fa2d96032a9862683e5ef63213c825eef9505ea11208"
@@ -298,7 +306,7 @@
    "sha256": "7570224a0b4c0dd8e9f1b0aacdaa930e2170d97fa1d1e9c6864bd60d13869325"
   }
  },
- "git_sha": "ade2850e199edadf622a4ac8d1398bb0cbe2b9db",
+ "git_sha": "c6972ba11cfa59e224f5674c6f5d09b9459d92b8",
  "model": {
   "model": {
    "repo": "Qwen/Qwen3.5-0.8B",
