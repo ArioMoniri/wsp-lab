@@ -644,3 +644,13 @@ diagnostics; `prepare --rotation-only` carrying the staged reuse proofs unchange
 merged (21646f2); pin map extended; A5.1.2 re-pin (xviii); execution freeze written (`part_a/restage_freeze.json`); a533 manifest
 and audits preserved as `manifest_a533.json` / `rotation_audits_a533.jsonl`. Rotation-only re-stage launching under agent-tmux
 `a5-f10-restage` with the Board A command (CPU, 4 threads, ≈ 2–3.5 h). Scoring held until the re-stage report is accepted.
+
+**11 Nov 2026, 06:30 UTC. F10 rotation-only re-stage complete (exit 0).** Execution SHA 7bacec1, clean tree, 02:44–06:22 UTC (3 h 38 min
+CPU, 4 threads; `part_a/restage_launch.json`). Yield **31 of 40 rotation pairs** (≥ 15, so the rotation contrast is resolvable by
+yield): 9 excluded — 6 chain picks `replay_failed` (scorer round-trip on predecessor-zero / base-nonzero entries, as ruled) and 3
+lora_sft `rounding_bound_failed` on one tensor each (`15a53586`, `2233954b`, `72d3756e`; the exact one-fp32-spacing slack bit on
+real tensors beyond the dry-run three; no retuning under F10a). 1,984 of 2,534 edited tensors rotated. Regenerated manifest
+`59d839e3…`, audits `4ec0928a…`, committed at 848d7a5 with the frozen F10.6 slot mask (`slot_mask_f10.json`, sha256 `a2ed6ae7…`,
+9 rotation slots masked, all ladder slots kept). Slot-masked registered-scale calibration (10,000 replicates, 61-donor pool) launched
+under agent-tmux `a5-slotmask-f10`. Priced scoring after exclusions: 135.2 min. Re-stage report in preparation for Board A; scoring
+held.
