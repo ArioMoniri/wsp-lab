@@ -1,0 +1,1904 @@
+{
+ "schema": "a5-part-a-prescore-inventory-v2",
+ "supersedes_status_of": {
+  "path": "docs/prereg/a5_manifests/part_a/PRESCORE_INVENTORY.json",
+  "sha256": "2ab1caea1dce1f4ac2afb50a59e80d3f3cf3c19ae4a922144a61bbddd9cc2160",
+  "md": "docs/prereg/a5_manifests/part_a/PRESCORE_INVENTORY.md",
+  "md_sha256": "419ee039de63ea75014b9271e3a2718e593bf9d17b5d83900533511c04100f0c",
+  "note": "inventory 1 is kept byte-unchanged as the historical snapshot at 079e60b; this file re-evaluates its 52 gates and adds Board A's staging-cal conditions"
+ },
+ "readable": "docs/prereg/a5_manifests/part_a/PRESCORE_INVENTORY_2.md",
+ "built_utc": "2026-11-11T11:11:05Z",
+ "built_at_head": "c947cc9c7e48118573622507448d213b3648de2a",
+ "branch": "prereg/prescore-inventory-2 (created from main 87f6895, fast-forwarded to main c947cc9 before any build step; c947cc9 adds attestation entry 23 only)",
+ "builder": {
+  "build2.py": "294a58340a17c6e308ddd23691c790b75d640b321a66e8f449615809bccc2f3f",
+  "rehash2.py": "56a508ada0f56a1995981f483aad3a3256660818fefa30fe7cf6061734266775",
+  "merge2.py": "a4f09f4c82845b19810c3b9700279bc1d4a4ea26062bdf96492afb60cca20685",
+  "where": "session scratch, not committed"
+ },
+ "status": "SCORING HELD: this inventory releases nothing",
+ "gate_counts": {
+  "MET": 33,
+  "BOARD_A": 14,
+  "OPEN": 4,
+  "AT_EXECUTION": 6,
+  "PARTIAL": 4
+ },
+ "awaiting_board_a": [
+  "F10-5",
+  "F10-7a",
+  "F10C2-4b",
+  "F11-4b",
+  "F11-6e",
+  "ST-5",
+  "SIM-3b",
+  "AN4-3c",
+  "AN4-3e",
+  "SC-b",
+  "SC-2",
+  "SC-4",
+  "SC-5",
+  "SC-7"
+ ],
+ "files": {
+  "configs/eval_tf_v1.yaml": {
+   "bytes": 2595,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317",
+   "path": "configs/eval_tf_v1.yaml",
+   "role": "scoring config",
+   "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317"
+  },
+  "data/runs/a5/f11_sim_dryrun/boarda/power_slotmask_f11_replay.json": {
+   "bytes": 241039486,
+   "path": "data/runs/a5/f11_sim_dryrun/boarda/power_slotmask_f11_replay.json",
+   "role": "F11d.2 replay output (scratch destination)",
+   "sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb"
+  },
+  "data/runs/a5/nullsize/inputs.json": {
+   "bytes": 651039,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+   "path": "data/runs/a5/nullsize/inputs.json",
+   "role": "NULL-SIZE payload (F11.4 input 1)",
+   "sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
+  },
+  "data/runs/a5/part_a_predictions/predictions_f11.detail.jsonl": {
+   "bytes": 1375719,
+   "path": "data/runs/a5/part_a_predictions/predictions_f11.detail.jsonl",
+   "role": "predictions detail (named in predictions_f11.json:detail_jsonl)",
+   "sha256": "2eca1717680ae0d06e04b6adfacfdcff7611f19b82e9db2151286088eb3ea3c2"
+  },
+  "data/runs/a5/part_a_predictions/predictions_f11.json": {
+   "bytes": 269681,
+   "path": "data/runs/a5/part_a_predictions/predictions_f11.json",
+   "role": "run-output copy of the predictions file",
+   "sha256": "50c378000b424346438de03bf2ad2881a1d10706dfc28b18d0f2130ab5e7a7bb"
+  },
+  "data/runs/a5/part_a_predictions/run.log": {
+   "bytes": 9542,
+   "path": "data/runs/a5/part_a_predictions/run.log",
+   "role": "predictions run log",
+   "sha256": "4e422e737a43038f9da64b45e941d21fb598138458a8b8e0927d129d2014e30c"
+  },
+  "data/runs/a5/part_a_predictions/synthetic_binding_summary.json": {
+   "bytes": 10666,
+   "path": "data/runs/a5/part_a_predictions/synthetic_binding_summary.json",
+   "role": "synthetic input-binding summary (cases A-E)",
+   "sha256": "e28161eb9cee01b6c00a4c1d7b8ccf2261c6a3569f0cdbf3556d09a0bebad830"
+  },
+  "data/runs/a5/power/fields.json": {
+   "bytes": 14156,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "85843ed28d3fd3ba5dc71e2ba8943fd022924cbc4f0b62dddbfb001cb2bcf3b9",
+   "path": "data/runs/a5/power/fields.json",
+   "role": "power fields (F11.4 --fields)",
+   "sha256": "85843ed28d3fd3ba5dc71e2ba8943fd022924cbc4f0b62dddbfb001cb2bcf3b9"
+  },
+  "data/runs/a5/power/power_slotmask_f10.json": {
+   "bytes": 187303362,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "b14756828bc27cbbe14e1e590226820371a65ef5f83ad9622b2e6ccf04a3450a",
+   "path": "data/runs/a5/power/power_slotmask_f10.json",
+   "role": "F10.6 calibration output (FAIL)",
+   "sha256": "b14756828bc27cbbe14e1e590226820371a65ef5f83ad9622b2e6ccf04a3450a"
+  },
+  "data/runs/a5/power/power_slotmask_f11.json": {
+   "bytes": 241039486,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+   "path": "data/runs/a5/power/power_slotmask_f11.json",
+   "role": "F11.4 calibration output",
+   "sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb"
+  },
+  "docs/PREREG_H1_TF.md": {
+   "bytes": 493312,
+   "changed_since_inventory_1": true,
+   "inventory_1_sha256": "8fe66f80f4736b83449bcefb27725d8f1ebd8029267dc9078925a517e9f75f79",
+   "path": "docs/PREREG_H1_TF.md",
+   "role": "registration text at this HEAD",
+   "sha256": "5f33f22618d7adee9d5cfa0dd04cdf42094cfede5cf1944802e2eafad91018cb"
+  },
+  "docs/PROGRESS.md": {
+   "bytes": 86989,
+   "path": "docs/PROGRESS.md",
+   "role": "progress log at this HEAD",
+   "sha256": "72f121355c0157a2dc5f4cd9c16322f38e94eb8e73341b1aa951d549b6bfed24"
+  },
+  "docs/design/F10_SENSITIVITY_SPEC.md": {
+   "bytes": 37277,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4",
+   "path": "docs/design/F10_SENSITIVITY_SPEC.md",
+   "role": "F10.5 specification (analysis SPEC_SHA256)",
+   "sha256": "8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4"
+  },
+  "docs/prereg/a5_manifests/README.md": {
+   "bytes": 13578,
+   "changed_since_inventory_1": true,
+   "inventory_1_sha256": "bb6173b11aee232267eb4f0fc53e84c9bb47261bf662f7021251780c061dbb6d",
+   "path": "docs/prereg/a5_manifests/README.md",
+   "role": "package README",
+   "sha256": "26abc287dfe210fe34b0d5d534805d2578562ac03c4a40869100b4643c2e6934"
+  },
+  "docs/prereg/a5_manifests/code_hashes.json": {
+   "bytes": 14671,
+   "changed_since_inventory_1": true,
+   "inventory_1_sha256": "3447730883fe30306c9615418fcefb50b03dfbe78d05f6cc4d2ba5315e3b7bdb",
+   "path": "docs/prereg/a5_manifests/code_hashes.json",
+   "role": "governed code pin inventory",
+   "sha256": "e0a2c7793c2554337c21449f67c0e1f690c91e00d00a3f909c0b528e056ba769"
+  },
+  "docs/prereg/a5_manifests/components.jsonl": {
+   "bytes": 799719,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec",
+   "path": "docs/prereg/a5_manifests/components.jsonl",
+   "role": "component inventory (selection_f11 input)",
+   "sha256": "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec"
+  },
+  "docs/prereg/a5_manifests/control_seeds.json": {
+   "bytes": 6612,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "d357ed51031877f817baeb4204cf93b38c66fdfcfd95bd41803d93d5160c12d5",
+   "path": "docs/prereg/a5_manifests/control_seeds.json",
+   "role": "registered seeds (rotation_seed, SeedSequence(20261107))",
+   "sha256": "d357ed51031877f817baeb4204cf93b38c66fdfcfd95bd41803d93d5160c12d5"
+  },
+  "docs/prereg/a5_manifests/nullsize/inputs_provenance.json": {
+   "bytes": 331437,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "ea160aa4088c56db0aa27046daf3e21eb5865b3950b98e70b4eff9242e1eb1a3",
+   "path": "docs/prereg/a5_manifests/nullsize/inputs_provenance.json",
+   "role": "NULL-SIZE inputs provenance",
+   "sha256": "ea160aa4088c56db0aa27046daf3e21eb5865b3950b98e70b4eff9242e1eb1a3"
+  },
+  "docs/prereg/a5_manifests/nullsize/report.json": {
+   "bytes": 18617,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "1bed2c9531e4230864a1ebbe7e4023e0ffafcf704a59c40e93f9a75bd469dfa6",
+   "path": "docs/prereg/a5_manifests/nullsize/report.json",
+   "role": "NULL-SIZE report (analysis NULLSIZE_REPORT_SHA256)",
+   "sha256": "1bed2c9531e4230864a1ebbe7e4023e0ffafcf704a59c40e93f9a75bd469dfa6"
+  },
+  "docs/prereg/a5_manifests/nullsize/validation.json": {
+   "bytes": 486,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "7a9f72876e73f5ffba2852f925a8aa3ae52a5c9261d55af942b322b1e0606136",
+   "path": "docs/prereg/a5_manifests/nullsize/validation.json",
+   "role": "NULL-SIZE validation",
+   "sha256": "7a9f72876e73f5ffba2852f925a8aa3ae52a5c9261d55af942b322b1e0606136"
+  },
+  "docs/prereg/a5_manifests/nullsize_inputs.json": {
+   "bytes": 7763,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "6e58b589e32491b36fd70e679b20242538ea8e958b9b9072ce0e30b444508885",
+   "path": "docs/prereg/a5_manifests/nullsize_inputs.json",
+   "role": "NULL-SIZE inputs specification",
+   "sha256": "6e58b589e32491b36fd70e679b20242538ea8e958b9b9072ce0e30b444508885"
+  },
+  "docs/prereg/a5_manifests/panels.json": {
+   "bytes": 368046,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "c291b68516952c4f342bfc7f36843a83f0482df7d721a00e46287597bad108cd",
+   "path": "docs/prereg/a5_manifests/panels.json",
+   "role": "panels",
+   "sha256": "c291b68516952c4f342bfc7f36843a83f0482df7d721a00e46287597bad108cd"
+  },
+  "docs/prereg/a5_manifests/part_a/PRESCORE_A512_NOTE.md": {
+   "bytes": 5830,
+   "path": "docs/prereg/a5_manifests/part_a/PRESCORE_A512_NOTE.md",
+   "role": "inventory 1 A5.1.2 note",
+   "sha256": "13001b8b0440ae0cccc459f9e0946932c7068592ecf311511ffaceb393611ebe"
+  },
+  "docs/prereg/a5_manifests/part_a/PRESCORE_INVENTORY.json": {
+   "bytes": 130488,
+   "path": "docs/prereg/a5_manifests/part_a/PRESCORE_INVENTORY.json",
+   "role": "pre-score inventory 1 (historical snapshot at 079e60b)",
+   "sha256": "2ab1caea1dce1f4ac2afb50a59e80d3f3cf3c19ae4a922144a61bbddd9cc2160"
+  },
+  "docs/prereg/a5_manifests/part_a/PRESCORE_INVENTORY.md": {
+   "bytes": 22484,
+   "path": "docs/prereg/a5_manifests/part_a/PRESCORE_INVENTORY.md",
+   "role": "pre-score inventory 1, readable (historical snapshot)",
+   "sha256": "419ee039de63ea75014b9271e3a2718e593bf9d17b5d83900533511c04100f0c"
+  },
+  "docs/prereg/a5_manifests/part_a/README.md": {
+   "bytes": 15208,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "2fcbf517ccf26f2a1fe325ef31300d291bc0f254c7faaacd18154e327bceada1",
+   "path": "docs/prereg/a5_manifests/part_a/README.md",
+   "role": "a533 staging README",
+   "sha256": "2fcbf517ccf26f2a1fe325ef31300d291bc0f254c7faaacd18154e327bceada1"
+  },
+  "docs/prereg/a5_manifests/part_a/RESTAGE_A512_NOTE.md": {
+   "bytes": 3511,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "9e2286818206461b66c00ac887bc7c36f7aa75024f99b9e5d5b0e66ee50df901",
+   "path": "docs/prereg/a5_manifests/part_a/RESTAGE_A512_NOTE.md",
+   "role": "A5.1.2 hash entries for the F10 re-stage",
+   "sha256": "9e2286818206461b66c00ac887bc7c36f7aa75024f99b9e5d5b0e66ee50df901"
+  },
+  "docs/prereg/a5_manifests/part_a/RESTAGE_REPORT.md": {
+   "bytes": 57841,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "61294c8666b4bbe4f938e76af7797631ef86613e77d431229bddcaf69d6d5f61",
+   "path": "docs/prereg/a5_manifests/part_a/RESTAGE_REPORT.md",
+   "role": "F10 re-stage report (accepted with conditions, board-a-f10-restage-2026-11-11.md)",
+   "sha256": "61294c8666b4bbe4f938e76af7797631ef86613e77d431229bddcaf69d6d5f61"
+  },
+  "docs/prereg/a5_manifests/part_a/SUPPLEMENT_A512_NOTE.md": {
+   "bytes": 5397,
+   "path": "docs/prereg/a5_manifests/part_a/SUPPLEMENT_A512_NOTE.md",
+   "role": "F11.3/F11.4 A5.1.2 note (pre-enrichment hashes)",
+   "sha256": "b8a5997a0e98243d7e451fdbe92850a96911ef8fed632101e6725746d66c9565"
+  },
+  "docs/prereg/a5_manifests/part_a/SUPPLEMENT_REPORT.md": {
+   "bytes": 57546,
+   "path": "docs/prereg/a5_manifests/part_a/SUPPLEMENT_REPORT.md",
+   "role": "F11.3 staging report (accepted, board-a-f11-staging-cal (a))",
+   "sha256": "a88cfe7b6280169f68c301a0fdce4e98ac37ba6b3c9ec5a8ea3f913b1c2bc656"
+  },
+  "docs/prereg/a5_manifests/part_a/f11_calibration_record.json": {
+   "bytes": 2939,
+   "changed_since_inventory_1": true,
+   "inventory_1_sha256": "216bdc9c578e576cf67ea1dfc85a1a89850c69c6c9c39fbb4fc5b8fcda26f5a4",
+   "path": "docs/prereg/a5_manifests/part_a/f11_calibration_record.json",
+   "role": "F11.4 calibration record (enriched at 516d9c9)",
+   "sha256": "3de71f022af7b8d94930a1d6f8c8b6ba428ba78f8637f921c71aba329f5548d7"
+  },
+  "docs/prereg/a5_manifests/part_a/f11_calibration_replay_record.json": {
+   "bytes": 2100,
+   "path": "docs/prereg/a5_manifests/part_a/f11_calibration_replay_record.json",
+   "role": "F11d.2 single replay record (byte-identical)",
+   "sha256": "d96036fa2087b196ec8c4a50a6a446e1bd828b6c5a10718a7895e0115ea77fd8"
+  },
+  "docs/prereg/a5_manifests/part_a/manifest.json": {
+   "bytes": 993418,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6",
+   "path": "docs/prereg/a5_manifests/part_a/manifest.json",
+   "role": "execution manifest (52 edits; F11 staging output at 8211ecf)",
+   "sha256": "71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6"
+  },
+  "docs/prereg/a5_manifests/part_a/manifest_a533.json": {
+   "bytes": 544290,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6",
+   "path": "docs/prereg/a5_manifests/part_a/manifest_a533.json",
+   "role": "preserved a533 staging manifest (FROZEN_STAGED_MANIFEST_SHA256)",
+   "sha256": "d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6"
+  },
+  "docs/prereg/a5_manifests/part_a/manifest_pre_f11.json": {
+   "bytes": 828584,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "59d839e351824fa154a665fcf105284ce5fdeed8423a5c0a2b7a60687b0d3b06",
+   "path": "docs/prereg/a5_manifests/part_a/manifest_pre_f11.json",
+   "role": "preserved pre-F11 (F10 re-stage) manifest",
+   "sha256": "59d839e351824fa154a665fcf105284ce5fdeed8423a5c0a2b7a60687b0d3b06"
+  },
+  "docs/prereg/a5_manifests/part_a/predictions_f11.json": {
+   "bytes": 269681,
+   "path": "docs/prereg/a5_manifests/part_a/predictions_f11.json",
+   "role": "frozen Part A prediction rows, 52 edits (re-pin xxiv)",
+   "sha256": "50c378000b424346438de03bf2ad2881a1d10706dfc28b18d0f2130ab5e7a7bb"
+  },
+  "docs/prereg/a5_manifests/part_a/restage_freeze.json": {
+   "bytes": 14236,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "03dfaf2667d0addbd459c0662b8fa87a2304b36a054c36cf64ac29192ca48858",
+   "path": "docs/prereg/a5_manifests/part_a/restage_freeze.json",
+   "role": "F10 re-stage pre-execution freeze (xviii)",
+   "sha256": "03dfaf2667d0addbd459c0662b8fa87a2304b36a054c36cf64ac29192ca48858"
+  },
+  "docs/prereg/a5_manifests/part_a/restage_launch.json": {
+   "bytes": 789,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "28dcba683dc215fe303d938a1c7b094b5d0856929f19fb720187b75bb1a59a7e",
+   "path": "docs/prereg/a5_manifests/part_a/restage_launch.json",
+   "role": "F10 re-stage launch/end record",
+   "sha256": "28dcba683dc215fe303d938a1c7b094b5d0856929f19fb720187b75bb1a59a7e"
+  },
+  "docs/prereg/a5_manifests/part_a/rotation_audits.jsonl": {
+   "bytes": 9460401,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "9412eb0d4d60f5587c4c5d19e9afcda86c6c45faa38a37b3ab937008d505c45a",
+   "path": "docs/prereg/a5_manifests/part_a/rotation_audits.jsonl",
+   "role": "execution audit file (pre-F11 bytes + 12 supplementary edits' rows)",
+   "sha256": "9412eb0d4d60f5587c4c5d19e9afcda86c6c45faa38a37b3ab937008d505c45a"
+  },
+  "docs/prereg/a5_manifests/part_a/rotation_audits_a533.jsonl": {
+   "bytes": 1782920,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "f05fec4265ffd93c8c537100993d23262be95141369240fcad0a7e16ff474d35",
+   "path": "docs/prereg/a5_manifests/part_a/rotation_audits_a533.jsonl",
+   "role": "preserved a533 audit file",
+   "sha256": "f05fec4265ffd93c8c537100993d23262be95141369240fcad0a7e16ff474d35"
+  },
+  "docs/prereg/a5_manifests/part_a/rotation_audits_pre_f11.jsonl": {
+   "bytes": 7810911,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "4ec0928a91b5523a400b911f00f8045f267386c2589aa72a58816d565f5c97f3",
+   "path": "docs/prereg/a5_manifests/part_a/rotation_audits_pre_f11.jsonl",
+   "role": "preserved pre-F11 audit file",
+   "sha256": "4ec0928a91b5523a400b911f00f8045f267386c2589aa72a58816d565f5c97f3"
+  },
+  "docs/prereg/a5_manifests/part_a/slot_mapping_f11.json": {
+   "bytes": 9180,
+   "path": "docs/prereg/a5_manifests/part_a/slot_mapping_f11.json",
+   "role": "explicit 52-slot mapping (written post-run from the output; disclosed F11c.2; certified by Board A reconstruction)",
+   "sha256": "1e2155adaf606b61ba7d325ff15a6970cee92ec0a5ef03ec7d48c3fdc7146862"
+  },
+  "docs/prereg/a5_manifests/part_a/slot_mask_f10.json": {
+   "bytes": 3036,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "86fa27a5c1838d0c0bd88ef530feba22eceafac698d0ec4506fbf05df83b698e",
+   "path": "docs/prereg/a5_manifests/part_a/slot_mask_f10.json",
+   "role": "F10.6 mask",
+   "sha256": "86fa27a5c1838d0c0bd88ef530feba22eceafac698d0ec4506fbf05df83b698e"
+  },
+  "docs/prereg/a5_manifests/part_a/slot_mask_f10.provenance.json": {
+   "bytes": 847,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "0bb56b4bb05ce0718f48e7fc962a60e4378b06d9c46c9cf08e4b1ef78be08636",
+   "path": "docs/prereg/a5_manifests/part_a/slot_mask_f10.provenance.json",
+   "role": "F10.6 mask provenance sidecar",
+   "sha256": "0bb56b4bb05ce0718f48e7fc962a60e4378b06d9c46c9cf08e4b1ef78be08636"
+  },
+  "docs/prereg/a5_manifests/part_a/slot_mask_f11.json": {
+   "bytes": 3972,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+   "path": "docs/prereg/a5_manifests/part_a/slot_mask_f11.json",
+   "role": "F11.4 mask (52 ids)",
+   "sha256": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4"
+  },
+  "docs/prereg/a5_manifests/part_a/slotmask_calibration_record.json": {
+   "bytes": 1725,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "0c5fa8c38da42d63bd5762c307ec1c2254313501fbfd4763b3418eaa3eff6b51",
+   "path": "docs/prereg/a5_manifests/part_a/slotmask_calibration_record.json",
+   "role": "F10.6 calibration record (FAIL, superseded)",
+   "sha256": "0c5fa8c38da42d63bd5762c307ec1c2254313501fbfd4763b3418eaa3eff6b51"
+  },
+  "docs/prereg/a5_manifests/part_a/supplement_freeze.json": {
+   "bytes": 18345,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "503e415efda3801216cc57ba332ab643a333e4b73cb92ce6366add0682fda0a4",
+   "path": "docs/prereg/a5_manifests/part_a/supplement_freeze.json",
+   "role": "F11.3 staging pre-execution freeze",
+   "sha256": "503e415efda3801216cc57ba332ab643a333e4b73cb92ce6366add0682fda0a4"
+  },
+  "docs/prereg/a5_manifests/part_a/supplement_launch.json": {
+   "bytes": 1524,
+   "changed_since_inventory_1": true,
+   "inventory_1_sha256": "d17fab2f7648a405045b85bcb92e309a5ea11fb19a6d864a852ccb72bd38fb38",
+   "path": "docs/prereg/a5_manifests/part_a/supplement_launch.json",
+   "role": "F11.3 staging launch/end record",
+   "sha256": "d20a4ab36faa47864bf5c5c1a724e2c4d7e096bbadb5631bc8c95bca6954fdbb"
+  },
+  "docs/prereg/a5_manifests/power/fields_manifest.json": {
+   "bytes": 287897,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "19e9de8430ff2a135db848f7d0d5097b5b5724138e9ee815e807e5753e5f9a6b",
+   "path": "docs/prereg/a5_manifests/power/fields_manifest.json",
+   "role": "power fields manifest (selection_f11 input)",
+   "sha256": "19e9de8430ff2a135db848f7d0d5097b5b5724138e9ee815e807e5753e5f9a6b"
+  },
+  "docs/prereg/a5_manifests/power/registered_donors.json": {
+   "bytes": 3551,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5",
+   "path": "docs/prereg/a5_manifests/power/registered_donors.json",
+   "role": "F7.1 61-donor pool",
+   "sha256": "6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5"
+  },
+  "docs/prereg/a5_manifests/power/report.json": {
+   "bytes": 8416,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "ff46de30fa8e4ff97a4034e8bdef78cb19bc49662073523500a43c773b55845a",
+   "path": "docs/prereg/a5_manifests/power/report.json",
+   "role": "registered power report (40-slot anchors)",
+   "sha256": "ff46de30fa8e4ff97a4034e8bdef78cb19bc49662073523500a43c773b55845a"
+  },
+  "docs/prereg/a5_manifests/references.json": {
+   "bytes": 86857,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "5b6991f299c1eee049de51bc1e4f00c71c1dfc58114cdf6549fb5d246850564e",
+   "path": "docs/prereg/a5_manifests/references.json",
+   "role": "references / pricing inputs",
+   "sha256": "5b6991f299c1eee049de51bc1e4f00c71c1dfc58114cdf6549fb5d246850564e"
+  },
+  "docs/prereg/a5_manifests/selection.json": {
+   "bytes": 157183,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "393530365f87f981d5da3ecb2779c89b8e7bf98105b6c45d1824bf290e908c63",
+   "path": "docs/prereg/a5_manifests/selection.json",
+   "role": "registered selection",
+   "sha256": "393530365f87f981d5da3ecb2779c89b8e7bf98105b6c45d1824bf290e908c63"
+  },
+  "docs/prereg/a5_manifests/selection_f11.json": {
+   "bytes": 14815,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c",
+   "path": "docs/prereg/a5_manifests/selection_f11.json",
+   "role": "frozen F11.2 supplementary list",
+   "sha256": "ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c"
+  },
+  "docs/prereg/a5_manifests/text_groups.json": {
+   "bytes": 35171,
+   "changed_since_inventory_1": false,
+   "inventory_1_sha256": "f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1",
+   "path": "docs/prereg/a5_manifests/text_groups.json",
+   "role": "registered 64 windows (scoring --text-groups)",
+   "sha256": "f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1"
+  },
+  "docs/prereg/f10_attestations.md": {
+   "bytes": 42821,
+   "changed_since_inventory_1": true,
+   "inventory_1_sha256": "e9a0cb0a30664f81a9aada9691cc1e57ca7ad0abcd841ad154634eed08ad2421",
+   "path": "docs/prereg/f10_attestations.md",
+   "role": "no-exposure attestations (entries 1-23)",
+   "sha256": "a5ab6708901cd879969e0aacd4d4db26131a87ab216b3a495b70621119478963"
+  },
+  "docs/reviews/council/board-a-f10-2026-11-11.md": {
+   "bytes": 18278,
+   "path": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "role": "Board A review",
+   "sha256": "f1c494ab608c464d29f9dc261dee8711e553ab0fee90a136581b0efb432142b3"
+  },
+  "docs/reviews/council/board-a-f10-code-2-2026-11-11.md": {
+   "bytes": 16400,
+   "path": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "role": "Board A review",
+   "sha256": "9592a264cb82a5a2de3644f3f33be1b0a23b7a8ac15901ca695d7c02703bc0c5"
+  },
+  "docs/reviews/council/board-a-f10-restage-2026-11-11.md": {
+   "bytes": 14448,
+   "path": "docs/reviews/council/board-a-f10-restage-2026-11-11.md",
+   "role": "Board A review",
+   "sha256": "be31797764b5a65659fec8306e124f3667f2bdb52e813e41bfdf4157921ffc4b"
+  },
+  "docs/reviews/council/board-a-f11-2026-11-11.md": {
+   "bytes": 17685,
+   "path": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "role": "Board A review",
+   "sha256": "294ff5bdaf65a6072cc2a775cd1b770a9429811a0301f2170538a40620e32161"
+  },
+  "docs/reviews/council/board-a-f11-sim-2026-11-11.md": {
+   "bytes": 13524,
+   "path": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "role": "Board A review",
+   "sha256": "4c320dd44684507627db1e3089c40188f9f658b7fec05e3b453a329e5a3c877b"
+  },
+  "docs/reviews/council/board-a-f11-stage-2026-11-11.md": {
+   "bytes": 19804,
+   "path": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "role": "Board A review",
+   "sha256": "801982f90f6afdff3f5bf46b19040a6a3149a20dfecd4d61001dea6fceaa0192"
+  },
+  "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md": {
+   "bytes": 16082,
+   "path": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "role": "Board A review",
+   "sha256": "9f91596408dd2f4f37745300ad0ab00889bd02d6f958428cbe215c6a43d0ef6e"
+  },
+  "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md": {
+   "bytes": 14382,
+   "path": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "role": "Board A review",
+   "sha256": "228e511afd0617cec0467d4994d6fb825f855375033143fceac3a8deb215fa6a"
+  },
+  "scripts/a5_f11_supplement.py": {
+   "bytes": 14024,
+   "path": "scripts/a5_f11_supplement.py",
+   "role": "selection builder (pinned xxii)",
+   "sha256": "90dcb312a9e81104dd24167c1e6243af7711a5d4e5ac610d3072cf65ae7764a3"
+  },
+  "scripts/a5_simulation.py": {
+   "bytes": 57803,
+   "path": "scripts/a5_simulation.py",
+   "role": "simulator (pinned xix)",
+   "sha256": "4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a"
+  },
+  "scripts/part_a_analyse.py": {
+   "bytes": 2340,
+   "path": "scripts/part_a_analyse.py",
+   "role": "Part A analysis CLI (pinned xxi)",
+   "sha256": "74bcff0f9f25be7aacf8cfadb3b0f2cdbef044455e2313f1dd6e52f40bce0b32"
+  },
+  "scripts/part_a_f10_restage_launch.sh": {
+   "bytes": 1748,
+   "path": "scripts/part_a_f10_restage_launch.sh",
+   "role": "F10 re-stage launch wrapper (committed 516d9c9)",
+   "sha256": "ce25c17c8484b006af2f0b5eac71695109899624ca8947673763725d5410afb2"
+  },
+  "scripts/part_a_f11_calibration_launch.sh": {
+   "bytes": 809,
+   "path": "scripts/part_a_f11_calibration_launch.sh",
+   "role": "F11.4 calibration wrapper (= /tmp/a5_f11_calibration.sh)",
+   "sha256": "00c3a8bb46acbd1e34f095deba6b8a5f58167060e1c4a8414b70ae23de91b19b"
+  },
+  "scripts/part_a_f11_calibration_replay.sh": {
+   "bytes": 844,
+   "path": "scripts/part_a_f11_calibration_replay.sh",
+   "role": "F11d.2 replay wrapper (committed 890f6e6 after launch)",
+   "sha256": "f41b72b25f06ad9c5ae3a2eef7fe486daa958b4c823fb60fcd17bb23beae9229"
+  },
+  "scripts/part_a_f11_supplement_launch.sh": {
+   "bytes": 1524,
+   "path": "scripts/part_a_f11_supplement_launch.sh",
+   "role": "F11.3 staging launch wrapper (= /tmp/a5_f11_supplement.sh)",
+   "sha256": "1dcc133a4b1cfd8e356fd6b2ff7613054fc43033a0035c83cbd1c3d0eb6c92e4"
+  },
+  "scripts/part_a_predictions.py": {
+   "bytes": 47591,
+   "path": "scripts/part_a_predictions.py",
+   "role": "prediction-row builder (pinned xxiv)",
+   "sha256": "d312967e317e330a3a7beff73a74f47c8da4ebbaaf110f763f2d7f36a8233847"
+  },
+  "scripts/part_a_score_launch.sh": {
+   "bytes": 6777,
+   "changed_since_inventory_1": true,
+   "inventory_1_sha256": "69eae67c9028ee0352eb39346b7201f9b43edc065540ca6d648e00f0e148de41",
+   "path": "scripts/part_a_score_launch.sh",
+   "role": "two-phase scoring launch script (77ee786; not executed; NOT in code_hashes.json)",
+   "sha256": "b1508ad0161840f2be62870508a64b49df6587cd14ee7da6c48a6a3296600aec"
+  },
+  "scripts/part_a_synthetic_binding.py": {
+   "bytes": 17470,
+   "path": "scripts/part_a_synthetic_binding.py",
+   "role": "synthetic input-binding check (pinned xxiv)",
+   "sha256": "01b7937c92767b5adacccfd0803c00e9886700f595d6a6dffbf20e97bb7f3687"
+  },
+  "src/wsp/eval/part_a_analysis.py": {
+   "bytes": 177773,
+   "path": "src/wsp/eval/part_a_analysis.py",
+   "role": "Part A analysis module (pinned xxi)",
+   "sha256": "5a21e9959511d791337cc16180385f91d6fe2f3ff804ad16b0c5c1febf805ca1"
+  },
+  "src/wsp/eval/response_intervention.py": {
+   "bytes": 138255,
+   "path": "src/wsp/eval/response_intervention.py",
+   "role": "prepare/score module incl. --proofs-only/--require-proofs/--max-minutes (pinned xxiii)",
+   "sha256": "47a1c6d129b5a84d51b3797c4d40f9ace824533969c05db713490d91940642b2"
+  },
+  "tests/test_a5_simulation.py": {
+   "bytes": 42161,
+   "path": "tests/test_a5_simulation.py",
+   "role": "test (pinned xxiii)",
+   "sha256": "62755edd1766ed69c73d8453e9ab445af97ae552786b9f4daf12044bf74f0c32"
+  },
+  "tests/test_part_a_analysis.py": {
+   "bytes": 128024,
+   "path": "tests/test_part_a_analysis.py",
+   "role": "test (pinned)",
+   "sha256": "829932c50ac8a8cef3236102e7e9ce6a92f3aff705d8ad625e3111412e8f5e69"
+  },
+  "tests/test_part_a_predictions.py": {
+   "bytes": 27337,
+   "path": "tests/test_part_a_predictions.py",
+   "role": "predictions tests (pinned xxiv)",
+   "sha256": "22dd6d1087ad99abec7287f95a0e37301e0e19fc258221e932a9271caffc5c39"
+  },
+  "tests/test_part_a_score_launch.py": {
+   "bytes": 14181,
+   "path": "tests/test_part_a_score_launch.py",
+   "role": "launch-script tests (40 bash-level; NOT in code_hashes.json)",
+   "sha256": "af58b943c30942522c89ecbddc69f267be44071a2651e2140a995adc4fb5d076"
+  },
+  "tests/test_response_intervention.py": {
+   "bytes": 110088,
+   "path": "tests/test_response_intervention.py",
+   "role": "test (pinned xxiii)",
+   "sha256": "00eed546891da97a2b9a346a6bc74b7e945006ffa2a212ae542258e7cd518b95"
+  }
+ },
+ "logs": {
+  "/home/ubuntu/agent-logs/a5-f11-calibration-20261111-092804.log": "afbcd5b218bbe5e7e9735bc49f554a9abd46ae33119c4e334c493bffdaa378b1",
+  "/home/ubuntu/agent-logs/a5-f11-replay-20261111-100853.log": "7d0f11b3305c557e5506a08f437fe9ab38dd3be2d9e4da0d64d0edb8cbc5dc41",
+  "/home/ubuntu/agent-logs/a5-f11-supplement-20261111-080602.log": "8e312647a270707e53da0cea4a00119ff30a15aad0cf6a631e20529713135892",
+  "/home/ubuntu/agent-logs/part-a-predictions-20261111-101035.log": "5ce5df51816eb66c0f6ccebe21a923781e69a6bc5ec5fcfeed65e759a4483b41"
+ },
+ "population": {
+  "code_sha": "887a5146b459e29bb42cda24482a2bcf458537a3",
+  "delta_files": 165,
+  "distinct_components": 52,
+  "excluded_sources": [
+   "0027efdf2eae7405",
+   "05531ce1db4df63f",
+   "057dcfbedea3251f",
+   "0bc0a0c4ad0520e0",
+   "0d055869527177b4",
+   "14cdaabee246493b",
+   "15a53586efc72a50",
+   "2233954b0cc3edc0",
+   "72d3756e968e3209"
+  ],
+  "manifest_sha256": "71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6",
+  "n_excluded": 9,
+  "n_registered": 40,
+  "n_selections": 52,
+  "n_supplementary": 12,
+  "n_variants": 156,
+  "reg_sorted_sha256": "e2bd6cb2956c0fbe64194b3f1ebbb481248ecec45b8a729a59a54b9a2bac9d6b",
+  "scored": false,
+  "staged_zoo": "data/runs/a5/part_a/qwen3.5-0.8b",
+  "supp_cells": {
+   "chain:0": 4,
+   "chain:2": 4,
+   "lora_sft:2": 4
+  },
+  "supp_sorted_sha256": "1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9",
+  "variant_json": 156
+ },
+ "scoring": {
+  "minutes": 185.12,
+  "minutes_per_entry": 1.04,
+  "n_D": 19,
+  "n_P": 0,
+  "n_missing_originals": 19,
+  "n_missing_predecessors": 0,
+  "n_priced": 178,
+  "n_variants": 147,
+  "originals_to_prove_or_score": [
+   "15cdcf0bb126de17",
+   "17668df17662b3f7",
+   "1ac30f3c7a209fe6",
+   "2410c595817dc20b",
+   "342a1be080049e8f",
+   "388347cfb0b7fafa",
+   "45cd0be9fea1c139",
+   "8d29ac2adb7fdda0",
+   "aaf7a0660c6d5a73",
+   "af6d608f8651fb46",
+   "b5d0ac5d76c3cad6",
+   "c12f6ec6bad59ba3"
+  ],
+  "priced_unproven_as_references": 12,
+  "references_to_score": 19,
+  "unproven_originals": [
+   "15cdcf0bb126de17",
+   "17668df17662b3f7",
+   "1ac30f3c7a209fe6",
+   "2410c595817dc20b",
+   "342a1be080049e8f",
+   "388347cfb0b7fafa",
+   "45cd0be9fea1c139",
+   "8d29ac2adb7fdda0",
+   "aaf7a0660c6d5a73",
+   "af6d608f8651fb46",
+   "b5d0ac5d76c3cad6",
+   "c12f6ec6bad59ba3"
+  ],
+  "window_check": true
+ },
+ "pricing": {
+  "all_12_fail": {
+   "entries": 178,
+   "minutes": 185.12
+  },
+  "all_12_prove": {
+   "entries": 166,
+   "minutes": 172.64
+  },
+  "max_possible_from_proofs": 185.12,
+  "threshold_minutes": 231.4
+ },
+ "reference_proofs": {
+  "carried": [
+   "base (predecessor of every supplementary edit)"
+  ],
+  "computed": false,
+  "deferred_to": "score --manifest (score_reference_proofs)",
+  "function": "supplement_reference_proofs",
+  "identity": null,
+  "paths_touched": []
+ },
+ "unproven_eq_supplement_ids": true,
+ "slot_mapping": {
+  "available": {
+   "ladder_0.25": 52,
+   "ladder_0.5": 52,
+   "rotation": 43
+  },
+  "equals_output_table": true,
+  "file_sha256": "1e2155adaf606b61ba7d325ff15a6970cee92ec0a5ef03ec7d48c3fdc7146862",
+  "mapping_sha256": "171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a",
+  "n_slots": 52,
+  "rotation_unavailable": [
+   "0027efdf2eae7405",
+   "05531ce1db4df63f",
+   "057dcfbedea3251f",
+   "0bc0a0c4ad0520e0",
+   "0d055869527177b4",
+   "14cdaabee246493b",
+   "15a53586efc72a50",
+   "2233954b0cc3edc0",
+   "72d3756e968e3209"
+  ],
+  "rotation_unavailable_eq_excluded": true,
+  "slots_40_51_are_supplements_in_selection_order": true,
+  "slots_sha256": "68b8b01db16f9c267943e160fafbd8e6aecb15fa5d820f3eae62a5ecd6b4620e"
+ },
+ "calibration": {
+  "environment": {},
+  "gates": {
+   "label": "slot-masked (F10.6); supplemented (F11.4)",
+   "passed": true,
+   "power": {
+    "ordered_go_rate": 0.8722,
+    "passed": true,
+    "threshold": 0.8
+   },
+   "size": {
+    "alternative_rate": 0.2576,
+    "applies_to": "ordered go and each individual two-sided test (FP2); not the funding-only alternative branch (F5.7)",
+    "ordered_go_rate": 0.0175,
+    "passed": true,
+    "threshold": 0.07,
+    "two_sided_rejection_rates": [
+     0.0348,
+     0.0378,
+     0.0378
+    ]
+   }
+  },
+  "input_provenance_check": {
+   "data/runs/a5/nullsize/inputs.json": true,
+   "data/runs/a5/power/fields.json": true,
+   "docs/prereg/a5_manifests/part_a/slot_mask_f11.json": true,
+   "docs/prereg/a5_manifests/power/registered_donors.json": true,
+   "docs/prereg/a5_manifests/selection_f11.json": true
+  },
+  "launch_script_eq": true,
+  "log_sha_eq_record": true,
+  "output_gates_eq_record": false,
+  "output_sha256_now": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+  "record_sha256": "3de71f022af7b8d94930a1d6f8c8b6ba428ba78f8637f921c71aba329f5548d7",
+  "run": {
+   "command": "Board A frozen command (board-a-f11-sim-2026-11-11.md), run via /tmp/a5_f11_calibration.sh under agent-tmux a5-f11-calibration",
+   "dirty_files": 0,
+   "end_utc": "2026-11-11T09:34:03Z",
+   "execution_sha": "92b0338",
+   "start_utc": "2026-11-11T09:28:04Z"
+  }
+ },
+ "replay": {
+  "log_marker_lines": [
+   "START 2026-11-11T10:08:53Z HEAD 759ef241c86e7c398ddcc2c9ab32cde932d76d25 dirty 1 mask 5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+   "END 2026-11-11T10:16:02Z",
+   "REPLAY_EXIT 0"
+  ],
+  "log_sha_eq_record": true,
+  "record": {
+   "availability_digest": "171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a",
+   "basis": "A5 note F11d (single replay exception); Board A board-a-f11-staging-cal-2026-11-11.md conditions 1–2",
+   "byte_identical": true,
+   "command": "identical to the Board A frozen command except --output (sole authorised substitution)",
+   "dirty_at_launch": {
+    "count": 1,
+    "file": "scripts/part_a_f11_calibration_replay.sh (untracked copy of the launch script, committed at 890f6e6 immediately after launch; not an input of the run)"
+   },
+   "end_utc": "2026-11-11T10:16:02Z",
+   "execution_sha": "759ef241c86e7c398ddcc2c9ab32cde932d76d25",
+   "gates": {
+    "label": "slot-masked (F10.6); supplemented (F11.4)",
+    "passed": true,
+    "power": {
+     "ordered_go_rate": 0.8722,
+     "passed": true,
+     "threshold": 0.8
+    },
+    "size": {
+     "alternative_rate": 0.2576,
+     "applies_to": "ordered go and each individual two-sided test (FP2); not the funding-only alternative branch (F5.7)",
+     "ordered_go_rate": 0.0175,
+     "passed": true,
+     "threshold": 0.07,
+     "two_sided_rejection_rates": [
+      0.0348,
+      0.0378,
+      0.0378
+     ]
+    }
+   },
+   "launch_script_sha256": "f41b72b25f06ad9c5ae3a2eef7fe486daa958b4c823fb60fcd17bb23beae9229",
+   "log_path": "/home/ubuntu/agent-logs/a5-f11-replay-20261111-100853.log",
+   "log_sha256": "7d0f11b3305c557e5506a08f437fe9ab38dd3be2d9e4da0d64d0edb8cbc5dc41",
+   "mask_sha256": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+   "ordered_table_sha256": "68b8b01db16f9c267943e160fafbd8e6aecb15fa5d820f3eae62a5ecd6b4620e",
+   "original_output_sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+   "replay_output_path": "/home/ubuntu/wsp-data/runs/a5/f11_sim_dryrun/boarda/power_slotmask_f11_replay.json",
+   "replay_output_sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+   "schema": "a5-f11-calibration-replay-record-v1",
+   "start_utc": "2026-11-11T10:08:53Z",
+   "verdict": "replay byte-identical to the original F11.4 output (sha256 8a1be18f…); the output records no self-referential path; condition 2 satisfied"
+  },
+  "record_sha256": "d96036fa2087b196ec8c4a50a6a446e1bd828b6c5a10718a7895e0115ea77fd8",
+  "replay_output_sha256_now": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+  "script_eq_record": true
+ },
+ "supplement_launch": {
+  "dirty": 0,
+  "end": "2026-11-11T09:26:07Z",
+  "execution_sha": "8211ecf4c079f32dd8cc59b77fdfa5bd8a99a7bc",
+  "exit": 0,
+  "log_sha_eq": true,
+  "outputs_eq": true,
+  "script_eq": true,
+  "sha256": "d20a4ab36faa47864bf5c5c1a724e2c4d7e096bbadb5631bc8c95bca6954fdbb",
+  "start": "2026-11-11T08:06:02Z"
+ },
+ "predictions": {
+  "abstentions_eq_excluded": true,
+  "code": {
+   "code_files_dirty": true,
+   "git_sha": "516d9c90bddd75b31791186af88db6bd6d6716d4",
+   "scripts/a5_power_fields.py": "bcf7d15d679e819d17f7784262bb22fbe10fece33bbb6757e8e08b44d3e592a8",
+   "scripts/part_a_predictions.py": "d312967e317e330a3a7beff73a74f47c8da4ebbaaf110f763f2d7f36a8233847",
+   "src/wsp/eval/response_intervention.py": "e52ea009740751a38c9445dfb6a63767a9535cd22ce343c240371269e55d4d79",
+   "src/wsp/features/response_field.py": "98d81bbc300e715fe27a02e04711c0d036ae7ef9342d6bddbcaa227d91f725bc",
+   "src/wsp/features/rotation.py": "8ac459934b0b145f62a3f0c81f68980c1f57d0ef7663d16e9ce1f693be376dba",
+   "src/wsp/zoo/apply.py": "4dbeb10e9d7024508baa376b915a90072170428f87663b32865ff4543cd72005"
+  },
+  "comparison": {
+   "ladder_0.25": {
+    "bitwise_equal_value": 1,
+    "compared": 33,
+    "sign_agree": 33
+   },
+   "ladder_0.5": {
+    "bitwise_equal_value": 0,
+    "compared": 33,
+    "sign_agree": 33
+   },
+   "rotation": {
+    "bitwise_equal_value": 0,
+    "compared": 25,
+    "sign_agree": 25
+   }
+  },
+  "detail_jsonl_eq": true,
+  "disagreements": [],
+  "ids_eq_manifest": true,
+  "n_abstentions": 9,
+  "n_rows": 52,
+  "n_supplementary": 12,
+  "nothing_written_under": [
+   "data/zoo",
+   "data/runs/g2",
+   "data/runs/a5/part_a",
+   "data/evals"
+  ],
+  "outcomes_read": "none: no evaluation record, TF-v1 score, rotation/ladder outcome or sealed outcome is opened; only stored edit bytes, staged variant files, the base model and the G2 WikiText artefacts",
+  "predictions_sha256_recomputed": "cc0beda26c9a8c77ca1b5da9adf02f6e79db6b813762af361dbd40dd83a94c68",
+  "predictions_sha256_recorded": "cc0beda26c9a8c77ca1b5da9adf02f6e79db6b813762af361dbd40dd83a94c68",
+  "rows_sha256_recomputed": "079f19c10b586c513026814d57c8709c2ddc54faa785c876fbcfe61e1cea0386",
+  "rows_sha256_recorded": "079f19c10b586c513026814d57c8709c2ddc54faa785c876fbcfe61e1cea0386",
+  "run_copy_equal": true,
+  "sha256": "50c378000b424346438de03bf2ad2881a1d10706dfc28b18d0f2130ab5e7a7bb",
+  "staged_file_hash_match": 147,
+  "status": "complete",
+  "summary": {
+   "abstention_reasons": {
+    "abstain:rotation_pair_excluded_at_staging": 9
+   },
+   "gradient_source_counts": {
+    "base_field": 42,
+    "chain_exact": 10
+   },
+   "n_edits": 52,
+   "n_supplementary": 12,
+   "q_partial_rows": 0,
+   "timing": {
+    "field_load_seconds": 188.9876856803894,
+    "setup_seconds": 514.5990896224976,
+    "spectral_seconds": 308.44144773483276,
+    "threads": 4,
+    "wall_seconds": 2651.327820777893
+   }
+  },
+  "variant_ids_match": 156,
+  "variant_json_hash_match": 156
+ },
+ "synthetic_binding": {
+  "all_passed": true,
+  "analysis_code_unchanged_516d9c9_to_head": true,
+  "cases": [
+   {
+    "bound": {
+     "fields_sha256": true,
+     "ledger_sha256": true,
+     "manifest_sha256": true,
+     "masked_calibration_sha256": true,
+     "spec_sha256": true
+    },
+    "case": "A_intact",
+    "exit_code": 0,
+    "expect": {
+     "exit_code": 0
+    },
+    "passed": true
+   },
+   {
+    "bound": null,
+    "case": "B_manifest_byte_flipped",
+    "exit_code": 2,
+    "expect": {
+     "exit_code": 2,
+     "refusal_contains": "does not match the supplied --manifest-sha256"
+    },
+    "passed": true
+   },
+   {
+    "bound": null,
+    "case": "C_manifest_byte_flipped_own_sha",
+    "exit_code": 2,
+    "expect": {
+     "exit_code": 2,
+     "refusal_contains": "does not match the execution manifest"
+    },
+    "passed": true
+   },
+   {
+    "bound": null,
+    "case": "D_prediction_row_dropped",
+    "exit_code": 2,
+    "expect": {
+     "exit_code": 2,
+     "refusal_contains": "does not match the ledger's fields_sha256"
+    },
+    "passed": true
+   },
+   {
+    "bound": null,
+    "case": "E_prediction_row_dropped_ledger_rebound",
+    "exit_code": 2,
+    "expect": {
+     "exit_code": 2,
+     "refusal_contains": "no frozen prediction row (3 contrasts) for selected edit 0027efdf2eae7405"
+    },
+    "passed": true
+   }
+  ],
+  "inputs_eq_now": {
+   "calibration_record": "3de71f022af7b8d94930a1d6f8c8b6ba428ba78f8637f921c71aba329f5548d7",
+   "manifest": "71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6",
+   "masked_calibration": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+   "predictions": "50c378000b424346438de03bf2ad2881a1d10706dfc28b18d0f2130ab5e7a7bb",
+   "restage_provenance": null,
+   "spec_sha256": "8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4",
+   "text_groups_sha256": "f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1"
+  },
+  "outcomes_read": "none: window values are random and seeded; no evaluation record or score is opened",
+  "ran_from": "/home/ubuntu/projects/wsp-lab/.worktrees/feat/part-a-predictions/scripts/part_a_analyse.py",
+  "seed": 20261111,
+  "sha256": "e28161eb9cee01b6c00a4c1d7b8ccf2261c6a3569f0cdbf3556d09a0bebad830"
+ },
+ "pins": {
+  "code_hashes_sha256": "e0a2c7793c2554337c21449f67c0e1f690c91e00d00a3f909c0b528e056ba769",
+  "git_sha": "1e01a26bbcd103c7a362eb33636927e288327e0d",
+  "launch_script_pinned": false,
+  "launch_test_pinned": false,
+  "n_files": 77,
+  "predictions_pinned": "50c378000b424346438de03bf2ad2881a1d10706dfc28b18d0f2130ab5e7a7bb",
+  "verify_pins_head": "c947cc9c7e48118573622507448d213b3648de2a",
+  "verify_pins_result": "all pins match",
+  "verify_pins_exit": 0
+ },
+ "launch_script": {
+  "gpu_uuid": true,
+  "has_proofs_only_stop": true,
+  "launch_record_in_tracked_tree": true,
+  "manifest_hash_arg": true,
+  "missing_file_fails": true,
+  "phase1_sets_cuda_hidden": false,
+  "rehashes_variant_json": true,
+  "require_proofs_dry_run_gate": true,
+  "sha256": "b1508ad0161840f2be62870508a64b49df6587cd14ee7da6c48a6a3296600aec",
+  "verify_pins": true
+ },
+ "staged_bytes_rehash": {
+  "start_utc": "2026-11-11T11:08:57Z",
+  "end_utc": "2026-11-11T11:11:37Z",
+  "rule": "sorted (variant_id, file) pairs of manifest.delta_sha256, every 7th from offset 3",
+  "n_pairs": 165,
+  "n_sample": 24,
+  "n_equal": 24,
+  "bytes": 17781916824,
+  "n_supplementary": 6,
+  "n_increment": 1,
+  "files": [
+   {
+    "variant_id": "073a266308fe7370",
+    "file": "delta.safetensors",
+    "expected": "050368b542b16a4cb295ebd063188c39c3899407e34c6dcc25b9ddb752b83da4",
+    "got": "050368b542b16a4cb295ebd063188c39c3899407e34c6dcc25b9ddb752b83da4",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "12db4caa66fe8ca4",
+    "file": "delta.safetensors",
+    "expected": "56e2452022c39089941b7d466c013b9dd9ac3ff0bdebf8c6ec3e3740fcfdfa4f",
+    "got": "56e2452022c39089941b7d466c013b9dd9ac3ff0bdebf8c6ec3e3740fcfdfa4f",
+    "equal": true,
+    "bytes": 150997040,
+    "supplementary": false
+   },
+   {
+    "variant_id": "21c6044695fed38e",
+    "file": "delta.safetensors",
+    "expected": "951e8621f34b7fce8a9fc48884b91bd90806acfd15802afa5c27786a5b4d197d",
+    "got": "951e8621f34b7fce8a9fc48884b91bd90806acfd15802afa5c27786a5b4d197d",
+    "equal": true,
+    "bytes": 385879488,
+    "supplementary": false
+   },
+   {
+    "variant_id": "2ad1813877843ad7",
+    "file": "delta.safetensors",
+    "expected": "978a94af555e36459bb20760ccae36dbdfbb470c4ce1df5686321353f85eecdd",
+    "got": "978a94af555e36459bb20760ccae36dbdfbb470c4ce1df5686321353f85eecdd",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "344b6ea953cdebbf",
+    "file": "delta.safetensors",
+    "expected": "d186f74c8f138c292f1572e9020653ca2bac8bd276ca600afdc4686dd742d77c",
+    "got": "d186f74c8f138c292f1572e9020653ca2bac8bd276ca600afdc4686dd742d77c",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "41078f1c56148747",
+    "file": "delta.safetensors",
+    "expected": "2d9f4bb900f851fc19e8c41eeb1b0b0161b834f1a7041270d329a3fb351cff26",
+    "got": "2d9f4bb900f851fc19e8c41eeb1b0b0161b834f1a7041270d329a3fb351cff26",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": true
+   },
+   {
+    "variant_id": "477350e0a0491020",
+    "file": "delta.safetensors",
+    "expected": "5ca819baa89bc12d556811c43ab6d1e77e76607d843104f61d8eb5a35354f3cc",
+    "got": "5ca819baa89bc12d556811c43ab6d1e77e76607d843104f61d8eb5a35354f3cc",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "57185815ae8a2cf0",
+    "file": "delta.safetensors",
+    "expected": "4a2ca400255d616e0f30dcf46ab02f75deacdf129d9b3cc24f5dcee2fe07da69",
+    "got": "4a2ca400255d616e0f30dcf46ab02f75deacdf129d9b3cc24f5dcee2fe07da69",
+    "equal": true,
+    "bytes": 92275960,
+    "supplementary": true
+   },
+   {
+    "variant_id": "6113676726c19bc3",
+    "file": "delta.safetensors",
+    "expected": "83a14a29354da61e8e9091b0239d9133422ed68c183a7bfd7df1812abb7ccceb",
+    "got": "83a14a29354da61e8e9091b0239d9133422ed68c183a7bfd7df1812abb7ccceb",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "6a554d08a2232e60",
+    "file": "delta.safetensors",
+    "expected": "13971b3c5fff2e8177eac561f6b7f419bf6d91d44537612410e90144b51491df",
+    "got": "13971b3c5fff2e8177eac561f6b7f419bf6d91d44537612410e90144b51491df",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "6f1f66e1a6d1a383",
+    "file": "delta.safetensors",
+    "expected": "7fb86adc3a7ca47c8d703cfe5238c8fe0207d2def327ace82020d685d2043393",
+    "got": "7fb86adc3a7ca47c8d703cfe5238c8fe0207d2def327ace82020d685d2043393",
+    "equal": true,
+    "bytes": 897589336,
+    "supplementary": false
+   },
+   {
+    "variant_id": "7b360fbf0494745b",
+    "file": "delta.safetensors",
+    "expected": "4d007f0190040c6ca6eb232203fbdfcbf831a4ff424d50ed190d641dbcb43e08",
+    "got": "4d007f0190040c6ca6eb232203fbdfcbf831a4ff424d50ed190d641dbcb43e08",
+    "equal": true,
+    "bytes": 1015031504,
+    "supplementary": false
+   },
+   {
+    "variant_id": "82e6ef53bd3b5bd0",
+    "file": "delta.safetensors",
+    "expected": "e1a4c51e1641b4139d08c3c906f3560c2b3a07a121b7e96169f03cc25243abaa",
+    "got": "e1a4c51e1641b4139d08c3c906f3560c2b3a07a121b7e96169f03cc25243abaa",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": true
+   },
+   {
+    "variant_id": "8d5a95f8c96beee0",
+    "file": "delta.safetensors",
+    "expected": "6b038205a739e67e49b6b256a2c84931f90afff4bcda2f1346874f54997391f4",
+    "got": "6b038205a739e67e49b6b256a2c84931f90afff4bcda2f1346874f54997391f4",
+    "equal": true,
+    "bytes": 150997040,
+    "supplementary": false
+   },
+   {
+    "variant_id": "9254cc82a7d9c85d",
+    "file": "delta.safetensors",
+    "expected": "2719a86a24fe2d019d90fea3456192461a22550fbbefeffd9192db08bbe78fea",
+    "got": "2719a86a24fe2d019d90fea3456192461a22550fbbefeffd9192db08bbe78fea",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "a27ba8a3c75802ce",
+    "file": "increment.safetensors",
+    "expected": "b7e3d80e83c1fc1aa794dab1f7102af3821058b687a970cc92b65641a5f86ecf",
+    "got": "b7e3d80e83c1fc1aa794dab1f7102af3821058b687a970cc92b65641a5f86ecf",
+    "equal": true,
+    "bytes": 115344496,
+    "supplementary": false
+   },
+   {
+    "variant_id": "ae3438814695d10a",
+    "file": "delta.safetensors",
+    "expected": "e23d3f3d5b85fc4ccda51067d0721e58da79d11fc25747df95756ada3a52264c",
+    "got": "e23d3f3d5b85fc4ccda51067d0721e58da79d11fc25747df95756ada3a52264c",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": true
+   },
+   {
+    "variant_id": "b67496b7ac04369b",
+    "file": "delta.safetensors",
+    "expected": "0169e0bc70507d49d2bb14c43f6c84f08c4464a6c198ba65f443907903a980d1",
+    "got": "0169e0bc70507d49d2bb14c43f6c84f08c4464a6c198ba65f443907903a980d1",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "c02e9c4a5018a292",
+    "file": "delta.safetensors",
+    "expected": "1977f3bbbdaf80cce90ab6fb834933c6311f1f166541d7ccb79c3a436572e94f",
+    "got": "1977f3bbbdaf80cce90ab6fb834933c6311f1f166541d7ccb79c3a436572e94f",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "ce9a93bfa840dfc8",
+    "file": "delta.safetensors",
+    "expected": "5fcbedcbcb471200de3e0fa0ebfbb316d5d35e11b1a9213861187c33055d01e4",
+    "got": "5fcbedcbcb471200de3e0fa0ebfbb316d5d35e11b1a9213861187c33055d01e4",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "dcef7b692d17e808",
+    "file": "delta.safetensors",
+    "expected": "37086303b4dd7a50c3b391fbbae3793ed3b96c5b511060a8c14bc9193c4796f1",
+    "got": "37086303b4dd7a50c3b391fbbae3793ed3b96c5b511060a8c14bc9193c4796f1",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": true
+   },
+   {
+    "variant_id": "ea199e4ddb21a294",
+    "file": "delta.safetensors",
+    "expected": "c45f6f4cd0831e1043042cc2ebba9a97b1cb5a81873c4f2ebc51c3aed8218036",
+    "got": "c45f6f4cd0831e1043042cc2ebba9a97b1cb5a81873c4f2ebc51c3aed8218036",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": true
+   },
+   {
+    "variant_id": "ef993c4862b8b0b1",
+    "file": "delta.safetensors",
+    "expected": "77da9605e2de29bd61bbacb420342d17e74e2d4d656f7b93c7b0e61ccf0f94b3",
+    "got": "77da9605e2de29bd61bbacb420342d17e74e2d4d656f7b93c7b0e61ccf0f94b3",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   },
+   {
+    "variant_id": "ff8ec4eb95a009e2",
+    "file": "delta.safetensors",
+    "expected": "f2e755581998461674ba1cf6a9496137df22a4d71925ec91da201ecee58c13c6",
+    "got": "f2e755581998461674ba1cf6a9496137df22a4d71925ec91da201ecee58c13c6",
+    "equal": true,
+    "bytes": 880811880,
+    "supplementary": false
+   }
+  ],
+  "variant_json": {
+   "n": 156,
+   "equal": 156
+  }
+ },
+ "exposure": {
+  "n_variant_eval_paths_existing": 0,
+  "n_variant_ids": 156,
+  "reference_proofs_f11_exists": false,
+  "reference_proofs_prev_exist": [],
+  "score_launch_json_exists": false,
+  "tf_v1_mtime_utc": "2026-11-07T22:09:24Z"
+ },
+ "gpu_identity": {
+  "query": "nvidia-smi --query-gpu=name,driver_version,memory.total,uuid,memory.used --format=csv,noheader",
+  "result_2026-11-11T11:11:38Z": "NVIDIA RTX PRO 4500 Blackwell Server Edition, 595.112.07, 32623 MiB, GPU-3669f1b9-ff73-668a-ad0e-a3cb83c9be8c, 317 MiB",
+  "equals_inventory_1": true,
+  "compute_apps": "pid 2029310 (.venv/bin/pytest -q -p no:cacheprovider, started 11:09:23 UTC, not this session) 308 MiB",
+  "note": "the GPU was not idle at the query; phase 2 needs an exclusive GPU and the script checks identity only"
+ },
+ "tests": {
+  "run": "agent-tmux prescore2-tests, CUDA_VISIBLE_DEVICES= , HEAD c947cc9, 11:10:08-11:11:11 UTC",
+  "files": [
+   "tests/test_part_a_analysis.py",
+   "tests/test_part_a_predictions.py",
+   "tests/test_a5_simulation.py",
+   "tests/test_part_a_score_launch.py",
+   "tests/test_response_intervention.py"
+  ],
+  "result": "356 passed, 2 skipped, 2 failed",
+  "log": "/home/ubuntu/agent-logs/prescore2-tests-20261111-111008.log",
+  "failed": [
+   "tests/test_response_intervention.py::test_f10_logs_the_complete_a533_verdict_without_using_it (line 789: prerounding_norm_mismatch 2.9937e-09 vs 4.0984e-09, rel 1e-6)",
+   "tests/test_response_intervention.py::test_f10_pooled_diagnostics_are_independent_aggregates (line 1156: pooled_rounding_error_rel 0.013612904055 vs 0.013612905618, rel 1e-9)"
+  ],
+  "note": "the two order/thread-dependent test failures named in PROGRESS 11:05 UTC; both compare a test's own recomputation on synthetic tmp_path fixtures with a tight tolerance; the staged values are frozen and hashed (manifest, audits, 165 + 156 file hashes), and no pipeline output depends on these tests. The fix (branch fix/f10-diagnostic-test-order, no commits at build time) edits a pinned test file, so it needs a re-pin (xxv) and changes code_hashes.json and the package README; the manifest, audits, staged bytes, predictions and calibration identities here are unaffected. The launcher's --verify-pins HEAD checks the new map at execution"
+ },
+ "commands": {
+  "cwd": "/home/ubuntu/projects/wsp-lab (canonical checkout, clean tree), inside agent-tmux",
+  "phase_1": "scripts/part_a_score_launch.sh 71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6",
+  "phase_1_does": "clean tree; --verify-pins HEAD; manifest sha256 = argument; strict re-hash 165 + 156 files; score --proofs-only (writes reference_proofs_f11.json, prints PRICE); STOP. Exit codes 64/2/3/4/5/6",
+  "between": "commit reference_proofs_f11.json; recompute the price from it; if > 231.4 min halt and append a dated reprice note before any GPU command (F11c.1(d)); at or below, record and accept the repriced plan; explicit GPU authorisation",
+  "phase_2": "scripts/part_a_score_launch.sh 71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6 --phase score --max-minutes 231.4",
+  "phase_2_does": "the same four checks; refuse if score_launch.json exists (8); score --dry-run --require-proofs --max-minutes 231.4 gate (7); GPU identity incl. UUID (9); write score_launch.json; /usr/bin/time -v score --require-proofs --max-minutes 231.4; end/exit into the record",
+  "rehash_volume": "116,715,970,712 bytes + 156 variant.json per phase (inventory 1 read 17.48 GB in about 10 min uncached)"
+ },
+ "pricing_note": "with the frozen manifest the proof step can price at most 178 entries / 185.12 min (all 12 fail) and at least 166 / 172.64 min (all 12 prove); 231.4 = 1.25 x 185.12 cannot be crossed by proof failures alone; it guards against an inconsistent record. Retries are unpriced; the script caps price, not wall-clock",
+ "attestations": {
+  "file": "docs/prereg/f10_attestations.md",
+  "sha256": "a5ab6708901cd879969e0aacd4d4db26131a87ab216b3a495b70621119478963",
+  "entries": [
+   "1 chair",
+   "1-ext chair (to ~09:20)",
+   "2-9 F10 roles",
+   "10-13 F11 roles",
+   "14 F11b drafter",
+   "15 inventory-1 session",
+   "16 simulator implementer (via chair)",
+   "17 prepare implementer (via chair)",
+   "18 analysis builder (via chair)",
+   "19 chair extension 2",
+   "20 Board A F11, F11-sim, F11-stage, analysis-4 (verbatim)",
+   "21 F11c drafter",
+   "22 chair: F11d and replay (to 10:16)",
+   "23 predictions builder (added by the chair, c947cc9)"
+  ],
+  "not_in_file": [
+   "chair extension 3: 10:16 UTC through the final freeze and release (re-pins xxiii/xxiv, the a36aeb9 commit, the hook bypass)",
+   "staging-report author (line at SUPPLEMENT_REPORT.md section end, not entered)",
+   "Board A staging-cal reviewer (line in its review; condition 6: 'Include this review's attestation')",
+   "Board A re-stage reviewer (line in its review, not copied; entry 20 says so)",
+   "launch-hardening builder (feat/score-launch-hardening, 77ee786)",
+   "test-order-fix builder (fix/f10-diagnostic-test-order), if merged before the freeze",
+   "this inventory-2 session (proposed in PRESCORE2_A512_NOTE.md)",
+   "any Board A reviewer of the launcher, predictions and this inventory"
+  ],
+  "scoring_phase": "If the chair launches phase 1 and phase 2 personally, the chair is the only new scoring-phase decision-maker: one chair attestation through the final freeze and release, written before phase 1 (phase 1 reads the twelve originals' TF-v1 eval.json/records.jsonl, exposure under the stage review), and a launch line in the campaign record. No new session is involved. A delegated launcher would need its own attestation at launch. After phase 1, nobody exposed to proof reads makes a methodological choice; accepting the repriced plan is mechanical under F11c.1(d)."
+ },
+ "inventory_1_gaps": [
+  {
+   "n": 1,
+   "gap": "F11.3 staging report and its acceptance",
+   "now": "closed: SUPPLEMENT_REPORT.md a88cfe7b...; Board A staging-cal (a) ACCEPT"
+  },
+  {
+   "n": 2,
+   "gap": "Board A acceptance of the F11.4 report and route",
+   "now": "conditional: ACCEPT WITH CONDITIONS 1-3; F11d + byte-identical replay on file; awaits Board A"
+  },
+  {
+   "n": 3,
+   "gap": "slot_mapping_f11.json",
+   "now": "closed with disclosed departure: 1e2155ad... (post-run; Board A reconstruction; F11d)"
+  },
+  {
+   "n": 4,
+   "gap": "analysis tamper/binding exercise on the final manifest (and the 40-edit simulation test)",
+   "now": "evidence on file: synthetic binding A-E (e28161eb...); test fix 77ee786; awaits Board A (condition 4)"
+  },
+  {
+   "n": 5,
+   "gap": "frozen 52-edit field-prediction file",
+   "now": "evidence on file: predictions_f11.json 50c37800... (pinned xxiv); awaits Board A (condition 4)"
+  },
+  {
+   "n": 6,
+   "gap": "dated F11.8 clarification (deferred proofs, 178, stop-and-reprice)",
+   "now": "closed: F11c.1, threshold 231.4 min"
+  },
+  {
+   "n": 7,
+   "gap": "launch script LS-1 to LS-4",
+   "now": "LS-1/2/3 fixed, LS-4 partly; launcher not pinned; awaits Board A review (condition 5)"
+  },
+  {
+   "n": 8,
+   "gap": "pending attestations",
+   "now": "entries 15-23 added; gaps remain (attestations.not_in_file)"
+  },
+  {
+   "n": 9,
+   "gap": "run-record gaps (staging launch record; calibration record env/inputs; uncommitted wrappers)",
+   "now": "launch record enriched d20a4ab3...; calibration record inputs added, environment still {}; wrappers committed 516d9c9 (not frozen pre-run, F11c.4); replay record has similar gaps (SIM-3a)"
+  }
+ ],
+ "findings": [
+  {
+   "id": "P2-1",
+   "finding": "scripts/part_a_score_launch.sh (b1508ad0...) and tests/test_part_a_score_launch.py (af58b943...) are not rows of code_hashes.json, so --verify-pins HEAD does not cover the launcher; its bytes are bound only by the clean tree at the launch SHA. Pin it (or freeze its hash in the release note) before phase 1"
+  },
+  {
+   "id": "P2-2",
+   "finding": "the launcher checks GPU identity, not exclusivity; at 11:11:38 UTC a pytest process from another session held 308 MiB. Confirm `nvidia-smi --query-compute-apps` is empty before phase 2"
+  },
+  {
+   "id": "P2-3",
+   "finding": "phase 1 does not set CUDA_VISIBLE_DEVICES and writes no launch record of its own (only the agent-tmux log and reference_proofs_f11.json); phase 2 writes score_launch.json into the tracked tree after the clean-tree check (commit it after the campaign)"
+  },
+  {
+   "id": "P2-4",
+   "finding": "predictions_f11.json was computed at 516d9c9 with code_files_dirty true (the builder was uncommitted); its builder bytes equal the pinned d312967e... and response_intervention.py was the re-pin (xx) bytes e52ea009..., not the current 47a1c6d1...; the rows bind 147/147 staged file hashes and 156/156 variant.json hashes"
+  },
+  {
+   "id": "P2-5",
+   "finding": "the synthetic binding ran from .worktrees/feat/part-a-predictions (based on 516d9c9), not at main; part_a_analysis.py and part_a_analyse.py are unchanged from 516d9c9 to c947cc9 and the analysis module does not import response_intervention"
+  },
+  {
+   "id": "P2-6",
+   "finding": "inventory 1's A5.1.2 hash entries (PRESCORE_A512_NOTE.md) were not appended to PREREG; F11c and attestation 15 cite inventory 1 by path. PRESCORE2_A512_NOTE.md carries both inventories' identities"
+  },
+  {
+   "id": "P2-7",
+   "finding": "the replay record and wrapper fall short of staging-cal conditions 1-2 in the ways listed at SC-1 and SIM-3a; the byte-identity result itself is verified here"
+  }
+ ],
+ "gates": [
+  {
+   "id": "F10-1",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "methodological record (F10a) and one no-exposure attestation per decision-maker",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "F10a; f10_attestations.md entries 1-9 (unchanged)"
+  },
+  {
+   "id": "F10-2",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "executable correctness of F10.3/F10.4 (tests)",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "board-a-f10-code-2 (060cc60), merged (unchanged)"
+  },
+  {
+   "id": "F10-3",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "pins and frozen re-stage execution",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "re-pin (xviii); restage_freeze.json 03dfaf26..., restage_launch.json 28dcba68... re-hashed unchanged"
+  },
+  {
+   "id": "F10-4",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "accept the outcome-free re-stage report",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "board-a-f10-restage ACCEPT WITH CONDITIONS; chair correction 09:10 UTC (unchanged)"
+  },
+  {
+   "id": "F10-5",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "slot-masked calibration when yield < 40",
+   "inventory_1_status": "BOARD_A",
+   "status": "BOARD_A",
+   "evidence": "F11.4 PASS (record 3de71f02..., output 8a1be18f...); Board A staging-cal (b) ACCEPT WITH CONDITIONS 1-3; F11d (759ef24) + byte-identical replay (f11_calibration_replay_record.json d96036fa..., replay output re-hashed 8a1be18f... = original) + this inventory (condition 3); Board A: 'I must see this completion evidence before calibration conditions can be discharged for scoring release'"
+  },
+  {
+   "id": "F10-6",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "F10.5 interpretation/sensitivity specification frozen before scoring",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "F10_SENSITIVITY_SPEC.md 8624e063... unchanged; F10b; analysis bound (synthetic run A bound spec_sha256)"
+  },
+  {
+   "id": "F10-7a",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "scoring release only after conditions 1-5 and the 6 spec",
+   "inventory_1_status": "OPEN",
+   "status": "BOARD_A",
+   "evidence": "all pre-score rows below; chair's explicit release after Board A (staging-cal condition 7)",
+   "discharged_by": "Board A, then the chair"
+  },
+  {
+   "id": "F10-7b",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "exposure maintained / attestations updated through final freeze",
+   "inventory_1_status": "OPEN",
+   "status": "OPEN",
+   "evidence": "entries 15-23 now present (attestations sha256 a5ab6708...); still not in the file: chair extension 3 (10:16 UTC through release), staging-report author (own line in SUPPLEMENT_REPORT.md), Board A staging-cal reviewer (own line in its review), Board A re-stage reviewer (own line in its review, not copied), launch-hardening builder (77ee786), test-order-fix builder (if merged before the freeze), this inventory-2 session (text in PRESCORE2_A512_NOTE.md); entries 16-18 are relayed by the chair only"
+  },
+  {
+   "id": "F10-7c",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "re-hash staged bytes immediately before the exclusive-GPU campaign",
+   "inventory_1_status": "AT_SCORING",
+   "status": "AT_EXECUTION",
+   "evidence": "part_a_score_launch.sh (b1508ad0...) strict re-hash of all 165 delta/increment + 156 variant.json files, missing file fails (exit 5), in phase 1 and again in phase 2; sample now 24/24 + 156/156 (offset-3 sample, disjoint from inventory 1's)",
+   "discharged_by": "the launch script, run by the chair (launcher)"
+  },
+  {
+   "id": "F10-7d",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "charge references, failures and retries",
+   "inventory_1_status": "AT_SCORING",
+   "status": "AT_EXECUTION",
+   "evidence": "priced 178 / 185.12 min (all 12 fail) or 166 / 172.64 min (all 12 prove); repriced by phase 1 from reference_proofs_f11.json; retries unpriced and must be recorded in the campaign record",
+   "discharged_by": "chair (accepts the repriced plan; records actual charges)"
+  },
+  {
+   "id": "F10-7e",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "close/seal the ledger before the one analysis",
+   "inventory_1_status": "AT_SCORING",
+   "status": "AT_EXECUTION",
+   "evidence": "no ledger exists (nothing scored); ledger is a post-campaign obligation (staging-cal condition 7)",
+   "discharged_by": "chair, after the campaign and before the one analysis"
+  },
+  {
+   "id": "F10C2-1",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "merge and re-pin (xviii); verify pins at execution HEAD",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "(xviii); restage_launch.json (unchanged)"
+  },
+  {
+   "id": "F10C2-2",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "freeze and record the rotation-only execution",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "restage_freeze/launch (unchanged)"
+  },
+  {
+   "id": "F10C2-3",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "re-pin note (xviii) content",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "PREREG re-pin (xviii) (unchanged)"
+  },
+  {
+   "id": "F10C2-4a",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "re-stage report accepted",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "board-a-f10-restage (unchanged)"
+  },
+  {
+   "id": "F10C2-4b",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "frozen failed-rotation mask and passing slot-masked calibration before scoring",
+   "inventory_1_status": "BOARD_A",
+   "status": "BOARD_A",
+   "evidence": "slot_mask_f11.json 5f4e7701... frozen before the run; F11.4 PASS; Board A staging-cal (b) ACCEPT WITH CONDITIONS 1-3; F11d (759ef24) + byte-identical replay (f11_calibration_replay_record.json d96036fa..., replay output re-hashed 8a1be18f... = original) + this inventory (condition 3); Board A: 'I must see this completion evidence before calibration conditions can be discharged for scoring release'"
+  },
+  {
+   "id": "F10C2-4c",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "all rotation/ladder/reference scoring held until gates discharged",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "manifest.scored false; 0 of 156 variant eval paths exist (lexists only); no reference_proofs_f11.json (no proof read); no score_launch.json"
+  },
+  {
+   "id": "F11-1",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "methodological freeze (F11a), attestations, frozen list, no top-up, forty preserved",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "F11a; A3-A5, B1-B6 (inventory 1); population re-checked here (12 ids 1848fe4c..., 4/4/4, 52 components, registered 40 e2bd6cb2...)"
+  },
+  {
+   "id": "F11-2",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "prepare implementation gate (review, tests, re-pin, frozen launch)",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "board-a-f11-stage; (xx) (unchanged)"
+  },
+  {
+   "id": "F11-3a",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "accept the outcome-free supplementary staging report",
+   "inventory_1_status": "OPEN",
+   "status": "MET",
+   "evidence": "SUPPLEMENT_REPORT.md a88cfe7b... (ff81181); Board A staging-cal (a) ACCEPT"
+  },
+  {
+   "id": "F11-3b",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "simulation supplement option reviewed/tested/re-pinned",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "board-a-f11-sim; (xix) (unchanged)"
+  },
+  {
+   "id": "F11-3c",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "actual per-contrast mask and ID mapping frozen/hashed before the run",
+   "inventory_1_status": "PARTIAL",
+   "status": "MET",
+   "evidence": "disclosed departure accepted: slot_mapping_f11.json 1e2155ad... written post-run (F11c.2); Board A rebuilt the 52 ordered rows independently from pre-existing inputs (staging-cal); F11d.1 accepts the departure as a procedural exception, F11d.3 freezes the mapping before the replay; replay byte-identical. Recomputed here: ordered table 68b8b01d..., availability digest 171dfd20..., table = output table, slots 40-51 = the 12 in selection order, 9 rotation-unavailable = the 9 exclusions. The original chronology stays non-compliant (F11d.1)"
+  },
+  {
+   "id": "F11-3d",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "original reuse proofs (especially aaf7a066)",
+   "inventory_1_status": "AT_SCORING",
+   "status": "AT_EXECUTION",
+   "evidence": "reference_proofs.computed false, paths_touched []; phase 1 `score --proofs-only` writes reference_proofs_f11.json (12 originals incl. aaf7a0660c6d5a73)",
+   "discharged_by": "chair (launcher), phase 1, after Board A release"
+  },
+  {
+   "id": "F11-4a",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "one registered-scale calibration under frozen settings, hashes published",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "f11_calibration_record.json 3de71f02... (enriched 516d9c9); output re-hashed 8a1be18f...; input_provenance 5/5 re-hashed equal; log afbcd5b2... = record; wrapper 00c3a8bb... = record"
+  },
+  {
+   "id": "F11-4b",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "calibration report and route accepted",
+   "inventory_1_status": "BOARD_A",
+   "status": "BOARD_A",
+   "evidence": "Board A staging-cal (b) ACCEPT WITH CONDITIONS 1-3; F11d (759ef24) + byte-identical replay (f11_calibration_replay_record.json d96036fa..., replay output re-hashed 8a1be18f... = original) + this inventory (condition 3); Board A: 'I must see this completion evidence before calibration conditions can be discharged for scoring release'"
+  },
+  {
+   "id": "F11-5a",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "analysis implementation reviewed/tested/re-pinned",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "analysis-4; (xxi); F11b; part_a_analysis.py 5a21e995... and part_a_analyse.py 74bcff0f... unchanged since 516d9c9"
+  },
+  {
+   "id": "F11-5b",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "targeted analysis tests pass on the accepted execution manifest and reject tampering",
+   "inventory_1_status": "OPEN",
+   "status": "MET",
+   "evidence": "synthetic_binding_summary.json e28161eb...: A intact exit 0 binding ledger/manifest/fields/spec/masked-calibration hashes; B-E tamper cases refused (exit 2) as expected; inputs = current hashes (manifest 71e77a3e..., predictions 50c37800..., calibration 8a1be18f..., record 3de71f02...); targeted test run at c947cc9 (tests/test_part_a_analysis.py within 356 passed); Board A sees it under SC-4"
+  },
+  {
+   "id": "F11-6a",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "attestations through final methodological freeze",
+   "inventory_1_status": "OPEN",
+   "status": "OPEN",
+   "evidence": "entries 15-23 now present (attestations sha256 a5ab6708...); still not in the file: chair extension 3 (10:16 UTC through release), staging-report author (own line in SUPPLEMENT_REPORT.md), Board A staging-cal reviewer (own line in its review), Board A re-stage reviewer (own line in its review, not copied), launch-hardening builder (77ee786), test-order-fix builder (if merged before the freeze), this inventory-2 session (text in PRESCORE2_A512_NOTE.md); entries 16-18 are relayed by the chair only"
+  },
+  {
+   "id": "F11-6b",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "recheck all pins match",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "`--verify-pins HEAD` at c947cc9: all pins match (exit 0); code_hashes.json e0a2c779... (77 files, git_sha 1e01a26); repeated by the launch script at the execution HEAD"
+  },
+  {
+   "id": "F11-6c",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "rehash staged bytes before the single campaign",
+   "inventory_1_status": "AT_SCORING",
+   "status": "AT_EXECUTION",
+   "evidence": "as F10-7c",
+   "discharged_by": "the launch script, run by the chair"
+  },
+  {
+   "id": "F11-6d",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "charge missing originals, failures and retries; no advance ladder/reference scoring; seal ledger",
+   "inventory_1_status": "AT_SCORING",
+   "status": "AT_EXECUTION",
+   "evidence": "as F10-7d/F10-7e; scored false",
+   "discharged_by": "chair"
+  },
+  {
+   "id": "F11-6e",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "existing qualification, field, allocation, reference-reuse and exposure gates",
+   "inventory_1_status": "OPEN",
+   "status": "BOARD_A",
+   "evidence": "field predictions now frozen: predictions_f11.json 50c37800... (52 rows; rows 079f19c1... and predictions cc0beda2... recomputed; bound to 147/147 staged file hashes and 156/156 variant.json hashes; 9 abstentions = the 9 exclusions); qualification/allocation per F11a/A3-A5; reference reuse at phase 1; Board A must see the predictions and checks (staging-cal condition 4)"
+  },
+  {
+   "id": "ST-1a",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "merge, re-pin (xx), verify pins at the clean execution HEAD",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "(xx); supplement_launch.json execution_sha 8211ecf, dirty 0 (unchanged)"
+  },
+  {
+   "id": "ST-1b",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "dated clarification of F11.8 'built at staging' (deferred proofs, 178-entry pricing, stop-and-reprice)",
+   "inventory_1_status": "OPEN",
+   "status": "MET",
+   "evidence": "A5 note F11c.1 (c319787): deferred proofs, 178 / 185.12 min conservative, 166 / 172.64 min lower bound, stop-and-reprice threshold 1.25 x 185.12 = 231.4 min"
+  },
+  {
+   "id": "ST-1c",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "implementer/stager/reviewer attestations through this freeze",
+   "inventory_1_status": "OPEN",
+   "status": "PARTIAL",
+   "evidence": "implementers: entries 16-18 (relayed by the chair only; no own statements); stager: entry 19 (chair); reviewers: entry 20 (F11, sim, stage, analysis-4); Board A to rule whether chair-relayed entries suffice (staging-cal condition 6)"
+  },
+  {
+   "id": "ST-2",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "frozen staging launch and environment; launch/end record with output hashes",
+   "inventory_1_status": "PARTIAL",
+   "status": "MET",
+   "evidence": "disclosed departures accepted by Board A staging-cal (a): supplement_launch.json enriched (d20a4ab3...: command, cwd, log 8e312647... = re-hashed log, wrapper 1dcc133a... = committed script, outputs = manifest 71e77a3e... and audits 9412eb0d...); wrapper committed post-run (F11c.4); manifest code_sha 887a514 vs execution 8211ecf (F11c.3)"
+  },
+  {
+   "id": "ST-3",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "accept actual staging evidence, no replacement",
+   "inventory_1_status": "OPEN",
+   "status": "MET",
+   "evidence": "Board A staging-cal (a) ACCEPT (no replacement, nine exclusions, 31 rotations, 80 ladders unchanged)"
+  },
+  {
+   "id": "ST-4",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "freeze calibration inputs after staging (mask, 52-ID mapping, final manifest/audits)",
+   "inventory_1_status": "PARTIAL",
+   "status": "MET",
+   "evidence": "as F11-3c (ordering departure accepted under F11d; mapping certified by Board A reconstruction; byte-identical replay)"
+  },
+  {
+   "id": "ST-5",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "proof-phase hold; proof-only / record / reprice sequence before GPU",
+   "inventory_1_status": "OPEN",
+   "status": "BOARD_A",
+   "evidence": "no proof read yet (paths_touched []; no reference_proofs_f11.json); two-phase launcher implements proofs-only STOP, --require-proofs, --max-minutes; no Board A review of the hardened launcher (77ee786) is on file (staging-cal condition 5)"
+  },
+  {
+   "id": "SIM-1",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "merge and re-pin accepted simulator bytes",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "(xix); pins match at c947cc9"
+  },
+  {
+   "id": "SIM-2",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "mask from actual exclusions; slot_mapping_f11.json saved and hashed before RNG execution",
+   "inventory_1_status": "PARTIAL",
+   "status": "MET",
+   "evidence": "as F11-3c"
+  },
+  {
+   "id": "SIM-3a",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "execute the single frozen command once; full execution record",
+   "inventory_1_status": "PARTIAL",
+   "status": "PARTIAL",
+   "evidence": "original record: environment {} and command given by reference (F11c.4, disclosed); replay record d96036fa...: SHA 759ef241, start/end, wrapper f41b72b2... (= committed script), log 7d0f11b3... (= re-hashed log; log shows REPLAY_EXIT 0), mask, ordered table, availability digest, output hashes, comparison byte_identical true; it lacks an exit-code field, Python/NumPy/thread fields, input hashes other than the mask, the mapping-file hash and a literal argv (argv is in the committed wrapper); launch had 1 untracked file (the wrapper, committed 16 s after launch at 890f6e6). Board A to rule (staging-cal condition 2)"
+  },
+  {
+   "id": "SIM-3b",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "accept the report",
+   "inventory_1_status": "BOARD_A",
+   "status": "BOARD_A",
+   "evidence": "Board A staging-cal (b) ACCEPT WITH CONDITIONS 1-3; F11d (759ef24) + byte-identical replay (f11_calibration_replay_record.json d96036fa..., replay output re-hashed 8a1be18f... = original) + this inventory (condition 3); Board A: 'I must see this completion evidence before calibration conditions can be discharged for scoring release'"
+  },
+  {
+   "id": "SIM-4",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "retain holds; attestations through final freeze",
+   "inventory_1_status": "OPEN",
+   "status": "OPEN",
+   "evidence": "holds retained (scored false); attestations: entries 15-23 now present (attestations sha256 a5ab6708...); still not in the file: chair extension 3 (10:16 UTC through release), staging-report author (own line in SUPPLEMENT_REPORT.md), Board A staging-cal reviewer (own line in its review), Board A re-stage reviewer (own line in its review, not copied), launch-hardening builder (77ee786), test-order-fix builder (if merged before the freeze), this inventory-2 session (text in PRESCORE2_A512_NOTE.md); entries 16-18 are relayed by the chair only"
+  },
+  {
+   "id": "AN4-1",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "adopt conventions by dated A5 note",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "F11b (unchanged)"
+  },
+  {
+   "id": "AN4-2",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "merge, re-test, re-pin; --verify-pins HEAD at the real execution HEAD",
+   "inventory_1_status": "MET",
+   "status": "PARTIAL",
+   "evidence": "pins match at c947cc9; targeted run at c947cc9 (5 files): 356 passed, 2 skipped, 2 failed = the two known order-dependent F10 diagnostic tests in tests/test_response_intervention.py (test fixtures, not the pipeline); the full suite is not green at main (re-pin (xxiv) committed with the hook bypassed); fix in flight on fix/f10-diagnostic-test-order; a green full suite at the execution commit needs that fix and its re-pin"
+  },
+  {
+   "id": "AN4-3a",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "inventory: twelve IDs, four per cell, component uniqueness, forty preserved, 9 exclusions, 80 ladders",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "population re-checked (see population)"
+  },
+  {
+   "id": "AN4-3b",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "bind a533 and final execution manifest hashes",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "manifest_a533 d7785b35..., execution manifest 71e77a3e... re-hashed"
+  },
+  {
+   "id": "AN4-3c",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "bind ledger/field predictions, windows, producer and scoring identities",
+   "inventory_1_status": "OPEN",
+   "status": "BOARD_A",
+   "evidence": "field predictions frozen and bound (see F11-6e); windows text_groups.json f769afca... bound; ledger and producer/scoring identities exist only after scoring (AT_EXECUTION, chair); Board A condition 4"
+  },
+  {
+   "id": "AN4-3d",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "actual per-contrast masks and mapping; the 52-slot calibration report",
+   "inventory_1_status": "MET",
+   "status": "MET",
+   "evidence": "mask, mapping, 52-slot calibration (see F11-3c, F11-4a)"
+  },
+  {
+   "id": "AN4-3e",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "separate acceptance of the calibration report and route",
+   "inventory_1_status": "BOARD_A",
+   "status": "BOARD_A",
+   "evidence": "Board A staging-cal (b) ACCEPT WITH CONDITIONS 1-3; F11d (759ef24) + byte-identical replay (f11_calibration_replay_record.json d96036fa..., replay output re-hashed 8a1be18f... = original) + this inventory (condition 3); Board A: 'I must see this completion evidence before calibration conditions can be discharged for scoring release'"
+  },
+  {
+   "id": "AN4-3f",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "exercise input-binding/tamper checks on the final manifest with synthetic responses",
+   "inventory_1_status": "OPEN",
+   "status": "MET",
+   "evidence": "as F11-5b (synthetic responses only)"
+  },
+  {
+   "id": "SC-a",
+   "source": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "release_gate": "accept the outcome-free F11.3 staging evidence and the reconstructed mask/ordered mapping",
+   "inventory_1_status": null,
+   "status": "MET",
+   "evidence": "verdict (a) ACCEPT"
+  },
+  {
+   "id": "SC-b",
+   "source": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "release_gate": "calibration acceptance (ACCEPT WITH CONDITIONS 1-3)",
+   "inventory_1_status": null,
+   "status": "BOARD_A",
+   "evidence": "Board A staging-cal (b) ACCEPT WITH CONDITIONS 1-3; F11d (759ef24) + byte-identical replay (f11_calibration_replay_record.json d96036fa..., replay output re-hashed 8a1be18f... = original) + this inventory (condition 3); Board A: 'I must see this completion evidence before calibration conditions can be discharged for scoring release'"
+  },
+  {
+   "id": "SC-1",
+   "source": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "release_gate": "prospective ordering-remedy freeze before the replay",
+   "inventory_1_status": null,
+   "status": "PARTIAL",
+   "evidence": "F11d (759ef24, 10:08:45 UTC) precedes the replay start (10:08:53): ruling, single-replay exception, frozen report a88cfe7b..., manifest, audits, supplement, mask, mapping file 1e2155ad..., availability digest, inputs, simulator; it cites the review by path, not by hash (review sha256 now 9f915964...); the ordered-table hash is deferred to the replay record (it is in the Board A review text); the replay wrapper was not frozen by hash before execution (untracked at launch, committed 890f6e6 at 10:09:03; record dirty_at_launch 1). Board A to rule"
+  },
+  {
+   "id": "SC-2",
+   "source": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "release_gate": "one replay, byte identity, full record",
+   "inventory_1_status": null,
+   "status": "BOARD_A",
+   "evidence": "byte-identical: replay output re-hashed 8a1be18f... = original; record completeness PARTIAL (see SIM-3a). Board A must see the completion evidence"
+  },
+  {
+   "id": "SC-3",
+   "source": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "release_gate": "reconcile hash/status history",
+   "inventory_1_status": null,
+   "status": "MET",
+   "evidence": "F11d.4 + this inventory: current supplement_launch.json d20a4ab3... (old d17fab2f...), f11_calibration_record.json 3de71f02... (old 216bdc9c...), SUPPLEMENT_REPORT/SUPPLEMENT_A512_NOTE describe pre-enrichment records; inventory 1 (2ab1caea.../419ee039...) is kept unchanged as a historical snapshot and superseded by this inventory for status; retrospective vs prospective evidence distinguished (files table)"
+  },
+  {
+   "id": "SC-4",
+   "source": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "release_gate": "frozen predictions and final analysis gate, before proof reads",
+   "inventory_1_status": null,
+   "status": "BOARD_A",
+   "evidence": "predictions_f11.json 50c37800... (see F11-6e; computed at 516d9c9 with code_files_dirty true; the builder bytes equal the pinned d312967e...; response_intervention.py used e52ea009... = pre-(xxiii) bytes); forty-edit test fix (77ee786, tests/test_a5_simulation.py 62755edd...); synthetic binding A-E passed (e28161eb...); targeted tests at c947cc9 (AN4-2)"
+  },
+  {
+   "id": "SC-5",
+   "source": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "release_gate": "two-phase launch reviewed before any proof read; repriced before GPU",
+   "inventory_1_status": null,
+   "status": "BOARD_A",
+   "evidence": "launcher b1508ad0... (77ee786; re-pin (xxiii) text): LS-1 fixed (phase 1 proofs-only then STOP; phase 2 `--require-proofs --max-minutes T --dry-run` gate); LS-2 fixed (missing file fails; variant.json included); LS-3 fixed (manifest sha256 argument; `--verify-pins HEAD`); LS-4 partly (GPU UUID recorded; launch record still written into the tracked tree after the clean-tree check; phase 1 writes no launch record of its own). New: the launcher and its tests are not rows of code_hashes.json; GPU exclusivity is not checked; phase 1 does not hide the GPU. No Board A review of the launcher is on file"
+  },
+  {
+   "id": "SC-6",
+   "source": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "release_gate": "F11c and attestations through the final freeze",
+   "inventory_1_status": null,
+   "status": "OPEN",
+   "evidence": "F11c MET (c319787); attestations: entries 15-23 now present (attestations sha256 a5ab6708...); still not in the file: chair extension 3 (10:16 UTC through release), staging-report author (own line in SUPPLEMENT_REPORT.md), Board A staging-cal reviewer (own line in its review), Board A re-stage reviewer (own line in its review, not copied), launch-hardening builder (77ee786), test-order-fix builder (if merged before the freeze), this inventory-2 session (text in PRESCORE2_A512_NOTE.md); entries 16-18 are relayed by the chair only"
+  },
+  {
+   "id": "SC-7",
+   "source": "docs/reviews/council/board-a-f11-staging-cal-2026-11-11.md",
+   "release_gate": "updated inventory and the chair's explicit release; execution-time checks; ledger sealed before the analysis",
+   "inventory_1_status": null,
+   "status": "BOARD_A",
+   "evidence": "this inventory (part 1 of 2); chair's explicit release not on file; pre-GPU identity/re-hash/pins and the ledger are AT_EXECUTION",
+   "discharged_by": "Board A, then the chair"
+  }
+ ]
+}
