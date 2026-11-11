@@ -460,3 +460,16 @@ calibration (agent-tmux `a5-f11-replay`, 10:08–10:16 UTC, execution SHA 759ef2
 `data/runs/a5/f11_sim_dryrun/boarda/`) and compared it with the original output: byte-identical (sha256 `8a1be18f…`). The one
 untracked file at launch was the replay launch script itself, committed at 890f6e6. I opened no file under `data/evals`, ran no
 scoring, and read no score, response or contrast. No Part A outcome exists.
+
+## 23. Part A predictions builder (added by the chair, 11 Nov 2026, 11:06 UTC)
+
+- **Role:** author of `scripts/part_a_predictions.py`, `scripts/part_a_synthetic_binding.py`, their test, and the frozen
+  `predictions_f11.json` (branch `feat/part-a-predictions`; files committed by the chair as a36aeb9 while the builder's own hook run
+  was in progress — byte-identical blobs; merged 1e01a26; pinned in re-pin (xxiv)).
+- **Session identity:** delegated session, Claude Opus 5.5 (claude_umut instance); CPU run under agent-tmux `part-a-predictions`
+  10:10–10:54 UTC; synthetic binding run (seed 20261111) in /tmp.
+- **Statement (from the committed file's provenance fields, quoted):** `outcomes_read`: "none: no evaluation record, TF-v1 score, rotation/ladder outcome or sealed outcome is opened; only stored edit bytes, staged variant files, the base model and the G2 WikiText artefacts". The synthetic responses were random; no evaluation record of any variant or reference was read; the staged bytes
+  were read and checked against the manifest's hashes.
+- Its report to the chair is on record only through this entry and `docs/PROGRESS.md`. It notes that fields.json rebuilt its own
+  rotations (R_eff hashes differ; signs agree 25/25; values within 1.4 %) and that ladder predictions follow A5.3 and the analysis code
+  (y(W + sΔ) − y(W) at the predecessor).
