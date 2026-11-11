@@ -1,0 +1,3743 @@
+{
+ "schema": "a5-part-a-prescore-inventory-v1",
+ "built_utc": "2026-11-11T09:53:00Z",
+ "built_at_head": "079e60b0d65da1f893d726c80acb9d2a0874acba",
+ "builder": {
+  "script": "build.py (session scratch; sha256 recorded below)",
+  "sha256": "8144f3ed0ff091618771a22c5d30a2de7c3cc8738080708bb3542629a1ad91aa",
+  "rehash_script_sha256": "19593831edb5fc7e15d0870ad1c8cd5895bf87f330a75e9856c0848269f61d59"
+ },
+ "status": "SCORING HELD: this inventory releases nothing; see gates",
+ "files": {
+  "docs/prereg/a5_manifests/part_a/manifest.json": {
+   "path": "docs/prereg/a5_manifests/part_a/manifest.json",
+   "sha256": "71e77a3e1f703451864ce960129399be1579d8aa84631bebc0c8d6324b4790d6",
+   "bytes": 993418,
+   "role": "execution manifest (52 edits; F11 staging output at 8211ecf)"
+  },
+  "docs/prereg/a5_manifests/part_a/rotation_audits.jsonl": {
+   "path": "docs/prereg/a5_manifests/part_a/rotation_audits.jsonl",
+   "sha256": "9412eb0d4d60f5587c4c5d19e9afcda86c6c45faa38a37b3ab937008d505c45a",
+   "bytes": 9460401,
+   "role": "execution audit file (pre-F11 bytes + 12 supplementary edits' rows)"
+  },
+  "docs/prereg/a5_manifests/part_a/manifest_pre_f11.json": {
+   "path": "docs/prereg/a5_manifests/part_a/manifest_pre_f11.json",
+   "sha256": "59d839e351824fa154a665fcf105284ce5fdeed8423a5c0a2b7a60687b0d3b06",
+   "bytes": 828584,
+   "role": "preserved pre-F11 (F10 re-stage) manifest",
+   "expected_sha256": "59d839e351824fa154a665fcf105284ce5fdeed8423a5c0a2b7a60687b0d3b06",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/rotation_audits_pre_f11.jsonl": {
+   "path": "docs/prereg/a5_manifests/part_a/rotation_audits_pre_f11.jsonl",
+   "sha256": "4ec0928a91b5523a400b911f00f8045f267386c2589aa72a58816d565f5c97f3",
+   "bytes": 7810911,
+   "role": "preserved pre-F11 audit file",
+   "expected_sha256": "4ec0928a91b5523a400b911f00f8045f267386c2589aa72a58816d565f5c97f3",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/manifest_a533.json": {
+   "path": "docs/prereg/a5_manifests/part_a/manifest_a533.json",
+   "sha256": "d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6",
+   "bytes": 544290,
+   "role": "preserved a533 staging manifest (FROZEN_STAGED_MANIFEST_SHA256)",
+   "expected_sha256": "d7785b35de1d7041edd2db139591562379db12e33c2532921c814735e8dde8d6",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/rotation_audits_a533.jsonl": {
+   "path": "docs/prereg/a5_manifests/part_a/rotation_audits_a533.jsonl",
+   "sha256": "f05fec4265ffd93c8c537100993d23262be95141369240fcad0a7e16ff474d35",
+   "bytes": 1782920,
+   "role": "preserved a533 audit file",
+   "expected_sha256": "f05fec4265ffd93c8c537100993d23262be95141369240fcad0a7e16ff474d35",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/README.md": {
+   "path": "docs/prereg/a5_manifests/part_a/README.md",
+   "sha256": "2fcbf517ccf26f2a1fe325ef31300d291bc0f254c7faaacd18154e327bceada1",
+   "bytes": 15208,
+   "role": "a533 staging README",
+   "expected_sha256": "2fcbf517ccf26f2a1fe325ef31300d291bc0f254c7faaacd18154e327bceada1",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/RESTAGE_REPORT.md": {
+   "path": "docs/prereg/a5_manifests/part_a/RESTAGE_REPORT.md",
+   "sha256": "61294c8666b4bbe4f938e76af7797631ef86613e77d431229bddcaf69d6d5f61",
+   "bytes": 57841,
+   "role": "F10 re-stage report (accepted with conditions, board-a-f10-restage-2026-11-11.md)",
+   "expected_sha256": "61294c8666b4bbe4f938e76af7797631ef86613e77d431229bddcaf69d6d5f61",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/RESTAGE_A512_NOTE.md": {
+   "path": "docs/prereg/a5_manifests/part_a/RESTAGE_A512_NOTE.md",
+   "sha256": "9e2286818206461b66c00ac887bc7c36f7aa75024f99b9e5d5b0e66ee50df901",
+   "bytes": 3511,
+   "role": "A5.1.2 hash entries for the F10 re-stage"
+  },
+  "docs/prereg/a5_manifests/part_a/restage_freeze.json": {
+   "path": "docs/prereg/a5_manifests/part_a/restage_freeze.json",
+   "sha256": "03dfaf2667d0addbd459c0662b8fa87a2304b36a054c36cf64ac29192ca48858",
+   "bytes": 14236,
+   "role": "F10 re-stage pre-execution freeze (xviii)",
+   "expected_sha256": "03dfaf2667d0addbd459c0662b8fa87a2304b36a054c36cf64ac29192ca48858",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/restage_launch.json": {
+   "path": "docs/prereg/a5_manifests/part_a/restage_launch.json",
+   "sha256": "28dcba683dc215fe303d938a1c7b094b5d0856929f19fb720187b75bb1a59a7e",
+   "bytes": 789,
+   "role": "F10 re-stage launch/end record",
+   "expected_sha256": "28dcba683dc215fe303d938a1c7b094b5d0856929f19fb720187b75bb1a59a7e",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/supplement_freeze.json": {
+   "path": "docs/prereg/a5_manifests/part_a/supplement_freeze.json",
+   "sha256": "503e415efda3801216cc57ba332ab643a333e4b73cb92ce6366add0682fda0a4",
+   "bytes": 18345,
+   "role": "F11.3 staging pre-execution freeze",
+   "expected_sha256": "503e415efda3801216cc57ba332ab643a333e4b73cb92ce6366add0682fda0a4",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/supplement_launch.json": {
+   "path": "docs/prereg/a5_manifests/part_a/supplement_launch.json",
+   "sha256": "d17fab2f7648a405045b85bcb92e309a5ea11fb19a6d864a852ccb72bd38fb38",
+   "bytes": 392,
+   "role": "F11.3 staging launch/end record"
+  },
+  "docs/prereg/a5_manifests/part_a/slot_mask_f10.json": {
+   "path": "docs/prereg/a5_manifests/part_a/slot_mask_f10.json",
+   "sha256": "86fa27a5c1838d0c0bd88ef530feba22eceafac698d0ec4506fbf05df83b698e",
+   "bytes": 3036,
+   "role": "F10.6 mask",
+   "expected_sha256": "86fa27a5c1838d0c0bd88ef530feba22eceafac698d0ec4506fbf05df83b698e",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/slot_mask_f10.provenance.json": {
+   "path": "docs/prereg/a5_manifests/part_a/slot_mask_f10.provenance.json",
+   "sha256": "0bb56b4bb05ce0718f48e7fc962a60e4378b06d9c46c9cf08e4b1ef78be08636",
+   "bytes": 847,
+   "role": "F10.6 mask provenance sidecar",
+   "expected_sha256": "0bb56b4bb05ce0718f48e7fc962a60e4378b06d9c46c9cf08e4b1ef78be08636",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/slotmask_calibration_record.json": {
+   "path": "docs/prereg/a5_manifests/part_a/slotmask_calibration_record.json",
+   "sha256": "0c5fa8c38da42d63bd5762c307ec1c2254313501fbfd4763b3418eaa3eff6b51",
+   "bytes": 1725,
+   "role": "F10.6 calibration record (FAIL, superseded)",
+   "expected_sha256": "0c5fa8c38da42d63bd5762c307ec1c2254313501fbfd4763b3418eaa3eff6b51",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/slot_mask_f11.json": {
+   "path": "docs/prereg/a5_manifests/part_a/slot_mask_f11.json",
+   "sha256": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+   "bytes": 3972,
+   "role": "F11.4 mask (52 ids)",
+   "expected_sha256": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/part_a/f11_calibration_record.json": {
+   "path": "docs/prereg/a5_manifests/part_a/f11_calibration_record.json",
+   "sha256": "216bdc9c578e576cf67ea1dfc85a1a89850c69c6c9c39fbb4fc5b8fcda26f5a4",
+   "bytes": 1980,
+   "role": "F11.4 calibration record (PASS)"
+  },
+  "docs/prereg/a5_manifests/selection.json": {
+   "path": "docs/prereg/a5_manifests/selection.json",
+   "sha256": "393530365f87f981d5da3ecb2779c89b8e7bf98105b6c45d1824bf290e908c63",
+   "bytes": 157183,
+   "role": "registered selection",
+   "expected_sha256": "393530365f87f981d5da3ecb2779c89b8e7bf98105b6c45d1824bf290e908c63",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/selection_f11.json": {
+   "path": "docs/prereg/a5_manifests/selection_f11.json",
+   "sha256": "ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c",
+   "bytes": 14815,
+   "role": "frozen F11.2 supplementary list",
+   "expected_sha256": "ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/references.json": {
+   "path": "docs/prereg/a5_manifests/references.json",
+   "sha256": "5b6991f299c1eee049de51bc1e4f00c71c1dfc58114cdf6549fb5d246850564e",
+   "bytes": 86857,
+   "role": "references / pricing inputs",
+   "expected_sha256": "5b6991f299c1eee049de51bc1e4f00c71c1dfc58114cdf6549fb5d246850564e",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/text_groups.json": {
+   "path": "docs/prereg/a5_manifests/text_groups.json",
+   "sha256": "f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1",
+   "bytes": 35171,
+   "role": "registered 64 windows (scoring --text-groups)",
+   "expected_sha256": "f769afcade5a80571daf3a9578b1c03584b46a5abbbba07b32d43a7e9035e7e1",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/control_seeds.json": {
+   "path": "docs/prereg/a5_manifests/control_seeds.json",
+   "sha256": "d357ed51031877f817baeb4204cf93b38c66fdfcfd95bd41803d93d5160c12d5",
+   "bytes": 6612,
+   "role": "registered seeds (rotation_seed, SeedSequence(20261107))",
+   "expected_sha256": "d357ed51031877f817baeb4204cf93b38c66fdfcfd95bd41803d93d5160c12d5",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/panels.json": {
+   "path": "docs/prereg/a5_manifests/panels.json",
+   "sha256": "c291b68516952c4f342bfc7f36843a83f0482df7d721a00e46287597bad108cd",
+   "bytes": 368046,
+   "role": "panels"
+  },
+  "docs/prereg/a5_manifests/components.jsonl": {
+   "path": "docs/prereg/a5_manifests/components.jsonl",
+   "sha256": "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec",
+   "bytes": 799719,
+   "role": "component inventory (selection_f11 input)",
+   "expected_sha256": "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/nullsize_inputs.json": {
+   "path": "docs/prereg/a5_manifests/nullsize_inputs.json",
+   "sha256": "6e58b589e32491b36fd70e679b20242538ea8e958b9b9072ce0e30b444508885",
+   "bytes": 7763,
+   "role": "NULL-SIZE inputs specification"
+  },
+  "docs/prereg/a5_manifests/nullsize/report.json": {
+   "path": "docs/prereg/a5_manifests/nullsize/report.json",
+   "sha256": "1bed2c9531e4230864a1ebbe7e4023e0ffafcf704a59c40e93f9a75bd469dfa6",
+   "bytes": 18617,
+   "role": "NULL-SIZE report (analysis NULLSIZE_REPORT_SHA256)",
+   "expected_sha256": "1bed2c9531e4230864a1ebbe7e4023e0ffafcf704a59c40e93f9a75bd469dfa6",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/nullsize/inputs_provenance.json": {
+   "path": "docs/prereg/a5_manifests/nullsize/inputs_provenance.json",
+   "sha256": "ea160aa4088c56db0aa27046daf3e21eb5865b3950b98e70b4eff9242e1eb1a3",
+   "bytes": 331437,
+   "role": "NULL-SIZE inputs provenance"
+  },
+  "docs/prereg/a5_manifests/nullsize/validation.json": {
+   "path": "docs/prereg/a5_manifests/nullsize/validation.json",
+   "sha256": "7a9f72876e73f5ffba2852f925a8aa3ae52a5c9261d55af942b322b1e0606136",
+   "bytes": 486,
+   "role": "NULL-SIZE validation"
+  },
+  "docs/prereg/a5_manifests/power/fields_manifest.json": {
+   "path": "docs/prereg/a5_manifests/power/fields_manifest.json",
+   "sha256": "19e9de8430ff2a135db848f7d0d5097b5b5724138e9ee815e807e5753e5f9a6b",
+   "bytes": 287897,
+   "role": "power fields manifest (selection_f11 input)",
+   "expected_sha256": "19e9de8430ff2a135db848f7d0d5097b5b5724138e9ee815e807e5753e5f9a6b",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/power/registered_donors.json": {
+   "path": "docs/prereg/a5_manifests/power/registered_donors.json",
+   "sha256": "6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5",
+   "bytes": 3551,
+   "role": "F7.1 61-donor pool",
+   "expected_sha256": "6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5",
+   "matches_expected": true
+  },
+  "docs/prereg/a5_manifests/power/report.json": {
+   "path": "docs/prereg/a5_manifests/power/report.json",
+   "sha256": "ff46de30fa8e4ff97a4034e8bdef78cb19bc49662073523500a43c773b55845a",
+   "bytes": 8416,
+   "role": "registered power report (40-slot anchors)"
+  },
+  "docs/prereg/a5_manifests/code_hashes.json": {
+   "path": "docs/prereg/a5_manifests/code_hashes.json",
+   "sha256": "3447730883fe30306c9615418fcefb50b03dfbe78d05f6cc4d2ba5315e3b7bdb",
+   "bytes": 13574,
+   "role": "governed code pin inventory"
+  },
+  "docs/prereg/a5_manifests/README.md": {
+   "path": "docs/prereg/a5_manifests/README.md",
+   "sha256": "bb6173b11aee232267eb4f0fc53e84c9bb47261bf662f7021251780c061dbb6d",
+   "bytes": 13578,
+   "role": "package README"
+  },
+  "docs/prereg/f10_attestations.md": {
+   "path": "docs/prereg/f10_attestations.md",
+   "sha256": "e9a0cb0a30664f81a9aada9691cc1e57ca7ad0abcd841ad154634eed08ad2421",
+   "bytes": 26759,
+   "role": "no-exposure attestations (entries 1-14)"
+  },
+  "docs/design/F10_SENSITIVITY_SPEC.md": {
+   "path": "docs/design/F10_SENSITIVITY_SPEC.md",
+   "sha256": "8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4",
+   "bytes": 37277,
+   "role": "F10.5 specification (analysis SPEC_SHA256)",
+   "expected_sha256": "8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4",
+   "matches_expected": true
+  },
+  "configs/eval_tf_v1.yaml": {
+   "path": "configs/eval_tf_v1.yaml",
+   "sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317",
+   "bytes": 2595,
+   "role": "scoring config",
+   "expected_sha256": "5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317",
+   "matches_expected": true
+  },
+  "scripts/part_a_score_launch.sh": {
+   "path": "scripts/part_a_score_launch.sh",
+   "sha256": "69eae67c9028ee0352eb39346b7201f9b43edc065540ca6d648e00f0e148de41",
+   "bytes": 2286,
+   "role": "gated scoring launch script (not executed)"
+  },
+  "docs/PREREG_H1_TF.md": {
+   "path": "docs/PREREG_H1_TF.md",
+   "sha256": "8fe66f80f4736b83449bcefb27725d8f1ebd8029267dc9078925a517e9f75f79",
+   "bytes": 469498,
+   "role": "registration text at this HEAD"
+  },
+  "data/runs/a5/nullsize/inputs.json": {
+   "path": "data/runs/a5/nullsize/inputs.json",
+   "sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+   "bytes": 651039,
+   "role": "NULL-SIZE payload (F11.4 input 1)",
+   "expected_sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+   "matches_expected": true
+  },
+  "data/runs/a5/power/fields.json": {
+   "path": "data/runs/a5/power/fields.json",
+   "sha256": "85843ed28d3fd3ba5dc71e2ba8943fd022924cbc4f0b62dddbfb001cb2bcf3b9",
+   "bytes": 14156,
+   "role": "power fields (F11.4 --fields)",
+   "expected_sha256": "85843ed28d3fd3ba5dc71e2ba8943fd022924cbc4f0b62dddbfb001cb2bcf3b9",
+   "matches_expected": true
+  },
+  "data/runs/a5/power/power_slotmask_f11.json": {
+   "path": "data/runs/a5/power/power_slotmask_f11.json",
+   "sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+   "bytes": 241039486,
+   "role": "F11.4 calibration output",
+   "expected_sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+   "matches_expected": true
+  },
+  "data/runs/a5/power/power_slotmask_f10.json": {
+   "path": "data/runs/a5/power/power_slotmask_f10.json",
+   "sha256": "b14756828bc27cbbe14e1e590226820371a65ef5f83ad9622b2e6ccf04a3450a",
+   "bytes": 187303362,
+   "role": "F10.6 calibration output (FAIL)",
+   "expected_sha256": "b14756828bc27cbbe14e1e590226820371a65ef5f83ad9622b2e6ccf04a3450a",
+   "matches_expected": true
+  }
+ },
+ "population": {
+  "registered_40": [
+   "0027efdf2eae7405",
+   "00f8111cbad8218f",
+   "014f8a9ec78db2be",
+   "05531ce1db4df63f",
+   "0559051354691a70",
+   "057dcfbedea3251f",
+   "0712caa1d248514a",
+   "07f9a50b29a7ef5c",
+   "0a841d4082532e8b",
+   "0bc0a0c4ad0520e0",
+   "0d055869527177b4",
+   "13b02fe2673cc296",
+   "14cdaabee246493b",
+   "15a53586efc72a50",
+   "19d9a98cfb2db6e2",
+   "1ab850a41051fe45",
+   "1b2b671e5da5d625",
+   "1fc51f7164052d50",
+   "2233954b0cc3edc0",
+   "22659cefc904e29f",
+   "2971f30e5276edd9",
+   "2d1de332e36d8f00",
+   "2d7f5f78fac4a9ae",
+   "2f61a4086395b719",
+   "2fb8d03d2547f357",
+   "3499f7dcc5968d96",
+   "34e407b92a902282",
+   "3996bea032c24200",
+   "453d8c08966438e0",
+   "455b881d5de4e6e0",
+   "4f918f6bbd264b34",
+   "5abd76a640cc2b9d",
+   "5f80bd482d092938",
+   "61d1f61e25212068",
+   "649bd035e79488e5",
+   "72d3756e968e3209",
+   "7d03d89c0b0299e6",
+   "85366c308158ea48",
+   "8cfc1393b97300ab",
+   "983c5e13c59e0022"
+  ],
+  "registered_40_sorted_sha256": "e2bd6cb2956c0fbe64194b3f1ebbb481248ecec45b8a729a59a54b9a2bac9d6b",
+  "supplementary_12": [
+   "15cdcf0bb126de17",
+   "17668df17662b3f7",
+   "1ac30f3c7a209fe6",
+   "2410c595817dc20b",
+   "342a1be080049e8f",
+   "388347cfb0b7fafa",
+   "45cd0be9fea1c139",
+   "8d29ac2adb7fdda0",
+   "aaf7a0660c6d5a73",
+   "af6d608f8651fb46",
+   "b5d0ac5d76c3cad6",
+   "c12f6ec6bad59ba3"
+  ],
+  "supplementary_12_sorted_sha256": "1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9",
+  "supplementary_cells": {
+   "chain:0": [
+    "342a1be080049e8f",
+    "388347cfb0b7fafa",
+    "45cd0be9fea1c139",
+    "aaf7a0660c6d5a73"
+   ],
+   "chain:2": [
+    "15cdcf0bb126de17",
+    "17668df17662b3f7",
+    "1ac30f3c7a209fe6",
+    "2410c595817dc20b"
+   ],
+   "lora_sft:2": [
+    "8d29ac2adb7fdda0",
+    "af6d608f8651fb46",
+    "b5d0ac5d76c3cad6",
+    "c12f6ec6bad59ba3"
+   ]
+  },
+  "supplementary_in_selection_order": [
+   "8d29ac2adb7fdda0",
+   "af6d608f8651fb46",
+   "b5d0ac5d76c3cad6",
+   "c12f6ec6bad59ba3",
+   "342a1be080049e8f",
+   "388347cfb0b7fafa",
+   "45cd0be9fea1c139",
+   "aaf7a0660c6d5a73",
+   "15cdcf0bb126de17",
+   "17668df17662b3f7",
+   "1ac30f3c7a209fe6",
+   "2410c595817dc20b"
+  ]
+ },
+ "rotation_exclusions_9": {
+  "14cdaabee246493b": {
+   "rotation_variant_id": "0824ab1a336c0c19",
+   "pair_verdict": "excluded",
+   "reasons": [
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.15.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.15.self_attn.o_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.21.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.8.linear_attn.out_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.8.mlp.down_proj.weight"
+    }
+   ]
+  },
+  "057dcfbedea3251f": {
+   "rotation_variant_id": "0bcb2f48c5fcbcd2",
+   "pair_verdict": "excluded",
+   "reasons": [
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.0.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.0.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.10.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.11.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.11.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.11.self_attn.q_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.12.linear_attn.out_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.14.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.15.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.15.self_attn.q_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.16.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.19.self_attn.v_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.20.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.20.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.21.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.22.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.22.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.3.self_attn.q_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.4.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.6.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.7.self_attn.q_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.8.linear_attn.out_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.8.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.9.mlp.up_proj.weight"
+    }
+   ]
+  },
+  "2233954b0cc3edc0": {
+   "rotation_variant_id": "417883272c745e7e",
+   "pair_verdict": "excluded",
+   "reasons": [
+    {
+     "reason": "rounding_bound_failed",
+     "tensor": "model.layers.12.mlp.up_proj.weight"
+    }
+   ]
+  },
+  "0d055869527177b4": {
+   "rotation_variant_id": "716996040438aed6",
+   "pair_verdict": "excluded",
+   "reasons": [
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.21.mlp.down_proj.weight"
+    }
+   ]
+  },
+  "0bc0a0c4ad0520e0": {
+   "rotation_variant_id": "7cb4ef4f618014cc",
+   "pair_verdict": "excluded",
+   "reasons": [
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.0.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.11.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.18.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.18.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.23.self_attn.o_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.5.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.7.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.8.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.8.mlp.up_proj.weight"
+    }
+   ]
+  },
+  "0027efdf2eae7405": {
+   "rotation_variant_id": "8506c63c5b858637",
+   "pair_verdict": "excluded",
+   "reasons": [
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.10.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.11.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.14.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.15.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.15.self_attn.o_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.16.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.17.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.18.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.20.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.22.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.4.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.5.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.9.mlp.down_proj.weight"
+    }
+   ]
+  },
+  "72d3756e968e3209": {
+   "rotation_variant_id": "9ebbe197b37dfdfd",
+   "pair_verdict": "excluded",
+   "reasons": [
+    {
+     "reason": "rounding_bound_failed",
+     "tensor": "model.layers.2.mlp.down_proj.weight"
+    }
+   ]
+  },
+  "15a53586efc72a50": {
+   "rotation_variant_id": "ed51a348b7fd834b",
+   "pair_verdict": "excluded",
+   "reasons": [
+    {
+     "reason": "rounding_bound_failed",
+     "tensor": "model.layers.11.self_attn.q_proj.weight"
+    }
+   ]
+  },
+  "05531ce1db4df63f": {
+   "rotation_variant_id": "ffe89cadb99d110c",
+   "pair_verdict": "excluded",
+   "reasons": [
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.0.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.10.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.11.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.11.self_attn.q_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.12.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.13.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.14.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.16.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.17.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.17.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.18.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.18.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.19.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.19.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.2.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.21.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.3.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.3.self_attn.o_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.3.self_attn.q_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.4.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.6.mlp.down_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.7.self_attn.q_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.8.mlp.up_proj.weight"
+    },
+    {
+     "reason": "replay_failed",
+     "tensor": "model.layers.9.mlp.up_proj.weight"
+    }
+   ]
+  }
+ },
+ "staged_bytes": {
+  "staged_zoo": "data/runs/a5/part_a/qwen3.5-0.8b",
+  "files": [
+   {
+    "variant_id": "03bb09f5fef50b43",
+    "file": "delta.safetensors",
+    "sha256": "250bfc4942fad252803456a75a59bafe2ffc1b257e7fd160142d677e29f3182d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/03bb09f5fef50b43/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "05a14e9476819235",
+    "file": "delta.safetensors",
+    "sha256": "30066b57296b2df49dde73c9f98b9039cbc000cd23fe6849ea4d05a17b9ddff1",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/05a14e9476819235/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "065ec848e52de490",
+    "file": "delta.safetensors",
+    "sha256": "2118a10974d01bf3918d77a316d96d3e7c90f8193589e17c8756a3dd1c879e8d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/065ec848e52de490/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "073a266308fe7370",
+    "file": "delta.safetensors",
+    "sha256": "050368b542b16a4cb295ebd063188c39c3899407e34c6dcc25b9ddb752b83da4",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/073a266308fe7370/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "0936224384434c66",
+    "file": "delta.safetensors",
+    "sha256": "8ec355ade0cfc8e1640f76d23d146aa5eda441a3165d858476795bda6ec20627",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/0936224384434c66/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "0a81f2e52068b542",
+    "file": "delta.safetensors",
+    "sha256": "a1aa70ac4fd758200612830a5dd0f7a49a204f64ce874a1d39c8fd5daee5987f",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/0a81f2e52068b542/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "0bfb19dd9c185da0",
+    "file": "delta.safetensors",
+    "sha256": "f4041fb5e041184f731bcf0d5eff3866210d1794c1848ed6bcb0fb2c9545a19e",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/0bfb19dd9c185da0/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "0ff3a16f693343b1",
+    "file": "delta.safetensors",
+    "sha256": "efdd59e8a48f76fc735fcc85f972c1af832c82c36184ac16087f2526e6b80a03",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/0ff3a16f693343b1/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "0ff8adb2d7c5b40e",
+    "file": "delta.safetensors",
+    "sha256": "8cf123268d90cf724dac432b6fd9b7eea4c279afa60ddbf22190b1a22911bb34",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/0ff8adb2d7c5b40e/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "105202417885974f",
+    "file": "delta.safetensors",
+    "sha256": "a955cc6a055e777570f61c45d267b5afe20f624127f11d888dbdc3e352c50f27",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/105202417885974f/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "12db4caa66fe8ca4",
+    "file": "delta.safetensors",
+    "sha256": "56e2452022c39089941b7d466c013b9dd9ac3ff0bdebf8c6ec3e3740fcfdfa4f",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/12db4caa66fe8ca4/delta.safetensors",
+    "present": true,
+    "bytes": 150997040
+   },
+   {
+    "variant_id": "137641508e8b58a0",
+    "file": "delta.safetensors",
+    "sha256": "020bb7bafe03f55eae2d6f58f8fc26af4e7a68bd128938c4b842badbff08be1a",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/137641508e8b58a0/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "1590ffc581e0af7d",
+    "file": "delta.safetensors",
+    "sha256": "16a9893ff06c3e85a89ceffb7171c231867847309648f3e2b81fb37fd4a30f04",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/1590ffc581e0af7d/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "164ad9137bcc0f90",
+    "file": "delta.safetensors",
+    "sha256": "80fb21b643a14b4166f08478e5260f6c2e96ee639956e06ecc2040d831dc5038",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/164ad9137bcc0f90/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "1d2b581bed5a4409",
+    "file": "delta.safetensors",
+    "sha256": "a8fe30f6a44d12cb7d9d2f09749f73715086a7bb80080d48587283b18d1dc447",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/1d2b581bed5a4409/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "1de0a0cf096998b9",
+    "file": "delta.safetensors",
+    "sha256": "c0c12033b519dfdf86447c4228db2f82025a68b94016fd57a41de036e72817c4",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/1de0a0cf096998b9/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "1ffb7ac8e0e2fc14",
+    "file": "delta.safetensors",
+    "sha256": "ffcd07173e3755f4452c80958ea75bc887f929a0f1782c8018bcbfcda6fed6bf",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/1ffb7ac8e0e2fc14/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "21c6044695fed38e",
+    "file": "delta.safetensors",
+    "sha256": "951e8621f34b7fce8a9fc48884b91bd90806acfd15802afa5c27786a5b4d197d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/21c6044695fed38e/delta.safetensors",
+    "present": true,
+    "bytes": 385879488
+   },
+   {
+    "variant_id": "21c6044695fed38e",
+    "file": "increment.safetensors",
+    "sha256": "78ec4689a5110b7054df3e431cb096df613fb523dc8ab0c9d41766628f2fbe94",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/21c6044695fed38e/increment.safetensors",
+    "present": true,
+    "bytes": 69206696
+   },
+   {
+    "variant_id": "21e27d70aacb7804",
+    "file": "delta.safetensors",
+    "sha256": "ff2a1b9a60c73d4a018b157e19a7fe3fd352140ebaf1ee54fd4cef8b3bb4e780",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/21e27d70aacb7804/delta.safetensors",
+    "present": true,
+    "bytes": 115344496
+   },
+   {
+    "variant_id": "24752f64cd3b4080",
+    "file": "delta.safetensors",
+    "sha256": "fe59b44ff94903bad53a6824678ae277ce77ad168dab0324e39eb2c8cb19dbeb",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/24752f64cd3b4080/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "265fc9d519bcc0af",
+    "file": "delta.safetensors",
+    "sha256": "5ae402d05df0d3ac5adde5fdc4458e10dd616959ffa101d2add73a076d82ea8b",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/265fc9d519bcc0af/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "281da7d0e1e0e473",
+    "file": "delta.safetensors",
+    "sha256": "e373563baf8b0337030fb1391312bc111927462171f00304ab140054afece7a2",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/281da7d0e1e0e473/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "294fb1a97047a74a",
+    "file": "delta.safetensors",
+    "sha256": "a0be0f15c1d2ccbfa61b1a432b24289269d151c1a11584b9b895d8c94f8ac016",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/294fb1a97047a74a/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "2ad1813877843ad7",
+    "file": "delta.safetensors",
+    "sha256": "978a94af555e36459bb20760ccae36dbdfbb470c4ce1df5686321353f85eecdd",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/2ad1813877843ad7/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "2b0c71a449ddd099",
+    "file": "delta.safetensors",
+    "sha256": "1a6de861b21695c6c902279226578f12de8c79fb4f6150daec0db1f8165aa28b",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/2b0c71a449ddd099/delta.safetensors",
+    "present": true,
+    "bytes": 46137800
+   },
+   {
+    "variant_id": "2d78171abc3abb58",
+    "file": "delta.safetensors",
+    "sha256": "92fd29afd76b80f83c3e07da32c0843320e7ebd2911caf136af0f4ea1c7756da",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/2d78171abc3abb58/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "3177a34add5494f5",
+    "file": "delta.safetensors",
+    "sha256": "f21ee5925b69b7d8be5aeeb650ac6b87c869a6331012d39f7602962d93319a84",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/3177a34add5494f5/delta.safetensors",
+    "present": true,
+    "bytes": 385879488
+   },
+   {
+    "variant_id": "3177a34add5494f5",
+    "file": "increment.safetensors",
+    "sha256": "8c72e43d4d2908718ae41bb041a5b68d49802df73407cf43ceee2f7073361294",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/3177a34add5494f5/increment.safetensors",
+    "present": true,
+    "bytes": 69206696
+   },
+   {
+    "variant_id": "32126eeee4c278ae",
+    "file": "delta.safetensors",
+    "sha256": "56bbcf27bcc428e7fa183de92390392341c50ae03744707a7753604e7d8ba4c7",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/32126eeee4c278ae/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "321ed52f29c5427e",
+    "file": "delta.safetensors",
+    "sha256": "50ce7266f5b1d5e271997478e6fff495b8797e3d35819540ef8efb765bd635c6",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/321ed52f29c5427e/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "344b6ea953cdebbf",
+    "file": "delta.safetensors",
+    "sha256": "d186f74c8f138c292f1572e9020653ca2bac8bd276ca600afdc4686dd742d77c",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/344b6ea953cdebbf/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "366800d745feac2d",
+    "file": "delta.safetensors",
+    "sha256": "1af1da36ae74c56000d015eb671e41bf07cdeeb8bf06d2c04b6b9155c7325242",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/366800d745feac2d/delta.safetensors",
+    "present": true,
+    "bytes": 150997040
+   },
+   {
+    "variant_id": "3701979a52879081",
+    "file": "delta.safetensors",
+    "sha256": "8574c6f0df73c04855d8b071796c6d4efbc771d1c96dcaad8087d55bb9708afd",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/3701979a52879081/delta.safetensors",
+    "present": true,
+    "bytes": 138413392
+   },
+   {
+    "variant_id": "3701979a52879081",
+    "file": "increment.safetensors",
+    "sha256": "66f1e21d5a84948baf02dd90c81ee659c0624122e1c7abca8850878cb91c663b",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/3701979a52879081/increment.safetensors",
+    "present": true,
+    "bytes": 115344496
+   },
+   {
+    "variant_id": "38ce3900d29b39af",
+    "file": "delta.safetensors",
+    "sha256": "d780c229464c8266d842688629f94e4e7585215ce2ce521cd1ce82e39a2deaef",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/38ce3900d29b39af/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "3d00ecc17271fdf0",
+    "file": "delta.safetensors",
+    "sha256": "3c1b7c237c27ca1c290623b51466a2c7626d928cba71257d6a9281d4ccc0f9fa",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/3d00ecc17271fdf0/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "3f0e14fc08521ff1",
+    "file": "delta.safetensors",
+    "sha256": "ceb6093e1f057c976784266f82fb818f623e75ebbdbe3c9de410557ea33fac77",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/3f0e14fc08521ff1/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "41078f1c56148747",
+    "file": "delta.safetensors",
+    "sha256": "2d9f4bb900f851fc19e8c41eeb1b0b0161b834f1a7041270d329a3fb351cff26",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/41078f1c56148747/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "4204ea88f830d431",
+    "file": "delta.safetensors",
+    "sha256": "dea9c5cb51e3ddc281bc1e62dbda4feb3753bd300456da469afc71407d5d13b8",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/4204ea88f830d431/delta.safetensors",
+    "present": true,
+    "bytes": 138413392
+   },
+   {
+    "variant_id": "42119ad1b0b27a5f",
+    "file": "delta.safetensors",
+    "sha256": "7970cf154d165d08ccacf9f04537252642277d16cb3b7195aa51a64fb69c15ba",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/42119ad1b0b27a5f/delta.safetensors",
+    "present": true,
+    "bytes": 92275960
+   },
+   {
+    "variant_id": "431f4d88693e6b9a",
+    "file": "delta.safetensors",
+    "sha256": "1d630ce4f01a14b42e76ec8233869fa5585bcbf86c38229856e55882c7975dea",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/431f4d88693e6b9a/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "4368f8331d279091",
+    "file": "delta.safetensors",
+    "sha256": "527bab06ba217c9b1028328810bacd51da3c5fd182f179ae366b42657c5bcb89",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/4368f8331d279091/delta.safetensors",
+    "present": true,
+    "bytes": 29360352
+   },
+   {
+    "variant_id": "448a6d0f338360f9",
+    "file": "delta.safetensors",
+    "sha256": "b3adbe0725b999a0e96e4aef44e3bb93f3c24978c544f081941705a508f60afd",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/448a6d0f338360f9/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "46d309523cf70eac",
+    "file": "delta.safetensors",
+    "sha256": "101bae5b8fda6d3f87420e7ab44bacb5e7115ace831a233bca547c7f2996c5e9",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/46d309523cf70eac/delta.safetensors",
+    "present": true,
+    "bytes": 92275960
+   },
+   {
+    "variant_id": "477350e0a0491020",
+    "file": "delta.safetensors",
+    "sha256": "5ca819baa89bc12d556811c43ab6d1e77e76607d843104f61d8eb5a35354f3cc",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/477350e0a0491020/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "4b2306d72e767529",
+    "file": "delta.safetensors",
+    "sha256": "14828029746ebe8bbad292102c51725bba2d3d47e5a6d17077a2227766891ede",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/4b2306d72e767529/delta.safetensors",
+    "present": true,
+    "bytes": 46137800
+   },
+   {
+    "variant_id": "4c96c43a37f1ddb6",
+    "file": "delta.safetensors",
+    "sha256": "cd6f4b43f1dbe3234040d5abf421ea4001e128b42cfdfc3b47e2011243ca922c",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/4c96c43a37f1ddb6/delta.safetensors",
+    "present": true,
+    "bytes": 138413392
+   },
+   {
+    "variant_id": "4c96c43a37f1ddb6",
+    "file": "increment.safetensors",
+    "sha256": "f421ca9121e3136c509dbc9db33d5e9fda8f72ab417d5a245ea2dc8d2b9d99c8",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/4c96c43a37f1ddb6/increment.safetensors",
+    "present": true,
+    "bytes": 69206696
+   },
+   {
+    "variant_id": "54d8dbe734fd301c",
+    "file": "delta.safetensors",
+    "sha256": "95fae6d34defc6c3cbe5993009c60fa4e2c5c78b9ffb920e297787b2a4a3c457",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/54d8dbe734fd301c/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "54dcf4ad8ed6ec0d",
+    "file": "delta.safetensors",
+    "sha256": "6aee94347da6ee188af7d9e245d1ebc255cf05a87b9bcea515c076144871dc69",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/54dcf4ad8ed6ec0d/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "5598cde106c3ca76",
+    "file": "delta.safetensors",
+    "sha256": "74b5ae2cc7a93f1dedcf43506556e8ebf18359f44e294fdc8b50fa6bfd7a4538",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/5598cde106c3ca76/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "57185815ae8a2cf0",
+    "file": "delta.safetensors",
+    "sha256": "4a2ca400255d616e0f30dcf46ab02f75deacdf129d9b3cc24f5dcee2fe07da69",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/57185815ae8a2cf0/delta.safetensors",
+    "present": true,
+    "bytes": 92275960
+   },
+   {
+    "variant_id": "59156b8fec2701a3",
+    "file": "delta.safetensors",
+    "sha256": "3902655ddb478196d9325c89eb967726aab265e4b3a989b4c527274cb6e2eec1",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/59156b8fec2701a3/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "59b3a8d9777cefaf",
+    "file": "delta.safetensors",
+    "sha256": "db765f2a7599d64634ccec064f58602c58b9ddcf211107aade6401e8c4839517",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/59b3a8d9777cefaf/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "5b6cb30f498e4eb9",
+    "file": "delta.safetensors",
+    "sha256": "0f06a6f592b22c7b5d190aaa18fcae1eb2ccbf808168e9fac80322f6d5b931c8",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/5b6cb30f498e4eb9/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "5bd05cdff436175e",
+    "file": "delta.safetensors",
+    "sha256": "7846992356775fd848260a267278690b2c78f84774724657622a8404463f7e88",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/5bd05cdff436175e/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "5cf896c1ba7da8a1",
+    "file": "delta.safetensors",
+    "sha256": "48f046ae3ddb83fa843be21507c977d75be4cd666b792ab59a3a18d8266acf40",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/5cf896c1ba7da8a1/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "5d7cf0b2c0c7b489",
+    "file": "delta.safetensors",
+    "sha256": "c5cda80c1bb6f2d4014b88bf9ae372dfa94c4bfc563fdee60d2ee2ee16da737b",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/5d7cf0b2c0c7b489/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "6113676726c19bc3",
+    "file": "delta.safetensors",
+    "sha256": "83a14a29354da61e8e9091b0239d9133422ed68c183a7bfd7df1812abb7ccceb",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6113676726c19bc3/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "6149784b7e175235",
+    "file": "delta.safetensors",
+    "sha256": "069b0755d1f2b5837dae2c0470c26d45ee61633f3a6e11e8e675f89b74973772",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6149784b7e175235/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "619673ebd1dc1a29",
+    "file": "delta.safetensors",
+    "sha256": "cc03f2d55c90b78e3bf8dc6ee67a9d017717668d443a81a1aa751337ebbb56a0",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/619673ebd1dc1a29/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "66d9430775129dd1",
+    "file": "delta.safetensors",
+    "sha256": "02a98b10576df11ca746a6c47ea59363087e135842803239d30b6e3b2455e3d4",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/66d9430775129dd1/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "67c689ca2473e4f4",
+    "file": "delta.safetensors",
+    "sha256": "399d78d7b9bed79e63b0776980ea5cd7fc961ce19068ec07fbc9a867e4555d5e",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/67c689ca2473e4f4/delta.safetensors",
+    "present": true,
+    "bytes": 138413392
+   },
+   {
+    "variant_id": "69440966f51b6863",
+    "file": "delta.safetensors",
+    "sha256": "d3303ff9d7e84caac10b909832c1083222eec0b7b8937d9c16c60903427ce068",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/69440966f51b6863/delta.safetensors",
+    "present": true,
+    "bytes": 385879488
+   },
+   {
+    "variant_id": "69440966f51b6863",
+    "file": "increment.safetensors",
+    "sha256": "f397c993d7209c1b82a110bb4f2e555188aeeb4dd3d876f6571c4b31a2f87e8a",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/69440966f51b6863/increment.safetensors",
+    "present": true,
+    "bytes": 69206696
+   },
+   {
+    "variant_id": "6a554d08a2232e60",
+    "file": "delta.safetensors",
+    "sha256": "13971b3c5fff2e8177eac561f6b7f419bf6d91d44537612410e90144b51491df",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6a554d08a2232e60/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "6b25cea0650c5b07",
+    "file": "delta.safetensors",
+    "sha256": "cce4bcc3156e3a28f80f2ebf3882cd5bdbbb570d5085722eabf05f1bb2720475",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6b25cea0650c5b07/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "6b579dbe647afe42",
+    "file": "delta.safetensors",
+    "sha256": "af90e2c6833c0152b59b702c2a9fcc8fb78c8a322d0cdb0066cff64ca6c37e17",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6b579dbe647afe42/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "6bced9f5eec0d156",
+    "file": "delta.safetensors",
+    "sha256": "81066320b1d2b3209716c9500863ceebe2cc9f54cb8eb6667eb850eb4d34c191",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6bced9f5eec0d156/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "6c28ad7a3f1f520e",
+    "file": "delta.safetensors",
+    "sha256": "d387db3546b6066bebf0ad2eeae32184f4afffd5e29f412cd33b7ba4f60ab48e",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6c28ad7a3f1f520e/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "6c63f76eadcd81e0",
+    "file": "delta.safetensors",
+    "sha256": "86698e131c4f999558156dd0e7947797696332fda93a15438082a484062b241f",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6c63f76eadcd81e0/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "6dc4a23fb51b45ca",
+    "file": "delta.safetensors",
+    "sha256": "1c1588b26261372b1f30385db7d0a0827741cb32090a0d8779f75a64b9f4163c",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6dc4a23fb51b45ca/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "6f1f66e1a6d1a383",
+    "file": "delta.safetensors",
+    "sha256": "7fb86adc3a7ca47c8d703cfe5238c8fe0207d2def327ace82020d685d2043393",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6f1f66e1a6d1a383/delta.safetensors",
+    "present": true,
+    "bytes": 897589336
+   },
+   {
+    "variant_id": "6f1f66e1a6d1a383",
+    "file": "increment.safetensors",
+    "sha256": "c0a295ceb847f8a14332c39f697ccb2ef54977d689105a2df2479c09784b8d76",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/6f1f66e1a6d1a383/increment.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "71b8d911e58cdd05",
+    "file": "delta.safetensors",
+    "sha256": "6f97c0d35c8b00c2ccbbc00d93269435d4fc7f294ac5942bd76f2918b5e1d18a",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/71b8d911e58cdd05/delta.safetensors",
+    "present": true,
+    "bytes": 914366784
+   },
+   {
+    "variant_id": "71b8d911e58cdd05",
+    "file": "increment.safetensors",
+    "sha256": "baf749f9a06c59086d068c610e830aada99c6437bd1a89db921e30b7adb71773",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/71b8d911e58cdd05/increment.safetensors",
+    "present": true,
+    "bytes": 914366784
+   },
+   {
+    "variant_id": "74c12d9f47980688",
+    "file": "delta.safetensors",
+    "sha256": "47f725df9121008bc886ce080a88ab2229b5623db8ecfa053b3df3a39f233c91",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/74c12d9f47980688/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "777bce482a34a0c1",
+    "file": "delta.safetensors",
+    "sha256": "48e6643f9500e3c903e7546768194bb9942d849b5bd885a9c2505ca8ddf107be",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/777bce482a34a0c1/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "795f6b2ae938c440",
+    "file": "delta.safetensors",
+    "sha256": "247a3f147bc573b793644f187f0bf7bd487c23a4824ae4372d071a49308df524",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/795f6b2ae938c440/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "7b360fbf0494745b",
+    "file": "delta.safetensors",
+    "sha256": "4d007f0190040c6ca6eb232203fbdfcbf831a4ff424d50ed190d641dbcb43e08",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/7b360fbf0494745b/delta.safetensors",
+    "present": true,
+    "bytes": 1015031504
+   },
+   {
+    "variant_id": "7b360fbf0494745b",
+    "file": "increment.safetensors",
+    "sha256": "498490474613b0050caa1224d5bcea2e1cb1ce416a177d11cb317bc27fcad78e",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/7b360fbf0494745b/increment.safetensors",
+    "present": true,
+    "bytes": 406851096
+   },
+   {
+    "variant_id": "7bb668bd833a70a8",
+    "file": "delta.safetensors",
+    "sha256": "5024a23a8c3dcbf05a7b183395ce372c642e8243a9d18b9d76a768bbcd6b2028",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/7bb668bd833a70a8/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "7bcf2228246f2a4b",
+    "file": "delta.safetensors",
+    "sha256": "c44701db291a99a6daeb3c0f7e2fe228e02b9a2067408646af3d1f4ef4264cc3",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/7bcf2228246f2a4b/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "7c5c45e32826cab8",
+    "file": "delta.safetensors",
+    "sha256": "d610263d31b8d0ea327afedc08041301b4a30fdd18553d44cff85bcf84b837b7",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/7c5c45e32826cab8/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "805113b632ee5d3a",
+    "file": "delta.safetensors",
+    "sha256": "414e2abfc5a07caa4a1dfef5a875ccdcd42db7fa2cd081c9d0aa90cbb79a434b",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/805113b632ee5d3a/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "816953b82a434a9a",
+    "file": "delta.safetensors",
+    "sha256": "95eeecf331cfc0eedf62edc16553ca450f82b3d215bda3b52a1c059bf6689920",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/816953b82a434a9a/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "82e6ef53bd3b5bd0",
+    "file": "delta.safetensors",
+    "sha256": "e1a4c51e1641b4139d08c3c906f3560c2b3a07a121b7e96169f03cc25243abaa",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/82e6ef53bd3b5bd0/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "8487a2b916cbca14",
+    "file": "delta.safetensors",
+    "sha256": "414b15dd35cb5988d773befd1a6c952e2a1216b7c719a37997dcd66758b73a44",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/8487a2b916cbca14/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "87b27885a3bbec6c",
+    "file": "delta.safetensors",
+    "sha256": "00b6d7aa106dc0e4c4af1c44b330081d2843b10d023fc695d64da94efa6a2088",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/87b27885a3bbec6c/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "88645e0ecc78ef09",
+    "file": "delta.safetensors",
+    "sha256": "7f44bc2c95ce23e628c26d04002e7f5e199fedf971c8bd1180c3187153b5e0ac",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/88645e0ecc78ef09/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "88f36bc05cf1b28b",
+    "file": "delta.safetensors",
+    "sha256": "b94cc87f6524a994c6f00262cc905ed3b456b1cd68bfe442579dd498b70a384e",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/88f36bc05cf1b28b/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "8a1a5ebda4fb2755",
+    "file": "delta.safetensors",
+    "sha256": "db2b241cf8a0c0e6200c325eece537a6b69540d0c17d1d1b88b987ab265774fa",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/8a1a5ebda4fb2755/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "8c2822631244cdaf",
+    "file": "delta.safetensors",
+    "sha256": "74deb70caae1e0c59aa8b784661a4ac13fb1e400d71e19f2be96438d3d6ed8e6",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/8c2822631244cdaf/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "8d5a95f8c96beee0",
+    "file": "delta.safetensors",
+    "sha256": "6b038205a739e67e49b6b256a2c84931f90afff4bcda2f1346874f54997391f4",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/8d5a95f8c96beee0/delta.safetensors",
+    "present": true,
+    "bytes": 150997040
+   },
+   {
+    "variant_id": "8d6934de2d8367fc",
+    "file": "delta.safetensors",
+    "sha256": "998df8a07bd9dcbfbcb7109b48049abfafe0944b420c2b980bad6ca616abeb81",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/8d6934de2d8367fc/delta.safetensors",
+    "present": true,
+    "bytes": 23068904
+   },
+   {
+    "variant_id": "8decf208957f3989",
+    "file": "delta.safetensors",
+    "sha256": "15e267692abca5097645fca7d112591048bfe9124e5820a29361cb3a177f5967",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/8decf208957f3989/delta.safetensors",
+    "present": true,
+    "bytes": 29360352
+   },
+   {
+    "variant_id": "8e307a2ad1f7eaf6",
+    "file": "delta.safetensors",
+    "sha256": "fa08158d8a4f963b335f1187d2f8d641f6fb950ad4eedc9fd2f90662d6a7c5f0",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/8e307a2ad1f7eaf6/delta.safetensors",
+    "present": true,
+    "bytes": 138413392
+   },
+   {
+    "variant_id": "8e307a2ad1f7eaf6",
+    "file": "increment.safetensors",
+    "sha256": "dee9d35b92d309f39f8bbacfc73897ebce60e375eff724f43be1b6464f4792ad",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/8e307a2ad1f7eaf6/increment.safetensors",
+    "present": true,
+    "bytes": 69206696
+   },
+   {
+    "variant_id": "8f20341f47e95ec1",
+    "file": "delta.safetensors",
+    "sha256": "1365a4799857ed68d52dc9b47803d98359766c0ad9f6172c8dc5858e75c1d25f",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/8f20341f47e95ec1/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "92089146a25f10d1",
+    "file": "delta.safetensors",
+    "sha256": "b593bc669568072e6d79eaeb57b55a18bbb30b421cd9bdeb2ec49215cae08996",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/92089146a25f10d1/delta.safetensors",
+    "present": true,
+    "bytes": 138413392
+   },
+   {
+    "variant_id": "9254cc82a7d9c85d",
+    "file": "delta.safetensors",
+    "sha256": "2719a86a24fe2d019d90fea3456192461a22550fbbefeffd9192db08bbe78fea",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/9254cc82a7d9c85d/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "93c9ab5b357ee219",
+    "file": "delta.safetensors",
+    "sha256": "0f941c931895db195304a6dff1ffc6d3a2d133f35918fa30639c0a924ac3f3fc",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/93c9ab5b357ee219/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "956f31365297b6c2",
+    "file": "delta.safetensors",
+    "sha256": "a41566fed60dd559079afa10336ec558412463fa92aff19385ab431e5c3c2336",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/956f31365297b6c2/delta.safetensors",
+    "present": true,
+    "bytes": 23068904
+   },
+   {
+    "variant_id": "9c4639b034dfa9df",
+    "file": "delta.safetensors",
+    "sha256": "c4b9b00e1dcbd8bde80e3978521aa6647ae5b9601e7cb2512eac4254712332a2",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/9c4639b034dfa9df/delta.safetensors",
+    "present": true,
+    "bytes": 914366784
+   },
+   {
+    "variant_id": "9c4639b034dfa9df",
+    "file": "increment.safetensors",
+    "sha256": "d1ecfb222015436c9c3554ef356c708a5947391d01fd9f1d15fe6bec668a1093",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/9c4639b034dfa9df/increment.safetensors",
+    "present": true,
+    "bytes": 914366784
+   },
+   {
+    "variant_id": "9f4c38110febf1b7",
+    "file": "delta.safetensors",
+    "sha256": "5072771c74fced8ad74a1804a39eef086b2cf4fc56bf27c03580df93e1053367",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/9f4c38110febf1b7/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "a27ba8a3c75802ce",
+    "file": "delta.safetensors",
+    "sha256": "f789e600638780bdf685fe05fc8cf93c5ecb62d66ce6e1170f1391275a9bae46",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/a27ba8a3c75802ce/delta.safetensors",
+    "present": true,
+    "bytes": 138413392
+   },
+   {
+    "variant_id": "a27ba8a3c75802ce",
+    "file": "increment.safetensors",
+    "sha256": "b7e3d80e83c1fc1aa794dab1f7102af3821058b687a970cc92b65641a5f86ecf",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/a27ba8a3c75802ce/increment.safetensors",
+    "present": true,
+    "bytes": 115344496
+   },
+   {
+    "variant_id": "a4d77030e8b3de7e",
+    "file": "delta.safetensors",
+    "sha256": "8ef62e02743d3326903ace805d70c245d1429a8b43ae9f6f3d73cb4dd3044872",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/a4d77030e8b3de7e/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "a7196ac00fc0beb8",
+    "file": "delta.safetensors",
+    "sha256": "7347337891ceb5b309c6dae54456bad9074852c530e0c9b5c31fcd4814dd69ad",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/a7196ac00fc0beb8/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "a7751b617767a85c",
+    "file": "delta.safetensors",
+    "sha256": "d4240032c337dc162079932b8a90c62da042c7af5e935c68b1e2943a98f76ba1",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/a7751b617767a85c/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "ac5e9257cb8027f4",
+    "file": "delta.safetensors",
+    "sha256": "e8d991e65d20e2229c4aa3c6e31c558c1d5c06c17159028a90a1d26b4bec7235",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ac5e9257cb8027f4/delta.safetensors",
+    "present": true,
+    "bytes": 1015031504
+   },
+   {
+    "variant_id": "ac5e9257cb8027f4",
+    "file": "increment.safetensors",
+    "sha256": "8a830ecf1a819c2e8d5c2019de82b281cc64c19a16e641f49e439a0dd932a065",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ac5e9257cb8027f4/increment.safetensors",
+    "present": true,
+    "bytes": 406851096
+   },
+   {
+    "variant_id": "ac8ead535a7aca5e",
+    "file": "delta.safetensors",
+    "sha256": "8355702dc1b3fcee64bcb2e43bff87951bd74aa979473b9d66db3288f2306cbb",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ac8ead535a7aca5e/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "ae3438814695d10a",
+    "file": "delta.safetensors",
+    "sha256": "e23d3f3d5b85fc4ccda51067d0721e58da79d11fc25747df95756ada3a52264c",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ae3438814695d10a/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "b3b97e6ab82b82cb",
+    "file": "delta.safetensors",
+    "sha256": "705c6cf78a1d98b30954f79b2d1e1fa7380d8ab8bf77ac93afe833f88805926d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/b3b97e6ab82b82cb/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "b5219d6a6978632c",
+    "file": "delta.safetensors",
+    "sha256": "f3add79e1c7bc725baff351962fe3c8576a7072246f93610f8ade6c2301709f2",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/b5219d6a6978632c/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "b5e39024fd33d898",
+    "file": "delta.safetensors",
+    "sha256": "9a32641d3b229a8b9d4b14817fd5fbf202c7a190193445930a5a1bc9b2556943",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/b5e39024fd33d898/delta.safetensors",
+    "present": true,
+    "bytes": 46137800
+   },
+   {
+    "variant_id": "b60e5a17c81873ca",
+    "file": "delta.safetensors",
+    "sha256": "feb1519feef08ed971122fedc80947c7066613823f29abb7070de1e72ee1fab1",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/b60e5a17c81873ca/delta.safetensors",
+    "present": true,
+    "bytes": 947921696
+   },
+   {
+    "variant_id": "b60e5a17c81873ca",
+    "file": "increment.safetensors",
+    "sha256": "8cdbf4f2f1e7dd9b686730080c25d4e94be303710b523bf0a7e0e22cf175ad12",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/b60e5a17c81873ca/increment.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "b61358b573b37a4f",
+    "file": "delta.safetensors",
+    "sha256": "c203d686a39bf738e18f6a0c0026f99191cb345e52703d0c0ab8f59ff76497ea",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/b61358b573b37a4f/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "b67496b7ac04369b",
+    "file": "delta.safetensors",
+    "sha256": "0169e0bc70507d49d2bb14c43f6c84f08c4464a6c198ba65f443907903a980d1",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/b67496b7ac04369b/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "ba6101ceef138a71",
+    "file": "delta.safetensors",
+    "sha256": "e5aba9048e2575127612a2d140b38337a96b1a7b7eb01d9414695a4c523645a0",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ba6101ceef138a71/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "bc05ff7185b4118b",
+    "file": "delta.safetensors",
+    "sha256": "22de98d7da8f7f520cc13e5bbb6d0ca60f93fa2dfabed05eb8ff114341193683",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/bc05ff7185b4118b/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "bc8b667c7ba94e8b",
+    "file": "delta.safetensors",
+    "sha256": "5a78e5e2fa56b1a7b583ee799b5b057928b9d3bcfbeffffd1bf9619c9cab7c0d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/bc8b667c7ba94e8b/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "bdd9953c55713623",
+    "file": "delta.safetensors",
+    "sha256": "aa8b9cd046a89777c5e308447ad1ad249d89ccc76b7a1b286e44731ca2409b41",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/bdd9953c55713623/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "beab05c78600f56f",
+    "file": "delta.safetensors",
+    "sha256": "571a7483c52f260e7ea52c6d0e5fece64ba908166101a6f68a331f1e6d315674",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/beab05c78600f56f/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "bf0e67a749a6f4a0",
+    "file": "delta.safetensors",
+    "sha256": "8809e6d97101c97c9e1bbd8df1da1912707301787dbed09cce59756ed38edc47",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/bf0e67a749a6f4a0/delta.safetensors",
+    "present": true,
+    "bytes": 115344496
+   },
+   {
+    "variant_id": "c02e9c4a5018a292",
+    "file": "delta.safetensors",
+    "sha256": "1977f3bbbdaf80cce90ab6fb834933c6311f1f166541d7ccb79c3a436572e94f",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/c02e9c4a5018a292/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "c0b894745c4070bb",
+    "file": "delta.safetensors",
+    "sha256": "92ddf42498b0f6fc3d08492a02136092b5ccceeb9c10417c89a814d1060c76b2",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/c0b894745c4070bb/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "c30739957c388fdc",
+    "file": "delta.safetensors",
+    "sha256": "03ca1d3d6b3aee7b6c3a90ad3bec07f5bd55ee512ef4c9394b11bc22fc1a6433",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/c30739957c388fdc/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "c4dca42f1499097a",
+    "file": "delta.safetensors",
+    "sha256": "6711380c77aa0830ff2cfa760484685ad3a7b4a1e41addea1a994d9d7cc0c694",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/c4dca42f1499097a/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "c7efa4adaf790751",
+    "file": "delta.safetensors",
+    "sha256": "b8126979fa4d2c6f32924538a8e68d72b4ed3df5d4983b278f170ad8ff7973cf",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/c7efa4adaf790751/delta.safetensors",
+    "present": true,
+    "bytes": 947921696
+   },
+   {
+    "variant_id": "c7efa4adaf790751",
+    "file": "increment.safetensors",
+    "sha256": "0f9f4165cd096d42664f3eed5ed93acab238243f2b9516442ffdc63b9dfebe7d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/c7efa4adaf790751/increment.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "cae98c80778f0d8b",
+    "file": "delta.safetensors",
+    "sha256": "b3ed8154edaa7d7fef4ca4a583d7ff8ece0ee347f6e9e222ab01ca906bb15470",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/cae98c80778f0d8b/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "ce9a93bfa840dfc8",
+    "file": "delta.safetensors",
+    "sha256": "5fcbedcbcb471200de3e0fa0ebfbb316d5d35e11b1a9213861187c33055d01e4",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ce9a93bfa840dfc8/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "d06c2f4abc843d7f",
+    "file": "delta.safetensors",
+    "sha256": "5021c785accb3a86133c5ee76f342d8640222fc181a68c7be198c1bd64925a14",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/d06c2f4abc843d7f/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "d21f5a4661e0eba7",
+    "file": "delta.safetensors",
+    "sha256": "44c60a003d38ede40f9027cfaaa1504427c54926f763c6c323f6dc0c6cafdd8d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/d21f5a4661e0eba7/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "d627ee70fdf98765",
+    "file": "delta.safetensors",
+    "sha256": "54c3971d2c134541572b820fba7aa5cc357fbddd3636b397389957f4e796f2d8",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/d627ee70fdf98765/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "d76a454f707156c4",
+    "file": "delta.safetensors",
+    "sha256": "ed04d7d2bb9ea75cc46988467d431795fa8f3f0f7e5bedef73f65e3c320d546a",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/d76a454f707156c4/delta.safetensors",
+    "present": true,
+    "bytes": 115344496
+   },
+   {
+    "variant_id": "d77906e130f968a6",
+    "file": "delta.safetensors",
+    "sha256": "9eb6b908b113320d577da25f3eb8229beb1976b5cb598f9c61d482ad8c741f90",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/d77906e130f968a6/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "dcb5eab0f2a60f30",
+    "file": "delta.safetensors",
+    "sha256": "0b2f6f7d31c29cda57a5f90b790988f2fd3b5a7972abff37ce1ed4bcc72d3e20",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/dcb5eab0f2a60f30/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "dcef7b692d17e808",
+    "file": "delta.safetensors",
+    "sha256": "37086303b4dd7a50c3b391fbbae3793ed3b96c5b511060a8c14bc9193c4796f1",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/dcef7b692d17e808/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "e04a0838ac4d050d",
+    "file": "delta.safetensors",
+    "sha256": "d7fffb3260df709cb211a4f435b67410e10177abeb391f02481e7d4e4769a69d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/e04a0838ac4d050d/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "e2c08955f74f6649",
+    "file": "delta.safetensors",
+    "sha256": "6adf61e6a402cfad0790940c27d050a20f61f0ff5f49d15e57b3e0f9ce5771d3",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/e2c08955f74f6649/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "e442eff80f1b4316",
+    "file": "delta.safetensors",
+    "sha256": "99e54d94276bd6c2c54dddd85c2110aaeccf9661528d062c232dae1118d807d9",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/e442eff80f1b4316/delta.safetensors",
+    "present": true,
+    "bytes": 914366784
+   },
+   {
+    "variant_id": "e442eff80f1b4316",
+    "file": "increment.safetensors",
+    "sha256": "55b528673d577b6f97734656b41e1d69eb2c767671b37935b5ecea4bc84d2353",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/e442eff80f1b4316/increment.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "e4c6ff90b7272115",
+    "file": "delta.safetensors",
+    "sha256": "0b60132f6421ba862b9be457acfaedbdf624b6cf1bddb7500abde529f499a522",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/e4c6ff90b7272115/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "e9328ffa27a31187",
+    "file": "delta.safetensors",
+    "sha256": "5138d8e8ad17ea42d3e95b8965618c2b9f448e0aa1695f86d921a7ba94ac824d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/e9328ffa27a31187/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "ea199e4ddb21a294",
+    "file": "delta.safetensors",
+    "sha256": "c45f6f4cd0831e1043042cc2ebba9a97b1cb5a81873c4f2ebc51c3aed8218036",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ea199e4ddb21a294/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "ea9913d4ea1851b6",
+    "file": "delta.safetensors",
+    "sha256": "7648302dd7241450f2bebae2e3852df5cd6f2ef1cd8b739dea0e0de244f45f7d",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ea9913d4ea1851b6/delta.safetensors",
+    "present": true,
+    "bytes": 138413392
+   },
+   {
+    "variant_id": "ea9913d4ea1851b6",
+    "file": "increment.safetensors",
+    "sha256": "38de7537b34c4b325a3881f8d7e3d2966a229317f5a2fce0210ffeb0a63038a2",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ea9913d4ea1851b6/increment.safetensors",
+    "present": true,
+    "bytes": 69206696
+   },
+   {
+    "variant_id": "ee45ea9f284e7a2e",
+    "file": "delta.safetensors",
+    "sha256": "07fd38c0135ebef645c7fe62270c75f874403f97a6998d239258a493018abaa8",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ee45ea9f284e7a2e/delta.safetensors",
+    "present": true,
+    "bytes": 29360352
+   },
+   {
+    "variant_id": "ee83a8f491ee4ff5",
+    "file": "delta.safetensors",
+    "sha256": "149005dc8dc264886c4f4455ec5b6299ebab110b46c591114c611a3f9fc4729a",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ee83a8f491ee4ff5/delta.safetensors",
+    "present": true,
+    "bytes": 897589336
+   },
+   {
+    "variant_id": "ee83a8f491ee4ff5",
+    "file": "increment.safetensors",
+    "sha256": "9196b0e9e5220ddba987119a885d0d46865b22dd1f068a804b29da75c680932a",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ee83a8f491ee4ff5/increment.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "ef7d3ec65d35d6ce",
+    "file": "delta.safetensors",
+    "sha256": "b8eda0b02a887a3881657ab574b8f811d3e19fd9bdaf6ed094c00c0c1db00e65",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ef7d3ec65d35d6ce/delta.safetensors",
+    "present": true,
+    "bytes": 23068904
+   },
+   {
+    "variant_id": "ef993c4862b8b0b1",
+    "file": "delta.safetensors",
+    "sha256": "77da9605e2de29bd61bbacb420342d17e74e2d4d656f7b93c7b0e61ccf0f94b3",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ef993c4862b8b0b1/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "efe63f9a93cb3ac5",
+    "file": "delta.safetensors",
+    "sha256": "4d49114b08c96a4a91ace16303329768ae3b7cb460d6253367982f8dfe227e0e",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/efe63f9a93cb3ac5/delta.safetensors",
+    "present": true,
+    "bytes": 914366784
+   },
+   {
+    "variant_id": "efe63f9a93cb3ac5",
+    "file": "increment.safetensors",
+    "sha256": "7087cbc6c5cd1497e7137b205d73eacdbb1d0978cb5505d7c99119b134341bab",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/efe63f9a93cb3ac5/increment.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "f130777edbe1993d",
+    "file": "delta.safetensors",
+    "sha256": "a29d504342704a2c331cd64b98f5a5f52bd74099247c051654e1585f1e908e14",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/f130777edbe1993d/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "f246f77918b32213",
+    "file": "delta.safetensors",
+    "sha256": "613846e4e76b869a308f060f26f485670cf6f80713884771c3892beba2ea67a5",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/f246f77918b32213/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "f951e61f0f1e7da0",
+    "file": "delta.safetensors",
+    "sha256": "e91c4e1758679e91dbc4d8162705fb15a2704d34ccdf20bad488c5b9a88a58e5",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/f951e61f0f1e7da0/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "facea4b71fa37dbd",
+    "file": "delta.safetensors",
+    "sha256": "0d5b3ad476872a7ae860009c2ee9d3dd448cb8b9a3a16d9ce7aaa7c25aee374e",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/facea4b71fa37dbd/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   },
+   {
+    "variant_id": "ff8ec4eb95a009e2",
+    "file": "delta.safetensors",
+    "sha256": "f2e755581998461674ba1cf6a9496137df22a4d71925ec91da201ecee58c13c6",
+    "path": "data/runs/a5/part_a/qwen3.5-0.8b/ff8ec4eb95a009e2/delta.safetensors",
+    "present": true,
+    "bytes": 880811880
+   }
+  ],
+  "sample_rehash": {
+   "rule": "Re-hash a deterministic sample of staged delta/increment files and all variant.json files.\nSample rule: sort the 165 (variant_id, filename) pairs of manifest.json:delta_sha256; take indices 0, 7, 14, ... (every 7th).",
+   "n_pairs_total": 165,
+   "n_sampled": 24,
+   "n_supplementary_sampled": 4,
+   "n_equal": 24,
+   "bytes_hashed": 17475728968,
+   "rows": [
+    {
+     "variant_id": "03bb09f5fef50b43",
+     "file": "delta.safetensors",
+     "source_id": "0a841d4082532e8b",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "250bfc4942fad252803456a75a59bafe2ffc1b257e7fd160142d677e29f3182d",
+     "actual": "250bfc4942fad252803456a75a59bafe2ffc1b257e7fd160142d677e29f3182d",
+     "equal": true
+    },
+    {
+     "variant_id": "0ff3a16f693343b1",
+     "file": "delta.safetensors",
+     "source_id": "2f61a4086395b719",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "efdd59e8a48f76fc735fcc85f972c1af832c82c36184ac16087f2526e6b80a03",
+     "actual": "efdd59e8a48f76fc735fcc85f972c1af832c82c36184ac16087f2526e6b80a03",
+     "equal": true
+    },
+    {
+     "variant_id": "1d2b581bed5a4409",
+     "file": "delta.safetensors",
+     "source_id": "1fc51f7164052d50",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "a8fe30f6a44d12cb7d9d2f09749f73715086a7bb80080d48587283b18d1dc447",
+     "actual": "a8fe30f6a44d12cb7d9d2f09749f73715086a7bb80080d48587283b18d1dc447",
+     "equal": true
+    },
+    {
+     "variant_id": "265fc9d519bcc0af",
+     "file": "delta.safetensors",
+     "source_id": "5abd76a640cc2b9d",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "5ae402d05df0d3ac5adde5fdc4458e10dd616959ffa101d2add73a076d82ea8b",
+     "actual": "5ae402d05df0d3ac5adde5fdc4458e10dd616959ffa101d2add73a076d82ea8b",
+     "equal": true
+    },
+    {
+     "variant_id": "3177a34add5494f5",
+     "file": "increment.safetensors",
+     "source_id": "00f8111cbad8218f",
+     "supplementary": false,
+     "bytes": 69206696,
+     "expected": "8c72e43d4d2908718ae41bb041a5b68d49802df73407cf43ceee2f7073361294",
+     "actual": "8c72e43d4d2908718ae41bb041a5b68d49802df73407cf43ceee2f7073361294",
+     "equal": true
+    },
+    {
+     "variant_id": "38ce3900d29b39af",
+     "file": "delta.safetensors",
+     "source_id": "7d03d89c0b0299e6",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "d780c229464c8266d842688629f94e4e7585215ce2ce521cd1ce82e39a2deaef",
+     "actual": "d780c229464c8266d842688629f94e4e7585215ce2ce521cd1ce82e39a2deaef",
+     "equal": true
+    },
+    {
+     "variant_id": "4368f8331d279091",
+     "file": "delta.safetensors",
+     "source_id": "342a1be080049e8f",
+     "supplementary": true,
+     "bytes": 29360352,
+     "expected": "527bab06ba217c9b1028328810bacd51da3c5fd182f179ae366b42657c5bcb89",
+     "actual": "527bab06ba217c9b1028328810bacd51da3c5fd182f179ae366b42657c5bcb89",
+     "equal": true
+    },
+    {
+     "variant_id": "54d8dbe734fd301c",
+     "file": "delta.safetensors",
+     "source_id": "2971f30e5276edd9",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "95fae6d34defc6c3cbe5993009c60fa4e2c5c78b9ffb920e297787b2a4a3c457",
+     "actual": "95fae6d34defc6c3cbe5993009c60fa4e2c5c78b9ffb920e297787b2a4a3c457",
+     "equal": true
+    },
+    {
+     "variant_id": "5bd05cdff436175e",
+     "file": "delta.safetensors",
+     "source_id": "2d1de332e36d8f00",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "7846992356775fd848260a267278690b2c78f84774724657622a8404463f7e88",
+     "actual": "7846992356775fd848260a267278690b2c78f84774724657622a8404463f7e88",
+     "equal": true
+    },
+    {
+     "variant_id": "67c689ca2473e4f4",
+     "file": "delta.safetensors",
+     "source_id": "1ac30f3c7a209fe6",
+     "supplementary": true,
+     "bytes": 138413392,
+     "expected": "399d78d7b9bed79e63b0776980ea5cd7fc961ce19068ec07fbc9a867e4555d5e",
+     "actual": "399d78d7b9bed79e63b0776980ea5cd7fc961ce19068ec07fbc9a867e4555d5e",
+     "equal": true
+    },
+    {
+     "variant_id": "6c28ad7a3f1f520e",
+     "file": "delta.safetensors",
+     "source_id": "2d1de332e36d8f00",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "d387db3546b6066bebf0ad2eeae32184f4afffd5e29f412cd33b7ba4f60ab48e",
+     "actual": "d387db3546b6066bebf0ad2eeae32184f4afffd5e29f412cd33b7ba4f60ab48e",
+     "equal": true
+    },
+    {
+     "variant_id": "74c12d9f47980688",
+     "file": "delta.safetensors",
+     "source_id": "2410c595817dc20b",
+     "supplementary": true,
+     "bytes": 880811880,
+     "expected": "47f725df9121008bc886ce080a88ab2229b5623db8ecfa053b3df3a39f233c91",
+     "actual": "47f725df9121008bc886ce080a88ab2229b5623db8ecfa053b3df3a39f233c91",
+     "equal": true
+    },
+    {
+     "variant_id": "7c5c45e32826cab8",
+     "file": "delta.safetensors",
+     "source_id": "1b2b671e5da5d625",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "d610263d31b8d0ea327afedc08041301b4a30fdd18553d44cff85bcf84b837b7",
+     "actual": "d610263d31b8d0ea327afedc08041301b4a30fdd18553d44cff85bcf84b837b7",
+     "equal": true
+    },
+    {
+     "variant_id": "88f36bc05cf1b28b",
+     "file": "delta.safetensors",
+     "source_id": "1fc51f7164052d50",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "b94cc87f6524a994c6f00262cc905ed3b456b1cd68bfe442579dd498b70a384e",
+     "actual": "b94cc87f6524a994c6f00262cc905ed3b456b1cd68bfe442579dd498b70a384e",
+     "equal": true
+    },
+    {
+     "variant_id": "8e307a2ad1f7eaf6",
+     "file": "increment.safetensors",
+     "source_id": "13b02fe2673cc296",
+     "supplementary": false,
+     "bytes": 69206696,
+     "expected": "dee9d35b92d309f39f8bbacfc73897ebce60e375eff724f43be1b6464f4792ad",
+     "actual": "dee9d35b92d309f39f8bbacfc73897ebce60e375eff724f43be1b6464f4792ad",
+     "equal": true
+    },
+    {
+     "variant_id": "9c4639b034dfa9df",
+     "file": "increment.safetensors",
+     "source_id": "057dcfbedea3251f",
+     "supplementary": false,
+     "bytes": 914366784,
+     "expected": "d1ecfb222015436c9c3554ef356c708a5947391d01fd9f1d15fe6bec668a1093",
+     "actual": "d1ecfb222015436c9c3554ef356c708a5947391d01fd9f1d15fe6bec668a1093",
+     "equal": true
+    },
+    {
+     "variant_id": "ac5e9257cb8027f4",
+     "file": "delta.safetensors",
+     "source_id": "0027efdf2eae7405",
+     "supplementary": false,
+     "bytes": 1015031504,
+     "expected": "e8d991e65d20e2229c4aa3c6e31c558c1d5c06c17159028a90a1d26b4bec7235",
+     "actual": "e8d991e65d20e2229c4aa3c6e31c558c1d5c06c17159028a90a1d26b4bec7235",
+     "equal": true
+    },
+    {
+     "variant_id": "b60e5a17c81873ca",
+     "file": "delta.safetensors",
+     "source_id": "05531ce1db4df63f",
+     "supplementary": false,
+     "bytes": 947921696,
+     "expected": "feb1519feef08ed971122fedc80947c7066613823f29abb7070de1e72ee1fab1",
+     "actual": "feb1519feef08ed971122fedc80947c7066613823f29abb7070de1e72ee1fab1",
+     "equal": true
+    },
+    {
+     "variant_id": "bdd9953c55713623",
+     "file": "delta.safetensors",
+     "source_id": "22659cefc904e29f",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "aa8b9cd046a89777c5e308447ad1ad249d89ccc76b7a1b286e44731ca2409b41",
+     "actual": "aa8b9cd046a89777c5e308447ad1ad249d89ccc76b7a1b286e44731ca2409b41",
+     "equal": true
+    },
+    {
+     "variant_id": "c7efa4adaf790751",
+     "file": "delta.safetensors",
+     "source_id": "05531ce1db4df63f",
+     "supplementary": false,
+     "bytes": 947921696,
+     "expected": "b8126979fa4d2c6f32924538a8e68d72b4ed3df5d4983b278f170ad8ff7973cf",
+     "actual": "b8126979fa4d2c6f32924538a8e68d72b4ed3df5d4983b278f170ad8ff7973cf",
+     "equal": true
+    },
+    {
+     "variant_id": "d76a454f707156c4",
+     "file": "delta.safetensors",
+     "source_id": "0559051354691a70",
+     "supplementary": false,
+     "bytes": 115344496,
+     "expected": "ed04d7d2bb9ea75cc46988467d431795fa8f3f0f7e5bedef73f65e3c320d546a",
+     "actual": "ed04d7d2bb9ea75cc46988467d431795fa8f3f0f7e5bedef73f65e3c320d546a",
+     "equal": true
+    },
+    {
+     "variant_id": "e442eff80f1b4316",
+     "file": "increment.safetensors",
+     "source_id": "0bc0a0c4ad0520e0",
+     "supplementary": false,
+     "bytes": 880811880,
+     "expected": "55b528673d577b6f97734656b41e1d69eb2c767671b37935b5ecea4bc84d2353",
+     "actual": "55b528673d577b6f97734656b41e1d69eb2c767671b37935b5ecea4bc84d2353",
+     "equal": true
+    },
+    {
+     "variant_id": "ee83a8f491ee4ff5",
+     "file": "delta.safetensors",
+     "source_id": "0d055869527177b4",
+     "supplementary": false,
+     "bytes": 897589336,
+     "expected": "149005dc8dc264886c4f4455ec5b6299ebab110b46c591114c611a3f9fc4729a",
+     "actual": "149005dc8dc264886c4f4455ec5b6299ebab110b46c591114c611a3f9fc4729a",
+     "equal": true
+    },
+    {
+     "variant_id": "f246f77918b32213",
+     "file": "delta.safetensors",
+     "source_id": "17668df17662b3f7",
+     "supplementary": true,
+     "bytes": 880811880,
+     "expected": "613846e4e76b869a308f060f26f485670cf6f80713884771c3892beba2ea67a5",
+     "actual": "613846e4e76b869a308f060f26f485670cf6f80713884771c3892beba2ea67a5",
+     "equal": true
+    }
+   ],
+   "variant_json": {
+    "n": 156,
+    "n_present": 156,
+    "n_equal": 156,
+    "unequal": []
+   },
+   "started_utc": "2026-11-11T09:37:40Z",
+   "ended_utc": "2026-11-11T09:47:47Z",
+   "seconds": 607.7
+  }
+ },
+ "gpu_expected": {
+  "nvidia_smi_query": "nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader",
+  "result": "NVIDIA RTX PRO 4500 Blackwell Server Edition, 595.112.07, 32623 MiB",
+  "cpu_only_preparation": {
+   "supplement_freeze.cpu_only": true,
+   "supplement_freeze.computed_under_env": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "HF_HUB_OFFLINE": "1",
+    "MKL_NUM_THREADS": "4",
+    "OMP_NUM_THREADS": "4"
+   },
+   "f11_calibration_command_env": "CUDA_VISIBLE_DEVICES= (board-a-f11-sim frozen command; /tmp/a5_f11_calibration.sh)",
+   "restage_launch.command": "env CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 HF_HUB_OFFLINE=1 PYTHONPATH=src .venv/bin/python -m wsp.eval.response_intervention prepare --rotation-only --audit-rule f10 --staged-manifest docs/prereg/a5_manifests/part_a/manifest.json --zoo data/zoo/qwen3.5-0.8b --selection docs/prereg/a5_manifests/selection.json --references docs/prereg/a5_manifests/references.json --out data/runs/a5/part_a --manifest-out docs/prereg/a5_manifests/part_a/manifest.json"
+  }
+ },
+ "checks": {
+  "A1_execution_manifest_52_edits": {
+   "pass": true,
+   "evidence": {
+    "n_edit_ids": 52,
+    "n_selections": 52,
+    "coverage.n_edits": 52
+   }
+  },
+  "A2_supplementary_flag_on_exactly_12": {
+   "pass": true,
+   "evidence": {
+    "selections_flagged": 12,
+    "edit_audits_flagged": 12,
+    "same_ids": true,
+    "variant_rows_flagged": 0,
+    "note": "flag lives on selection rows and edit-audit rows (Board A stage condition 3); variant rows carry none"
+   }
+  },
+  "A3_supplement_ids_equal_frozen_list": {
+   "pass": true,
+   "evidence": {
+    "ids": [
+     "15cdcf0bb126de17",
+     "17668df17662b3f7",
+     "1ac30f3c7a209fe6",
+     "2410c595817dc20b",
+     "342a1be080049e8f",
+     "388347cfb0b7fafa",
+     "45cd0be9fea1c139",
+     "8d29ac2adb7fdda0",
+     "aaf7a0660c6d5a73",
+     "af6d608f8651fb46",
+     "b5d0ac5d76c3cad6",
+     "c12f6ec6bad59ba3"
+    ]
+   }
+  },
+  "A4_supplement_sorted_id_sha256_1848fe4c": {
+   "pass": true,
+   "evidence": {
+    "recomputed": "1848fe4cacbaacc9f643a179835770fefd3027a48cef7cf9d83358f15b85fdd9",
+    "rule": "sha256(json.dumps(sorted(ids)))"
+   }
+  },
+  "A5_four_per_depleted_cell": {
+   "pass": true,
+   "evidence": {
+    "cells": {
+     "chain:0": 4,
+     "chain:2": 4,
+     "lora_sft:2": 4
+    }
+   }
+  },
+  "A6_supplements_are_roots": {
+   "pass": true,
+   "evidence": {
+    "predecessor_ids": [
+     "base"
+    ]
+   }
+  },
+  "A7_component_uniqueness_52": {
+   "pass": true,
+   "evidence": {
+    "distinct_component_ids": 52
+   }
+  },
+  "A8_registered_40_sorted_sha256_e2bd6cb2": {
+   "pass": true,
+   "evidence": {
+    "recomputed": "e2bd6cb2956c0fbe64194b3f1ebbb481248ecec45b8a729a59a54b9a2bac9d6b",
+    "n": 40
+   }
+  },
+  "A9_supplements_disjoint_from_registered": {
+   "pass": true,
+   "evidence": {
+    "id_overlap": 0
+   }
+  },
+  "A10_supplementary_variants_36_none_excluded": {
+   "pass": true,
+   "evidence": {
+    "n": 36,
+    "kinds": {
+     "scale": 24,
+     "rotation": 12
+    },
+    "excluded": 0
+   }
+  },
+  "B1_no_registered_row_altered_vs_manifest_pre_f11": {
+   "pass": true,
+   "evidence": {
+    "per_key": {
+     "delta_sha256": {
+      "n_pre": 111,
+      "n_now": 147,
+      "changed": [],
+      "n_added": 36
+     },
+     "variant_json_sha256": {
+      "n_pre": 120,
+      "n_now": 156,
+      "changed": [],
+      "n_added": 36
+     },
+     "edit_audits": {
+      "n_pre": 40,
+      "n_now": 52,
+      "changed": [],
+      "n_added": 12
+     },
+     "rotation_seeds": {
+      "n_pre": 40,
+      "n_now": 52,
+      "changed": [],
+      "n_added": 12
+     },
+     "selections": {
+      "changed": [],
+      "n_pre": 40
+     },
+     "variants": {
+      "changed": [],
+      "n_pre": 120,
+      "n_now": 156
+     },
+     "restage": {
+      "equal": true
+     },
+     "selection_ledger": {
+      "equal": true
+     },
+     "realised_increment_ladder_variant_ids": {
+      "equal": true
+     },
+     "excluded_variant_ids": {
+      "equal": true
+     },
+     "f10_subsets": {
+      "equal": true,
+      "detail": {
+       "noise_calibrated": {
+        "n_pre": 34,
+        "n_now": 45,
+        "removed": [],
+        "added": [
+         "15cdcf0bb126de17",
+         "17668df17662b3f7",
+         "1ac30f3c7a209fe6",
+         "2410c595817dc20b",
+         "342a1be080049e8f",
+         "388347cfb0b7fafa",
+         "45cd0be9fea1c139",
+         "8d29ac2adb7fdda0",
+         "af6d608f8651fb46",
+         "b5d0ac5d76c3cad6",
+         "c12f6ec6bad59ba3"
+        ],
+        "added_all_supplementary": true,
+        "registered_members_sorted_sha256": "fb1c34e68d91c03b67b90ae1c0e867eaad32edadebf2ec4b615ce13515aedfa0"
+       },
+       "pooled_norm_le_2e-2": {
+        "n_pre": 30,
+        "n_now": 41,
+        "removed": [],
+        "added": [
+         "15cdcf0bb126de17",
+         "17668df17662b3f7",
+         "1ac30f3c7a209fe6",
+         "2410c595817dc20b",
+         "342a1be080049e8f",
+         "388347cfb0b7fafa",
+         "45cd0be9fea1c139",
+         "8d29ac2adb7fdda0",
+         "af6d608f8651fb46",
+         "b5d0ac5d76c3cad6",
+         "c12f6ec6bad59ba3"
+        ],
+        "added_all_supplementary": true,
+        "registered_members_sorted_sha256": "3da5f44f0c10307c2af7336c23fad430d13f6eb9347976e34de5d0810277267c"
+       }
+      },
+      "note": "union staging summary: supplements appended; registered members equal the frozen S30/S34 (part_a_analysis.py S30_SHA256/S34_SHA256), which the analysis uses; supplements never enter S30/S34 (F11b.1(d))"
+     }
+    },
+    "all_additions_belong_to_supplements": true,
+    "also": "manifest.supplement.carried.entries_byte_identical = True"
+   }
+  },
+  "B2_registered_selection_rows_equal_a533": {
+   "pass": true,
+   "evidence": {
+    "n_compared": 40
+   }
+  },
+  "B3_rotation_audits_prefix_preserved": {
+   "pass": true,
+   "evidence": {
+    "pre_rows": 2534,
+    "now_rows": 3069,
+    "added_rows": 535,
+    "manifest.rotation_audits": {
+     "file": "rotation_audits.jsonl",
+     "layout": "pre-F11 file bytes, then the supplementary rows (edit id order)",
+     "n_pass": 2990,
+     "n_tensors": 3069,
+     "sha256": "9412eb0d4d60f5587c4c5d19e9afcda86c6c45faa38a37b3ab937008d505c45a"
+    }
+   }
+  },
+  "B4_nine_original_rotation_exclusions_with_reasons": {
+   "pass": true,
+   "evidence": {
+    "excluded": {
+     "0027efdf2eae7405": {
+      "rotation_variant_id": "8506c63c5b858637",
+      "pair_verdict": "excluded",
+      "reasons": [
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.10.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.11.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.14.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.15.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.15.self_attn.o_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.16.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.17.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.18.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.20.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.22.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.4.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.5.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.9.mlp.down_proj.weight"
+       }
+      ]
+     },
+     "05531ce1db4df63f": {
+      "rotation_variant_id": "ffe89cadb99d110c",
+      "pair_verdict": "excluded",
+      "reasons": [
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.0.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.10.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.11.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.11.self_attn.q_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.12.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.13.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.14.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.16.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.17.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.17.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.18.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.18.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.19.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.19.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.2.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.21.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.3.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.3.self_attn.o_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.3.self_attn.q_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.4.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.6.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.7.self_attn.q_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.8.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.9.mlp.up_proj.weight"
+       }
+      ]
+     },
+     "057dcfbedea3251f": {
+      "rotation_variant_id": "0bcb2f48c5fcbcd2",
+      "pair_verdict": "excluded",
+      "reasons": [
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.0.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.0.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.10.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.11.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.11.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.11.self_attn.q_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.12.linear_attn.out_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.14.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.15.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.15.self_attn.q_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.16.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.19.self_attn.v_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.20.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.20.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.21.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.22.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.22.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.3.self_attn.q_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.4.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.6.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.7.self_attn.q_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.8.linear_attn.out_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.8.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.9.mlp.up_proj.weight"
+       }
+      ]
+     },
+     "0bc0a0c4ad0520e0": {
+      "rotation_variant_id": "7cb4ef4f618014cc",
+      "pair_verdict": "excluded",
+      "reasons": [
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.0.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.11.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.18.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.18.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.23.self_attn.o_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.5.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.7.mlp.up_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.8.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.8.mlp.up_proj.weight"
+       }
+      ]
+     },
+     "0d055869527177b4": {
+      "rotation_variant_id": "716996040438aed6",
+      "pair_verdict": "excluded",
+      "reasons": [
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.21.mlp.down_proj.weight"
+       }
+      ]
+     },
+     "14cdaabee246493b": {
+      "rotation_variant_id": "0824ab1a336c0c19",
+      "pair_verdict": "excluded",
+      "reasons": [
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.15.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.15.self_attn.o_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.21.mlp.down_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.8.linear_attn.out_proj.weight"
+       },
+       {
+        "reason": "replay_failed",
+        "tensor": "model.layers.8.mlp.down_proj.weight"
+       }
+      ]
+     },
+     "15a53586efc72a50": {
+      "rotation_variant_id": "ed51a348b7fd834b",
+      "pair_verdict": "excluded",
+      "reasons": [
+       {
+        "reason": "rounding_bound_failed",
+        "tensor": "model.layers.11.self_attn.q_proj.weight"
+       }
+      ]
+     },
+     "2233954b0cc3edc0": {
+      "rotation_variant_id": "417883272c745e7e",
+      "pair_verdict": "excluded",
+      "reasons": [
+       {
+        "reason": "rounding_bound_failed",
+        "tensor": "model.layers.12.mlp.up_proj.weight"
+       }
+      ]
+     },
+     "72d3756e968e3209": {
+      "rotation_variant_id": "9ebbe197b37dfdfd",
+      "pair_verdict": "excluded",
+      "reasons": [
+       {
+        "reason": "rounding_bound_failed",
+        "tensor": "model.layers.2.mlp.down_proj.weight"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "B5_31_rotations_and_80_ladders_of_the_forty": {
+   "pass": true,
+   "evidence": {
+    "rotations_staged": 31,
+    "ladders": 80,
+    "ladder_delta_hashes_equal_a533": true,
+    "ladder_kind_in_manifest": "scale",
+    "realised_increment_ladder_flags": 16
+   }
+  },
+  "B6_rehash_before_after_staging_equal": {
+   "pass": true,
+   "evidence": {
+    "all_equal": true,
+    "by_variant_sha256": "fab1b8a4a50c9aaad7bd810482efedce5a1e3938237bc2ab3ea4b76beff952ef",
+    "n_files": 249,
+    "n_variants": 120,
+    "staged_rows_sha256": "313e04289a0e42e8f926d14246c85058061a027e64fb52fb33e0a2c6d82124c0"
+   }
+  },
+  "C1_f11_mask_recomputes_from_execution_manifest": {
+   "pass": true,
+   "evidence": {
+    "mask_sha256": "5f4e770185ec9cc6fa10461d3012196bbd3feb9ca4af9f3065510a634b5bbfc4",
+    "mapping_sha256_recomputed": "171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a",
+    "available_counts": {
+     "rotation": 43,
+     "ladder_0.25": 52,
+     "ladder_0.5": 52
+    },
+    "n_ids": 52
+   }
+  },
+  "C2_f10_mask_recomputes_from_manifest_pre_f11": {
+   "pass": true,
+   "evidence": {
+    "mask_sha256": "86fa27a5c1838d0c0bd88ef530feba22eceafac698d0ec4506fbf05df83b698e",
+    "mapping_sha256_recomputed": "b7724a69315d8c8692a128504126251ac16945cf7b741ec60b3cdb6daa5cb329",
+    "available_counts": {
+     "rotation": 31,
+     "ladder_0.25": 40,
+     "ladder_0.5": 40
+    },
+    "n_ids": 40
+   }
+  },
+  "C3_slot_table_in_calibration_output_consistent": {
+   "pass": true,
+   "evidence": {
+    "slot_table_sha256": "68b8b01db16f9c267943e160fafbd8e6aecb15fa5d820f3eae62a5ecd6b4620e",
+    "slot_table_rule": "sha256(json.dumps(slot_mask.slots, sort_keys=True)) over the output's slot table",
+    "cells": {
+     "LoRA:0": 10,
+     "LoRA:1": 10,
+     "LoRA:2": 14,
+     "chain:0": 8,
+     "chain:1": 3,
+     "chain:2": 7
+    },
+    "slots_40_51": [
+     "8d29ac2adb7fdda0",
+     "af6d608f8651fb46",
+     "b5d0ac5d76c3cad6",
+     "c12f6ec6bad59ba3",
+     "342a1be080049e8f",
+     "388347cfb0b7fafa",
+     "45cd0be9fea1c139",
+     "aaf7a0660c6d5a73",
+     "15cdcf0bb126de17",
+     "17668df17662b3f7",
+     "1ac30f3c7a209fe6",
+     "2410c595817dc20b"
+    ],
+    "output_slot_mask_mapping_sha256": "171dfd20b47020dbc172d39eac87adf5c6efbe7864a0f3a784ef018fcb19741a"
+   }
+  },
+  "C4_frozen_slot_mapping_file_slot_mapping_f11_json_exists": {
+   "pass": false,
+   "evidence": {
+    "required_by": "board-a-f11-sim-2026-11-11.md condition 2 (save the explicit slot table as part_a/slot_mapping_f11.json and freeze/hash before RNG execution)",
+    "found": false
+   }
+  },
+  "D1_f11_calibration_PASS_and_output_hash": {
+   "pass": true,
+   "evidence": {
+    "output_sha256": "8a1be18f726d5b030dbaa5937dcc63ba9a3ca9f730d314f689a4fbb7631441fb",
+    "power": 0.8722,
+    "size_ordered_go": 0.0175,
+    "two_sided": [
+     0.0348,
+     0.0378,
+     0.0378
+    ],
+    "alternative_rate": 0.2576,
+    "available_slots": {
+     "ladder_0.25": 52,
+     "ladder_0.5": 52,
+     "rotation": 43
+    },
+    "run": {
+     "command": "Board A frozen command (board-a-f11-sim-2026-11-11.md), run via /tmp/a5_f11_calibration.sh under agent-tmux a5-f11-calibration",
+     "dirty_files": 0,
+     "end_utc": "2026-11-11T09:34:03Z",
+     "execution_sha": "92b0338",
+     "start_utc": "2026-11-11T09:28:04Z"
+    },
+    "verdict": "PASS: ordered power 0.8722 >= 0.80 and size 0.0175 <= 0.07 (two-sided 0.0348/0.0378/0.0378); alternative rate 0.2576 reported, not gated (F5.7). Part A is decisive on the supplemented 52-edit design (F11.4); Board A acceptance required before scoring."
+   }
+  },
+  "D2_output_gates_equal_record": {
+   "pass": true,
+   "evidence": {
+    "output_gates_found": true
+   }
+  },
+  "D3_f10_6_record_FAIL_superseded": {
+   "pass": true,
+   "evidence": {
+    "output_sha256": "b14756828bc27cbbe14e1e590226820371a65ef5f83ad9622b2e6ccf04a3450a",
+    "power": 0.7514,
+    "verdict": "FAIL: ordered power 0.7514 < 0.80 (size passed); scoring hold remains (F10.6; Board A F10 condition 5); a new amendment is required",
+    "superseded_by": "F11 (A5 amendment) and the F11.4 supplemented run"
+   }
+  },
+  "E1_inputs_match_recorded_identities": {
+   "pass": true,
+   "evidence": {
+    "n_checked": 28,
+    "mismatches": {},
+    "expected_sources": "A5.1.2 entries, RESTAGE_A512_NOTE.md, selection_f11.json:inputs, supplement_freeze.json:inputs, board-a-f11-sim condition-3 command table, part_a_analysis.py constants, calibration records"
+   }
+  },
+  "E2_selection_f11_inputs_live": {
+   "pass": true,
+   "evidence": {
+    "note": "selection_f11.json:inputs.part_a_manifest names the pre-F11 manifest bytes, now preserved as manifest_pre_f11.json",
+    "inputs": {
+     "components": {
+      "path": "docs/prereg/a5_manifests/components.jsonl",
+      "sha256": "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec"
+     },
+     "fields_manifest": {
+      "path": "docs/prereg/a5_manifests/power/fields_manifest.json",
+      "sha256": "19e9de8430ff2a135db848f7d0d5097b5b5724138e9ee815e807e5753e5f9a6b"
+     },
+     "part_a_manifest": {
+      "path": "docs/prereg/a5_manifests/part_a/manifest.json",
+      "sha256": "59d839e351824fa154a665fcf105284ce5fdeed8423a5c0a2b7a60687b0d3b06"
+     },
+     "registered_donors": {
+      "path": "docs/prereg/a5_manifests/power/registered_donors.json",
+      "sha256": "6e77bca615624a04cb43b3d11a035b5dc31e5a2f1cd918d42a35cc7786babbb5"
+     },
+     "selection": {
+      "path": "docs/prereg/a5_manifests/selection.json",
+      "sha256": "393530365f87f981d5da3ecb2779c89b8e7bf98105b6c45d1824bf290e908c63"
+     }
+    }
+   }
+  },
+  "F1_verify_pins_HEAD": {
+   "pass": true,
+   "evidence": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python scripts/a5_build_manifests.py --verify-pins HEAD",
+    "head": "079e60b0d65da1f893d726c80acb9d2a0874acba",
+    "output": [
+     "all pins match",
+     "exit 0"
+    ],
+    "n_pinned_files": 71,
+    "code_hashes_sha256": "3447730883fe30306c9615418fcefb50b03dfbe78d05f6cc4d2ba5315e3b7bdb",
+    "code_hashes_git_sha": "ade2850e199edadf622a4ac8d1398bb0cbe2b9db",
+    "pinned_from": "working tree"
+   }
+  },
+  "H1_unproven_originals_are_the_12": {
+   "pass": true,
+   "evidence": {
+    "unproven_originals": [
+     "15cdcf0bb126de17",
+     "17668df17662b3f7",
+     "1ac30f3c7a209fe6",
+     "2410c595817dc20b",
+     "342a1be080049e8f",
+     "388347cfb0b7fafa",
+     "45cd0be9fea1c139",
+     "8d29ac2adb7fdda0",
+     "aaf7a0660c6d5a73",
+     "af6d608f8651fb46",
+     "b5d0ac5d76c3cad6",
+     "c12f6ec6bad59ba3"
+    ],
+    "unproven_rule": "each unproven original is priced as one entry to be proven or scored; score --manifest runs the reuse proofs first (proven: reused; failed: scored as a reference) and refuses to score any variant while its original stays unproven",
+    "reference_proofs": {
+     "carried": [
+      "base (predecessor of every supplementary edit)"
+     ],
+     "computed": false,
+     "deferred_to": "score --manifest (score_reference_proofs)",
+     "function": "supplement_reference_proofs",
+     "identity": null,
+     "paths_touched": []
+    }
+   }
+  },
+  "I1_priced_count": {
+   "pass": true,
+   "evidence": {
+    "n_variants": 147,
+    "references_to_score": 19,
+    "n_D": 19,
+    "n_P": 0,
+    "priced_unproven_as_references": 12,
+    "n_priced": 178,
+    "minutes_per_entry": 1.04,
+    "minutes": 185.12,
+    "retries": "unpriced (not in n_priced)",
+    "window_check": true,
+    "config": "configs/eval_tf_v1.yaml",
+    "n_reuse_proofs_carried": 49,
+    "reuse_proof_model_revisions": [
+     "2fc06364715b967f1860aea9cf38778875588b17",
+     "None"
+    ],
+    "reuse_proof_config_hashes": [
+     "79d13d456efee587281566168ebd598bcffe136d3c3c7f8f13a05692350014f6",
+     "None"
+    ]
+   }
+  },
+  "J1_staged_files_present": {
+   "pass": true,
+   "evidence": {
+    "n_files": 165,
+    "n_present": 165,
+    "by_file": {
+     "delta.safetensors": 147,
+     "increment.safetensors": 18
+    },
+    "total_bytes": 116715970712
+   }
+  },
+  "J2_sample_rehash_now": {
+   "pass": true,
+   "evidence": {
+    "rule": "Re-hash a deterministic sample of staged delta/increment files and all variant.json files.\nSample rule: sort the 165 (variant_id, filename) pairs of manifest.json:delta_sha256; take indices 0, 7, 14, ... (every 7th).",
+    "n_pairs_total": 165,
+    "n_sampled": 24,
+    "n_supplementary_sampled": 4,
+    "n_equal": 24,
+    "bytes_hashed": 17475728968,
+    "started_utc": "2026-11-11T09:37:40Z",
+    "ended_utc": "2026-11-11T09:47:47Z",
+    "seconds": 607.7,
+    "variant_json": {
+     "n": 156,
+     "n_present": 156,
+     "n_equal": 156,
+     "unequal": []
+    }
+   }
+  },
+  "L1_no_variant_evaluation_path": {
+   "pass": true,
+   "evidence": {
+    "n_variant_ids_checked": 156,
+    "lexists_under_tf_v1": 0,
+    "name_walk_depth4_hits": [],
+    "tf_v1_dir_mtime_utc": "2026-11-07T22:09:24Z",
+    "method": "os.path.lexists and os.walk of names only; no file under data/evals opened"
+   }
+  }
+ },
+ "gates": [
+  {
+   "id": "F10-1",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "methodological record (F10a) and one no-exposure attestation per decision-maker",
+   "evidence": "PREREG F10a; f10_attestations.md entries 1-9",
+   "status": "MET"
+  },
+  {
+   "id": "F10-2",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "executable correctness of F10.3/F10.4 (tests)",
+   "evidence": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md verdict ACCEPT WITH CONDITIONS (060cc60); merged",
+   "status": "MET"
+  },
+  {
+   "id": "F10-3",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "pins and frozen re-stage execution",
+   "evidence": "re-pin (xviii); docs/prereg/a5_manifests/part_a/restage_freeze.json, restage_launch.json (7bacec1, exit 0)",
+   "status": "MET"
+  },
+  {
+   "id": "F10-4",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "accept the outcome-free re-stage report",
+   "evidence": "docs/reviews/council/board-a-f10-restage-2026-11-11.md ACCEPT WITH CONDITIONS; its conditions 1-2 discharged by the chair correction of 09:10 UTC in PREREG (after F11 block)",
+   "status": "MET"
+  },
+  {
+   "id": "F10-5",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "slot-masked calibration when yield < 40",
+   "evidence": "F10.6 run FAIL (slotmask_calibration_record.json) superseded by F11; F11.4 run PASS (f11_calibration_record.json; checks D1-D3)",
+   "status": "BOARD_A"
+  },
+  {
+   "id": "F10-6",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "F10.5 interpretation/sensitivity specification frozen before scoring",
+   "evidence": "docs/design/F10_SENSITIVITY_SPEC.md (8624e063...) adopted F10b.1; implemented in part_a_analysis.py (AN4 accepted)",
+   "status": "MET"
+  },
+  {
+   "id": "F10-7a",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "scoring release only after conditions 1-5 and the 6 spec",
+   "evidence": "see F10-5 and the F11 rows",
+   "status": "OPEN"
+  },
+  {
+   "id": "F10-7b",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "exposure maintained / attestations updated through final freeze",
+   "evidence": "attestation checklist below: implementer, stager, calibration-run, Board A reviewer (stage, sim, analysis-4, re-stage) and chair-extension entries missing",
+   "status": "OPEN"
+  },
+  {
+   "id": "F10-7c",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "re-hash staged bytes immediately before the exclusive-GPU campaign",
+   "evidence": "scripts/part_a_score_launch.sh re-hashes manifest delta/increment files before score; sample of 24 re-hashed now (J2). Script findings LS-2/LS-3 below",
+   "status": "AT_SCORING"
+  },
+  {
+   "id": "F10-7d",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "charge references, failures and retries",
+   "evidence": "priced 178 entries / 185.12 min (I1); retries unpriced; actual charges must be recorded in the campaign record",
+   "status": "AT_SCORING"
+  },
+  {
+   "id": "F10-7e",
+   "source": "docs/reviews/council/board-a-f10-2026-11-11.md",
+   "release_gate": "close/seal the ledger before the one analysis",
+   "evidence": "no ledger exists yet (nothing scored)",
+   "status": "AT_SCORING"
+  },
+  {
+   "id": "F10C2-1",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "merge and re-pin (xviii); verify pins at execution HEAD",
+   "evidence": "re-pin (xviii); restage_launch.json",
+   "status": "MET"
+  },
+  {
+   "id": "F10C2-2",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "freeze and record the rotation-only execution",
+   "evidence": "docs/prereg/a5_manifests/part_a/restage_freeze.json, restage_launch.json",
+   "status": "MET"
+  },
+  {
+   "id": "F10C2-3",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "re-pin note (xviii) content",
+   "evidence": "PREREG re-pin (xviii)",
+   "status": "MET"
+  },
+  {
+   "id": "F10C2-4a",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "re-stage report accepted",
+   "evidence": "docs/reviews/council/board-a-f10-restage-2026-11-11.md",
+   "status": "MET"
+  },
+  {
+   "id": "F10C2-4b",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "frozen failed-rotation mask and passing slot-masked calibration before scoring",
+   "evidence": "F10.6 FAIL superseded; F11.4 PASS on frozen slot_mask_f11.json (C1, D1)",
+   "status": "BOARD_A"
+  },
+  {
+   "id": "F10C2-4c",
+   "source": "docs/reviews/council/board-a-f10-code-2-2026-11-11.md",
+   "release_gate": "all rotation/ladder/reference scoring held until gates discharged",
+   "evidence": "manifest.scored = false; no evaluation path for any variant (L1)",
+   "status": "MET"
+  },
+  {
+   "id": "F11-1",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "methodological freeze (F11a), attestations, frozen list, no top-up, forty preserved",
+   "evidence": "PREREG F11a; attestations 10-13; A3-A5, B1-B6",
+   "status": "MET"
+  },
+  {
+   "id": "F11-2",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "prepare implementation gate (review, tests, re-pin, frozen launch)",
+   "evidence": "docs/reviews/council/board-a-f11-stage-2026-11-11.md ACCEPT WITH CONDITIONS; re-pin (xx); supplement_freeze.json/supplement_launch.json",
+   "status": "MET"
+  },
+  {
+   "id": "F11-3a",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "accept the outcome-free supplementary staging report",
+   "evidence": "no F11.3 staging report committed (PROGRESS 09:34 UTC: 'staging report in flight'); manifest evidence verified here (A1-A10, B1-B6)",
+   "status": "OPEN"
+  },
+  {
+   "id": "F11-3b",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "simulation supplement option reviewed/tested/re-pinned",
+   "evidence": "docs/reviews/council/board-a-f11-sim-2026-11-11.md; re-pin (xix)",
+   "status": "MET"
+  },
+  {
+   "id": "F11-3c",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "actual per-contrast mask and ID mapping frozen/hashed before the run",
+   "evidence": "slot_mask_f11.json committed in 92b0338 = calibration execution SHA (C1); explicit slot_mapping_f11.json absent (C4); slot table only in the output (C3)",
+   "status": "PARTIAL"
+  },
+  {
+   "id": "F11-3d",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "original reuse proofs (especially aaf7a066)",
+   "evidence": "deferred to the scoring-phase proof step (stage review ruling); 12 unproven originals priced (H1)",
+   "status": "AT_SCORING"
+  },
+  {
+   "id": "F11-4a",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "one registered-scale calibration under frozen settings, hashes published",
+   "evidence": "f11_calibration_record.json; output sha256 re-hashed (D1); run 09:28:04-09:34:03 UTC at 92b0338, dirty 0",
+   "status": "MET"
+  },
+  {
+   "id": "F11-4b",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "calibration report and route accepted",
+   "evidence": "verdict PASS (power 0.8722, size 0.0175; two-sided 0.0348/0.0378/0.0378); no Board A acceptance on file",
+   "status": "BOARD_A"
+  },
+  {
+   "id": "F11-5a",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "analysis implementation reviewed/tested/re-pinned",
+   "evidence": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md; re-pin (xxi); F11b",
+   "status": "MET"
+  },
+  {
+   "id": "F11-5b",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "targeted analysis tests pass on the accepted execution manifest and reject tampering",
+   "evidence": "not exercised in this inventory session (scope: no analysis run); required by AN4 condition 3",
+   "status": "OPEN"
+  },
+  {
+   "id": "F11-6a",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "attestations through final methodological freeze",
+   "evidence": "see attestation checklist",
+   "status": "OPEN"
+  },
+  {
+   "id": "F11-6b",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "recheck all pins match",
+   "evidence": "--verify-pins HEAD at 079e60b: all pins match (F1); must be re-run at the scoring execution HEAD",
+   "status": "MET"
+  },
+  {
+   "id": "F11-6c",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "rehash staged bytes before the single campaign",
+   "evidence": "launch script; sample now (J2)",
+   "status": "AT_SCORING"
+  },
+  {
+   "id": "F11-6d",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "charge missing originals, failures and retries; no advance ladder/reference scoring; seal ledger",
+   "evidence": "priced 178/185.12 min (I1); scored false",
+   "status": "AT_SCORING"
+  },
+  {
+   "id": "F11-6e",
+   "source": "docs/reviews/council/board-a-f11-2026-11-11.md",
+   "release_gate": "existing qualification, field, allocation, reference-reuse and exposure gates",
+   "evidence": "frozen 52-edit field-prediction file for the analysis --fields input not located (data/runs/a5/power/fields.json covers 33 of 52 edits, lacking the 19 n_D originals); qualification/allocation evidence not re-examined here",
+   "status": "OPEN"
+  },
+  {
+   "id": "ST-1a",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "merge, re-pin (xx), verify pins at the clean execution HEAD",
+   "evidence": "re-pin (xx); supplement_launch.json execution_sha 8211ecf dirty 0",
+   "status": "MET"
+  },
+  {
+   "id": "ST-1b",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "dated clarification of F11.8 'built at staging' (deferred proofs, 178-entry pricing, stop-and-reprice)",
+   "evidence": "re-pin (xx) text mentions deferred proofs and 178 entries; no dated clarification clause of F11.8 with the stop-and-reprice operation located in PREREG",
+   "status": "OPEN"
+  },
+  {
+   "id": "ST-1c",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "implementer/stager/reviewer attestations through this freeze",
+   "evidence": "not in f10_attestations.md",
+   "status": "OPEN"
+  },
+  {
+   "id": "ST-2",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "frozen staging launch and environment; launch/end record with output hashes",
+   "evidence": "supplement_freeze.json (503e415e...) and supplement_launch.json: SHA, times, exit 0, freeze hash; record lacks job/log identity, argv and output hashes; manifest.code_sha records 887a514 (HEAD at write time; only analysis code/docs differ from 8211ecf)",
+   "status": "PARTIAL"
+  },
+  {
+   "id": "ST-3",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "accept actual staging evidence, no replacement",
+   "evidence": "manifest evidence verified (A1-A10, B1-B6); staging report and its acceptance missing",
+   "status": "OPEN"
+  },
+  {
+   "id": "ST-4",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "freeze calibration inputs after staging (mask, 52-ID mapping, final manifest/audits)",
+   "evidence": "mask, manifest and audits committed in 92b0338 before the run; mapping file absent (C4)",
+   "status": "PARTIAL"
+  },
+  {
+   "id": "ST-5",
+   "source": "docs/reviews/council/board-a-f11-stage-2026-11-11.md",
+   "release_gate": "proof-phase hold; proof-only / record / reprice sequence before GPU",
+   "evidence": "no proof reads yet (supplement.reference_proofs.paths_touched = []); launch script runs full score with no separate proof-only stop (LS-1)",
+   "status": "OPEN"
+  },
+  {
+   "id": "SIM-1",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "merge and re-pin accepted simulator bytes",
+   "evidence": "re-pin (xix); pins match (F1)",
+   "status": "MET"
+  },
+  {
+   "id": "SIM-2",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "mask from actual exclusions; slot_mapping_f11.json saved and hashed before RNG execution",
+   "evidence": "mask recomputes (C1); slot_mapping_f11.json absent (C4); output slot table consistent (C3)",
+   "status": "PARTIAL"
+  },
+  {
+   "id": "SIM-3a",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "execute the single frozen command once; full execution record",
+   "evidence": "record has SHA, dirty 0, start/end, mask/mapping/output hashes; command given by reference via /tmp/a5_f11_calibration.sh (uncommitted, sha256 00c3a8bb...; contents equal the frozen command); record lacks Python/NumPy/thread fields and input hashes (inputs re-hashed here, E1)",
+   "status": "PARTIAL"
+  },
+  {
+   "id": "SIM-3b",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "accept the report",
+   "evidence": "no Board A acceptance on file",
+   "status": "BOARD_A"
+  },
+  {
+   "id": "SIM-4",
+   "source": "docs/reviews/council/board-a-f11-sim-2026-11-11.md",
+   "release_gate": "retain holds; attestations through final freeze",
+   "evidence": "see checklist",
+   "status": "OPEN"
+  },
+  {
+   "id": "AN4-1",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "adopt conventions by dated A5 note",
+   "evidence": "PREREG F11b",
+   "status": "MET"
+  },
+  {
+   "id": "AN4-2",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "merge, re-test, re-pin; --verify-pins HEAD at the real execution HEAD",
+   "evidence": "re-pin (xxi); all pins match at 079e60b (F1); PROGRESS 08:16 'full test suite green on main'; must be repeated at the scoring HEAD",
+   "status": "MET"
+  },
+  {
+   "id": "AN4-3a",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "inventory: twelve IDs, four per cell, component uniqueness, forty preserved, 9 exclusions, 80 ladders",
+   "evidence": "checks A1-A10, B1-B6",
+   "status": "MET"
+  },
+  {
+   "id": "AN4-3b",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "bind a533 and final execution manifest hashes",
+   "evidence": "files table; E1",
+   "status": "MET"
+  },
+  {
+   "id": "AN4-3c",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "bind ledger/field predictions, windows, producer and scoring identities",
+   "evidence": "text_groups.json and config bound (E1); ledger, producer identities exist only after scoring; frozen 52-edit field-prediction file not located",
+   "status": "OPEN"
+  },
+  {
+   "id": "AN4-3d",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "actual per-contrast masks and mapping; the 52-slot calibration report",
+   "evidence": "C1-C3, D1-D2",
+   "status": "MET"
+  },
+  {
+   "id": "AN4-3e",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "separate acceptance of the calibration report and route",
+   "evidence": "none on file",
+   "status": "BOARD_A"
+  },
+  {
+   "id": "AN4-3f",
+   "source": "docs/reviews/council/board-a-part-a-analysis-4-2026-11-11.md",
+   "release_gate": "exercise input-binding/tamper checks on the final manifest with synthetic responses",
+   "evidence": "not run",
+   "status": "OPEN"
+  }
+ ],
+ "attestations": {
+  "file": "docs/prereg/f10_attestations.md",
+  "sha256": "e9a0cb0a30664f81a9aada9691cc1e57ca7ad0abcd841ad154634eed08ad2421",
+  "entries": [
+   {
+    "n": "1",
+    "role": "chair",
+    "coverage": "10 Nov 18:00 - 11 Nov ~01:25 UTC",
+    "status": "present"
+   },
+   {
+    "n": "1-ext",
+    "role": "chair, extension",
+    "coverage": "to ~09:20 UTC 11 Nov",
+    "status": "present; does not cover staging completion (09:26), F11.4 calibration (09:28-09:34) or later"
+   },
+   {
+    "n": "2",
+    "role": "staging builder (a533)",
+    "status": "present"
+   },
+   {
+    "n": "3",
+    "role": "rotation-yield analyst",
+    "status": "present"
+   },
+   {
+    "n": "4",
+    "role": "F10 drafter",
+    "status": "present"
+   },
+   {
+    "n": "5",
+    "role": "F10 code builder",
+    "status": "present (from its report)"
+   },
+   {
+    "n": "6",
+    "role": "Board A (F10)",
+    "status": "present"
+   },
+   {
+    "n": "7",
+    "role": "F10a drafter",
+    "status": "present"
+   },
+   {
+    "n": "8",
+    "role": "F10.5 sensitivity-spec drafter",
+    "status": "present"
+   },
+   {
+    "n": "9",
+    "role": "slot-mask path builder",
+    "status": "present"
+   },
+   {
+    "n": "10",
+    "role": "council metrology member (F11)",
+    "status": "present"
+   },
+   {
+    "n": "11",
+    "role": "F11 drafter",
+    "status": "present"
+   },
+   {
+    "n": "12",
+    "role": "chair's sizing runs",
+    "status": "present"
+   },
+   {
+    "n": "13",
+    "role": "F11a drafter",
+    "status": "present"
+   },
+   {
+    "n": "14",
+    "role": "F11b drafter",
+    "status": "present"
+   }
+  ],
+  "pending": [
+   "simulation --supplement implementer (54f17fc; feat/a5-sim-supplement)",
+   "prepare --supplement implementer (c914270/bef5396; feat/f11-supplement-stage)",
+   "Part A analysis F11-path implementer (f57b70a; fix/part-a-analysis-manifest-binding)",
+   "F11.3 stager / F11.4 calibration operator (chair, agent-tmux a5-f11-supplement and a5-f11-calibration): chair extension beyond ~09:20 UTC",
+   "Board A reviewers of re-stage, F11 stage, F11 sim and analysis-4: lines exist in their review files but are not entered or incorporated by reference in f10_attestations.md (only Board A F11 is incorporated, F11a.4)",
+   "the scoring-launch script author (1b954a6) and this pre-score inventory session (proposed text in PRESCORE_A512_NOTE.md)"
+  ],
+  "needed_for_scoring_phase": [
+   "chair: a new attestation covering the interval to the final methodological freeze and the scoring release decision",
+   "scorer session: a new attestation at launch (the proof-only step reads the twelve originals' TF-v1 eval.json/records.jsonl, which is exposure under the stage review; it must follow the final freeze)",
+   "Board A: attestation with its acceptance of the staging report, calibration report and route"
+  ]
+ },
+ "launch_script_findings": [
+  {
+   "id": "LS-1",
+   "finding": "scripts/part_a_score_launch.sh runs `score --manifest ... --text-groups ...` directly; score runs the reuse proofs and continues to GPU commands in one call. The 'proof step' named in the commit message of 1b954a6 exists only as the first stage inside `score`. There is no separate proof-only phase (score_reference_proofs(..., write=True)), retained proof record and accepted repricing before GPU work, as board-a-f11-stage condition 5 and its 'Price and stop-and-reprice' ruling require; nothing in the script stops if a proof fails and the price changes."
+  },
+  {
+   "id": "LS-2",
+   "finding": "the re-hash loop skips a missing file (FileNotFoundError -> continue) and does not fail; a deleted delta/increment would pass. It re-hashes delta/increment files only, not variant.json."
+  },
+  {
+   "id": "LS-3",
+   "finding": "the script does not check the manifest sha256 against a frozen value (stage review: 'verify the frozen manifest hash and staged-zoo identity/bytes at scoring launch'), nor --verify-pins HEAD."
+  },
+  {
+   "id": "LS-4",
+   "finding": "the score_launch.json record is written into docs/ (tracked tree) after the clean-tree check; it records GPU name/driver/memory but not GPU UUID, and no proof/reprice record."
+  }
+ ],
+ "disclosures": [
+  "manifest.json code_sha and provenance.git_sha = 887a5146 (HEAD of the canonical checkout when the manifest was written at ~09:26 UTC), while supplement_launch.json records execution_sha 8211ecf (clean at launch, 08:06 UTC). main advanced in the same checkout during the run (merges 9add718, 887a514). git diff 8211ecf..887a514 touches only part_a_analysis.py, part_a_analyse.py, their tests, code_hashes.json, the package README, PREREG, PROGRESS, attestations, root README and the analysis-4 review; no prepare/rotation code.",
+  "selection_f11.json:inputs.part_a_manifest records 59d839e3..., the pre-F11 manifest bytes now preserved as manifest_pre_f11.json; the live manifest.json is the post-staging execution manifest.",
+  "the F11.4 run used an uncommitted wrapper /tmp/a5_f11_calibration.sh (sha256 00c3a8bb46acbd1e34f095deba6b8a5f58167060e1c4a8414b70ae23de91b19b, 809 bytes, read 11 Nov 2026 ~09:40 UTC); its python command equals the Board A frozen command; it was not frozen with its hash before execution.",
+  "power/fields.json in the user brief is data/runs/a5/power/fields.json (the F11.4 --fields input); the committed metadata is docs/prereg/a5_manifests/power/fields_manifest.json; both are inventoried."
+ ]
+}
