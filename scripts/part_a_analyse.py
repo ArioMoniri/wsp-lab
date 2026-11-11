@@ -11,7 +11,12 @@ a533 variant id, or that selects an unflagged non-registered edit; a NULL-SIZE/t
 hash mismatch; a ledger window order, block assignment or token identity that differs from
 ``text_groups.json``; an unsealed or incomplete ledger; a re-stage entry that contradicts itself
 or the execution manifest; a missing frozen prediction row; a frozen id-list mismatch; or a
-missing/mismatched F10.6 slot-masked calibration report.
+missing/mismatched F10.6 slot-masked calibration report or, with F11 supplementary edits, F11.4
+supplemented calibration report (masks verified per contrast; a ladder mask on a registered id is
+refused); and on a calibration size failure ("hold: size failure requires a new amendment",
+F11a.1(b)). A power-only F11.4 failure runs as the F11.7 screen (F11a.1). Reports: the registered
+Part A on every selected edit, the F10.5 reports on the supplemented set (frozen cells unchanged,
+supplements marked), and the descriptive registered-40 sensitivity.
 
     python scripts/part_a_analyse.py --ledger LEDGER.json --fields FIELDS.json \
         --spec-sha256 8624e06343bbb401ff3b6d783572b0c53e1172d0ea3f36aec3768a13701998d4 \
