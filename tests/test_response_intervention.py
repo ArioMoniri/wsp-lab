@@ -5,6 +5,7 @@ Synthetic manifest rows and tiny bf16 state dicts only: no model, no data/, CPU.
 
 import hashlib
 import json
+import math
 from pathlib import Path
 
 import pytest
@@ -685,3 +686,162 @@ def test_prepare_cli_stages_registered_selection_with_alias_predecessor(tmp_path
     for vid, files in m["delta_sha256"].items():
         assert files["delta.safetensors"] == _sha(out / "zoo" / vid / "delta.safetensors")
     assert not (zoo / "A" / "delta.safetensors").exists()  # canonical zoo untouched
+
+
+# -------------------------------------------------------------------- F10 audit rule and chain-ladder flag
+
+
+def _grid_base():
+    """Predecessor values at 1.5: bf16 spacing 2^-7 on both sides of every coordinate."""
+    return {"a.weight": torch.full((40, 56), 1.5, dtype=torch.bfloat16),
+            "b.weight": torch.full((48, 48), 1.5, dtype=torch.bfloat16)}  # fmt: skip
+
+
+def _low_kappa_delta():
+    g = torch.Generator().manual_seed(3)
+    a, b = torch.randn(40, 4, generator=g), torch.randn(4, 56, generator=g)
+    return {"a.weight": a @ b * (2**-7 * 0.8) / 4}
+
+
+def test_audit_rule_switch_records_rule_and_f10_keeps_low_kappa_pair(tmp_path):
+    base = _grid_base()
+    entry = _entry(tmp_path / "zoo", "k1", _low_kappa_delta())
+    old = ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "a", strengths=(),
+                            audit_rule="a533")[0]  # fmt: skip
+    new = ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "b", strengths=())[0]
+    assert old.excluded and old.exclusions == [{"tensor": "a.weight", "reason": "audit_failed"}]
+    assert not new.excluded and new.exclusions == []
+    m_old = json.loads((old.entry_dir / "variant.json").read_text())
+    m_new = json.loads((new.entry_dir / "variant.json").read_text())
+    assert (m_old["audit_rule"], m_new["audit_rule"]) == ("a533", "f10")
+    assert ri.DEFAULT_AUDIT_RULE == "f10"
+    # the a533 path is the registered audit, unchanged
+    assert set(m_old["tensor_audits"]["a.weight"]) >= set(ri.AUDIT_FIELDS)
+    t = m_new["tensor_audits"]["a.weight"]
+    assert t["passes"] is True and t["s31_passes"] is False and t["failed_checks"] == []
+    e = m_new["edit_audit"]
+    assert e["passes"] and e["energy_guard"]["passes"]
+    assert e["log_energy_ratio"] == pytest.approx(math.log(t["energy_ratio"]), rel=1e-9)
+    assert e["pooled_norm_mismatch"] == pytest.approx(abs(t["norm_mismatch_signed"]), rel=1e-9)
+    assert e["noise_calibrated_passes"] is t["noise_calibrated_passes"]
+    assert e["in_subset_pooled_norm_2e-2"] is (e["pooled_norm_mismatch"] <= 2e-2)
+    assert e["in_subset_noise_calibrated"] is e["noise_calibrated_passes"]
+    # same construction: the rotation bytes do not depend on the audit rule
+    assert old.variant_id == new.variant_id
+    with pytest.raises(ValueError, match="audit rule"):
+        ri.build_variants(entry, base, seed=11, stage_root=tmp_path / "c", audit_rule="b")
+    sel = [ri.Selection("k1", "K", "lora_sft", 0, 0, 1.0, "base")]
+    man = ri.manifest_for(sel, [new], code_sha="x")
+    assert man["audit_rule"] == "f10" and man["variants"][0]["audit_rule"] == "f10"
+    assert man["f10_subsets"] == {"pooled_norm_le_2e-2": sorted(["k1"] if e["in_subset_pooled_norm_2e-2"] else []),
+                                  "noise_calibrated": ["k1"] if e["noise_calibrated_passes"] else []}  # fmt: skip
+    assert ri.manifest_for(sel, [old], code_sha="x")["audit_rule"] == "a533"
+
+
+def test_f10_sub_resolution_guard_excludes_the_pair(tmp_path):
+    """All energy in sparse single-ulp flips: every tensor check passes, rounding removes R, the pair goes."""
+    base = _grid_base()
+    perm = torch.randperm(48, generator=torch.Generator().manual_seed(0))
+    flips = torch.zeros(48, 48)
+    flips[torch.arange(48), perm] = 2**-7
+    entry = _entry(tmp_path / "zoo", "s1", {"b.weight": flips})
+    rot = ri.build_variants(entry, base, seed=4, stage_root=tmp_path / "st", strengths=())[0]
+    meta = json.loads((rot.entry_dir / "variant.json").read_text())
+    assert meta["tensor_audits"]["b.weight"]["passes"] is True
+    assert rot.excluded and rot.exclusions == [{"tensor": None, "reason": "sub_resolution"}]
+    assert meta["edit_audit"]["energy_guard"]["ratio"] < 0.5 and not meta["edit_audit"]["passes"]
+    assert not (rot.entry_dir / "delta.safetensors").exists()
+    # a large tensor in the same edit carries the pooled energy: the guard passes
+    g = torch.Generator().manual_seed(5)
+    big = torch.randn(40, 3, generator=g) @ torch.randn(3, 56, generator=g) * 0.05
+    entry2 = _entry(tmp_path / "zoo", "s2", {"a.weight": big, "b.weight": flips})
+    rot2 = ri.build_variants(entry2, base, seed=4, stage_root=tmp_path / "st", strengths=())[0]
+    assert not rot2.excluded
+
+
+def test_f10_tensor_failure_is_listed_with_its_reason(tmp_path, monkeypatch):
+    base, delta = _base(), _root_delta()
+    entry = _entry(tmp_path / "zoo", "f1", delta)
+    real = ri.rotation.apply_and_round
+
+    def nudged(W, X):  # a wrong grid for one tensor: bf16(W + R) moved by one ulp at one coordinate
+        new, eff = real(W, X)
+        if W.shape == (6, 6):
+            new = new.clone()
+            new[0, 1] = (new[0, 1].float() + ri.rotation.ulp_bf16(new[0, 1])).to(torch.bfloat16)
+            eff = ri.rotation.realised_increment(W, new)
+        return new, eff
+
+    monkeypatch.setattr(ri.rotation, "apply_and_round", nudged)
+    rot = ri.build_variants(entry, base, seed=7, stage_root=tmp_path / "st", strengths=())[0]
+    assert rot.excluded
+    assert rot.exclusions == [{"tensor": "layers.0.v.weight", "reason": "replay_failed"}]
+    t = json.loads((rot.entry_dir / "variant.json").read_text())["tensor_audits"]
+    assert set(t["layers.0.v.weight"]["failed_checks"]) == {"replay", "rounding_bound"}
+    assert t["layers.0.q.weight"]["passes"]
+
+
+def test_chain_ladders_are_flagged_realised_increment(tmp_path):
+    base = _base()
+    cum_p = {"layers.1.o.weight": _lowrank((6, 6), [0, 1], [2, 3], 1, 20)}
+    pred = dict(base)
+    pred["layers.1.o.weight"] = (base["layers.1.o.weight"].float() + cum_p["layers.1.o.weight"]).to(
+        torch.bfloat16
+    )
+    succ_q = (pred["layers.0.q.weight"].float() + _lowrank((8, 6), [1, 2, 3], [0, 1, 2], 2, 21)).to(
+        torch.bfloat16
+    )
+    cum_e = {
+        "layers.1.o.weight": pred["layers.1.o.weight"].float() - base["layers.1.o.weight"].float(),
+        "layers.0.q.weight": succ_q.float() - base["layers.0.q.weight"].float(),
+    }
+    zoo = tmp_path / "zoo"
+    _entry(zoo, "p1", cum_p, family="chain", cumulative=True)
+    entry = _entry(zoo, "c1", cum_e, family="chain", parent="p1", cumulative=True)
+    chain = ri.build_variants(
+        entry, pred, seed=3, stage_root=tmp_path / "st", base_state=base, predecessor_id="p1"
+    )
+    root = ri.build_variants(
+        _entry(zoo, "r1", _root_delta()), base, seed=3, stage_root=tmp_path / "st"
+    )
+    for v in chain + root:
+        meta = json.loads((v.entry_dir / "variant.json").read_text())
+        if v.kind == "scale":
+            assert meta["realised_increment_ladder"] is (v.source_id == "c1")
+            assert v.realised_increment_ladder is (v.source_id == "c1")
+        else:
+            assert "realised_increment_ladder" not in meta
+    sel = [ri.Selection("c1", "K1", "chain", 0, 0, 1.0, "p1"),
+           ri.Selection("r1", "K2", "lora_sft", 0, 0, 1.0, "base")]  # fmt: skip
+    man = ri.manifest_for(sel, chain + root, code_sha="x")
+    flagged = {v["variant_id"] for v in man["variants"] if v.get("realised_increment_ladder")}
+    assert flagged == {v.variant_id for v in chain if v.kind == "scale"}
+    assert man["realised_increment_ladder_variant_ids"] == sorted(flagged)
+    for v in man["variants"]:
+        assert ("realised_increment_ladder" in v) is (v["kind"] == "scale")
+
+
+def test_f10_chain_rotation_that_cannot_round_trip_is_excluded_not_raised(tmp_path):
+    base = _base()
+    q = base["layers.0.q.weight"].clone()
+    q[1, 0] = 1e5  # large base value that the predecessor sets to exactly zero
+    base["layers.0.q.weight"] = q
+    pred = dict(base)
+    pq = q.clone()
+    pq[1, 0] = 0.0
+    pred["layers.0.q.weight"] = pq
+    cum_p = {"layers.0.q.weight": pq.float() - q.float()}
+    succ = (pq.float() + _lowrank((8, 6), [1, 2, 3], [0, 1, 2], 2, 21)).to(torch.bfloat16)
+    zoo = tmp_path / "zoo"
+    _entry(zoo, "p1", cum_p, family="chain", cumulative=True)
+    entry = _entry(zoo, "c1", {"layers.0.q.weight": succ.float() - q.float()}, family="chain",
+                   parent="p1", cumulative=True)  # fmt: skip
+    kw = {"stage_root": tmp_path / "st", "base_state": base, "predecessor_id": "p1"}
+    rot = ri.build_variants(entry, pred, seed=3, strengths=(), **kw)[0]
+    assert rot.excluded
+    assert rot.exclusions == [{"tensor": "layers.0.q.weight", "reason": "replay_failed"}]
+    t = json.loads((rot.entry_dir / "variant.json").read_text())["tensor_audits"]
+    assert t["layers.0.q.weight"]["failed_checks"] == ["scorer_roundtrip"]
+    with pytest.raises(RuntimeError, match="round-trip"):  # the registered path is unchanged
+        ri.build_variants(entry, pred, seed=3, strengths=(), audit_rule="a533",
+                          **kw | {"stage_root": tmp_path / "st2"})  # fmt: skip

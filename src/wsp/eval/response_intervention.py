@@ -6,6 +6,8 @@
    remainder given to the lowest tertiles first (chair: 10/10/10 LoRA, 4/3/3 chain); a shortage stops.
 2. :func:`build_variants` — for one edit, the rotation R at s = 1 and the scaled edits s·Δ, each applied at
    the actual predecessor and rounded to bf16 (A5.3.3), staged as a zoo entry outside the canonical zoo.
+   The rotation pair is audited under ``--audit-rule`` (``f10``, F10.3 remedy d, by default; ``a533``,
+   the registered realised audit, on request); the rule is recorded in ``variant.json`` and the manifest.
 3. :func:`manifest_for` — the A5.11 pieces computable from the staged zoo.
 4. :func:`plan_scoring` / :func:`scoring_summary` — which predecessor and original references are on file
    with the same scoring identity (A5.3.4), and the priced count at 1.04 min per entry.
@@ -57,6 +59,8 @@ FAMILIES = ("lora_sft", "chain")
 MINUTES_PER_ENTRY = 1.04
 ROTATION_DOMAIN = "20261107:rotation:"
 NUMERIC_TOL = 1e-5  # A5.3.3 orthogonality / reconstruction residual (chair default)
+AUDIT_RULES = ("a533", "f10")  # registered realised audit (A5.3/A5.3.3) or F10.3 (remedy d)
+DEFAULT_AUDIT_RULE = "f10"
 DEFAULT_CONFIG = "configs/eval_tf_v1.yaml"
 
 
@@ -90,6 +94,8 @@ class Variant:
     entry_dir: Path
     excluded: bool = False
     exclusions: list = field(default_factory=list)
+    audit_rule: str | None = None  # rotation variants only
+    realised_increment_ladder: bool | None = None  # scale variants only
 
 
 # ------------------------------------------------------------------------------------------- selection
@@ -304,6 +310,49 @@ def _edit_audit(audits, D, R):
     }
 
 
+def _f10_edit_audit(audits):
+    """F10 per-edit verdict (tensor checks and the energy guard) and pooled F10.4/F10.5 diagnostics,
+    from the per-tensor norms of D, R and R_eff in :func:`rotation.f10_tensor_audit`'s output."""
+    keys = sorted(audits)
+    d2 = sum(audits[k]["d_norm"] ** 2 for k in keys)
+    r2 = [audits[k]["r_norm"] ** 2 for k in keys]
+    e2 = [audits[k]["r_eff_norm"] ** 2 for k in keys]
+    guard = rotation.edit_energy_guard(r2, e2)
+    d, e = math.sqrt(d2), math.sqrt(sum(e2))
+    pooled_eps = math.sqrt(
+        sum((audits[k]["rounding_error_rel"] * audits[k]["d_norm"]) ** 2 for k in keys)
+    )
+    noise_ok = all(audits[k]["noise_calibrated_passes"] for k in keys)
+    pooled = (e - d) / d
+    return {
+        "audit_rule": "f10",
+        "passes": all(audits[k]["passes"] for k in keys) and guard["passes"],
+        "n_tensors": len(keys),
+        "n_failing": sum(not audits[k]["passes"] for k in keys),
+        "energy_guard": guard,
+        "log_energy_ratio": math.log(sum(e2) / d2) if sum(e2) > 0 else None,
+        "pooled_norm_mismatch": abs(pooled),
+        "pooled_norm_mismatch_signed": pooled,
+        "pooled_rounding_error_rel": pooled_eps / d,
+        "noise_calibrated_passes": noise_ok,
+        "in_subset_pooled_norm_2e-2": abs(pooled) <= 2e-2,
+        "in_subset_noise_calibrated": noise_ok,
+        "realised_s31_passes": all(audits[k]["s31_passes"] for k in keys),
+        "max_norm_mismatch": max(audits[k]["norm_mismatch"] for k in keys),
+        "max_spectrum_mismatch": max(audits[k]["spectrum_mismatch"] for k in keys),
+        "max_abs_rank_difference": max(abs(audits[k]["rank_difference"]) for k in keys),
+        "max_orthogonality_error": max(audits[k]["orthogonality_error"] for k in keys),
+        "max_reconstruction_residual": max(audits[k]["reconstruction_residual"] for k in keys),
+        "max_prerounding_norm_mismatch": max(audits[k]["prerounding_norm_mismatch"] for k in keys),
+        "max_prerounding_spectrum_mismatch": max(
+            audits[k]["prerounding_spectrum_mismatch"] for k in keys
+        ),
+        "max_rounding_bound_ratio": max(audits[k]["rounding_bound_max_ratio"] for k in keys),
+        "all_support_identical": all(audits[k]["support_identical"] for k in keys),
+        "all_replay": all(audits[k]["replay_passes"] for k in keys),
+    }
+
+
 def _stage_header(canonical, edit):
     manifest = canonical / "manifest.jsonl"
     if manifest.exists():
@@ -340,6 +389,7 @@ def build_variants(
     base_state=None,
     predecessor_id=None,
     predecessor_holder=None,
+    audit_rule=DEFAULT_AUDIT_RULE,
 ):
     """Rotation (s = 1) and scaled variants of one edit, staged under ``stage_root/<variant id>``.
 
@@ -350,11 +400,21 @@ def build_variants(
     sorted-name order through :func:`rotation.rotate_block` (each tensor starts from its cloned state).
     A tensor with an exclusion reason, or a failed audit, excludes the whole rotation pair: its entry holds
     only ``variant.json`` and is not added to the staged manifest. Never writes into the canonical zoo.
+    ``audit_rule`` selects the audit that decides the rotation exclusions (the construction is the same):
+    ``a533`` is the registered realised audit (norm, spectrum and 1e-3 rank of R_eff against D_eff, plus
+    fp32 orthogonality and reconstruction); ``f10`` is F10.3 (remedy d): per tensor the fp64 construction
+    checks, support, bitwise replay from the seed and the round-to-nearest bound
+    (:func:`rotation.f10_tensor_audit`), per edit sum ||R_eff||^2 >= 1/2 sum ||R||^2
+    (``sub_resolution``); the realised statistics are written as diagnostics. Scale variants of a step
+    whose predecessor is not the base scale its realised increment D (no per-step Δ is stored) and carry
+    ``realised_increment_ladder: true``.
     ``predecessor_holder`` records the zoo entry whose stored bytes gave ``predecessor_state`` when the
     predecessor is an alias without bytes of its own; the scoring plan checks the holder's bytes.
     """
     from wsp.zoo.apply import load_entry_delta
 
+    if audit_rule not in AUDIT_RULES:
+        raise ValueError(f"unknown audit rule {audit_rule!r} (expected one of {AUDIT_RULES})")
     entry_dir, stage_root = Path(entry_dir), Path(stage_root)
     canonical = entry_dir.resolve().parent
     staged = stage_root.resolve()
@@ -477,7 +537,17 @@ def build_variants(
         (d / "variant.json").write_text(json.dumps(info, indent=1, sort_keys=True))
         _upsert_stage_rows(stage_root, header, rows)
         return Variant(
-            vid, kind, float(strength), seed, source_id, predecessor_id, d, excluded, exclusions
+            vid,
+            kind,
+            float(strength),
+            seed,
+            source_id,
+            predecessor_id,
+            d,
+            excluded,
+            exclusions,
+            info.get("audit_rule"),
+            info.get("realised_increment_ladder"),
         )
 
     # rotation at s = 1
@@ -492,25 +562,49 @@ def build_variants(
             reason = rotation.exclusion_reason(D[k], *blocks[k])
         if reason:
             exclusions.append({"tensor": k, "reason": reason})
-    audits, states, R = {}, {}, {}
+    audits, states, R, edit_audit = {}, {}, {}, None
     if not exclusions:
         generator = torch.Generator()
         generator.manual_seed(seed)
+        frames = {}  # F10 replay frames, drawn from a fresh generator seeded with `seed`
         for k in edited:
             rows_k, cols_k = blocks[k]
             R_raw = rotation.rotate_block(D[k], rows_k, cols_k, seed, shared_generator=generator)
             states[k], R[k] = rotation.apply_and_round(W[k], R_raw)
-            audits[k] = _rotation_diagnostics(D[k], R_raw, R[k], W[k], rows_k, cols_k, generator)
-        exclusions = [
-            {"tensor": k, "reason": "audit_failed"} for k, a in audits.items() if not a["passes"]
-        ]
+            if audit_rule == "a533":
+                audits[k] = _rotation_diagnostics(
+                    D[k], R_raw, R[k], W[k], rows_k, cols_k, generator
+                )
+            else:
+                a = rotation.f10_tensor_audit(
+                    D[k], W[k], R_raw, R[k], rows_k, cols_k, seed,
+                    raw_delta=raw[k] if root else None, frames=frames, scorer_base=base[k],
+                )  # fmt: skip
+                a |= {"nonzero_d": int((D[k] != 0).sum()), "nonzero_r": int((R[k] != 0).sum()),
+                      "logged_d": _moments(D[k], W[k]), "logged_r": _moments(R[k], W[k])}  # fmt: skip
+                audits[k] = a
+        if audit_rule == "a533":
+            exclusions = [
+                {"tensor": k, "reason": "audit_failed"}
+                for k, a in audits.items()
+                if not a["passes"]
+            ]
+            edit_audit = _edit_audit(audits, D, R)
+        else:
+            exclusions = [
+                {"tensor": k, "reason": a["reason"]} for k, a in audits.items() if not a["passes"]
+            ]
+            edit_audit = _f10_edit_audit(audits)
+            if not edit_audit["energy_guard"]["passes"]:
+                exclusions.append({"tensor": None, "reason": "sub_resolution"})
     meta = {
+        "audit_rule": audit_rule,
         "tensor_audits": audits,
-        "edit_audit": _edit_audit(audits, D, R) if audits else {"passes": False, "n_tensors": 0},
+        "edit_audit": edit_audit or {"passes": False, "n_tensors": 0},
         "coverage": {
             "n_edited": len(edited),
             "n_rotated": len(audits) if not exclusions else 0,
-            "n_excluded": len(exclusions),
+            "n_excluded": sum(e["tensor"] is not None for e in exclusions),
             "fraction": (len(audits) / len(edited)) if not exclusions else 0.0,
         },
         "rotation_generator": "one torch.Generator per edit seeded with `seed`, shared across tensors in "
@@ -530,7 +624,8 @@ def build_variants(
                 "fraction_nonzero_lost": float((nonzero & (X == 0)).sum())
                 / max(int(nonzero.sum()), 1),
             }
-        variants.append(write("scale", s, states, {"tensor_stats": stats}, False, []))
+        ladder = {"tensor_stats": stats, "realised_increment_ladder": not root}
+        variants.append(write("scale", s, states, ladder, False, []))
     return variants
 
 
@@ -545,6 +640,38 @@ def _entry_files(d):
     }
 
 
+def _variant_row(v):
+    row = {
+        "variant_id": v.variant_id,
+        "kind": v.kind,
+        "strength": v.strength,
+        "seed": v.seed,
+        "source_id": v.source_id,
+        "predecessor_id": v.predecessor_id,
+        "excluded": v.excluded,
+        "exclusions": v.exclusions,
+    }
+    if v.kind == "rotation":
+        row["audit_rule"] = v.audit_rule
+    else:
+        row["realised_increment_ladder"] = bool(v.realised_increment_ladder)
+    return row
+
+
+def _f10_subsets(variants):
+    """F10.5(c), (e): edits whose rotation is in the pooled-norm (<= 2e-2) and noise-calibrated subsets."""
+    out = {"pooled_norm_le_2e-2": [], "noise_calibrated": []}
+    for v in sorted(variants, key=lambda v: v.source_id):
+        if v.kind != "rotation" or v.audit_rule != "f10":
+            continue
+        e = json.loads((v.entry_dir / "variant.json").read_text())["edit_audit"]
+        if e.get("in_subset_pooled_norm_2e-2"):
+            out["pooled_norm_le_2e-2"].append(v.source_id)
+        if e.get("in_subset_noise_calibrated"):
+            out["noise_calibrated"].append(v.source_id)
+    return out
+
+
 def manifest_for(selections, variants, code_sha):
     """A5.11 pieces computable from the staged zoo (no paths, no timestamps: deterministic)."""
     edit_ids = sorted(s.edit_id for s in selections)
@@ -552,34 +679,31 @@ def manifest_for(selections, variants, code_sha):
         {s.predecessor_id for s in selections} | {v.predecessor_id for v in variants}
     )
     by_id = sorted(variants, key=lambda v: v.variant_id)
+    rules = sorted({v.audit_rule for v in variants if v.kind == "rotation"})
+    if len(rules) > 1:
+        raise ValueError(f"rotation variants staged under different audit rules {rules}")
+    rule = rules[0] if rules else None
+    ladders = sorted(
+        v.variant_id for v in by_id if v.kind == "scale" and v.realised_increment_ladder
+    )
     return {
         "schema": "a5-part-a-launch-v1",
         "code_sha": code_sha,
+        "audit_rule": rule,
+        "realised_increment_ladder_variant_ids": ladders,
         "edit_ids": edit_ids,
         "component_ids": sorted(s.component_id for s in selections),
         "predecessor_ids": predecessors,
         "selections": [asdict(s) for s in selections],
         "variant_ids": [v.variant_id for v in by_id if not v.excluded],
         "excluded_variant_ids": [v.variant_id for v in by_id if v.excluded],
-        "variants": [
-            {
-                "variant_id": v.variant_id,
-                "kind": v.kind,
-                "strength": v.strength,
-                "seed": v.seed,
-                "source_id": v.source_id,
-                "predecessor_id": v.predecessor_id,
-                "excluded": v.excluded,
-                "exclusions": v.exclusions,
-            }
-            for v in by_id
-        ],
+        "variants": [_variant_row(v) for v in by_id],
         "delta_sha256": {v.variant_id: _entry_files(v.entry_dir) for v in by_id if not v.excluded},
         "reference_ids_needed": {"predecessors": predecessors, "originals": edit_ids},
         "selected_without_variants": sorted(set(edit_ids) - {v.source_id for v in variants}),
         "variants_without_selection": sorted({v.source_id for v in variants} - set(edit_ids)),
         "minutes_per_entry": MINUTES_PER_ENTRY,
-    }
+    } | ({"f10_subsets": _f10_subsets(variants)} if rule == "f10" else {})
 
 
 # ---------------------------------------------------------------------------------------- scoring plan
@@ -932,6 +1056,31 @@ AUDIT_FIELDS = (
     "s31_passes",
     "passes",
 )
+F10_AUDIT_FIELDS = (  # written in addition when the rotation was audited under F10
+    "failed_checks",
+    "reason",
+    "construction_passes",
+    "prerounding_spectrum_mismatch",
+    "prerounding_rank_d",
+    "prerounding_rank_r",
+    "construction_residual",
+    "replay_passes",
+    "replay_bytes_equal",
+    "scorer_roundtrip_mismatches",
+    "rounding_bound_passes",
+    "rounding_bound_violations",
+    "rounding_bound_max_ratio",
+    "n_exceed_half_ulp_w",
+    "norm_mismatch_signed",
+    "kappa",
+    "eps_hat",
+    "eps_D",
+    "tau",
+    "noise_rank_d",
+    "noise_rank_r",
+    "noise_calibrated_passes",
+    "energy_ratio",
+)
 
 
 def audit_rows(variants, shapes):
@@ -952,9 +1101,10 @@ def audit_rows(variants, shapes):
                     "seed": v.seed,
                     "tensor": t,
                     "shape": list(shapes[t]),
+                    "audit_rule": meta.get("audit_rule", "a533"),
                     "verdict": reasons.get(t, "pass" if a.get("passes") else "not_audited"),
                 }
-                | {k: a[k] for k in AUDIT_FIELDS if k in a}
+                | {k: a[k] for k in AUDIT_FIELDS + F10_AUDIT_FIELDS if k in a}
             )
     return out
 
@@ -973,6 +1123,7 @@ def edit_audit_summary(variants):
             "predecessor_bytes_holder": meta.get("predecessor_bytes_holder"),
             "seed": v.seed,
             "pair_verdict": "excluded" if v.excluded else "pass",
+            "audit_rule": meta.get("audit_rule", "a533"),
             "exclusions": v.exclusions,
             "coverage": cov,
             "unrotated_tensors": cov["n_edited"] - cov["n_rotated"],
@@ -1034,7 +1185,12 @@ def prepare(args):
             pred, kw["base_state"] = load_edited_model(base, entry), base
             kw["predecessor_holder"] = holder
         variants += build_variants(
-            zoo / s.edit_id, pred, rotation_seed(s.edit_id), tuple(args.strengths), **kw
+            zoo / s.edit_id,
+            pred,
+            rotation_seed(s.edit_id),
+            tuple(args.strengths),
+            audit_rule=args.audit_rule,
+            **kw,
         )
         print(
             f"staged {s.edit_id}: {[v.variant_id for v in variants[-1 - len(args.strengths) :]]}",
@@ -1144,6 +1300,12 @@ def main(argv=None):
     p.add_argument("--n-lora", type=int, default=30)
     p.add_argument("--n-chain", type=int, default=10)
     p.add_argument("--strengths", type=float, nargs="+", default=[0.25, 0.5])
+    p.add_argument(
+        "--audit-rule",
+        choices=AUDIT_RULES,
+        default=DEFAULT_AUDIT_RULE,
+        help="rotation exclusion audit: a533 (registered realised audit) or f10 (F10.3, remedy d)",
+    )
     s = sub.add_parser("score", help="run wsp.eval.batch on the staged zoo (inside agent-tmux)")
     s.add_argument("--stage", required=True, help="staged zoo directory (OUT/<zoo name>)")
     s.add_argument("--config", default=DEFAULT_CONFIG)
