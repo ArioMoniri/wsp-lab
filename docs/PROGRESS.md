@@ -800,3 +800,11 @@ input-binding run of the analysis; the launch script's single-call proofs+scorin
 two-phase script with `score --proofs-only`; `tests/test_a5_simulation.py:598` (expects 40 edits) → updated for 52; slot mapping
 written post-run (`slot_mapping_f11.json`, disclosed; mapping hash matches); run records enriched (516d9c9); F11.8 clarification,
 disclosures and attestations 15–21 → A5 note F11c. Staging report in flight. Scoring held.
+
+**11 Nov 2026, 10:03 UTC.** F11 staging report merged (`part_a/SUPPLEMENT_REPORT.md`, ff81181): 43/52; all 12 supplements
+pass (535/535 tensors); the forty's 249 files identical; freeze matched including the Torch hash under the frozen environment;
+calibration PASS 0.8722 [0.8655, 0.8787]. Chair notes on its §10 gaps appended to A5 (manifest code_sha disclosure; selection builder
+now pinned, re-pin (xxii); launch records enriched; **ordering violation disclosed** — the calibration ran before the staging report
+and Board A's acceptance, and the slot mapping was written afterwards; remedy offered: re-run the frozen command after acceptance
+and require byte-identical output; Torch-hash reproduction commands recorded). Board A review of staging evidence + calibration
+requested. In flight: predictions file (CPU), two-phase launch hardening, F11c note. Scoring held.
