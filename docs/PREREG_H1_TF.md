@@ -4646,3 +4646,255 @@ re-pin (xxvii) changes; phase 2 is not authorised by this note.
 *A5.1.2 re-pin (xxvii) (11 Nov 2026, 11:37 UTC).* `scripts/part_a_score_launch.sh` `19f90aefe0321f41…` (old `92a3dee4…`,
 xxvi); `tests/test_part_a_score_launch.py` `291e778321abfd85…`; `code_hashes.json` `5a8b52bc1adf6680…` (old
 `6aaef05a…`, xxvi); README `88d12fa5fd823b98…`. Nothing scored.
+
+#### A5 amendment F12 (11 Nov 2026, before any G3 outcome): learned model-specific world model against the first-order field; additivity panel
+
+This block is appended; earlier text is not rewritten. It records the chair decision of council round 6
+(`docs/council/2026-11-11/SYNTHESIS-r6.md` §§1 and 3; brief `BRIEF-r6.md`; member reports `round6-world-model.md`,
+`round6-representation.md`, `round6-metrology.md`, `round6-editor.md`, all in the same directory) on the user's thesis that the
+registered predictor is "a single neuron" and that a model-specific world model is needed. It was drafted on branch
+`council/2026-11-11` at `2d61b22` (main at `7c1bc54`), while Part A is staged, frozen and released with conditions but **unscored and
+held** (F11e), and before any G3, rotation, ladder, sealed, F8 or F9 outcome had been read. It adds a secondary, outcome-blind test
+and an additivity panel. It changes no registered arm (A5.4), Part A selection (A5.1.2, F11.2), decision rule (A5.5), line-stop rule
+(F5.5), H5 success criterion (A5.7), seed, cap or pin (F12.9). Board A reviews F12 before its power simulation runs. Counts below are
+recomputed from committed manifests and cite their exact fields; where a member report's count did not reproduce, the discrepancy
+is stated, not repaired. Settings that neither the synthesis nor a member report fixes are marked **drafting default, Board A may
+change before the simulation runs**.
+
+**F12.1 — Purpose: the user's thesis and the field's function class.** *Thesis.* A predictor learned from this base's own observed
+edit–outcome pairs should forecast edit effects better than the registered field, which the user calls a single neuron. *Function
+class (registered, A5.8.3; `src/wsp/features/response_field.py`).* With realised increments D_t = fp32(bf16(W_t + Δ_t)) − fp32(W_t),
+a = Σ_t⟨g_t, D_t⟩ and q = Σ_t ½tr(G_t D_t A_t D_tᵀ) ≥ 0 (K-FAC factors truncated at 99 % energy; q omits weight/bias off-diagonal
+and all cross-tensor blocks, the code notes it "is not joint q"), and the readout is ŷ = β₀ + β₁a + β₂q with ridge penalty 1. It is a
+fixed second-order Taylor model of this base: a linear functional whose ~10⁸ coefficients are this model's WikiText gradient, a
+block-diagonal Gauss–Newton magnitude, and at most three learned coefficients. "Single neuron" is right about the readout and wrong
+about the information, which is model-specific by construction. *Known blind spots* (world-model Q1; representation §1;
+metrology §1; editor Q1): (i) cross-tensor interactions — a and q are additive across tensors, so for any edit split into
+disjoint tensor sets the field predicts Δy(D₁ + D₂) − Δy(D₁) − Δy(D₂) = 0 exactly (F12.6); (ii) negative curvature — q ≥ 0, so
+ŷ(s) = β₁sa + β₂s²q changes sign at most once, at s* = |a|/q when a < 0 < q, improve-then-harm only; (iii) third-order effects,
+saturation, thresholds and termination, and everything on the generation side (F9.6); (iv) a per-edit gain Δy/a varying with
+family, rank or norm (one β₁); (v) path dependence (F6 withdrew the chain cross term after its 0.336 audit error; only re-anchoring
+restores exactness). It predicts effect sizes where the Taylor remainder is small next to |a| and only direction beyond; Part A tests
+direction only. *Outcome-free self-assessment* (world-model Q1, from `part_a/predictions_f11.json`): κ = q/|a| at s = 1 has median
+0.023 (κ > 1 for 2 of 52); s* < 1 for 1 of 46 defined; median predicted |a| 0.228 nats for LoRA (34 edits) and 0.00054 nats for
+chain (18), the latter below the 0.00487-nat panel-mean half-width (`docs/reviews/P5/tf-v1-requalification-2026-11-06.md`); a(0.5)/a(1) median 0.497, range −10.45 to 0.815. *No outcome
+evidence exists*: the 33/33, 33/33 and 25/25 agreements compare two computations of the same prediction
+(`part_a/PRESCORE_INVENTORY_2.md` §5), and F11.4's 0.8722 is simulated power under the registered 0.75 alternative. *The gap.*
+Part B's augmented StatNN and the F5.2 K+F head are restricted model-specific surrogates trained on this base's outcomes, but no
+registered contrast sets a learned model-specific predictor against the three-coefficient field head to head. F12 registers that
+contrast with the field nested inside the candidate, so that a win belongs to the learned part; F12-I registers the one experiment
+in which the field's answer is exactly zero. A JEPAWG-style latent dynamics model is not registered: one was built as M3
+(`src/wsp/predictor/models/__init__.py`, class `JEPA`, 16-d latent, VICReg) and scored ρ 0.15/0.13 on the seed split with 98 of 521
+successor pairs featured and 25 evaluated (`docs/reviews/P4/d3v2f-summary-2026-11-08.md`); in editing W + D is known exactly and the
+unknown is the response.
+
+**F12.2 — Population, folds and endpoint.** *Rows: roots only* (`components.jsonl` `parent_id` null), so every predecessor is the
+base and the field is exact. Part A components are the 40 of `selection.json` → `registered.component_ids` plus the components of
+the 12 `selection_f11.json` → `supplement_ids` (52; F11.5). *Existing roots:* entries with a TF-v1 primary record
+(`snapshot.json` → `content.tf_v1_records.primary`, `n_primary` 689 = 688 zoo entries in 126 components plus the `base` reference
+record), root, outside the 52 Part A components: **123 rows / 89 components** (chain 105, lora_sft 10, abliteration 4, random_dir 4);
+sorted-id sha256 `f96e4ea55f4e887abdd713e97b27a06eec2b80fba82a397fbe5d6b9a36ca2160`. *Purchasable development roots:* entries with
+no TF-v1 primary record, `component_status` `development`, outside Part A, `bytes_present` true, root, in a component holding no
+TF-v1 primary record: **147 rows / 145 components** (abliteration 79, random_dir 49, lora_sft 19); sorted-id sha256
+`d31b9686178eca25230f6e77ab61676aad2b14296b4f0e9612d9eb9bc003dba0`. The two sets share no component. *Population:* **270 rows /
+234 components** (chain 105, abliteration 83, random_dir 53, lora_sft 29 rows), sorted-id sha256
+`bd695b4ee6590156d2264b5f4c8dca252a1e63aced35d927a0d940d0eadd6348` (sha256 of the UTF-8 `json.dumps` of the sorted id list,
+Python defaults). Rows per component: 214 singletons, 12 pairs, 2 triples, 4 of four, 2 of five. Bytes: 225 rows are stored; the
+other 45 (existing chain roots) resolve through a same-component alias (`bytes_via_alias`, `exactness` bitwise). Deltas: 267
+distinct `content.zoo_bytes.entry_delta_hash` values; three pairs share a delta, each within one component, and stay as logical rows.
+*Exclusions, never scored by F12:* the 52 Part A components; every entry of a `confirmatory` or `fresh_unselected` component (no new
+scoring, no G7 freshness spent); task vectors (the 30 in the purchasable components are not roots); non-root chain steps; `excluded`
+and status-less components. *Discrepancy disclosed (Board A rules before the simulation).* 44 of the 123 existing roots (all chain
+root steps, 37 components) lie in components whose current status is `confirmatory`: the old-seal components the G6 census scored
+(`snapshot.json:old_seal`, A5.9.1), G6-exposed and barred from G7. This draft reads "confirmatory components excluded" as "no
+confirmatory entry is newly scored", which keeps the synthesis's 270 / 234. The literal reading, exclusion by status, gives **226
+rows / 197 components** (79 + 147 rows; 52 + 145 components). Board A chooses one reading before the simulation runs; the simulation
+and the analysis use only the chosen population; under the 270 reading the 226-row restriction is reported descriptively.
+*Exposure.* All 123 existing outcomes are on file and 117 carry a G0, G1 or G6 row in `snapshot.json:exposure_ledger`; all are
+treated as exposed development outcomes, so A4.4 wording applies and results are split existing versus purchased descriptively.
+The 147 purchased rows are fresh development rows. *Outer folds.* Five component folds. Stratum of a component = its family; the one
+component holding two families (random_dir `db5c3a7bfc19178c` and chain `4b67b0aa12cce3e5`) is stratum `mixed` (strata:
+abliteration 83, chain 71, random_dir 50, lora_sft 29, mixed 1 components). Within each stratum components are ordered by
+sha256(UTF-8 `20261111:f12:` + component id) ascending; the strata are concatenated in the order abliteration, chain, lora_sft,
+mixed, random_dir and components are assigned round-robin to folds 0–4 by position (drafting default for the stratification). The
+fold manifest is frozen and hashed before any F12 field token is computed. *Inner folds, seeds and stopping:* the F5 pins exactly
+(outer-training components ordered by sha256(`20261110:lol-inner:` + component id), round-robin to four inner folds; seeds 0/1/2 by
+`torch.manual_seed`; ≤ 300 epochs, patience 30, refit epochs floor((e₍₂₎ + e₍₃₎)/2) ≥ 1; seed predictions averaged before the loss).
+*Endpoint:* TF-v1 WikiText mean NLL change Δy = y(W₀ + D) − y(W₀), nats per valid next token over the 64 windows of 1,024 tokens,
+common base reference, under `configs/eval_tf_v1.yaml` (sha256 `5c20cabe8e35b4116adeed4df650cf27461e7ab144ef66c0b60c397b13b00317`,
+F8a.7). MMLU is not an F12 endpoint.
+
+**F12.3 — Models.** All arms share rows, outer and inner folds, seeds, fitting opportunity and the F5-pin eligibility rule (a row
+lacking r, a finite SVD or a K frame is excluded from every arm, listed before fitting; r is the adapter rank for LoRA and chain
+roots, 1 for abliteration and random_dir). No outer-held-out row selects anything. *Baseline F3:* the A5.8.3 field calibration
+ŷ_F3 = β₀ + β₁Σa + β₂Σq, ridge penalty 1, fitted per outer fold on outer-training rows only. *Candidate WM-R:* ŷ_WM = ŷ_F3 + h_θ(x),
+where h is the F5-pinned K+F head (token columns 0–38 of the F5 schema pins with K blocks, WikiText objective in column 35;
+h1 = GELU(W1x_t + b1 + E[ρ_t]) (16), h2 = GELU(W2h1 + b2) (16), 12×16 role embedding, masked sum and mean pooling, linear head;
+f(D) − f(0), exactly zero at zero edit; 1,137 nominal parameters) plus cached probe D·x summaries. The summaries enter as three further token columns
+(drafting default): for each `mlp.down_proj` token (the MLP writers of A5.8.3, whose post-gating x is cached on the scoring-disjoint
+64-prompt probe panel) column 39 is the root-mean-square over output coordinates of the per-coordinate mean of D_t x, column 40 the
+root-mean-square over output coordinates of the per-coordinate RMS of D_t x, column 41 a probe-presence flag; 0 elsewhere. W1
+becomes 42×16, so WM-R's head has **1,185** nominal parameters (1,137 + 48). h is trained with L1 loss on F3's outer-training
+residuals Δy − ŷ_F3 (the F5.1 recipe with F3 in the role of the nuisance fit: AdamW lr 1e-3, weight decay 1e-2, batch 16), so WM-R
+reduces to F3 at zero edit and any gain belongs to h. The F5-pin gauge audit applies to WM-R; a violation makes its contrasts
+undefined. *Comparator: augmented StatNN on the same inputs.* The F5-pin augmented comparator for K+F: v4 pooled statistics plus
+WM-R's 42-column masked token for each of the 186 matrix slots, zero padding and a presence column, flattened in A5.8.3 order;
+A5.8.4 settings, tree count chosen on the same inner folds from {100, 300, 600} (lowest mean inner L1, smaller count on ties);
+fitted to the same F3 residuals, ŷ_S = ŷ_F3 + tree. It receives every scalar WM-R receives plus the v4 statistics (as in the F5
+pins), which is disclosed and conservative for WM-R. *Sensitivity arms (descriptive), same folds, residual target and zero-edit
+subtraction, inputs the comparator's flattened vector x standardised with outer-training statistics:* (K) Gaussian-kernel ridge
+residual (representation §2(c)): bandwidth the median pairwise Euclidean distance among outer-training rows; ridge λ chosen on the
+four inner folds from {10⁻³, 10⁻², 10⁻¹, 1, 10} (lowest mean inner L1, larger λ on ties; drafting default); n_train coefficients;
+prediction k(x) − k(x₀) with x₀ the zero-edit input. (M) Width-8 residual MLP (editor Q4–Q5): one GELU hidden layer of width 8,
+8d + 17 parameters for input width d, F5.1 training recipe and F5-pin nested stopping and seeds, prediction f(x) − f(x₀).
+*Controls (descriptive; editor Q4–Q5):* WM-R−F, field-absent (token columns 35–38 zeroed in h; F3 unchanged); WM-R-perm, columns
+35–37 recomputed from the frozen A5.8.3 permuted-field control (`20261107:permuted-field:`), reported with that control's
+eligibility audit.
+
+**F12.4 — Contrasts, intervals and decision wording.** A_x = Σ_i |Δy_i − mean_s p_x,s(i)| over the out-of-fold predictions of the
+analysed population (seeds averaged; F3 has none). **C_WM = 1 − A_WM/A_F3** and **C_WM,S = 1 − A_WM/A_S**. Each takes A5.4.2's
+conditional (resampling whole components) and joint (also resampling the 32 common two-window item blocks of F8a.2 across all rows
+and the shared base reference) bootstrap-t intervals on L = log(A_WM/A_comparator), **4,000 draws, PCG64 seed 20261107**, linear
+.025/.975 quantiles, component influences, with every A5.4.2 guard and failure rule (A_x/n > 1e-12 nats, ≥ 2 distinct components in
+the point data and every draw, all 4,000 draws valid; no retry, clamp or replacement). *Decision (scientific wording only),
+evaluated once in this order; equality as A5.5.1 (≥ inclusive; "> 0" and "< 0.05" strict; exactly 0.80 meets power):*
+1. **Unresolved (validity)** — any A5.4.2 failure in C_WM or C_WM,S, a missing manifest or hash, a failed F12.5 gate, an exhausted
+   cap or a WM-R gauge violation.
+2. **"Correction detected"** — C_WM ≥ 0.05 and C_WM,S ≥ 0.05, and the conditional and joint lower bounds of **both** contrasts > 0.
+   Both comparators must pass (intersection–union; no multiplicity adjustment is needed or applied).
+3. **"None detectable"** — the conditional and joint upper bounds of C_WM are both < 0.05 and F12.5's simulated ordered power at
+   oracle C = 0.15 is ≥ 0.80 on the analysed population. C_WM,S is reported beside it and cannot rescue or reverse it.
+4. **"Unresolved"** — otherwise.
+
+"Correction detected" means that a learned model-specific residual reduced held-out absolute error relative to both the
+three-coefficient field and the same-input tree on these root rows; "none detectable" means that this arm's correction is bounded
+below 0.05 at adequate power, not that no world model can help. Neither is a falsifier of the field or of Part A (A4.4; 123 rows
+are exposed). F12 has **no A5.5, F5.5, funding, G7 or G8 authority**, cannot satisfy, fail, rescue or reopen any F5.5 predicate or
+Part B threshold, and does not change Part A's decision. *Descriptive, reported alongside with the same interval machinery (failed
+descriptive intervals are labelled undefined, A5.4.2):* (a) zero-fit E₀ = 1 − Σ(Δy − a)²/ΣΔy² over the population (F9.2's primary
+form at s = 1, its bias²/conditional-MSE split, component bootstrap 4,000 draws, SeedSequence 20261107); (b) leave-one-family-out
+C_WM: for each of abliteration, chain, lora_sft and random_dir, F3 and WM-R are refitted on all other strata (the `mixed`
+component always trains) and predict the held-out family; (c) the K and M sensitivity arms against F3 and against StatNN; (d) the
+controls, C_WM:WM−F and C_WM:WM-perm; (e) C_S:F3 = 1 − A_S/A_F3, the tree against the field; (f) every contrast split existing
+versus purchased rows; (g) the 226-row restriction (F12.2) under the 270 reading.
+
+**F12.5 — Outcome-free power simulation and purchase gate.** Before any purchase, on CPU, on the real token matrix X of the
+population (F3 inputs, K+F tokens and probe columns computed under F12.8 for every row; no outcome is read). *Data-generating
+process:* Δy_i = a_i + γ·h\*(x_i) + ε_i, with a_i the row's realised Σa and h\* a random function of WM-R's architecture: an
+untrained head at PyTorch default initialisation under `torch.manual_seed(seed("20261111:f12:", "hstar:<r>"))` for replicate r,
+scaled to unit standard deviation over the rows (seed(domain, key) is the `control_seeds.json` rule, `scripts/a5_build_panels.py:
+domain_seed`). *Noise:* ε from the qualification noise payload of F8a.2 (`data/runs/a5/nullsize/inputs.json`, sha256
+`67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de`; `centred_noise` [141, 64], `window_mask`, `donors[j].component`;
+141 donors in 63 components). Per replicate the payload's components are resampled with replacement and assigned to the simulated
+components; the rows of one simulated component draw donors from one payload component; ε_i is the window mean of the drawn
+donor's centred noise, and the window values are kept so that the joint procedure resamples the same 32 common blocks across rows
+(component and item clustering per A5.4.2). The noise is centred per donor and carries no edit mean (A5.3.2 clarification (ii)).
+*Effect size:* γ is set per h\* so that the oracle predictor a + γh\* has C = 0.15 against out-of-fold F3, averaged over 100 noise
+draws to within ±0.005 by bisection (drafting default); **γ = 0 is the null**. A **variance-×2** scenario (ε scaled by √2) is
+reported and does not gate. *Each replicate* refits F3, WM-R and StatNN with the full nested folds and seeds and computes the
+F12.4 decision with 4,000-draw conditional and joint intervals. *Gates* (point estimates with exact CP intervals; equality passes):
+**size ≤ 0.07** — under γ = 0, the rate at which C_WM's lower bound is > 0, separately for the conditional and the joint procedure,
+and the rate of "correction detected", each ≤ 0.07 at nominal 0.05; **ordered power ≥ 0.80** — under the alternative, the rate of
+"correction detected". *Smallest valid holdout* (metrology §5): candidate sets S_k = the existing components plus the first k
+purchasable components in the order sha256(UTF-8 `20261111:f12:purchase:` + component id) ascending, k ∈ {0, 29, 58, 87, 116, 145}
+(drafting default); folds are recomputed on S_k by the F12.2 rule; the purchase is the smallest S_k on which both gates pass. If
+none passes at k = 145, F12 is **not bought** and stands "unresolved — not powered"; no larger or different purchase follows
+without a new amendment. *Replicates:* 1,000 per scenario and k (drafting default), seeds seed("20261111:f12:",
+"sim:<scenario>:<k>:<r>"). A 10-replicate pilot measures CPU time and the projected total is recorded and accepted by the chair
+before the full run. Simulation code, configuration and inputs are hashed and committed before the run and its report before any
+purchase. **Purchase only after both gates pass and Board A accepts the simulation report.**
+
+**F12.6 — F12-I additivity panel (descriptive).** *Entries (36):* (a) the 16 lora_sft roots of the purchasable set with
+`eligibility` `eligible` (16 components; ids `64b10bbaef2b726d`, `6cf90a51c4244720`, `81ffbb2850280a20`, `823f35704d34f1d8`,
+`8289fa52f33a8d0d`, `89a781074d330a7e`, `94804c08e9e63a25`, `a202c469c4f60027`, `af6664b98264308c`, `d904e32c5c8bc52e`,
+`e0235707664804ef`, `f3e1be8e4fe2c66b`, `f4b10903b8e09e24`, `f66b8fbbfa3e43d0`, `f8c2cf0c6b9ffa8c`, `fc796b847b42a34b`), each split
+into an early half (tensors of layers 0–11) and a late half (layers 12–23): 32 entries; (b) the F8-E Astra two-tensor patch
+(F8.1(i)) split by tensor: 2 entries; (c) the Concept Country-style construction, F8a.2's C4 rank-one down-projection edit (layer 12
+`down_proj`, ρ = 0.05, labelled an own-definition contrast), split in halves by input-column index (columns j < in/2 and j ≥ in/2;
+drafting default): 2 entries. **36 entries ≈ 0.62 GPU-h** (36 × 1.04 min = 37.44 min). *Construction:* each part is the full
+entry's update restricted to a disjoint support and applied to the base in bf16; because rounding is elementwise, the realised
+parts must sum bitwise to the full realised delta, which is verified at construction and fails closed. A half with zero realised
+delta is a no-op: not scored, its I undefined and reported, never substituted. *Full entries:* Δy(full) comes from F12 scoring (a),
+F8-E (b) and F8-F (c). A full not on file when F12-I scores (F12 not bought, its component outside the purchased S_k, or an F8 gate
+or the F8a.4 Astra qualification failed) is scored inside F12-I at 1.04 min each, at most 18 entries (18.72 min), under F12.8's
+stop-and-reprice rule; a failed Astra qualification drops (b) and is reported. *Statistic:* per window w,
+I_w = y_w(full) − y_w(part₁) − y_w(part₂) + y_w(base), and I = mean_w I_w = Δy(full) − Δy(part₁) − Δy(part₂), all on the common
+base reference. Interval: the A5.3 resolution rule (32 two-window blocks, percentile bootstrap, 4,000 draws, resolved iff the interval
+strictly excludes 0), RNG seed("20261111:f12-i:", "<full entry id>"). *Against the F8a floor:* each |I| is reported beside F8a.2's
+h\* as recorded in `floor.json`, and labelled above floor iff |I| > h\*. The summary is the number of resolved I among the 18 split
+edits with exact CP intervals over independent components; below 30 clusters it is entries-only (F9.2). *The field's prediction:*
+a is linear in D, so a(full) − a(part₁) − a(part₂) = 0 exactly for every split; for (a) and (b), whose parts are disjoint tensor sets,
+q is additive too and the zero-fit forecasts s·a and s·a + s²·q both predict **I = 0 exactly**; for (c), a within-tensor split, a
+predicts 0 and q predicts its within-tensor cross term q(full) − q(part₁) − q(part₂), recorded in the forecast. A resolved I is
+direct evidence of an interaction the field cannot represent, i.e. for the thesis; an unresolved I says nothing. F12-I has no
+decision authority. (World-model table: no resolved I → no interaction target; a latent dynamics model is reopened only if F12-I
+resolves interactions.)
+
+**F12.7 — Ordering and governance.** (1) *Register now.* F12 reads nothing from Part A: its 52 components are excluded and no Part A
+prediction, staging record, calibration, score or ledger informs any F12 choice. (2) *Board A* reviews F12, rules on the F12.2
+reading and accepts or changes every drafting default before the simulation runs. (3) *Freeze.* F8a's freeze rules apply with
+`f12` in place of `f8`: one freeze of F12 and F12-I under `docs/prereg/f12_manifests/`; a C1 commit (fold manifest, population and
+purchase order, F12-I construction inputs and part supports, simulation code and config, code hashes, exposure attestations) before
+any F12 delta is contracted with the field, and a C2 commit (deltas, field tokens, F9.1 forecast batch, simulation report, code
+hashes) before the first F12 score; the hash chain of F8a.1(a) with H₀ = sha256(UTF-8 `f12-manifest-v1:` + S), S the full sha of the
+commit that first adds this heading; code pinned in C1 and equal in C2 (F8a.1(b)); exposure attestations for every decision-maker
+(F8a.1(c)); after any exposure, an explicitly exploratory amendment before scoring (F8a.1(d)). (4) *Forecasts.* Every F12 and F12-I
+entry to be scored gets its F9.1 row (a, q, κ, s\*, sign(a), quadratic-sign forecast, top-k tensor shares, chart output or
+abstention, anchor `base-exact`, selection status `outcome-blind`) before scoring, and each batch's SHA-256 is committed before its
+first scoring job. (5) *Scoring* happens after the Part A ledger is sealed and after the F8 and F9 panels' scoring records close, in
+the order Part A → F8-E → F8-F → F9 → F12 → F12-I. (6) *Analysis* runs once, with pinned code; the 123 existing TF-v1 records are
+read for F12 only in that run; the simulation reads only the centred payload of F12.5.
+
+**F12.8 — Cost and stop-and-reprice.** *Scoring:* 147 × 1.04 min (`part_a/manifest.json:scoring.minutes_per_entry`) = 152.88 min
+**≈ 2.55 GPU-h**, **cap 3 GPU-h** (2.66 GPU-h at the census rate of 11.2 GPU-h per 618 entries, `docs/PROGRESS.md` 7 Nov); a smaller
+S_k costs its rows × 1.04 min. *Fields:* 270 × 94.3676 s = 25,479 s **≈ 7 CPU-h** at the measured 13,305.825513 s per 141 donors
+(`fields_manifest.json` summary, quoted in `docs/H5_DESIGN.md`); rows whose fields already exist are reused after an identity
+check. K blocks, SVDs and probe summaries are CPU, measured and charged. *F12-I:* **≈ 0.62 GPU-h** (37.44 min) for the 36 entries,
+plus at most 18.72 min for fulls not on file (F12.6), ≤ 56.16 GPU-min in all. *Simulation:* CPU, priced by its pilot (F12.5).
+*Stop-and-reprice:* after the first 10 entries of each purchase the measured rate is projected; a projection above the cap, or any
+overrun, stops scoring until a dated amendment reprices. References, failures and retries are charged. H0 TF-v1 scoring; no
+allocation is borrowed from Part A, G5, G7, F8 or F9.
+
+**F12.9 — What does not change.** Part A: the 52-component selection, staged bytes, frozen predictions, analysis (F11.5), its
+release conditions (F11e) and its priority. Part B: the A5.4 arms, primary contrast, controls, thresholds and intervals. The ordered
+decision function A5.5, the line-stop rule F5.5, the H5 success criterion A5.7, the F5 pins and F5 family, F8/F8a and F9/F9a.
+Seeds (`control_seeds.json`; `SeedSequence(20261107)`; PCG64 20261107), every pin, cap and allocation other than F12's own, and the
+F7.1 donor pool.
+
+**F12.10 — Brief corrections recorded.** (a) TF-v1 primary records: **689** (`snapshot.json` →
+`content.tf_v1_records.n_primary`; 688 zoo entries in 126 components plus `base`), 648 of them chain
+(`g6_census.chain_entries_with_primary_record`), not 694. The zoo has 1,259 entries (`closure_reconciliation.n_entries`), so
+1,259 − 688 = 571 entries lack a primary record (development 302, confirmatory 118, fresh_unselected 106, excluded 33, no status 12),
+not 565. (b) Chain: **675 entries / 93 components** (`g6_census.chain_entries`; `components.jsonl`); 618 is the G6 census count
+(`exposure_ledger.counts["G6:census"]`); 99 counts lineages with ≥ 4 nodes (world-model report; not recomputed here). (c) Only
+**147** development roots can be scored without spending G7 freshness, **≈ 2.55 GPU-h**, not 565 entries at 9.8 GPU-h. The
+world-model report's "177 entries / 172 components" reproduces as **177 entries / 145 components** (147 roots + 30 task vectors)
+under the filter of F12.2; without the "no TF-v1 record in the component" condition the same filter gives 233 entries / 181
+components and 194 roots. (d) **M3** is the JEPAWG-style model: ρ **0.15/0.13** (0.1548/0.1335, seed split; 0.12/0.07 trajectory);
+the brief's "JEPA-style 0.42/0.56" and "0.45/0.50" are m1_matched (W2T-style). (e) arXiv **2605.06298** is a video world model with no
+weight edits. (f) **WeightLoop** (arXiv 2611.07319) computes exact output changes Δprediction = s_y Δwᵀh from cached features, even
+for finite edits, which qualifies the brief's "no forecast" summary.
+
+| clause | rule | evidence | gate |
+|---|---|---|---|
+| F12.1 purpose | none changed; states the field's function class and blind spots | A5.8.3; `response_field.py`; `predictions_f11.json` via world-model Q1; `PRESCORE_INVENTORY_2.md` §5; d3v2f summary | accept the statement as outcome-free |
+| F12.2 population | 270 roots / 234 components (123 existing + 147 purchasable); exclusions; folds `20261111:f12:`; F5 inner folds and seeds; TF-v1 WikiText Δy | `snapshot.json` (`content.tf_v1_records.primary`, `old_seal`, `exposure_ledger`); `components.jsonl`; `selection.json`; `selection_f11.json`; sorted-id sha256s above | Board A rules 270/234 vs 226/197; fold manifest frozen before field tokens |
+| F12.3 models | F3; WM-R = F3 + K+F head + probe columns (1,185 params); augmented StatNN; K and M arms; WM-R−F, WM-R-perm | A5.8.3; F5.1–F5.2; F5 pins; editor and representation reports | code and settings hashed in C1; drafting defaults accepted |
+| F12.4 contrasts | C_WM, C_WM,S; A5.4.2 conditional and joint, 4,000 draws, seed 20261107; detected / none detectable / unresolved; descriptives | A5.4.2; A5.5.1 equality; F9.2 | no A5.5/F5.5/funding authority |
+| F12.5 power | Δy = a + γh\* + ε on real tokens; ε from the F8a.2 payload; oracle C = 0.15; γ = 0 null; size ≤ 0.07, ordered power ≥ 0.80; smallest S_k | nullsize payload sha256 `67da223c…`; metrology §5; A5.4.2 | simulation report accepted by Board A before any purchase |
+| F12.6 F12-I | 36 split entries; I vs F8a floor; field predicts I = 0 | F8.1(i); F8a.2 (C4, h\*); A5.3 resolution rule | F9.1 forecasts before scoring; after F8/F9 |
+| F12.7 ordering | register now; C1/C2 freeze under F8a rules; score after the sealed Part A ledger and the F8/F9 panels | F8a.1; F9.1 | exposure attestations; exploratory amendment if exposed |
+| F12.8 cost | ≈ 2.55 GPU-h scoring, cap 3; ≈ 7 CPU-h fields; F12-I ≈ 0.62 GPU-h (≤ 56.16 GPU-min with fulls) | `part_a/manifest.json:scoring.minutes_per_entry` 1.04; `fields_manifest.json` 13,305.825513 s / 141 | stop-and-reprice |
+| F12.9 unchanged | Part A, Part B, A5.5, F5.5, A5.7, seeds, pins | — | — |
+| F12.10 corrections | 689; 675 / 93; 147 ≈ 2.55 GPU-h; M3 0.15/0.13; 2605.06298; WeightLoop | `snapshot.json`; `components.jsonl`; d3v2f summary; SYNTHESIS-r6 §1 | record only |
+
+*No-exposure attestation (drafting session, 11 Nov 2026).* This block was drafted by an implementation sub-agent session working
+only in the worktree `.worktrees/council/2026-11-11` on branch `council/2026-11-11`. The session opened no file under `data/` (no
+file under `data/evals`, no TF-v1 record, no score, no null-size payload); its only contact with `data/` was a directory listing
+of two entry names under `data/zoo/qwen3.5-0.8b`. It read committed files only: this preregistration, the council round-6 synthesis
+and member reports, the P4 d3v2f summary, `docs/RESULTS.md` (TF-v1 timing lines), grep hits in `scripts/a5_build_panels.py`,
+`src/wsp/predictor/models/__init__.py` and `docs/H5_DESIGN.md`, the commit hooks and `scripts/secret_scan.sh`, and the manifests
+`snapshot.json`, `components.jsonl`, `selection.json`, `selection_f11.json`, `control_seeds.json` (grep) and `part_a/manifest.json`
+(of which only `scoring.minutes_per_entry` was printed). From `snapshot.json` it read entry ids and file hashes of the
+TF-v1 records, never their contents. It saw no G3, rotation, ladder, reference, sealed, F8 or F9 outcome and no Part A score (none
+exists); it used no GPU and wrote nothing under `data/`. The counts and hashes above are functions of committed manifests only.
