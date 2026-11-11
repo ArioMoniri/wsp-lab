@@ -412,7 +412,11 @@ def test_f12b_end_to_end_null_and_alt_deterministic():
             # descriptive sensitivity: the other rules on the same draws
             assert set(st["sensitivity"]) == {"strict", "floor_one_way"}
             # F12c.2: each sensitivity record carries its own binding / raw counts
-            assert set(st["sensitivity"]["strict"]) >= {"valid", "joint_bootstrap_t", "floor_binding"}
+            assert set(st["sensitivity"]["strict"]) >= {
+                "valid",
+                "joint_bootstrap_t",
+                "floor_binding",
+            }
             assert all("target_sd" in f for f in r["fit"]["wmr"])
     alt = [r for r in recs if r["scenario"] == "alt"]
     for r in alt:

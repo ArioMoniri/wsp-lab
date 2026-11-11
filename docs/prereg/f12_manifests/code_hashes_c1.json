@@ -20,7 +20,7 @@
   "tests/test_f12_population.py": "924e73d7c9d8833d9e9a657b9ba61467d7dae3a37a4dc7a3c1afa977fcc937ad",
   "tests/test_f12_simulation.py": "b0ad68b5f93bf51dc90eb6c87925fbf1ccb7b1949145b0f8f33e3d12975e9f5d",
   "tests/test_f12_tokens.py": "b928b504328b0283dcba5d3e9b971f9f295a3fa4a9a42c82110526bf4db03e58",
-  "tests/test_f12b_repairs.py": "075a5cc6ff40fc82afcee269f386b52ca5295ad66713b8275407db647ebfc8b4",
+  "tests/test_f12b_repairs.py": "9c33d6fa401f05c696ce299e5b66d278377efb2615e2489b3a287c3e56f4c6a2",
   "tests/test_f12c_governance.py": "15d84f56bc74ff6bb01a2582addbce8f6ab55f5e112397534ee9013dea90c43c"
  },
  "note": "Draft of F12a.6(c) item 11. Not a C1 file until MANIFEST_C1.sha256 is committed; it is regenerated (python scripts/f12_simulation.py c1-draft) after any change to a listed file. Missing for C1: the token builder's C1 outputs, population/folds/schemas/models/intervals/f12i/resources files, the C1 verifier and exposure_c1.json.",
