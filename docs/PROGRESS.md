@@ -888,3 +888,11 @@ filter "components holding no TF-v1 record" (else 194 / 181); 45 alias-bytes roo
 separate acceptances before purchase and before scoring; F12-I: correct the column-split quadratic claim, freeze supports,
 paired inference, forecasts and the all-in budget. Unfiltered purchase metadata reproduces as 194 rows / 179 components (drafter said
 181). Next: F12 tooling (simulation code, field tokens for the 270 roots, F12-I constructions) under those conditions. Part A held.
+
+**11 Nov 2026, 12:40 UTC.** F12a merged (34dd317 → bb891f5): one clause per Board A condition; Board A's own noise
+construction adopted (a common resampled 32-block index per simulated panel applied to every donor vector, which produces the
+panel-mean variance from the qualification residuals); fixed 1,000 replicates with Bonferroni-split one-sided Clopper–Pearson
+bounds (power ≥ 838/1,000; each size count ≤ 46/1,000; 10,000 only by prospective amendment); F12 scripts to be pinned in
+`docs/prereg/f12_manifests/code_hashes_c1.json`; forecasts under F9a.2 before scheduling; F12-I C4 split tests J = I − c_q
+(descriptive); attestation 33. Housekeeping: `f10_attestations.md` had an accidental duplicate of entries 1–29 (merge-union
+artefact); removed, content unchanged. In flight: F12 simulation code and F12 inputs. Part A held.
