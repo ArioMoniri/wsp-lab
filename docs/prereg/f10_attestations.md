@@ -178,3 +178,100 @@ condition 7), and the scoring record adds one for the interval up to the scoring
 - **Statement (from its report to the chair, quoted):** "I did not run the 10,000-replicate registered run." It opened no file under
   `data/evals`; its inputs are the null-size payload and the sign predictions, not outcomes.
 - **Coverage:** about 01:20 to 02:40 UTC, 11 Nov 2026. Its report to the chair is on record only through this entry.
+
+## F11 entries (added 11 Nov 2026, after the F11 merge and Board A's F11 review; Board A F11 condition 1)
+
+Entries 10–13 cover the sessions that have so far decided, drafted or sized amendment F11 (`docs/PREREG_H1_TF.md`, F11 and note
+F11a). They are written by the F11a drafter (entry 13) from the committed record: the metrology report's provenance and exposure
+lines, `selection_f11.json:outcomes_read`, the F11 block's own attestation, `docs/PROGRESS.md` (06:40, 07:20, 07:50, 08:15 and 08:50
+UTC entries), git reflogs and the Board A F11 review. Coverage times are UTC, from the reflogs (branch creation and last commit).
+Board A's F11 line is in `docs/reviews/council/board-a-f11-2026-11-11.md` (role ML methods/pre-registration reviewer; session
+`review/board-a-f11`; 11 Nov 2026, through completion of that review) and is incorporated by reference (F11a.4). Not covered: the
+stager, the `prepare --supplement` and 52-slot-simulation implementation sessions and any later reviewer; each adds its own entry
+before it acts. The chair's coverage in entry 1 ended about 01:25 UTC; the chair's F11 decisions (07:20 UTC entry) fall after it, and
+entry 12 covers only the sizing runs, so the chair extends entry 1 through the F11 decisions and the final methodological freeze
+(review, condition 6).
+
+## 10. Council metrology member for F11 (added by the F11a drafter, 11 Nov 2026)
+
+- **Role:** council metrology member; author of `docs/council/2026-11-11/f11-metrology.md` (the resizing options, the k = 12
+  recommendation and the Option B fallback wording).
+- **Session identity:** Claude Opus 5.5, branch `council/f11-resize` (created from main `4c33fdb` 11 Nov 2026 06:37:44 UTC; commit
+  `2151b2c` 07:08:49 UTC; merged as `92fff4e`).
+- **Coverage:** 11 Nov 2026 06:37 UTC to the report commit at 07:08 UTC.
+- **Read and ran:** CPU only. It read the registration sections A5.3 to A5.5, F2, F5.7, F7, F10 and F10a, the Board A F10 review,
+  PROGRESS (06:30 and 06:40 UTC entries), the Part A staging metadata, the NULL-SIZE inputs and power fields, and the outputs
+  `data/runs/a5/power/sizing_slots_{34,37,39}.json`. Its reduced-replicate emulator and grid runs (500 replicates) wrote only to
+  `data/runs/a5/f11_sizing/` (`candidates.json`, `binomial_curve.json`, `donor_cell_resolvability.json`, `emulator_*.json`, 16 grid
+  outputs, logs and `code/`), not committed. It also produced the sizing outputs reported in the metrology report. It used no GPU.
+- **Attestation (quoted from `f11-metrology.md`):**
+
+> Not opened: anything under `data/evals`.
+>
+> Exposure: this member has seen no G3, rotation, ladder, reference or sealed outcome, nor a summary of one. Simulation inputs are
+> the pre-G3 NULL-SIZE payload and power fields.
+
+  The report's header adds "No GPU. Data read only. No file under `data/evals` was opened." (its own header says "Data read only";
+  the list above shows it wrote scratch files under `data/runs/a5/f11_sizing/`, which its provenance section also records). It
+  opened nothing under `data/evals`. The audit and calibration figures it used (31/40, 0.7514) are construction and design evidence,
+  not outcomes (Board A F11 review, "Legitimacy").
+
+## 11. F11 drafter (added by the F11a drafter, 11 Nov 2026)
+
+- **Role:** wrote the F11 block (F11.1–F11.9), the frozen supplementary list `selection_f11.json`, its builder
+  `scripts/a5_f11_supplement.py` and `tests/test_a5_f11_supplement.py`.
+- **Session identity:** Claude Opus 5.5, branch `prereg/f11` (created from main `04c64f0` 11 Nov 2026 07:07:47 UTC; commit `0a3049d`
+  07:20:43 UTC; merged to main).
+- **Coverage:** 11 Nov 2026 07:07 UTC to the commit at 07:20 UTC.
+- **Read and ran:** `docs/` (the registration, PROGRESS, the metrology report, the Board A F10 and F10-code-2 reviews, the Part A and
+  selection manifests); `scripts/` and `src/`; the zoo manifest `data/zoo/qwen3.5-0.8b/manifest.jsonl` and the `edit.json` files (and
+  a directory listing) of four candidates; the outputs `data/runs/a5/power/sizing_slots_{34,37,39}.json`. It ran the builder and its
+  11 tests on metadata (CPU). It made no GPU use, staged nothing, ran no simulation and wrote nothing under `data/`.
+- **Attestation (quoted from `docs/prereg/a5_manifests/selection_f11.json`, field `outcomes_read`):**
+
+> none: metadata manifests only (no TF-v1 record, evaluation file or G3 outcome)
+
+  and from the F11 block (F11.6): "It opened nothing under `data/evals`, used no GPU, staged nothing, ran no simulation and wrote
+  nothing under `data/`. It has seen no G3, rotation, ladder, reference or sealed outcome, or a summary of one." Disclosed: the
+  not-alias-only filter was in the chair's brief to this drafter, and the drafter's own report states the order and filters are
+  audit-informed and outcome-blind (F11.6).
+
+## 12. Chair's sizing runs (added by the F11a drafter from the chair's PROGRESS entry, 11 Nov 2026)
+
+- **Role:** the chair launched the three outcome-free sizing runs that supplied the 34, 37 and 39-slot anchors of the F11 sizing
+  curve; the chair's F11 decision (Option A) is the 07:20 UTC PROGRESS entry.
+- **Session identity:** the chair, Claude Fable 5.1, T3 thread `aef54e1a…` (as in entry 1). The runs ran under `agent-tmux` as
+  `a5-sizing-34`, `a5-sizing-37` and `a5-sizing-39`.
+- **Coverage:** 11 Nov 2026 from the 06:40 UTC PROGRESS entry (after the slot-masked calibration record was committed at 06:37 UTC)
+  through the sizing outputs and the 07:20 UTC decision. The run end times are in the output files, not restated here.
+- **Read and ran:** CPU only. The three runs used the same simulator, 61-donor pool, seeds and 10,000 replicates as the F10.6 run,
+  with **synthetic masks** that unmask subsets of the 9 excluded rotation slots. They wrote
+  `data/runs/a5/power/sizing_slots_34.json`, `sizing_slots_37.json` and `sizing_slots_39.json` (sha256 `e36a832b…`, `ed039ab5…`,
+  `71de730f…`, F11.1(c)). The files carry the F10.6 label string; the runs are labelled sizing, not registered gates.
+- **Attestation (quoted from the chair's record, `docs/PROGRESS.md`, 11 Nov 2026, 06:40 UTC):**
+
+> Chair: outcome-free sizing runs launched (synthetic masks unmasking subsets of the excluded cells, labelled sizing, not
+> registered) to size a supplementary-selection amendment (F11) before council metrology and Board A are asked.
+
+  and the 07:20 UTC entry: "candidates exist in the three depleted cells [...] all base-exact roots so the scorer round-trip cannot
+  fail". The chair's PROGRESS record states that nothing has been scored (10 Nov 23:50 UTC entry) and the Part A manifest records
+  `scored: false`. The simulations read pre-G3 NULL-SIZE and power fields and audit-derived masks, not outcomes. This entry
+  quotes the chair's record and is not a fresh chair statement; the chair's no-exposure statement for the F11 interval is for the
+  chair to extend in entry 1 (see above).
+
+## 13. F11a drafter (this drafting session; added 11 Nov 2026)
+
+- **Role:** wrote note F11a (F11 clarifications adopting Board A F11 condition 1) and entries 10–13 of this file.
+- **Session identity:** Claude Sonnet 5.5, branch `prereg/f11a` (worktree `.worktrees/prereg/f11a`), delegated by the chair; created
+  from main `af82db4` at 11 Nov 2026 07:26:56 UTC.
+- **Coverage:** from branch creation through the commit that adds this entry.
+- **Read and ran:** the Board A F11 review (condition 1 in full and the body it refers to), the F11 and F10a blocks at the end of
+  `docs/PREREG_H1_TF.md`, the format of this file, the metrology report (its provenance and exposure lines), `docs/PROGRESS.md`
+  (06:40 to 08:50 UTC), `selection_f11.json` (the `outcomes_read` field), git reflogs and logs. It ran `scripts/secret_scan.sh` and
+  git commands. It ran no scoring, GPU job, simulation, staging or test suite, and wrote only under `docs/`.
+- **Attestation:** I opened nothing under `data/evals/`, opened no zoo `eval.json`, `records.jsonl` or `summary.json`, used no GPU,
+  and wrote nothing under `data/`. I have seen no G3, rotation, ladder, reference or sealed outcome, or a summary of one. None
+  exists. I made no selection or methodological choice: F11a copies Board A's wording. It rests on the chair's brief and the
+  committed record; it does not prove other sessions' histories.
+- **Note on the F11 drafter's commit record:** PROGRESS (08:15 UTC) records the F11 drafter's report as one commit made with
+  `--no-verify` and the rest of the suite run under `agent-tmux`, and that nothing under `data/evals` was opened.
