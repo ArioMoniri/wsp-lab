@@ -725,3 +725,10 @@ supplementary edits' own donor rows stay in the pools per F11.5 — slots draw c
 run (200 replicates, synthetic 52-id mask with the 9 F10 exclusions masked): ordered power 0.86 [0.80, 0.91], null ordered go 0.02,
 null alternative 0.255 (reported, not gated); registered-40 sensitivity 0.73. Builder's choice for Board A: ladder masks are allowed
 on supplementary ids (F11.4 "every supplementary rotation or ladder exclusion"), still refused on the 40. Under Board A review.
+
+**11 Nov 2026, 10:20 UTC.** Board A accepted the simulator `--supplement` (merged 54f17fc; re-pin (xix)) and gave the frozen F11.4
+command (`board-a-f11-sim-2026-11-11.md` §frozen command). Board A judged the analysis manifest-binding repair sound (aef0a83) but
+REJECTED closing F11 condition 5 pending four corrections (supplements in the F10.5 reports with frozen cells; registered-40 report
+and root/non-root splits; per-contrast masks incl. supplementary ladders; F11a screen route with size-failure priority) — in flight
+on the same branch. `prepare --supplement` staging mode still in flight. Order: staging code → Board A → merge + re-pin (xx) →
+stage the 12 → frozen F11.4 calibration → report → Board A → (analysis merge + re-pin) → scoring.

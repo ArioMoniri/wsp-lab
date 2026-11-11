@@ -3978,3 +3978,15 @@ pin. It authorises no staging, calibration or scoring by itself. Execution still
 supplement path, the 52-slot simulation option and the 52-component analysis with the manifest-binding fix each need Board A review,
 CPU tests and a re-pin, and the accepted F10 re-stage report is a separate gate. Nothing has been scored and no G3, rotation, ladder,
 reference or sealed outcome exists (`part_a/manifest.json:scored` false).
+
+*A5.1.2 re-pin (xix) (11 Nov 2026, about 10:20 UTC; merge of `feat/a5-sim-supplement` after Board A's acceptance with conditions,
+`docs/reviews/council/board-a-f11-sim-2026-11-11.md`; before any G3 outcome).* `scripts/a5_simulation.py` gained `--supplement`
+(52-slot design: slots 40–51 appended in cell order; the 40 unchanged; byte-identical output without the option, golden-hash
+regression), `--registered-40-sensitivity` (descriptive, `decision_authority: false`), and the 52-id `--slot-mask` rules (ladder masks
+allowed for supplementary ids only). Builder re-run with `--pin-worktree` into a copy; only `code_hashes.json` and the package README
+copied back. Rows: `scripts/a5_simulation.py` `4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a` (old `c4f0c55f…`,
+xvi); `tests/test_a5_simulation.py` `d231c8b0264d48e7e75b991b5bf82ee2f71b846c0364063800bbea84920d2833`;
+`docs/prereg/a5_manifests/code_hashes.json` `a0077ab6f0518ec586689b07dc1a203f315d740393506cfa6ae3b74a0fb88d95` (old `74321d76…`,
+xviii); `docs/prereg/a5_manifests/README.md` `26ca1d2da368f321acd4addbefb84a091cbbe8e9c775c5eb2731c96bf2cb034b` (old `692879c7…`,
+xviii). No selection, seed, control, panel or decision file changed; no F11.4 run executed; nothing scored. Further re-pins follow
+the `prepare --supplement` merge (before staging) and the analysis F11-path merge (before scoring).
