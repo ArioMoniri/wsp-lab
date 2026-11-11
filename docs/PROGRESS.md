@@ -619,3 +619,9 @@ will be flagged `cell_drift` on any downward re-stage drift (never moved).
 runtime verification of the adopted specification hash; frozen window-order validation and complete re-stage audit evidence;
 complete ledgers, 3×2 sign tables and fit diagnostics; conditional masked-calibration disclosure; re-test and pin before scoring.
 Corrections in flight on the same branch. Both code branches (F10 rule, analysis) are now in their second round; scoring held.
+
+**11 Nov 2026, 04:30 UTC.** Corrected Part A analysis code committed (2b03bda; 138 tests, full suite 968 passed): validity-first A5.5
+ordering with Part B always reported; runtime spec-hash check (`--spec-sha256`); window order and per-window token hashes validated
+against `text_groups.json`; complete re-stage evidence per pair (`audit_missing` fail-closed); complete ledgers, 3×2 sign tables,
+fit diagnostics; F10.6 masked-calibration disclosure (refused at 40/40, required below). Under Board A re-review. Pin list proposed:
+`src/wsp/eval/part_a_analysis.py`, `scripts/part_a_analyse.py`, `tests/test_part_a_analysis.py`, `docs/design/F10_SENSITIVITY_SPEC.md`.
