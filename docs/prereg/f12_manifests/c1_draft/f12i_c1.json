@@ -28,13 +28,13 @@
  "ceiling_gpu_min": 56.16,
  "construction": {
   "path": "scripts/f12_additivity_prepare.py",
-  "sha256": "ac7aee71c3f29da98f55366574f291cd5c461ac78648259f58e8b54521601f16"
+  "sha256": "c3e55e27aa58016aae897fbdf15fa04196db36ea50fc150c30043995ae622c74"
  },
  "construction_evidence": {
   "base_state_hash": "18f07d70a89aa63125e7e95535ff2730eb54bae4ee846d72f183e004a740d982",
   "driver": {
    "path": "scripts/f12_additivity_stream.py",
-   "sha256": "0bf273ea2b8eaa1cd84094d7d675d17c63ae5a4566a76bce6c2c5e1c70f9688a"
+   "sha256": "1c23b01cafe273099785f712a6ccb1dcd78fd926c8e91df565f478087baba228"
   },
   "dry_run_cross_check": {
    "identical": true,
@@ -42,14 +42,55 @@
    "root": "64b10bbaef2b726d",
    "sha256": "d86fce386a4269bd5dab629f3ca7b022b63f20d8c4caf130cf61589cd377594f"
   },
+  "evidence_driver_sha256": "0bf273ea2b8eaa1cd84094d7d675d17c63ae5a4566a76bce6c2c5e1c70f9688a",
   "noop_parts": 0,
-  "outcomes_read": "none",
+  "outcomes_read_intent": {
+   "label": "algorithmic intent of this code path on authentic inputs; not access telemetry and not a session attestation (PREREG_H1_TF F12a.1(c); unexposed adoption A11). Actual reads: the run record's read_boundary",
+   "statement": "none"
+  },
   "peak_rss_bytes": 3114868736,
   "plan": {
    "path": "docs/prereg/a5_manifests/f12/additivity_plan.json",
    "sha256": "2c441619077f4df8b73d3d599767e0c39a985f1ed764748ad31a8eb8491bd968"
   },
   "population_json_sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5",
+  "requalification": {
+   "base_load_check": {
+    "base_state_hash": "18f07d70a89aa63125e7e95535ff2730eb54bae4ee846d72f183e004a740d982",
+    "matches_pin": true,
+    "path": "docs/prereg/a5_manifests/f12/f12r/base_load_check.json",
+    "sha256": "be61df823a11d0c7507dfe5b6d7f26e065c84ef9ccb457dbe3794884abffeead"
+   },
+   "base_model_leaves": {
+    "path": "docs/prereg/a5_manifests/f12/f12r/base_model_leaves.json",
+    "sha256": "6d99ad84c23d451be6800328bb80740ed75abf1eaf8bbd99c19cd3c256ce50f6"
+   },
+   "basis": "note F12-R and its second addendum: the hardened streaming driver (A26 checks, authenticated inputs, 4 GB cap, confined base loader) reproduces every LoRA entry and status entry of the committed plan",
+   "records": [
+    {
+     "identical": true,
+     "lora_entries_sha256": "a9bed8d88f487a9cecfe9720e8fa33864b29ecdecb817107015463ba61024ce3",
+     "path": "docs/prereg/a5_manifests/f12/f12r/plan_requalification.json",
+     "plan": {
+      "path": "docs/prereg/a5_manifests/f12/f12r/additivity_plan_requalified.json",
+      "sha256": "bedd44c1c230f75cb3e89891301329d3a9d9bf24f3e684150ef16e9cbebae875"
+     },
+     "sha256": "3d59d181ba946da610fa8901f356d3b943923d4f1f8f57ec4b976f64b1636c59",
+     "status_entries_identical": true
+    },
+    {
+     "identical": true,
+     "lora_entries_sha256": "a9bed8d88f487a9cecfe9720e8fa33864b29ecdecb817107015463ba61024ce3",
+     "path": "docs/prereg/a5_manifests/f12/f12r/plan_requalification2.json",
+     "plan": {
+      "path": "docs/prereg/a5_manifests/f12/f12r/additivity_plan_requalified2.json",
+      "sha256": "167fb8f9917bcd5fa1789fea6ebcad8a538037411b9691f6eaa8dcd959160fa0"
+     },
+     "sha256": "b4ef06e858e6aeb4223943611770c67944401f2f757a94c5550f4ed605feaf4e",
+     "status_entries_identical": true
+    }
+   ]
+  },
   "roots_built": 16,
   "roots_failed": [],
   "run_record": {

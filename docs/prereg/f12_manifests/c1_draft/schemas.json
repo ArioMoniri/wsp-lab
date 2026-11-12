@@ -108,7 +108,7 @@
  "status": "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs (F12e); the governed C1 file is written at the C1 freeze and verified by Board A",
  "token_builder": {
   "path": "scripts/f12_tokens.py",
-  "sha256": "3188c5c54e51110d0fb161f688c8c94832eed674be80b3c757060951a596092a"
+  "sha256": "984447c51c56e41009185e38e8d78efd6abdcfa995b7ada6db9fe0df812fea46"
  },
  "token_columns": 42,
  "token_input_hashes": {

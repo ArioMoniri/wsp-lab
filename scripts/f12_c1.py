@@ -494,6 +494,18 @@ ADDITIVITY_PLAN_REL = "docs/prereg/a5_manifests/f12/additivity_plan.json"
 ADDITIVITY_RUN_REL = "docs/prereg/a5_manifests/f12/additivity_plan_run.json"
 ADDITIVITY_XCHECK_REL = "docs/prereg/a5_manifests/f12/additivity_plan_crosscheck.json"
 ADDITIVITY_DRIVER = "scripts/f12_additivity_stream.py"
+F12R_DIR = "docs/prereg/a5_manifests/f12/f12r"
+PLAN_REQUALIFICATIONS = (
+    f"{F12R_DIR}/plan_requalification.json",
+    f"{F12R_DIR}/plan_requalification2.json",
+)
+BASE_LEAVES_REL = f"{F12R_DIR}/base_model_leaves.json"
+BASE_LOAD_CHECK_REL = f"{F12R_DIR}/base_load_check.json"
+TOKEN_RERUN_REL = f"{F12R_DIR}/token_rerun_run.json"
+TOKEN_REQUAL_REL = f"{F12R_DIR}/token_requalification.json"
+TOKEN_MANIFEST_REQUAL_REL = f"{F12R_DIR}/tokens_manifest_requal.json"
+DISPOSITION_HEADING = "#### A5 chair resource disposition on F12 input builds"
+RERUN_RULING_HEADING = "#### A5 chair ruling on the F12 token requalification rerun"
 ADDITIVITY_SCRIPT = "scripts/f12_additivity_prepare.py"
 POPULATION_REL = "docs/prereg/a5_manifests/f12/population.json"
 F12G_REVIEW_REL = "docs/reviews/council/board-a-f12g-2026-11-12.md"
@@ -530,6 +542,50 @@ def _ref(root, p):
     except ValueError:
         rel = str(p)
     return {"path": rel, "sha256": _sha_file(p)}
+
+
+def _plan_requalification(root, plan_bytes) -> dict:
+    """The F12-R requalifications of the committed plan with the hardened driver and confined base loader (fail
+    closed unless each is identical to the committed plan), and the base-model leaves pin and load check."""
+    root = Path(root)
+    recs = []
+    for rel in PLAN_REQUALIFICATIONS:
+        p = root / rel
+        if not p.exists():
+            raise ValueError(f"F12g: plan requalification record {rel} is missing")
+        r = json.loads(p.read_text())
+        ok = (
+            r.get("identical") is True
+            and r.get("status_entries_identical") is True
+            and not r.get("differences")
+            and (r.get("reference") or {}).get("sha256") == _sha_bytes(plan_bytes)
+        )
+        if not ok:
+            raise ValueError(
+                f"F12g: plan requalification {rel} is not identical to the committed plan"
+            )
+        recs.append(
+            _ref(root, p)
+            | {
+                k: r[k]
+                for k in ("identical", "status_entries_identical", "lora_entries_sha256", "plan")
+            }
+        )
+    chk = json.loads((root / BASE_LOAD_CHECK_REL).read_text())
+    leaves = _ref(root, root / BASE_LEAVES_REL)
+    if (
+        chk.get("matches_pin") is not True
+        or (chk.get("pin") or {}).get("sha256") != leaves["sha256"]
+    ):
+        raise ValueError("F12g: the base-model load check does not reproduce the pinned leaves")
+    return {
+        "basis": "note F12-R and its second addendum: the hardened streaming driver (A26 checks, authenticated "
+        "inputs, 4 GB cap, confined base loader) reproduces every LoRA entry and status entry of the committed plan",
+        "records": recs,
+        "base_model_leaves": leaves,
+        "base_load_check": _ref(root, root / BASE_LOAD_CHECK_REL)
+        | {"matches_pin": True, "base_state_hash": chk.get("base_state_hash")},
+    }
 
 
 def scoped_f12i(root, facts, pop, plan_path=None, run_path=None) -> dict:
@@ -658,7 +714,11 @@ def scoped_f12i(root, facts, pop, plan_path=None, run_path=None) -> dict:
             "roots_built": len(out) - len(failed),
             "roots_failed": failed,
             "noop_parts": sum(p["noop"] for x in out.values() for p in x["parts"]),
-            "outcomes_read": "none",
+            "outcomes_read_intent": fa.outcomes_read_intent(),
+            "evidence_driver_sha256": run["driver"]["sha256"],
+            "requalification": _plan_requalification(
+                root, (root / ADDITIVITY_PLAN_REL).read_bytes()
+            ),
             "what_it_proves": "outcome-free CPU construction in memory: each realised part (stored delta restricted "
             "to its support, applied to the bf16 base and rounded) sums bitwise to the full realised increment, "
             "tensor by tensor; no part file is written and no field, forecast or outcome is read",
@@ -716,6 +776,11 @@ FROZEN_STATUS = (
 )
 REGISTER_REL = "docs/prereg/f12_attestations.md"
 ACCESS_AUDIT_REL = "docs/reviews/council/f12-inputs-access-audit-2026-11-12.md"
+ADOPTION_REVIEWS = {
+    "adoption": "docs/reviews/council/f12-unexposed-adoption-2026-11-12.md",
+    "recheck": "docs/reviews/council/f12-remedy-recheck-2026-11-12.md",
+    "recheck2": "docs/reviews/council/f12-remedy-recheck2-2026-11-12.md",
+}
 PIN_REL = f"{MANIFEST_DIR}/noise_payload_restricted_pin.json"
 NOISE_CHECK_REL = f"{MANIFEST_DIR}/f12f_noise_check.json"
 PILOT_REPORT_REL = f"{MANIFEST_DIR}/f12f_pilot_report.json"
@@ -850,7 +915,7 @@ def build_exposure(root=ROOT, register_root=None) -> dict:
     adjudicate, cited by number, plus the committed static access audit of the F12 inputs code. Nothing is resolved
     here. ``register_root`` (default ``root``) is the repository holding the committed register and audit report."""
     src = Path(register_root or root)
-    for rel in (REGISTER_REL, ACCESS_AUDIT_REL):
+    for rel in (REGISTER_REL, ACCESS_AUDIT_REL, *ADOPTION_REVIEWS.values()):
         if not _committed_clean(src, rel):
             raise ValueError(f"{rel} is not committed or has uncommitted changes")
     text = (src / REGISTER_REL).read_text()
@@ -863,6 +928,28 @@ def build_exposure(root=ROOT, register_root=None) -> dict:
     entries["5"]["static_access_audit"] = entries["5"]["static_access_audit"].format(**audit)
     for k in ("10", "11"):
         entries[k]["status"] = by_row[k]["status"]
+    after = (
+        "still unattestable for their own interactive history: the unexposed adoption review, the F12-R remedy and "
+        "the two re-checks register or adopt retained choices; they do not supply either session's personal "
+        "statement (F12a.1(c)); not adjudicated here"
+    )
+    for k in ("5", "22"):
+        entries[k]["after_remedy"] = after
+    reviews = {}
+    for key, rel in ADOPTION_REVIEWS.items():
+        text = (src / rel).read_text()
+        disp = next(p.strip() for p in text.split("\n\n") if p.strip().startswith("**"))
+        reviews[key] = {"path": rel, "sha256": _sha_file(src / rel), "disposition": disp}
+    sec = (
+        (src / ADOPTION_REVIEWS["adoption"])
+        .read_text()
+        .split("## (c) Overall session statements", 1)[1]
+    )
+    sec = sec.split("\n## ", 1)[0]
+    statements = {
+        tag: next(p.strip() for p in sec.split("\n\n") if p.strip().startswith(f"**{tag}:**"))
+        for tag in ("A", "B", "Combined")
+    }
     return {
         "requirement": "F12a.1(c)-(d): statements (i) old development outcomes, (ii) new outcomes, (iii) prescore "
         "audits for every decision-maker, code/input builder, extractor, token-run session, chair and approving "
@@ -878,11 +965,23 @@ def build_exposure(root=ROOT, register_root=None) -> dict:
             "overall": overall,
             "findings": findings,
         },
+        "unexposed_adoption": {
+            "reviews": reviews,
+            "adoption_review_session_statements": statements,
+            "remedy_entry_24": {"row": by_row["24"], "register_entry": "Entry 24"},
+            "session_A": "retained choices registered or adopted by unexposed roles: the adoption review registered or "
+            "verified 12 and adopted 13 of 33 itemised choices and flagged eight (A10, A11, A19, A21, A24, A25, A26, "
+            "A30); the unexposed F12-R implementer (register entry 24) remedied them; re-check 1 adopted A11, A21, "
+            "A24, A25, A26 and A30, and re-check 2 adopted A10 and A19",
+            "session_B": "covered by the adoption review: within its conservative envelope of every potentially "
+            "inherited contribution, 13 retained items, five registered and eight adopted, zero flagged",
+        },
         "pending": [f"row {r['#']}: {r['status']}" for r in rows if "PENDING" in r["status"]],
         "adjudication": "none in this file: the unattestable sessions (row 5, entry 22), the qualified Board A F12c "
         "attestation (entry 21), the direct prescore-audit readers (entries 15b, 15c, 15d), the raw-payload parses "
-        "(entries 17 and 20) and the static access audit's findings are recorded for Board A to adjudicate at C1 "
-        "verification (F12g condition 5)",
+        "(entries 17 and 20), the static access audit's findings and the unexposed adoption review, remedy and "
+        "re-checks are recorded for Board A to adjudicate at C1 verification (F12g condition 5; Board A F12-C1 "
+        "condition 1)",
     }
 
 
@@ -908,6 +1007,78 @@ def code_pin_failures(root=ROOT) -> list:
     if bad:
         F.append(f"code_hashes_c1.json: current bytes differ for {bad}")
     return F
+
+
+def _prereg_block(text, heading) -> str:
+    """The appended PREREG block whose heading line equals (or uniquely starts with) ``heading``: its text through the
+    line before the next ``#### `` heading."""
+    lines = text.split("\n")
+    hits = [i for i, ln in enumerate(lines) if ln == heading] or [
+        i for i, ln in enumerate(lines) if ln.startswith(heading)
+    ]
+    if len(hits) != 1:
+        raise ValueError(f"PREREG block {heading!r}: {len(hits)} matching headings")
+    i = hits[0]
+    j = next((k for k in range(i + 1, len(lines)) if lines[k].startswith("#### ")), len(lines))
+    return "\n".join(lines[i:j]).rstrip("\n") + "\n"
+
+
+def resource_bindings(root=ROOT) -> dict:
+    """Item 10 at the second freeze (Board A F12-C1 conditions 2 and 3): the chair resource disposition and the token
+    requalification ruling, each bound by heading and text sha256, and the rerun and comparison records."""
+    root = Path(root)
+    prereg = (root / "docs/PREREG_H1_TF.md").read_text()
+    out = {}
+    for key, prefix, commit in (
+        ("disposition", DISPOSITION_HEADING, "159af3e"),
+        ("requalification_ruling", RERUN_RULING_HEADING, "53976db"),
+    ):
+        block = _prereg_block(prereg, prefix)
+        out[key] = {
+            "heading": block.split("\n", 1)[0],
+            "commit": commit,
+            "text_sha256": _sha_bytes(block.encode()),
+        }
+    disp = _prereg_block(prereg, DISPOSITION_HEADING)
+    out["disposition"]["future_boundary"] = " ".join(
+        disp[disp.index("(d) *Future boundary") :].split()
+    )
+    ruling = _prereg_block(prereg, RERUN_RULING_HEADING)
+    out["requalification_ruling"]["resource_cap"] = next(
+        ln.strip() for ln in ruling.splitlines() if ln.startswith("resource-cap:")
+    )
+    run = json.loads((root / TOKEN_RERUN_REL).read_text())
+    if run.get("status") != "complete" or run.get("within_cap") is not True:
+        raise ValueError("the token requalification rerun record is not complete within its cap")
+    out["token_rerun"] = {
+        "record": _ref(root, root / TOKEN_RERUN_REL),
+        "manifest": _ref(root, root / TOKEN_MANIFEST_REQUAL_REL),
+        "status": run["status"],
+        "exit_status": run.get("exit_status"),
+        "git_head_at_launch": run.get("git_head_at_launch"),
+        "cap_bytes": run["cap_bytes"],
+        "stop_threshold_bytes": run.get("stop_threshold_bytes"),
+        "within_cap": run["within_cap"],
+        "peak_rss_bytes": run["peak_rss_bytes"]["process_ru_maxrss"],
+        "peak_rss_sampled_tree_bytes": run["peak_rss_bytes"].get("max_sampled_tree"),
+        "wall_seconds": run["wall_seconds_time"],
+        "cpu_seconds": run["cpu_seconds"]["total"],
+        "cpu_hours": run.get("cpu_hours"),
+        "mem_available_at_launch_bytes": run.get("mem_available_at_launch_bytes"),
+    }
+    req = json.loads((root / TOKEN_REQUAL_REL).read_text())
+    if req.get("identical") is not True:
+        raise ValueError("the token requalification comparison is not identical")
+    out["token_requalification"] = {
+        "record": _ref(root, root / TOKEN_REQUAL_REL),
+        "identical": True,
+        "basis": req.get("basis"),
+    }
+    out["accounting"] = (
+        "input-build CPU and memory are charged to the F12 inputs, not to the 190 CPU-h simulation ceiling; no "
+        "retroactive memory compliance is claimed (chair resource disposition (c))"
+    )
+    return out
 
 
 def restricted_payload_bytes(root=ROOT) -> bytes:
@@ -1043,6 +1214,7 @@ def build_code_hashes(root=ROOT) -> dict:
     files = set(inv["files"])
     files |= local_import_closure(root, sorted(f for f in files if f.endswith(".py")))
     files |= {rel for rel in C1_INPUTS if (root / rel).exists()}
+    files |= {str(p.relative_to(root)) for p in sorted((root / F12R_DIR).glob("*.json"))}
     files -= {f"{MANIFEST_DIR}/{n}" for n in C1_FILES}
     return {
         "schema": C1_CODE_SCHEMA,
@@ -1087,6 +1259,7 @@ def build_c1(root=ROOT, exposure_root=None) -> dict:
         ]
     }
     objs["resources.json"]["prerequisite_binding"] = binding
+    objs["resources.json"]["resource_bindings"] = resource_bindings(root)
     objs["simulation_config.json"]["noise_check_and_pilot"] = {
         rel.rsplit("/", 1)[1]: _ref(root, root / rel)
         for rel in (

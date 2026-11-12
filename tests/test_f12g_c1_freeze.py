@@ -333,7 +333,7 @@ def _register_repo(tmp_path):
     """A temporary repository holding committed copies of the attestation register and the access audit report. The
     exposure builders are tested on it, never on the live register, so editing the register never fails the hook."""
     root = tmp_path / "register_repo"
-    for rel in (c1.REGISTER_REL, c1.ACCESS_AUDIT_REL):
+    for rel in (c1.REGISTER_REL, c1.ACCESS_AUDIT_REL, *c1.ADOPTION_REVIEWS.values()):
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel, root / rel)
     _git(root, "init", "-q")
@@ -509,3 +509,144 @@ def test_write_c1_refuses_once_the_manifest_exists(tmp_path):
     m.write_text("H0 x\n")
     with pytest.raises(ValueError, match="never rewritten"):
         c1.write_c1(tmp_path)
+
+
+# ------------------------------------------------------------------ second re-freeze (Board A F12-C1 conditions 1-3)
+
+
+def test_item9_outcome_statement_is_algorithmic_intent_not_telemetry():
+    """A11 (unexposed adoption; remedy F12-R): item 9 carries the remedy's intent label, not a bare outcomes_read."""
+    ev = c1.build_draft(ROOT)["f12i_c1.json"]["construction_evidence"]
+    assert "outcomes_read" not in ev
+    assert ev["outcomes_read_intent"] == fa.outcomes_read_intent()
+    assert ev["outcomes_read_intent"]["label"].startswith("algorithmic intent")
+    assert "not access telemetry" in ev["outcomes_read_intent"]["label"]
+    assert '"outcomes_read"' not in json.dumps(c1.build_draft(ROOT)["f12i_c1.json"])
+
+
+def test_item9_binds_the_hardened_driver_requalification():
+    obj = c1.build_draft(ROOT)["f12i_c1.json"]
+    ev = obj["construction_evidence"]
+    run = json.loads((ROOT / c1.ADDITIVITY_RUN_REL).read_text())
+    assert ev["evidence_driver_sha256"] == run["driver"]["sha256"]
+    assert ev["driver"]["sha256"] == _sha((ROOT / c1.ADDITIVITY_DRIVER).read_bytes())
+    req = ev["requalification"]
+    assert [r["path"] for r in req["records"]] == list(c1.PLAN_REQUALIFICATIONS)
+    for r in req["records"]:
+        assert r["sha256"] == _sha((ROOT / r["path"]).read_bytes())
+        assert r["identical"] is True and r["status_entries_identical"] is True
+    assert req["base_model_leaves"]["sha256"] == _sha((ROOT / c1.BASE_LEAVES_REL).read_bytes())
+    assert req["base_load_check"]["matches_pin"] is True
+    assert obj["construction"]["sha256"] == _sha((ROOT / c1.ADDITIVITY_SCRIPT).read_bytes())
+    assert obj["scope"] == list(c1.F12G_SCOPE)
+
+
+def test_builder_rejects_a_failed_plan_requalification(tmp_path, monkeypatch):
+    bad = json.loads((ROOT / c1.PLAN_REQUALIFICATIONS[0]).read_text())
+    bad["identical"] = False
+    p = tmp_path / "plan_requalification.json"
+    p.write_text(json.dumps(bad))
+    monkeypatch.setattr(
+        c1, "PLAN_REQUALIFICATIONS", (str(p),) + tuple(c1.PLAN_REQUALIFICATIONS[1:])
+    )
+    with pytest.raises(ValueError, match="requalification"):
+        c1.build_draft(ROOT)
+
+
+def test_exposure_cites_the_adoption_reviews_rechecks_and_entry_24(tmp_path):
+    src = _register_repo(tmp_path)
+    exp = c1.build_exposure(ROOT, register_root=src)
+    rev = exp["unexposed_adoption"]
+    for key, rel in c1.ADOPTION_REVIEWS.items():
+        r = rev["reviews"][key]
+        text = (src / rel).read_text()
+        assert r["path"] == rel and r["sha256"] == _sha((src / rel).read_bytes())
+        assert r["disposition"].startswith("**") and r["disposition"] in text
+    stm = rev["adoption_review_session_statements"]
+    assert (
+        stm["A"].startswith("**A:**")
+        and stm["B"].startswith("**B:**")
+        and stm["Combined"].startswith("**Combined:**")
+    )
+    for v in stm.values():
+        assert v in (src / c1.ADOPTION_REVIEWS["adoption"]).read_text()
+    rows = {r["#"]: r for r in exp["rows"]}
+    assert rev["remedy_entry_24"] == {"row": rows["24"], "register_entry": "Entry 24"}
+    assert "registered or adopted by unexposed roles" in rev["session_A"]
+    assert "covered" in rev["session_B"]
+    for k in ("5", "22"):
+        assert (
+            "still unattestable for their own interactive history"
+            in exp["entries"][k]["after_remedy"]
+        ), k
+    assert "Board A" in exp["adjudication"] and "adoption" in exp["adjudication"]
+
+
+def test_exposure_refuses_an_uncommitted_adoption_review(tmp_path):
+    src = _register_repo(tmp_path)
+    p = src / c1.ADOPTION_REVIEWS["recheck2"]
+    p.write_text(p.read_text() + "\nedit\n")
+    with pytest.raises(ValueError, match="not committed"):
+        c1.build_exposure(ROOT, register_root=src)
+
+
+def test_resources_bind_the_disposition_ruling_and_rerun_record():
+    res = c1.resource_bindings(ROOT)
+    prereg = (ROOT / "docs/PREREG_H1_TF.md").read_text()
+    for key in ("disposition", "requalification_ruling"):
+        b = res[key]
+        assert b["heading"] in prereg and b["heading"].startswith("#### A5 chair")
+        assert b["text_sha256"] == _sha(c1._prereg_block(prereg, b["heading"]).encode())
+    assert (
+        "resource-cap: build=scripts/f12_tokens.py cap_bytes=19000000000 threads=6"
+        == res["requalification_ruling"]["resource_cap"]
+    )
+    run = json.loads((ROOT / c1.TOKEN_RERUN_REL).read_text())
+    rr = res["token_rerun"]
+    assert rr["record"]["sha256"] == _sha((ROOT / c1.TOKEN_RERUN_REL).read_bytes())
+    assert rr["peak_rss_bytes"] == run["peak_rss_bytes"]["process_ru_maxrss"] == 17124909056
+    assert (
+        rr["wall_seconds"] == run["wall_seconds_time"]
+        and rr["cpu_seconds"] == run["cpu_seconds"]["total"]
+    )
+    assert rr["within_cap"] is True and rr["cap_bytes"] == 19000000000
+    tq = res["token_requalification"]
+    assert tq["identical"] is True and tq["record"]["sha256"] == _sha(
+        (ROOT / c1.TOKEN_REQUAL_REL).read_bytes()
+    )
+    with pytest.raises(ValueError, match="block"):
+        c1._prereg_block(prereg, "#### A5 chair ruling that does not exist")
+
+
+def test_governed_package_binds_resources_and_the_adoption_record(tmp_path):
+    files = c1.build_c1(ROOT, exposure_root=_register_repo(tmp_path))
+    res = json.loads(files["resources.json"])
+    assert res["resource_bindings"] == c1.resource_bindings(ROOT)
+    assert (
+        "resource_bindings" not in c1.build_draft(ROOT)["resources.json"]
+    )  # bound at the freeze only
+    exp = json.loads(files["exposure_c1.json"])
+    assert set(exp["unexposed_adoption"]["reviews"]) == set(c1.ADOPTION_REVIEWS)
+    item9 = json.loads(files["f12i_c1.json"])
+    assert item9["construction_evidence"]["outcomes_read_intent"] == fa.outcomes_read_intent()
+
+
+def test_governed_code_hashes_pin_the_remedy_code_pins_and_comparison_tool():
+    files = c1.build_code_hashes(ROOT)["files"]
+    for rel in (
+        "scripts/f12_inputs_guard.py",
+        "scripts/f12_base_loader.py",
+        "scripts/f12_tokens_compare.py",
+        "tests/test_f12r_guard.py",
+        "tests/test_f12r_base_loader.py",
+        "tests/test_f12r_compare.py",
+        "tests/test_f12r_additivity.py",
+        "tests/test_f12r_population.py",
+        "tests/test_f12r_tokens.py",
+        c1.BASE_LEAVES_REL,
+        c1.TOKEN_RERUN_REL,
+        c1.TOKEN_REQUAL_REL,
+        *c1.PLAN_REQUALIFICATIONS,
+    ):
+        assert rel in files, rel
+        assert files[rel] == _sha((ROOT / rel).read_bytes()), rel
