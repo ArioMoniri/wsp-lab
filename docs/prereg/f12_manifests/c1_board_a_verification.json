@@ -1,0 +1,6 @@
+{
+ "schema": "f12d-c1-board-a-verification-v1",
+ "manifest_sha256": "16a91fe2ad17a146b215a1a7ab6704873bb3712866868ea4b756b45fdcbfe9c2",
+ "review": "docs/reviews/council/board-a-f12-c1b-2026-11-12.md",
+ "review_sha256": "0bc36726c1a613d9c85201e5f8e27f6d768e1c183cdd05108c445438c13a6473"
+}
