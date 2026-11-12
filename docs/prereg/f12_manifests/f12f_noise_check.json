@@ -1,0 +1,65 @@
+{
+ "checks": {
+  "cross_component_covariance": {
+   "correlation_plug_in": 0.47618323637071214,
+   "empirical": 6.046091844029906e-06,
+   "mc_se": 8.93714539094056e-08,
+   "plug_in": 5.900987749479029e-06,
+   "z": 1.6236067357477166
+  },
+  "panel_mean_variance": {
+   "correlation_plug_in": 1.0,
+   "empirical": 1.2641276049552803e-05,
+   "mc_se": 1.6478081849232856e-07,
+   "plug_in": 1.239226268117735e-05,
+   "z": 1.5111793390384578
+  },
+  "within_component_covariance": {
+   "correlation_plug_in": 0.874523951396735,
+   "empirical": 1.112153318720831e-05,
+   "mc_se": 1.6419008260284973e-07,
+   "plug_in": 1.0837330526689514e-05,
+   "z": 1.7309368264722684
+  }
+ },
+ "code_sha256": {
+  "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
+  "scripts/a5_simulation.py": "4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a",
+  "scripts/f12_simulation.py": "1ef27e649e512e11b731a1c9a755cb6c53d5d4625bc9c15cd173f3741bc3c384",
+  "scripts/tfv1_requalify.py": "46f7ab9a4ab3207990fdc0fa888d9f6164fc156f98a0072f33df51d1432e6249",
+  "src/wsp/features/pool.py": "85a6341a446f32761531e0f0a193101114201d9eb08b0e05e6a6d1d42ee94390"
+ },
+ "components": 234,
+ "cpu_seconds": 12.899152176000001,
+ "criterion": "|empirical - plug-in| <= 4.0 Monte Carlo SE for each quantity; every donor's plug-in panel-mean variance > 0",
+ "donor_block_mean_abs_max": 0.0,
+ "donor_plug_in_variance_min": 7.599151884141175e-09,
+ "draw_order": "F12a.4(b)",
+ "f12a4d_check": true,
+ "failures": [],
+ "finished_utc": "2026-11-12T06:36:21Z",
+ "identities": {
+  "payload_restricted_sha256": "44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5",
+  "tokens_matrix_sha256": "e721729932bd11a69bbdc04b06000b8cb48d66c52b53e43f5c3d47a99c571b8f",
+  "tokens_synthetic": false
+ },
+ "k": 145,
+ "label": "F12a.4(d) noise check",
+ "panels": 10000,
+ "rows": 270,
+ "rss_max_mb": 543.671875,
+ "schema": "f12c-noise-check-v1",
+ "seeds": "seed('20261111:f12:', 'noisecheck:<d>'), d = 0..9999",
+ "started_utc": "2026-11-12T06:36:08Z",
+ "status": "pass",
+ "tokens": {
+  "file_sha256": "26b2fb63d16dc6272cdbecca6cac3e52bc532d66a0f02a70ee4aa26f0ac7ddfa",
+  "matrix_manifest": {
+   "path": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12f/docs/prereg/a5_manifests/f12/matrix_manifest.json",
+   "sha256": "0ea5deb3b8afd3fa64f26262de8de1a25a49f5517bdd70811b890de328dda20c"
+  },
+  "matrix_sha256": "e721729932bd11a69bbdc04b06000b8cb48d66c52b53e43f5c3d47a99c571b8f",
+  "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/matrix/f12_token_matrix.npz",
+  "synthetic": false
+ }
+}
