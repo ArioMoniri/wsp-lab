@@ -9,8 +9,11 @@ import pytest
 import torch
 from safetensors.torch import save_file
 
+from scripts import a5_build_manifests as bm
 from scripts import f12_additivity_prepare as fa
 from scripts import f12_additivity_stream as fs
+from scripts import f12_inputs_guard as fg
+from wsp.features import response_field as rf
 
 SHAPES = {
     "model.layers.3.mlp.down_proj.weight": (4, 6),
@@ -54,7 +57,13 @@ def toy(tmp_path, monkeypatch):
     for k, i in enumerate(ids):
         _write_lora(zoo / f"holder_{i}", seed=k + 1, zero_early=(k == 2))
     rows = [
-        {"id": i, "family": "lora_sft", "source": "purchasable", "bytes_holder": f"holder_{i}"}
+        {
+            "id": i,
+            "family": "lora_sft",
+            "source": "purchasable",
+            "bytes_holder": f"holder_{i}",
+            "resolved_delta_hash": bm.entry_delta_hash(bm.artefact_files(zoo / f"holder_{i}")),
+        }
         for i in ids
     ]
     pop = tmp_path / "population.json"
@@ -62,7 +71,14 @@ def toy(tmp_path, monkeypatch):
     g2 = tmp_path / "g2"
     man = g2 / "fields" / fa.OBJECTIVE / "manifest.json"
     man.parent.mkdir(parents=True)
-    man.write_text(json.dumps({"identity": {"state_hash": STATE_HASH}}))
+    ident = {"state_hash": STATE_HASH}
+    man.write_text(json.dumps({"identity": ident}))
+    frec = {
+        "status": "complete",
+        "identity_sha256": rf._hash(ident),
+        "files": {"manifest.json": fg.sha256_bytes(man.read_bytes())},
+    }
+    (g2 / "g2_manifest.json").write_text(json.dumps({"fields": {fa.OBJECTIVE: frec}}))
     base = _base()
 
     def load_base_state(expected):
@@ -70,9 +86,30 @@ def toy(tmp_path, monkeypatch):
         return {n: t.clone() for n, t in base.items()}, STATE_HASH
 
     monkeypatch.setattr(fa.pf, "load_base_state", load_base_state)
+    # F12-R: toy pins, boundary and resource guard in place of the governed ones (tests/test_f12r_additivity.py
+    # tests the governed defaults and the refusals)
+    monkeypatch.setattr(fa, "GOVERNED_POPULATION_SHA256", fg.sha256_bytes(pop.read_bytes()))
+    monkeypatch.setattr(
+        fa, "G2_MANIFEST_SHA256", fg.sha256_bytes((g2 / "g2_manifest.json").read_bytes())
+    )
+    monkeypatch.setattr(fa, "WIKITEXT_IDENTITY_SHA256", rf._hash(ident))
+    monkeypatch.setattr(fa, "hf_cache_dir", lambda: tmp_path / "hf")
+    floor_dir = fa.ROOT / "docs/prereg/f8_manifests/floor_payload"
+    monkeypatch.setattr(
+        fa, "read_boundary", lambda *extra: fg.ReadBoundary(allowed=[tmp_path, floor_dir, *extra])
+    )
+    peak = {"bytes": 10**6}
+
+    def guard(build, threads, cap_bytes, ruling):
+        return fg.ResourceGuard(
+            build, threads, cap_bytes, ruling,
+            rss_fn=lambda: 10**6, mem_fn=lambda: 10**12, peak_fn=lambda: peak["bytes"],
+        )  # fmt: skip
+
+    monkeypatch.setattr(fa, "resource_guard", guard)
     monkeypatch.setattr(time, "time", lambda: 1000.0)
     args = ["--population", str(pop), "--g2", str(g2), "--zoo", str(zoo), "--threads", "1"]
-    return {"tmp": tmp_path, "ids": ids, "pop": pop, "args": args, "zoo": zoo}
+    return {"tmp": tmp_path, "ids": ids, "pop": pop, "args": args, "zoo": zoo, "peak": peak}
 
 
 def _run_both(toy, extra=()):
@@ -163,7 +200,9 @@ def test_roots_subset_and_unknown_root(toy):
     doc = json.loads(out.read_text())
     assert [e["full_id"] for e in doc["entries"] if "parts" in e] == [toy["ids"][1]]
     with pytest.raises(ValueError, match="not an F12-I LoRA root"):
-        fs.main([*toy["args"], "--out", str(out), "--roots", "ffffffffffffffff"])
+        fs.main(
+            [*toy["args"], "--out", str(toy["tmp"] / "two.json"), "--roots", "ffffffffffffffff"]
+        )
 
 
 def test_dense_holder_refused(toy):
@@ -176,10 +215,12 @@ def test_dense_holder_refused(toy):
         fs.main([*toy["args"], "--out", str(toy["tmp"] / "x.json")])
 
 
-def test_rss_guard(toy, monkeypatch):
-    monkeypatch.setattr(fs, "peak_rss_bytes", lambda: 5 * 10**9)
+def test_rss_guard(toy):
+    # F12-R (A21): the cap is the resource authority's 4 GB (a 4.5 GB limit needs a chair ruling, tested in
+    # test_f12r_additivity.py); a peak above it stops the run between units
+    toy["peak"]["bytes"] = 5 * 10**9
     with pytest.raises(MemoryError, match="peak RSS"):
-        fs.main([*toy["args"], "--out", str(toy["tmp"] / "x.json"), "--rss-limit-gb", "4.5"])
+        fs.main([*toy["args"], "--out", str(toy["tmp"] / "x.json")])
 
 
 def test_cross_check(toy):
