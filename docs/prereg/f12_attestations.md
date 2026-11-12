@@ -32,13 +32,14 @@ round-6 member reports. They are predictions and simulation outputs, not outcome
 | 8 | Board A methods reviewer, F12b review | `review/board-a-f12b` worktree | that review | none knowingly opened; whether displayed material held numerical summaries: not certain | none | summaries only | the review's "Exposure attestation"; entry 19 | given (its own session only) |
 | 9 | F12c implementer (this file's author) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12c`, worktree `.worktrees/prereg/f12c`, 11 Nov 2026 about 18:10 UTC to the F12c commit | F12c note, code, tests, manifests, synthetic checks | see below | none | see below | below | given (this session only); raw-loader account confirmed in entry 20 |
 | 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11-12 Nov 2026 | through 07:40 UTC 12 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entries 10 and 10a | given through the second C1 freeze (entries 10, 10a, 10b, 10c) |
-| 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** (entries 12-14, row 15 and entries 23-24 so far) |
+| 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** (entries 12-14, row 15 and entries 23-25 so far) |
 | 15 | Board A methods reviewer, F12c review | `review/board-a-f12c` worktree | that review | none seen | none deliberately; hook-run access **not certain** | summaries only | the review's attestation; entry 21 | given 12 Nov 2026 (its own session only), qualified |
 | 12 | F12d implementer and v2 restricted-payload extractor (chair-authorised for that step) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12d`, worktree `.worktrees/prereg/f12d`, 11 Nov 2026 about 21:45 UTC to the F12d note commit | F12d note, code, tests, v2 restricted copy and pin, C1 skeleton, resource plan | none seen; handled centred qualification noise (see below) | none | read F12a.1's account and entries 9-10, not the audits | entry 12 below | given (this session only) |
 | 13 | F12e implementer (C1 draft fill, candidate identity freeze, real-token qualification) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12e`, worktree `.worktrees/prereg/f12e`, 11 Nov 2026 about 23:52 UTC to the F12e note commit (12 Nov) | F12e note, `scripts/f12_qualify.py`, the C1 draft fill, token facts, base tensor hashes, candidate identities, qualification report | none seen; read the real F12 token outputs (field forecasts, see below) | none | read F12a.1's account and entries 10 and 12, not the audits | entry 13 below | given (this session only) |
 | 14 | F12f implementer (gauge-token builder and pricing, runner gauge audit, comparator-matrix builder, re-qualification code) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12f`, worktree `.worktrees/prereg/f12f`, 12 Nov 2026 about 00:33 UTC to the F12f note commit | F12f note, `scripts/f12_gauge_tokens.py`, `scripts/f12_matrix.py`, the gauge audit in `scripts/f12_simulation.py`, `scripts/f12_qualify.py` / `f12_c1.py` changes, priced-only gauge records | none seen; read the real F12 token outputs and the edit-derived v4 feature files (see below) | none | read F12a.1's account and entries 9, 10, 12 and 13, not the audits | entry 14 below | given (this session only) |
 | 23 | F12 C1 freeze implementer (streaming F12-I LoRA plan driver and evidence, scoped item 9 builder, governed C1 files, `MANIFEST_C1.sha256`, the re-pin before Board A verification) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12-c1`, worktree `.worktrees/prereg/f12-c1`, 12 Nov 2026 from before 07:14 UTC (start not certain) to the F12-C1 note commit | `scripts/f12_additivity_stream.py`, the additivity plan evidence, the `f12_c1.py` F12g and freeze builders and their tests, the governed C1 files and manifest (`451d45c`, superseded, and the re-freeze), note F12-C1 | seen, summaries (quoted in this register and the PREREG notes) | none | read this register's account of the audits, not the audits | entry 23 below | given (this session only) |
 | 24 | F12-R unexposed-role implementer (remedy of adoption flags A10, A11, A19, A21, A24, A25, A26, A30; plan requalification; token-rerun price) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12-remedy`, worktree `.worktrees/prereg/f12-remedy`, 12 Nov 2026 from the worktree's creation off main `e7283e2` to the F12-R note commit; no prior part in F12 | `scripts/f12_inputs_guard.py`, the F12-R changes to `f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`, `f12_additivity_stream.py` and their tests, the plan requalification and the token-rerun price under `docs/prereg/a5_manifests/f12/f12r/`, note F12-R; after the chair's ruling of 09:19 UTC, the comparison tool, the full token requalification rerun and its comparison, the F12-R addendum; after the independent re-check, the A10 confined base loader and its pin, the A19 resume removal, their requalification and the second addendum | seen, summaries (quoted in reviews, this register and the PREREG); snapshot parsed for metadata | **none** | read the reviews' and PREREG's accounts of the audits, not the audits | entry 24 below | given (this session only) |
+| 25 | F12-S1 stage-1 operator (unexposed role, F12a.1(c)-(d); chair acceptance of F12 stage 1, 12 Nov 2026 14:49 UTC (c)) | Claude Opus 5.5 implementation sub-agent, fresh, branch `ops/f12-stage1`, worktree `.worktrees/ops/f12-stage1`, 12 Nov 2026 from about 14:50 UTC (worktree off main `456377e`) to the F12-S1 note commit; no prior part in F12 | the single F12 stage-1 run under the frozen config, its committed report and ledger snapshot, the `select` run that writes `f12c_stage2_selection.json`, note F12-S1; no code or configuration change | seen, summaries (quoted in the PREREG, reviews and this register) | **none** | read the PREREG's, reviews' and this register's accounts of the audits, not the audits | entry 25 below | given (this session only) |
 
 PENDING cells are blank on purpose. Nothing is inferred from a session's role, branch or timing.
 
@@ -720,3 +721,52 @@ with the frozen run. It started no other job of its own while the build ran.
   that tripwire reason only.
 - It opened nothing under `data/evals`, saw no new outcome, read no pilot decision code and used no GPU.
 - Statements (i)–(iii) are unchanged.
+
+## Entry 25: F12-S1 stage-1 operator (given, before launch)
+
+*Session.* An implementation sub-agent session (Claude Opus 5.5), fresh, with no prior part in F12, working only in
+`.worktrees/ops/f12-stage1` on branch `ops/f12-stage1`, created with `bash scripts/wt.sh new ops/f12-stage1` from main `456377e`
+on 12 Nov 2026 at about 14:50 UTC, until the commit adding note F12-S1. Its role is the unexposed stage-1 operator of the chair's
+acceptance of F12 stage 1 (PREREG, 12 Nov 2026, 14:49 UTC, (c)) under F12a.1(c)–(d). It runs the frozen, Board A-verified
+procedure, changes no code, test or configuration, attests to this session only and writes no other entry. This entry is
+committed before stage 1 is launched.
+
+*What it read before launch.*
+- Committed documents: the chair's acceptance of F12 stage 1; PREREG F12a.1(c)–(e) (about lines 4935–4955); the F12c note's
+  stage-1, selection and ledger passages (located by search); the F12f note's noise-check and timing-pilot summaries (F12f.13–15:
+  aggregate z scores, pilot validity count, timing, memory and the all-in projection, no decision count) and the chair's pilot
+  acceptance; Board A's C1b verification in full; Board A's F12c review (condition headings and condition 5); this register's
+  preamble, table, and entries 24 and 10c and the entry 23 addendum.
+- Code and configuration: the usage block and the `run` / `select` / budget CLI of `scripts/f12_simulation.py`, its
+  `load_restricted` and governed-matrix checks; `scripts/f12_budget.py`; `scripts/wt.sh`, `.githooks/pre-commit`,
+  `scripts/precommit.sh`; `f12c_stage1_config.json` (hashed, equal to the F12c pin `7cb10a83…`).
+- Manifests, for paths and identities only: `f12_pilot_acceptance.json` (key names, `chair_accepted`, `projection`, `identities`);
+  the head of the matrix manifest (code hashes, counts, matrix path and hashes, the first pooled-feature hashes);
+  `noise_payload_restricted_pin.json` in full (provenance, counts and hashes; no noise value); a string search of
+  `f12f_noise_check.json`, `f12f_pilot_timing.json` and `f12_pilot_acceptance.json` for file paths only (one path printed, the
+  token matrix). It did not open `f12f_pilot_report.json`.
+- Hashes only: the token matrix `.npz` (equal to the manifest's `26b2fb63…`), both copies of the v2 restricted payload (equal to
+  the pin's `44d79403…`), the budget ledger (equal to the committed F12f snapshot `5c456f0c…`). No token array and no noise value
+  was printed.
+- `python scripts/f12_c1.py verify` printed `"verified": true` with no failures.
+- Directory listings, names only: `docs/prereg/f12_manifests/` and `/home/ubuntu/wsp-data/runs/a5/` (whose listing shows the
+  entry names `part_a` and `part_a_predictions`; nothing under them was listed or opened). `agent-tmux -l` printed other jobs'
+  names; none was opened.
+
+*(i) Old development outcomes.* Seen as summaries only, as quoted in the PREREG, Board A's reviews and this register. No TF-v1
+root record, G0/G1/G6 ledger outcome or D3 outcome was opened or displayed. This disclosure does not disqualify.
+
+*(ii) New outcomes.* **None.** The session has not opened, computed, scored or received any Part A (G3, rotation, ladder,
+missing-reference, sealed), F8-E, F8-F or F9 outcome, or a summary of one. It has opened and listed nothing under `data/evals`. It
+has opened no Part A staging, prediction or calibration file, and it has read no F12f pilot per-replicate record or decision
+code. This statement is for this session alone.
+
+*(iii) Prescore audits.* The session read only the PREREG's, reviews' and this register's accounts of the disclosed pre-score
+audits. It did not open the Part A prediction or calibration files, the prescore inventories, the round-6 member reports or the
+synthesis.
+
+*Planned disclosures.* The pre-commit hook runs the full test suite at each of this session's commits. As entries 23 and 24
+disclose, `tests/test_f12g_c1_freeze.py` calls `prerequisite_binding`, which decodes the whole committed F12f pilot report in
+the test process; nothing from it is displayed (pass/fail output only). The stage-1 run itself prints progress lines; the
+session will read only completeness, validity counts, timing, memory, the `select` output (k\*) and hashes, and will not read
+per-replicate records or decision codes.
