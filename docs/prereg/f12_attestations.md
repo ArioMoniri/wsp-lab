@@ -23,16 +23,17 @@ round-6 member reports. They are predictions and simulation outputs, not outcome
 | # | session and role | identity (as known) | covers | (i) old dev. outcomes | (ii) new outcomes | (iii) prescore audits | source | status |
 |---|---|---|---|---|---|---|---|---|
 | 1 | F12 drafting (council round 6 implementation sub-agent) | branch `council/2026-11-11` | drafting of F12 | none opened; only commit metadata and record hashes | none | read the round-6 synthesis and member reports, which summarise Part A predictions and calibration | `docs/PREREG_H1_TF.md`, end of amendment F12 | given (its own session only) |
-| 2 | Council round 6 chair and members (F12 choices) | `docs/council/2026-11-11/` | round 6 | — | — | — | — | **PENDING** |
-| 3 | Board A, F12 / F12-I review | `docs/reviews/council/board-a-f12-2026-11-11.md` | that review | — | — | — | no attestation text found in the review | **PENDING** |
+| 2 | Council round 6 chair and members (F12 choices) | `docs/council/2026-11-11/`; four member sessions (editor, representation, world-model, metrology); chair = entry 10 | round 6 | seen, summaries (all four) | none (all four) | editor: summaries only; representation and metrology: `PRESCORE_INVENTORY_2.md` read directly; world-model: `predictions_f11.json` and `f11_calibration_record.json` read directly; metrology: F11 calibration record read directly | entries 15a-15d | given 12 Nov 2026 (each for its own session) |
+| 3 | Board A, F12 / F12-I review | `docs/reviews/council/board-a-f12-2026-11-11.md` | that review | seen, summaries; ledger metadata and hashes | none | summaries only; selection manifests read | entry 16 | given 12 Nov 2026 (its own session only) |
 | 4 | F12a drafting (implementation sub-agent) | Claude Opus 5.5, branch `prereg/f12a`, about 12:00-12:50 UTC | F12a | none | none | read F12a.1's account of the audits | `docs/PREREG_H1_TF.md`, end of note F12a | given (its own session only) |
-| 5 | F12 inputs implementer (`f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`; commit `0412799`) and the token-run sessions (`agent-tmux` jobs `f12-tokens2`, `f12-tokens3`) | unknown | pinned C1 code and its runs | — | — | — | — | **PENDING** |
-| 6 | F12 simulation implementer (`f12_simulation.py` at `07e1dc2`; the synthetic smoke run that wrote the restricted payload copy) | branch `feat/f12-simulation` | pinned code; restricted-copy extractor | — | — | — | — | **PENDING** |
-| 7 | F12b drafting (implementation sub-agent) | branch `prereg/f12b`, about 14:10-18:10 UTC | F12b, its code and synthetic diagnostics | none opened | none | not stated | `docs/PREREG_H1_TF.md`, end of amendment F12b | given (its own session only); (iii) **PENDING** |
-| 8 | Board A methods reviewer, F12b review | `review/board-a-f12b` worktree | that review | not stated | none | not stated | the review's "Exposure attestation" | given (its own session only); (i), (iii) **PENDING** |
-| 9 | F12c implementer (this file's author) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12c`, worktree `.worktrees/prereg/f12c`, 11 Nov 2026 about 18:10 UTC to the F12c commit | F12c note, code, tests, manifests, synthetic checks | see below | none | see below | below | given (this session only) |
-| 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11 Nov 2026 | through 21:50 UTC 11 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entry 10 below | given to 21:50 UTC; **renewal PENDING** at C1 |
-| 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** |
+| 5 | F12 inputs implementer (`f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`; commit `0412799`) and the token-run sessions (`agent-tmux` jobs `f12-tokens2`, `f12-tokens3`) | implementer: delegate session killed out of memory on 11 Nov; token runs: launched by the chair | pinned C1 code and its runs | implementer: **cannot attest**; token runs: entry 10 | implementer: cannot attest | implementer: cannot attest | entries 10 and 22 | implementer **UNATTESTABLE** (for Board A); token runs covered by the chair |
+| 6 | F12 simulation implementer (`f12_simulation.py` at `07e1dc2`; the synthetic smoke run that wrote the restricted payload copy) | branch `feat/f12-simulation` | pinned code; restricted-copy extractor | seen, summaries; centred qualification noise; raw F8a.2 payload parsed (disclosure) | none | summaries only | entry 17 | given 12 Nov 2026 (its own session only) |
+| 7 | F12b drafting (implementation sub-agent) | branch `prereg/f12b`, about 14:10-18:05 UTC | F12b, its code and synthetic diagnostics | none seen (code constants of uncertain provenance disclosed) | none | none read | end of amendment F12b; entry 18 | given (its own session only) |
+| 8 | Board A methods reviewer, F12b review | `review/board-a-f12b` worktree | that review | none knowingly opened; whether displayed material held numerical summaries: not certain | none | summaries only | the review's "Exposure attestation"; entry 19 | given (its own session only) |
+| 9 | F12c implementer (this file's author) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12c`, worktree `.worktrees/prereg/f12c`, 11 Nov 2026 about 18:10 UTC to the F12c commit | F12c note, code, tests, manifests, synthetic checks | see below | none | see below | below | given (this session only); raw-loader account confirmed in entry 20 |
+| 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11-12 Nov 2026 | through 07:40 UTC 12 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entries 10 and 10a | given to 07:40 UTC 12 Nov; **renewal PENDING** at C1 |
+| 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** (entries 12-14 and row 15 so far) |
+| 15 | Board A methods reviewer, F12c review | `review/board-a-f12c` worktree | that review | none seen | none deliberately; hook-run access **not certain** | summaries only | the review's attestation; entry 21 | given 12 Nov 2026 (its own session only), qualified |
 | 12 | F12d implementer and v2 restricted-payload extractor (chair-authorised for that step) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12d`, worktree `.worktrees/prereg/f12d`, 11 Nov 2026 about 21:45 UTC to the F12d note commit | F12d note, code, tests, v2 restricted copy and pin, C1 skeleton, resource plan | none seen; handled centred qualification noise (see below) | none | read F12a.1's account and entries 9-10, not the audits | entry 12 below | given (this session only) |
 | 13 | F12e implementer (C1 draft fill, candidate identity freeze, real-token qualification) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12e`, worktree `.worktrees/prereg/f12e`, 11 Nov 2026 about 23:52 UTC to the F12e note commit (12 Nov) | F12e note, `scripts/f12_qualify.py`, the C1 draft fill, token facts, base tensor hashes, candidate identities, qualification report | none seen; read the real F12 token outputs (field forecasts, see below) | none | read F12a.1's account and entries 10 and 12, not the audits | entry 13 below | given (this session only) |
 | 14 | F12f implementer (gauge-token builder and pricing, runner gauge audit, comparator-matrix builder, re-qualification code) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12f`, worktree `.worktrees/prereg/f12f`, 12 Nov 2026 about 00:33 UTC to the F12f note commit | F12f note, `scripts/f12_gauge_tokens.py`, `scripts/f12_matrix.py`, the gauge audit in `scripts/f12_simulation.py`, `scripts/f12_qualify.py` / `f12_c1.py` changes, priced-only gauge records | none seen; read the real F12 token outputs and the edit-derived v4 feature files (see below) | none | read F12a.1's account and entries 9, 10, 12 and 13, not the audits | entry 14 below | given (this session only) |
@@ -267,3 +268,268 @@ above:
   and the note records timing, memory and validity only.
 - No a, q, token or feature value was printed. Nothing under `data/evals` was opened. No GPU was used.
 - Statements (i)–(iii) are unchanged.
+
+## Entries 15-21: statements collected by the chair on 12 Nov 2026 (verbatim)
+
+On 12 Nov 2026, about 07:10 UTC, the chair asked each reachable session to attest for its own session only, in text, without
+editing any file, running anything or opening anything under `data/evals`. Each statement below is that session's reply, recorded
+verbatim by the chair and attributed to it. The chair has not edited their content. Each session's T3 thread is the source.
+
+### Entry 15a: council round 6, editor member
+
+> I attest only for this session's work as the round-6 editor.
+>
+> (i) **Old development outcomes: yes, summaries.** I read briefs, syntheses and reviews containing existing performance
+> summaries, including the D3/P4 fast-tier rho table, TF-v1 qualification/noise summaries, inventory counts and historical timing
+> results. I did not directly open individual TF-v1 root outcome records or G0/G1/G6 outcome ledgers.
+>
+> (ii) **New outcomes: none that I identified in my session record.** I saw no Part A score, G3, rotation, ladder,
+> missing-reference, sealed, F8 or F9 outcome or outcome summary. I opened nothing under `data/evals`. I cannot independently
+> attest that no such outcomes existed; the materials described Part A as unscored.
+>
+> (iii) **Prescore audits: summaries only.** I did not directly open Part A prescore inventories, `predictions_f11.json`, or F11
+> calibration records. I read summaries of frozen predictions, calibration power and forecast-consistency checks in the brief and
+> programme documents.
+>
+> I worked during the session dated **11 November 2026 UTC**; exact clock times are **not certain**. I read nothing directly under
+> `/home/ubuntu/wsp-data`.
+>
+> Disclosure: I encountered numerical historical outcomes and prescore summaries before proposing F12; this session was not
+> development-outcome-blind.
+
+### Entry 15b: council round 6, representation member
+
+> (i) **Old development outcomes:** Yes—through briefs, syntheses, council reports and reviews, including the D3/P4 predictor
+> correlations and TF-v1 qualification/noise summaries. I read quoted outcome statistics and census/coverage summaries. I did not
+> directly open individual TF-v1 outcome records or outcome ledgers.
+>
+> (ii) **New outcomes:** I saw no Part A scores, G3, observed rotation/ladder effects, missing-reference, sealed, F8 or F9
+> outcomes or summaries thereof. I opened nothing under `data/evals`. My record supports non-exposure; it cannot independently
+> establish that no outcomes existed.
+>
+> (iii) **Prescore material:** I directly read portions of `PRESCORE_INVENTORY_2.md`, the Board A release review, and the
+> top-level keys and `summary` of `predictions_f11.json`. An earlier command also requested that JSON's first 55 lines; its
+> displayed coverage is not certain because output was truncated. I did not intentionally read per-edit prediction details.
+> Direct exposure to F11 calibration-record contents is **not certain**; I read calibration/power summaries in briefs and A5
+> excerpts.
+>
+> Work occurred during this round-6 session, dated 11 November 2026; exact UTC hours are **not certain**. I intentionally read
+> nothing under `/home/ubuntu/wsp-data`; filesystem aliasing is **not certain**. Disclosure: F12 proposals were informed by
+> previously examined development summaries.
+
+### Entry 15c: council round 6, world-model member
+
+> **Attestation: round-6 world-model member (this session only)**
+>
+> (i) **Old development outcomes:** I saw summaries only, never a per-entry outcome record. These were the fast-tier ρ values in
+> `d3v2f-summary-2026-11-08.md`; the TF-v1 requalification half-widths (0.00487, 0.01282 and others); the quoted θ̂ values (D3
+> WikiText 0.0071, MMLU 0.129) in A5.4; and lines of `RESULTS.md` and `PROGRESS.md`, including base perplexity 22.90 vs 22.91.
+> From `snapshot.json` I read only the index of which entries have TF-v1 records (ids and hashes, no values).
+>
+> (ii) **New outcomes:** none seen. I opened nothing under `data/` or `data/evals`.
+>
+> (iii) **Prescore audits:** I read `predictions_f11.json` directly: its summary, predictor block, the power-field comparison,
+> one full row, and statistics I computed over all 52 rows (κ, |a|, signs, s*). I also read `f11_calibration_record.json`, the
+> power README and the `fields_manifest.json` summary. I listed the PRESCORE_INVENTORY files but did not open them.
+>
+> **Timing:** 11 Nov 2026; I'm not certain of the UTC hours.
+>
+> **/home/ubuntu/wsp-data:** nothing read.
+>
+> **Disclosures:** Two web-fetch subagents read arXiv pages only. I saw the other members' round-6 files only as names in `git
+> status`; I did not open them. My memo quotes statistics computed from the frozen predictions; these are predictions, not
+> outcomes.
+
+### Entry 15d: council round 6, metrology member
+
+> (i) This session read summaries of existing development outcomes, including P4/D3 correlations and the TF-v1 qualification
+> noise and timing figures. It also read progress summaries of G1/G6 status. It did not open raw TF-v1 root outcome records or
+> anything under `/home/ubuntu/wsp-data`.
+>
+> (ii) I saw no Part A score, G3, rotation, ladder, missing-reference, sealed, F8, or F9 outcome or outcome summary. I opened
+> nothing under `data/evals`. From this session's record, I can confirm none was seen; I cannot independently confirm whether any
+> were produced elsewhere.
+>
+> (iii) I read `PRESCORE_INVENTORY_2.md` and the F11 calibration record directly, as well as brief/status summaries. I did
+> **not** open `predictions_f11.json`; I saw only summaries of its contents.
+>
+> I worked around 11 Nov 2026, approximately 12:00 UTC. Disclosure: the session read development-result summaries and the
+> non-outcome F11 calibration record, but no raw evaluation records or Part A predictions.
+
+### Entry 16: Board A, F12 / F12-I review
+
+> I attest only for this session/thread.
+>
+> **Role/time:** Board A reviewer for ML methods and pre-registration, working on 11 November 2026 UTC; exact hours not certain.
+> This attestation is supplied on 12 November.
+>
+> **(i) Old development outcomes:** Yes, summaries: quoted D3/fast-tier correlations and comparative performance in the
+> round-six brief, synthesis and reports. I read committed G0/G1/G6 exposure-ledger metadata and record hashes, including
+> census-exposure status. I did not open existing TF-v1 root outcome payloads.
+>
+> **(ii) New outcomes:** This session saw no Part A score, G3, rotation, ladder, missing-reference, sealed, F8 or F9 outcome or
+> summary of one. It opened nothing under `data/evals`. My record supports no exposure; I did not independently inspect outcome
+> storage to establish nonexistence.
+>
+> **(iii) Prescore audits:** I read summaries and quoted statistics concerning Part A inventories, frozen predictions and F11
+> calibration in the amendment and council documents. I did not directly open the prescore inventories, `predictions_f11.json`,
+> or F11 calibration records. I did read selection manifests to reproduce excluded components.
+>
+> **Other disclosure:** I read nothing under `/home/ubuntu/wsp-data`. Earlier work used CPU metadata checks and pin verification
+> and wrote the review and session note; no GPU or commits. No tools used for this attestation.
+
+### Entry 17: F12 simulation implementer (restricted-copy extractor, v1)
+
+> **Role and time.** I was the F12.5 simulation implementation sub-agent, working in worktree `feat/f12-simulation` on 11 Nov
+> 2026, roughly 11:30–13:40 UTC. The start time is not certain.
+>
+> **(i) Old development outcomes.** I saw no raw records, but I did see summaries. These were:
+> - the PREREG text: A5.4.4's D3 θ̂ values (0.0071 and 0.129) and F12.1's M3 ρ values (0.15 and 0.13);
+> - round 6's ρ values for m1_matched;
+> - the requalification half-widths (0.00487, 0.01282, 0.03109, 0.1137).
+>
+> The noise payload's `centred_noise` comes from existing TF-v1 development outcomes. During exploration I printed per-donor
+> means and SDs of `centred_noise` and the full `donors[0]` record, including its `audit` and `norm` fields.
+>
+> **(ii) New outcomes.** I saw none, and I opened nothing under `data/evals`. The full pytest suite and the pre-commit hook ran
+> repository tests whose file access I did not inspect; I saw only pass/fail summaries.
+>
+> **(iii) Prescore audits.** I saw only summaries, namely F12.1's figures from `predictions_f11.json` and its
+> PRESCORE_INVENTORY_2 §5 agreement counts. I did not open those files or any F11 calibration file.
+>
+> **Under /home/ubuntu/wsp-data.** I read `runs/a5/nullsize/inputs.json` and listed the `nullsize/` and `power/` directories. I
+> wrote only to `runs/a5/f12_sim_dryrun/`.
+>
+> **Restricted copy.** The code read `inputs.json` in full, checked its sha256 (`67da223c…`) and `json.loads` the whole object. It
+> kept `centred_noise`, `window_mask`, `window_ids` and `donors.{id, component, family}`, and discarded everything else.
+> Disclosure: `donor_mean` was parsed into memory as part of that load but was never accessed, printed or written.
+
+### Entry 18: F12b implementer (completes row 7, statement (iii))
+
+> **Exposure attestation, F12b implementation session, 11 Nov 2026, about 14:10–18:05 UTC.**
+>
+> **Role:** implementation sub-agent in worktree `.worktrees/prereg/f12b`.
+>
+> **(i) Old development outcomes:** none seen. I read PREREG A5.4.2, F12.3–F12.5 and F12a.2–F12a.5 plus the end of F12a, Board
+> A conditions 2–7, the F12b plan in PROGRESS.md, and code. Disclosure: `f12_simulation.py` contains `QUALIFICATION_HALF_WIDTH
+> 0.00487`, a noise-qualification figure, and synthetic Σa family medians (`FAMILY_A_MEDIAN`). I am not certain of their
+> provenance.
+>
+> **(ii) New outcomes:** none seen, and no summary of one. I opened nothing under `data/evals` and nothing under `data/`.
+>
+> **(iii) Prescore audits:** I did not read the Part A prescore inventories, `predictions_f11.json` or the F11 calibration
+> records. I did not read note F12a.1, only its heading in a grep. I saw no summary of any of these.
+>
+> **Read under /home/ubuntu/wsp-data:** `f12_sim_dryrun/noise_payload_restricted.json`, `progress.log`, `f12b/probe.log`,
+> directory listings, and my own synthetic outputs. A process listing showed the token job's output path; I did not open it.
+>
+> **Earlier killed session:** I know only its script's header and PROGRESS.md's account. Its access is not certain to me. I
+> rewrote its script (keeping parts of its studentiser decomposition and its γ and smoke-run designs), and the earlier version
+> was never committed.
+
+### Entry 19: Board A, F12b review (completes row 8, statements (i) and (iii))
+
+> **Session-only exposure attestation**
+>
+> (i) **Old development outcomes:** I did not knowingly open an existing TF-v1 root outcome record, G0/G1/G6 outcome ledger or D3
+> outcome. I read F12/F12a/F12b, the design note and earlier Board A reviews. Those included historical exposure/population
+> summaries; I am **not certain** whether the material displayed also contained numerical summaries of old development outcomes.
+>
+> (ii) **New outcomes:** This session saw no Part A score, G3, rotation, ladder, missing-reference, sealed, F8 or F9 response
+> outcome or summary thereof. It opened nothing under `data/evals`. This confirms my session's record, not an independent
+> verification that no outcomes existed.
+>
+> (iii) **Prescore audits:** I did not open Part A inventory files, `predictions_f11.json` or underlying F11 calibration records.
+> I read summaries/discussions in the preregistration and prior reviews, including numerical F11 synthetic
+> simulation/calibration-support summaries.
+>
+> **Role/time:** Board A registered-methods reviewer for F12b, 11 November 2026, finishing around 18:09 UTC; start time **not
+> certain**.
+>
+> **External reads:** Under `/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/f12b/`, I read the reduced summary/report, timing
+> report/sidecar, smoke/head diagnostics and both gamma JSON files; hashed several artifacts. No raw noise payload was opened. I
+> ran twelve targeted synthetic/toy unit tests, not new simulation replicates.
+
+### Entry 20: F12c implementer, confirmation of the raw-loader account (Board A F12c condition 1)
+
+> 1. **Test and code.** The test was `tests/test_f12_simulation.py::test_real_payload_allowlist_and_panel_mean`. It ran once, at
+>    about 18:11 UTC on 11 Nov 2026, inside a baseline run of the F12 test suite. The worktree was freshly created at commit
+>    `8df6c74` and had not been modified. I did not compute the sha256 of `scripts/f12_simulation.py` at that commit, so the file
+>    hash is not certain.
+>
+> 2. **Path and values.** The test read `data/runs/a5/nullsize/inputs.json` through the worktree's `data` symlink to
+>    `/home/ubuntu/projects/wsp-lab/data/`. Pytest asserted on the values only inside the test. No value was printed, logged,
+>    written to a file or kept for any decision.
+>
+> 3. **Non-allowlisted values.** `json.loads` parsed the whole file. `NoisePayload.load` then kept only `centred_noise`,
+>    `window_mask`, `window_ids` and the donors' id, component and family, and deleted the parsed object. No other field was
+>    selected, surfaced or used. Whether the file contains `donor_mean` at all is not certain; I never listed its keys.
+>
+> 4. **Retained output.** I ran pytest with `-q -p no:cacheprovider` and kept only the tail of its output in my session
+>    transcript. That tail showed progress dots and "28 passed in 37.51s", with no values. No log file was written.
+>
+> 5. **New outcomes.** I saw no Part A, G3, F8 or F9 outcome or summary. F12a.1 quotes Part A's simulated 0.8722 power, which is
+>    a prediction, not an outcome.
+
+*Chair note.* Because the worktree was unmodified at `8df6c74`, the code the test ran is that commit's
+`scripts/f12_simulation.py`, which is recoverable from git.
+
+### Entry 21: Board A, F12c review (row 15)
+
+> I was the Board A methods review sub-agent for F12c, working on 11 November 2026 UTC; exact start/end times are **not
+> certain**.
+>
+> My review records my known exposure:
+>
+> (i) I saw no existing TF-v1 root outcome, G0/G1/G6 ledger outcome or D3 outcome. Targeted tests handled restricted centred noise
+> and synthetic/toy inputs.
+>
+> (ii) I received no new Part A, F8-E, F8-F or F9 outcome or summary and deliberately opened nothing under `data/evals`. The
+> commit hook unexpectedly launched repository-wide pytest. I terminated it after three progress dots; no outcome content
+> appeared. Its collection-time filesystem access was not exhaustively audited, so whether it accessed `data/evals` is **not
+> certain**. I cannot give an unqualified no-access attestation.
+>
+> (iii) I read preregistration/review summaries of prescore audits, not their underlying prediction/calibration files.
+>
+> I have no additional known exposure beyond this record.
+
+## Entry 22: sessions that cannot attest (for Board A to rule)
+
+- **F12 inputs implementer** (row 5; `f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`, commit `0412799`). Its
+  delegate session was killed out of memory on 11 Nov 2026, before reporting, and cannot be asked. Its committed code is pinned
+  and its token run's manifest records `outcomes_read: none` (stored edit bytes, `edit.json`, the base model, the G2 field and
+  probe cache only). That manifest field is a code-written record, not a session attestation.
+- **First F12b session.** It was killed out of memory on 11 Nov 2026, before committing anything. Its uncommitted diagnostics
+  script was rewritten by the F12b relaunch session (entry 18), which does not know its access.
+- **Token runs** (`agent-tmux` jobs `f12-tokens`, `f12-tokens2`, `f12-tokens3`). These were launched by the chair; they are
+  covered by entry 10.
+
+Board A's F12c condition 1 asks for individual statements and says one session cannot attest for another. The chair therefore
+records these two sessions as unattestable rather than inferring their exposure, and asks Board A to rule at C1 whether F12a.1(d)'s
+unexposed-role or exploratory-amendment rule applies to the code they produced.
+
+## Entry 10a: chair renewal (21:50 UTC 11 Nov to 07:40 UTC 12 Nov 2026)
+
+*Session.* The same orchestrating chair session as entry 10. This renewal covers the interval since entry 10 and attests to this
+session only. It is to be renewed again at the C1 freeze.
+
+*(i) Old development outcomes.* Nothing new beyond entry 10. The collected attestations (entries 15-21) quote old development
+summaries that the chair had already seen.
+
+*(ii) New outcomes.* None. Part A remains unscored and held; no Part A, G3, F8, F9, F12 or F12-I scoring or GPU job was run. The
+chair opened nothing under `data/evals`.
+
+*(iii) Prescore audits.* Nothing new beyond entry 10.
+
+*What the chair read in this interval.* All of these are field forecasts, edit-derived inputs or run metadata, not outcomes:
+- the F12 token manifest (row counts, eligibility, exclusions, file hashes, timing, and the omitted-energy count of 212 of 270
+  rows) and its seven output-file hashes, which the chair verified;
+- the F12-I dry-run log and manifest, including its two zero-fit field interaction forecasts (I_a and I_q for one LoRA layer
+  split and one column-split stand-in) and its bitwise-sum flags;
+- the F12e and F12f reports as summarised by their implementers: qualification pass/fail per check, omitted-energy counts by
+  family and k bin, gauge-token change counts and maximum change, the noise check's three z statistics, and the pilot's
+  CPU-seconds, memory, validity count and gauge-audit discrepancy maximum;
+- for the pilot acceptance, the committed pilot report, timing and noise-check hashes, their three timestamps, the noise check's
+  pass flag and the all-in projection total.
+
+The chair did not read the pilot's per-replicate records or simulated decision codes.
