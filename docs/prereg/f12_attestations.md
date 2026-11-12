@@ -242,3 +242,13 @@ sealed, F8 or F9 outcome and no Part A score, received no summary of one and use
 *(iii) Prescore audits.* The session read F12a.1's account of the disclosed pre-score audits and entries 9, 10, 12 and 13 of
 this register. It did not open the Part A prediction or calibration files, the prescore inventories, the round-6 member reports
 or `SYNTHESIS-r6.md`.
+
+*Entry 14, continuation (12 Nov 2026, about 01:17–01:43 UTC, same session, after merging main `9c94d62`).* In addition to the
+above:
+- It read the chair ruling on F12f.
+- From the frozen token outputs, after verifying them, it printed per-rank token counts and per-family row counts by rank.
+- It ran the gauge builder on four real rows in a scratch directory (`gauge_resume_check`), printing per-row ranks, token
+  counts, changed-token counts and K-block changes only (all zero).
+- It printed no a, q, token or feature value, opened no noise payload, ran no noise check, pilot or replicate, opened nothing
+  under `data/evals` and used no GPU.
+- Statements (i)–(iii) are unchanged.

@@ -6401,3 +6401,55 @@ own ids); the audit covers every present token; its tolerance applies to each se
 tokens). *Flagged:* the comparator's v4 block is taken as the pinned pooling code's statistics plus spectrum (1,378 columns;
 matrix width 9,376), whereas the older StatNN baseline used the statistics only. A wider comparator is conservative for WM-R, but
 which block F12.3's "v4 pooled statistics" means is for Board A to confirm at C1; the matrix builder is cheap to re-run.
+
+#### A5 note F12f, continued (Thu Nov 12 01:42:44 UTC 2026, before any G3 outcome): gauge-transformed tokens, real comparator matrix, re-qualification
+
+This block is appended; earlier text is not rewritten. It carries out the chair ruling on F12f on branch `prereg/f12f` after
+merging main `9c94d62` (merge `4287d71`). Code commit: `bbf38da` (tests first). **The ruling's rank-1 premise does not hold
+numerically, and the test it asks for cannot pass. Under the stop rule, the full gauge-token build was not launched, and steps
+3–7 of the brief were not run on real data.** Part A remains held by the programme owner.
+
+**F12f.7 — What was done under the ruling.**
+- (b) *Gauge diagonal:* zero-based, so d = (½, 1, 2, ½, …) and Q = ½ at rank 1 (`GAUGE_INDEX_BASE` = 0).
+- (a) *Threads and cap:* the builder refuses any thread count but six. The self-pricing cap defaults to 24 h. The bitwise
+  K-block reproduction check is kept (`REPRO_RTOL` = 0).
+- *Resume:* `--resume` reloads finished rows (each row's full gauge tokens in `detail.jsonl`; `run_identity.json` must match;
+  torn lines are dropped) and never recomputes them. Without `--resume`, an existing output is refused. Unit-tested, and tested
+  on real data in a scratch directory: two rows were built, a run without `--resume` was refused, and a `--resume` run to four
+  rows kept the two finished rows and computed two (all four reproduced bitwise).
+- *Superseded records:* the two 1-based priced-only records are kept unchanged and listed as superseded in
+  `docs/prereg/f12_manifests/f12f_superseded.json` (sha256 `15d495121abd7e96d5fe35afb2feb9c72b9e4e8b686d2bc1e275780d44a27d9d`).
+- *Builder:* `scripts/f12_gauge_tokens.py`, sha256 `6f7714ff41a01709cbd78d03fcbef624b16afab3b86bbbbf8d96dbd7ea5c343b`.
+
+**F12f.8 — Finding: at rank 1 the zero-based gauge leaves the tokens bitwise unchanged.** At r = 1, H is the 1 × 1 Haar matrix
+after positive-diagonal QR, which is 1, so Q = ½ and (B, A) → (B/2, 2A).
+- Scaling by a power of two is exact in floating point, barring subnormals: every product in the K block's fp64 matrix products
+  is halved and then doubled exactly, so the fp32 K block, and hence the token, is bitwise the same.
+- The same holds for every d_j of the F5 pin, which are all powers of two. No index base makes the rank-1 audit numerically
+  non-trivial without a design change to d.
+- Evidence:
+  - 200 of 200 random rank-1 cases are bitwise equal, against 1 of 200 at rank 2 and 2 of 200 at rank 3;
+  - the test `test_rank_one_factors_change_but_tokens_are_bitwise_invariant` records it;
+  - on the real tokens, the four rows built in the resume check (all r = 1, 37 tokens) show 0 changed tokens.
+
+The ruling's statement that the transform is non-trivial at rank 1 is true of the factors, not of the tokens or the audit. The
+brief's requested test, "a rank-1 tensor's gauge tokens differ from the untransformed tokens", was not written: it would fail.
+
+*Effect of the zero-based index on the real tokens:*
+- **Rank 1:** 2,165 of 6,845 present tokens, in 205 of 270 rows (abliteration 83, rank-1 chain 69, random_dir 53). Their gauge
+  tokens equal the frozen tokens bitwise, so their audit discrepancy is exactly 0, as under the 1-based reading.
+- **Ranks 4–32:** 4,680 tokens in 65 rows (lora_sft 29; chain-LoRA 36): 1,368 at r = 4, 1,152 at r = 8, 1,512 at r = 16 and
+  648 at r = 32. They get a real rotation and a perturbed fp32 K block under either index base. Zero-based changes their d
+  pattern, not whether they are transformed.
+
+**F12f.9 — Decision needed (for the chair; not taken here).**
+- (1) Accept that the rank-1 audit is exactly invariant (disclosed for Board A), keep j = 0..r−1, and launch the build as now
+  implemented; or
+- (2) a design change to the gauge pin (for example a non-power-of-two diagonal), which needs Board A.
+
+Separately, contention now slows the rows about fourfold: the second row took 444 s, against 104 s on a quiet machine, so even
+the 24 h cap may bind. The build is ready to launch on the chair's word:
+`agent-tmux <name> /home/ubuntu/wsp-data/runs/a5/f12_inputs/run_gauge_tokens.sh`, after its cap argument is updated to 24.
+Everything else in F12f.6 remains as listed.
+
+*Attestation.* Entry 14 of `docs/prereg/f12_attestations.md` is extended to this continuation.
