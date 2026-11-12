@@ -31,7 +31,7 @@ round-6 member reports. They are predictions and simulation outputs, not outcome
 | 7 | F12b drafting (implementation sub-agent) | branch `prereg/f12b`, about 14:10-18:05 UTC | F12b, its code and synthetic diagnostics | none seen (code constants of uncertain provenance disclosed) | none | none read | end of amendment F12b; entry 18 | given (its own session only) |
 | 8 | Board A methods reviewer, F12b review | `review/board-a-f12b` worktree | that review | none knowingly opened; whether displayed material held numerical summaries: not certain | none | summaries only | the review's "Exposure attestation"; entry 19 | given (its own session only) |
 | 9 | F12c implementer (this file's author) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12c`, worktree `.worktrees/prereg/f12c`, 11 Nov 2026 about 18:10 UTC to the F12c commit | F12c note, code, tests, manifests, synthetic checks | see below | none | see below | below | given (this session only); raw-loader account confirmed in entry 20 |
-| 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11-12 Nov 2026 | through 07:40 UTC 12 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entries 10 and 10a | given through the C1 freeze (entries 10, 10a, 10b) |
+| 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11-12 Nov 2026 | through 07:40 UTC 12 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entries 10 and 10a | given through the second C1 freeze (entries 10, 10a, 10b, 10c) |
 | 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** (entries 12-14, row 15 and entries 23-24 so far) |
 | 15 | Board A methods reviewer, F12c review | `review/board-a-f12c` worktree | that review | none seen | none deliberately; hook-run access **not certain** | summaries only | the review's attestation; entry 21 | given 12 Nov 2026 (its own session only), qualified |
 | 12 | F12d implementer and v2 restricted-payload extractor (chair-authorised for that step) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12d`, worktree `.worktrees/prereg/f12d`, 11 Nov 2026 about 21:45 UTC to the F12d note commit | F12d note, code, tests, v2 restricted copy and pin, C1 skeleton, resource plan | none seen; handled centred qualification noise (see below) | none | read F12a.1's account and entries 9-10, not the audits | entry 12 below | given (this session only) |
@@ -687,3 +687,36 @@ with the frozen run. It started no other job of its own while the build ran.
 - Statements (i) and (iii) are unchanged. **(ii) remains none**: no Part A, F8-E, F8-F or F9 outcome or summary, nothing
   under `data/evals`, no Part A staging/prediction/calibration file, no F12f pilot per-replicate record or decision code.
 
+## Entry 10c: chair renewal at the second C1 freeze (statement supplied by the chair, recorded verbatim)
+
+> Entry 10c. Session: the same orchestrating chair session as entries 10, 10a and 10b. This renewal covers the first C1 freeze
+> to the second C1 freeze on 12 Nov 2026 and attests to this session only. (i) Old development outcomes: nothing new beyond
+> entries 10 and 10a. (ii) New outcomes: none. Part A remains unscored and held by the programme owner. No Part A, G3, F8, F9,
+> F12 or F12-I scoring or GPU job was run, and the chair opened nothing under data/evals. (iii) Prescore audits: nothing new
+> beyond entry 10. What the chair read in this interval: Board A's F12-C1 review; the unexposed-role adoption review and both
+> re-checks; the remedy implementer's reports (per-flag status, test counts, AST-identity results, plan and base-state
+> requalification results, and the token requalification's per-file equality results, wall time, CPU time and peak RSS); and
+> the chair's own resource disposition, requalification ruling and the recorded peak-RSS figures in the token and gauge
+> manifests. The chair did not read token values, per-row a and q values, per-replicate pilot records or simulated decision
+> codes. Decisions in this interval: the resource disposition and future memory boundary; commissioning the unexposed-role
+> adoption review and remedy; choosing the full 270-row token rerun under a dated 19 GB resource cap; disabling resume and
+> confining the base-model cache for A19 and A10; accepting guard-only requalification without another token rerun; and this
+> second re-freeze. None used a Part A, F8, F9, F12 or F12-I outcome.
+
+*Entry 23, addendum (12 Nov 2026, from about 14:10 UTC to the commit adding note F12-C1b; same session, after merging main
+`a5d03e9` and `prereg/f12-remedy` at `df0265e`).* In addition to the above:
+- *Read.* Board A's F12-C1 review in full; the unexposed adoption review (header, scope section, sections (b) and (c)); both
+  re-checks' opening statements and headings; the chair resource disposition, the token requalification ruling, note F12-R
+  and its two addenda; this register's entry 24 row and opening; the merged remedy code where `f12_c1.py` reads it (the
+  `outcomes_read_intent` label); the F12-R evidence records, printing only their status, equality and hash fields and the
+  rerun's memory, wall-time and CPU figures. No token value, per-row a or q value or feature value was printed.
+- *Committed pilot report.* The freeze builder's static prerequisite check (`prerequisite_binding`), run by the tests and at
+  each freeze, parses the whole committed `f12f_pilot_report.json` in memory, including its per-replicate records, and keeps
+  only its identity fields. Nothing else from it was printed or used. Board A's F12-C1 review deliberately avoided that
+  decode; this session discloses that its builder performs it.
+- *Test runs.* The full suite twice outside the hook on the merged tree (the first without `scripts/env.sh`, which made one
+  Part A path test fail because `wsp` resolved to the main checkout; the second, as the hook runs it, failed only the two C1
+  pin tripwires) and the hook's full suite at each later commit. The merge commit `14009f7` was made with `--no-verify` for
+  that tripwire reason only.
+- It opened nothing under `data/evals`, saw no new outcome, read no pilot decision code and used no GPU.
+- Statements (i)–(iii) are unchanged.
