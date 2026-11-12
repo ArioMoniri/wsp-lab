@@ -824,6 +824,18 @@ def _matrix_detail(matrix, tok, gauge, v4_width, P):
     }
 
 
+def f12f_inputs(token_manifest_sha256):
+    """(gauge, matrix) inputs from the committed F12f manifests; None for a manifest that does not exist."""
+    gauge = matrix = None
+    if Path(GAUGE_MANIFEST).exists():
+        raw = Path(GAUGE_MANIFEST).read_bytes()
+        gauge = gauge_inputs(json.loads(raw), hashlib.sha256(raw).hexdigest(), token_manifest_sha256)
+    if Path(MATRIX_MANIFEST).exists():
+        raw = Path(MATRIX_MANIFEST).read_bytes()
+        matrix = matrix_inputs(json.loads(raw), hashlib.sha256(raw).hexdigest())
+    return gauge, matrix
+
+
 def omitted_energy_unchanged(report, prior) -> bool:
     """The omitted-energy flag carried to Board A unchanged (chair ruling on F12e (c))."""
     return json.dumps(report.get("omitted_energy"), sort_keys=True) == json.dumps(
@@ -1165,11 +1177,20 @@ def main(argv=None):
         print(json.dumps({"written": str(a.out), "sha256": _write(a.out, obj)}))
         return 0
     ident = json.loads(a.identities.read_text())
-    rep = qualify(man, population, psha, out_dir, tok=tok, identities=ident)
+    gauge, matrix = f12f_inputs(msha)
+    rep = qualify(man, population, psha, out_dir, tok=tok, identities=ident, gauge=gauge, matrix=matrix)
+    prior = json.loads(F12E_QUALIFICATION_PATH.read_text())
+    rep["omitted_energy_flag"] = {
+        "unchanged_from_f12e": omitted_energy_unchanged(rep, prior),
+        "f12e_report": {"path": _rel(F12E_QUALIFICATION_PATH), "sha256": sha256_file(F12E_QUALIFICATION_PATH)},
+        "status": "flagged for Board A at C1, unchanged (chair ruling on F12e (c); F5 pins: a diagnostic, not an "
+        "input); no threshold or rule is introduced",
+    }
     rep["token_manifest"] = {"path": _rel(TOKEN_MANIFEST), "sha256": msha}
     rep["population"] = {"path": _rel(POPULATION), "sha256": psha}
     rep["candidate_identities"] = {"path": _rel(a.identities), "sha256": sha256_file(a.identities)}
-    rep["code"] = {"scripts/f12_qualify.py": sha256_file(ROOT / "scripts/f12_qualify.py")}
+    rep["code"] = {rel: sha256_file(ROOT / rel) for rel in ("scripts/f12_qualify.py", "scripts/f12_matrix.py",
+                                                             "scripts/f12_gauge_tokens.py", "scripts/f12_simulation.py")}
     try:
         head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, cwd=ROOT).strip()
     except (OSError, subprocess.CalledProcessError):

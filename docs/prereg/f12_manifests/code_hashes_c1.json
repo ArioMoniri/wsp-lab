@@ -17,7 +17,7 @@
   "scripts/f12_matrix.py": "bcee6a6df705d7a234faf8ec177167e7e632b133fdd3d82de5b59054b2d0d97f",
   "scripts/f12_payload_extract.py": "5de91001e242a5687c3fb97988f7093f2d552cf553cdb92f6c2c0f4cb0fa79dd",
   "scripts/f12_population.py": "7e1c196dcbedd36e2ea7102d6a1ef4e50e23b8381dcc2bbf1cfffce77b2ee45d",
-  "scripts/f12_qualify.py": "43cc6dee4e9bec3b39204ec843a9656f15a41423364d20a2c70a327fcb4db095",
+  "scripts/f12_qualify.py": "9ce2bfc3cede66b8404ba92c3cf46e878520fd5970a01ce577e03a298e0b1da0",
   "scripts/f12_simulation.py": "1ef27e649e512e11b731a1c9a755cb6c53d5d4625bc9c15cd173f3741bc3c384",
   "scripts/f12_tokens.py": "3188c5c54e51110d0fb161f688c8c94832eed674be80b3c757060951a596092a",
   "scripts/f12b_diagnostics.py": "ab54d18c875442639e314864346298d327b29107b8719b166e67b9ad766939db",
@@ -36,7 +36,7 @@
   "tests/test_f12f_gauge_audit.py": "a16a7e9ea979e4f93518404c8e3cb304604086e84d4f945c6e30b2addc2d48e8",
   "tests/test_f12f_gauge_tokens.py": "1965eedd5247d604a46966970c364b3e56c5b31a663d66254c379c6957666018",
   "tests/test_f12f_matrix.py": "13bbfd12288c5432547b720ffbc379275aa84ba81597ff6dc32a0919afa5ccc3",
-  "tests/test_f12f_qualify.py": "afa6e0cea7252ce0ae1b27fc841023ae0bd98fac03c19c1f1627599e1a13b188"
+  "tests/test_f12f_qualify.py": "47bb716ed5986684785c380fb594a07d3cb602d90c3e8d8ae788a1848e5d4dae"
  },
  "note": "Draft of F12a.6(c) item 11. Not a C1 file until MANIFEST_C1.sha256 is committed; it is regenerated (python scripts/f12_simulation.py c1-draft) after any change to a listed file. The C1 package draft is c1_draft/ (F12d skeleton; token-dependent parts filled from the frozen token manifest by F12e, f12e_token_facts.json); MANIFEST_C1.sha256 and Board A verification are still to come.",
  "restricted_payload": {

@@ -1,0 +1,96 @@
+{
+ "basis": "PREREG_H1_TF chair ruling on F12e (a); F12.3; F12a.2(i); F5 schema pins 'Gauge audit'",
+ "code": {
+  "code_files_dirty": true,
+  "git_sha": "8eabc96da29d7a4f3a5e0ae95a3cccd23517d1ba",
+  "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
+  "scripts/a5_power_fields.py": "bcf7d15d679e819d17f7784262bb22fbe10fece33bbb6757e8e08b44d3e592a8",
+  "scripts/f12_gauge_tokens.py": "c80c3613585977c269b5b8e777fd88a87b7715af4daa75ef5fb21497de092d54",
+  "scripts/f12_qualify.py": "723581f389d5f6c2031285f25cafeaac937c940224d8b7bfef04baf3444467cc",
+  "scripts/f12_tokens.py": "3188c5c54e51110d0fb161f688c8c94832eed674be80b3c757060951a596092a",
+  "src/wsp/features/response_field.py": "98d81bbc300e715fe27a02e04711c0d036ae7ef9342d6bddbcaa227d91f725bc",
+  "src/wsp/zoo/apply.py": "4dbeb10e9d7024508baa376b915a90072170428f87663b32865ff4543cd72005"
+ },
+ "construction": {
+  "Q": "H diag(d); H Haar r x r: torch.Generator('cpu').manual_seed(seed('20261110:lol-gauge:', '<row id>:<exact tensor name>')), randn(r, r) fp64, QR with positive diagonal (zero sign -> +1); d_j = 2^((j mod 3) - 1), j = 1..r; r = recorded rank capped at min(out, in) (frozen r_eff)",
+  "edit_id": "the population row id (the canonical zoo edit id); alias rows keep their own id",
+  "factors": "balanced B = U_r diag(sigma_r^1/2), A = diag(sigma_r^1/2) V_r^T of the full thin fp32 SVD of D_t (f12_tokens.balanced_factors); (B, A) -> (BQ, Q^-1 A) in fp64 (Q^-1 = diag(1/d) H^T), cast to fp32",
+  "scope": "every population row and every present token (each present token has balanced low-rank factors); absent slots stay zero",
+  "source_checks": "token manifest sha256 pinned; token files equal its sha256; population sha256; slot names; base state hash; per-row increment sha256 equals the frozen rows.jsonl; presence equals the nonzero supported tensors; r_eff equals the frozen detail; the recomputed K block reproduces the frozen columns 0-15 bitwise (frozen run's six threads)",
+  "token": "frozen token with columns 0-15 replaced by the K block of the transformed factors (frozen K frames); columns 16-41 copied (functions of D_t alone); masked K blocks stay zero"
+ },
+ "files": {
+  "detail.jsonl": "ffafb2d706005e3d9f20df23b0a61a8386a32050aeb2682a805d566814a50941",
+  "pricing.json": "d30021ee247ddc753e4895ce6e005fe497fb904e3258ba5842340649d0b294e2",
+  "rows.jsonl": "9e44331c0f2179f00a98269b64a624d34af80540f1ff65fdafcd7bd20559fa09"
+ },
+ "gauge_tokens": null,
+ "inputs": {
+  "base_state_hash": "18f07d70a89aa63125e7e95535ff2730eb54bae4ee846d72f183e004a740d982",
+  "population_sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5",
+  "token_files": {
+   "aq.json": "90ab8466ee08b08e2fc003d419cbeb4d87494dc007413fe4f542a961f79d4e67",
+   "detail.jsonl": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a",
+   "kframes.json": "b80b9b3aef8b29c242e13c5a99d9e6096c28aa444fbac7b66454f40f0d256e48",
+   "kframes.safetensors": "100a4024bf09f33820540c21b53bd0512c14bd1d1dfb7c299f647f5aedd0b519",
+   "pricing.json": "1146a853b066fbce80acb06975083e7c9c579b2faafa018e23939d3f2cfecd98",
+   "rows.jsonl": "424c9039c7f3bcb7232465428681072da5ce4bfbe24f98ca1f04d7ca72f863c6",
+   "tokens.safetensors": "f8c5e163fcbcb013fdf6287a6ac19f242f0ec1bd786c7add618cc8af8974a054"
+  },
+  "token_manifest": {
+   "path": "docs/prereg/a5_manifests/f12/tokens_manifest.json",
+   "sha256": "424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f"
+  },
+  "zoo": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12f/data/zoo/qwen3.5-0.8b"
+ },
+ "out_dir": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/gauge_pricing",
+ "outcomes_read": "none: the frozen token outputs (verified), population.json, stored edit bytes and the base model only; no evaluation record, TF-v1 score, noise payload or data/evals file",
+ "rows_sha256": "f4198d98bdbbadc4bb6ed006299857489740f950e845e7ab98f3457a9d21a9da",
+ "schema": "f12-gauge-tokens-v1",
+ "status": "priced_only",
+ "summary": {
+  "charged_to": "F12 inputs (chair ruling on F12e (c)), not the 190 CPU-h simulation ceiling",
+  "cond_max": 1.0,
+  "k_block_max_abs_change": 0.0,
+  "k_reproduced_exact_rows": 3,
+  "k_reproduction_max_abs_diff": 0.0,
+  "k_reproduction_max_rel_diff": 0.0,
+  "k_reproduction_rule": "recomputed K block bitwise equal to the frozen columns 0-15 (REPRO_RTOL = 0; the frozen run's six threads), else fail closed",
+  "masked_tokens": 0,
+  "max_rss_bytes": 3153223680,
+  "n_rows_done": 3,
+  "n_tokens": 27,
+  "pricing": {
+   "cap_wall_hours": 10.0,
+   "first_row_present_tensors": [
+    2,
+    17,
+    8
+   ],
+   "first_row_seconds": [
+    18.708030939102173,
+    104.1131854057312,
+    5.008445501327515
+   ],
+   "first_rows": 3,
+   "n_rows": 270,
+   "present_tensors_total": 6845,
+   "projected_wall_hours": 9.004280124331208,
+   "projected_wall_seconds": 32415.40844759235,
+   "projected_wall_seconds_naive": 11512.891519784927,
+   "projected_wall_seconds_tensor_weighted": 32415.40844759235,
+   "setup_seconds": 8.221953630447388,
+   "threads": 6,
+   "within_cap": true
+  },
+  "timing": {
+   "process_cpu_hours": 0.15643589583333334,
+   "process_cpu_seconds": 563.169225,
+   "row_cpu_seconds_total": 552.255959613,
+   "row_seconds_total": 127.82966184616089,
+   "threads": 6,
+   "wall_seconds": 136.7033543586731
+  },
+  "tokens_reproduced_bitwise": 27
+ }
+}

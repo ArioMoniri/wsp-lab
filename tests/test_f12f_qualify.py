@@ -165,3 +165,17 @@ def test_c1_draft_cites_the_f12f_gauge_tokens_runner_audit_and_matrix():
     for obj in (f["gauge_tokens_manifest"], f["qualification"], mx["manifest"]):
         p = fs.ROOT / obj["path"]
         assert obj["sha256"] == (_sha(p.read_bytes()) if p.exists() else None)
+
+
+def test_cli_loader_reads_the_committed_gauge_and_matrix_manifests(f12f, monkeypatch):
+    x = f12f
+    gpath, mpath = x["tmp"] / "g.json", x["tmp"] / "matrix_manifest.json"
+    gpath.write_text(json.dumps(x["gman"]))
+    monkeypatch.setattr(fq, "GAUGE_MANIFEST", gpath)
+    monkeypatch.setattr(fq, "MATRIX_MANIFEST", mpath)
+    gauge, matrix = fq.f12f_inputs(x["tsha"])
+    assert gauge["sha256"] == _sha(gpath.read_bytes()) and "data" in gauge
+    assert matrix["sha256"] == _sha(mpath.read_bytes()) and "matrix" in matrix
+    monkeypatch.setattr(fq, "GAUGE_MANIFEST", x["tmp"] / "absent.json")
+    gauge, _ = fq.f12f_inputs(x["tsha"])
+    assert gauge is None
