@@ -1,0 +1,46 @@
+{
+ "driver": {
+  "path": "scripts/f12_additivity_stream.py",
+  "sha256": "0bf273ea2b8eaa1cd84094d7d675d17c63ae5a4566a76bce6c2c5e1c70f9688a"
+ },
+ "git_head": "5344866e606575021d02e40f5a8beaf54b1d659a",
+ "noop_parts": 0,
+ "outcomes_read": "none",
+ "peak_rss_bytes": 3114868736,
+ "plan": "docs/prereg/a5_manifests/f12/additivity_plan.json",
+ "plan_sha256": "2c441619077f4df8b73d3d599767e0c39a985f1ed764748ad31a8eb8491bd968",
+ "population": {
+  "path": "docs/prereg/a5_manifests/f12/population.json",
+  "sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+ },
+ "reused_code": {
+  "scripts/a5_power_fields.py": "bcf7d15d679e819d17f7784262bb22fbe10fece33bbb6757e8e08b44d3e592a8",
+  "scripts/f12_additivity_prepare.py": "ac7aee71c3f29da98f55366574f291cd5c461ac78648259f58e8b54521601f16",
+  "scripts/part_a_predictions.py": "d312967e317e330a3a7beff73a74f47c8da4ebbaaf110f763f2d7f36a8233847",
+  "src/wsp/features/response_field.py": "98d81bbc300e715fe27a02e04711c0d036ae7ef9342d6bddbcaa227d91f725bc",
+  "src/wsp/features/rotation.py": "8ac459934b0b145f62a3f0c81f68980c1f57d0ef7663d16e9ce1f693be376dba",
+  "src/wsp/zoo/apply.py": "4dbeb10e9d7024508baa376b915a90072170428f87663b32865ff4543cd72005"
+ },
+ "roots": [
+  "64b10bbaef2b726d",
+  "6cf90a51c4244720",
+  "81ffbb2850280a20",
+  "823f35704d34f1d8",
+  "8289fa52f33a8d0d",
+  "89a781074d330a7e",
+  "94804c08e9e63a25",
+  "a202c469c4f60027",
+  "af6664b98264308c",
+  "d904e32c5c8bc52e",
+  "e0235707664804ef",
+  "f3e1be8e4fe2c66b",
+  "f4b10903b8e09e24",
+  "f66b8fbbfa3e43d0",
+  "f8c2cf0c6b9ffa8c",
+  "fc796b847b42a34b"
+ ],
+ "roots_failed": [],
+ "rss_limit_gb": 4.5,
+ "schema": "f12-additivity-stream-run-v1",
+ "threads": 2
+}

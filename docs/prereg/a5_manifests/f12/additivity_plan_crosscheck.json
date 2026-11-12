@@ -1,0 +1,42 @@
+{
+ "also_equal": {
+  "base": true,
+  "population_json_sha256": true,
+  "source": true
+ },
+ "basis": "chair instruction (12 Nov 2026) on F12g condition 2: before the real run, the streaming driver's entry for the LoRA root that the committed F12-I dry run built through the original whole-panel code path must reproduce that run's supports, part ids, increment hashes and bitwise flags exactly",
+ "command": "python scripts/f12_additivity_stream.py cross-check <streaming plan> docs/prereg/a5_manifests/f12/additivity_dryrun/manifest.json 64b10bbaef2b726d",
+ "compared_fields": [
+  "full_increment_sha256",
+  "n_full_tensors",
+  "bitwise_sum_verified",
+  "I_defined",
+  "parts[].label",
+  "parts[].part_id",
+  "parts[].support",
+  "parts[].n_tensors",
+  "parts[].increment_sha256",
+  "parts[].noop",
+  "parts[].I_status"
+ ],
+ "differences": [],
+ "full_plan_entry_equal": true,
+ "identical": true,
+ "outcomes_read": "none",
+ "reference": {
+  "code": "scripts/f12_additivity_prepare.py dry-run (commit 47ca987), whole-panel loading",
+  "path": "docs/prereg/a5_manifests/f12/additivity_dryrun/manifest.json",
+  "sha256": "1c59c5f3deaabbbfa595c1474fe4ee63d5a705a84b22a7c4cf97cd4747a7e461"
+ },
+ "root": "64b10bbaef2b726d",
+ "schema": "f12-additivity-stream-crosscheck-v1",
+ "streaming_run": {
+  "driver_sha256": "0bf273ea2b8eaa1cd84094d7d675d17c63ae5a4566a76bce6c2c5e1c70f9688a",
+  "git_head": "5344866e606575021d02e40f5a8beaf54b1d659a",
+  "peak_rss_bytes": 3114692608,
+  "plan_path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/c1_freeze/xcheck/plan_64b10bbaef2b726d.json",
+  "plan_sha256": "b086bde031348c6add2b7e3ad3db29ca2794060f53ca697a9e74ebab04aacf3e",
+  "run_record_sha256": "e9af1593a7e3271afe520ead3c0692701fa0bec083324dc4ba7bd3f4327bb71b",
+  "threads": 2
+ }
+}
