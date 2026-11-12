@@ -7,7 +7,7 @@
   },
   "manifest": {
    "path": "docs/prereg/a5_manifests/f12/matrix_manifest.json",
-   "sha256": null
+   "sha256": "0ea5deb3b8afd3fa64f26262de8de1a25a49f5517bdd70811b890de328dda20c"
   },
   "pooling_code": {
    "path": "src/wsp/features/pool.py",

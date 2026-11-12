@@ -15,7 +15,7 @@
     },
     "gauge_tokens_manifest": {
      "path": "docs/prereg/a5_manifests/f12/gauge_tokens_manifest.json",
-     "sha256": null
+     "sha256": "0b90f6ee70acda98f32e3cf8a2a72259c08e9cfeba4d7e89f0be735869656818"
     },
     "qualification": {
      "path": "docs/prereg/f12_manifests/f12f_qualification.json",

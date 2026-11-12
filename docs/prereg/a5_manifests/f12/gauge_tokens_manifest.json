@@ -1,0 +1,130 @@
+{
+ "basis": "PREREG_H1_TF chair ruling on F12e (a); F12.3; F12a.2(i); F5 schema pins 'Gauge audit'",
+ "code": {
+  "code_files_dirty": false,
+  "git_sha": "4f6a7c6beffad67ad485ccac2c942fa3a10aad85",
+  "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
+  "scripts/a5_power_fields.py": "bcf7d15d679e819d17f7784262bb22fbe10fece33bbb6757e8e08b44d3e592a8",
+  "scripts/f12_gauge_tokens.py": "6f7714ff41a01709cbd78d03fcbef624b16afab3b86bbbbf8d96dbd7ea5c343b",
+  "scripts/f12_qualify.py": "9ce2bfc3cede66b8404ba92c3cf46e878520fd5970a01ce577e03a298e0b1da0",
+  "scripts/f12_tokens.py": "3188c5c54e51110d0fb161f688c8c94832eed674be80b3c757060951a596092a",
+  "src/wsp/features/response_field.py": "98d81bbc300e715fe27a02e04711c0d036ae7ef9342d6bddbcaa227d91f725bc",
+  "src/wsp/zoo/apply.py": "4dbeb10e9d7024508baa376b915a90072170428f87663b32865ff4543cd72005"
+ },
+ "construction": {
+  "Q": "H diag(d); H Haar r x r: torch.Generator('cpu').manual_seed(seed('20261110:lol-gauge:', '<row id>:<exact tensor name>')), randn(r, r) fp64, QR with positive diagonal (zero sign -> +1); d_j = 2^((j mod 3) - 1), j = 0..r-1 (chair ruling on F12f (b)); r = recorded rank capped at min(out, in) (frozen r_eff); at r = 1, Q = 1/2 exactly, so (B/2, 2A) is exact in floating point and the token is bitwise unchanged",
+  "edit_id": "the population row id (the canonical zoo edit id); alias rows keep their own id",
+  "factors": "balanced B = U_r diag(sigma_r^1/2), A = diag(sigma_r^1/2) V_r^T of the full thin fp32 SVD of D_t (f12_tokens.balanced_factors); (B, A) -> (BQ, Q^-1 A) in fp64 (Q^-1 = diag(1/d) H^T), cast to fp32",
+  "scope": "every population row and every present token (each present token has balanced low-rank factors); absent slots stay zero",
+  "source_checks": "token manifest sha256 pinned; token files equal its sha256; population sha256; slot names; base state hash; per-row increment sha256 equals the frozen rows.jsonl; presence equals the nonzero supported tensors; r_eff equals the frozen detail; the recomputed K block reproduces the frozen columns 0-15 bitwise (frozen run's six threads)",
+  "token": "frozen token with columns 0-15 replaced by the K block of the transformed factors (frozen K frames); columns 16-41 copied (functions of D_t alone); masked K blocks stay zero"
+ },
+ "files": {
+  "detail.jsonl": "943b171cad6d0522d441a7d65cdb8abae7395ee5e80d81baa3bfd8c6cf55098f",
+  "gauge_tokens.safetensors": "fe5bc334884b3c1c6e2a45acde2462e3cf6a877a1c097e7c473993ec5cc02f2b",
+  "pricing.json": "0fe66fa8ce8d21d06b6e7c1c6f15b6f292d9632a82815c9fea81af4f44959d94",
+  "rows.jsonl": "052f1eb2475bc8c0676243431d1d5780cd844900be76bf4a06111611984b5d3d"
+ },
+ "gauge_tokens": {
+  "X_gauge_sha256": "6d75dfac42f1fc7a2484e1d7c9e101603897dc936463ce7cc197f0f76da4fd19",
+  "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/gauge_tokens_zb/gauge_tokens.safetensors",
+  "sha256": "fe5bc334884b3c1c6e2a45acde2462e3cf6a877a1c097e7c473993ec5cc02f2b",
+  "shape": [
+   270,
+   186,
+   42
+  ]
+ },
+ "inputs": {
+  "base_state_hash": "18f07d70a89aa63125e7e95535ff2730eb54bae4ee846d72f183e004a740d982",
+  "population_sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5",
+  "token_files": {
+   "aq.json": "90ab8466ee08b08e2fc003d419cbeb4d87494dc007413fe4f542a961f79d4e67",
+   "detail.jsonl": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a",
+   "kframes.json": "b80b9b3aef8b29c242e13c5a99d9e6096c28aa444fbac7b66454f40f0d256e48",
+   "kframes.safetensors": "100a4024bf09f33820540c21b53bd0512c14bd1d1dfb7c299f647f5aedd0b519",
+   "pricing.json": "1146a853b066fbce80acb06975083e7c9c579b2faafa018e23939d3f2cfecd98",
+   "rows.jsonl": "424c9039c7f3bcb7232465428681072da5ce4bfbe24f98ca1f04d7ca72f863c6",
+   "tokens.safetensors": "f8c5e163fcbcb013fdf6287a6ac19f242f0ec1bd786c7add618cc8af8974a054"
+  },
+  "token_manifest": {
+   "path": "docs/prereg/a5_manifests/f12/tokens_manifest.json",
+   "sha256": "424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f"
+  },
+  "zoo": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12f/data/zoo/qwen3.5-0.8b"
+ },
+ "out_dir": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/gauge_tokens_zb",
+ "outcomes_read": "none: the frozen token outputs (verified), population.json, stored edit bytes and the base model only; no evaluation record, TF-v1 score, noise payload or data/evals file",
+ "rows_sha256": "a62d0d352172cd697eff949293d92068ec434dd506dae47943f1feb76cb21543",
+ "schema": "f12-gauge-tokens-v1",
+ "status": "complete",
+ "summary": {
+  "charged_to": "F12 inputs (chair ruling on F12e (c)), not the 190 CPU-h simulation ceiling",
+  "cond_max": 4.000000000000009,
+  "gauge_index_base": 0,
+  "k_block_max_abs_change": 1.862645149230957e-09,
+  "k_reproduced_exact_rows": 270,
+  "k_reproduction_max_abs_diff": 0.0,
+  "k_reproduction_rule": "recomputed K block bitwise equal to the frozen columns 0-15 (REPRO_RTOL = 0; the frozen run's six threads), else fail closed",
+  "masked_tokens": 0,
+  "max_rss_bytes": 5400002560,
+  "n_rows_done": 270,
+  "n_tokens": 6845,
+  "pricing": {
+   "cap_wall_hours": 24.0,
+   "first_row_present_tensors": [
+    2,
+    17,
+    8
+   ],
+   "first_row_seconds": [
+    6.942702531814575,
+    22.950159072875977,
+    5.845864772796631
+   ],
+   "first_rows": 3,
+   "n_rows": 270,
+   "present_tensors_total": 6845,
+   "prior_rows_seconds": 0,
+   "projected_wall_hours": 2.5190820484985537,
+   "projected_wall_seconds": 9068.695374594794,
+   "projected_wall_seconds_naive": 3224.7517836093903,
+   "projected_wall_seconds_tensor_weighted": 9068.695374594794,
+   "setup_seconds": 8.266409635543823,
+   "threads": 6,
+   "within_cap": true
+  },
+  "timing": {
+   "process_cpu_hours": 21.08597431277778,
+   "process_cpu_seconds": 75909.507526,
+   "row_cpu_seconds_total": 75897.50957254609,
+   "row_seconds_total": 16411.935245990753,
+   "threads": 6,
+   "wall_seconds": 16421.888682603836
+  },
+  "tokens_k_block_changed": 4655,
+  "tokens_k_block_changed_by_rank": {
+   "1": [
+    0,
+    2165
+   ],
+   "16": [
+    1501,
+    1512
+   ],
+   "32": [
+    646,
+    648
+   ],
+   "4": [
+    1360,
+    1368
+   ],
+   "8": [
+    1148,
+    1152
+   ]
+  },
+  "tokens_reproduced_bitwise": 6845
+ }
+}

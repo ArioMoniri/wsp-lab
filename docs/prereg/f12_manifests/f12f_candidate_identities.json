@@ -1,0 +1,80 @@
+{
+ "code": {
+  "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
+  "scripts/a5_simulation.py": "4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a",
+  "scripts/f12_budget.py": "c2df25e58f9cb49e839603c4bfc96de1d45bface60873df67323aff00e538741",
+  "scripts/f12_c1.py": "6494bed4703c8b26baf239f6fd3ae62285dce242d809df2f7fd0f48f691707cd",
+  "scripts/f12_gauge_tokens.py": "6f7714ff41a01709cbd78d03fcbef624b16afab3b86bbbbf8d96dbd7ea5c343b",
+  "scripts/f12_matrix.py": "bcee6a6df705d7a234faf8ec177167e7e632b133fdd3d82de5b59054b2d0d97f",
+  "scripts/f12_payload_extract.py": "5de91001e242a5687c3fb97988f7093f2d552cf553cdb92f6c2c0f4cb0fa79dd",
+  "scripts/f12_population.py": "7e1c196dcbedd36e2ea7102d6a1ef4e50e23b8381dcc2bbf1cfffce77b2ee45d",
+  "scripts/f12_qualify.py": "9ce2bfc3cede66b8404ba92c3cf46e878520fd5970a01ce577e03a298e0b1da0",
+  "scripts/f12_simulation.py": "1ef27e649e512e11b731a1c9a755cb6c53d5d4625bc9c15cd173f3741bc3c384",
+  "scripts/f12_tokens.py": "3188c5c54e51110d0fb161f688c8c94832eed674be80b3c757060951a596092a",
+  "scripts/tfv1_requalify.py": "46f7ab9a4ab3207990fdc0fa888d9f6164fc156f98a0072f33df51d1432e6249",
+  "src/wsp/features/extract.py": "11de545c5ba8b4186df91ff218992a595fdbc8dcd343fd4b6b3a8e6278626906",
+  "src/wsp/features/pool.py": "85a6341a446f32761531e0f0a193101114201d9eb08b0e05e6a6d1d42ee94390"
+ },
+ "code_hashes_c1_draft": {
+  "path": "docs/prereg/f12_manifests/code_hashes_c1.json",
+  "sha256": "36026c51d9966d608cce8daf74cc59b307c573838361ab716010be3361a71eee"
+ },
+ "config_files": {
+  "docs/prereg/f12_manifests/f12c_pilot_config.json": "5e8c8c2aef6bdb049c9470757f5847e406fbc908384abb0c83cf4e1b2254b24e",
+  "docs/prereg/f12_manifests/f12c_stage1_config.json": "7cb10a83a6a2fb0e7e92ee14b2bea21d3efea42d49510e1625e9bcb9df204b01",
+  "docs/prereg/f12_manifests/f12c_stage2_config.json": "ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f",
+  "docs/prereg/f12_manifests/f12c_target_config.json": "be372fc56657bc4e6a62732e0e7bbce1701027197635b846efee6e8f4948e29c"
+ },
+ "configs": {
+  "pilot": "5e8c8c2aef6bdb049c9470757f5847e406fbc908384abb0c83cf4e1b2254b24e",
+  "stage1": "7cb10a83a6a2fb0e7e92ee14b2bea21d3efea42d49510e1625e9bcb9df204b01",
+  "stage2": "ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f",
+  "target": "be372fc56657bc4e6a62732e0e7bbce1701027197635b846efee6e8f4948e29c"
+ },
+ "gauge_manifest": {
+  "path": "docs/prereg/a5_manifests/f12/gauge_tokens_manifest.json",
+  "sha256": "0b90f6ee70acda98f32e3cf8a2a72259c08e9cfeba4d7e89f0be735869656818"
+ },
+ "matrix_manifest": {
+  "path": "docs/prereg/a5_manifests/f12/matrix_manifest.json",
+  "sha256": "0ea5deb3b8afd3fa64f26262de8de1a25a49f5517bdd70811b890de328dda20c"
+ },
+ "population": {
+  "path": "docs/prereg/a5_manifests/f12/population.json",
+  "sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+ },
+ "resource_plan": {
+  "path": "docs/prereg/f12_manifests/f12c_resource_plan.json",
+  "sha256": "53804434a6a679ebd69a3775f7a26a25a224c397d6f8323c7bec16532221a348"
+ },
+ "restricted_payload": {
+  "path": "/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/noise_payload_restricted_v2.json",
+  "pin": "docs/prereg/f12_manifests/noise_payload_restricted_pin.json",
+  "pin_sha256": "f30dbf3058373e3a52b064eb1b08ff2aa51f3dd9fc0172aedfc5fe41d26b2562",
+  "sha256": "44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5"
+ },
+ "schema": "f12f-candidate-identities-v1",
+ "simulation_code_identity": {
+  "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
+  "scripts/a5_simulation.py": "4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a",
+  "scripts/f12_simulation.py": "1ef27e649e512e11b731a1c9a755cb6c53d5d4625bc9c15cd173f3741bc3c384",
+  "scripts/tfv1_requalify.py": "46f7ab9a4ab3207990fdc0fa888d9f6164fc156f98a0072f33df51d1432e6249",
+  "src/wsp/features/pool.py": "85a6341a446f32761531e0f0a193101114201d9eb08b0e05e6a6d1d42ee94390"
+ },
+ "snapshot": {
+  "path": "docs/prereg/a5_manifests/snapshot.json",
+  "sha256": "1b2af25cde1bd7ad0427fec2d0ee22d34f75651ba3fb979176464f8fad701da3"
+ },
+ "status": "candidate identities re-frozen (F12f) before the re-run qualification, noise check and timing pilot use them; not C1 and not a C1 verification",
+ "token_manifest": {
+  "path": "docs/prereg/a5_manifests/f12/tokens_manifest.json",
+  "sha256": "424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f"
+ },
+ "versions": {
+  "lightgbm": "4.7.0",
+  "numpy": "2.5.4",
+  "python": "3.12.3",
+  "scipy": "1.18.1",
+  "torch": "2.15.0+cu132"
+ }
+}
