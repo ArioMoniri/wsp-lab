@@ -20,7 +20,18 @@ condition 6 and step 2 of its "Ordered path to stage 1").
   file is labelled a draft skeleton (not a C1 file) and every token-dependent part says ``AWAITING``. It is written to
   ``docs/prereg/f12_manifests/c1_draft/`` (never the governed C1 paths).
 
+* F12g (Board A F12g review, conditions 2 and 4; chair acceptance of F12g): item 9 ``f12i_c1.json`` is the scoped F12
+  plan record of F12-I (``scoped_f12i``): Board A's two scope paragraphs verbatim, the 16 LoRA roots and 32 part ids
+  from the committed streaming plan evidence, the registered Astra and C4 rules, H0-I, prices and ceiling. The Astra and
+  C4 construction hashes belong wholly to F12-I's own C1. ``C1_FILES`` and ``verify_c1`` are unchanged.
+* ``build_c1(root)`` / ``write_c1(root)`` build and write the governed C1 files (status ``FROZEN_STATUS``): the
+  exposure file from the committed attestation register (``build_exposure``), the pinned restricted payload bytes,
+  the governed code hashes (``build_code_hashes``) and a static prerequisite binding check (``prerequisite_binding``);
+  ``write_c1`` refuses once ``MANIFEST_C1.sha256`` exists.
+
     python scripts/f12_c1.py build-draft     # rewrites docs/prereg/f12_manifests/c1_draft/
+    python scripts/f12_c1.py freeze          # writes the governed C1 files and regenerates the draft
+    python scripts/f12_c1.py manifest        # writes MANIFEST_C1.sha256 (write_manifest)
     python scripts/f12_c1.py verify          # prints the failures; exit 1 unless C1 is verified
 """
 
@@ -395,9 +406,15 @@ def _fill_from_facts(root, files, facts, pop):
     src = _rel_sha(root, FACTS_REL)
     folds = fq.eligible_row_folds(pop, set(facts["eligibility"]["eligible_ids"]))
     if fq.folds_sha256(folds) != facts["folds_sha256"]:
-        raise ValueError("eligible-row folds recomputed from population.json differ from the token facts")
+        raise ValueError(
+            "eligible-row folds recomputed from population.json differ from the token facts"
+        )
     qual = root / QUALIFICATION_REL
-    qref = _rel_sha(root, QUALIFICATION_REL) if qual.exists() else "f12e qualification report not yet written"
+    qref = (
+        _rel_sha(root, QUALIFICATION_REL)
+        if qual.exists()
+        else "f12e qualification report not yet written"
+    )
     for obj in files.values():
         obj["status"] = FILLED_STATUS
     files["population.json"]["eligibility"] = {
@@ -414,7 +431,8 @@ def _fill_from_facts(root, files, facts, pop):
         "eligible_row_folds": folds,
     }
     files["schemas.json"] |= {
-        "token_input_hashes": {"source": src, "token_manifest": facts["token_manifest"]} | facts["token_inputs"],
+        "token_input_hashes": {"source": src, "token_manifest": facts["token_manifest"]}
+        | facts["token_inputs"],
         "g2_manifest_and_probe_cache": facts["identities"],
         "down_proj_tensor_hashes": {
             "base_state_hash": facts["base_state_hash"],
@@ -458,18 +476,600 @@ def _fill_from_facts(root, files, facts, pop):
         "widths": fm.widths(),
         "zero_edit_input": "x0_v4: the pinned pooling code on the zero delta (F12a.2(h))",
     }
-    files["f12i_c1.json"]["parent_support_tensor_hashes"] = {
-        "source": src,
-        "base_state_hash": facts["base_state_hash"],
-        "lora": facts["f12i_lora_parents"],
-        "astra_and_c4": F12I_AWAITING,
-    }
+    # F12g as accepted by Board A: item 9 is the scoped F12 plan record of F12-I (no Astra/C4 hashes, which belong
+    # wholly to F12-I's own C1); it needs the committed LoRA construction evidence and fails closed without it
+    files["f12i_c1.json"] = {"status": FILLED_STATUS} | scoped_f12i(root, facts, pop)
     files["code_hashes_c1.json"]["token_facts"] = src
 
 
 def _rel_or_none(root, rel):
     p = Path(root) / rel
     return {"path": rel, "sha256": _sha_file(p) if p.exists() else None}
+
+
+# ------------------------------------------------------------------------ F12g scoped item 9
+
+ADDITIVITY_PLAN_REL = "docs/prereg/a5_manifests/f12/additivity_plan.json"
+ADDITIVITY_RUN_REL = "docs/prereg/a5_manifests/f12/additivity_plan_run.json"
+ADDITIVITY_XCHECK_REL = "docs/prereg/a5_manifests/f12/additivity_plan_crosscheck.json"
+ADDITIVITY_DRIVER = "scripts/f12_additivity_stream.py"
+ADDITIVITY_SCRIPT = "scripts/f12_additivity_prepare.py"
+POPULATION_REL = "docs/prereg/a5_manifests/f12/population.json"
+F12G_REVIEW_REL = "docs/reviews/council/board-a-f12g-2026-11-12.md"
+F12G_SCOPE = (
+    (
+        "Scope: F12 plan record under F12g, complete for this scope only. This file is not F12-I's own C1 and does not "
+        "authorise F12-I construction, contraction, scheduling or scoring. It records the 16 registered LoRA roots and "
+        "their verified layer-split evidence, the registered Astra and C4 split definitions and source requirements, the "
+        "F12-I chain anchor, and the registered prices and ceiling."
+    ),
+    (
+        "The Astra and C4 construction hashes, eligibility and dependencies are not part of F12's C1. They are recorded "
+        "wholly in F12-I's own C1 under docs/prereg/f12_manifests/f12i/, after F8a's C1 and the F8a.4 Astra "
+        "qualification disposition. Failed Astra qualification drops that pair and is recorded as such; no replacement or "
+        "purchase of the full bypasses it. These exclusions from this file do not exclude any requirement from F12-I's "
+        "own C1/C2 or change F12-I conditions 8–10."
+    ),
+)
+F12G_INDEPENDENCE = (
+    "F12's numerical simulation consumes no F12-I construction, forecast or outcome data; governance verification "
+    "reads the frozen F12 plan in item 9 and verifies pinned source/configuration bytes."
+)
+C4_TENSOR = "model.layers.12.mlp.down_proj.weight"
+
+
+def _sha_bytes(b) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+def _ref(root, p):
+    p = Path(p)
+    try:
+        rel = str(p.resolve().relative_to(Path(root).resolve()))
+    except ValueError:
+        rel = str(p)
+    return {"path": rel, "sha256": _sha_file(p)}
+
+
+def scoped_f12i(root, facts, pop, plan_path=None, run_path=None) -> dict:
+    """Item 9 under F12g as accepted by Board A: the F12 plan record of F12-I, complete for its scope (no status).
+
+    Fails closed on missing or inconsistent LoRA construction evidence and on any claim of a completed Astra or C4
+    construction; a root that failed its bitwise check or has a no-op part is recorded as such, never substituted."""
+    from scripts import f12_additivity_prepare as fa
+
+    root = Path(root)
+    plan_path = Path(plan_path or root / ADDITIVITY_PLAN_REL)
+    run_path = Path(run_path or root / ADDITIVITY_RUN_REL)
+    xcheck_path = root / ADDITIVITY_XCHECK_REL
+    if not plan_path.exists() or not run_path.exists() or not xcheck_path.exists():
+        raise ValueError(
+            "F12g: the committed LoRA construction evidence (streaming plan, its run record and the dry-run "
+            "cross-check) is missing"
+        )
+    plan_bytes = plan_path.read_bytes()
+    plan, run = json.loads(plan_bytes), json.loads(run_path.read_text())
+    xcheck = json.loads(xcheck_path.read_text())
+    if run.get("plan_sha256") != _sha_bytes(plan_bytes):
+        raise ValueError("F12g: the plan's run record names other plan bytes")
+    if xcheck.get("identical") is not True:
+        raise ValueError("F12g: the streaming driver's dry-run cross-check is not identical")
+    if plan.get("schema") != fa.SCHEMA or plan.get("mode") != "plan":
+        raise ValueError("F12g: the LoRA construction evidence is not an f12-additivity-v1 plan")
+    pop_sha = _sha_file(root / POPULATION_REL)
+    if plan.get("population_json_sha256") != pop_sha or run["population"]["sha256"] != pop_sha:
+        raise ValueError("F12g: the plan was not built from the governed population.json")
+    if plan["base"]["state_hash"] != facts["base_state_hash"]:
+        raise ValueError("F12g: the plan's base state differs from the token facts' base state")
+    for e in plan["entries"]:
+        if e.get("kind") != "lora_layer_split" and ("parts" in e or "status" not in e):
+            raise ValueError(
+                f"F12g: the plan claims an Astra/C4 construction ({e.get('full_id')}, {e.get('kind')}); those "
+                "belong wholly to F12-I's own C1"
+            )
+    lora = [e for e in plan["entries"] if e.get("kind") == "lora_layer_split"]
+    if sorted(e["full_id"] for e in lora) != sorted(pop["f12i_lora_roots"]) or len(lora) != 16:
+        raise ValueError("F12g: the plan's LoRA roots are not the 16 registered F12-I LoRA roots")
+    parents = facts["f12i_lora_parents"]
+    by_id = {e["full_id"]: e for e in lora}
+    out = {}
+    for rid in pop["f12i_lora_roots"]:
+        e, par = by_id[rid], parents[rid]
+        rec = {
+            "family": par["family"],
+            "eligibility": par["eligibility"],
+            "parent_increment_sha256": par["increment_sha256"],
+            "n_edited_tensors": par["n_edited_tensors"],
+            "n_nonzero_tensors": par["n_nonzero_tensors"],
+            "source_files": e["source"]["files"],
+            "split_rule": e["split_rule"],
+            "bitwise_sum_verified": e["bitwise_sum_verified"],
+            "I_defined": e["I_defined"],
+        }
+        if not e["bitwise_sum_verified"]:
+            out[rid] = rec | {"failure": e["failure"], "parts": []}
+            continue
+        if len(e.get("parts") or []) != 2:
+            raise ValueError(f"F12g: {rid}: a verified entry without its two parts")
+        if e["full_increment_sha256"] != par["increment_sha256"]:
+            raise ValueError(
+                f"F12g: {rid}: plan full increment differs from the token facts' parent increment"
+            )
+        want = {"early": sorted(par["part1"]), "late": sorted(par["part2"])}
+        parts = []
+        for p in e["parts"]:
+            if p["part_id"] != fa.part_id(rid, p["label"]):
+                raise ValueError(
+                    f"F12g: {rid}: part id {p['part_id']} is not the registered part id"
+                )
+            if sorted(p["support"]["tensors"]) != want.get(p["label"]):
+                raise ValueError(
+                    f"F12g: {rid}: {p['label']} support differs from the token facts' layer split"
+                )
+            parts.append(
+                {
+                    k: p[k]
+                    for k in (
+                        "label",
+                        "part_id",
+                        "support",
+                        "n_tensors",
+                        "increment_sha256",
+                        "noop",
+                        "I_status",
+                    )
+                }
+                | {
+                    "support_base_tensor_hashes": {
+                        n: par["support_base_tensor_hashes"][n] for n in p["support"]["tensors"]
+                    }
+                }
+            )
+        out[rid] = rec | {
+            "full_increment_sha256": e["full_increment_sha256"],
+            "n_full_tensors": e["n_full_tensors"],
+            "parts": parts,
+        }
+    failed = [r for r, x in out.items() if not x["bitwise_sum_verified"]]
+    return {
+        "scope": list(F12G_SCOPE),
+        "authority": {
+            "amendment": "PREREG_H1_TF A5 amendment F12g (12 Nov 2026, 07:14 UTC) and the A5 chair acceptance of "
+            "F12g as amended by Board A (12 Nov 2026, 07:19 UTC)",
+            "board_a_review": _ref(root, root / F12G_REVIEW_REL),
+            "registered_item": "F12a.6(c) item 9 at H9 of MANIFEST_C1.sha256; C1_FILES and verify_c1 unchanged",
+        },
+        "independence": F12G_INDEPENDENCE,
+        "own_chain_H0": H0_F12I,
+        "own_chain_anchor": f"sha256(UTF-8 'f12i-manifest-v1:' + S), S = {S_HEAD} (F12a.10(a))",
+        "own_c1_location": "docs/prereg/f12_manifests/f12i/",
+        "construction": _ref(root, root / ADDITIVITY_SCRIPT),
+        "construction_evidence": {
+            "plan": _ref(root, plan_path),
+            "run_record": _ref(root, run_path),
+            "dry_run_cross_check": _ref(root, xcheck_path)
+            | {"identical": True, "root": xcheck.get("root")},
+            "driver": _ref(root, root / ADDITIVITY_DRIVER),
+            "population_json_sha256": pop_sha,
+            "base_state_hash": plan["base"]["state_hash"],
+            "threads": run.get("threads"),
+            "peak_rss_bytes": run.get("peak_rss_bytes"),
+            "roots_built": len(out) - len(failed),
+            "roots_failed": failed,
+            "noop_parts": sum(p["noop"] for x in out.values() for p in x["parts"]),
+            "outcomes_read": "none",
+            "what_it_proves": "outcome-free CPU construction in memory: each realised part (stored delta restricted "
+            "to its support, applied to the bf16 base and rounded) sums bitwise to the full realised increment, "
+            "tensor by tensor; no part file is written and no field, forecast or outcome is read",
+        },
+        "lora_roots": len(out),
+        "lora_root_ids_sha256": hashlib.sha256(json.dumps(sorted(out)).encode()).hexdigest(),
+        "lora": out,
+        "lora_rule": {
+            "split": "layers 0-11 (early) versus 12-23 (late): two parts per root, 32 parts (F12.6(a); F12a.8(a))",
+            "part_id": f"sha256(UTF-8 '{fa.PART_DOMAIN}' + full id + ':' + label)[:16]",
+            "noop": "a part with zero realised increment is not written or scored; its entry's I is undefined",
+            "failure": "a root failing the bitwise check is recorded with the failure and never substituted",
+            "shared_sources": "each LoRA full is its F12 population row's stored adapter bytes (source_files), the "
+            "same bytes the F12 token builder read; no new input",
+        },
+        "astra_rule": {
+            "split": "one part per changed tensor of the qualified two-tensor patch (F12a.8(b); F8a.4 A6): 2 parts",
+            "source_requirement": "a qualified F8a.4 replay record and its entry bytes, authenticated in F12-I's own "
+            "C1; the construction helper's qualified/entry_dir check alone does not authenticate upstream authority",
+            "failed_qualification": "a failed F8a.4 qualification drops that pair and is recorded as such; no "
+            "replacement patch or purchase of the full bypasses it",
+        },
+        "c4_rule": {
+            "tensor": C4_TENSOR,
+            "stored_shape_out_in": [1024, 3584],
+            "boundary": 1792,
+            "split": "input columns j < 1792 (cols_lo) versus j >= 1792 (cols_hi) of the stored [out, in] weight: 2 "
+            "parts (F12.6(c); F12a.8(c))",
+            "shape_requirement": "a C4 delta that is not exactly this one tensor at stored shape [1024, 3584] fails "
+            "closed; nothing is reshaped, padded or substituted",
+            "status": "own-definition contrast (F8a.2 C4), not a certified reproduction",
+            "source_requirement": "F8a's C1-frozen construction, neither construction_degenerate nor a no-op, "
+            "passing the identity verifier; never the dry-run stand-in",
+            "forecast": "F12a.9: signed quadratic cross-term forecast and descriptive J discrepancy",
+        },
+        "full_eligibility_rule": "F12a.10(c): a full already scored by F12 or F8 on the identity-matched common base "
+        "reference is reused; a LoRA full is eligible iff its row passes the F12 C1 population and identity audits; "
+        "Astra only after a passed F8a.4 qualification; C4 only from F8a's C1-frozen construction; a panel-level "
+        "non-purchase is not a refusal, an upstream validity refusal is never bypassed",
+        "planned": {"parts": 36, "fulls": 18, "lora_parts": 32, "astra_parts": 2, "c4_parts": 2},
+        "planned_counts_note": "planned counts are not claims of completed Astra/C4 construction or eligibility",
+        "prices_gpu_min": {"parts": 37.44, "additional_fulls_max": 18.72, "all_in_ceiling": 56.16},
+        "pricing_rule": "F12a.10(d)-(e): 36 parts x 1.04 min = 37.44 GPU-min; at most 18 additional fulls x 1.04 min "
+        "= 18.72 GPU-min; 56.16 GPU-min is the separately metered all-in stop-and-reprice ceiling including "
+        "base/reference overhead, failures and retries; after ten F12-I entries the rate is reprojected",
+        "ceiling_gpu_min": 56.16,
+    }
+
+
+# ------------------------------------------------------------------------ C1 freeze (governed files)
+
+FROZEN_STATUS = (
+    "C1 file (PREREG_H1_TF F12a.6(c); item 9 scoped by F12g as accepted by Board A): frozen through "
+    "MANIFEST_C1.sha256; not verified until Board A's separate C1 verification record and review"
+)
+REGISTER_REL = "docs/prereg/f12_attestations.md"
+PIN_REL = f"{MANIFEST_DIR}/noise_payload_restricted_pin.json"
+NOISE_CHECK_REL = f"{MANIFEST_DIR}/f12f_noise_check.json"
+PILOT_REPORT_REL = f"{MANIFEST_DIR}/f12f_pilot_report.json"
+PILOT_ACCEPTANCE_REL = f"{MANIFEST_DIR}/f12_pilot_acceptance.json"
+C1_INPUTS = (
+    TOKEN_MANIFEST,
+    GAUGE_MANIFEST_REL,
+    MATRIX_MANIFEST_REL,
+    POPULATION_REL,
+    ADDITIVITY_PLAN_REL,
+    ADDITIVITY_RUN_REL,
+    ADDITIVITY_XCHECK_REL,
+    "configs/eval_tf_v1.yaml",
+    FACTS_REL,
+    QUALIFICATION_REL,
+    F12F_QUALIFICATION_REL,
+    f"{MANIFEST_DIR}/f12e_base_tensor_hashes.json",
+    f"{MANIFEST_DIR}/f12e_candidate_identities.json",
+    f"{MANIFEST_DIR}/f12f_candidate_identities.json",
+    NOISE_CHECK_REL,
+    PILOT_REPORT_REL,
+    f"{MANIFEST_DIR}/f12f_pilot_timing.json",
+    f"{MANIFEST_DIR}/f12f_pilot_projection.json",
+    f"{MANIFEST_DIR}/f12f_budget_ledger_snapshot.jsonl",
+    PILOT_ACCEPTANCE_REL,
+    "pyproject.toml",
+    "uv.lock",
+)
+ENTRY_NOTES = {
+    "5": {
+        "status": "UNATTESTABLE",
+        "session": "F12 inputs implementer (scripts/f12_population.py, scripts/f12_tokens.py, "
+        "scripts/f12_additivity_prepare.py; commit 0412799); its delegate session was killed out of memory on 11 Nov "
+        "2026 before reporting and cannot be asked",
+        "sources": ["row 5", "22"],
+        "static_access_audit": "commissioned by the chair (A5 chair acceptance of F12g (d)): an independent static "
+        "access audit of the code at 0412799 (f12_population.py, f12_tokens.py, f12_additivity_prepare.py), listing "
+        "every file path each opens and every field each reads, as evidence for Board A's adjudication under F12g "
+        "condition 5, not as a substitute attestation; it is not part of this file and is not adjudicated here",
+    },
+    "22": {
+        "status": "UNATTESTABLE",
+        "sessions": [
+            (
+                "F12 inputs implementer (row 5; commit 0412799), killed out of memory on 11 Nov 2026 before reporting; "
+                "its token run's manifest records outcomes_read: none, a code-written record, not a session attestation"
+            ),
+            (
+                "first F12b session, killed out of memory on 11 Nov 2026 before committing anything; its uncommitted "
+                "diagnostics script was rewritten by the F12b relaunch session (entry 18), which does not know its access"
+            ),
+        ],
+        "for_board_a": "the chair records both as unattestable rather than inferring their exposure and asks Board A "
+        "to rule whether F12a.1(d)'s unexposed-role or exploratory-amendment rule applies to the code they produced",
+    },
+    "21": {
+        "status": "qualified",
+        "session": "Board A methods reviewer, F12c review (row 15)",
+        "qualification": "the commit hook launched repository-wide pytest, terminated after three progress dots; "
+        "whether its collection-time filesystem access reached data/evals is not certain; the reviewer cannot give "
+        "an unqualified no-access attestation",
+    },
+    "15b": {
+        "session": "council round 6, representation member",
+        "prescore_audits": "read directly",
+        "detail": "portions of PRESCORE_INVENTORY_2.md, the Board A release review, and the top-level keys and "
+        "summary of predictions_f11.json (its first 55 lines were requested; displayed coverage not certain); direct "
+        "exposure to F11 calibration-record contents not certain",
+    },
+    "15c": {
+        "session": "council round 6, world-model member",
+        "prescore_audits": "read directly",
+        "detail": "predictions_f11.json (summary, predictor block, power-field comparison, one full row and "
+        "statistics computed over all 52 rows) and f11_calibration_record.json",
+    },
+    "15d": {
+        "session": "council round 6, metrology member",
+        "prescore_audits": "read directly",
+        "detail": "PRESCORE_INVENTORY_2.md and the F11 calibration record; not predictions_f11.json",
+    },
+    "17": {
+        "session": "F12 simulation implementer (restricted-copy extractor, v1)",
+        "disclosure": "raw F8a.2 payload parsed: runs/a5/nullsize/inputs.json was read and json.loads parsed the "
+        "whole object (donor_mean parsed into memory, never accessed, printed or written); during exploration the "
+        "session printed per-donor means and SDs of centred_noise and the full donors[0] record including its audit "
+        "and norm fields",
+    },
+    "20": {
+        "session": "F12c implementer, confirmation of the raw-loader account",
+        "disclosure": "raw F8a.2 payload parsed once (about 18:11 UTC, 11 Nov 2026) by "
+        "test_real_payload_allowlist_and_panel_mean through the worktree's data symlink; json.loads parsed the whole "
+        "file and only the allowlisted fields were kept; no value printed, logged or written; whether the file holds "
+        "donor_mean is not certain to that session",
+    },
+    "10": {
+        "session": "chair",
+        "status": "given to 07:40 UTC 12 Nov 2026 (entries 10 and 10a); renewal at the C1 freeze not in the register "
+        "at this freeze",
+    },
+    "11": {
+        "session": "every later C1/C2 builder, analyst and Board A reviewer",
+        "status": "PENDING in the register; this C1 freeze session's own statement is added to the register in a "
+        "later commit, after this file and the manifest are committed",
+    },
+}
+
+
+def _register_rows(text):
+    rows, header = [], None
+    for ln in text.splitlines():
+        if not ln.startswith("|"):
+            continue
+        cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if header is None:
+            header = cells
+            continue
+        if set("".join(cells)) <= set("-: "):
+            continue
+        rows.append(dict(zip(header, cells)))
+    return rows
+
+
+def build_exposure(root=ROOT) -> dict:
+    """Item 1 from the attestation register as committed: its rows verbatim, its sha256 and the entries Board A must
+    adjudicate, cited by number. Nothing is resolved here."""
+    root = Path(root)
+    if not _committed_clean(root, REGISTER_REL):
+        raise ValueError("the attestation register is not committed or has uncommitted changes")
+    text = (root / REGISTER_REL).read_text()
+    return {
+        "requirement": "F12a.1(c)-(d): statements (i) old development outcomes, (ii) new outcomes, (iii) prescore "
+        "audits for every decision-maker, code/input builder, extractor, token-run session, chair and approving "
+        "reviewer through the freeze; one session never attests for another; a commit time is not an attestation",
+        "register": {"path": REGISTER_REL, "sha256": _sha_file(root / REGISTER_REL)},
+        "rows": _register_rows(text.split("## Register", 1)[1].split("\n## ", 1)[0]),
+        "entries": ENTRY_NOTES,
+        "pending": [
+            "row 10: the chair's renewal at the C1 freeze",
+            "row 11: every later C1/C2 builder, analyst and Board A reviewer, including this C1 freeze session",
+        ],
+        "adjudication": "none in this file: the unattestable sessions (row 5, entry 22), the qualified Board A F12c "
+        "attestation (entry 21), the direct prescore-audit readers (entries 15b, 15c, 15d) and the raw-payload parses "
+        "(entries 17 and 20) are recorded for Board A to adjudicate at C1 verification (F12g condition 5)",
+    }
+
+
+def restricted_payload_bytes(root=ROOT) -> bytes:
+    """Item 6: the pinned v2 restricted copy, byte-exact (its own provenance block; the pin and extractor are in
+    code_hashes_c1.json)."""
+    root = Path(root)
+    pin = json.loads((root / PIN_REL).read_text())
+    want = pin["restricted_copy"]["sha256"]
+    for p in (
+        root / MANIFEST_DIR / "noise_payload/restricted.json",
+        Path(pin["restricted_copy"]["path"]),
+    ):
+        if p.exists():
+            data = p.read_bytes()
+            if _sha_bytes(data) == want:
+                return data
+    raise ValueError(f"no restricted payload with the pinned sha256 {want}")
+
+
+def _module_paths(root, mod):
+    parts = mod.split(".")
+    if parts[0] == "scripts":
+        base = root / "scripts" / Path(*parts[1:])
+        cands = [base.with_suffix(".py")]
+    elif parts[0] == "wsp":
+        base = root / "src" / Path(*parts)
+        cands = [base.with_suffix(".py"), base / "__init__.py"]
+        cands += [root / "src" / Path(*parts[:i]) / "__init__.py" for i in range(1, len(parts))]
+    else:
+        return []
+    return [p for p in cands if p.exists()]
+
+
+def local_import_closure(root, seeds) -> set:
+    """Repository-local modules (scripts.*, wsp.*) imported anywhere, transitively, by the seed files."""
+    import ast
+
+    root = Path(root)
+    todo, seen = [root / s for s in seeds], set()
+    while todo:
+        p = todo.pop()
+        rel = str(p.relative_to(root))
+        if rel in seen or p.suffix != ".py":
+            continue
+        seen.add(rel)
+        for node in ast.walk(ast.parse(p.read_text())):
+            mods = []
+            if isinstance(node, ast.Import):
+                mods = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+                mods = [node.module] + [f"{node.module}.{a.name}" for a in node.names]
+            for m in mods:
+                todo += _module_paths(root, m)
+    return seen
+
+
+def code_unchanged(root, mapping) -> bool:
+    return bool(mapping) and all(
+        (Path(root) / rel).exists() and _sha_file(Path(root) / rel) == sha
+        for rel, sha in mapping.items()
+    )
+
+
+def prerequisite_binding(root=ROOT) -> dict:
+    """Static check (from the committed records, nothing re-run) that the registered noise check, the timing pilot
+    and the chair's pilot acceptance stay bound to the frozen bytes."""
+    root = Path(root)
+    nc = json.loads((root / NOISE_CHECK_REL).read_text())
+    pr = json.loads((root / PILOT_REPORT_REL).read_text())
+    pa = json.loads((root / PILOT_ACCEPTANCE_REL).read_text())
+    pin = json.loads((root / PIN_REL).read_text())
+    mm = json.loads((root / MATRIX_MANIFEST_REL).read_text())
+    ids = {
+        "noise_check": nc["identities"],
+        "pilot_report": pr["identities"],
+        "pilot_acceptance": pa["identities"],
+    }
+    codes = {"noise_check": nc["code_sha256"]} | {
+        k: ids[k]["code_sha256"] for k in ("pilot_report", "pilot_acceptance")
+    }
+    out = {
+        "basis": "static: identities read from the committed records and compared with the frozen bytes; nothing "
+        "was re-run",
+        "noise_check": _ref(root, root / NOISE_CHECK_REL),
+        "pilot_report": _ref(root, root / PILOT_REPORT_REL),
+        "pilot_acceptance": _ref(root, root / PILOT_ACCEPTANCE_REL),
+    }
+    for k in codes:
+        out[k] |= {"code_files": sorted(codes[k]), "code_unchanged": code_unchanged(root, codes[k])}
+    out["payload_matches_item6"] = all(
+        i["payload_restricted_sha256"] == pin["restricted_copy"]["sha256"] for i in ids.values()
+    )
+    out["matrix_matches_manifest"] = all(
+        i["tokens_matrix_sha256"] == mm["matrix_sha256"] for i in ids.values()
+    )
+    out["acceptance_cites_committed_records"] = (
+        pa["noise_check_sha256"] == out["noise_check"]["sha256"]
+        and pa["pilot_report_sha256"] == out["pilot_report"]["sha256"]
+    )
+    return out
+
+
+def candidate_identity_drift(root=ROOT) -> dict:
+    """Pins of f12f_candidate_identities.json whose current bytes differ (disclosed, not repaired)."""
+    root = Path(root)
+    ci = json.loads((root / f"{MANIFEST_DIR}/f12f_candidate_identities.json").read_text())
+    out = {}
+    for rel, sha in sorted((ci.get("code") or {}).items()):
+        cur = _sha_file(root / rel) if (root / rel).exists() else None
+        if cur != sha:
+            out[rel] = {"pinned": sha, "current": cur}
+    d = ci.get("code_hashes_c1_draft") or {}
+    if (
+        d.get("path")
+        and (root / d["path"]).exists()
+        and _sha_file(root / d["path"]) != d.get("sha256")
+    ):
+        out[d["path"]] = {"pinned": d.get("sha256"), "current": _sha_file(root / d["path"])}
+    return out
+
+
+def build_code_hashes(root=ROOT) -> dict:
+    """Item 11: every F12 script, test and config, their repository-local import closure, the frozen inputs and
+    pins, with runtime versions."""
+    from scripts import f12_simulation as fs
+
+    root = Path(root)
+    if root.resolve() != fs.ROOT.resolve():
+        raise ValueError(
+            "code hashes are built only for the repository the simulation module lives in"
+        )
+    inv = fs.c1_draft_inventory()
+    files = set(inv["files"])
+    files |= local_import_closure(root, sorted(f for f in files if f.endswith(".py")))
+    files |= {rel for rel in C1_INPUTS if (root / rel).exists()}
+    files -= {f"{MANIFEST_DIR}/{n}" for n in C1_FILES}
+    return {
+        "schema": C1_CODE_SCHEMA,
+        "status": FROZEN_STATUS,
+        "note": "F12a.6(c) item 11: sha256 of every F12 script and test, the configurations, the repository-local "
+        "modules they import (transitively), the frozen inputs and pins (token, gauge-token and matrix manifests, "
+        "population, F12-I LoRA construction evidence, token facts, qualification, candidate identities, noise check, "
+        "pilot and pilot acceptance) and the dependency lock, with runtime versions.",
+        "files": {rel: _sha_file(root / rel) for rel in sorted(files)},
+        "restricted_payload": inv["restricted_payload"],
+        "versions": inv["versions"],
+        "candidate_identity_drift": candidate_identity_drift(root),
+    }
+
+
+def build_c1(root=ROOT) -> dict:
+    """The governed C1 package: {name: bytes} in chain order. Fails closed if the prerequisite binding broke."""
+    root = Path(root)
+    draft = build_draft(root)
+    binding = prerequisite_binding(root)
+    broken = [
+        k
+        for k in ("noise_check", "pilot_report", "pilot_acceptance")
+        if not binding[k]["code_unchanged"]
+    ]
+    if broken or not binding["payload_matches_item6"] or not binding["matrix_matches_manifest"]:
+        raise ValueError(
+            f"prerequisite identity binding broken ({broken}); restart rules apply, freeze refused"
+        )
+    objs = {}
+    for name, obj in draft.items():
+        objs[name] = {
+            k: v
+            for k, v in obj.items()
+            if k not in ("status", "at_freeze", "draft_pin", "token_facts")
+        }
+    objs["exposure_c1.json"] = build_exposure(root)
+    objs["resources.json"]["pilot_acceptance"] = _ref(root, root / PILOT_ACCEPTANCE_REL) | {
+        "all_in_cpu_h": json.loads((root / PILOT_ACCEPTANCE_REL).read_text())["projection"][
+            "all_in_cpu_h"
+        ]
+    }
+    objs["resources.json"]["prerequisite_binding"] = binding
+    objs["simulation_config.json"]["noise_check_and_pilot"] = {
+        rel.rsplit("/", 1)[1]: _ref(root, root / rel)
+        for rel in (
+            NOISE_CHECK_REL,
+            PILOT_REPORT_REL,
+            f"{MANIFEST_DIR}/f12f_pilot_timing.json",
+            f"{MANIFEST_DIR}/f12f_pilot_projection.json",
+            f"{MANIFEST_DIR}/f12f_budget_ledger_snapshot.jsonl",
+        )
+    }
+    objs["noise_payload/restricted.json"] = None
+    objs["code_hashes_c1.json"] = build_code_hashes(root)
+    out = {}
+    for name in C1_FILES:
+        if name == "noise_payload/restricted.json":
+            out[name] = restricted_payload_bytes(root)
+            continue
+        obj = {"status": FROZEN_STATUS} | objs[name]
+        out[name] = (json.dumps(obj, indent=1, sort_keys=True, allow_nan=False) + "\n").encode()
+    return out
+
+
+def write_c1(root=ROOT) -> list:
+    """Write the governed C1 files; refuses once MANIFEST_C1.sha256 exists (no C1 file is rewritten)."""
+    root = Path(root)
+    if (root / MANIFEST_PATH).exists():
+        raise ValueError("MANIFEST_C1.sha256 exists: C1 files are never rewritten")
+    written = []
+    for name, data in build_c1(root).items():
+        p = root / MANIFEST_DIR / name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(data)
+        written.append(p)
+    return written
 
 
 def write_draft(root=ROOT) -> list:
@@ -485,10 +1085,21 @@ def write_draft(root=ROOT) -> list:
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("command", choices=("build-draft", "verify"))
+    p.add_argument("command", choices=("build-draft", "freeze", "manifest", "verify"))
     a = p.parse_args(argv)
     if a.command == "build-draft":
         print(json.dumps({"written": [str(x.relative_to(ROOT)) for x in write_draft()]}, indent=1))
+        return 0
+    if a.command == "freeze":
+        gov = [str(x.relative_to(ROOT)) for x in write_c1()]
+        drafts = [str(x.relative_to(ROOT)) for x in write_draft()]
+        print(json.dumps({"governed": gov, "draft_regenerated": drafts}, indent=1))
+        return 0
+    if a.command == "manifest":
+        out = write_manifest()
+        print(
+            json.dumps({"manifest": str(out.relative_to(ROOT)), "sha256": _sha_file(out)}, indent=1)
+        )
         return 0
     fails = verify_c1(ROOT)
     print(json.dumps({"verified": not fails, "failures": fails}, indent=1))

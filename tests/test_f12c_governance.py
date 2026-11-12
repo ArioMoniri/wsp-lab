@@ -750,7 +750,13 @@ def test_noise_check_fails_closed():
 def test_code_hashes_c1_draft_pins_current_bytes():
     obj = json.loads(fs.CODE_HASHES_C1.read_text())
     assert obj["schema"] == fs.C1_SCHEMA
-    assert obj["status"] == "draft, pending Board A C1 verification"
+    # the draft pin until the C1 freeze; the governed item 11 (f12_c1.build_code_hashes) once MANIFEST_C1.sha256 exists
+    from scripts import f12_c1 as c1
+
+    frozen = (fs.ROOT / c1.MANIFEST_PATH).exists()
+    assert obj["status"] == (
+        c1.FROZEN_STATUS if frozen else "draft, pending Board A C1 verification"
+    )
     root = fs.ROOT
     listed = set(obj["files"])
     for pat in (

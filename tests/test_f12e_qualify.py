@@ -389,11 +389,13 @@ def test_c1_draft_filled_from_committed_token_facts():
     assert len(sch["down_proj_tensor_hashes"]["tensors"]) == 24
     gauge = files["models.json"]["gauge_and_control_audits"]
     assert gauge["F5_gauge_audit"]["satisfied_by_frozen_output"] is False
-    f12i = files["f12i_c1.json"]["parent_support_tensor_hashes"]
+    # F12g (Board A F12g condition 4): item 9 is the scoped F12 plan record; its LoRA parents still come from the token
+    # facts, and the Astra/C4 hashes are not in it (they belong wholly to F12-I's own C1)
+    f12i = files["f12i_c1.json"]
     assert set(f12i["lora"]) == set(POP["f12i_lora_roots"])
-    assert "awaiting the F12-I constructions" in json.dumps(
-        f12i["astra_and_c4"]
-    )  # not in the token output
+    for rid, rec in f12i["lora"].items():
+        assert rec["parent_increment_sha256"] == facts["f12i_lora_parents"][rid]["increment_sha256"]
+    assert "awaiting" not in json.dumps(f12i).lower() and "astra_and_c4" not in f12i
     for name, obj in files.items():  # the committed draft equals the builder's output
         p = fs.ROOT / c1.DRAFT_DIR / name
         assert json.loads(p.read_text()) == json.loads(json.dumps(obj)), name
