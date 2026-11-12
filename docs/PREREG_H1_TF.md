@@ -7471,3 +7471,31 @@ each commit.
 - *What follows, and what does not.* Nothing else was run: no coverage target, no stage-2 replicate and no second selection.
   The target and stage 2 need a further dated chair acceptance, which checks this measured cost against the ceiling. Purchase,
   C2, scoring and every Part A, F8 and F9 gate are unchanged. Part A remains held by the programme owner.
+
+#### A5 chair acceptance of the F12 coverage target and stage 2 (12 Nov 2026, 22:00 UTC, before any G3 outcome)
+
+(a) *Stage 1 is closed.* F12 stage 1 ran once, to completion, without a stop (note F12-S1). It produced 480 of 480 planned
+records, all valid, and used 13.33 CPU-h measured by the ledger against 18.32 projected. The process tree peaked at 2.87 GB RSS.
+The report `f2e5c386…` was committed first (`46e6276`), and the selection `6acc4138…` separately after it (`01421d8`).
+The computed k* is **145**. The chair read only k*, completeness, validity counts, timing, memory and hashes. It read no stage-1
+decision codes, rates or per-k rule checks.
+(b) *Budget.* The ledger's pinned `Ledger.spent_cpu_h` gives 13.72 CPU-h spent (noise check, pilot and stage 1). The projected
+all-in total is 105.34 CPU-h, within the 190 CPU-h ceiling.
+(c) *Ledger end-event fields.* The stage-1 `end` event's `spent_cpu_h` (27.06) and `projected_total_cpu_h` (123.66) are
+overstated. `Meter.end` adds the attempt's CPU on top of a projection that already counts it, and still lists the item as
+remaining. The live budget stop is unaffected. `Meter._check` (launch and checkpoint) recomputes the projection from the
+ledger's events through `projection()`, using `Ledger.attempts()`, which takes each attempt's largest recorded CPU and so counts
+each attempt once. No code reads a stored event total back. The `spent_cpu_h` and `projected_total_cpu_h` fields of `end`
+events are therefore **not authoritative**, and every budget figure is taken from `Ledger.spent_cpu_h` and `projection()`.
+`scripts/f12_budget.py` is pinned in C1 item 11, so it is not changed now. The fix, with a test, is made at C2 under the
+identity and restart rules.
+(d) *Acceptance.* The chair accepts, in this order and on the committed selection (k* = 145):
+1. the independent coverage target, run once, under `f12c_target_config.json`: 200 planned replicates with their own
+   independent noise and training streams;
+2. stage 2, run once, under `f12c_stage2_config.json`: exactly 1,000 stress, 1,000 alternative and 200 variance-×2 replicates
+   at k = 145, with no fallback k, no extension and no decision from a partial run;
+3. assembly and validation of the stage-2 report.
+Each runs at most two workers, within the 4 GB per-job limit, under the budget ledger and the 190 CPU-h live stop. Invalid
+replicates count as failures. The projected remaining cost is about 92 CPU-h, about 46 h of wall time at two workers.
+(e) *What this does not release.* The assembled report goes to Board A for acceptance. Purchase, C2, the before-scheduling
+forecasts, scoring and every Part A, F8 and F9 gate are unchanged. Part A remains held by the programme owner.
