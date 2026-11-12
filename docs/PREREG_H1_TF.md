@@ -7380,3 +7380,20 @@ this re-freeze, so item 1 cites them. Statements (i)–(iii) of entry 23 are unc
 `data/evals`, read no pilot decision code and used no GPU.
 
 Part A remains held by the programme owner.
+
+#### A5 chair acceptance of F12 stage 1 (12 Nov 2026, 14:49 UTC, before any G3 outcome): Board A ordered path step 8
+
+Board A verified C1 (`docs/reviews/council/board-a-f12-c1b-2026-11-12.md`, commit `d67d74b`, record `4c50bee`). On main the verifier
+prints `"verified": true` with no failures, for manifest `16a91fe2ad17a146b215a1a7ab6704873bb3712866868ea4b756b45fdcbfe9c2`.
+(a) *Acceptance.* The chair accepts the start of the **single** F12 stage 1. It runs under the committed configuration
+`docs/prereg/f12_manifests/f12c_stage1_config.json`: 40 alternative and 40 stress replicates at each of the six k values,
+r = 1000–1039, with its own panel domain. It uses at most two workers, the 4 GB per-job limit, the append-only budget ledger
+`/home/ubuntu/wsp-data/runs/a5/f12_budget/ledger.jsonl`, and the 190 CPU-h all-in ceiling, with its live stop. The projected
+stage-1 cost is 18.3 CPU-h, about 9 h wall at two workers.
+(b) *What follows, and what does not.* After stage 1 completes, its report and the computed `f12c_stage2_selection.json` are
+committed before any target or stage-2 replicate runs (Board A F12c condition 5). There is no repeated stage 1, no fallback k, no
+extension and no decision from a partial run. The independent coverage target and stage 2 need a further dated chair acceptance,
+which checks stage 1's measured cost against the ceiling. Purchase, C2, scoring and every Part A, F8 and F9 gate are unchanged.
+Part A remains held by the programme owner.
+(c) *Operator.* Stage 1 is run by a fresh operator session whose statement (ii) is "none", recorded in the register before launch.
+That operator changes no code or configuration.
