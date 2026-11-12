@@ -6661,3 +6661,233 @@ A's adjudication of the unattestable F12 inputs implementer (condition 5), the c
 audit of the code at `0412799` (`f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`): every file path each opens
 and every field each reads, as evidence for Board A, not as a substitute attestation. (e) Stage 1 still requires Board A's
 separate, explicit C1 verification (condition 7). Part A remains held by the programme owner.
+
+#### A5 note F12-C1 (Thu Nov 12 08:17:58 UTC 2026, before any G3 outcome): C1 freeze of the F12 simulation package
+
+This block is appended; earlier text is not rewritten. It records the C1 freeze of the F12 simulation package on branch
+`prereg/f12-c1` (from main `5b91d90`, merged with main `1c6a0da` and `11016f6`), under amendment F12g as accepted by Board A
+(`docs/reviews/council/board-a-f12g-2026-11-12.md`, commit `00fbb71`), the chair acceptance of F12g and the chair's later
+instructions. Part A is staged, frozen, released with conditions, unscored and held, and no G3, rotation, ladder, sealed, F8 or
+F9 outcome has been read.
+
+Commits:
+- `5344866`: the streaming F12-I LoRA plan driver, tests first;
+- `32360a7`: the LoRA construction evidence;
+- `e72a8e1`: the scoped item 9 builder and the freeze builders, tests first;
+- `451d45c`: the first freeze, **superseded** before any Board A verification (F12-C1.5);
+- `8dbad19`: the re-pin's test fixes, tests first, which withdraw the superseded freeze from the tree;
+- `2d92612`: register entries 23 and 10b;
+- `2e71d2a`: the re-freeze, the governed C1 package;
+- this note's commit.
+
+**This session does not verify C1.** Ordered-path step 7 still needs Board A's separate, explicit C1 verification, in a
+later commit descending from `2e71d2a`, citing the manifest's sha256 (F12g condition 7). Stage 1 is not released.
+
+**F12-C1.1 — F12-I LoRA construction evidence (F12g condition 2).**
+- *Why a new driver.* `scripts/f12_additivity_prepare.py plan` materialises the dense fp32 delta of all 16 LoRA roots before
+  building any of them. One root measured 0.88 GB in fp32 (72 tensors, 220,200,960 values), so the peak would be about 19 GB.
+  That is far above the 4 GB per-job limit. On the chair's instruction (option 3), a new pinned driver,
+  `scripts/f12_additivity_stream.py` (sha256 `0bf273ea2b8eaa1cd84094d7d675d17c63ae5a4566a76bce6c2c5e1c70f9688a`), was written test-first
+  (`tests/test_f12_additivity_stream.py`).
+- *How it works.* It reuses the pinned functions of `f12_additivity_prepare.py`, which is unchanged (sha256
+  `ac7aee71…`), and processes one root at a time and, within a root, one tensor at a
+  time. Its output is in the `f12-additivity-v1` format, and it records the governed `population.json` sha256
+  (`07ab85d3…`) as its input.
+- *Disclosure: the committed dry run.* The F12-I dry run (`docs/prereg/a5_manifests/f12/additivity_dryrun/`) used the original
+  whole-panel loading code, which loads all 16 roots even when it builds only one. Its peak memory was therefore probably far
+  above the per-job limit (about 19 GB by the measurement above). Its peak was not recorded.
+- *Equivalence, both before the real run.*
+  - Synthetic: on synthetic LoRA adapters (including a no-op half), the driver's output is byte-identical to `run()` / `plan`
+    (test `test_byte_identical_to_plan`).
+  - Real data: the driver's entry for root `64b10bbaef2b726d` reproduces exactly the committed dry run's supports, part ids,
+    increment hashes, bitwise flags and no-op status. Source files, population sha256 and base also match.
+    `docs/prereg/a5_manifests/f12/additivity_plan_crosscheck.json` (sha256
+    `d86fce386a4269bd5dab629f3ca7b022b63f20d8c4caf130cf61589cd377594f`) records `identical: true` with no differences.
+- *Run.* `agent-tmux` job `f12c1-plan`, 2 threads, at clean `5344866`, after an available-memory check (above 6 GB). It ran
+  under an in-process 4.5 GB peak-RSS guard and an external watchdog set to kill it above 4.5 GB.
+  - **16 of 16 roots built; 16 of 16 bitwise realised-part sums verified; 32 parts; 0 no-op parts; no root failed or was
+    substituted.**
+  - **Peak RSS 3.11 GB** (3,114,868,736 bytes, process maximum; watchdog's largest 1 s sample 3.04 GB). Wall time 67 s.
+  - Outputs: `docs/prereg/a5_manifests/f12/additivity_plan.json` (sha256
+    `2c441619077f4df8b73d3d599767e0c39a985f1ed764748ad31a8eb8491bd968`) and its run record `additivity_plan_run.json` (sha256
+    `4dfacc768ffc82ccf21dc1283247dd69209d7bb992b0ee32bb00ecd4c37a510d`).
+  - Like `plan`, the evidence lists the Astra and C4 entries with the helper's status strings and builds nothing for them. Item 9
+    does not copy those strings.
+
+**F12-C1.2 — Item 9 under F12g (F12g conditions 2 and 4).** `build_draft` / `_fill_from_facts` now produce item 9 from
+`scoped_f12i`. `C1_FILES` and `verify_c1` are unchanged.
+- *Content.*
+  - Board A's two scope paragraphs verbatim; a test checks them against the committed review.
+  - Board A's numerical-versus-governance wording, also tested against the chair acceptance.
+  - The 16 registered LoRA roots with family, eligibility and parent increment hash (equal to the plan's full increment, checked).
+  - The adapter source files and their hashes.
+  - The 32 part ids (checked against the registered rule), with supports (checked against the token facts' layer split),
+    support base tensor hashes, realised-part hashes, no-op status and bitwise flags.
+  - The committed evidence (plan, run record, cross-check, driver) by path and sha256.
+  - The full H₀ᴵ `7ba2957b30755704b670156131cdfe6393fc56051851cb4d094d6ea1d82b961e`.
+  - Astra's one-part-per-changed-tensor rule and drop rule.
+  - C4's `model.layers.12.mlp.down_proj.weight`, stored [out, in] shape [1024, 3584], boundary 1792, fail-closed shape
+    requirement and own-definition status.
+  - The F12a.10(c) eligibility rule; 36 planned parts and 18 planned fulls; 37.44, 18.72 and 56.16 GPU-min.
+- *What it omits.* It holds no Astra or C4 hash and no "awaiting" text.
+- *Fail-closed checks.* The builder rejects missing evidence, wrong or missing LoRA roots, missing parts, a parent-increment,
+  population or base mismatch, a wrong part id, a run record naming other plan bytes, and any built Astra, C4 or stand-in entry.
+  It records a failed or no-op root without substituting another.
+- *Verifier-barrier tests* (`tests/test_f12g_c1_freeze.py`, temporary repositories; the verifier is unchanged):
+  - the complete scoped item 9 passes;
+  - an item 9 containing "awaiting" (in any case) fails even with recomputed hashes;
+  - removing item 9, dropping H9, stale bytes (committed or not), a missing Board A record and a Board A review committed with
+    the manifest all fail.
+- *Old expectations updated, only where the scoped builder changes them:*
+  - the F12e draft test's item 9 assertion;
+  - the code-pin test's status check, now `f12_c1.code_pin_failures`.
+- *Item 9 sha256.* Scoped, governed: **`706a2df1b3bdb6c67a58402655128e823bdf8d478e1e8622c48598359df9efca`**, byte-identical to the superseded freeze.
+
+**F12-C1.3 — Effect on earlier identity-bound evidence.**
+- *Stale pins (disclosed, not repaired).* The candidate identities `f12f_candidate_identities.json` pin `scripts/f12_c1.py` at
+  `6494bed4…` (now `5fdca523395adccf883b5e652b69933d4e91ebcf7bbcee546c059c6a5a9eba24`) and the draft code hashes at
+  `36026c51…`. Both pins are stale.
+  - The path `docs/prereg/f12_manifests/code_hashes_c1.json` holds the governed item 11.
+  - `f12f_qualification.json`'s code-identity check was run against the old pins.
+  - Governed item 11 records the drift (`candidate_identity_drift`).
+- *Noise check, pilot and acceptance (static finding, re-checked at the re-freeze).* The noise check, the pilot report and the
+  chair's pilot acceptance bind only the simulation code:
+  - `scripts/f12_simulation.py`, `scripts/a5_build_panels.py`, `scripts/a5_simulation.py`, `scripts/tfv1_requalify.py`,
+    `src/wsp/features/pool.py`;
+  - plus the restricted payload `44d79403…6fb5` and the matrix `e7217299…71b8f`.
+
+  None of those five files has changed on this branch since main `5b91d90` (`git diff` empty). At the re-freeze every recorded
+  code hash equals the current bytes, the payload equals item 6, the matrix equals the committed matrix manifest, and the
+  acceptance cites the committed noise-check and pilot-report bytes. **This binding was checked by reading the committed
+  records, not by re-running anything.** `f12_c1.prerequisite_binding` records it in `resources.json`, and `build_c1` refuses
+  the freeze if it breaks. The chair accepted this reading as a static finding.
+
+**F12-C1.4 — Governed files and manifest.**
+- *Built from the frozen inputs* by `python -m scripts.f12_c1 freeze`:
+  - the token, gauge-token and matrix manifests;
+  - the F12f candidate identities;
+  - the v2 restricted payload pin;
+  - the configs;
+  - the pilot acceptance;
+  - the committed attestation register and the committed static access audit.
+- *Manifest.* `docs/prereg/f12_manifests/MANIFEST_C1.sha256` (`write_manifest`; H₀ `e0619f6a…5301`, anchor
+  `f12-manifest-v1:49fec4a3c885e7f611084c0e56dac77053ba2ec8`), **sha256 `2b4923270afa4699f27b2e8797ec02e2a85002290355a932b26f19169c50b6bc`**.
+
+| H | file | sha256 | H_k | against `451d45c` |
+|---|---|---|---|---|
+| H1 | `exposure_c1.json` | `0d2ff24be69552879bdea4185e53ffff09053a8f504d4b820519d0926c1ab387` | `9bd2177f1525639377c7e7564253ddba7ca31951961d0939f8ab6aa5df22cfc5` | replaces `1eebc4ff…` |
+| H2 | `population.json` | `2e174ca90e952c1b8512e36640821c16847bb3465a2d2101ab31fafd358e427d` | `5029506a8390a9c0f6ec7f947d6e4c0de5c537bf0c396dbfb681e36c15d6caaf` | byte-identical to `451d45c` |
+| H3 | `folds.json` | `7952e372785beb01fff17c76b675ca028d5831f15192be48dec9d03fdffdeff9` | `3ca6c18fb5338b3805254f47660c2ac38e77b350c163f6441d0c52eab9ec2a8f` | byte-identical to `451d45c` |
+| H4 | `schemas.json` | `d7972d2bbdb1c1044ef97a335578f2388a83da2319983869ef495af65ee4a773` | `05674de9c1b1033230143c8d368d68040f40db9f53a114b561b000d34cc04ec4` | byte-identical to `451d45c` |
+| H5 | `models.json` | `c8bcce9c27f3fcd7522cd1b061d27ce7adcce23d7ce6fe775b649e245ddc999f` | `84fb9b61463f54ec5af47db7bae0a74f699e64d73ab12afc5eb4e1f9b927df27` | byte-identical to `451d45c` |
+| H6 | `noise_payload/restricted.json` | `44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5` | `3e78e9049c27d4a9aa380f550e5d99ccc9c562d76a9e41e43df152c5f081ba2d` | byte-identical to `451d45c` |
+| H7 | `simulation_config.json` | `b7ed22705b8b17336fbd8b66543ca4804e82c64a70416cdbc18208ba0fb0f4fc` | `83302050e16b5a775e5d5e7f86ab6ffd0373f14fe72b262f82f3ec5e22dc79bb` | byte-identical to `451d45c` |
+| H8 | `intervals.json` | `bd16899430f8b2fecf249cdaf9bcab00507d90ef2cbc09975ac8c5622037f3a4` | `917b1be6de021763ce11f3dcc1ab62d4d3994635d23ea68341e7b9cb25b65a91` | byte-identical to `451d45c` |
+| H9 | `f12i_c1.json` | `706a2df1b3bdb6c67a58402655128e823bdf8d478e1e8622c48598359df9efca` | `aed5bb929a31632ff197edbd6b375a89ab2f2c848a3b5856423790207cbc3c63` | byte-identical to `451d45c` |
+| H10 | `resources.json` | `c1172666cf2d8108c72f4935eaa2a3b93b45d3d0f9a52218f1d882555e77e772` | `dc0cde0a7b1c7c94268ac6e19f4e7486193e0c7b555246d1319e66828a08c043` | byte-identical to `451d45c` |
+| H11 | `code_hashes_c1.json` | `e08230c58fb3c9bacee5c0cb3daaeb46b296f1cad3e3347b99eddcbe3138af42` | `edf1da02cb6af9e89816376b439199f809ff24e57c21a64a3497cf57942aaba5` | replaces `31583b96…` |
+
+Notes on the files:
+- Every JSON file's status is the governed C1 status, with no draft or awaiting marker. The exposure file quotes the register's
+  rows and the audit's findings verbatim, including role names such as "F12 drafting" and "C1 draft fill".
+- *Item 1 (exposure).* It cites:
+  - the register `docs/prereg/f12_attestations.md` as committed at `2d92612` (sha256 `9956fbea2a24c3d50de41ee37134576391d8e8b7d285ef27e2794a61afc7fcea`), with its rows verbatim and
+    entries by number. That register includes the chair's renewal (entry 10b; row 10 "given through the C1 freeze (entries 10,
+    10a, 10b)") and this session's entry 23. Row 11 stays PENDING for later builders, analysts and Board A reviewers.
+  - the static access audit `docs/reviews/council/f12-inputs-access-audit-2026-11-12.md` (main `11016f6`, sha256 `21f763a7ef6327441715296dd49de85d509a19351bdcf59b8801a20da6cadb32`), with its overall finding and findings
+    table verbatim. Its overall finding is "PARTLY SUPPORTED" for the unqualified statement "the committed F12 inputs code reads
+    no outcome values": the F8a floor literal and the Astra qualification flag are upstream numerical and decision information.
+
+  It adjudicates nothing.
+- *Item 6 (restricted payload).* These are the pinned v2 restricted bytes, unchanged (sha256 `44d79403…6fb5`), with their
+  embedded provenance block (source path and sha256, extractor and its sha256, fields read). The Python and numpy versions that
+  F12a.4(e) also lists are in item 11 and in the pin, not in item 6's bytes; flagged below. The raw source is already committed
+  at `docs/prereg/f8_manifests/floor_payload/nullsize_inputs.json`.
+- *Item 7 (simulation config)* cites the noise check, pilot report, timing, projection and ledger snapshot.
+- *Item 10 (resources)* cites the chair's pilot acceptance (all-in 110.33 CPU-h of 190) and the static prerequisite binding.
+- *Item 11 (code hashes)* pins 94 files with runtime versions:
+  - every F12 script and test, including `f12_gauge_tokens.py`, `f12_matrix.py`, `f12_qualify.py`, `f12_budget.py`,
+    `f12_c1.py`, `f12_payload_extract.py`, `f12_additivity_prepare.py`, `f12_additivity_stream.py` and the fixed
+    `tests/test_f12g_c1_freeze.py`;
+  - the F12 configs;
+  - the repository-local modules they import, transitively;
+  - the frozen inputs: the token, gauge and matrix manifests, the population, the F12-I LoRA evidence, the token facts, the
+    qualifications, the candidate identities, the noise check, the pilot and its acceptance;
+  - `configs/eval_tf_v1.yaml`, `pyproject.toml` and `uv.lock`.
+- *`c1-draft` after the freeze.* `python scripts/f12_simulation.py c1-draft` writes the draft pin to the same path as item 11
+  and **must not be run after the freeze**. It was not changed to refuse, because a refusal would have changed
+  `scripts/f12_simulation.py`, a file the noise check and pilot are bound to. Instead, two existing checks catch an overwrite
+  (test `test_c1_draft_overwrite_after_the_freeze_is_caught_by_both_checks`):
+  - `verify_c1` reports `code_hashes_c1.json` differing from the manifest digest;
+  - the hook's code-pin check (`f12_c1.code_pin_failures`, used by `test_code_hashes_c1_draft_pins_current_bytes`) fails on
+    the draft status once `MANIFEST_C1.sha256` exists.
+
+**F12-C1.5 — Superseded manifest (re-pin before any Board A verification).** This manifest replaces the manifest committed at
+`451d45c` (sha256 `ae77fe5ef6673acff1d34401a719a0952a67efe4714cd62b983c04fba931b883`), which no Board A review cited or
+verified.
+- *Why.*
+  - A pinned test defect. `tests/test_f12g_c1_freeze.py` built the exposure file from the live register, and that builder
+    refuses an uncommitted register, so every commit editing `docs/prereg/f12_attestations.md` failed the pre-commit hook
+    (1,478 passed, 2 failed). Fixing it changed a file pinned in item 11.
+  - The chair's renewal (entry 10b) and this session's entry 23 belong in the register that item 1 cites.
+- *How.*
+  - `8dbad19` fixed the tests (exposure from a temporary committed copy of the register; the overwrite test) and withdrew the
+    superseded governed files and manifest from the tree. They remain in history at `451d45c`; `write_c1` refuses while a
+    manifest exists, and item 11 would otherwise have been stale.
+  - `2d92612` committed the register, with the hook passing (1,483 passed).
+  - `2e71d2a` re-froze.
+- *What changed.* Items 2–10 are byte-identical to `451d45c`. Items 1 and 11 changed, as the table shows. Nothing was tuned on
+  any outcome.
+
+**F12-C1.6 — Verify output.** `python -m scripts.f12_c1 verify` at `2e71d2a` (exit 1), verbatim:
+
+```
+{
+ "verified": false,
+ "failures": [
+  "C1: no Board A C1 verification record (fields inside C1 files cannot verify themselves)"
+ ]
+}
+```
+
+The only failure is the missing Board A verification record and review, as expected before step 7.
+
+**F12-C1.7 — Flagged for Board A at C1 (not resolved here).**
+- *Rank-1 gauge invariance.* 2,165 of 6,845 tokens, in 205 of 270 rows, are bitwise invariant under the gauge: their audit
+  discrepancy is exactly 0 by construction (chair correction to F12f). Is the audit adequate for those rows?
+- *Omitted energy.* 212 of 270 rows are above 0.01. F5 pins record it as a diagnostic, not an input; no rule is introduced.
+- *Comparator v4 block.* The comparator uses statistics plus spectrum (1,378 columns; matrix width 9,376). The older StatNN
+  baseline used statistics only.
+- *F12f ruling (c) implementing defaults:*
+  - the gauge seed's edit id is the population row id, and alias rows keep their own ids;
+  - the audit covers every present token;
+  - its tolerance applies to each seed's token-head prediction in nats.
+- *Attestation disclosures*, from the register as committed (sha256 `9956fbea…`); the exposure file adjudicates none of
+  them:
+  - Row 5 / entry 22: **two unattestable sessions**. They are the F12 inputs implementer (commit `0412799`), killed out of
+    memory, and the first F12b session, also killed out of memory. The chair commissioned an independent static access audit of
+    the code at `0412799`, cited in item 1 ("PARTLY SUPPORTED"), as evidence for Board A's condition 5.
+  - Entry 21: the qualified Board A F12c attestation (hook-run access not certain).
+  - Entries 15b, 15c and 15d: direct readers of prescore audits.
+  - Entries 17 and 20: parses of the raw payload.
+  - Row 11 remains PENDING for later sessions.
+- *Item 9's scope.* The verifier authenticates bindings, not semantic completeness (Board A F12g).
+- *Item 6 provenance.* Item 6 holds the restricted bytes exactly; its runtime versions sit in item 11 and the pin.
+- *Noise check and pilot before C1.* They were computed before C1 under the candidate identities, following Board A's ordered
+  path (steps 4–6 before step 7). F12a.6(d)'s C2 items 17–18 were originally to be computed after C1. Board A should rule how
+  C2 records them.
+- *Driver and dry-run memory.* The new pinned driver needs review, and the dry run's unrecorded peak memory (F12-C1.1) is
+  disclosed above.
+- *The superseded manifest (F12-C1.5)* and the `c1-draft` overwrite guard by detection rather than refusal (F12-C1.4).
+
+**F12-C1.8 — Attestation.** Entry 23 of `docs/prereg/f12_attestations.md` is this session's attestation (Claude Opus 5.5
+implementation sub-agent, worktree `.worktrees/prereg/f12-c1`). It was committed (`2d92612`) before the re-freeze, so item 1
+cites a register that contains it.
+- (i) It read old development summaries quoted in the register and the PREREG notes, and opened no TF-v1 record, ledger outcome
+  or D3 outcome.
+- (ii) It saw no G3, rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A score. It opened nothing under
+  `data/evals`, read no pilot decision code and used no GPU. It hashed the restricted payload, listed its key names and copied
+  its bytes, and printed no value.
+- (iii) It read the register's and the PREREG's accounts of the prescore audits, not the audits.
+
+Part A remains held by the programme owner.
