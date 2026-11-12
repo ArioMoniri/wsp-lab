@@ -6257,3 +6257,19 @@ own ids); the audit covers every present token; its tolerance applies to each se
 tokens). *Flagged:* the comparator's v4 block is taken as the pinned pooling code's statistics plus spectrum (1,378 columns;
 matrix width 9,376), whereas the older StatNN baseline used the statistics only. A wider comparator is conservative for WM-R, but
 which block F12.3's "v4 pooled statistics" means is for Board A to confirm at C1; the matrix builder is cheap to re-run.
+
+#### A5 chair correction to the F12f ruling (12 Nov 2026, 01:47 UTC, before any G3 outcome): rank-1 gauge invariance is exact
+
+The F12f ruling (b) said the zero-based index makes the gauge transform non-trivial at rank 1. That was wrong in effect. Every
+d_j in the F5 pin is a power of two, and floating-point scaling by a power of two is exact. At rank 1, H = 1 and Q = 1/2, so
+(B, A) → (B/2, 2A) reproduces BA bitwise and the token is unchanged under either index base. The F12f implementer confirmed this
+(200 of 200 random rank-1 cases bitwise identical; 199 of 200 at rank 2 and 198 of 200 at rank 3 differ). The chair withdrew
+its request for a test that rank-1 tokens differ, and the implementer's test records the actual behaviour instead.
+(a) *Ruling.* The zero-based index stands. The pin is not changed: a non-power-of-two diagonal would be a design change for
+Board A, and none is needed, because an exactly invariant token is the property the audit tests, not a gap in it. The audit's
+discriminating content is the Haar rotation at ranks ≥ 2.
+(b) *Disclosure for Board A at C1.* Rank 1 covers 2,165 of the 6,845 tokens in 205 of the 270 rows (abliteration 83, rank-1
+chain 69, random_dir 53); their audit discrepancy is exactly 0 by construction. Ranks 4 to 32 cover 4,680 tokens in 65 rows (all
+29 lora_sft and 36 chain-LoRA rows), which receive a real rotation. Board A may judge whether the audit is adequate for the
+rank-1 rows.
+(c) The full gauge-token build is launched under the F12f ruling's 24 h self-pricing cap and 6-thread rule.
