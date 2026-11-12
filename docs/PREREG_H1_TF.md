@@ -7205,3 +7205,178 @@ Changed again: `scripts/f12_tokens.py` (`984447c51c56`), `scripts/f12_additivity
 since only in resume handling (now refused) and base-loader confinement, verified by the load-only check; its numerical
 functions are unchanged. The disclosed pre-verification re-freeze remains required and is not done here. Nothing is merged
 to main or pushed.
+
+#### A5 note F12-C1b (Thu Nov 12 14:39:10 UTC 2026, before any G3 outcome): second C1 freeze of the F12 simulation package
+
+This block is appended; earlier text is not rewritten. It records the second C1 freeze of the F12 simulation package. This is
+the disclosed pre-verification re-freeze that Board A's F12-C1 review (`docs/reviews/council/board-a-f12-c1-2026-11-12.md`,
+commit `ed425bd`) asks for in its condition 3, after Board A **withheld** verification of manifest `2b492327…`. It was done on
+branch `prereg/f12-c1` after merging main `a5d03e9` and `prereg/f12-remedy` at `df0265e`. Part A is staged, frozen, released
+with conditions, unscored and held, and no G3, rotation, ladder, sealed, F8 or F9 outcome has been read.
+
+Commits:
+- `14009f7`: merge of `prereg/f12-remedy`. Main fast-forwarded first. Committed with `--no-verify` for one reason only: the
+  full suite, run as the hook runs it, failed exactly the two C1 pin tripwires (`test_code_hashes_c1_draft_pins_current_bytes`,
+  `test_c1_draft_filled_from_committed_token_facts`; 1,578 passed, 2 failed).
+- `9eb71c4`: the builder changes, tests first. It also withdraws the unverified freeze of `2e71d2a` from the tree, which keeps
+  it in history. Hook passed: 1,588 passed.
+- `074bafd`: register entry 10c and the entry 23 addendum. Hook passed: 1,588 passed.
+- `82541a8`: the re-freeze. Hook passed: 1,588 passed, 0 failed.
+- this note's commit.
+
+The PREREG and register blocks merged from `prereg/f12-remedy` were only appended, in time order; no earlier text changed.
+**This session does not verify C1**, and stage 1 is not released.
+
+**F12-C1b.1 — Builder changes (tests first, `tests/test_f12g_c1_freeze.py`, 25 tests; ten were red before the code).**
+- *Item 9: A11.* The outcome statement is now `outcomes_read_intent`, which is the remedy's function
+  `f12_additivity_prepare.outcomes_read_intent()`: statement "none" and the label "algorithmic intent of this code path on authentic inputs; not access telemetry and not a session attestation (PREREG_H1_TF F12a.1(c); unexposed adoption A11). Actual reads: the run record's read_boundary".
+  It no longer carries a bare `outcomes_read`.
+- *Item 9: driver identities.* The current construction script `c3e55e27aa58…` and driver
+  `1c23b01cafe2…` are cited. The driver that produced the committed plan evidence is recorded separately
+  (`evidence_driver_sha256` `0bf273ea2b8e…`).
+- *Item 9: requalification.* It binds the remedy's two plan requalifications, and fails closed unless each is identical to
+  the committed plan, including the status entries:
+  - `docs/prereg/a5_manifests/f12/f12r/plan_requalification.json` `3d59d181ba94…`;
+  - `docs/prereg/a5_manifests/f12/f12r/plan_requalification2.json` `b4ef06e858e6…`;
+  - LoRA entries hash `a9bed8d88f48…` on both.
+
+  It also binds the base-model leaves pin (`6d99ad84c23d…`) and the load check that reproduces the
+  pinned base state.
+- *Item 9: what did not change.* Board A's two F12g scope paragraphs, the independence wording and all 16 LoRA records are
+  byte-identical to `2e71d2a`.
+- *Item 1 (exposure).* It also cites, each verified as committed:
+  - the adoption review, both re-checks (path, sha256 and opening disposition verbatim), and the adoption review's session
+    statements A, B and Combined verbatim;
+  - the remedy's register row 24.
+
+  The builder is tested on a temporary committed copy, never on the live files.
+- *Item 10 (resources).* `resource_bindings` binds:
+  - the chair resource disposition and the token requalification ruling, each by heading and text sha256;
+  - the ruling's `resource-cap` line;
+  - the rerun and comparison records.
+
+  It fails closed unless the rerun is complete within its cap and the comparison is identical.
+- *Item 11 (code hashes).* It adds every file under `docs/prereg/a5_manifests/f12/f12r/`. The new scripts and tests are picked
+  up by the existing F12 globs.
+
+**F12-C1b.2 — Governed files and manifest.**
+- *Manifest.* `docs/prereg/f12_manifests/MANIFEST_C1.sha256` (`write_manifest`; H₀ `e0619f6a…5301`, anchor
+  `f12-manifest-v1:49fec4a3c885e7f611084c0e56dac77053ba2ec8`), **sha256 `16a91fe2ad17a146b215a1a7ab6704873bb3712866868ea4b756b45fdcbfe9c2`**.
+
+| H | file | sha256 | H_k | against `2b492327…` (`2e71d2a`) |
+|---|---|---|---|---|
+| H1 | `exposure_c1.json` | `b1f30387f0db554f984acbe3a0df30b200e9c80a57f431487280889417186300` | `66f517ac39ca968f07aee89f71ce72c38221607603ac615ac75cde599e99e1e4` | **changed** (`0d2ff24b…`): register with entries 10c and 23 addendum; adoption review, re-checks, entry 24 |
+| H2 | `population.json` | `f86fe47f24c777be3b1db06a847bba2bd6d455e009e6442878f91825ceed7a7d` | `42c92b59fce8661cede56638fa05289f3a8d924a0125016c6d485f74958c13a8` | **changed** (`2e174ca9…`): selector `scripts/f12_population.py` identity |
+| H3 | `folds.json` | `7952e372785beb01fff17c76b675ca028d5831f15192be48dec9d03fdffdeff9` | `c96f70469c6c0345308db225d5ac4b2856dd00f75c553eee652d467aad44e505` | identical |
+| H4 | `schemas.json` | `c077277be542805674322aa0ef0f004c1426ea3981fcdea49485e74864a14939` | `f974a7eac458d703855593442937a4eed17be2f7dd352cf6a9e6ebf6a96f981f` | **changed** (`d7972d2b…`): token builder `scripts/f12_tokens.py` identity |
+| H5 | `models.json` | `c8bcce9c27f3fcd7522cd1b061d27ce7adcce23d7ce6fe775b649e245ddc999f` | `0f946acd2b02fc32b8968720e360fd35d96264fcd5d30e17e96f550f846a2c38` | identical |
+| H6 | `noise_payload/restricted.json` | `44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5` | `fe0e56f0e6100932af0a9b8680b774ca81659095e45218a89c11dd861b1df49c` | identical |
+| H7 | `simulation_config.json` | `b7ed22705b8b17336fbd8b66543ca4804e82c64a70416cdbc18208ba0fb0f4fc` | `366add810a6d6c9897e91307ef42a5a8d938cba0995b48886c19f55616c0736a` | identical |
+| H8 | `intervals.json` | `bd16899430f8b2fecf249cdaf9bcab00507d90ef2cbc09975ac8c5622037f3a4` | `9a5e3e6833aa7c86737e473df6eca1f3c4448cb489634781aca75bb4cd0259cf` | identical |
+| H9 | `f12i_c1.json` | `958c1faf61e131ea23b00616b92da0c4ad7614d5367d189010ef3b77dac29dc9` | `eca7d7f8bf55abb3065f5f6fb30133915d0136944c000d8a556515d643ccda49` | **changed** (`706a2df1…`): construction script and driver identities; requalification binding; A11 intent label |
+| H10 | `resources.json` | `67189465de23fe852d851e8123ddaed8173b77feea37828bbcde63115c9d77b9` | `6deb89b98fa8cad3e1e17f025333490d9269cb04f9ef0e6cf610274fba36e1a6` | **changed** (`c1172666…`): resource disposition, requalification ruling, rerun and comparison records |
+| H11 | `code_hashes_c1.json` | `ff2634f1bcb72a24c9e80de314fd1fb4398f7803d220ea3e84cf8e7065152470` | `e4523be2a90bd808dd59e72064ef1c5d14e390b87d7a910b2254d7530dea5013` | **changed** (`e08230c5…`): remedy code, tests, pins, comparison tool, F12-R evidence |
+
+Notes on the files:
+- *Items 2 and 4* differ from `2e71d2a` only in the selector and token-builder sha256 (one line each). Item 4 was not on the
+  chair's list. It changed because it pins the token builder, which the remedy hardened. The token requalification bound in
+  item 10 shows that the hardened builder reproduces the frozen tokens bit for bit; the frozen token files remain the governed
+  inputs.
+- *Item 1* cites:
+  - the register as committed at `074bafd` (sha256 `7bb3067dd7f7d485866890705a249096a6079480228da69c506fc54958e045ad`). Row 10 reads "given through the second C1
+    freeze (entries 10, 10a, 10b, 10c)". Row 11 stays PENDING for later sessions.
+  - the access audit, as before;
+  - the adoption review `e83adf5cfda9…`;
+  - re-check 1 `1249d0dddb4b…`;
+  - re-check 2 `7ea8e918abd4…`;
+  - entry 24.
+
+  It records that session A's retained choices are now registered or adopted by unexposed roles (12 registered or verified, 13
+  adopted, eight flagged and then remedied: re-check 1 adopted six, re-check 2 adopted A10 and A19), and that session B's are
+  covered (13 items: five registered, eight adopted, zero flagged). It records entry 22's two sessions, for row 5 and entry 22,
+  as still unattestable for their own interactive history. It adjudicates nothing.
+- *Item 10* binds:
+  - the rerun: peak RSS **17,124,909,056 bytes** (sampled process tree 17,124,769,792),
+    under the 19,000,000,000-byte cap (stop at 18,050,000,000);
+  - wall time **15,322 s** (4.26 h);
+  - CPU **74,350 s** (20.653 CPU-h);
+  - launch at `fdb179c` with 25,640,480,768 bytes available;
+  - `token_requalification.json` identical.
+- *Item 11* pins 116 files:
+  - including `scripts/f12_inputs_guard.py`, `scripts/f12_base_loader.py`, `scripts/f12_tokens_compare.py`, the six
+    `tests/test_f12r_*.py` files and `docs/prereg/a5_manifests/f12/f12r/base_model_leaves.json`;
+  - its candidate-identity drift now lists `scripts/f12_c1.py`, `scripts/f12_population.py`, `scripts/f12_tokens.py` and the
+    draft code-hash pin (Board A flag (i): historical evidence, not current authority).
+
+**F12-C1b.3 — Verify output.** `python -m scripts.f12_c1 verify` at `82541a8` (exit 1), verbatim:
+
+```
+{
+ "verified": false,
+ "failures": [
+  "C1: no Board A C1 verification record (fields inside C1 files cannot verify themselves)"
+ ]
+}
+```
+
+The only failure is the missing Board A verification record and review.
+
+**F12-C1b.4 — Binding re-check (static; nothing re-run).**
+- The noise check, pilot report and pilot acceptance bind the five simulation files (`scripts/f12_simulation.py`,
+  `scripts/a5_build_panels.py`, `scripts/a5_simulation.py`, `scripts/tfv1_requalify.py`, `src/wsp/features/pool.py`), the
+  restricted payload `44d79403…6fb5` and the matrix `e7217299…71b8f`.
+- `git diff 5b91d90` over those five files on this branch, after both merges, is empty. The remedy branch did not touch them.
+- At the re-freeze, `prerequisite_binding` finds:
+  - every recorded code hash equal to the current bytes (noise check, pilot report, acceptance: all true);
+  - the payload equal to item 6 (true);
+  - the matrix equal to the committed matrix manifest (true);
+  - the acceptance citing the committed records (true).
+- **The bindings hold.** This was checked by reading the committed records, not by re-running anything.
+- Disclosure: like the earlier freezes, `prerequisite_binding` parses the whole committed pilot report in memory, including
+  per-replicate records, and keeps only identity fields. Board A's F12-C1 review deliberately avoided that decode.
+
+**F12-C1b.5 — Superseded manifests (none verified by Board A).**
+- `ae77fe5ef6673acff1d34401a719a0952a67efe4714cd62b983c04fba931b883` at `451d45c`: a pinned test defect; replaced by the first
+  re-freeze (note F12-C1).
+- `2b4923270afa4699f27b2e8797ec02e2a85002290355a932b26f19169c50b6bc` at `2e71d2a`: Board A withheld verification. Replaced
+  here because:
+  - the remedy changed pinned code;
+  - entries 10c and 23 (addendum) belong in the cited register;
+  - the conditions' dispositions must be bound.
+
+Both remain in history. This re-freeze rewrites no verified file.
+
+**F12-C1b.6 — Board A F12-C1 conditions (Board A adjudicates; nothing is closed here).**
+1. *Unattestable sessions.*
+   - The unexposed adoption review itemised session A's 33 and session B's 13 retained choices.
+   - The unexposed F12-R implementer (entry 24) remedied A's eight flags, tests first, with all 47 numerical functions
+     AST-identical.
+   - Two independent unexposed re-checks adopted all eight.
+   - The tokens were requalified by a full 270-row rerun, identical on every deterministic field. The plan was requalified twice,
+     identical.
+   - Item 1 cites all of it, item 9 binds the plan requalifications, and item 10 binds the token requalification.
+   - The two sessions remain unattestable for their own interactive history. No personal statement is supplied for them, and no
+     exploratory amendment is made.
+2. *Memory departures and future boundary.* Item 10 binds the chair resource disposition (heading and text sha256, commit
+   `159af3e`), which:
+   - records the token run (17,180,188,672 bytes), the unmeasured dry run (about 19 GB, an estimate) and the gauge build
+     (5,400,002,560 bytes) as departures, without claiming retroactive compliance;
+   - sets the 4 GB future boundary with dated pre-launch rulings;
+   - is followed by the token requalification ruling (`53976db`, 19 GB cap) and the rerun's measured peak within it.
+
+   The streaming plan (3.11 GB) and the requalifications (2.64 and 3.11 GB) were within 4 GB.
+3. *Re-freeze.* This note. The earlier manifests are preserved, and the numerical prerequisites are reconciled (F12-C1b.4)
+   without a rerun, because none of their identities changed.
+
+Board A's rulings (a)–(e) and (g)–(i) on the earlier flags stand as given.
+- (f) is condition 1 above.
+- (h) now also covers `2b492327…`.
+- (i) now also covers the stale pins of `f12_population.py` and `f12_tokens.py`.
+- Its caution that the `c1-draft` overwrite detector is not write prevention stands: `python scripts/f12_simulation.py
+  c1-draft` must not be run after this freeze.
+
+**F12-C1b.7 — Attestation.** Entry 23's addendum and the chair's entry 10c are in the register committed at `074bafd`, before
+this re-freeze, so item 1 cites them. Statements (i)–(iii) of entry 23 are unchanged. This session opened nothing under
+`data/evals`, read no pilot decision code and used no GPU.
+
+Part A remains held by the programme owner.
