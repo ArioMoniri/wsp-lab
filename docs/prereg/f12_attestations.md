@@ -35,6 +35,7 @@ round-6 member reports. They are predictions and simulation outputs, not outcome
 | 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** |
 | 12 | F12d implementer and v2 restricted-payload extractor (chair-authorised for that step) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12d`, worktree `.worktrees/prereg/f12d`, 11 Nov 2026 about 21:45 UTC to the F12d note commit | F12d note, code, tests, v2 restricted copy and pin, C1 skeleton, resource plan | none seen; handled centred qualification noise (see below) | none | read F12a.1's account and entries 9-10, not the audits | entry 12 below | given (this session only) |
 | 13 | F12e implementer (C1 draft fill, candidate identity freeze, real-token qualification) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12e`, worktree `.worktrees/prereg/f12e`, 11 Nov 2026 about 23:52 UTC to the F12e note commit (12 Nov) | F12e note, `scripts/f12_qualify.py`, the C1 draft fill, token facts, base tensor hashes, candidate identities, qualification report | none seen; read the real F12 token outputs (field forecasts, see below) | none | read F12a.1's account and entries 10 and 12, not the audits | entry 13 below | given (this session only) |
+| 14 | F12f implementer (gauge-token builder and pricing, runner gauge audit, comparator-matrix builder, re-qualification code) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12f`, worktree `.worktrees/prereg/f12f`, 12 Nov 2026 about 00:33 UTC to the F12f note commit | F12f note, `scripts/f12_gauge_tokens.py`, `scripts/f12_matrix.py`, the gauge audit in `scripts/f12_simulation.py`, `scripts/f12_qualify.py` / `f12_c1.py` changes, priced-only gauge records | none seen; read the real F12 token outputs and the edit-derived v4 feature files (see below) | none | read F12a.1's account and entries 9, 10, 12 and 13, not the audits | entry 14 below | given (this session only) |
 
 PENDING cells are blank on purpose. Nothing is inferred from a session's role, branch or timing.
 
@@ -188,3 +189,56 @@ sealed, F8 or F9 outcome and no Part A score, received no summary of one and use
 *(iii) Prescore audits.* The session read F12a.1's account of the disclosed pre-score audits and entries 10 and 12 of this
 register. It did not open the Part A prediction or calibration files, the prescore inventories, the round-6 member reports or
 `SYNTHESIS-r6.md`.
+
+## Entry 14: F12f implementer (given)
+
+*Session.* An implementation sub-agent session (Claude Opus 5.5) working only in `.worktrees/prereg/f12f` on branch `prereg/f12f`,
+from main `8eabc96`, from 12 Nov 2026 about 00:33 UTC until the commit adding note F12f. The chair's brief authorised it to read
+the real F12 token outputs under `/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/` after verifying them against the committed
+manifest, and the stored zoo deltas and the existing pooled v4 files of the 270 rows after confirming that the v4 files carry no
+outcome field. It attests to this session only and writes no other entry.
+
+*What it read.*
+- Committed files: the chair ruling on F12e and note F12e; the F5 schema pins ("Gauge audit", "Augmented comparators"), F12.3
+  and F12a.2(h)–(i) of `docs/PREREG_H1_TF.md`; Board A's F12c review ("Ordered path to stage 1"); this register (header, table,
+  entries 9, 10, 12 and 13); `f12e_qualification.json`; the F12 scripts, tests, configs and resource plan;
+  `src/wsp/features/pool.py`, `extract.py` and `predictor/baselines.py` (`load_feature_table`); the snapshot's
+  `content.feature_manifest` (hashes) and `tokens_manifest.json`; the repository hooks.
+- **Real F12 token outputs (field forecasts and edit-derived inputs, not outcomes).**
+  - The seven files were verified against the committed manifest by `f12_gauge_tokens.frozen_inputs` (all equal) before every
+    read.
+  - The gauge builder and a diagnostic read `tokens.safetensors`, `rows.jsonl`, `detail.jsonl`, `kframes.json` and
+    `kframes.safetensors`.
+  - For the diagnosis of the reproduction failure it printed, for row `0298985df48ec8f9` only, the row's family, rank, flags and
+    omitted energy, two tensors' per-tensor records (including their field contractions a and q, which are forecasts) and those
+    tokens' log σ columns.
+  - It printed presence counts per row and K-block reproduction differences. It printed no other a, q or token value.
+- **Stored zoo deltas and the base model.** Three rows' stored deltas were loaded and rebuilt into increments on CPU in each of
+  four pricing attempts, and one row's in a ≤ 2-thread probe. The pinned base model was loaded (state hash re-verified) in each.
+- **v4 feature files.** It verified the sha256 of `features.json`, `features.safetensors` and `pooled.safetensors` for the 270
+  rows against the A5 snapshot (all equal). From `features.json` it printed key-name counts, the `eligibility` value counts, the
+  `params` key names, the config, the edit ids' agreement with the row ids, and the agreement of changed supported tensors with
+  the token presence. From `pooled.safetensors` it printed key names and shapes. It printed no feature value. Their values
+  entered no output: the matrix was not built.
+- `data/`:
+  - It ran `ls data/` with the name `evals` filtered from the output (the listing itself read the top-level directory),
+    `ls -d data/features/*`, and a name listing of `data/features/qwen3.5-0.8b` (first names and count).
+  - It read `data/features/qwen3.5-0.8b/manifest.json`.
+  - It opened nothing under `data/evals` and walked no directory below it.
+- **Noise payload.** It computed the sha256 of the restricted payload copy `noise_payload_restricted_v2.json` (equal to
+  `44d79403…6fb5`) and read the pin. It did not parse or print the payload and ran no noise check, pilot or simulation replicate
+  on it. Tests use toy payloads.
+- Test runs: the F12 test files (OMP 2, serial) and the pre-commit hook's full suite at each commit; the suite's collection-time
+  file access was not audited. No test reads a real token, feature or payload file.
+- Incidental: while checking machine load it read the tail of another agent's unrelated tmux job (an eICU benchmark log); nothing
+  in it concerns this programme.
+
+*(i) Old development outcomes.* None seen. It saw no TF-v1 record, no G0/G1/G6 ledger outcome and no D3 outcome. The token
+outputs include field forecasts (a, q) for the 123 existing roots; these are forecasts, not their recorded outcomes.
+
+*(ii) New outcomes.* None. The session opened nothing under `data/evals`. It saw no G3, rotation, ladder, missing-reference,
+sealed, F8 or F9 outcome and no Part A score, received no summary of one and used no GPU.
+
+*(iii) Prescore audits.* The session read F12a.1's account of the disclosed pre-score audits and entries 9, 10, 12 and 13 of
+this register. It did not open the Part A prediction or calibration files, the prescore inventories, the round-6 member reports
+or `SYNTHESIS-r6.md`.

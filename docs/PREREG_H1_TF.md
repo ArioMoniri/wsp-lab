@@ -6239,3 +6239,147 @@ must pass before the 10,000-panel noise check. The gauge-token build is CPU only
 in full, and is charged to the F12 inputs (not to the 190 CPU-h simulation ceiling). The pilot's measured cost, which now
 includes StatNN at the real comparator width, decides whether that ceiling holds. The omitted-energy flag (212 of 270 rows above
 0.01; F5 pins: a diagnostic, not an input) is carried to Board A at C1 unchanged. Part A remains held by the programme owner.
+
+#### A5 note F12f (Thu Nov 12 01:04:21 UTC 2026, before any G3 outcome): gauge-transformed tokens, real comparator matrix, re-qualification
+
+This block is appended; earlier text is not rewritten. It implements the chair ruling on F12e (a)–(c) on branch `prereg/f12f`
+(main `8eabc96`) while Part A is staged, frozen, released with conditions, unscored and held, and before any G3, rotation, ladder,
+sealed, F8 or F9 outcome had been read. Commits: `5ce09ef` (tests and code for steps 1–3, written tests first), `ebb9317`
+(priced-only records and the qualification loader) and this note's commit. **The gauge-token build priced above the 10 h wall
+cap in its own run (17.48 h) and stopped, as pinned. Under the stop rule of the brief, nothing after step 1 was run on real
+data: no real matrix, no re-pinned identities, no re-qualification, no noise check, no pilot and no ledger event.** F12f changes
+no rule, releases nothing and does not mark C1 verified. Part A remains held by the programme owner.
+
+**F12f.1 — Step 1: gauge-transformed tokens (built, priced, stopped).** `scripts/f12_gauge_tokens.py` (sha256
+`e63cdec560d1bd8f16251bbb5410e050ac8b9fd00b4c99c5386ac686da7e68b6`) is a new pinned script. The frozen run's code path
+(`scripts/f12_tokens.py`) is unchanged. The new script verifies the frozen token manifest (sha256 pinned) and its seven files,
+then rebuilds each row's realised increment from the stored zoo bytes. The increment hash must equal the frozen `rows.jsonl`,
+and the presence must equal the nonzero supported tensors. It recomputes the frozen builder's full thin fp32 SVD and balanced
+factors (B, A) at the frozen r_eff, and requires the K block of (B, A) to reproduce the frozen columns 0–15 **bitwise**.
+It then applies the F5-pin gauge:
+- Q = H diag(d), with H the positive-diagonal QR of fp64 `randn(r, r)` under
+  `torch.Generator('cpu').manual_seed(seed('20261110:lol-gauge:', '<row id>:<tensor>'))`.
+- (B, A) → (BQ, Q⁻¹A) in fp64, with Q⁻¹ = diag(1/d) Hᵀ, then cast to fp32.
+- The gauge-transformed token is the frozen token with columns 0–15 replaced. Columns 16–41 are functions of D_t alone and are
+  copied. Masked K blocks stay zero.
+
+Implementation conventions, disclosed for the chair and Board A to confirm:
+- d_j = 2^((j mod 3) − 1) is indexed j = 1..r (the σ_j indexing of the same pins), so d = (1, 2, ½, …). At r = 1, Q = 1 exactly.
+- The "canonical edit id" is the population row id; the 45 alias rows keep their own ids.
+- The scope is every present token. Each present token has balanced low-rank factors, which covers both readings of "stored
+  low-rank factors".
+
+*Why bitwise, and why six threads.* The first priced row, `0298985df48ec8f9`, is a random_dir row at r = 1 with σ₁/σ₂ ≈ 1.02
+(omitted energy 0.50). There the rank-1 truncation is ill-conditioned:
+- At 2 threads the recomputed K block of `model.layers.8.mlp.down_proj.weight` differed from the frozen one by 5.9e-9 absolute
+  (3.5e-5 of the block's largest entry).
+- 1 and 2 threads differ from each other by 8.4e-9.
+
+That is the order of the audit's 1e-4 tolerance, and at r = 1 the gauge is exactly the identity. A tolerance on reproduction
+would therefore inject non-gauge discrepancies into the audit. The builder requires bitwise reproduction (`REPRO_RTOL` = 0),
+which needs the frozen run's six threads. At six threads all 27 priced tokens reproduced bitwise.
+
+*Price (F12a.7-style projection from the first three rows, as f12_tokens: max of naive and tensor-weighted, plus setup).*
+
+| run | code | row walls (s) | naive / weighted (h) | projected | CPU used |
+|---|---|---|---|---|---|
+| dedicated pricing (`--price-only`), quiet machine | `8eabc96` + uncommitted builder (logic as `5ce09ef`) | 18.7, 104.1, 5.0 | 3.20 / 9.00 | **9.00 h ≤ 10** | 0.156 CPU-h, 137 s wall |
+| full run (`5ce09ef`, clean), its own pricing; load average 13 with another agent's job at 100 % | `5ce09ef` | 38.5, 139.8, 69.9 | 6.21 / 17.48 | **17.48 h > 10: `price_exceeds_cap`, stopped** | 0.270 CPU-h, 257 s wall |
+
+- Records: `docs/prereg/f12_manifests/f12f_gauge_tokens_priced_dedicated.json` (sha256
+  `8f57e74dc296d9db8bb1b86f234b974b59f9a0d4edbb7a7d44162e353f634f75`) and `f12f_gauge_tokens_priced_fullrun.json` (sha256
+  `3f962ad47072325179d15e485fb36b8e000c9b39e388c6d431cb4399bd88f3c7`). No manifest is written at the governed path
+  `docs/prereg/a5_manifests/f12/gauge_tokens_manifest.json`.
+- The same methods in CPU terms: about 13.8 (naive) to 38.9 (weighted) CPU-h on the quiet machine, and 24.1 to 67.8 CPU-h under
+  contention. These are charged to the F12 inputs, not to the 190 CPU-h ceiling.
+- Peak RSS was 3.15 GB. CPU used in step 1, all attempts: about 0.44 CPU-h. This counts two 2-thread pricing attempts that failed
+  closed on reproduction (about 25 CPU-s together) and a ≤ 2-thread diagnostic probe of that one row.
+
+The two prices differ by contention alone; the machine was not the single heavy job during the full run.
+
+**F12f.2 — Step 2: gauge audit in the runner (implemented and tested; not yet applied to real tokens).** In
+`scripts/f12_simulation.py` (sha256 `1ef27e649e512e11b731a1c9a755cb6c53d5d4625bc9c15cd173f3741bc3c384`):
+- `gauge_audit` evaluates every refitted WM-R head (each seed, each outer fold) on the held-out rows' frozen and gauge-transformed
+  tokens, with the same parameters and training standardisation.
+- f is the seed's head prediction in nats; F3 reads no tokens. The tolerance is |f_gauge − f| ≤ 1e-5 + 1e-4 |f|, and non-finite
+  values fail.
+- Every nonzero discrepancy is retained (fold, seed, row, f, f_gauge, delta, tolerance).
+- Any violation sets C_WM and C_WM,S invalid ("WM-R gauge violation (F5 pins)"), makes the decision `unresolved_validity`, and
+  is counted as a replicate failure in the rates (F12a.5(d)).
+- Negative tests cover perturbed gauge tokens (violation, retained), sub-tolerance discrepancies (retained, no violation) and an
+  identical-token audit that leaves every fit unchanged.
+
+**F12f.3 — Step 3: real comparator matrix (builder implemented and tested; matrix not built).**
+
+*Builder.* `scripts/f12_matrix.py` (sha256 `bcee6a6df705d7a234faf8ec177167e7e632b133fdd3d82de5b59054b2d0d97f`) builds the matrix:
+- inputs: the verified frozen tokens, the verified complete gauge output, and v4 = `pooled.safetensors` `stats` (1,242) then
+  `svd` (136) of each row;
+- layout: one token per present (row, slot) in A5.8.3 order, `tokens_gauge` aligned with it, and `x0_v4` = the pinned pooling
+  code on the zero delta (all zero; F12a.2(h));
+- non-finite values fail closed;
+- comparator width: **1,378 + 186 × 43 = 9,376** columns.
+
+*v4 source check (done on the real files).* Before using them, this session checked the v4 files against the A5 snapshot.
+- Hashes: all 270 rows' `features.json`, `features.safetensors` and `pooled.safetensors` equal the snapshot's
+  `content.feature_manifest` (snapshot sha256 `1b2af25c…01da3`).
+- Edit-derived only. `pooled.safetensors` holds only `stats` [1242] and `svd` [136]. `features.json` has exactly the extractor's
+  edit-derived keys and no evaluation or outcome field; `eligibility` is the edit build's classification (production 268,
+  unclassified 2).
+- Extraction settings: every row has edit id equal to the row id, feature_version 4, 4 buckets, 24 layers, and effective bf16
+  delta relative to the base.
+- Presence: its changed supported tensors equal the frozen token presence.
+
+The builder enforces all of these.
+
+*Simulation changes.*
+- A non-synthetic matrix must carry the 1,378-column v4 block, the gauge tokens and x₀. The 18-column stand-in is refused there
+  and stays synthetic-only.
+- Budget-ledger (governed) runs refuse synthetic matrices and any matrix whose identity differs from the committed
+  `docs/prereg/a5_manifests/f12/matrix_manifest.json`. The matrix sha256 includes `tokens_gauge` and `x0_v4`, and the
+  synthetic matrix's hash is unchanged.
+- The noise check now records its token source, including the matrix manifest. The pilot and stage reports already carry
+  `tokens_matrix_sha256`.
+
+The real matrix needs the complete gauge output, so it was not built.
+
+**F12f.4 — Steps 4–6 not run.**
+- The re-pin is not done. `scripts/f12_qualify.py` (sha256 `9ce2bfc3…1da0`) now pins the new code, the gauge and matrix
+  manifests and the snapshot in `f12f-candidate-identities-v1`. Its gauge and matrix checks pass only on verified complete F12f
+  inputs, and it reports the omitted-energy flag against the F12e report. But no identities file and no qualification report were
+  written.
+- `code_hashes_c1.json` (sha256 `12eb46e7…16a2`) and the C1 draft were regenerated over the changed code. The draft now cites
+  the gauge manifest, runner audit, matrix manifest and builder; the manifest hashes are null until those files exist.
+- No `noisecheck:<d>` or `pilot:<r>` stream was used, no noise payload was opened, and no budget-ledger event was written. The
+  noise check can still run once without a re-seeding question.
+- The break-even against 190 CPU-h is unchanged until measured: (190 − 0.005 − 0.042) × 3600 / 2,890 replicates ≈ 236.6 CPU-s
+  per alternative-equivalent replicate at the plan's noise and overhead. The real width adds 1,360 v4 columns to the synthetic
+  8,016.
+- `pilot_acceptance` is not written. The omitted-energy flag (212 of 270 rows above 0.01) is carried unchanged.
+
+**F12f.5 — Decision needed (for the chair; not taken here).** The gauge build needs one of:
+- a dedicated six-thread window in which it is the single heavy job; the quiet price was 9.00 h, and the true wall is uncertain
+  between that and the contended 17.48 h;
+- a dated wall cap above 10 h for this CPU-only input build; or
+- a ruling on a pricing basis that is robust to contention.
+
+Thread count cannot be lowered without giving up bitwise reproduction (F12f.1).
+
+**F12f.6 — What remains.**
+- The rest of the chair ruling on F12e: the full gauge-token build and its committed manifest; the real matrix and
+  `matrix_manifest.json` (`python scripts/f12_matrix.py`); `f12_qualify.py identities` and `qualify`, which must pass every check
+  including gauge and simulation matrix inputs.
+- Board A's ordered path:
+  - step 4: the 10,000-panel k = 145 noise check under the ledger with `--operator`;
+  - step 5: the ten-alternative pilot (r = 3000–3009, two workers, real width, gauge audit active), its report, process-tree
+    costs and `project_cpu` all-in projection;
+  - step 6: `pilot_acceptance`, only within 190 CPU-h;
+  - step 7: final attestations, the F12-I Astra and C4 hashes, `MANIFEST_C1.sha256` and Board A's explicit C1 verification,
+    including the gauge evidence and the omitted-energy flag;
+  - step 8: stage 1.
+
+*No-exposure attestation.* Entry 14 of `docs/prereg/f12_attestations.md` is this session's attestation (Claude Opus 5.5
+implementation sub-agent, worktree `.worktrees/prereg/f12f`). (i) It saw no TF-v1 record, ledger outcome or D3 outcome. It read
+the real F12 token outputs (field forecasts) after verifying their hashes, and the edit-derived v4 feature files after verifying
+them against the snapshot. (ii) It saw no G3, rotation, ladder, missing-reference, sealed, F8 or F9 outcome and no Part A score,
+opened nothing under `data/evals`, opened no noise payload and used no GPU. (iii) It read F12a.1's account of the prescore audits
+and register entries 9, 10, 12 and 13, not the audits.
