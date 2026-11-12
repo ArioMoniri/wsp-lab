@@ -1,0 +1,119 @@
+{
+ "accepted_utc": "2026-11-12T06:59:41Z",
+ "all_in_ceiling_cpu_h": 190.0,
+ "ceiling_source": "PREREG_H1_TF A5 chair ruling on F12c (11 Nov 2026, 18:55 UTC)",
+ "chair_accepted": true,
+ "identities": {
+  "code_sha256": {
+   "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
+   "scripts/a5_simulation.py": "4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a",
+   "scripts/f12_simulation.py": "1ef27e649e512e11b731a1c9a755cb6c53d5d4625bc9c15cd173f3741bc3c384",
+   "scripts/tfv1_requalify.py": "46f7ab9a4ab3207990fdc0fa888d9f6164fc156f98a0072f33df51d1432e6249",
+   "src/wsp/features/pool.py": "85a6341a446f32761531e0f0a193101114201d9eb08b0e05e6a6d1d42ee94390"
+  },
+  "payload_restricted_sha256": "44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5",
+  "tokens_matrix_sha256": "e721729932bd11a69bbdc04b06000b8cb48d66c52b53e43f5c3d47a99c571b8f",
+  "tokens_synthetic": false
+ },
+ "noise_check_sha256": "8d1126585792c19f8d59ae9475d00b723841cb69565307a2b6e21ef47c8355ad",
+ "pilot_report_sha256": "a9774699f2b22d7603376ba806d74bd9335ee82f35769b240c06cc26afc81ba5",
+ "pilot_timing_sha256": "536fa3426e7264b24573394ff4a91e763d88a566c5d1bf296448a493b875c9ec",
+ "projection": {
+  "all_in_cpu_h": 110.32560926618139,
+  "all_in_worst_cpu_h": 110.32560926618139,
+  "alternative_timing": "measured",
+  "basis": "process CPU seconds per replicate measured in this run; F12c schedule: stage 1 = 40 stress + 40 alternative at each of six k; stage 2 = 1,000 stress + 1,000 alternative + 200 variance-x2 at k*; coverage target = 200 stress at k*; pilot = 10 alternative at k = 145; plus the noise check and overhead; worst case over k*",
+  "coverage_target_by_k_cpu_h": {
+   "0": 7.632445221938887,
+   "116": 7.632445221938887,
+   "145": 7.632445221938887,
+   "29": 7.632445221938887,
+   "58": 7.632445221938887,
+   "87": 7.632445221938887
+  },
+  "coverage_target_worst_cpu_h": 7.632445221938887,
+  "extrapolations": [
+   "stress cost per replicate extrapolated: projected at the measured alternative cost (synthetic stress / alternative ratios 0.89-0.92, so this is conservative); not measured stress timing",
+   "every k below k = 145 projected at the cost measured at k = 145 (conservative: synthetic per-replicate cost rises with k)",
+   "variance-x2 cost per replicate projected at max(stress, alternative)"
+  ],
+  "items_by_kind_cpu_h": {
+   "noise_check": 0.003583097826666667,
+   "overhead": 0.031118166879167575,
+   "pilot": 0.3836968055555556,
+   "stage1": 18.317868532653335,
+   "stage2": 83.95689744132777,
+   "target": 7.632445221938887
+  },
+  "label": "projection; stress timing extrapolated from the alternative-only pilot (not measured stress timing)",
+  "noise_cpu_h": 0.003583097826666667,
+  "noise_cpu_h_source": "measured",
+  "overhead_cpu_h": 0.031118166879167575,
+  "overhead_cpu_h_source": "measured per-invocation overhead x planned invocations",
+  "pilot_cpu_h": 0.3836968055555556,
+  "pilot_cpu_h_source": "measured process tree",
+  "replicates_total_worst_cpu_h": 110.29090800147554,
+  "stage1_cpu_h": 18.317868532653335,
+  "stage2_by_k": {
+   "0": {
+    "alt_s": 137.3840139949,
+    "cpu_h": 83.95689744132777,
+    "interpolated": true,
+    "null_s": 137.3840139949,
+    "null_var2_from": "max(stress, alternative)",
+    "null_var2_s": 137.3840139949
+   },
+   "116": {
+    "alt_s": 137.3840139949,
+    "cpu_h": 83.95689744132777,
+    "interpolated": true,
+    "null_s": 137.3840139949,
+    "null_var2_from": "max(stress, alternative)",
+    "null_var2_s": 137.3840139949
+   },
+   "145": {
+    "alt_s": 137.3840139949,
+    "cpu_h": 83.95689744132777,
+    "interpolated": false,
+    "null_s": 137.3840139949,
+    "null_var2_from": "max(stress, alternative)",
+    "null_var2_s": 137.3840139949
+   },
+   "29": {
+    "alt_s": 137.3840139949,
+    "cpu_h": 83.95689744132777,
+    "interpolated": true,
+    "null_s": 137.3840139949,
+    "null_var2_from": "max(stress, alternative)",
+    "null_var2_s": 137.3840139949
+   },
+   "58": {
+    "alt_s": 137.3840139949,
+    "cpu_h": 83.95689744132777,
+    "interpolated": true,
+    "null_s": 137.3840139949,
+    "null_var2_from": "max(stress, alternative)",
+    "null_var2_s": 137.3840139949
+   },
+   "87": {
+    "alt_s": 137.3840139949,
+    "cpu_h": 83.95689744132777,
+    "interpolated": true,
+    "null_s": 137.3840139949,
+    "null_var2_from": "max(stress, alternative)",
+    "null_var2_s": 137.3840139949
+   }
+  },
+  "stage2_worst_cpu_h": 83.95689744132777,
+  "stress_timing": "extrapolated from the alternative (not measured)",
+  "units_by_kind": {
+   "noise_check": 1,
+   "pilot": 10,
+   "stage1": 480,
+   "stage2": 2200,
+   "target": 200
+  }
+ },
+ "schema": "f12d-pilot-acceptance-v2",
+ "signed_by": "chair (orchestrating session of the wsp-lab programme)"
+}

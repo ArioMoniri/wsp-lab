@@ -6600,3 +6600,20 @@ matrix, at `8f27758`:
 - **Step 8:** stage 1, only after that verification and the chair's acceptance.
 
 *Attestation.* Entry 14 of `docs/prereg/f12_attestations.md` is extended to this completion.
+
+#### A5 chair pilot acceptance (12 Nov 2026, 06:59 UTC, before any G3 outcome): F12 measured pilot accepted within 190 CPU-h (Board A F12c ordered path, step 6)
+
+The chair signed `docs/prereg/f12_manifests/f12_pilot_acceptance.json` (schema f12d-pilot-acceptance-v2, written by the pinned
+`make_pilot_acceptance`, sha256 `008aae9a5c6dcb374f2839b62a291113ea870d20c1520d5efb0ae3cfa4e7233c`). Before signing, the chair
+verified that the committed pilot report is byte-identical to the run's output (sha256 prefix `a9774699`), and that the
+chronology holds: the registered noise check finished at 06:36:21 UTC, the pilot ran from 06:40:52 to 06:52:44 UTC, and the
+acceptance is dated 06:59:41 UTC. The function recomputed the all-in projection from the committed pilot timing and noise check:
+**110.33 CPU-h against the 190 CPU-h ceiling** of the chair ruling on F12c. The record binds the pilot report, timing and
+noise-check hashes and the token, payload and code identities.
+*What the chair read to sign.* File hashes, the three timestamps, the noise check's pass flag and the projection total. The chair
+did not read the pilot's per-replicate records or decision codes, which the F12f implementer disclosed were printed in the
+pilot's progress log and which no rule uses.
+*What this does not do.* It is not C1 verification and does not release stage 1. Step 7 remains: the PENDING attestation rows,
+the F12-I Astra and C4 hashes, `MANIFEST_C1.sha256`, and Board A's explicit C1 verification, including the rank-1 gauge
+invariance, the omitted-energy flag, the v4 block width and the F12f implementing defaults. At two workers the projection implies
+about 55 h of wall time for the simulation programme. Part A remains held by the programme owner.
