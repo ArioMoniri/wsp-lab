@@ -6469,3 +6469,134 @@ chain 69, random_dir 53); their audit discrepancy is exactly 0 by construction. 
 29 lora_sft and 36 chain-LoRA rows), which receive a real rotation. Board A may judge whether the audit is adequate for the
 rank-1 rows.
 (c) The full gauge-token build is launched under the F12f ruling's 24 h self-pricing cap and 6-thread rule.
+
+#### A5 note F12f, completion (Thu Nov 12 06:53:33 UTC 2026, before any G3 outcome): gauge-transformed tokens, real comparator matrix, re-qualification
+
+This block is appended; earlier text is not rewritten. It completes F12f under the chair ruling on F12f and the chair correction
+to it, on branch `prereg/f12f` after merging main `03bd2cb` (merge `4f6a7c6`). Commits: `4fc9e09` (gauge and matrix manifests,
+candidate identities), `8f27758` (qualification), `d2812db` (noise check) and this note's commit (pilot artefacts). Steps 1 and
+3–5 of the brief and steps 4–5 of Board A's ordered path are done. **`pilot_acceptance` is not written.** F12f changes no rule,
+releases nothing and does not mark C1 verified. Part A remains held by the programme owner.
+
+**F12f.10 — Step 1: gauge-transformed tokens (complete).**
+
+*Run.* `agent-tmux` job `f12f-gauge-zb`, from clean code at `4f6a7c6`, six threads, zero-based diagonal (j = 0..r−1), 24 h
+self-pricing cap, fresh output directory `gauge_tokens_zb`. The superseded 1-based output was left untouched. Its own pricing
+after the first three rows projected 2.52 h (naive 0.90 h), within the cap.
+
+*Actual cost.* **21.09 CPU-h and 4 h 33 min 45 s wall** (16,422 s); rows were slowed by another programme's load (load average
+about 11–14). Peak RSS 5.3 GB. Gauge-related CPU over all attempts, including the superseded 1-based pricing (about 0.44) and
+the zero-based resume check (0.52), is about 22.0 CPU-h. It is charged to the F12 inputs, not to the 190 CPU-h ceiling.
+
+*Result.*
+- **Manifest:** `docs/prereg/a5_manifests/f12/gauge_tokens_manifest.json` (sha256
+  `0b90f6ee70acda98f32e3cf8a2a72259c08e9cfeba4d7e89f0be735869656818`), status complete.
+- **Outputs:** `gauge_tokens.safetensors` sha256 `fe5bc334884b3c1c6e2a45acde2462e3cf6a877a1c097e7c473993ec5cc02f2b`;
+  `X_gauge` hash `6d75dfac…fd19`.
+- **Coverage:** 270 rows and 6,845 tokens. Every frozen K block reproduced bitwise (270 of 270 rows, 6,845 of 6,845 tokens); no
+  masked block; cond(Q) ≤ 4.000.
+- **Changed tokens by rank:**
+
+  | r | changed / tokens |
+  |---|---|
+  | 1 | 0 / 2,165 |
+  | 4 | 1,360 / 1,368 |
+  | 8 | 1,148 / 1,152 |
+  | 16 | 1,501 / 1,512 |
+  | 32 | 646 / 648 |
+
+  The largest K-block change is 1.9e-9. At rank 1 the tokens are bitwise invariant (chair correction to F12f, disclosed for Board
+  A at C1: discrepancy exactly 0 by construction in 205 rows). The 25 unchanged tokens at r ≥ 4 are fp32 coincidences of the
+  rotation.
+
+**F12f.11 — Step 3: real comparator matrix (built).**
+- **Command and outputs:** `python scripts/f12_matrix.py`. Matrix sha256 (`f12_simulation.matrix_sha256`)
+  `e721729932bd11a69bbdc04b06000b8cb48d66c52b53e43f5c3d47a99c571b8f`; file sha256
+  `26b2fb63d16dc6272cdbecca6cac3e52bc532d66a0f02a70ee4aa26f0ac7ddfa`.
+- **Manifest:** `docs/prereg/a5_manifests/f12/matrix_manifest.json` (sha256
+  `0ea5deb3b8afd3fa64f26262de8de1a25a49f5517bdd70811b890de328dda20c`).
+- **Contents:** 270 rows, 234 components, 270 eligible, 6,845 tokens with aligned gauge tokens (4,655 with a changed K block),
+  x₀ all zero. Comparator width **9,376** (v4 1,242 + 136, then 186 × 43). As the F12f ruling (c) says, the v4 block (statistics
+  plus spectrum) is flagged for Board A at C1.
+- **Source checks:** token manifest and files; gauge manifest and files; snapshot-pinned v4 files for all 270 rows (hash,
+  edit-derived keys, extraction settings, presence); slot table. All passed.
+
+**F12f.12 — Step 4: re-pin and re-qualification (pass).**
+- *Candidate identities:* `f12f_candidate_identities.json` (sha256
+  `cccdf9c017fe8fe508918a0c6d67c8de58886a7169ff4b6d01467c13df54b324`). It re-freezes the F12 code including the gauge and matrix
+  builders and the pooling and extraction code, the configs, the v2 restricted payload pin, the token, gauge and matrix
+  manifests, the population, the A5 snapshot, the resource plan and the runtime versions.
+- *C1 draft:* regenerated. It cites the gauge manifest, runner audit, matrix manifest and qualification; code pins are in
+  `code_hashes_c1.json`.
+- *Qualification:* `f12f_qualification.json` (sha256 `233e7d7c605741c2d40a7d9fbc3087b5cd49672e52b329cf4a9d177eb27bd527`), run at
+  `4fc9e09` with no identity drift. **All ten checks pass:** token files, code identity, population identity, counts, exclusions,
+  finite schema, folds, nesting, **gauge** and **simulation matrix inputs**. The omitted-energy summary equals F12e's
+  (`unchanged_from_f12e`: true; 212 of 270 rows above 0.01) and is carried to Board A at C1 unchanged.
+
+**F12f.13 — Board A step 4: registered noise check (pass).** `scripts/f12_simulation.py noisecheck` on the committed real
+matrix, at `8f27758`:
+- **Setup:** k = 145 (270 rows, 234 components); 10,000 panels from `noisecheck:<d>` streams; v2 restricted payload `44d79403…6fb5`;
+  under the budget ledger `/home/ubuntu/wsp-data/runs/a5/f12_budget/ledger.jsonl` with the pre-pilot resource plan and operator
+  `chair-delegated:F12f`. It is the registered check (`f12a4d_check` true).
+- **Results:** all three quantities lie within 4 Monte Carlo SE of their plug-in values.
+
+  | quantity | empirical | plug-in | MC SE | z |
+  |---|---|---|---|---|
+  | panel-mean variance | 1.2641e-5 | 1.2392e-5 | 1.65e-7 | **1.51** |
+  | within-component covariance | 1.1122e-5 | 1.0837e-5 | 1.64e-7 | **1.73** |
+  | cross-component covariance | 6.046e-6 | 5.901e-6 | 8.94e-8 | **1.62** |
+
+- **Cost:** 12.9 CPU-s.
+- **Report:** `f12f_noise_check.json`, sha256 `8d1126585792c19f8d59ae9475d00b723841cb69565307a2b6e21ef47c8355ad`.
+
+**F12f.14 — Board A step 5: timing pilot.** `scripts/f12_simulation.py run` with `f12c_pilot_config.json`, at `d2812db`:
+- **Setup:** exactly ten alternative replicates at k = 145, r = 3000–3009, `pilot:<r>` streams; two workers (single-thread torch,
+  LightGBM `n_jobs` 1, OMP 2); the real comparator width; the gauge audit active; under the ledger.
+- **Use of results:** timing, memory and validity only. No decision count from the pilot is used or reported here.
+- **Validity:** 10 of 10 replicates valid.
+- **Gauge audit:** applied to all 150 fitted WM-R models (10 replicates × 5 outer folds × 3 seeds; 810 held-out row
+  evaluations per replicate). It found **0 violations**. It retained 1,037 nonzero discrepancies; the largest |Δf| is 2.07e-9
+  nats, at most 2.0e-4 of the tolerance.
+- **Cost (process-tree CPU per replicate):** **mean 137.4 s, max 158.6 s**; replicates 1,373.8 CPU-s, process tree 1,381.3 CPU-s,
+  overhead 7.5 CPU-s; 711 s wall.
+- **Memory:** worker peak RSS 851 MB, parent 725 MB (process maximum 0.95 GB).
+- **Ledger:** noise check 12.9 CPU-s; pilot 1,381.3 CPU-s, checkpointed at 10 units. The barrier's projected total stayed at
+  about 164 CPU-h, below 190.
+- **All-in projection:** `project_cpu` from the timing sidecar and the noise check, conservative as registered (stress at the
+  alternative's measured cost; every k at k = 145's cost; variance-×2 at the maximum).
+
+  | item | CPU-h |
+  |---|---|
+  | noise check | 0.004 |
+  | pilot | 0.384 |
+  | stage 1 | 18.32 |
+  | coverage target | 7.63 |
+  | stage 2 (worst k*) | 83.96 |
+  | overhead | 0.031 |
+  | **all-in** | **110.33 ≤ 190** |
+
+- **Break-even:** recomputed with the measured noise and overhead, (190 − 0.0036 − 0.031) × 3600 / 2,890 replicates =
+  **236.6 CPU-s** per replicate. The measured 137.4 s mean and 158.6 s maximum are below it.
+- **Committed artefacts:**
+
+  | file | sha256 |
+  |---|---|
+  | `f12f_pilot_report.json` | `a9774699f2b22d7603376ba806d74bd9335ee82f35769b240c06cc26afc81ba5` |
+  | `f12f_pilot_timing.json` | `536fa3426e7264b24573394ff4a91e763d88a566c5d1bf296448a493b875c9ec` |
+  | `f12f_pilot_projection.json` | `7e253cd64787f62c6fefc6426ff176581c2d79441caca213cca07a74c1fd4dbd` |
+  | `f12f_budget_ledger_snapshot.jsonl` | `5c456f0c909f68d7387150d891d229c39ee3d8c51aec2d11e334badda5b64dfc` |
+
+- `pilot_acceptance` is not written.
+
+**F12f.15 — What remains (Board A's ordered path, steps 6–8).**
+- **Step 6:** the chair's `pilot_acceptance` (schema f12d-pilot-acceptance-v2, `make_pilot_acceptance` on the committed pilot
+  report, timing and noise check), only within 190 CPU-h. The projection is 110.3 CPU-h.
+- **Step 7:** the final attestations (the PENDING rows of the register); the F12-I Astra and C4 hashes; `MANIFEST_C1.sha256`;
+  Board A's explicit C1 verification and the closure of its continuing conditions. These include:
+  - the gauge evidence and the rank-1 invariance disclosure (2,165 tokens in 205 rows, discrepancy exactly 0);
+  - the omitted-energy flag;
+  - the comparator's v4 block (1,378 columns, width 9,376) against the statistics-only alternative;
+  - the implementing defaults of the F12f ruling (c).
+- **Step 8:** stage 1, only after that verification and the chair's acceptance.
+
+*Attestation.* Entry 14 of `docs/prereg/f12_attestations.md` is extended to this completion.

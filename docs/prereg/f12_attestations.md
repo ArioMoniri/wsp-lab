@@ -252,3 +252,18 @@ above:
 - It printed no a, q, token or feature value, opened no noise payload, ran no noise check, pilot or replicate, opened nothing
   under `data/evals` and used no GPU.
 - Statements (i)–(iii) are unchanged.
+
+*Entry 14, completion (12 Nov 2026, about 01:47–06:55 UTC, same session, after merging main `03bd2cb`).* In addition to the
+above:
+- It read the chair correction to the F12f ruling.
+- It ran the full gauge-token build. Its log printed per-row ranks, token counts, changed-token counts and K-block changes only.
+- It built the real comparator matrix from the verified token, gauge and v4 files. It printed counts, widths and hashes only.
+- It ran the re-qualification (check verdicts and problem lists).
+- **It opened the v2 restricted noise payload through the pinned loader** for the registered noise check and the timing pilot.
+  It printed the noise check's summary statistics: panel-mean variance and within- and cross-component covariances against their
+  plug-ins. These are properties of centred qualification noise, not outcomes.
+- **The pilot's progress log printed each replicate's simulated decision code and simulated C_WM and C_WM,S.** These are
+  outcome-free simulation outputs on synthetic Δy. They are not used, summarised or reported beyond the committed pilot report,
+  and the note records timing, memory and validity only.
+- No a, q, token or feature value was printed. Nothing under `data/evals` was opened. No GPU was used.
+- Statements (i)–(iii) are unchanged.
