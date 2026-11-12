@@ -1,0 +1,209 @@
+{
+ "launch_conditions": "sole heavy job; MemAvailable >= 22,000,000,000 bytes (cap + 4 GB) at launch; new --out-dir and new --manifest (the hardened builder refuses to overwrite either); peak recorded, run stopped above 95% of the cap",
+ "method": {
+  "added_by_hardening": "hashing 28.82 GB of stored holder bytes (270 rows) and 1,259 edit.json files, plus a per-row checkpoint; estimated well under 0.25 h, not separately measured",
+  "peak": "set by setup (11,327,195,583-byte field held whole, factors, base), not by row count: ~17.18 GB for any row subset; the F12-R guards add only hashing and small records",
+  "per_tensor_seconds": 3.1536888436038097,
+  "rule": "wall = setup + per_tensor_seconds x stored tensors of the rows run; setup is fixed (whole field, all 186 K frames, spectral factors) whatever the row count",
+  "threads": "6, as the frozen run: fp32 results depend on the intra-op thread count (tests/conftest.py), so a bitwise comparison needs the frozen run's threads and library versions"
+ },
+ "options": {
+  "A_full_rerun": {
+   "does_not_establish": "the dead implementer session's history (no rerun can)",
+   "establishes": "bitwise reproduction by the hardened builder of every frozen output (tokens.safetensors X/presence/row_eligible, detail.jsonl, aq.json, kframes, rows.jsonl except 'seconds') for all 270 rows, on inputs authenticated row by row",
+   "peak_rss_bytes_expected": 17180188672,
+   "price": {
+    "cpu_hours_upper_bound_6_threads": 41.7,
+    "wall_hours": 6.96,
+    "wall_seconds": 25040
+   },
+   "price_contended_setup": {
+    "cpu_hours_upper_bound_6_threads": 51.5,
+    "wall_hours": 8.58,
+    "wall_seconds": 30879
+   },
+   "rows": 270,
+   "stored_tensors": 6845
+  },
+  "B_stratified_sample_plus_all_row_authentication": {
+   "does_not_establish": "observed bitwise reproduction of the 246 unsampled rows' token values: that is inferred from AST-identical numerical functions, identical authenticated inputs and deterministic CPU kernels at fixed threads and library versions",
+   "establishes": "bitwise reproduction on every family/inner-family/rank code path (24 rows) and of all 186 K frames (computed in setup); every row's input increment equals the frozen run's; every input authenticated",
+   "peak_rss_bytes_expected": 17180188672,
+   "plus_within_4GB": "for all 270 rows: inputs authenticated (stored bytes = resolved_delta_hash, edit.json via the snapshot index) and the realised increment's sha256 recomputed tensor by tensor at the bf16 base and compared with the frozen rows.jsonl increment_sha256 (f12e_token_facts realised_increment_sha256_by_row); priced like the streaming plan (16 roots in 78 s, peak 2.64 GB): about 0.5 h wall, <= 1 CPU-h, < 3 GB; no chair ruling needed",
+   "prerequisites_not_implemented": [
+    "a --rows <ids> selection in f12_tokens.py (tests first)",
+    "an increments-only pass (tests first)",
+    "a comparison script against the frozen outputs (reads the real token arrays; to be run by the authorised session)"
+   ],
+   "price": {
+    "cpu_hours_upper_bound_6_threads": 12.2,
+    "wall_hours": 2.04,
+    "wall_seconds": 7348
+   },
+   "price_contended_setup": {
+    "cpu_hours_upper_bound_6_threads": 22.0,
+    "wall_hours": 3.66,
+    "wall_seconds": 13187
+   },
+   "rows": 24,
+   "sample_rule": "strata = family x chain inner family x recorded rank (12 strata); within each, the 2 rows with the smallest sha256(UTF-8 '20261112:f12-r:sample:' + id) (all rows if fewer); content-independent, chosen before any rerun",
+   "stored_tensors": 1235
+  }
+ },
+ "proposed_ruling_line": "resource-cap: build=scripts/f12_tokens.py cap_bytes=18000000000 threads=6",
+ "recommended": "B (cheapest valid evidence); A if Board A requires observed bitwise reproduction of every row (same memory ruling, about 5 h more wall)",
+ "schema": "f12r-token-rerun-price-v1",
+ "sources": {
+  "cpu_time": "not recorded by the token run; CPU-h are upper bounds = wall x 6 threads",
+  "row_metadata": "edit.json, lora/adapter_config.json and safetensors headers of the 270 holders (no tensor data loaded); stored bytes by stat",
+  "tokens_manifest": "docs/prereg/a5_manifests/f12/tokens_manifest.json (complete run, 6 threads): setup 3,452.96 s (field load 165.93, K frames 1,641.15, spectral 1,632.91), row seconds 21,587.00, wall 25,091.26 s, summary.max_rss_bytes 17,180,188,672",
+  "tokens_pricing_run2_capped8h": "docs/prereg/a5_manifests/f12/tokens_pricing_run2_capped8h.json: setup 9,292.32 s under contention (upper setup bound used below)"
+ },
+ "status": "priced only; NOT launched (needs a dated chair ruling above 4 GB, PREREG A5 chair resource disposition (d))",
+ "strata": [
+  {
+   "family": "abliteration",
+   "inner_family": null,
+   "recorded_rank": 1,
+   "rows": 83,
+   "sample": [
+    "0faa334d261531a3",
+    "c8ff2695818b43b6"
+   ],
+   "sample_stored_tensors": 27,
+   "stored_tensors": 1129
+  },
+  {
+   "family": "chain",
+   "inner_family": "abliteration",
+   "recorded_rank": 1,
+   "rows": 34,
+   "sample": [
+    "4d055739592f4545",
+    "7d98819050e7f2d6"
+   ],
+   "sample_stored_tensors": 24,
+   "stored_tensors": 448
+  },
+  {
+   "family": "chain",
+   "inner_family": "lora_sft",
+   "recorded_rank": 16,
+   "rows": 12,
+   "sample": [
+    "9ce4101f081de7cd",
+    "511469ed95897756"
+   ],
+   "sample_stored_tensors": 144,
+   "stored_tensors": 864
+  },
+  {
+   "family": "chain",
+   "inner_family": "lora_sft",
+   "recorded_rank": 32,
+   "rows": 4,
+   "sample": [
+    "39e9d468cbc939a5",
+    "41ddab4ad199bd39"
+   ],
+   "sample_stored_tensors": 144,
+   "stored_tensors": 288
+  },
+  {
+   "family": "chain",
+   "inner_family": "lora_sft",
+   "recorded_rank": 4,
+   "rows": 13,
+   "sample": [
+    "109fb9f5385c35ab",
+    "37af6305fa4b0b2b"
+   ],
+   "sample_stored_tensors": 144,
+   "stored_tensors": 936
+  },
+  {
+   "family": "chain",
+   "inner_family": "lora_sft",
+   "recorded_rank": 8,
+   "rows": 7,
+   "sample": [
+    "fcee8d176f0be8e8",
+    "ebdee050acff5df3"
+   ],
+   "sample_stored_tensors": 144,
+   "stored_tensors": 504
+  },
+  {
+   "family": "chain",
+   "inner_family": "random_dir",
+   "recorded_rank": 1,
+   "rows": 35,
+   "sample": [
+    "de9ce15f978a3fc6",
+    "bef26b7141d08529"
+   ],
+   "sample_stored_tensors": 14,
+   "stored_tensors": 254
+  },
+  {
+   "family": "lora_sft",
+   "inner_family": null,
+   "recorded_rank": 16,
+   "rows": 9,
+   "sample": [
+    "fd69d121f1cc6ec6",
+    "f3e1be8e4fe2c66b"
+   ],
+   "sample_stored_tensors": 144,
+   "stored_tensors": 648
+  },
+  {
+   "family": "lora_sft",
+   "inner_family": null,
+   "recorded_rank": 32,
+   "rows": 5,
+   "sample": [
+    "94804c08e9e63a25",
+    "d904e32c5c8bc52e"
+   ],
+   "sample_stored_tensors": 144,
+   "stored_tensors": 360
+  },
+  {
+   "family": "lora_sft",
+   "inner_family": null,
+   "recorded_rank": 4,
+   "rows": 6,
+   "sample": [
+    "6cf90a51c4244720",
+    "e9ebe9610a3aeddf"
+   ],
+   "sample_stored_tensors": 144,
+   "stored_tensors": 432
+  },
+  {
+   "family": "lora_sft",
+   "inner_family": null,
+   "recorded_rank": 8,
+   "rows": 9,
+   "sample": [
+    "e0235707664804ef",
+    "8289fa52f33a8d0d"
+   ],
+   "sample_stored_tensors": 144,
+   "stored_tensors": 648
+  },
+  {
+   "family": "random_dir",
+   "inner_family": null,
+   "recorded_rank": 1,
+   "rows": 53,
+   "sample": [
+    "bccb9ab10b5661e0",
+    "8d294d969624264b"
+   ],
+   "sample_stored_tensors": 18,
+   "stored_tensors": 334
+  }
+ ]
+}

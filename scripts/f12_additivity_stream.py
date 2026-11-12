@@ -18,11 +18,20 @@ writer), which it does not change:
   records the driver identity, the governed population sha256, the threads and the process's peak RSS. With
   ``--rss-limit-gb`` the run aborts once the peak RSS exceeds the limit.
 
-    python scripts/f12_additivity_stream.py --threads 2 --rss-limit-gb 4.5
+F12-R (PREREG_H1_TF A5 note F12-R; unexposed adoption A10, A11, A21, A26, A30), no numerical change: the population,
+G2 manifests and every root's stored bytes are read through ``f12_inputs_guard.ReadBoundary`` and authenticated
+(``f12_additivity_prepare`` pins; each holder against its row's ``resolved_delta_hash``); a tensor of a layer outside
+0-23 or with a non-canonical name fails its root closed (recorded, never split as ``late``); the F8a floor literal is
+bound to its committed recompute; the 4 GB cap of the resource authority (``--rss-limit-gb``, default 4; above 4 only
+with ``--chair-ruling``) is enforced at launch and by a process-tree monitor, and the sidecar records the cap, the peak
+and the exact reads; an existing output is never overwritten; ``outcomes_read`` is relabelled as algorithmic intent.
+
+    python scripts/f12_additivity_stream.py --threads 2 --out <new path>
     python scripts/f12_additivity_stream.py --roots 64b10bbaef2b726d --out <scratch>/x.json   # cross-check
     python scripts/f12_additivity_stream.py cross-check <plan.json> <reference manifest.json> <root id>
+    python scripts/f12_additivity_stream.py requalify <new plan.json> <committed plan.json> [--out <report.json>]
 
-No field, forecast, evaluation record or outcome is opened. CPU only.
+No field, forecast or evaluation record is opened by the intended algorithm. CPU only.
 """
 
 from __future__ import annotations
@@ -43,23 +52,21 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
 from scripts import f12_additivity_prepare as fa
+from scripts import f12_inputs_guard as fg
 from wsp.features import response_field as rf
 
 DRIVER = "scripts/f12_additivity_stream.py"
 SIDECAR_SCHEMA = "f12-additivity-stream-run-v1"
 CROSS_FIELDS = ("full_increment_sha256", "n_full_tensors", "bitwise_sum_verified", "I_defined")
 PART_FIELDS = ("label", "part_id", "support", "n_tensors", "increment_sha256", "noop", "I_status")
+REQUALIFY_SCHEMA = "f12-additivity-requalification-v1"
+# A21 launch projection: the measured peak of the committed streaming run (additivity_plan_run.json), dominated by the
+# bf16 base state; per-tensor work adds one dense tensor and its realised parts at a time.
+STREAM_ESTIMATE_BYTES = 3_114_868_736
 
 
 def peak_rss_bytes() -> int:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
-
-
-def _guard(limit_gb):
-    if limit_gb is not None and peak_rss_bytes() > limit_gb * 1e9:
-        raise MemoryError(
-            f"peak RSS {peak_rss_bytes() / 1e9:.2f} GB exceeds the {limit_gb} GB limit"
-        )
 
 
 def lora_factors_of(entry_dir: Path, base):
@@ -70,21 +77,21 @@ def lora_factors_of(entry_dir: Path, base):
     return lora_factors(entry_dir / "lora", base)
 
 
-def stream_root(e, base, limit_gb=None):
+def stream_root(e, base, guard, boundary=None):
     """One LoRA root, tensor by tensor: the plan's entry record (or a recorded failure)."""
     d = Path(e["entry_dir"])
     p = {
         "full_id": e["full_id"],
         "kind": e["kind"],
         "component": "F12.6(a)",
-        "source": {"entry_dir": str(d), "files": fa.holder_files(d)},
+        "source": {"entry_dir": str(d), "files": fa.holder_files(d, boundary)},
         "split_rule": f"layers 0-{fa.LAYER_BOUNDARY - 1} (early) versus {fa.LAYER_BOUNDARY}-23 (late)",
         "disjoint_tensors": True,
     }
     factors = lora_factors_of(d, base)
     names = sorted(factors)
     try:
-        supports = fa.layer_split_supports(names)
+        supports = fa.layer_split_supports(names, canonical=set(base))
         full_h, part_h = {}, [{} for _ in supports]
         nonzero = [False for _ in supports]
         for n in names:
@@ -98,7 +105,7 @@ def stream_root(e, base, limit_gb=None):
                     part_h[k][n] = rf._tensor_hash(inc[n])
                     nonzero[k] = nonzero[k] or bool(torch.count_nonzero(inc[n]))
             del raw_n, full, parts
-            _guard(limit_gb)
+            guard.check()
     except (ValueError, KeyError) as exc:
         return p | {"bitwise_sum_verified": False, "failure": str(exc), "I_defined": False}
     rec = dict(p)
@@ -122,10 +129,10 @@ def stream_root(e, base, limit_gb=None):
     return rec
 
 
-def plan_doc(args):
+def plan_doc(args, boundary, guard, floor):
     t0 = time.time()
     torch.set_num_threads(args.threads)
-    pop_bytes = args.population.read_bytes()
+    pop_bytes = boundary.read_bytes(args.population, sha256=fa.GOVERNED_POPULATION_SHA256)
     pop = json.loads(pop_bytes)
     entries_in = fa.lora_entries(pop, Path(args.zoo))
     if args.roots:
@@ -139,14 +146,13 @@ def plan_doc(args):
             raise ValueError(
                 f"{e['entry_dir']}: not a LoRA holder (dense delta.safetensors); not streamed"
             )
-    state_hash = json.loads(
-        (Path(args.g2) / "fields" / fa.OBJECTIVE / "manifest.json").read_text()
-    )["identity"]["state_hash"]
-    base, base_hash = fa.pf.load_base_state(state_hash)
-    _guard(args.rss_limit_gb)
+        fg.authenticate_entry(boundary, e["entry_dir"], e["resolved_delta_hash"])
+    state_hash = fa.g2_state_hash(boundary, Path(args.g2))
+    base, base_hash = fa.load_base(boundary, state_hash)
+    guard.check()
     entries = []
     for e in entries_in:
-        rec = stream_root(e, base, args.rss_limit_gb)
+        rec = stream_root(e, base, guard, boundary)
         fa.log(
             f"{rec['full_id']} {rec['kind']}: bitwise {rec['bitwise_sum_verified']}"
             + (
@@ -198,7 +204,8 @@ def plan_doc(args):
             "wall_seconds": time.time() - t0,
             "threads": args.threads,
         },
-        "outcomes_read": "none",
+        "outcomes_read_intent": fa.outcomes_read_intent(),
+        "floor_binding": floor,
         "code": fa.code_identity(),
     }
     return doc, pop_bytes
@@ -225,8 +232,18 @@ def _git_head():
 
 
 def run(args):
-    doc, pop_bytes = plan_doc(args)
     out = Path(args.out)
+    side_path = out.with_name(out.stem + "_run.json")
+    for p in (out, side_path):
+        if p.exists():
+            raise FileExistsError(f"{p} exists; a governed output is never overwritten")
+    boundary = fa.read_boundary()
+    floor = fa.floor_binding(boundary)
+    guard = fa.resource_guard(
+        DRIVER, args.threads, round(args.rss_limit_gb * 1e9), args.chair_ruling
+    )
+    guard.launch(STREAM_ESTIMATE_BYTES, breach_path=out.with_name(out.stem + "_breach.json"))
+    doc, pop_bytes = plan_doc(args, boundary, guard, floor)
     sha = fa.write_json(out, doc)
     fa.log(f"wrote {out} sha256 {sha}")
     lora = [e for e in doc["entries"] if e["kind"] == "lora_layer_split"]
@@ -240,13 +257,16 @@ def run(args):
         "git_head": _git_head(),
         "threads": args.threads,
         "rss_limit_gb": args.rss_limit_gb,
-        "peak_rss_bytes": peak_rss_bytes(),
         "roots": [e["full_id"] for e in lora],
         "roots_failed": [e["full_id"] for e in lora if not e["bitwise_sum_verified"]],
         "noop_parts": doc["summary"]["n_noop_parts"],
-        "outcomes_read": "none",
+        "floor_binding": floor,
+        "read_boundary": boundary.record(),
+        "outcomes_read_intent": fa.outcomes_read_intent(),
     }
-    fa.write_json(out.with_name(out.stem + "_run.json"), side)
+    resources = guard.stop()
+    side |= {"peak_rss_bytes": resources["peak_rss_bytes"], "resources": resources}
+    fa.write_json(side_path, side)
     return doc
 
 
@@ -274,8 +294,65 @@ def cross_check(doc, ref, root_id) -> list:
     return diffs
 
 
+def requalify(new, ref) -> dict:
+    """F12-R plan requalification: every LoRA entry of ``new`` against ``ref``, byte for byte (canonical JSON and the
+    plan writer's serialisation), plus the non-entry top-level keys that differ."""
+
+    def lora(d):
+        return {
+            e["full_id"]: e for e in d.get("entries", []) if e.get("kind") == "lora_layer_split"
+        }
+
+    a, b = lora(new), lora(ref)
+    diffs = sorted(
+        i
+        for i in set(a) | set(b)
+        if i not in a
+        or i not in b
+        or fa.canonical_json(a[i]) != fa.canonical_json(b[i])
+        or json.dumps(a[i], indent=1, sort_keys=True) != json.dumps(b[i], indent=1, sort_keys=True)
+    )
+    other = [e for e in new.get("entries", []) if e.get("kind") != "lora_layer_split"]
+    other_ref = [e for e in ref.get("entries", []) if e.get("kind") != "lora_layer_split"]
+    return {
+        "schema": REQUALIFY_SCHEMA,
+        "n_lora_entries": len(a),
+        "n_lora_entries_reference": len(b),
+        "identical": not diffs and len(a) == len(b),
+        "differences": diffs,
+        "lora_entries_sha256": fa.sha256_bytes(fa.canonical_json([a[i] for i in sorted(a)])),
+        "lora_entries_sha256_reference": fa.sha256_bytes(
+            fa.canonical_json([b[i] for i in sorted(b)])
+        ),
+        "status_entries_identical": fa.canonical_json(other) == fa.canonical_json(other_ref),
+        "top_level_keys_differing": sorted(
+            k for k in set(new) | set(ref) if k != "entries" and new.get(k) != ref.get(k)
+        ),
+    }
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:1] == ["requalify"]:
+        p = argparse.ArgumentParser(
+            description="F12-R: LoRA entries of a new plan against the committed plan"
+        )
+        p.add_argument("command")
+        p.add_argument("plan", type=Path)
+        p.add_argument("reference", type=Path)
+        p.add_argument("--out", type=Path)
+        a = p.parse_args(argv)
+        new_bytes, ref_bytes = a.plan.read_bytes(), a.reference.read_bytes()
+        rep = requalify(json.loads(new_bytes), json.loads(ref_bytes)) | {
+            "plan": {"path": _rel(a.plan), "sha256": fa.sha256_bytes(new_bytes)},
+            "reference": {"path": _rel(a.reference), "sha256": fa.sha256_bytes(ref_bytes)},
+        }
+        print(json.dumps(rep, indent=1))
+        if a.out:
+            if a.out.exists():
+                raise FileExistsError(f"{a.out} exists")
+            fa.write_json(a.out, rep)
+        return 0 if rep["identical"] else 1
     if argv[:1] == ["cross-check"]:
         p = argparse.ArgumentParser(description="cross-check one root against a reference manifest")
         p.add_argument("command")
@@ -295,7 +372,10 @@ def main(argv=None):
     p.add_argument("--g2", type=Path, default=ROOT / "data/runs/g2")
     p.add_argument("--zoo", default=str(ROOT / "data/zoo/qwen3.5-0.8b"))
     p.add_argument("--threads", type=int, default=int(os.environ.get("OMP_NUM_THREADS", "2")))
-    p.add_argument("--rss-limit-gb", type=float, default=None)
+    p.add_argument("--rss-limit-gb", type=float, default=fg.DEFAULT_CAP_BYTES / 1e9)
+    p.add_argument(
+        "--chair-ruling", help="exact heading of the dated chair ruling for a cap above 4 GB"
+    )
     run(p.parse_args(argv))
     return 0
 

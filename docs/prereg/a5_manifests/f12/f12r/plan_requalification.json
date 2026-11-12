@@ -1,0 +1,25 @@
+{
+ "differences": [],
+ "identical": true,
+ "lora_entries_sha256": "a9bed8d88f487a9cecfe9720e8fa33864b29ecdecb817107015463ba61024ce3",
+ "lora_entries_sha256_reference": "a9bed8d88f487a9cecfe9720e8fa33864b29ecdecb817107015463ba61024ce3",
+ "n_lora_entries": 16,
+ "n_lora_entries_reference": 16,
+ "plan": {
+  "path": "docs/prereg/a5_manifests/f12/f12r/additivity_plan_requalified.json",
+  "sha256": "bedd44c1c230f75cb3e89891301329d3a9d9bf24f3e684150ef16e9cbebae875"
+ },
+ "reference": {
+  "path": "docs/prereg/a5_manifests/f12/additivity_plan.json",
+  "sha256": "2c441619077f4df8b73d3d599767e0c39a985f1ed764748ad31a8eb8491bd968"
+ },
+ "schema": "f12-additivity-requalification-v1",
+ "status_entries_identical": true,
+ "top_level_keys_differing": [
+  "code",
+  "floor_binding",
+  "outcomes_read",
+  "outcomes_read_intent",
+  "summary"
+ ]
+}

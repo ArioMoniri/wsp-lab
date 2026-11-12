@@ -35,7 +35,24 @@ Modes:
              down_proj tensor, used only to exercise the column-split path)
 
 Targets must lie under ``/home/ubuntu/wsp-data/runs/a5/f12_additivity`` (staging, chair-authorised) or
-``/home/ubuntu/wsp-data/runs/a5/f12_inputs`` (scratch). CPU only; no evaluation record or outcome is opened.
+``/home/ubuntu/wsp-data/runs/a5/f12_inputs`` (scratch). CPU only. The intended algorithm opens no evaluation record or
+outcome; that is algorithmic intent, not access telemetry (``outcomes_read_intent``).
+
+F12-R (PREREG_H1_TF A5 note F12-R; unexposed adoption A10, A11, A21, A24, A25, A26, A30), no numerical change:
+
+* inputs are read through ``f12_inputs_guard.ReadBoundary`` (leaf-resolved, data/evals and other prohibited paths
+  refused before opening) and authenticated: population.json against the governed sha256, each holder's stored bytes
+  against its row's ``resolved_delta_hash``, g2_manifest.json and the field manifest against their pins (also in plan
+  mode), the F8a floor literal against the committed recompute by value and hash; the exact reads go to the sidecar
+  ``<out>_run.json``;
+* layers outside 0-23 and tensor names that are not canonical base tensors are rejected (A26);
+* Astra only from a qualification record whose sha256 is pinned (``ASTRA_QUALIFICATION_PIN``; None until F12-I's own
+  C1 pins one), bound to exactly two changed tensors, the base state and the holder files, with no field outside an
+  allowlist; a failed qualification is an explicit drop, nothing replaces it (A24);
+* C4 only from an F8 C1 construction record whose sha256 is pinned (``C4_SOURCE_PIN``; None until F8a's C1 pins one),
+  and only at stored shape [1024, 3584] with boundary 1792, checked before any construction (A25);
+* the resource authority's cap (4 GB unless a dated chair ruling) is enforced at launch against a header-derived
+  materialisation estimate, monitored, and the peak recorded (A21); an existing output is never overwritten.
 """
 
 from __future__ import annotations
@@ -57,6 +74,8 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
 from scripts import a5_power_fields as pf
+from scripts import f12_base_loader as fbl
+from scripts import f12_inputs_guard as fg
 from scripts import part_a_predictions as pap
 from wsp.features import response_field as rf
 from wsp.features import rotation
@@ -69,13 +88,62 @@ DEFAULT_POPULATION = ROOT / "docs/prereg/a5_manifests/f12/population.json"
 DEFAULT_PLAN = ROOT / "docs/prereg/a5_manifests/f12/additivity_plan.json"
 DEFAULT_DRYRUN = DATA_ROOT / "runs/a5/f12_inputs/additivity_dryrun"
 LAYER_BOUNDARY = 12  # early: layers 0-11, late: layers 12-23
+N_LAYERS = 24  # registered decoder layers 0-23 (F12.6(a))
 C4_TENSOR = "model.layers.12.mlp.down_proj.weight"
+C4_SHAPE = (1024, 3584)  # stored [out, in] (F12g; Board A F12-C1 review)
+C4_BOUNDARY = 1792
 PART_DOMAIN = "20261111:f12-i:part:"
 F8A_FLOOR_H_STAR = (
     0.00493967211805284  # docs/prereg/f8_manifests/floor_payload/floor_recompute_2026-11-11.json
 )
+# A30: the literal is bound by value and hash to the committed independent recompute (F8a condition 1).
+F8A_FLOOR_SOURCE = "docs/prereg/f8_manifests/floor_payload/floor_recompute_2026-11-11.json"
+F8A_FLOOR_SHA256 = "6369413491cb090820b4b257f007711887dc4dd534a43972a6590919122c1a57"
+F8A_FLOOR_PAYLOAD_SHA256 = "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de"
 STATUS_AWAIT_Q = "awaiting_qualification"
 STATUS_AWAIT_C = "awaiting_construction"
+STATUS_DROPPED_Q = "dropped:failed_qualification"
+# A10: the governed population.json (C1 item 2 source; tokens_manifest population_frozen).
+GOVERNED_POPULATION_SHA256 = "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+G2_MANIFEST_SHA256 = pap.G2_MANIFEST_SHA256
+WIKITEXT_IDENTITY_SHA256 = pap.WIKITEXT_IDENTITY_SHA256
+# A24/A25: sha256 of the authorised records; None until F12-I's own C1 (Astra, after F8a.4) and F8a's C1 (C4) pin them.
+ASTRA_QUALIFICATION_PIN = None
+C4_SOURCE_PIN = None
+ASTRA_RECORD_SCHEMA = "f8a4-astra-qualification-v1"
+ASTRA_RECORD_FIELDS = frozenset(
+    (
+        "schema",
+        "entry_id",
+        "entry_dir",
+        "qualified",
+        "tensors",
+        "base_state_hash",
+        "source_files",
+        "authority",
+    )
+)
+C4_RECORD_SCHEMA = "f8a-c1-c4-construction-v1"
+C4_RECORD_FIELDS = frozenset(
+    (
+        "schema",
+        "entry_id",
+        "tensor",
+        "shape",
+        "delta_path",
+        "delta_sha256",
+        "base_state_hash",
+        "construction_degenerate",
+        "noop",
+        "identity_verifier_passed",
+    )
+)
+INTENT_LABEL = (
+    "algorithmic intent of this code path on authentic inputs; not access telemetry and not a session attestation "
+    "(PREREG_H1_TF F12a.1(c); unexposed adoption A11). Actual reads: the run record's read_boundary"
+)
+SCRIPT = "scripts/f12_additivity_prepare.py"
+RUN_SCHEMA = "f12-additivity-run-v1"
 CODE_FILES = (
     "scripts/f12_additivity_prepare.py",
     "scripts/part_a_predictions.py",
@@ -110,13 +178,22 @@ def layer_of(name: str):
     return int(m.group(1)) if m else None
 
 
-def layer_split_supports(names, boundary=LAYER_BOUNDARY):
-    """[('early', {name: None}), ('late', {name: None})]: tensors of layers < boundary versus >= boundary."""
+def layer_split_supports(names, boundary=LAYER_BOUNDARY, n_layers=N_LAYERS, canonical=None):
+    """[('early', {name: None}), ('late', {name: None})]: tensors of layers < boundary versus >= boundary.
+
+    A26: a layer outside 0 .. n_layers-1 fails closed (never silently ``late``); with ``canonical`` (the base state's
+    tensor names) every name must be a canonical base tensor."""
     early, late = {}, {}
     for n in sorted(names):
         layer = layer_of(n)
         if layer is None:
             raise ValueError(f"{n}: not a decoder-layer tensor; the layer split is undefined")
+        if not 0 <= layer < n_layers:
+            raise ValueError(
+                f"{n}: layer {layer} is outside the registered layers 0-{n_layers - 1}"
+            )
+        if canonical is not None and n not in canonical:
+            raise ValueError(f"{n}: not a canonical base tensor name")
         (early if layer < boundary else late)[n] = None
     return [("early", early), ("late", late)]
 
@@ -136,6 +213,24 @@ def column_split_supports(name, shape):
     n_in = int(shape[1])
     half = n_in // 2
     return [("cols_lo", {name: (0, half)}), ("cols_hi", {name: (half, n_in)})]
+
+
+def c4_column_supports(raw):
+    """A25: the C4 split, only for exactly ``C4_TENSOR`` at stored shape [1024, 3584], boundary 1792."""
+    if sorted(raw) != [C4_TENSOR]:
+        raise ValueError(f"C4 delta must hold exactly {C4_TENSOR}, got {sorted(raw)[:3]}")
+    shape = tuple(int(x) for x in raw[C4_TENSOR].shape)
+    if shape != C4_SHAPE:
+        raise ValueError(
+            f"C4 {C4_TENSOR} has stored shape {list(shape)}, not {list(C4_SHAPE)}; nothing is reshaped"
+        )
+    sup = column_split_supports(C4_TENSOR, shape)
+    if sup[0][1][C4_TENSOR] != (0, C4_BOUNDARY) or sup[1][1][C4_TENSOR] != (
+        C4_BOUNDARY,
+        C4_SHAPE[1],
+    ):
+        raise ValueError(f"C4 column boundary is not {C4_BOUNDARY}")
+    return sup
 
 
 def restrict(raw, support):
@@ -249,28 +344,28 @@ class FieldView:
     """The frozen G2 WikiText field, memory-mapped: file sha256s and identity checked once, per-tensor content hashes
     checked for every tensor used, spectral factors computed per module on demand and released."""
 
-    def __init__(self, g2: Path):
-        g2_bytes = (g2 / "g2_manifest.json").read_bytes()
-        if sha256_bytes(g2_bytes) != pap.G2_MANIFEST_SHA256:
-            raise ValueError("g2_manifest.json differs from g2_manifest_final.json")
+    def __init__(self, g2: Path, boundary=None):
+        boundary = boundary or read_boundary()
+        g2_bytes = boundary.read_bytes(g2 / "g2_manifest.json", sha256=G2_MANIFEST_SHA256)
         man = json.loads(g2_bytes)
         frec = man["fields"][OBJECTIVE]
-        if (
-            frec.get("status") != "complete"
-            or frec["identity_sha256"] != pap.WIKITEXT_IDENTITY_SHA256
-        ):
+        if frec.get("status") != "complete" or frec["identity_sha256"] != WIKITEXT_IDENTITY_SHA256:
             raise ValueError("base WikiText field is not the frozen complete G2 field")
         d = g2 / "fields" / OBJECTIVE
-        files = {f: pf.sha256_file(d / f) for f in ("manifest.json", "tensors.pt")}
-        if files != frec["files"]:
-            raise ValueError("field file hashes differ from the G2 manifest")
-        fman = json.loads((d / "manifest.json").read_text())
+        files = {
+            f: boundary.sha256_file(d / f, sha256=frec["files"][f])
+            for f in ("manifest.json", "tensors.pt")
+        }
+        fman = json.loads(boundary.read_bytes(d / "manifest.json", sha256=files["manifest.json"]))
         self.identity = fman["identity"]
-        if rf._hash(self.identity) != pap.WIKITEXT_IDENTITY_SHA256:
+        if rf._hash(self.identity) != WIKITEXT_IDENTITY_SHA256:
             raise ValueError("field identity differs from the frozen identity")
         self.content_hashes = fman["content_hashes"]
         self.payload = torch.load(
-            d / "tensors.pt", map_location="cpu", weights_only=True, mmap=True
+            boundary.check(d / "tensors.pt", note="mmap; file sha256 checked above"),
+            map_location="cpu",
+            weights_only=True,
+            mmap=True,
         )
         self.coverage = self.identity["coverage"][OBJECTIVE]
         self.records = {
@@ -343,7 +438,7 @@ def write_json(path: Path, obj) -> str:
     return sha256_bytes(data)
 
 
-def holder_files(entry_dir: Path) -> dict:
+def holder_files(entry_dir: Path, boundary=None) -> dict:
     out = {}
     for rel in (
         "delta.safetensors",
@@ -353,7 +448,7 @@ def holder_files(entry_dir: Path) -> dict:
     ):
         p = entry_dir / rel
         if p.exists():
-            out[rel] = pf.sha256_file(p)
+            out[rel] = boundary.sha256_file(p) if boundary is not None else pf.sha256_file(p)
     return out
 
 
@@ -364,7 +459,14 @@ def lora_entries(pop, zoo: Path):
         r = rows[i]
         if r["family"] != "lora_sft" or r["source"] != "purchasable":
             raise ValueError(f"{i}: not a purchasable lora_sft root")
-        out.append({"full_id": i, "kind": "lora_layer_split", "entry_dir": zoo / r["bytes_holder"]})
+        out.append(
+            {
+                "full_id": i,
+                "kind": "lora_layer_split",
+                "entry_dir": zoo / r["bytes_holder"],
+                "resolved_delta_hash": r.get("resolved_delta_hash"),
+            }
+        )
     return out
 
 
@@ -375,19 +477,203 @@ def load_raw(entry_dir: Path, base):
     return {k: v.float() for k, v in stored.items()}
 
 
-def plan_constructions(pop, zoo, base, c4=None, astra=None, stand_in=False):
+# ---------------------------------------------------------------------------- F12-R: authenticated inputs
+
+
+def read_boundary(*extra) -> fg.ReadBoundary:
+    """The governed read boundary of F12-I construction (A10): the committed preregistration manifests, the pinned
+    zoo, the G2 run and the base-model cache; data/evals, Part A staging/predictions/calibration and the F12f pilot
+    report are refused wherever a path resolves."""
+    return fg.ReadBoundary(
+        allowed=[
+            ROOT / "docs/prereg/a5_manifests/f12",
+            ROOT / "docs/prereg/f8_manifests/floor_payload",
+            ROOT / "docs/prereg/f12_manifests/f12i",
+            DATA_ROOT / "zoo/qwen3.5-0.8b",
+            DATA_ROOT / "runs/g2",
+            hf_cache_dir(),
+            *extra,
+        ]
+    )
+
+
+def hf_cache_dir() -> Path:
+    from huggingface_hub import constants
+
+    return Path(constants.HF_HUB_CACHE)
+
+
+def resource_guard(build, threads, cap_bytes, ruling) -> fg.ResourceGuard:
+    return fg.ResourceGuard(build=build, threads=threads, cap_bytes=cap_bytes, ruling=ruling)
+
+
+def outcomes_read_intent(statement="none") -> dict:
+    return {"statement": statement, "label": INTENT_LABEL}
+
+
+def floor_binding(boundary) -> dict:
+    """A30: the F8a floor literal equals ``h_star`` of the committed independent recompute, whose bytes are pinned."""
+    data = boundary.read_bytes(ROOT / F8A_FLOOR_SOURCE, sha256=F8A_FLOOR_SHA256)
+    rec = fg.strict_json_loads(data.decode())
+    h = rec.get("h_star")
+    payload = rec.get("payload") or {}
+    if rec.get("schema") != "f8-floor-v1" or rec.get("status") != "computed":
+        raise ValueError("F8a floor recompute is not a computed f8-floor-v1 report")
+    if (
+        payload.get("sha256") != F8A_FLOOR_PAYLOAD_SHA256
+        or payload.get("pinned_sha256") != F8A_FLOOR_PAYLOAD_SHA256
+    ):
+        raise ValueError("F8a floor recompute does not name the pinned floor payload")
+    if not isinstance(h, float) or h != F8A_FLOOR_H_STAR or repr(h) != repr(F8A_FLOOR_H_STAR):
+        raise ValueError(
+            f"F8a floor literal {F8A_FLOOR_H_STAR!r} differs from the recompute's h_star {h!r}"
+        )
+    return {
+        "source": F8A_FLOOR_SOURCE,
+        "sha256": F8A_FLOOR_SHA256,
+        "h_star": F8A_FLOOR_H_STAR,
+        "payload_sha256": F8A_FLOOR_PAYLOAD_SHA256,
+        "units": rec.get("units"),
+        "rule": "the code literal equals h_star of the committed recompute (value and repr), read by sha256",
+    }
+
+
+def g2_state_hash(boundary, g2: Path) -> str:
+    """The frozen field's base state hash from its authenticated manifests (plan mode reads no tensor payload)."""
+    man = json.loads(boundary.read_bytes(g2 / "g2_manifest.json", sha256=G2_MANIFEST_SHA256))
+    frec = man["fields"][OBJECTIVE]
+    if frec.get("status") != "complete" or frec["identity_sha256"] != WIKITEXT_IDENTITY_SHA256:
+        raise ValueError("base WikiText field is not the frozen complete G2 field")
+    d = g2 / "fields" / OBJECTIVE
+    fman = json.loads(
+        boundary.read_bytes(d / "manifest.json", sha256=frec["files"]["manifest.json"])
+    )
+    if rf._hash(fman["identity"]) != WIKITEXT_IDENTITY_SHA256:
+        raise ValueError("field identity differs from the frozen identity")
+    return fman["identity"]["state_hash"]
+
+
+def load_base(boundary, state_hash):
+    """A10 (F12-R second remedy): the base only from its pinned, individually resolved, confined and staged cache
+    leaves, loaded under the confinement hook (``f12_base_loader.load_verified_base``)."""
+    return fbl.load_verified_base(boundary, state_hash)
+
+
+def safetensors_shapes(boundary, path) -> dict:
+    """{name: shape} from a safetensors header only (8-byte length, JSON header); the tensor data is not read."""
+    import struct
+
+    real = boundary.resolve(path)
+    fd = os.open(real, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(fd, "rb") as f:
+        (n,) = struct.unpack("<Q", f.read(8))
+        header = json.loads(f.read(n))
+    return {k: v["shape"] for k, v in header.items() if k != "__metadata__"}
+
+
+def materialisation_estimate(boundary, pop, zoo: Path) -> int:
+    """A21: a lower bound of ``plan_constructions``' peak: every LoRA root's dense fp32 delta is held at once, with
+    its realised increments (2 x out x in x 4 bytes per tensor)."""
+    total = 0
+    for e in lora_entries(pop, zoo):
+        d = Path(e["entry_dir"])
+        if (d / "delta.safetensors").exists():
+            shapes = safetensors_shapes(boundary, d / "delta.safetensors")
+            total += sum(2 * 4 * math.prod(s) for s in shapes.values())
+            continue
+        shapes = safetensors_shapes(boundary, d / "lora" / "adapter_model.safetensors")
+        for k, s in shapes.items():
+            if ".lora_A." in k:
+                b = shapes[k.replace(".lora_A.", ".lora_B.")]
+                total += 2 * 4 * int(b[0]) * int(s[1])
+    return total
+
+
+def authorise_astra(boundary, path, base_hash):
+    """A24: (status, record, sha256) from the pinned F8a.4 qualification record; refused unless authentic and bound
+    to exactly two changed tensors, the base and the holder's files; ``qualified: false`` is an explicit drop."""
+    if ASTRA_QUALIFICATION_PIN is None:
+        raise ValueError(
+            "no authorised Astra qualification is pinned (ASTRA_QUALIFICATION_PIN); F12-I's own C1 must pin the "
+            "F8a.4 disposition before any Astra construction"
+        )
+    data = boundary.read_bytes(path, sha256=ASTRA_QUALIFICATION_PIN)
+    rec = fg.strict_json_loads(data.decode())
+    extra = sorted(set(rec) - ASTRA_RECORD_FIELDS)
+    if extra:
+        raise ValueError(f"Astra record has fields outside the qualification allowlist: {extra}")
+    if rec.get("schema") != ASTRA_RECORD_SCHEMA:
+        raise ValueError("Astra record schema is not the qualification schema")
+    if not isinstance(rec.get("qualified"), bool):
+        raise ValueError("Astra record: qualified must be true or false")  # noqa: TRY004
+    if not rec["qualified"]:
+        return "drop", rec, sha256_bytes(data)
+    tensors = rec.get("tensors")
+    if not isinstance(tensors, list) or len(tensors) != 2 or len(set(tensors)) != 2:
+        raise ValueError("Astra record must name exactly two tensors")
+    if rec.get("base_state_hash") != base_hash:
+        raise ValueError("Astra record names another base state")
+    d = Path(rec["entry_dir"])
+    boundary.resolve(d)
+    if holder_files(d, boundary) != rec.get("source_files"):
+        raise ValueError("Astra record's source files differ from the entry's bytes")
+    return "build", rec, sha256_bytes(data)
+
+
+def authorise_c4(boundary, record_path, delta_path, cid, base_hash):
+    """A25: the C4 source must be F8a's C1-pinned construction record naming exactly these delta bytes, this id and
+    this base, at [1024, 3584]; not degenerate, not a no-op, identity-verified."""
+    if C4_SOURCE_PIN is None:
+        raise ValueError(
+            "no authorised F8 C1 C4 source is pinned (C4_SOURCE_PIN); C4 is built only from F8a's C1-frozen "
+            "construction"
+        )
+    if record_path is None:
+        raise ValueError("C4 needs --c4-record (the F8 C1 construction record)")
+    data = boundary.read_bytes(record_path, sha256=C4_SOURCE_PIN)
+    rec = fg.strict_json_loads(data.decode())
+    extra = sorted(set(rec) - C4_RECORD_FIELDS)
+    if extra:
+        raise ValueError(f"C4 record has fields outside its allowlist: {extra}")
+    want = {
+        "schema": C4_RECORD_SCHEMA,
+        "entry_id": cid,
+        "tensor": C4_TENSOR,
+        "shape": list(C4_SHAPE),
+        "base_state_hash": base_hash,
+        "construction_degenerate": False,
+        "noop": False,
+        "identity_verifier_passed": True,
+    }
+    bad = sorted(k for k, v in want.items() if rec.get(k) != v)
+    if bad:
+        raise ValueError(f"C4 record does not authorise this construction: {bad}")
+    if Path(rec["delta_path"]).resolve() != Path(delta_path).resolve():
+        raise ValueError("C4 record names another delta file")
+    return rec, sha256_bytes(data)
+
+
+def plan_constructions(
+    pop, zoo, base, c4=None, astra=None, stand_in=False, boundary=None, base_hash=None
+):
     """Every planned full edit: (record, W, raw, supports, disjoint) or a status-only record."""
+    boundary = boundary or read_boundary()
+    canonical = set(base)
     plan = []
     for e in lora_entries(pop, zoo):
+        fg.authenticate_entry(boundary, e["entry_dir"], e["resolved_delta_hash"])
         raw = load_raw(e["entry_dir"], base)
         plan.append(
             {
                 "full_id": e["full_id"],
                 "kind": e["kind"],
                 "component": "F12.6(a)",
-                "source": {"entry_dir": str(e["entry_dir"]), "files": holder_files(e["entry_dir"])},
+                "source": {
+                    "entry_dir": str(e["entry_dir"]),
+                    "files": holder_files(e["entry_dir"], boundary),
+                },
                 "raw": raw,
-                "supports": layer_split_supports(raw),
+                "supports": layer_split_supports(raw, canonical=canonical),
                 "disjoint_tensors": True,
                 "split_rule": f"layers 0-{LAYER_BOUNDARY - 1} (early) versus {LAYER_BOUNDARY}-23 (late)",
             }
@@ -402,40 +688,67 @@ def plan_constructions(pop, zoo, base, c4=None, astra=None, stand_in=False):
             }
         )
     else:
-        rec = json.loads(Path(astra).read_text())
-        if rec.get("qualified") is not True or not rec.get("entry_dir"):
-            raise ValueError(
-                "Astra record is not a qualified F8a.4 replay record with an entry_dir"
+        status, rec, rsha = authorise_astra(boundary, astra, base_hash)
+        if status == "drop":
+            plan.append(
+                {
+                    "full_id": rec.get("entry_id", "astra"),
+                    "kind": "astra_tensor_split",
+                    "component": "F12.6(b)",
+                    "status": STATUS_DROPPED_Q,
+                    "record_sha256": rsha,
+                    "replacement": None,
+                }
             )
-        d = Path(rec["entry_dir"])
-        raw = load_raw(d, base)
-        plan.append(
-            {
-                "full_id": rec.get("entry_id", d.name),
-                "kind": "astra_tensor_split",
-                "component": "F12.6(b)",
-                "source": {"entry_dir": str(d), "files": holder_files(d), "record": str(astra)},
-                "raw": raw,
-                "supports": tensor_split_supports(raw),
-                "disjoint_tensors": True,
-                "split_rule": "one part per changed tensor",
-            }
-        )
+        else:
+            d = Path(rec["entry_dir"])
+            raw = load_raw(d, base)
+            if sorted(raw) != sorted(rec["tensors"]):
+                raise ValueError(
+                    "Astra record's two tensors differ from the entry's changed tensors"
+                )
+            plan.append(
+                {
+                    "full_id": rec["entry_id"],
+                    "kind": "astra_tensor_split",
+                    "component": "F12.6(b)",
+                    "source": {
+                        "entry_dir": str(d),
+                        "files": holder_files(d, boundary),
+                        "record": str(astra),
+                        "record_sha256": rsha,
+                    },
+                    "raw": raw,
+                    "supports": tensor_split_supports(raw),
+                    "disjoint_tensors": True,
+                    "split_rule": "one part per changed tensor",
+                }
+            )
     if c4 is not None:
-        path, cid = c4
-        from safetensors.torch import load_file
+        path, cid, record = c4
+        from safetensors.torch import load as load_bytes
 
-        raw = {k: v.float() for k, v in load_file(str(path)).items()}
-        if sorted(raw) != [C4_TENSOR]:
-            raise ValueError(f"C4 delta must hold exactly {C4_TENSOR}")
+        rec, rsha = authorise_c4(boundary, record, path, cid, base_hash)
+        shapes = safetensors_shapes(boundary, path)
+        if shapes != {C4_TENSOR: list(C4_SHAPE)}:
+            raise ValueError(
+                f"C4 delta header {shapes} is not exactly {C4_TENSOR} at {list(C4_SHAPE)}"
+            )
+        data = boundary.read_bytes(path, sha256=rec["delta_sha256"])
+        raw = {k: v.float() for k, v in load_bytes(data).items()}
+        supports = c4_column_supports(raw)
         plan.append(
             {
                 "full_id": cid,
                 "kind": "c4_column_split",
                 "component": "F12.6(c)",
-                "source": {"delta": str(path), "sha256": pf.sha256_file(path)},
+                "source": {
+                    "delta": str(path),
+                    "sha256": rec["delta_sha256"],
+                    "record_sha256": rsha,
+                },
                 "raw": raw,
-                "supports": column_split_supports(C4_TENSOR, raw[C4_TENSOR].shape),
+                "supports": supports,
                 "disjoint_tensors": False,
                 "split_rule": "weight [out, in]; input columns j < in//2 versus j >= in//2",
             }
@@ -451,7 +764,7 @@ def plan_constructions(pop, zoo, base, c4=None, astra=None, stand_in=False):
                 "stand_in_for": "C4 (awaiting F8 C1 construction)",
                 "source": src["source"] | {"restricted_to": C4_TENSOR},
                 "raw": raw,
-                "supports": column_split_supports(C4_TENSOR, raw[C4_TENSOR].shape),
+                "supports": c4_column_supports(raw),
                 "disjoint_tensors": False,
                 "split_rule": "weight [out, in]; input columns j < in//2 versus j >= in//2",
             }
@@ -496,7 +809,9 @@ def entry_record(p, full, parts):
 
 
 def status_record(p):
-    return {k: p[k] for k in ("full_id", "kind", "component", "status")}
+    """Status-only entry; an explicit Astra drop also carries its record hash and ``replacement: None`` (A24)."""
+    rec = {k: p[k] for k in ("full_id", "kind", "component", "status")}
+    return rec | {k: p[k] for k in ("record_sha256", "replacement") if k in p}
 
 
 def write_part(target: Path, rec, part_rec, inc, base_hash):
@@ -541,26 +856,52 @@ def code_identity():
     return {f: pf.sha256_file(ROOT / f) for f in CODE_FILES}
 
 
+def run_record_path(out: Path) -> Path:
+    return Path(out).with_name(Path(out).stem + "_run.json")
+
+
 def run(args):
     t0 = time.time()
     torch.set_num_threads(args.threads)
-    pop_bytes = args.population.read_bytes()
+    out = Path(
+        args.out or (DEFAULT_PLAN if args.mode == "plan" else Path(args.target) / "manifest.json")
+    )
+    if args.mode != "plan":
+        check_target(args.target)
+        check_target(out.parent)
+    for p in (out, run_record_path(out)):
+        if p.exists():
+            raise FileExistsError(f"{p} exists; a governed output is never overwritten")
+    boundary = read_boundary()
+    pop_bytes = boundary.read_bytes(args.population, sha256=GOVERNED_POPULATION_SHA256)
     pop = json.loads(pop_bytes)
     zoo = Path(args.zoo)
+    floor = floor_binding(boundary)
+    guard = resource_guard(SCRIPT, args.threads, args.rss_cap_bytes, args.chair_ruling)
+    guard.launch(
+        materialisation_estimate(boundary, pop, zoo),
+        breach_path=out.with_name(out.stem + "_breach.json"),
+    )
     view = None
     if args.mode == "plan":
-        state_hash = json.loads(
-            (Path(args.g2) / "fields" / OBJECTIVE / "manifest.json").read_text()
-        )["identity"]["state_hash"]
+        state_hash = g2_state_hash(boundary, Path(args.g2))
     else:
-        check_target(args.target)
-        view = FieldView(Path(args.g2))
+        view = FieldView(Path(args.g2), boundary)
         state_hash = view.state_hash
-    base, base_hash = pf.load_base_state(state_hash)
-    c4 = (args.c4_delta, args.c4_id) if args.c4_delta else None
+    base, base_hash = load_base(boundary, state_hash)
+    guard.check()
+    c4 = (args.c4_delta, args.c4_id, args.c4_record) if args.c4_delta else None
     plan = plan_constructions(
-        pop, zoo, base, c4=c4, astra=args.astra_record, stand_in=args.mode == "dry-run"
+        pop,
+        zoo,
+        base,
+        c4=c4,
+        astra=args.astra_record,
+        stand_in=args.mode == "dry-run",
+        boundary=boundary,
+        base_hash=base_hash,
     )
+    guard.check()
     if args.mode == "dry-run":
         plan = [plan[0], plan[-1]]
     elif args.entries:
@@ -590,6 +931,7 @@ def run(args):
                 f"I_q={rec['forecast']['I_q_numerical']:.3e} ({rec['forecast']['seconds']:.0f}s)"
             )
         entries.append(rec)
+        guard.check()
     doc = {
         "schema": SCHEMA,
         "mode": args.mode,
@@ -619,13 +961,28 @@ def run(args):
             "wall_seconds": time.time() - t0,
             "threads": args.threads,
         },
-        "outcomes_read": "none",
+        "outcomes_read_intent": outcomes_read_intent(),
+        "floor_binding": floor,
         "code": code_identity(),
     }
-    out = args.out or (DEFAULT_PLAN if args.mode == "plan" else Path(args.target) / "manifest.json")
-    if args.mode != "plan":
-        check_target(Path(out).parent)
-    sha = write_json(Path(out), doc)
+    sha = write_json(out, doc)
+    resources = guard.stop()
+    write_json(
+        run_record_path(out),
+        {
+            "schema": RUN_SCHEMA,
+            "out": str(out),
+            "out_sha256": sha,
+            "mode": args.mode,
+            "population": {"path": str(args.population), "sha256": sha256_bytes(pop_bytes)},
+            "threads": args.threads,
+            "peak_rss_bytes": resources["peak_rss_bytes"],
+            "resources": resources,
+            "read_boundary": boundary.record(),
+            "floor_binding": floor,
+            "outcomes_read_intent": outcomes_read_intent(),
+        },
+    )
     log(f"wrote {out} sha256 {sha}")
     return doc
 
@@ -641,8 +998,15 @@ def main(argv=None):
     p.add_argument("--zoo", default=str(ROOT / "data/zoo/qwen3.5-0.8b"))
     p.add_argument("--c4-delta", type=Path)
     p.add_argument("--c4-id")
+    p.add_argument(
+        "--c4-record", type=Path, help="F8 C1 construction record (pinned by C4_SOURCE_PIN)"
+    )
     p.add_argument("--astra-record", type=Path)
     p.add_argument("--threads", type=int, default=int(os.environ.get("OMP_NUM_THREADS", "2")))
+    p.add_argument("--rss-cap-bytes", type=int, default=fg.DEFAULT_CAP_BYTES)
+    p.add_argument(
+        "--chair-ruling", help="exact heading of the dated chair ruling for a cap above 4 GB"
+    )
     args = p.parse_args(argv)
     if bool(args.c4_delta) != bool(args.c4_id):
         p.error("--c4-delta and --c4-id go together")

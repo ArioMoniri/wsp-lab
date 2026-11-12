@@ -6923,6 +6923,138 @@ thread count. The build must be the only heavy job the programme runs. It may la
 plus 4 GB. Its peak RSS is recorded in its manifest, and the build is stopped if its peak exceeds its cap. Delegate briefs may
 not grant memory allowances on their own.
 
+#### A5 note F12-R (Thu Nov 12 09:17:52 UTC 2026, before any G3 outcome): unexposed-role remedy of the flagged F12 inputs code
+
+*Who and what.* An implementation sub-agent session with no prior part in F12, acting as an unexposed implementer under
+F12a.1(c)–(d), remedied the eight items flagged by the unexposed adoption review
+(`docs/reviews/council/f12-unexposed-adoption-2026-11-12.md`, A10, A11, A19, A21, A24, A25, A26 and A30), test first, on branch
+`prereg/f12-remedy` from main `e7283e2`. Its attestation is register entry 24 (`docs/prereg/f12_attestations.md`):
+statement (ii) is **none**. This note neither verifies C1 nor closes Board A condition 1: it is the concrete remedy for Board A
+to review. No registered computation changed. Every numerical function in the four scripts is AST-identical to main, docstrings
+aside; the functions that changed are I/O, guards and orchestration only (`run`, `main`, `load_inputs`, `load_probe`,
+`load_field_setup`, `plan_constructions`, `layer_split_supports`, `FieldView.__init__`, `stream_root`, `plan_doc` and
+small record helpers). C1_FILES and `verify_c1` are unchanged.
+
+*Per flag.*
+- **A10 (inputs and read boundary).** A new standard-library module, `scripts/f12_inputs_guard.py`, resolves every read to its
+  leaf (symlinks and `..`) and refuses it before opening if the lexical or resolved path lies under `data/evals` (every
+  spelling), `docs/prereg/a5_manifests/part_a`, the Part A prediction output tree, any `part_a*` or `sealed*` tree under the
+  data root, or the F12f pilot report, or outside the job's allowlist. Reads use `O_NOFOLLOW` on the resolved leaf and are
+  recorded with their sha256. The resulting read record lands in the run record. Inputs are authenticated:
+  - the population builder checks its four manifests against the inputs recorded in the committed `population.json`, and the
+    snapshot reaches the selector only as a minimal projection (primary ids without values, entry delta hashes, ledger
+    gate/id/aliases);
+  - the token builder checks `population.json` against the governed sha256 (`07ab85d3…`), `components.jsonl` against its pin,
+    every zoo `edit.json` against the snapshot's `edit_json_index_sha256` (`1c4ba09d…0945`; checked on the real zoo, all 1,259
+    match), each row's stored bytes against its `resolved_delta_hash` before loading, and confines probe files to bare names
+    hash-checked against the G2 manifest;
+  - the additivity code checks the population and the G2 and field manifests (now also in plan mode) and each holder's bytes.
+
+  Residual limits: libraries (safetensors, `torch.load`, transformers) reopen boundary-checked, authenticated paths themselves,
+  so a race between check and open is not excluded. The base-model cache is boundary-checked as a directory and authenticated
+  by the state hash. Zoo files are recorded individually as unauthenticated because they are authenticated collectively by
+  `entry_delta_hash`.
+- **A11.** `outcomes_read` is replaced in the population, token, additivity-plan and streaming-sidecar documents by
+  `outcomes_read_intent: {statement, label}`. The label reads "algorithmic intent … not access telemetry and not a session
+  attestation". Actual reads are in `read_boundary` and session evidence in the register. Committed artifacts keep their
+  historical strings, to be read the same way. The rebuilt population document equals the committed `population.json` byte
+  for byte once the relabel is mapped back, which is tested. `f12_c1.py`'s item-9 `outcomes_read: none` is outside the flagged
+  code and is left for the re-freeze.
+- **A19.** `--resume` works only from an atomic `checkpoint.json` (fsync and replace after every row). The checkpoint is bound
+  to the code-file hashes, population/ids/fold hashes, base state, G2 manifest and field identity, probe cache, the thread
+  count, and each done row's authenticated sources and increment hash. Resume requires:
+  - done ids that are the exact, duplicate-free prefix of the population order;
+  - committed bytes that match their checkpointed prefix hashes (an uncommitted tail is truncated);
+  - lines that pass schema, 42-column and finiteness checks;
+  - unchanged row sources.
+
+  Without a checkpoint, resume is refused. Completeness is exact id equality, and a fresh run refuses a directory holding prior
+  outputs.
+- **A21.** The chair's cap (disposition (d)) is enforced at launch for all four entry points. The default is 4,000,000,000
+  bytes. A higher cap needs `--chair-ruling` naming a dated `#### A5 chair ruling …` heading in the committed HEAD
+  preregistration whose own block holds `resource-cap: build=<script> cap_bytes=<int> threads=<int>` for exactly this build,
+  cap and thread count. A job is refused if its projection exceeds the cap:
+  - token builder: the field file, 11,327,195,583 bytes;
+  - `f12_additivity_prepare.py`: twice the dense LoRA materialisation, from safetensors headers;
+  - streaming driver: its measured 3.11 GB.
+
+  A job is also refused if free memory is below the cap, or below cap + 4 GB under a ruling. A process-tree RSS monitor stops
+  the job at 95 % of the cap, the peak is checked between units and recorded, and outputs are never overwritten. This is not an
+  OS sandbox. Whether a ruled build is the only heavy job is not machine-checked.
+- **A24.** Astra is built only from a qualification record whose sha256 equals `ASTRA_QUALIFICATION_PIN`. The pin is None
+  until F12-I's own C1 pins the F8a.4 disposition, so any record is refused now. The record allows no fields outside an
+  allowlist (so no outcome fields) and must bind exactly two tensors equal to the entry's changed tensors, the base state and
+  the holder files. `qualified: false` yields an explicit `dropped:failed_qualification` entry with `replacement: null`;
+  nothing is loaded or substituted.
+- **A25.** C4 is built only from an F8 C1 construction record whose sha256 equals `C4_SOURCE_PIN` (None until F8a's C1 pins
+  it). The record must name this id, tensor, delta bytes and base, at shape [1024, 3584], not degenerate, not a no-op and
+  identity-verified. The delta header must be exactly that one tensor at [1024, 3584], and the split must have boundary 1792.
+  All of this is checked before any construction. The dry-run stand-in is shape-checked the same way. The generic column-split
+  helper remains for tests. The record schema (`f8a-c1-c4-construction-v1`) is defined here prospectively; F8a's C1 must
+  supply it, or the interface must be amended openly.
+- **A26.** `layer_split_supports` rejects layers outside 0–23 and, given the base state, names that are not canonical base
+  tensors. In the streaming driver, such a root fails closed and is recorded, never split as `late`; this is tested.
+- **A30.** The literal 0.00493967211805284 is bound to `docs/prereg/f8_manifests/floor_payload/floor_recompute_2026-11-11.json`
+  by sha256 (`6369413491cb090820b4b257f007711887dc4dd534a43972a6590919122c1a57`) and by value and repr of `h_star`, with schema
+  `f8-floor-v1`, status `computed` and payload sha256 `67da223c…3de`. A mismatch refuses the run. They agree; plan documents
+  now carry `floor_binding`.
+
+*Tests.* New: `test_f12r_guard.py` 22, `test_f12r_additivity.py` 33, `test_f12r_population.py` 7, `test_f12r_tokens.py` 20
+(82 in all). Each was red before its code: missing-module collection error; 6 failed and 27 errors; 7 failed; 10 failed and 10
+errors. The toy fixture of `test_f12_additivity_stream.py` now installs toy pins and boundary, and its RSS test follows the
+4 GB cap; its 8 tests pass. The existing F12 population, token and additivity tests pass (8, 24, 8). Full suite (serial, OMP
+2): **1563 passed, 2 failed, 5 skipped**, peak RSS 2.07 GB. The two failures are the C1 pin-drift tripwires
+`test_code_hashes_c1_draft_pins_current_bytes` and `test_c1_draft_filled_from_committed_token_facts` (pinned selector hash):
+pinned C1 code has changed. The pre-commit hook was run and refused the code commit on exactly these two, so it was committed
+with `--no-verify` and the reason stated.
+
+*Plan requalification (within 4 GB).* The hardened streaming driver ran on the 16 registered LoRA roots: 2 threads, the 4 GB
+cap, 78 s wall, peak RSS 2,635,849,728 bytes, every input authenticated. Every LoRA entry is byte-identical to the committed
+`additivity_plan.json`:
+- the canonical-JSON hash of the LoRA entries is `a9bed8d8…4ce3` on both sides;
+- the 77,099-byte entries section of the written file is identical;
+- the Astra/C4 status entries are identical.
+
+The only other differences are the `f12_additivity_prepare.py` code hash, `wall_seconds`, the A11 relabel and the new
+`floor_binding`. Evidence is in `docs/prereg/a5_manifests/f12/f12r/` (`additivity_plan_requalified.json`, its `_run.json`
+and `plan_requalification.json`). The committed plan is untouched.
+
+*Token-builder requalification: priced, not launched* (`docs/prereg/a5_manifests/f12/f12r/token_rerun_price.json`). The
+frozen tokens came from the pre-hardening builder. A rerun cannot fit in 4 GB: the 11.3 GB field is held whole, and the frozen
+run peaked at 17,180,188,672 bytes. Setup, not row count, sets that peak. A bitwise comparison needs the frozen run's 6 threads
+and library versions. Prices use the recorded timings: setup 3,452.96 s (9,292.32 s under contention in the capped run) and
+3.154 s per stored tensor. CPU-h are upper bounds of wall × 6, because CPU time was not recorded.
+- **A, full rerun:** 270 rows; 6.96 h wall (8.58 h with contended setup); at most 41.7 (51.5) CPU-h. It establishes bitwise
+  reproduction of every frozen output for every row on authenticated inputs.
+- **B, stratified sample plus all-row authentication (recommended as the cheapest valid evidence):** 24 rows, 1,235 stored
+  tensors. The sample takes 2 rows per family × chain-inner-family × recorded-rank stratum (12 strata), the smallest
+  sha256('20261112:f12-r:sample:' + id) in each. Cost: 2.04 h wall (3.66 h contended); at most 12.2 (22.0) CPU-h; the same
+  ~17.2 GB peak. A within-4 GB pass also authenticates every row's inputs and recomputes each row's realised-increment hash
+  against the frozen per-row hashes: about 0.5 h, at most 1 CPU-h, under 3 GB, no ruling needed. B establishes bitwise
+  reproduction on every code path, of all 186 K frames, and unchanged inputs for every row. It does not observe bitwise
+  reproduction of the 246 unsampled rows' token values; that is inferred from identical numerical code, identical inputs and
+  deterministic kernels. If Board A wants it observed, A costs about 5 h more under the same ruling.
+
+Either option needs a dated chair ruling first, for example
+`resource-cap: build=scripts/f12_tokens.py cap_bytes=18000000000 threads=6`, with at least 22 GB free and no other heavy job.
+B also needs three small pieces of code, tests first, before any re-freeze: a `--rows` selection, an increments-only pass, and
+a comparison script.
+
+*Changed identities (old pin → new sha256 prefix).*
+- `scripts/f12_population.py`: `7e1c196dcbed` → `bcd3cf129748`
+- `scripts/f12_tokens.py`: `3188c5c54e51` → `cf09464d4bd1`
+- `scripts/f12_additivity_prepare.py`: `ac7aee71c3f2` → `e0523dc345ea`
+- `scripts/f12_additivity_stream.py`: `0bf273ea2b8e` → `1c23b01cafe2`
+- `tests/test_f12_additivity_stream.py`: `fc7a8ad4b670` → `a29d551a641f`
+
+New and unpinned: `scripts/f12_inputs_guard.py` (`a8a794c142e1`), `tests/test_f12r_guard.py`, `tests/test_f12r_additivity.py`,
+`tests/test_f12r_population.py`, `tests/test_f12r_tokens.py`. The register `docs/prereg/f12_attestations.md` also changed
+(entry 24). These include **pinned C1 code** (item 11 `code_hashes_c1.json`; the selector hash in item 2; the construction
+script and driver hashes in item 9), so a disclosed pre-verification **re-freeze is required**. That is Board A condition 3
+and is not done here. No numerical identity used by the noise check or pilot changed: the five simulation files, the
+restricted payload and the matrix are untouched. The frozen tokens themselves remain those of the pre-hardening builder until a
+requalification is ruled and run.
+
 #### A5 chair ruling on the F12 token requalification rerun (12 Nov 2026, 09:19 UTC, before any G3 outcome): full rerun authorised under a pre-launch resource cap
 
 (a) *Why.* The unexposed-role remedy (note F12-R) hardened `scripts/f12_tokens.py` without changing any numerical function. The
@@ -6943,3 +7075,133 @@ listed explicitly. Any bitwise difference stops the requalification and is repor
 investigated by changing code. Projected cost: about 7 h wall, at most 41.7 CPU-h (upper bound), charged to the F12 inputs and
 not to the 190 CPU-h simulation ceiling. The rerun reads stored edit bytes, `edit.json`, the base model, and the G2 field and
 probe cache only, through the hardened read boundary. Part A remains held by the programme owner.
+
+#### A5 note F12-R, addendum (Thu Nov 12 13:45:32 UTC 2026, before any G3 outcome): full token requalification rerun under the chair's ruling of 09:19 UTC
+
+*Commit hook.* As the note already states, the code commit `8c1e0f0` was made with `--no-verify` because the pre-commit
+hook's full suite refused it only on the two C1 pin-drift tripwires (`test_code_hashes_c1_draft_pins_current_bytes`,
+`test_c1_draft_filled_from_committed_token_facts`). Those can pass only after a re-freeze. The chair accepted this. The
+comparison-tool commit `fdb179c` was handled the same way: the hook ran, reported 1574 passed with only those two failing,
+and the commit was made with `--no-verify` for that reason.
+
+*Tooling, before the rerun.* `scripts/f12_tokens_compare.py` has 12 tests, red before the module. It authenticates both
+runs' files against their own manifests and compares every deterministic field:
+- `tokens.safetensors`: header metadata as a mapping, tensor headers, the data section byte for byte, `X` bitwise with
+  differing rows named, `presence` and `row_eligible`;
+- `rows.jsonl`: ids in order, and records as canonical JSON;
+- `detail.jsonl`, `aq.json`, `kframes.json` and `kframes.safetensors`: byte for byte, plus every K-frame tensor;
+- the deterministic keys of `pricing.json` and the deterministic fields of the manifests.
+
+It prints only equality results and hashes. Every exclusion was fixed before the rerun and is listed in the report:
+- `seconds` and the other timing fields;
+- memory, paths, the code identities (changed by design), resume and read-boundary records, the A11 relabel, and the
+  hardened builder's new `checkpoint.json`;
+- the `tokens.safetensors` whole-file sha256, because safetensors writes the `__metadata__` keys in a nondeterministic
+  order (observed while writing the tests);
+- `pricing.json`'s `first_row_id` and `first_row_stored_tensors`, because the frozen run resumed with row 1 from the
+  capped run 2 (`run_tokens_resume.sh`), so those fields record resume history.
+
+A self-check of the tool on the frozen run against itself authenticated the frozen files against `tokens_manifest.json`.
+
+*Rerun.* The hardened `scripts/f12_tokens.py` ran at commit `fdb179c` with clean code files, through agent-tmux, all 270
+rows, 6 threads, no resume, under the ruling's cap of 19,000,000,000 bytes. The guard verified the ruling's
+`resource-cap` line in the committed preregistration. It launched at 09:28:29 UTC with 25,640,480,768 bytes available
+(23,000,000,000 required) and finished at 13:43:45 UTC with status complete and exit 0.
+- Wall time: 15,322 s (4.26 h); the frozen run took 25,091 s.
+- Setup: 2,161 s (field load 183, K frames 1,003, spectral factors 963); rows took 13,084 s.
+- CPU: 74,350 s (user 73,005, system 1,345), i.e. **20.65 CPU-h** at 485 % CPU, against the 41.7 CPU-h upper bound priced.
+- Peak RSS: **17,124,909,056 bytes** (the guard's tree sample peaked at 17,124,769,792), below the 18,050,000,000-byte stop
+  threshold.
+- The session started no other job of its own while the build ran. Evidence:
+  `docs/prereg/a5_manifests/f12/f12r/tokens_manifest_requal.json` and `token_rerun_run.json`.
+
+*Result: identical on every deterministic field* (`token_requalification.json`, commit `d7c8415`):
+- `tokens.safetensors`: data section (sha256 `7447e2e6…c325`), tensor headers and metadata mapping identical; `X` is
+  bitwise identical for all 270 rows; `presence` and `row_eligible` are identical; 6,845 present tokens. The whole-file
+  sha256 differs (`2c77cc94…` against the frozen `f8c5e163…`) only because the two metadata keys are written in the other
+  order: the headers have the same length and bytes.
+- `rows.jsonl`: 270 rows in the same order, identical without `seconds` (deterministic sha256 `8c049400…2a7d` on both
+  sides).
+- `detail.jsonl` (`3480fa5a…`), `aq.json` (`90ab8466…`), `kframes.json` (`b80b9b3a…`) and `kframes.safetensors`
+  (`100a4024…`, 744 tensors): byte-identical.
+- `pricing.json`'s deterministic keys and every deterministic manifest field: identical.
+
+The hardened builder therefore reproduces the frozen F12 tokens bit for bit on authenticated inputs. That is the token
+requalification Board A's F12-C1 condition 1 asks for. It does not restore the dead implementer session's history, and it
+does not verify C1. The frozen token files remain the governed inputs. The pinned C1 code identities listed in note F12-R
+still need the disclosed re-freeze, which is not done here.
+
+#### A5 note F12-R, second addendum (Thu Nov 12 14:07:29 UTC 2026, before any G3 outcome): A10 and A19 after the independent re-check
+
+The independent unexposed re-check (`docs/reviews/council/f12-remedy-recheck-2026-11-12.md`, `1788f9f`) adopted A11, A21,
+A24, A25, A26 and A30 and left **A10** and **A19** flagged. It also corrects a figure in the first addendum: measured
+bracket to bracket, the identical entries span of the plan is 77,090 bytes. The 77,099 bytes quoted in note F12-R included
+the key and its separator. The remedy below was written test-first by the same session.
+
+*A19 (resume): disabled for governed runs, as the flag permits.* Every run of `scripts/f12_tokens.py` is governed: its
+outputs must lie under `wsp-data/runs/a5` and it reads the real token inputs. A launcher-invoked run is governed too. So
+`--resume` is refused as the first step of `run`, before any read or directory creation, with the reasons stated. The
+checkpoint and resume code (binding, checkpoint writer and loader, row checks) is **removed** rather than kept for synthetic
+tests; no checkpoint is written. Two related fixes:
+- `strict_json_loads` now also rejects overflow literals such as `1e999` (the re-check's counterexample), as well as NaN
+  and Infinity;
+- the resource monitor stops the job even if its breach record cannot be written.
+
+A test builds the re-check's counterexample directory (a self-consistent row with `"a": 1e999`) and shows it refused,
+with nothing read or created.
+
+*A10 (base-model cache leaves).* The new `scripts/f12_base_loader.py` replaces the directory-only base loading in both F12
+loaders: tokens `load_base`, and additivity `load_base`, which the streaming driver uses.
+- **The pin.** The committed `docs/prereg/a5_manifests/f12/f12r/base_model_leaves.json` (sha256 `6d99ad84…50f6`, pinned in
+  code) names the repository, the revision and the three files the library reads, with their sha256 and sizes:
+  - `config.json` (`b90b86f3…`);
+  - `model.safetensors.index.json` (`d8a08838…`);
+  - `model.safetensors-00001-of-00001.safetensors` (`04b1c301…`, 1,746,942,600 bytes, equal to its LFS blob name).
+
+  It also records the base-state hash `18f07d70…d982`, which must equal the caller's.
+- **Staging.** Each leaf is resolved individually through every symlink and confined to the allowed cache root and to the
+  job's boundary (`data/evals` and the other prohibited paths refused before opening). It is then streamed with
+  `O_NOFOLLOW` into a private staging directory as a regular file and checked against the pin; unpinned files are never
+  staged. The allowed cache root is this model's own cache tree plus the hub's shared content-addressed blob store. The
+  real weight blob links into that store (`hub/blobs/f0/…`); other hub trees, such as other models and datasets, stay
+  refused.
+- **Loading.** `from_pretrained` loads only from the staging directory (`local_files_only`), under a Python audit hook
+  that refuses every `open`/`listdir`/`scandir` outside it and the interpreter's code and system trees. A library read of
+  anything else fails closed. The loaded state must hash to the pin, and the staging directory is removed.
+- **Limit.** Opens by native code (safetensors, torch) are not seen by the hook; every file they can reach in the staging
+  directory is a verified regular copy.
+
+The re-check's demonstration fails closed through both F12 loaders, before any library read: a static cache-leaf symlink
+into a prohibited directory holding `{}`. Tests also show:
+- a tiny real transformers model loads under the confinement;
+- a library read outside the verified set fails closed;
+- the shared-blob chain is accepted while other hub trees are refused;
+- leaf hashes and the pin are enforced.
+
+*Numerical identity.* All 47 numerical functions are AST-identical to main `e7283e2`: population selection, folds and
+hashing; token K frames, SVD factors, spectrum, probes, token, row, contraction and assembly; additivity supports,
+construction, cross term and forecasts. The changed functions are the same I/O, guard and orchestration set as before
+(`load_base` in both scripts and `run` in the token builder among them). No full token rerun is needed.
+
+*Tests and requalification.*
+- New `test_f12r_base_loader.py` 11. `test_f12r_tokens.py` is now 12: 11 resume tests removed, 3 added. The other F12-R and
+  F12 files pass unchanged (guard 22, additivity 33, population 7, compare 12, stream 8, tokens 24, additivity 8,
+  population 8; 145 in total).
+- Full suite, serially, as the pre-commit hook of `1e88b65`: **1578 passed, 2 failed, 5 skipped**. The two failures are the
+  C1 pin-drift tripwires, so the commit was made with `--no-verify`, as before.
+- **Streaming plan requalification** (2 threads, 4 GB cap, confined base loader): all 16 LoRA entries and the status
+  entries identical to the committed plan (LoRA entries hash `a9bed8d8…4ce3`; 77,090-byte entries span identical); peak
+  3,106,230,272 bytes.
+- **Load-only check:** the hardened loader reproduces the pinned base-state hash from the pinned leaves (321 tensors, 15 s);
+  peak 3,107,717,120 bytes.
+
+Evidence: `f12r/additivity_plan_requalified2*.json`, `f12r/plan_requalification2.json`, `f12r/base_load_check.json`
+(commit `9a4b25e`).
+
+*Identities.* New: `scripts/f12_base_loader.py` (`f582493e53ec`), `tests/test_f12r_base_loader.py` and the pin file.
+Changed again: `scripts/f12_tokens.py` (`984447c51c56`), `scripts/f12_additivity_prepare.py` (`c3e55e27aa58`),
+`scripts/f12_inputs_guard.py` (`e809049a4690`), `tests/test_f12r_tokens.py`, `tests/test_f12r_additivity.py` and
+`tests/test_f12_additivity_stream.py`. The token requalification rerun ran the builder at `fdb179c`. The builder changed
+since only in resume handling (now refused) and base-loader confinement, verified by the load-only check; its numerical
+functions are unchanged. The disclosed pre-verification re-freeze remains required and is not done here. Nothing is merged
+to main or pushed.

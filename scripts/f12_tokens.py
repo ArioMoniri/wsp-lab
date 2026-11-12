@@ -39,19 +39,35 @@ stored zoo bytes (``bytes_via_alias`` holder for the 45 alias rows) exactly as P
 
 Outputs (``--out-dir`` under ``/home/ubuntu/wsp-data/runs/a5/f12_inputs``): ``tokens.safetensors`` (``X`` [rows, 186,
 42] fp32 in population id order, ``presence`` [rows, 186] uint8, ``row_eligible`` [rows] uint8), ``rows.jsonl`` (one
-record per row: a, q, flags, eligibility, timing), ``detail.jsonl`` (per-tensor values and token vectors; also the
-resume log), ``aq.json`` (id -> a, q), ``kframes.safetensors`` + ``kframes.json`` (the K frame manifest, per-tensor
+record per row: a, q, flags, eligibility, timing), ``detail.jsonl`` (per-tensor values and token vectors), ``aq.json`` (id -> a, q), ``kframes.safetensors`` + ``kframes.json`` (the K frame manifest, per-tensor
 sha256), ``pricing.json``. ``--manifest`` (``docs/prereg/a5_manifests/f12/tokens_manifest.json``) records hashes only.
 Pricing: after the first row the wall time is projected two ways (n_rows x first-row seconds, and first-row seconds
 per supported tensor x each row's stored tensor count), and the run stops (``price_exceeds_cap``) if the larger
 projection, plus setup, exceeds ``--max-wall-hours``.
 
     OMP_NUM_THREADS=6 MKL_NUM_THREADS=6 python scripts/f12_tokens.py \
-        --out-dir /home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens --max-wall-hours 8 [--limit N] [--resume]
+        --out-dir /home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens --max-wall-hours 8 [--limit N]
 
 CPU only. Reads: population.json, the stored zoo deltas (``delta.safetensors`` or ``lora/``) and ``edit.json``, the
-pinned base model, the G2 WikiText field, the G2 probe cache and g2_manifest.json. No evaluation record, TF-v1 score or
-outcome is opened.
+pinned base model, the G2 WikiText field, the G2 probe cache and g2_manifest.json. The intended algorithm opens no
+evaluation record, TF-v1 score or outcome; that is algorithmic intent, not access telemetry (``outcomes_read_intent``).
+
+F12-R (PREREG_H1_TF A5 note F12-R; unexposed adoption A10, A11, A19, A21), no numerical change:
+
+* every read goes through ``f12_inputs_guard.ReadBoundary`` (resolved to the leaf; data/evals, Part A
+  staging/prediction/calibration and the F12f pilot report refused before opening; only the governed manifests, zoo,
+  G2 run, output directory and base-model cache allowed) and the manifest records the exact reads;
+* inputs are authenticated: population.json against the governed sha256; components.jsonl against its pin and every
+  zoo ``edit.json`` against the snapshot's pinned ``edit_json_index_sha256``; each row's stored bytes against its
+  ``resolved_delta_hash`` before loading; probe files are bare names inside the probe cache, hash-checked;
+* resume is disabled (A19, F12-R second remedy after the independent re-check): every run of this builder is
+  governed (outputs under wsp-data/runs/a5, real token inputs), so ``--resume`` is refused before any read, and the
+  checkpoint/resume code is removed. Completeness is exact id equality;
+* the base model is loaded only from its pinned, individually resolved and confined cache leaves, staged as regular
+  files and loaded under an audit hook that refuses any other read (``f12_base_loader``; A10 second remedy);
+* the resource authority's cap (4 GB, or a dated chair ruling's cap with ``--chair-ruling``) is enforced at launch
+  against the field file size (the field is loaded whole), monitored, and the peak recorded; a fresh run never
+  overwrites prior outputs and the manifest is never overwritten.
 """
 
 from __future__ import annotations
@@ -77,6 +93,8 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
 from scripts import a5_power_fields as pf
+from scripts import f12_base_loader as fbl
+from scripts import f12_inputs_guard as fg
 from scripts import part_a_predictions as pap
 from wsp.features import response_chart as rc
 from wsp.features import response_field as rf
@@ -118,6 +136,7 @@ assert len(COLUMNS) == N_COLS
 PROBE_ROLE = "mlp.down_proj"
 CODE_FILES = (
     "scripts/f12_tokens.py",
+    "scripts/f12_inputs_guard.py",
     "scripts/f12_population.py",
     "scripts/part_a_predictions.py",
     "scripts/a5_power_fields.py",
@@ -125,6 +144,61 @@ CODE_FILES = (
     "src/wsp/features/response_chart.py",
     "src/wsp/zoo/apply.py",
     "src/wsp/zoo/arch.py",
+)
+SCRIPT = "scripts/f12_tokens.py"
+# A10 pins: the governed population.json; components.jsonl (the 1,259 zoo ids of the A5 snapshot) and the snapshot's
+# content.zoo_bytes.edit_json_index_sha256 (snapshot.json sha256 1b2af25c...), which authenticates every edit.json.
+GOVERNED_POPULATION_SHA256 = "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+COMPONENTS_PATH = ROOT / "docs/prereg/a5_manifests/components.jsonl"
+COMPONENTS_SHA256 = "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec"
+EDIT_JSON_INDEX_SHA256 = "1c4ba09da3d7821fea8aabcf3561a4cec003297ae3f6adfb621f33663e0a0945"
+OUTCOMES_STATEMENT = (
+    "none: stored edit bytes, edit.json, the base model, the G2 WikiText field and probe cache only; no evaluation "
+    "record, TF-v1 score or outcome is opened"
+)
+INTENT_LABEL = (
+    "algorithmic intent of this code path on authentic inputs; not access telemetry and not a session attestation "
+    "(PREREG_H1_TF F12a.1(c); unexposed adoption A11). Actual reads: read_boundary; resume: disabled"
+)
+CHECKPOINT = "checkpoint.json"  # written by the first F12-R builder before resume was disabled; a prior output
+RESUME_DISABLED = (
+    "disabled: every run of this builder is governed (outputs under wsp-data/runs/a5, real token inputs), and resume "
+    "is refused in governed runs (A19, F12-R independent re-check)"
+)
+ROW_KEYS = (
+    "id",
+    "family",
+    "source",
+    "bytes_holder",
+    "rank",
+    "rank_source",
+    "n_edited_tensors",
+    "n_tokens",
+    "unsupported_changed_tensors",
+    "eligibility",
+    "a",
+    "a_fp64",
+    "q",
+    "q_partial",
+    "field_status",
+    "increment_sha256",
+    "token_flags",
+    "omitted_energy_max",
+    "omitted_energy_median",
+    "numerical_rank_max",
+    "n_probe_tokens",
+    "seconds",
+)
+DETAIL_KEYS = frozenset(("id", "tokens", "per_tensor", "field_per_tensor"))
+OUTPUT_NAMES = (
+    "tokens.safetensors",
+    "rows.jsonl",
+    "detail.jsonl",
+    CHECKPOINT,
+    "aq.json",
+    "kframes.json",
+    "kframes.safetensors",
+    "pricing.json",
 )
 
 
@@ -460,9 +534,12 @@ def projection(setup_seconds, first_seconds, first_tensors, tensor_counts):
 # --------------------------------------------------------------------------------------------- IO
 
 
-def stored_tensor_count(entry_dir: Path) -> int:
+def stored_tensor_count(entry_dir: Path, boundary=None) -> int:
     from safetensors import safe_open
 
+    if boundary is not None:
+        for p in fg.entry_files(boundary, entry_dir):
+            boundary.resolve(p)
     if (entry_dir / "delta.safetensors").exists():
         with safe_open(str(entry_dir / "delta.safetensors"), "pt") as f:
             return len(list(f.keys()))
@@ -470,23 +547,27 @@ def stored_tensor_count(entry_dir: Path) -> int:
         return sum("lora_A" in k for k in f.keys())  # noqa: SIM118 (safe_open is not iterable)
 
 
-def load_probe(g2_manifest, probe_dir: Path, layers):
-    """Hash-checked G2 probe cache -> {layer: (xbar, Xw)} and its identity record."""
+def load_probe(g2_manifest, probe_dir: Path, layers, boundary=None):
+    """Hash-checked G2 probe cache -> {layer: (xbar, Xw)} and its identity record (A10: every file a bare name inside
+    the cache, read through the boundary and checked against the G2 manifest before loading)."""
     from safetensors.torch import load_file
 
+    boundary = boundary if boundary is not None else fg.ReadBoundary(allowed=[probe_dir])
     rec = g2_manifest["probe_cache"]
     if rec.get("status") != "complete":
         raise ValueError("probe cache is not complete")
     files = rec["files"]
-    meta = json.loads((probe_dir / "probe_cache.json").read_text())
-    if pf.sha256_file(probe_dir / "probe_cache.json") != files["probe_cache.json"]:
-        raise ValueError("probe_cache.json differs from the G2 manifest")
+    meta = json.loads(
+        boundary.read_bytes(probe_dir / "probe_cache.json", sha256=files["probe_cache.json"])
+    )
     per_layer = {layer: [] for layer in layers}
     for row in sorted(meta, key=lambda r: r["index"]):
-        p = probe_dir / row["file"]
-        if pf.sha256_file(p) != files[row["file"]]:
-            raise ValueError(f"{p}: sha256 differs from the G2 manifest")
-        t = load_file(str(p))
+        name = fg.safe_name(row["file"])
+        p = probe_dir / name
+        if name not in files:
+            raise ValueError(f"{p}: not in the G2 manifest")
+        boundary.sha256_file(p, sha256=files[name])
+        t = load_file(str(boundary.resolve(p)))
         for layer in layers:
             per_layer[layer].append(t[f"layer.{layer}"])
     if (
@@ -508,14 +589,19 @@ def load_probe(g2_manifest, probe_dir: Path, layers):
     return probe, ident
 
 
+def code_files_identity():
+    return {f: pf.sha256_file(ROOT / f) for f in CODE_FILES}
+
+
 def code_identity():
-    out = {f: pf.sha256_file(ROOT / f) for f in CODE_FILES}
+    out = code_files_identity()
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     try:
         out["git_sha"] = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, cwd=ROOT
+            ["git", "rev-parse", "HEAD"], text=True, cwd=ROOT, env=env
         ).strip()
         dirty = subprocess.check_output(
-            ["git", "status", "--porcelain", "--", *CODE_FILES], text=True, cwd=ROOT
+            ["git", "status", "--porcelain", "--", *CODE_FILES], text=True, cwd=ROOT, env=env
         )
         out["code_files_dirty"] = bool(dirty.strip())
     except (OSError, subprocess.CalledProcessError):
@@ -529,6 +615,134 @@ def check_out_dir(path: Path):
         raise ValueError(f"{path}: outputs must stay under {ALLOWED_OUT}")
 
 
+def check_fresh_out(out: Path):
+    """A fresh (non-resume) run never overwrites a previous run's outputs (e.g. the frozen token run's)."""
+    found = [n for n in OUTPUT_NAMES if (Path(out) / n).exists()]
+    if found:
+        raise FileExistsError(
+            f"{out} holds outputs {found}; use a new --out-dir (resume is disabled)"
+        )
+
+
+# ---------------------------------------------------------------------------- F12-R: inputs and resume
+
+
+def read_boundary() -> fg.ReadBoundary:
+    """A10: the governed read boundary of the token build (prohibited paths refused wherever a path resolves)."""
+    return fg.ReadBoundary(
+        allowed=[
+            ROOT / "docs/prereg/a5_manifests/f12",
+            COMPONENTS_PATH,
+            DATA_ROOT / "zoo/qwen3.5-0.8b",
+            DATA_ROOT / "runs/g2",
+            ALLOWED_OUT,
+            hf_cache_dir(),
+        ]
+    )
+
+
+def hf_cache_dir() -> Path:
+    from huggingface_hub import constants
+
+    return Path(constants.HF_HUB_CACHE)
+
+
+def resource_guard(build, threads, cap_bytes, ruling) -> fg.ResourceGuard:
+    return fg.ResourceGuard(build=build, threads=threads, cap_bytes=cap_bytes, ruling=ruling)
+
+
+def launch_estimate(boundary, g2: Path) -> int:
+    """A21 launch projection: a lower bound, the G2 field file, which ``FieldArtifact.load`` holds whole."""
+    return boundary.resolve(Path(g2) / "fields" / OBJECTIVE / "tensors.pt").stat().st_size
+
+
+def authenticate_edit_index(boundary, zoo: Path, components_path=COMPONENTS_PATH) -> dict:
+    """{id: sha256(edit.json)} for every zoo id of components.jsonl, authenticated as a whole against the A5
+    snapshot's pinned ``edit_json_index_sha256`` (``a5_snapshot``: sha256 of json.dumps(sorted([id, sha])))."""
+    data = boundary.read_bytes(components_path, sha256=COMPONENTS_SHA256)
+    ids = [json.loads(x)["id"] for x in data.decode().splitlines() if x.strip()]
+    sha = {}
+    for i in ids:
+        p = Path(zoo) / i / "edit.json"
+        sha[i] = boundary.sha256_file(p, record=False) if p.exists() else None
+    index = sha256_bytes(json.dumps(sorted([i, h] for i, h in sha.items())).encode())
+    if index != EDIT_JSON_INDEX_SHA256:
+        raise fg.AuthenticationError(
+            f"edit.json index {index} differs from the snapshot's pinned {EDIT_JSON_INDEX_SHA256}"
+        )
+    note = (
+        f"{len(ids)} edit.json files of components.jsonl, hashed as the snapshot's edit_json_index"
+    )
+    boundary.reads.append(
+        {
+            "path": str(Path(zoo) / "*" / "edit.json"),
+            "resolved": None,
+            "sha256": index,
+            "authenticated": True,
+            "note": note,
+        }
+    )
+    return sha
+
+
+def read_edit(boundary, zoo: Path, row_id: str, edit_sha: dict) -> dict:
+    return json.loads(
+        boundary.read_bytes(Path(zoo) / row_id / "edit.json", sha256=edit_sha[row_id])
+    )
+
+
+def row_source(boundary, zoo: Path, r: dict, edit_sha: dict) -> dict:
+    """A row's authenticated sources: its holder's stored bytes (entry_delta_hash = the population's
+    resolved_delta_hash) and its own edit.json sha256 (from the authenticated index)."""
+    h = fg.authenticate_entry(boundary, Path(zoo) / r["bytes_holder"], r["resolved_delta_hash"])
+    return {"entry_delta_hash": h, "edit_json_sha256": edit_sha[r["id"]]}
+
+
+def governed_reasons(args) -> list:
+    """Why a run is governed (resume refused). Never empty for this builder: check_out_dir confines every output to
+    wsp-data/runs/a5/f12_inputs, every run reads the real token inputs, and a launcher-invoked run is governed too."""
+    reasons = [
+        "reads the real F12 token inputs (population, zoo deltas, G2 field and probes, base model)"
+    ]
+    out = Path(os.path.abspath(getattr(args, "out_dir", ALLOWED_OUT)))
+    if out == DATA_ROOT / "runs/a5" or DATA_ROOT / "runs/a5" in out.parents:
+        reasons.append(f"output {out} under {DATA_ROOT / 'runs/a5'}")
+    if os.environ.get("TMUX") or os.environ.get("AGENT_TMUX"):
+        reasons.append("invoked by a launcher (agent-tmux)")
+    return reasons
+
+
+def refuse_resume(args):
+    """A19 (F12-R second remedy): resume is disabled for governed runs, refused before any read."""
+    if getattr(args, "resume", False):
+        raise ValueError(
+            "resume is disabled for governed runs (A19): " + "; ".join(governed_reasons(args))
+        )
+
+
+def append_row(rows_path: Path, detail_path: Path, rec: dict, detail: dict, strict=True):
+    """Append one row exactly as the build always has (sorted keys, no NaN); (rows line sha256, detail line sha256)."""
+    rl = json.dumps(rec, sort_keys=True, allow_nan=not strict) + "\n"
+    dl = json.dumps(detail, sort_keys=True, allow_nan=not strict) + "\n"
+    with rows_path.open("a") as f:
+        f.write(rl)
+    with detail_path.open("a") as f:
+        f.write(dl)
+    return sha256_bytes(rl.encode()), sha256_bytes(dl.encode())
+
+
+def is_complete(done: dict, rows: list, limit) -> bool:
+    """Exact id equality (not a length comparison)."""
+    ids = [r["id"] for r in rows]
+    return limit is None and len(done) == len(ids) and sorted(done) == sorted(ids)
+
+
+def load_base(boundary, state_hash):
+    """A10 (F12-R second remedy): the base only from its pinned, individually resolved, confined and staged cache
+    leaves, loaded under the confinement hook (``f12_base_loader.load_verified_base``)."""
+    return fbl.load_verified_base(boundary, state_hash)
+
+
 def write_json(path: Path, obj) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = (json.dumps(obj, indent=1, sort_keys=True, allow_nan=False) + "\n").encode()
@@ -536,12 +750,16 @@ def write_json(path: Path, obj) -> str:
     return sha256_bytes(data)
 
 
-def load_field_setup(g2: Path, threads: int):
+def load_field_setup(g2: Path, threads: int, boundary=None):
     """Hash-checked G2 WikiText field: (gradients, coverage, FactorCache, K frames by tensor, identity records)."""
-    g2_bytes = (g2 / "g2_manifest.json").read_bytes()
-    if sha256_bytes(g2_bytes) != G2_MANIFEST_SHA256:
-        raise ValueError("g2_manifest.json differs from g2_manifest_final.json (F8a.3(d))")
+    boundary = boundary if boundary is not None else read_boundary()
+    g2_bytes = boundary.read_bytes(g2 / "g2_manifest.json", sha256=G2_MANIFEST_SHA256)
     g2_manifest = json.loads(g2_bytes)
+    for f in ("manifest.json", "tensors.pt"):
+        boundary.check(
+            g2 / "fields" / OBJECTIVE / f,
+            note="loaded by FieldArtifact.load after its sha256 check",
+        )
     frec = g2_manifest["fields"][OBJECTIVE]
     if frec.get("status") != "complete" or frec["identity_sha256"] != WIKITEXT_IDENTITY_SHA256:
         raise ValueError("base WikiText field is not the frozen complete G2 field")
@@ -644,12 +862,19 @@ def save_frames(frames, out_dir: Path):
 
 
 def run(args):
+    refuse_resume(args)
     t_start = time.time()
     torch.set_num_threads(args.threads)
     check_out_dir(args.out_dir)
     out = Path(args.out_dir)
+    if Path(args.manifest).exists():
+        raise FileExistsError(f"{args.manifest} exists; a governed manifest is never overwritten")
+    check_fresh_out(out)
     out.mkdir(parents=True, exist_ok=True)
-    pop_bytes = args.population.read_bytes()
+    boundary = read_boundary()
+    guard = resource_guard(SCRIPT, args.threads, args.rss_cap_bytes, args.chair_ruling)
+    guard.launch(launch_estimate(boundary, Path(args.g2)), breach_path=out / "breach.json")
+    pop_bytes = boundary.read_bytes(args.population, sha256=GOVERNED_POPULATION_SHA256)
     pop = json.loads(pop_bytes)
     if pop["reproduction"]["status"] != "reproduced":
         raise ValueError("population.json does not reproduce the registered population")
@@ -671,34 +896,30 @@ def run(args):
     }
     log(f"population frozen: {json.dumps(frozen)}")
     zoo = Path(args.zoo)
+    edit_sha = authenticate_edit_index(boundary, zoo)
     todo = rows if args.limit is None else rows[: args.limit]
-    counts = [stored_tensor_count(zoo / r["bytes_holder"]) for r in todo]
+    counts = [stored_tensor_count(zoo / r["bytes_holder"], boundary) for r in todo]
 
     g2_manifest, grads, coverage, factors, frames, slots, layer_types, state_hash, records = (
-        load_field_setup(Path(args.g2), args.threads)
+        load_field_setup(Path(args.g2), args.threads, boundary)
     )
+    guard.check()
     kdoc, k_sha = save_frames(frames, out)
     slots_by_name = {name: (idx, layer, role) for idx, layer, role, name in slots}
-    probe, probe_ident = load_probe(g2_manifest, Path(args.g2) / "probe_cache", range(N_LAYERS))
-    base, base_hash = pf.load_base_state(state_hash)
+    probe, probe_ident = load_probe(
+        g2_manifest, Path(args.g2) / "probe_cache", range(N_LAYERS), boundary
+    )
+    base, base_hash = load_base(boundary, state_hash)
+    guard.check()
     from wsp.zoo.apply import load_entry_delta
 
     setup_seconds = time.time() - t_start
     log(f"setup {setup_seconds:.0f}s; {len(todo)} rows")
     rows_path, detail_path = out / "rows.jsonl", out / "detail.jsonl"
-    done = {}
-    if args.resume and detail_path.exists():
-        for line in detail_path.read_text().splitlines():
-            if line.strip():
-                d = json.loads(line)
-                done[d["id"]] = d
-        recs = [json.loads(x) for x in rows_path.read_text().splitlines() if x.strip()]
-        recs = [r for r in recs if r["id"] in done]
-        log(f"resume: {len(done)} rows on file")
-    else:
-        recs = []
-        rows_path.write_text("")
-        detail_path.write_text("")
+    resume = RESUME_DISABLED
+    done, recs = {}, []
+    rows_path.write_text("")
+    detail_path.write_text("")
     pricing = None
     n_new = 0
     for n, (r, count) in enumerate(zip(todo, counts), 1):
@@ -706,9 +927,10 @@ def run(args):
             continue
         t_row = time.time()
         holder = zoo / r["bytes_holder"]
-        edit = json.loads((zoo / r["id"] / "edit.json").read_text())
+        row_source(boundary, zoo, r, edit_sha)  # stored bytes and edit.json authenticated first
+        edit = read_edit(boundary, zoo, r["id"], edit_sha)
         cfg_path = holder / "lora/adapter_config.json"
-        adapter = json.loads(cfg_path.read_text()) if cfg_path.exists() else None
+        adapter = json.loads(boundary.read_bytes(cfg_path)) if cfg_path.exists() else None
         rank, rank_source = recorded_rank(edit, adapter)
         stored = load_entry_delta(holder, base)
         W, D, raw, edited = pf.edit_increments(base, stored, None)
@@ -753,15 +975,13 @@ def run(args):
             "per_tensor": info,
             "field_per_tensor": fdetail,
         }
-        with rows_path.open("a") as f:
-            f.write(json.dumps(rec, sort_keys=True, allow_nan=False) + "\n")
-        with detail_path.open("a") as f:
-            f.write(json.dumps(detail, sort_keys=True, allow_nan=False) + "\n")
+        append_row(rows_path, detail_path, rec, detail)
         recs.append(rec)
         done[r["id"]] = detail
         n_new += 1
         del D, d_edit, per, toks
         gc.collect()
+        guard.check()
         log(
             f"{n}/{len(todo)} {r['id']} {r['family']} a={rec['a']} q={rec['q']} tokens={rec['n_tokens']} ({seconds:.1f}s)"
         )
@@ -803,11 +1023,14 @@ def run(args):
                     base_hash,
                     layer_types,
                     slots,
+                    boundary=boundary,
+                    guard=guard,
+                    resume=resume,
                 )
                 raise SystemExit(
                     f"price_exceeds_cap: projected {projected / 3600:.2f} h > {args.max_wall_hours} h"
                 )
-    complete = len(done) == len(rows) and args.limit is None
+    complete = is_complete(done, rows, args.limit)
     status = "complete" if complete else f"partial ({len(done)}/{len(rows)})"
     write_manifest(
         args,
@@ -826,6 +1049,9 @@ def run(args):
         base_hash,
         layer_types,
         slots,
+        boundary=boundary,
+        guard=guard,
+        resume=resume,
     )
 
 
@@ -846,9 +1072,14 @@ def write_manifest(
     base_hash,
     layer_types,
     slots,
+    boundary=None,
+    guard=None,
+    resume=None,
 ):
     from safetensors.torch import save_file
 
+    if Path(args.manifest).exists():
+        raise FileExistsError(f"{args.manifest} exists; a governed manifest is never overwritten")
     recs = sorted(recs, key=lambda r: r["id"])
     files = {"kframes.json": k_sha, "kframes.safetensors": kdoc["kframes_safetensors_sha256"]}
     token_record = None
@@ -961,8 +1192,10 @@ def write_manifest(
             },
             "max_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
         },
-        "outcomes_read": "none: stored edit bytes, edit.json, the base model, the G2 WikiText field and probe cache "
-        "only; no evaluation record, TF-v1 score or outcome is opened",
+        "outcomes_read_intent": {"statement": OUTCOMES_STATEMENT, "label": INTENT_LABEL},
+        "read_boundary": boundary.record() if boundary is not None else None,
+        "resources": guard.stop() if guard is not None else None,
+        "resume": resume,
         "code": code_identity(),
     }
     sha = write_json(args.manifest, doc)
@@ -981,6 +1214,10 @@ def main(argv=None):
     p.add_argument("--resume", action="store_true")
     p.add_argument("--threads", type=int, default=int(os.environ.get("OMP_NUM_THREADS", "6")))
     p.add_argument("--max-wall-hours", type=float, default=8.0)
+    p.add_argument("--rss-cap-bytes", type=int, default=fg.DEFAULT_CAP_BYTES)
+    p.add_argument(
+        "--chair-ruling", help="exact heading of the dated chair ruling for a cap above 4 GB"
+    )
     run(p.parse_args(argv))
 
 

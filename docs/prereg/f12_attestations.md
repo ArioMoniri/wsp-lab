@@ -32,12 +32,13 @@ round-6 member reports. They are predictions and simulation outputs, not outcome
 | 8 | Board A methods reviewer, F12b review | `review/board-a-f12b` worktree | that review | none knowingly opened; whether displayed material held numerical summaries: not certain | none | summaries only | the review's "Exposure attestation"; entry 19 | given (its own session only) |
 | 9 | F12c implementer (this file's author) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12c`, worktree `.worktrees/prereg/f12c`, 11 Nov 2026 about 18:10 UTC to the F12c commit | F12c note, code, tests, manifests, synthetic checks | see below | none | see below | below | given (this session only); raw-loader account confirmed in entry 20 |
 | 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11-12 Nov 2026 | through 07:40 UTC 12 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entries 10 and 10a | given through the C1 freeze (entries 10, 10a, 10b) |
-| 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** (entries 12-14, row 15 and entry 23 so far) |
+| 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** (entries 12-14, row 15 and entries 23-24 so far) |
 | 15 | Board A methods reviewer, F12c review | `review/board-a-f12c` worktree | that review | none seen | none deliberately; hook-run access **not certain** | summaries only | the review's attestation; entry 21 | given 12 Nov 2026 (its own session only), qualified |
 | 12 | F12d implementer and v2 restricted-payload extractor (chair-authorised for that step) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12d`, worktree `.worktrees/prereg/f12d`, 11 Nov 2026 about 21:45 UTC to the F12d note commit | F12d note, code, tests, v2 restricted copy and pin, C1 skeleton, resource plan | none seen; handled centred qualification noise (see below) | none | read F12a.1's account and entries 9-10, not the audits | entry 12 below | given (this session only) |
 | 13 | F12e implementer (C1 draft fill, candidate identity freeze, real-token qualification) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12e`, worktree `.worktrees/prereg/f12e`, 11 Nov 2026 about 23:52 UTC to the F12e note commit (12 Nov) | F12e note, `scripts/f12_qualify.py`, the C1 draft fill, token facts, base tensor hashes, candidate identities, qualification report | none seen; read the real F12 token outputs (field forecasts, see below) | none | read F12a.1's account and entries 10 and 12, not the audits | entry 13 below | given (this session only) |
 | 14 | F12f implementer (gauge-token builder and pricing, runner gauge audit, comparator-matrix builder, re-qualification code) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12f`, worktree `.worktrees/prereg/f12f`, 12 Nov 2026 about 00:33 UTC to the F12f note commit | F12f note, `scripts/f12_gauge_tokens.py`, `scripts/f12_matrix.py`, the gauge audit in `scripts/f12_simulation.py`, `scripts/f12_qualify.py` / `f12_c1.py` changes, priced-only gauge records | none seen; read the real F12 token outputs and the edit-derived v4 feature files (see below) | none | read F12a.1's account and entries 9, 10, 12 and 13, not the audits | entry 14 below | given (this session only) |
 | 23 | F12 C1 freeze implementer (streaming F12-I LoRA plan driver and evidence, scoped item 9 builder, governed C1 files, `MANIFEST_C1.sha256`, the re-pin before Board A verification) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12-c1`, worktree `.worktrees/prereg/f12-c1`, 12 Nov 2026 from before 07:14 UTC (start not certain) to the F12-C1 note commit | `scripts/f12_additivity_stream.py`, the additivity plan evidence, the `f12_c1.py` F12g and freeze builders and their tests, the governed C1 files and manifest (`451d45c`, superseded, and the re-freeze), note F12-C1 | seen, summaries (quoted in this register and the PREREG notes) | none | read this register's account of the audits, not the audits | entry 23 below | given (this session only) |
+| 24 | F12-R unexposed-role implementer (remedy of adoption flags A10, A11, A19, A21, A24, A25, A26, A30; plan requalification; token-rerun price) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12-remedy`, worktree `.worktrees/prereg/f12-remedy`, 12 Nov 2026 from the worktree's creation off main `e7283e2` to the F12-R note commit; no prior part in F12 | `scripts/f12_inputs_guard.py`, the F12-R changes to `f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`, `f12_additivity_stream.py` and their tests, the plan requalification and the token-rerun price under `docs/prereg/a5_manifests/f12/f12r/`, note F12-R; after the chair's ruling of 09:19 UTC, the comparison tool, the full token requalification rerun and its comparison, the F12-R addendum; after the independent re-check, the A10 confined base loader and its pin, the A19 resume removal, their requalification and the second addendum | seen, summaries (quoted in reviews, this register and the PREREG); snapshot parsed for metadata | **none** | read the reviews' and PREREG's accounts of the audits, not the audits | entry 24 below | given (this session only) |
 
 PENDING cells are blank on purpose. Nothing is inferred from a session's role, branch or timing.
 
@@ -597,3 +598,92 @@ sealed, F8 or F9 outcome and no Part A score, received no summary of one, read n
 *(iii) Prescore audits.* The session read this register's and the PREREG's accounts of the disclosed pre-score audits (including
 entry 10's quoted κ median and entry 9's mention of F11.4's simulated ordered power). It did not open the Part A prediction or
 calibration files, the prescore inventories, the round-6 member reports or `SYNTHESIS-r6.md`.
+
+## Entry 24: F12-R unexposed-role implementer (given)
+
+*Session.* An implementation sub-agent session (Claude Opus 5.5), fresh, with no prior part in F12, working only in
+`.worktrees/prereg/f12-remedy` on branch `prereg/f12-remedy`, created with `bash scripts/wt.sh new prereg/f12-remedy` from main
+`e7283e2` on 12 Nov 2026, until the commit adding note F12-R. Its role is the unexposed implementer of PREREG F12a.1(c)–(d) for
+the remedy of the eight items flagged in `docs/reviews/council/f12-unexposed-adoption-2026-11-12.md`. It attests to this session
+only and writes no other entry; it does not fill entry 22 or any other session's statement.
+
+*What it read.*
+- Committed documents: the adoption review, Board A's F12-C1 review and the static access audit in full; `docs/PREREG_H1_TF.md`
+  F12a.1 (about lines 4930–4955), the heading list and the chair resource disposition; this register's preamble, table and entry
+  23; the F12 scripts and tests it changed, parts of `f12_c1.py`, `a5_power_fields.py`, `a5_build_manifests.py`,
+  `a5_snapshot.py`, `src/wsp/zoo/apply.py`, `tests/conftest.py`, the hooks and `scripts/precommit.sh`; `code_hashes_c1.json`.
+- Committed manifests: `population.json` (inputs, one row, key names); the token manifest's code, input, file-hash and summary
+  fields (counts, timings, peak RSS) and the capped pricing record; the additivity plan and its run record;
+  `f12e_token_facts.json` (key names); the F8a floor payload README and, from `floor_recompute_2026-11-11.json`, its top-level key
+  names and types (which printed the first fifteen component ids of two dictionaries), `h_star`, schema, status, units and the
+  payload/code hashes, to bind the floor literal; it did not open `nullsize_inputs.json`.
+- `snapshot.json` was parsed (by this session's scripts, by `f12_population.py` and by tests). The session printed only key
+  names, value types and sizes, and `content.zoo_bytes.edit_json_index_sha256`; the TF-v1 primary index, ledger and other
+  contents were held in memory and not displayed.
+- Zoo and G2 metadata, CPU only: it hashed the 1,259 zoo `edit.json` files to check the snapshot's edit index (match); it read
+  the 270 population holders' `edit.json`, `lora/adapter_config.json` and safetensors headers and stat sizes (no tensor data)
+  to price the token rerun; it listed `data/runs/g2/` and the WikiText field directory (names and sizes).
+- The plan requalification run loaded the 16 F12-I LoRA roots' adapters and the pinned base model (state hash verified) and
+  printed per-root bitwise/no-op flags, peak RSS and hashes only.
+- Directory listings, names only: `docs/prereg/a5_manifests/`, its `part_a/` directory (file names only; no file opened),
+  `docs/prereg/f12_manifests/`, and `/home/ubuntu/wsp-data/` (whose listing shows an `evals` entry name; nothing under it was
+  listed or opened). `agent-tmux -l` printed other jobs' names; none was opened.
+- Test runs: targeted F12 tests (OMP 2, serial) and the full suite twice (once directly, once as the refusing pre-commit hook).
+  Per Board A's F12-C1 review, `f12_c1.build_c1` and `prerequisite_binding`, which `tests/test_f12g_c1_freeze.py` calls on the
+  repository, decode the whole committed F12f pilot report including its per-replicate records; those decodes happened in the
+  test processes and nothing from them was displayed (the output was pass/fail and two unrelated pin-drift failures). The
+  suite's file access was not otherwise audited.
+
+*(i) Old development outcomes.* Seen as summaries only, as quoted in the reviews, this register and the PREREG (for example
+Board A's real-input qualification and noise-check summaries, the pilot's aggregate validity and timing, and the earlier
+predictor and exposure accounts). No TF-v1 root record, G0/G1/G6 ledger outcome or D3 outcome was opened or displayed; the
+snapshot was parsed for metadata as stated above. This disclosure does not disqualify.
+
+*(ii) New outcomes.* **None.** The session did not open, compute, score or receive any Part A (G3, rotation, ladder,
+missing-reference, sealed), F8-E, F8-F or F9 outcome, or a summary of one. It opened and listed nothing under `data/evals`. It
+opened no Part A staging, prediction or calibration file and no real token array, and it read no F12f pilot per-replicate record
+or decision code (the test-process decodes disclosed above displayed none). It used no GPU and launched no token rebuild. This
+statement is for this session alone.
+
+*(iii) Prescore audits.* The session read the reviews', PREREG's and this register's accounts of the disclosed pre-score audits
+(including F12a.1's mention of F11.4's simulated ordered power). It did not open the Part A prediction or calibration files, the
+prescore inventories, the round-6 member reports or the synthesis.
+
+*Update (Thu Nov 12 13:45:13 UTC 2026): token requalification rerun, same session.* After the chair's ruling on the F12 token requalification
+rerun (PREREG, 12 Nov 2026, 09:19 UTC), the session merged main, wrote `scripts/f12_tokens_compare.py` (tests first),
+launched the hardened `scripts/f12_tokens.py` for all 270 rows into the new directory
+`/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/` (6 threads, no resume, cap 19 GB under the ruling) and compared it
+with the frozen run. It started no other job of its own while the build ran.
+- **Real token arrays, read only for the comparison, as the chair authorised.** The comparison tool read the frozen run's
+  and the rerun's `tokens.safetensors`, `rows.jsonl`, `detail.jsonl`, `aq.json`, `kframes.json`, `kframes.safetensors` and
+  `pricing.json` and both manifests twice: once as a self-check of the tool on the frozen run against itself before launch,
+  and once for the comparison. Both runs printed only equality results, counts, ids, tensor names and hashes; the session
+  also printed the two `tokens.safetensors` headers' metadata key names and lengths. No token, a/q or K-frame value was
+  printed or displayed.
+- **Rerun log.** The builder's log prints each row's a and q (field forecasts). The session read that log only through a
+  filter that removed them, and saw only row counters, ids, token counts, seconds, setup and pricing timings.
+- **Frozen run scripts.** The session read the shell scripts `run_tokens.sh` and `run_tokens_resume.sh` (not the frozen run's
+  log) to learn that the frozen run resumed with row 1 from the capped run 2; that fixed the `pricing.json` first-row
+  exclusion before the rerun.
+- Statements (i), (ii) and (iii) are unchanged. **(ii) remains none**: no Part A, F8-E, F8-F or F9 outcome or summary, nothing
+  under `data/evals`, no Part A staging/prediction/calibration file, no F12f pilot per-replicate record or decision code. The
+  full suite ran once more as the refusing pre-commit hook of the comparison-tool commit, with the same in-process decode of
+  the committed pilot report disclosed above, nothing displayed.
+
+*Update (Thu Nov 12 14:07:05 UTC 2026): second remedy after the independent re-check, same session.* The session read the re-check record
+(`docs/reviews/council/f12-remedy-recheck-2026-11-12.md`) in full and merged main. It then wrote the confined base loader
+(`scripts/f12_base_loader.py`) and removed governed resume (tests first).
+- **HF cache.** It listed the hub cache's top level (directory names, including dataset cache names; no dataset file was
+  opened), this model's snapshot and the symlink targets of its pinned leaves. It hashed the three pinned leaves (config,
+  weight index, weight shard) to write the pin file. It loaded the base model twice through the confined loader, CPU only,
+  printing only hashes, tensor counts and peaks: once in the streaming plan requalification (16 LoRA roots' adapters, as
+  before) and once in the load-only check.
+- **An accidental directory, removed.** During the red step of the A19 test, before the refusal existed, the old code path
+  created an empty directory, `/home/ubuntu/wsp-data/runs/a5/f12_inputs/f12r_resume_counterexample_never_created`
+  (13:55:06 UTC). The session confirmed it was empty, removed it, and hardened the test so that a regression fails before
+  any directory is made. Nothing else was written under the data root by tests.
+- The full suite ran once more, as the refusing pre-commit hook of the second-remedy code commit, with the same in-process
+  pilot-report decode disclosed above, nothing displayed. No real token array was read in this round.
+- Statements (i) and (iii) are unchanged. **(ii) remains none**: no Part A, F8-E, F8-F or F9 outcome or summary, nothing
+  under `data/evals`, no Part A staging/prediction/calibration file, no F12f pilot per-replicate record or decision code.
+

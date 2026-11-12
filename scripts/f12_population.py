@@ -29,6 +29,14 @@ Every count and hash the amendment and the Board A review state is recomputed an
 in ``reproduction.discrepancies`` (never repaired) and makes the script exit non-zero unless ``--allow-discrepancy``.
 
     python scripts/f12_population.py [--out docs/prereg/a5_manifests/f12/population.json]
+
+F12-R (PREREG_H1_TF A5 note F12-R; unexposed adoption A10, A11), no change to any selection: the four manifests are
+read through ``f12_inputs_guard.ReadBoundary`` (resolved to the leaf, only the committed manifest directory, data/evals
+and the other prohibited paths refused before opening) and authenticated against ``INPUT_SHA256`` (the inputs of the
+committed population.json); the snapshot reaches the selector only as its minimal projection (primary-record ids,
+entry delta hashes, ledger gate/id/aliases); ``outcomes_read`` becomes ``outcomes_read_intent`` (algorithmic intent,
+not access telemetry); the job is held to the 4 GB cap of the resource authority and records its peak; an existing
+output is never overwritten.
 """
 
 from __future__ import annotations
@@ -36,11 +44,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from scripts import f12_inputs_guard as fg  # standard library only
+
 MANIFESTS = ROOT / "docs/prereg/a5_manifests"
 DEFAULT_OUT = MANIFESTS / "f12/population.json"
 SCHEMA = "f12-population-v1"
@@ -52,6 +65,18 @@ K_GRID = (0, 29, 58, 87, 116, 145)
 SOURCE_EXISTING = "existing-TF-v1"
 SOURCE_PURCHASABLE = "purchasable"
 EXPOSURE_GATES = ("G0", "G1", "G6")
+SCRIPT = "scripts/f12_population.py"
+# A10: the four committed inputs of the governed population.json (its ``inputs`` record).
+INPUT_SHA256 = {
+    "components.jsonl": "6b4eff8d61a4b1c4d83f0c058cb4df5c6c5398e2c6656a8b58b38f8b46251dec",
+    "snapshot.json": "1b2af25cde1bd7ad0427fec2d0ee22d34f75651ba3fb979176464f8fad701da3",
+    "selection.json": "393530365f87f981d5da3ecb2779c89b8e7bf98105b6c45d1824bf290e908c63",
+    "selection_f11.json": "ce746e7135dd94b087da86953beb02382e5706f8ff2dd17bd57c053aaf54793c",
+}
+INTENT_LABEL = (
+    "algorithmic intent of this code path on authentic inputs; not access telemetry and not a session attestation "
+    "(PREREG_H1_TF F12a.1(c); unexposed adoption A11). Actual reads: read_boundary, when written by main"
+)
 
 # F12.2 / Board A table (11 Nov 2026): the registered counts and sorted-id hashes this selector must reproduce.
 EXPECTED = {
@@ -458,8 +483,11 @@ def build(components, snapshot, selection, selection_f11, inputs=None):
             "delta_hash": "content.zoo_bytes.entry_delta_hash of the row, else of its bytes_via_alias holder",
         },
         "inputs": inputs or {},
-        "outcomes_read": "none: snapshot.json is read for TF-v1 primary-record membership, entry delta hashes and "
-        "exposure-ledger membership only; no record payload, score or eval file is opened",
+        "outcomes_read_intent": {
+            "statement": "none: snapshot.json is read for TF-v1 primary-record membership, entry delta hashes and "
+            "exposure-ledger membership only; no record payload, score or eval file is opened",
+            "label": INTENT_LABEL,
+        },
         "counts": got
         | {
             "part_a_components": len(pa),
@@ -534,14 +562,45 @@ def build(components, snapshot, selection, selection_f11, inputs=None):
     return doc
 
 
-def load_inputs(manifests: Path):
+def minimal_snapshot(snapshot) -> dict:
+    """A10: the only snapshot fields the selector uses (primary-record ids without their values, entry delta hashes,
+    G0/G1/G6 ledger gate/id/aliases); everything else is dropped before ``build``."""
+    return {
+        "content": {
+            "tf_v1_records": {"primary": sorted(snapshot["content"]["tf_v1_records"]["primary"])},
+            "zoo_bytes": {
+                "entry_delta_hash": dict(snapshot["content"]["zoo_bytes"]["entry_delta_hash"])
+            },
+        },
+        "exposure_ledger": {
+            "rows": [
+                {k: row[k] for k in ("gate", "id", "aliases") if k in row}
+                for row in snapshot["exposure_ledger"]["rows"]
+            ]
+        },
+    }
+
+
+def read_boundary() -> fg.ReadBoundary:
+    """A10: only the committed A5 manifest directory (its part_a/ tree and data/evals are prohibited)."""
+    return fg.ReadBoundary(allowed=[MANIFESTS])
+
+
+def resource_guard(build, threads, cap_bytes, ruling) -> fg.ResourceGuard:
+    return fg.ResourceGuard(build=build, threads=threads, cap_bytes=cap_bytes, ruling=ruling)
+
+
+def load_inputs(manifests: Path, boundary=None, pins=None):
+    """The four manifests, authenticated (``pins``, default ``INPUT_SHA256``) and read through ``boundary``."""
+    boundary = boundary if boundary is not None else read_boundary()
+    pins = INPUT_SHA256 if pins is None else pins
     paths = {
         "components.jsonl": manifests / "components.jsonl",
         "snapshot.json": manifests / "snapshot.json",
         "selection.json": manifests / "selection.json",
         "selection_f11.json": manifests / "selection_f11.json",
     }
-    raw = {k: p.read_bytes() for k, p in paths.items()}
+    raw = {k: boundary.read_bytes(p, sha256=pins[k]) for k, p in paths.items()}
     components = [json.loads(x) for x in raw["components.jsonl"].decode().splitlines() if x.strip()]
     selection = json.loads(raw["selection.json"])
     if selection.get("components_jsonl_sha256") not in (
@@ -556,9 +615,10 @@ def load_inputs(manifests: Path):
         }
         for k, p in paths.items()
     }
+    snapshot = minimal_snapshot(json.loads(raw.pop("snapshot.json")))
     return (
         components,
-        json.loads(raw["snapshot.json"]),
+        snapshot,
         selection,
         json.loads(raw["selection_f11.json"]),
         inputs,
@@ -577,9 +637,23 @@ def main(argv=None):
     p.add_argument("--manifests", type=Path, default=MANIFESTS)
     p.add_argument("--out", type=Path, default=DEFAULT_OUT)
     p.add_argument("--allow-discrepancy", action="store_true")
+    p.add_argument("--rss-cap-bytes", type=int, default=fg.DEFAULT_CAP_BYTES)
+    p.add_argument("--chair-ruling")
     args = p.parse_args(argv)
-    components, snapshot, selection, selection_f11, inputs = load_inputs(args.manifests)
+    if Path(args.out).exists():
+        raise FileExistsError(f"{args.out} exists; a governed output is never overwritten")
+    threads = int(os.environ.get("OMP_NUM_THREADS", "1"))
+    guard = resource_guard(SCRIPT, threads, args.rss_cap_bytes, args.chair_ruling)
+    boundary = read_boundary()
+    # launch projection: the decoded manifests, generously 20 bytes of Python objects per input byte
+    guard.launch(
+        20 * sum(boundary.resolve(Path(args.manifests, n)).stat().st_size for n in INPUT_SHA256)
+    )
+    components, snapshot, selection, selection_f11, inputs = load_inputs(args.manifests, boundary)
     doc = build(components, snapshot, selection, selection_f11, inputs)
+    guard.check()
+    doc["read_boundary"] = boundary.record()
+    doc["resources"] = guard.stop()
     sha = write_json(args.out, doc)
     c = doc["counts"]
     print(

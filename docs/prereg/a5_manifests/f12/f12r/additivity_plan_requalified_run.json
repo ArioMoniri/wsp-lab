@@ -1,0 +1,709 @@
+{
+ "driver": {
+  "path": "scripts/f12_additivity_stream.py",
+  "sha256": "1c23b01cafe273099785f712a6ccb1dcd78fd926c8e91df565f478087baba228"
+ },
+ "floor_binding": {
+  "h_star": 0.00493967211805284,
+  "payload_sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
+  "rule": "the code literal equals h_star of the committed recompute (value and repr), read by sha256",
+  "sha256": "6369413491cb090820b4b257f007711887dc4dd534a43972a6590919122c1a57",
+  "source": "docs/prereg/f8_manifests/floor_payload/floor_recompute_2026-11-11.json",
+  "units": "nats per valid next token (WikiText extra.mean_nll; 1,023 tokens per window)"
+ },
+ "git_head": "8c1e0f09f714f618b5f98de12c0b29e104ad4793",
+ "noop_parts": 0,
+ "outcomes_read_intent": {
+  "label": "algorithmic intent of this code path on authentic inputs; not access telemetry and not a session attestation (PREREG_H1_TF F12a.1(c); unexposed adoption A11). Actual reads: the run record's read_boundary",
+  "statement": "none"
+ },
+ "peak_rss_bytes": 2635849728,
+ "plan": "docs/prereg/a5_manifests/f12/f12r/additivity_plan_requalified.json",
+ "plan_sha256": "bedd44c1c230f75cb3e89891301329d3a9d9bf24f3e684150ef16e9cbebae875",
+ "population": {
+  "path": "docs/prereg/a5_manifests/f12/population.json",
+  "sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+ },
+ "read_boundary": {
+  "allowed": [
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12",
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/f12_manifests/f12i",
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/f8_manifests/floor_payload",
+   "/home/ubuntu/wsp-data/hf/hub",
+   "/home/ubuntu/wsp-data/runs/g2",
+   "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b"
+  ],
+  "prohibited": [
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/data/evals",
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/part_a",
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/f12_manifests/f12f_pilot_report.json",
+   "/home/ubuntu/projects/wsp-lab/data/evals",
+   "/home/ubuntu/projects/wsp-lab/docs/prereg/a5_manifests/part_a",
+   "/home/ubuntu/projects/wsp-lab/docs/prereg/f12_manifests/f12f_pilot_report.json",
+   "/home/ubuntu/wsp-data/evals",
+   "/home/ubuntu/wsp-data/runs/a5/part_a_predictions"
+  ],
+  "prohibited_data_prefixes": [
+   "part_a",
+   "sealed"
+  ],
+  "reads": [
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/f8_manifests/floor_payload/floor_recompute_2026-11-11.json",
+    "resolved": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/f8_manifests/floor_payload/floor_recompute_2026-11-11.json",
+    "sha256": "6369413491cb090820b4b257f007711887dc4dd534a43972a6590919122c1a57"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12/population.json",
+    "resolved": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12/population.json",
+    "sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/adapter_config.json",
+    "sha256": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/adapter_model.safetensors",
+    "sha256": "dd91c0106e4e33e79937f34aa4e08e72499867c3736be00d3d6274775ec68c87"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/adapter_config.json",
+    "sha256": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/adapter_model.safetensors",
+    "sha256": "dd8b5d75c6a4139b7b7314024a8580c07c39682e3b2e02cf135a4eb3a5cc5577"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/adapter_model.safetensors",
+    "sha256": "913c3ccb5a41eba4ffc90e608a82049a9b5c0b9d2a583d1e378b19e2d9f4fa7b"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/adapter_model.safetensors",
+    "sha256": "348076cb30dc47d8cb5448d8ed2261baa052c1886fd1ee420fc463dc14144068"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/adapter_model.safetensors",
+    "sha256": "ec4a26e1a4b406f31306666f3e6ee7ae7b8c4a8715df55320c977afafaacf345"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/adapter_model.safetensors",
+    "sha256": "254c8052a5cfa8578281ed9b2955fda6b295df3a45be9a8341c0adefa4f8eb0e"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/adapter_config.json",
+    "sha256": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/adapter_model.safetensors",
+    "sha256": "24700f7e18c11bb083e3b541e29cc1efa97dd0c3f0ee10612ddd818887b38efa"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/adapter_model.safetensors",
+    "sha256": "33bc5e4efa1dc0ed496fb0fa6447a94e7b6a10ca435b07e2362aef76ffd8ef12"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/adapter_config.json",
+    "sha256": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/adapter_model.safetensors",
+    "sha256": "5b677c28c68ee94ccfa8451678fb5e463097d209eb001429fd918f720ecd9e11"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/adapter_config.json",
+    "sha256": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/adapter_model.safetensors",
+    "sha256": "1185121a903c722aac49882390e2a76ed3a190b7dcedcbd58fda41bcb2e6dbf2"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/adapter_model.safetensors",
+    "sha256": "a010d4c1b7d805e552ae6f404e70643a7fec5e35a819ecbe3b57cb4899464d88"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/adapter_model.safetensors",
+    "sha256": "15d1dd00fb5c8e16562b987349e77e44f5bac0ea3b8d21bf49d42dcf39e12f66"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/adapter_model.safetensors",
+    "sha256": "68ec3773b513896de3596a29e0c314a6229cc15b608b2f6dde5348dee4b845e6"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/adapter_model.safetensors",
+    "sha256": "8815a708f52c7c1f05e57bdd1d3e040369c1a0e44a573645f07b07fa2aeec254"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/adapter_model.safetensors",
+    "sha256": "3e60c63b88a1ad272488bff85995c812d85eb0b2d4b0d9d69855c8c7516db435"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/README.md",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/README.md",
+    "sha256": "2487e1f7e8b9192cc75308304fc92606b99fe119aab79f34ee1a11bdabe23720"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/adapter_model.safetensors",
+    "sha256": "061a9a95caa769112302b7b705312304cf6c3996b6518f15e03cbd3602d096c0"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/data/runs/g2/g2_manifest.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/g2/g2_manifest.json",
+    "sha256": "c4ec7390aaf118ed785c390ce337a4077936a31204f97da54341bcfa54fd09ff"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/data/runs/g2/fields/wikitext_nll/manifest.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/g2/fields/wikitext_nll/manifest.json",
+    "sha256": "38e26b16b08ba542b1d1a58f4bb1b93d79c87e657d346c58cb712c64e15e5eee"
+   },
+   {
+    "authenticated": false,
+    "note": "base model cache, read by transformers; authenticated by the state hash",
+    "path": "/home/ubuntu/projects/wsp-lab/data/hf/hub",
+    "resolved": null,
+    "sha256": null
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/adapter_model.safetensors",
+    "sha256": "dd91c0106e4e33e79937f34aa4e08e72499867c3736be00d3d6274775ec68c87"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/lora/adapter_config.json",
+    "sha256": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/64b10bbaef2b726d/edit.json",
+    "sha256": "f783a7e08f1cef448caf25da02bcd6636bad8c29ef1766d9a3a7ade4270a37c1"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/adapter_model.safetensors",
+    "sha256": "dd8b5d75c6a4139b7b7314024a8580c07c39682e3b2e02cf135a4eb3a5cc5577"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/6cf90a51c4244720/lora/adapter_config.json",
+    "sha256": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/6cf90a51c4244720/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/6cf90a51c4244720/edit.json",
+    "sha256": "728e1e1ffd5bd87c47fb24160f00bacb53d50d0f8c66adee63d5f3a62109684c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/adapter_model.safetensors",
+    "sha256": "913c3ccb5a41eba4ffc90e608a82049a9b5c0b9d2a583d1e378b19e2d9f4fa7b"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/81ffbb2850280a20/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/81ffbb2850280a20/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/81ffbb2850280a20/edit.json",
+    "sha256": "a834156185ea18a2b56652051530dc9f67592063c330c26db4cd3305c6195802"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/adapter_model.safetensors",
+    "sha256": "348076cb30dc47d8cb5448d8ed2261baa052c1886fd1ee420fc463dc14144068"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/823f35704d34f1d8/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/823f35704d34f1d8/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/823f35704d34f1d8/edit.json",
+    "sha256": "435f4e2be85a25576c5b4d080103ebcba6cc87966cb715636a1cbff38ad27b71"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/adapter_model.safetensors",
+    "sha256": "ec4a26e1a4b406f31306666f3e6ee7ae7b8c4a8715df55320c977afafaacf345"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/8289fa52f33a8d0d/edit.json",
+    "sha256": "927928b36bed6067bb4ba341a5359253bd2c0e112e2f1b30548e2bda90c5a7f7"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/adapter_model.safetensors",
+    "sha256": "254c8052a5cfa8578281ed9b2955fda6b295df3a45be9a8341c0adefa4f8eb0e"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/89a781074d330a7e/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/89a781074d330a7e/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/89a781074d330a7e/edit.json",
+    "sha256": "e405a43ed98f9880af8b0e17e53b044648ca4141d335df8039e465bcfa22208b"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/adapter_model.safetensors",
+    "sha256": "24700f7e18c11bb083e3b541e29cc1efa97dd0c3f0ee10612ddd818887b38efa"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/94804c08e9e63a25/lora/adapter_config.json",
+    "sha256": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/94804c08e9e63a25/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/94804c08e9e63a25/edit.json",
+    "sha256": "3fcec68bc8a4966955dc328663d3fefeff26e2e20203e947505185931dac6637"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/adapter_model.safetensors",
+    "sha256": "33bc5e4efa1dc0ed496fb0fa6447a94e7b6a10ca435b07e2362aef76ffd8ef12"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/a202c469c4f60027/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/a202c469c4f60027/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/a202c469c4f60027/edit.json",
+    "sha256": "062ab165ca211c4e160a2e4b5c4ac7765c268683266b1145a8b595e5b3842061"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/adapter_model.safetensors",
+    "sha256": "5b677c28c68ee94ccfa8451678fb5e463097d209eb001429fd918f720ecd9e11"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/af6664b98264308c/lora/adapter_config.json",
+    "sha256": "23bebc665ba694f256044672cdc9daac196b857a8e244e5716559006f11b23e9"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/af6664b98264308c/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/af6664b98264308c/edit.json",
+    "sha256": "9f07faee2ab8b1b38197042aa585f4dfef6e7baf3af7b31c5ee9fe53e63a7736"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/adapter_model.safetensors",
+    "sha256": "1185121a903c722aac49882390e2a76ed3a190b7dcedcbd58fda41bcb2e6dbf2"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/lora/adapter_config.json",
+    "sha256": "4992c996931afae458a8437026f7bfe668352e3ddcbc8807a384c603423615a1"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/d904e32c5c8bc52e/edit.json",
+    "sha256": "017a0d6b4f060322e258617514e90d6057f03a888ad43274eb8d3cf240ca747c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/adapter_model.safetensors",
+    "sha256": "a010d4c1b7d805e552ae6f404e70643a7fec5e35a819ecbe3b57cb4899464d88"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/e0235707664804ef/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/e0235707664804ef/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/e0235707664804ef/edit.json",
+    "sha256": "43b1842c52749a640ec7ce5d0bc7f350442df8feddbc3c5ea7443518db38cf07"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/adapter_model.safetensors",
+    "sha256": "15d1dd00fb5c8e16562b987349e77e44f5bac0ea3b8d21bf49d42dcf39e12f66"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f3e1be8e4fe2c66b/edit.json",
+    "sha256": "807a6c61440197611354b2bea1a698a5facfcf78ecb6c44877fd8869837073fb"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/adapter_model.safetensors",
+    "sha256": "68ec3773b513896de3596a29e0c314a6229cc15b608b2f6dde5348dee4b845e6"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f4b10903b8e09e24/edit.json",
+    "sha256": "f4a8bb9ed58a5a3d38902c6de370a706cf96e748b7628a10366413609aab7e43"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/adapter_model.safetensors",
+    "sha256": "8815a708f52c7c1f05e57bdd1d3e040369c1a0e44a573645f07b07fa2aeec254"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/lora/adapter_config.json",
+    "sha256": "0d84e7b0ef002cbd985d73b791222b6abdc000e9dee9170f3b437f930082417c"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f66b8fbbfa3e43d0/edit.json",
+    "sha256": "25be5a6cabb91d2fca3fc0a1f53ba7a18632d8c0c4eec80c82ac631eb9e3ba06"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/adapter_model.safetensors",
+    "sha256": "3e60c63b88a1ad272488bff85995c812d85eb0b2d4b0d9d69855c8c7516db435"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/f8c2cf0c6b9ffa8c/edit.json",
+    "sha256": "14ee3a6475114fbe2ca08f75b0dc16af707cd4bc56b04097e682429b80a827b2"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/adapter_model.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/adapter_model.safetensors",
+    "sha256": "061a9a95caa769112302b7b705312304cf6c3996b6518f15e03cbd3602d096c0"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/adapter_config.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/fc796b847b42a34b/lora/adapter_config.json",
+    "sha256": "b5e3fa8518910827dd6d85e980d0e7f6c9c3197fc9871bdfb0dc80ca2d3c33a4"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/data/zoo/qwen3.5-0.8b/fc796b847b42a34b/edit.json",
+    "resolved": "/home/ubuntu/wsp-data/zoo/qwen3.5-0.8b/fc796b847b42a34b/edit.json",
+    "sha256": "3ce5afd4abc7439b1fa53ae5913ceca8c26377a15397f53c1a18bcd331eda9d4"
+   }
+  ],
+  "rule": "every read resolved to its leaf (symlinks, ..) and refused before opening if prohibited or outside the allowed roots; O_NOFOLLOW on the resolved leaf; pins checked after reading"
+ },
+ "resources": {
+  "authority": "PREREG_H1_TF A5 chair resource disposition on F12 input builds (12 Nov 2026, 08:32 UTC), (d): 4 GB peak RSS per F12/F12-I job unless a dated chair ruling, committed before launch, names the build, a cap and the threads",
+  "build": "scripts/f12_additivity_stream.py",
+  "cap_bytes": 4000000000,
+  "enforcement": "launch refusal (projection, free memory, ruling); process-tree RSS sampling with stop at the threshold; peak check between units; not an OS sandbox",
+  "estimate_bytes": 3114868736,
+  "launched_at": "2026-11-12T09:13:00Z",
+  "max_sampled_tree_rss_bytes": 2636382208,
+  "mem_available_at_launch_bytes": 25841549312,
+  "monitor_interval_seconds": 0.2,
+  "omp_num_threads_env": "2",
+  "peak_rss_bytes": 2635849728,
+  "required_available_bytes": 4000000000,
+  "ruling": null,
+  "stop_threshold_bytes": 3800000000,
+  "threads": 2,
+  "within_cap": true
+ },
+ "reused_code": {
+  "scripts/a5_power_fields.py": "bcf7d15d679e819d17f7784262bb22fbe10fece33bbb6757e8e08b44d3e592a8",
+  "scripts/f12_additivity_prepare.py": "e0523dc345ea3d3eebdd02334c42ea55f834fc0ff6d65f9b2a4dbc1834072e70",
+  "scripts/part_a_predictions.py": "d312967e317e330a3a7beff73a74f47c8da4ebbaaf110f763f2d7f36a8233847",
+  "src/wsp/features/response_field.py": "98d81bbc300e715fe27a02e04711c0d036ae7ef9342d6bddbcaa227d91f725bc",
+  "src/wsp/features/rotation.py": "8ac459934b0b145f62a3f0c81f68980c1f57d0ef7663d16e9ce1f693be376dba",
+  "src/wsp/zoo/apply.py": "4dbeb10e9d7024508baa376b915a90072170428f87663b32865ff4543cd72005"
+ },
+ "roots": [
+  "64b10bbaef2b726d",
+  "6cf90a51c4244720",
+  "81ffbb2850280a20",
+  "823f35704d34f1d8",
+  "8289fa52f33a8d0d",
+  "89a781074d330a7e",
+  "94804c08e9e63a25",
+  "a202c469c4f60027",
+  "af6664b98264308c",
+  "d904e32c5c8bc52e",
+  "e0235707664804ef",
+  "f3e1be8e4fe2c66b",
+  "f4b10903b8e09e24",
+  "f66b8fbbfa3e43d0",
+  "f8c2cf0c6b9ffa8c",
+  "fc796b847b42a34b"
+ ],
+ "roots_failed": [],
+ "rss_limit_gb": 4.0,
+ "schema": "f12-additivity-stream-run-v1",
+ "threads": 2
+}
