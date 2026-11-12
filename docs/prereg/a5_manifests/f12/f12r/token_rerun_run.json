@@ -1,0 +1,54 @@
+{
+ "authority": "#### A5 chair ruling on the F12 token requalification rerun (12 Nov 2026, 09:19 UTC, before any G3 outcome): full rerun authorised under a pre-launch resource cap",
+ "cap_bytes": 19000000000,
+ "code_files_dirty": false,
+ "cpu_hours": 20.653,
+ "cpu_seconds": {
+  "system": 1344.96,
+  "total": 74350.28000000001,
+  "user": 73005.32
+ },
+ "exit_status": 0,
+ "frozen_run_for_reference": {
+  "max_rss_bytes": 17180188672,
+  "setup_seconds": 3452.9609384536743,
+  "wall_seconds": 25091.261086940765
+ },
+ "git_head_at_launch": "fdb179c2f22385f16d53f6f1ed08934326baa117",
+ "launcher": {
+  "agent_tmux_session": "f12r-token-rerun",
+  "command": "OMP/MKL/OPENBLAS=6 HF_HUB_OFFLINE=1 python scripts/f12_tokens.py --out-dir /home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal --manifest docs/prereg/a5_manifests/f12/f12r/tokens_manifest_requal.json --threads 6 --max-wall-hours 24 --rss-cap-bytes 19000000000 --chair-ruling <heading>; no --resume",
+  "script_sha256": "00f828db60c37b6b8568660212667a6184641dc2a7e57bbe4ab29959b955ff41",
+  "wrapper_log": [
+   "[2026-11-12T09:28:27Z] MemAvailable 25932521472 (need 23000000000)",
+   "[2026-11-12T13:43:49Z] exit 0",
+   "final exit 0"
+  ]
+ },
+ "manifest": "docs/prereg/a5_manifests/f12/f12r/tokens_manifest_requal.json",
+ "manifest_sha256": "d9d84ce45b5861f3f77607cd42e0cc124e16707b600f4fc2e06fe7f8ca071249",
+ "mem_available_at_launch_bytes": 25640480768,
+ "out_dir": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal",
+ "peak_rss_bytes": {
+  "max_sampled_tree": 17124769792,
+  "process_ru_maxrss": 17124909056,
+  "time_max_rss": 17124909056
+ },
+ "percent_cpu": 485,
+ "schema": "f12r-token-rerun-run-v1",
+ "sole_heavy_job": "no other job was started by this session while the build ran (the waits were idle until-loops); other programmes on the machine are not controlled by this session",
+ "status": "complete",
+ "stop_threshold_bytes": 18050000000,
+ "timing": {
+  "field_load_seconds": 182.50555539131165,
+  "k_frame_seconds": 1003.3034193515778,
+  "row_seconds_total": 13083.509328365326,
+  "setup_seconds": 2161.094978094101,
+  "spectral_seconds": 963.439439535141,
+  "threads": 6,
+  "wall_seconds": 15316.066686153412
+ },
+ "wall_seconds_manifest": 15316.066686153412,
+ "wall_seconds_time": 15322.0,
+ "within_cap": true
+}

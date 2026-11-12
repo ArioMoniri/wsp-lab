@@ -1,0 +1,342 @@
+{
+ "authenticated": "every compared file of both runs equals its own manifest's sha256 (checked before comparing)",
+ "basis": "PREREG_H1_TF A5 chair ruling on the F12 token requalification rerun (12 Nov 2026, 09:19 UTC), (c)",
+ "excluded": [
+  "tokens.safetensors whole-file sha256 (and manifest files.tokens.safetensors, tokens.sha256): safetensors writes __metadata__ keys in a nondeterministic order; the metadata mapping, tensor headers and data section are compared",
+  "rows.jsonl: seconds",
+  "pricing.json: first_row_id (the frozen run (relaunch 3, run_tokens_resume.sh) resumed with row 1 from the capped run 2, so its pricing records its first new row; a fresh rerun's first row differs by construction)",
+  "pricing.json: first_row_stored_tensors (the frozen run (relaunch 3, run_tokens_resume.sh) resumed with row 1 from the capped run 2, so its pricing records its first new row; a fresh rerun's first row differs by construction)",
+  "pricing.json: setup_seconds",
+  "pricing.json: first_row_seconds",
+  "pricing.json: projected_wall_seconds_naive",
+  "pricing.json: projected_wall_seconds_tensor_weighted",
+  "pricing.json: projected_wall_seconds",
+  "pricing.json: projected_wall_hours",
+  "pricing.json: within_cap",
+  "pricing.json: cap_wall_hours",
+  "checkpoint.json (new in the hardened builder; no frozen counterpart)",
+  "manifest: ordering_note",
+  "manifest: out_dir",
+  "manifest: rows_sha256",
+  "manifest: code",
+  "manifest: outcomes_read",
+  "manifest: outcomes_read_intent",
+  "manifest: read_boundary",
+  "manifest: resources",
+  "manifest: resume",
+  "manifest: population_frozen.verified_at",
+  "manifest: inputs.timing",
+  "manifest: inputs.zoo",
+  "manifest: inputs.*.path",
+  "manifest: inputs.*.dir",
+  "manifest: tokens.path",
+  "manifest: kframes.path",
+  "manifest: files.rows.jsonl",
+  "manifest: files.tokens.safetensors",
+  "manifest: tokens.sha256",
+  "manifest: files.pricing.json",
+  "manifest: files.checkpoint.json",
+  "manifest: summary.timing",
+  "manifest: summary.pricing",
+  "manifest: summary.max_rss_bytes"
+ ],
+ "files": {
+  "aq.json": {
+   "frozen_sha256": "90ab8466ee08b08e2fc003d419cbeb4d87494dc007413fe4f542a961f79d4e67",
+   "identical": true,
+   "new_sha256": "90ab8466ee08b08e2fc003d419cbeb4d87494dc007413fe4f542a961f79d4e67"
+  },
+  "detail.jsonl": {
+   "frozen_sha256": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a",
+   "identical": true,
+   "n_rows": 270,
+   "new_sha256": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a",
+   "rows_differing": []
+  },
+  "kframes.json": {
+   "frozen_sha256": "b80b9b3aef8b29c242e13c5a99d9e6096c28aa444fbac7b66454f40f0d256e48",
+   "identical": true,
+   "new_sha256": "b80b9b3aef8b29c242e13c5a99d9e6096c28aa444fbac7b66454f40f0d256e48"
+  },
+  "kframes.safetensors": {
+   "frozen_sha256": "100a4024bf09f33820540c21b53bd0512c14bd1d1dfb7c299f647f5aedd0b519",
+   "identical": true,
+   "n_tensors": 744,
+   "new_sha256": "100a4024bf09f33820540c21b53bd0512c14bd1d1dfb7c299f647f5aedd0b519",
+   "tensors_differing": []
+  },
+  "manifest": {
+   "fields_differing": [],
+   "frozen_sha256": "424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f",
+   "identical": true,
+   "new_sha256": "d9d84ce45b5861f3f77607cd42e0cc124e16707b600f4fc2e06fe7f8ca071249"
+  },
+  "pricing.json": {
+   "identical": true,
+   "keys_compared": [
+    "n_rows",
+    "stored_tensors_total",
+    "threads"
+   ],
+   "keys_differing": []
+  },
+  "rows.jsonl": {
+   "deterministic_sha256": "8c049400a11dc5eed4ce5ec286e6517bb96c28df0bea0aaf9fef9f0ae57e2a7d",
+   "deterministic_sha256_new": "8c049400a11dc5eed4ce5ec286e6517bb96c28df0bea0aaf9fef9f0ae57e2a7d",
+   "identical": true,
+   "ids_identical_in_order": true,
+   "keys_compared": [
+    "a",
+    "a_fp64",
+    "bytes_holder",
+    "eligibility",
+    "family",
+    "field_status",
+    "id",
+    "increment_sha256",
+    "n_edited_tensors",
+    "n_probe_tokens",
+    "n_tokens",
+    "numerical_rank_max",
+    "omitted_energy_max",
+    "omitted_energy_median",
+    "q",
+    "q_partial",
+    "rank",
+    "rank_source",
+    "source",
+    "token_flags",
+    "unsupported_changed_tensors"
+   ],
+   "n_rows": 270,
+   "rows_differing": []
+  },
+  "tokens.safetensors": {
+   "X_rows_differing": [],
+   "columns_identical": true,
+   "data_section_identical": true,
+   "data_section_sha256": "7447e2e6e82272ca95be9814ad87a3969c9107d026ac60ae7a8d49b161e7c325",
+   "data_section_sha256_new": "7447e2e6e82272ca95be9814ad87a3969c9107d026ac60ae7a8d49b161e7c325",
+   "file_identical_informational": false,
+   "frozen_sha256": "f8c5e163fcbcb013fdf6287a6ac19f242f0ec1bd786c7add618cc8af8974a054",
+   "header_metadata_identical": true,
+   "identical": true,
+   "n_rows": 270,
+   "new_sha256": "2c77cc94730325dff42497767e34981ad68762b1695bc6a0166c3bb6aa51b0ca",
+   "presence_identical": true,
+   "row_eligible_identical": true,
+   "row_ids_identical": true,
+   "shapes": {
+    "X": [
+     270,
+     186,
+     42
+    ],
+    "presence": [
+     270,
+     186
+    ],
+    "row_eligible": [
+     270
+    ]
+   },
+   "shapes_identical": true,
+   "tensor_headers_identical": true,
+   "tensor_sha256": {
+    "X": "3a1cb59bec12d09329bf4504eeeeb2204b0e752f9be8ce6f250fcf24779341ed",
+    "presence": "e1068061ee2d49e4b9b522320d21feb4c9f3a00460c816229851e4b93ef79a86",
+    "row_eligible": "2b14acebc522d247d7ac6689bc8eeff8aa9c839e1f33dca6f6a1fee237a4831c"
+   },
+   "tensor_sha256_new": {
+    "X": "3a1cb59bec12d09329bf4504eeeeb2204b0e752f9be8ce6f250fcf24779341ed",
+    "presence": "e1068061ee2d49e4b9b522320d21feb4c9f3a00460c816229851e4b93ef79a86",
+    "row_eligible": "2b14acebc522d247d7ac6689bc8eeff8aa9c839e1f33dca6f6a1fee237a4831c"
+   }
+  }
+ },
+ "frozen": {
+  "dir": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens",
+  "manifest": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12/tokens_manifest.json"
+ },
+ "identical": true,
+ "new": {
+  "dir": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal",
+  "manifest": "docs/prereg/a5_manifests/f12/f12r/tokens_manifest_requal.json"
+ },
+ "read_boundary": {
+  "allowed": [
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12",
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12/f12r",
+   "/home/ubuntu/wsp-data/runs/a5/f12_inputs"
+  ],
+  "prohibited": [
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/data/evals",
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/part_a",
+   "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/f12_manifests/f12f_pilot_report.json",
+   "/home/ubuntu/projects/wsp-lab/data/evals",
+   "/home/ubuntu/projects/wsp-lab/docs/prereg/a5_manifests/part_a",
+   "/home/ubuntu/projects/wsp-lab/docs/prereg/f12_manifests/f12f_pilot_report.json",
+   "/home/ubuntu/wsp-data/evals",
+   "/home/ubuntu/wsp-data/runs/a5/part_a_predictions"
+  ],
+  "prohibited_data_prefixes": [
+   "part_a",
+   "sealed"
+  ],
+  "reads": [
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12/tokens_manifest.json",
+    "resolved": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12/tokens_manifest.json",
+    "sha256": "424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12/tokens_manifest.json",
+    "resolved": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12/tokens_manifest.json",
+    "sha256": "424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f"
+   },
+   {
+    "authenticated": false,
+    "path": "docs/prereg/a5_manifests/f12/f12r/tokens_manifest_requal.json",
+    "resolved": "/home/ubuntu/projects/wsp-lab/.worktrees/prereg/f12-remedy/docs/prereg/a5_manifests/f12/f12r/tokens_manifest_requal.json",
+    "sha256": "d9d84ce45b5861f3f77607cd42e0cc124e16707b600f4fc2e06fe7f8ca071249"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/tokens.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/tokens.safetensors",
+    "sha256": "f8c5e163fcbcb013fdf6287a6ac19f242f0ec1bd786c7add618cc8af8974a054"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/rows.jsonl",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/rows.jsonl",
+    "sha256": "424c9039c7f3bcb7232465428681072da5ce4bfbe24f98ca1f04d7ca72f863c6"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/detail.jsonl",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/detail.jsonl",
+    "sha256": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/aq.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/aq.json",
+    "sha256": "90ab8466ee08b08e2fc003d419cbeb4d87494dc007413fe4f542a961f79d4e67"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/kframes.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/kframes.json",
+    "sha256": "b80b9b3aef8b29c242e13c5a99d9e6096c28aa444fbac7b66454f40f0d256e48"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/kframes.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/kframes.safetensors",
+    "sha256": "100a4024bf09f33820540c21b53bd0512c14bd1d1dfb7c299f647f5aedd0b519"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/pricing.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/pricing.json",
+    "sha256": "1146a853b066fbce80acb06975083e7c9c579b2faafa018e23939d3f2cfecd98"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/tokens.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/tokens.safetensors",
+    "sha256": "2c77cc94730325dff42497767e34981ad68762b1695bc6a0166c3bb6aa51b0ca"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/rows.jsonl",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/rows.jsonl",
+    "sha256": "6e61ef8b995b73ce7d38a7ab49d6870bb17bbe77f8570f58b3a32f90bb658ccb"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/detail.jsonl",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/detail.jsonl",
+    "sha256": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/aq.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/aq.json",
+    "sha256": "90ab8466ee08b08e2fc003d419cbeb4d87494dc007413fe4f542a961f79d4e67"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/kframes.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/kframes.json",
+    "sha256": "b80b9b3aef8b29c242e13c5a99d9e6096c28aa444fbac7b66454f40f0d256e48"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/kframes.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/kframes.safetensors",
+    "sha256": "100a4024bf09f33820540c21b53bd0512c14bd1d1dfb7c299f647f5aedd0b519"
+   },
+   {
+    "authenticated": true,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/pricing.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/pricing.json",
+    "sha256": "3d1cf9e4c03a275b66cd9266585564788fa9a19af4cd30894d380cedc4239bb0"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/tokens.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/tokens.safetensors",
+    "sha256": "f8c5e163fcbcb013fdf6287a6ac19f242f0ec1bd786c7add618cc8af8974a054"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/tokens.safetensors",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/tokens.safetensors",
+    "sha256": "2c77cc94730325dff42497767e34981ad68762b1695bc6a0166c3bb6aa51b0ca"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/rows.jsonl",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/rows.jsonl",
+    "sha256": "424c9039c7f3bcb7232465428681072da5ce4bfbe24f98ca1f04d7ca72f863c6"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/rows.jsonl",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/rows.jsonl",
+    "sha256": "6e61ef8b995b73ce7d38a7ab49d6870bb17bbe77f8570f58b3a32f90bb658ccb"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/detail.jsonl",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/detail.jsonl",
+    "sha256": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/detail.jsonl",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/detail.jsonl",
+    "sha256": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/pricing.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/pricing.json",
+    "sha256": "1146a853b066fbce80acb06975083e7c9c579b2faafa018e23939d3f2cfecd98"
+   },
+   {
+    "authenticated": false,
+    "path": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/pricing.json",
+    "resolved": "/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens_requal/pricing.json",
+    "sha256": "3d1cf9e4c03a275b66cd9266585564788fa9a19af4cd30894d380cedc4239bb0"
+   }
+  ],
+  "rule": "every read resolved to its leaf (symlinks, ..) and refused before opening if prohibited or outside the allowed roots; O_NOFOLLOW on the resolved leaf; pins checked after reading"
+ },
+ "schema": "f12r-token-comparison-v1",
+ "values_printed": "none: equality results, counts, ids, tensor names and hashes only"
+}
