@@ -6922,3 +6922,24 @@ only under a dated chair ruling in this document, committed before launch. The r
 thread count. The build must be the only heavy job the programme runs. It may launch only if free memory is at least its cap
 plus 4 GB. Its peak RSS is recorded in its manifest, and the build is stopped if its peak exceeds its cap. Delegate briefs may
 not grant memory allowances on their own.
+
+#### A5 chair ruling on the F12 token requalification rerun (12 Nov 2026, 09:19 UTC, before any G3 outcome): full rerun authorised under a pre-launch resource cap
+
+(a) *Why.* The unexposed-role remedy (note F12-R) hardened `scripts/f12_tokens.py` without changing any numerical function. The
+frozen F12 tokens were nevertheless produced by the pre-hardening code. Board A's F12-C1 condition 1 asks for reimplementation or
+requalification. The chair takes the **full rerun** of all 270 rows with the hardened builder, rather than the 24-row stratified
+sample, because it shows directly that every row's tokens reproduce. The sample would leave 246 rows resting on an argument from
+identical code and inputs.
+(b) *Resource cap, under the chair's resource disposition (d).* This ruling is committed before launch. The build is the only heavy
+job the programme runs while it is active. It launches only if free memory is at least 23 GB (cap plus 4 GB), runs at 6 threads to
+match the frozen run, and records its peak RSS. The guard stops it at 95% of the cap. The cap is set at 19 GB because the frozen
+run peaked at 17,180,188,672 bytes, and an 18 GB cap would stop at 17.1 GB, below that peak.
+
+resource-cap: build=scripts/f12_tokens.py cap_bytes=19000000000 threads=6
+
+(c) *Evidence and stop rule.* The rerun writes to a new output directory and never resumes over the frozen output. Its token
+array, per-row records and K-frames are compared with the frozen files on every deterministic field. Timing fields are excluded and
+listed explicitly. Any bitwise difference stops the requalification and is reported to the chair and Board A. It is not
+investigated by changing code. Projected cost: about 7 h wall, at most 41.7 CPU-h (upper bound), charged to the F12 inputs and
+not to the 190 CPU-h simulation ceiling. The rerun reads stored edit bytes, `edit.json`, the base model, and the G2 field and
+probe cache only, through the hardened read boundary. Part A remains held by the programme owner.
