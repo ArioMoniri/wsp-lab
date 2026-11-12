@@ -7397,3 +7397,19 @@ which checks stage 1's measured cost against the ceiling. Purchase, C2, scoring 
 Part A remains held by the programme owner.
 (c) *Operator.* Stage 1 is run by a fresh operator session whose statement (ii) is "none", recorded in the register before launch.
 That operator changes no code or configuration.
+
+#### A5 chair ruling on post-verification test tripwires (12 Nov 2026, 14:57 UTC, before any G3 outcome)
+
+Since Board A's verification record (`4c50bee`), three pinned tests fail by design, because each asserts that the repository's
+own C1 does not verify: `tests/test_f12d_prereqs.py::test_validator_rejects_an_unverified_or_stale_c1`,
+`tests/test_f12d_prereqs.py::test_c1_draft_skeleton_marks_token_dependent_parts_and_never_verifies` and
+`tests/test_f12e_qualify.py::test_c1_draft_filled_from_committed_token_facts`. Both files are pinned in C1 item 11
+(`code_hashes_c1.json`). Editing them would change verified C1 bytes and make the verifier report C1 as altered. Updating them
+now would therefore undo the verification it is meant to accommodate.
+(a) *Ruling.* Until the next freeze, a commit may bypass the pre-commit hook only if the full suite has been run for that
+commit and fails on exactly these three tests and nothing else. The commit message must say so and give the pass/fail counts.
+Any other failure blocks the commit.
+(b) *Repair.* The three tests are updated at the next freeze (C2), under the registered identity and restart rules, so that
+they assert the verified state. The C1 files and `verify_c1` are not changed.
+(c) This ruling covers only these three named tests. It does not relax any other test, the secret scan, or any F12 gate. Part A
+remains held by the programme owner.
