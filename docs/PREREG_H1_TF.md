@@ -7413,3 +7413,61 @@ Any other failure blocks the commit.
 they assert the verified state. The C1 files and `verify_c1` are not changed.
 (c) This ruling covers only these three named tests. It does not relax any other test, the secret scan, or any F12 gate. Part A
 remains held by the programme owner.
+
+#### A5 note F12-S1 (Thu Nov 12 21:54:29 UTC 2026, before any G3 outcome): F12 stage 1 executed
+
+Under the chair's acceptance of F12 stage 1 (12 Nov 2026, 14:49 UTC), a fresh unexposed operator session (register entry 25,
+statement (ii) "none", committed before launch at `fe83938`) ran the **single** F12 stage 1 on branch `ops/f12-stage1`. It
+changed no code, test or configuration. `python scripts/f12_c1.py verify` printed `"verified": true` before launch and before
+each commit.
+- *Command.* `python scripts/f12_simulation.py run --tokens /home/ubuntu/wsp-data/runs/a5/f12_inputs/matrix/f12_token_matrix.npz
+  --restricted-payload /home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/noise_payload_restricted_v2.json --out
+  /home/ubuntu/wsp-data/runs/a5/f12_stage1/run1 --config docs/prereg/f12_manifests/f12c_stage1_config.json --workers 2
+  --budget-ledger /home/ubuntu/wsp-data/runs/a5/f12_budget/ledger.jsonl --budget-plan
+  docs/prereg/f12_manifests/f12_pilot_acceptance.json --operator chair-delegated:F12-S1`, at `fe83938`, through
+  `agent-tmux f12-stage1`. Inputs checked by hash before launch: token matrix file `26b2fb63…` (the matrix manifest's); v2
+  restricted payload `44d79403…` (the pin's path and bytes); config `7cb10a83…` (the F12c pin); budget plan `008aae9a…`
+  (the chair-signed pilot acceptance). Memory available at launch: 24.2 GB.
+- *Times.* Launched 15:02:46 UTC (ledger launch event 15:02:48 UTC); finished 21:43:41 UTC; exit 0. Wall 24,050.9 s (6.68 h).
+- *CPU (ledger).* Stage-1 attempt 1: **48,005.41 CPU-s = 13.33 CPU-h** (projected 18.32). The timing sidecar gives 47,995.0
+  CPU-s over replicates and 10.4 CPU-s overhead, a mean of 100.0 CPU-s per replicate and a maximum of 159.0 CPU-s. Per-k means run
+  from 78.8 (k = 0, stress) to 127.0 CPU-s (k = 145, alternative).
+- *Memory.* Worker peak RSS 1,004.6 MB and parent 985.6 MB (getrusage). The operator's passive process-tree sampler, from
+  15:04:43 UTC, peaked at 2.87 GB RSS (2.31 GB PSS) for the four processes, at 20:53:28 UTC: below the 4 GB per-job limit. Two
+  workers. The first sampler in the run script summed each process once per thread. Its readings (peak 10.6 GB) overstate the
+  tree and are not a measurement.
+- *Stops.* There was no budget stop. The barrier's projection fell from 110.33 to 105.34 CPU-h at the last checkpoint. There was
+  no memory or validity stop, no relaunch, no extension and no other seed.
+- *Completeness.* 480 of 480 planned records, unique (scenario, k, r), r = 1000–1039:
+
+  | k | 0 | 29 | 58 | 87 | 116 | 145 |
+  |---|---|---|---|---|---|---|
+  | stress (null) | 40 | 40 | 40 | 40 | 40 | 40 |
+  | alternative | 40 | 40 | 40 | 40 | 40 | 40 |
+
+- *Validity.* **480 of 480 records valid** (40 of 40 in each cell); 0 invalid.
+- *Committed report (`46e6276`).* Byte-identical copies under `docs/prereg/f12_manifests/`:
+
+  | file | sha256 |
+  |---|---|
+  | `f12s1_stage1_report.json` (of `run1/report.json`) | `f2e5c386688aa39c75fccbd1796763011c46ba62ac078e2d55c274060689a6bd` |
+  | `f12s1_stage1_timing.json` (of `run1/report.time`) | `dcffbd5ee28488a0154556334b7d56e5f58938c2be0dc66152ab08f4615c4abe` |
+  | `f12s1_budget_ledger_snapshot.jsonl` (55 events) | `39b27af999cadd028d0691777e498a8fa3959b45d606ada8243a46e9a1692013` |
+
+- *Selection (`01421d8`, after the report commit).* `python scripts/f12_simulation.py select --stage1-report
+  /home/ubuntu/wsp-data/runs/a5/f12_stage1/run1/report.json` ran once, at 21:49:40 UTC, exit 0. It wrote
+  `docs/prereg/f12_manifests/f12c_stage2_selection.json`, sha256 `6acc413845fc80c7233ad142325eb0f9768a9af9e62d39ea08980afd9c7d763a`.
+  It is non-synthetic and binds the report `f2e5c386…`. **Computed k\* = 145.** The operator read only `k_star`, the report
+  binding and the synthetic flag, not the per-k rule checks.
+- *Cumulative ledger.* The total is **13.72 CPU-h against the 190 CPU-h ceiling**: noise check 12.93 CPU-s, pilot 1,381.33
+  CPU-s, stage 1 48,005.41 CPU-s, all completed. It is computed with the pinned `f12_budget.Ledger.spent_cpu_h`. The projected
+  all-in total is 105.34 CPU-h, with 7.63 for the coverage target, 83.96 for stage 2 (worst k\*) and 0.03 for overhead remaining.
+  *Disclosure:* the stage-1 `end` event's own `spent_cpu_h` (27.06) and `projected_total_cpu_h` (123.66) fields count the
+  attempt twice. `Meter.end` adds the attempt's CPU to a projection that already holds it from the last checkpoint, and still
+  prices stage 1 as remaining. Those two fields are not the ledger total. No code was changed.
+- *Commits.* `fe83938` (attestation), `46e6276` (report), `01421d8` (selection) and this note. Each bypassed the hook under
+  the chair's ruling on post-verification test tripwires (14:57 UTC). Each was preceded by a full-suite run (1585 passed, 3
+  failed, 5 skipped), failing exactly the three named tests, and by a clean secret scan. `core.bare` was false after each.
+- *What follows, and what does not.* Nothing else was run: no coverage target, no stage-2 replicate and no second selection.
+  The target and stage 2 need a further dated chair acceptance, which checks this measured cost against the ceiling. Purchase,
+  C2, scoring and every Part A, F8 and F9 gate are unchanged. Part A remains held by the programme owner.

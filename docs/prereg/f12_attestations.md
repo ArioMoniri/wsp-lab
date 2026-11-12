@@ -770,3 +770,27 @@ disclose, `tests/test_f12g_c1_freeze.py` calls `prerequisite_binding`, which dec
 the test process; nothing from it is displayed (pass/fail output only). The stage-1 run itself prints progress lines; the
 session will read only completeness, validity counts, timing, memory, the `select` output (k\*) and hashes, and will not read
 per-replicate records or decision codes.
+
+*Entry 25, update (Thu Nov 12 21:54:41 UTC 2026): after stage 1 and selection, same session.* Merged main `287267f` (the chair's ruling on
+post-verification test tripwires) by fast-forward. The session then committed this entry under that ruling, ran stage 1 (note
+F12-S1), committed the report, ran `select` once and committed the selection.
+- *Read during and after the run.* Ledger events, printing only their event, status, unit, CPU and projection fields. The
+  progress log, only through a filter that keeps the scenario and k of each line, plus a count of non-progress lines (0). The
+  timing sidecar in full. The run's stdout, printing only its key names, the k list and the key names of its release field.
+  The process-tree memory samples.
+- *Report.* It was decoded by the session's own counting script, which printed only key names, record counts per scenario and
+  k, the r range, `valid` counts, identities, the config file, the git head and the token and payload hashes. `select`
+  decoded it as designed and printed only k\*. No decision code, detection or stress count, rate, interval or summary value of
+  stage 1 was printed or read. From the selection file the session printed only key names, the report binding, k\* and the
+  synthetic flags.
+- *Names only.* A size listing of tracked files printed the names and sizes of three committed
+  `docs/prereg/a5_manifests/part_a/rotation_audits*.jsonl` files. None was opened.
+- *Hook runs.* The full suite ran four more times, through `agent-tmux` (job names `f12s1-suite1`–`f12s1-suite4`, one per commit). Each
+  run had the same in-process decode of the committed F12f pilot report already disclosed (nothing displayed). The output
+  showed pass/fail only.
+- *Register hash.* `exposure_c1.json` records this register's freeze-time sha256 (`7bb3067d…`) and row 11's old wording.
+  This entry changes the register's bytes. The register is not a C1 file (not in `MANIFEST_C1.sha256` or item 11), and
+  `verify` stays true.
+- Statements (i) and (iii) are unchanged. **(ii) remains none**: no Part A, F8-E, F8-F or F9 outcome or summary was opened or
+  received. Nothing under `data/evals` was opened or listed. No Part A staging, prediction or calibration file was opened. No
+  F12f pilot per-replicate record or decision code was read.
