@@ -6891,3 +6891,34 @@ cites a register that contains it.
 - (iii) It read the register's and the PREREG's accounts of the prescore audits, not the audits.
 
 Part A remains held by the programme owner.
+
+#### A5 chair resource disposition on F12 input builds (12 Nov 2026, 08:32 UTC, before any G3 outcome): Board A F12-C1 review condition 2
+
+Board A withheld C1 verification (`docs/reviews/council/board-a-f12-c1-2026-11-12.md`, commit `ed425bd`). Its condition 2 asks
+the resource authority to record historical memory departures, to distinguish authorised limits from estimates, and to set a
+compliant future boundary. The chair is that authority. No retroactive compliance is claimed.
+(a) *Where the 4 GB limit came from.* The 4 GB per-job limit was never registered. The chair first set it in a delegate brief at
+about 14:12 UTC on 11 Nov 2026 (the F12b relaunch), after a machine-wide out-of-memory event, and repeated it in later briefs.
+(b) *Departures, measured or estimated.*
+- *F12 token runs* (`f12_tokens.py`, launched by the chair). The completed run recorded a peak RSS of 17,180,188,672 bytes
+  (`tokens_manifest.json`, `summary.max_rss_bytes`). That run was launched at 16:47 UTC, after the 4 GB limit existed, without
+  any recorded memory authorisation. It is a departure.
+- *F12-I dry run* (`f12_additivity_prepare.py dry-run`, launched by the chair). Its peak was not recorded. F12-C1.1 estimates
+  about 19 GB from the code's whole-panel loading. That is an estimate, not a measurement. The first attempt, launched at 13:51 UTC
+  on 11 Nov alongside the 12 GB token job, was killed in the machine-wide out-of-memory event at about 14:00 UTC. The same event
+  killed the token job and the first F12b session, which is one of the two sessions Board A finds unattestable. The chair's
+  concurrent launch plausibly contributed to that event. This is not established, because other programmes were also using
+  memory at the time. The completed rerun at 23:46 UTC ran after the token job ended, again without a recorded authorisation.
+- *Gauge-token build* (`f12_gauge_tokens.py`). Its manifest records a peak of 5,400,002,560 bytes. The chair's F12f delegate
+  brief allowed a token-builder run "up to 6 threads and up to 18 GB, but only as the single heavy job on the machine". That
+  allowance sat in a delegate brief, not in a registered or dated ruling. Board A rightly notes that the F12f rulings in this
+  document do not raise a memory cap. Within that brief it was authorised; against the 4 GB limit it is a departure.
+- *Streaming plan driver.* Peak 3.11 GB, within the limit.
+(c) *Disposition.* These departures cost CPU and memory only. None read an outcome, changed a numerical identity used by the
+noise check or pilot, or altered a frozen input. The token and gauge outputs passed their bitwise and hash checks. No heavy build
+is repeated merely to measure a missing historical peak. The incidents stand as recorded.
+(d) *Future boundary, binding from now.* Every F12 or F12-I job is limited to 4 GB peak RSS. A heavy input build may exceed that
+only under a dated chair ruling in this document, committed before launch. The ruling names the build, a peak cap and the
+thread count. The build must be the only heavy job the programme runs. It may launch only if free memory is at least its cap
+plus 4 GB. Its peak RSS is recorded in its manifest, and the build is stopped if its peak exceeds its cap. Delegate briefs may
+not grant memory allowances on their own.
