@@ -38,6 +38,7 @@ condition 6 and step 2 of its "Ordered path to stage 1").
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -714,6 +715,7 @@ FROZEN_STATUS = (
     "MANIFEST_C1.sha256; not verified until Board A's separate C1 verification record and review"
 )
 REGISTER_REL = "docs/prereg/f12_attestations.md"
+ACCESS_AUDIT_REL = "docs/reviews/council/f12-inputs-access-audit-2026-11-12.md"
 PIN_REL = f"{MANIFEST_DIR}/noise_payload_restricted_pin.json"
 NOISE_CHECK_REL = f"{MANIFEST_DIR}/f12f_noise_check.json"
 PILOT_REPORT_REL = f"{MANIFEST_DIR}/f12f_pilot_report.json"
@@ -751,8 +753,9 @@ ENTRY_NOTES = {
         "sources": ["row 5", "22"],
         "static_access_audit": "commissioned by the chair (A5 chair acceptance of F12g (d)): an independent static "
         "access audit of the code at 0412799 (f12_population.py, f12_tokens.py, f12_additivity_prepare.py), listing "
-        "every file path each opens and every field each reads, as evidence for Board A's adjudication under F12g "
-        "condition 5, not as a substitute attestation; it is not part of this file and is not adjudicated here",
+        "every file path each opens and every field each reads; committed as {path} (sha256 {sha256}), cited in "
+        "access_audit; evidence for Board A's adjudication under F12g condition 5, not a substitute attestation; not "
+        "adjudicated here",
     },
     "22": {
         "status": "UNATTESTABLE",
@@ -810,13 +813,11 @@ ENTRY_NOTES = {
     },
     "10": {
         "session": "chair",
-        "status": "given to 07:40 UTC 12 Nov 2026 (entries 10 and 10a); renewal at the C1 freeze not in the register "
-        "at this freeze",
+        "status": "row 10's status cell, verbatim (filled from the register)",
     },
     "11": {
         "session": "every later C1/C2 builder, analyst and Board A reviewer",
-        "status": "PENDING in the register; this C1 freeze session's own statement is added to the register in a "
-        "later commit, after this file and the manifest are committed",
+        "status": "row 11's status cell, verbatim (filled from the register)",
     },
 }
 
@@ -836,28 +837,77 @@ def _register_rows(text):
     return rows
 
 
-def build_exposure(root=ROOT) -> dict:
+def _audit_findings(text):
+    """The access audit's overall finding paragraph and its findings table, verbatim."""
+    sec = text.split("## Findings", 1)[1].split("\n## ", 1)[0]
+    overall = next(p.strip() for p in sec.split("\n\n") if p.strip().startswith("**Overall:"))
+    table = "\n".join(ln for ln in sec.splitlines() if ln.startswith("|"))
+    return overall, _register_rows(table)
+
+
+def build_exposure(root=ROOT, register_root=None) -> dict:
     """Item 1 from the attestation register as committed: its rows verbatim, its sha256 and the entries Board A must
-    adjudicate, cited by number. Nothing is resolved here."""
-    root = Path(root)
-    if not _committed_clean(root, REGISTER_REL):
-        raise ValueError("the attestation register is not committed or has uncommitted changes")
-    text = (root / REGISTER_REL).read_text()
+    adjudicate, cited by number, plus the committed static access audit of the F12 inputs code. Nothing is resolved
+    here. ``register_root`` (default ``root``) is the repository holding the committed register and audit report."""
+    src = Path(register_root or root)
+    for rel in (REGISTER_REL, ACCESS_AUDIT_REL):
+        if not _committed_clean(src, rel):
+            raise ValueError(f"{rel} is not committed or has uncommitted changes")
+    text = (src / REGISTER_REL).read_text()
+    rows = _register_rows(text.split("## Register", 1)[1].split("\n## ", 1)[0])
+    by_row = {r["#"]: r for r in rows}
+    audit_text = (src / ACCESS_AUDIT_REL).read_text()
+    overall, findings = _audit_findings(audit_text)
+    audit = {"path": ACCESS_AUDIT_REL, "sha256": _sha_file(src / ACCESS_AUDIT_REL)}
+    entries = copy.deepcopy(ENTRY_NOTES)
+    entries["5"]["static_access_audit"] = entries["5"]["static_access_audit"].format(**audit)
+    for k in ("10", "11"):
+        entries[k]["status"] = by_row[k]["status"]
     return {
         "requirement": "F12a.1(c)-(d): statements (i) old development outcomes, (ii) new outcomes, (iii) prescore "
         "audits for every decision-maker, code/input builder, extractor, token-run session, chair and approving "
         "reviewer through the freeze; one session never attests for another; a commit time is not an attestation",
-        "register": {"path": REGISTER_REL, "sha256": _sha_file(root / REGISTER_REL)},
-        "rows": _register_rows(text.split("## Register", 1)[1].split("\n## ", 1)[0]),
-        "entries": ENTRY_NOTES,
-        "pending": [
-            "row 10: the chair's renewal at the C1 freeze",
-            "row 11: every later C1/C2 builder, analyst and Board A reviewer, including this C1 freeze session",
-        ],
+        "register": {"path": REGISTER_REL, "sha256": _sha_file(src / REGISTER_REL)},
+        "rows": rows,
+        "entries": entries,
+        "access_audit": audit
+        | {
+            "target": "commit 04127991845e246c2fab77293654b773674f01a2 (0412799)",
+            "role": "independent static audit commissioned by the chair for Board A F12g condition 5 and register "
+            "entry 22 / row 5; evidence for Board A, not an attestation for the killed implementer",
+            "overall": overall,
+            "findings": findings,
+        },
+        "pending": [f"row {r['#']}: {r['status']}" for r in rows if "PENDING" in r["status"]],
         "adjudication": "none in this file: the unattestable sessions (row 5, entry 22), the qualified Board A F12c "
-        "attestation (entry 21), the direct prescore-audit readers (entries 15b, 15c, 15d) and the raw-payload parses "
-        "(entries 17 and 20) are recorded for Board A to adjudicate at C1 verification (F12g condition 5)",
+        "attestation (entry 21), the direct prescore-audit readers (entries 15b, 15c, 15d), the raw-payload parses "
+        "(entries 17 and 20) and the static access audit's findings are recorded for Board A to adjudicate at C1 "
+        "verification (F12g condition 5)",
     }
+
+
+def code_pin_failures(root=ROOT) -> list:
+    """The code-pin check the hook runs: ``code_hashes_c1.json`` is the draft pin before the freeze and the governed
+    item 11 once ``MANIFEST_C1.sha256`` exists, and every listed file is at its pinned bytes. It catches
+    ``python scripts/f12_simulation.py c1-draft`` overwriting the governed item 11 after the freeze (that command is
+    not changed to refuse, because f12_simulation.py is bound to the noise check and pilot)."""
+    root = Path(root)
+    obj = json.loads((root / MANIFEST_DIR / "code_hashes_c1.json").read_text())
+    frozen = (root / MANIFEST_PATH).exists()
+    want = FROZEN_STATUS if frozen else "draft, pending Board A C1 verification"
+    F = []
+    if obj.get("status") != want:
+        F.append(
+            f"code_hashes_c1.json status {obj.get('status')!r} is not {want!r} (frozen={frozen})"
+        )
+    bad = [
+        rel
+        for rel, sha in sorted((obj.get("files") or {}).items())
+        if not (root / rel).exists() or _sha_file(root / rel) != sha
+    ]
+    if bad:
+        F.append(f"code_hashes_c1.json: current bytes differ for {bad}")
+    return F
 
 
 def restricted_payload_bytes(root=ROOT) -> bytes:
@@ -1008,8 +1058,9 @@ def build_code_hashes(root=ROOT) -> dict:
     }
 
 
-def build_c1(root=ROOT) -> dict:
-    """The governed C1 package: {name: bytes} in chain order. Fails closed if the prerequisite binding broke."""
+def build_c1(root=ROOT, exposure_root=None) -> dict:
+    """The governed C1 package: {name: bytes} in chain order. Fails closed if the prerequisite binding broke. The
+    exposure file is built from the committed register in ``exposure_root`` (default ``root``)."""
     root = Path(root)
     draft = build_draft(root)
     binding = prerequisite_binding(root)
@@ -1029,7 +1080,7 @@ def build_c1(root=ROOT) -> dict:
             for k, v in obj.items()
             if k not in ("status", "at_freeze", "draft_pin", "token_facts")
         }
-    objs["exposure_c1.json"] = build_exposure(root)
+    objs["exposure_c1.json"] = build_exposure(root, register_root=exposure_root)
     objs["resources.json"]["pilot_acceptance"] = _ref(root, root / PILOT_ACCEPTANCE_REL) | {
         "all_in_cpu_h": json.loads((root / PILOT_ACCEPTANCE_REL).read_text())["projection"][
             "all_in_cpu_h"

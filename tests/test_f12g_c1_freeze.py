@@ -256,7 +256,11 @@ def _repo(tmp_path, item9, *, verify=True, same_commit=False):
         p = man / name
         p.parent.mkdir(parents=True, exist_ok=True)
         if name == "code_hashes_c1.json":
-            obj = {"schema": fs.C1_SCHEMA, "status": "C1 frozen", "files": dict(IDS["code_sha256"])}
+            obj = {
+                "schema": fs.C1_SCHEMA,
+                "status": c1.FROZEN_STATUS,
+                "files": dict(IDS["code_sha256"]),
+            }
         elif name == "f12i_c1.json":
             obj = item9
         else:
@@ -325,8 +329,21 @@ def test_omission_stale_bytes_authority_and_chronology_still_fail(tmp_path):
 # ------------------------------------------------------------------ freeze builders
 
 
-def test_governed_package_has_no_draft_or_awaiting_markers():
-    files = c1.build_c1(ROOT)
+def _register_repo(tmp_path):
+    """A temporary repository holding committed copies of the attestation register and the access audit report. The
+    exposure builders are tested on it, never on the live register, so editing the register never fails the hook."""
+    root = tmp_path / "register_repo"
+    for rel in (c1.REGISTER_REL, c1.ACCESS_AUDIT_REL):
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / rel, root / rel)
+    _git(root, "init", "-q")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-qm", "register copy")
+    return root
+
+
+def test_governed_package_has_no_draft_or_awaiting_markers(tmp_path):
+    files = c1.build_c1(ROOT, exposure_root=_register_repo(tmp_path))
     assert list(files) == list(c1.C1_FILES)
     for name, data in files.items():
         text = data.decode()
@@ -336,36 +353,108 @@ def test_governed_package_has_no_draft_or_awaiting_markers():
             assert obj["status"] == c1.FROZEN_STATUS, name
             # the exposure file quotes the register's rows verbatim, whose role descriptions name earlier sessions'
             # work ("F12 drafting", "C1 draft fill"); a draft marker anywhere else is the word "draft"
-            rest = {k: v for k, v in obj.items() if k != "rows"}
+            rest = {k: v for k, v in obj.items() if k not in ("rows", "access_audit")}
             assert not re.search(r"\bdraft\b", json.dumps(rest), re.IGNORECASE), name
             assert "at_freeze" not in obj and "draft_pin" not in obj, name
     pin = json.loads((ROOT / c1.MANIFEST_DIR / "noise_payload_restricted_pin.json").read_text())
     assert _sha(files["noise_payload/restricted.json"]) == pin["restricted_copy"]["sha256"]
 
 
-def test_exposure_file_cites_the_register_faithfully():
-    exp = c1.build_exposure(ROOT)
-    reg = ROOT / c1.REGISTER_REL
+def test_exposure_file_cites_the_register_and_the_access_audit_faithfully(tmp_path):
+    src = _register_repo(tmp_path)
+    exp = c1.build_exposure(ROOT, register_root=src)
+    reg = src / c1.REGISTER_REL
     assert exp["register"] == {"path": c1.REGISTER_REL, "sha256": _sha(reg.read_bytes())}
-    assert exp["rows"] == c1._register_rows(
-        reg.read_text().split("## Register", 1)[1].split("\n## ", 1)[0]
-    )
+    rows = c1._register_rows(reg.read_text().split("## Register", 1)[1].split("\n## ", 1)[0])
+    assert exp["rows"] == rows
     assert [r["#"] for r in exp["rows"]][:5] == ["1", "2", "3", "4", "5"]
     assert "UNATTESTABLE" in exp["rows"][4]["status"]
     e = exp["entries"]
     assert e["5"]["status"] == "UNATTESTABLE" and "22" in e["5"]["sources"]
-    assert (
-        "0412799" in e["5"]["static_access_audit"]
-        and "commissioned" in e["5"]["static_access_audit"]
-    )
+    audit = exp["access_audit"]
+    rep = src / c1.ACCESS_AUDIT_REL
+    assert audit["path"] == c1.ACCESS_AUDIT_REL and audit["sha256"] == _sha(rep.read_bytes())
+    assert audit["overall"].startswith("**Overall: PARTLY SUPPORTED**")
+    assert audit["overall"] in rep.read_text()
+    assert [f["Script and tests"].split(",")[0] for f in audit["findings"]] == [
+        "`scripts/f12_population.py`",
+        "`scripts/f12_tokens.py`",
+        "`scripts/f12_additivity_prepare.py`",
+    ]
+    for f in audit["findings"]:
+        assert "| " + " | ".join(f.values()) + " |" in rep.read_text()
+    for needle in (
+        "0412799",
+        c1.ACCESS_AUDIT_REL,
+        "not a substitute attestation",
+        "not adjudicated",
+    ):
+        assert needle in e["5"]["static_access_audit"], needle
     assert e["22"]["status"] == "UNATTESTABLE" and len(e["22"]["sessions"]) == 2
     assert e["21"]["status"] == "qualified"
     for k in ("15b", "15c", "15d"):
         assert e[k]["prescore_audits"] == "read directly", k
     for k in ("17", "20"):
         assert "raw" in e[k]["disclosure"], k
+    by_row = {r["#"]: r for r in rows}
+    assert (
+        e["10"]["status"] == by_row["10"]["status"] and e["11"]["status"] == by_row["11"]["status"]
+    )
+    assert exp["pending"] == [
+        f"row {r['#']}: {r['status']}" for r in rows if "PENDING" in r["status"]
+    ]
     assert "Board A" in exp["adjudication"]
-    assert exp["pending"]  # the chair's renewal and later builders are reported, not filled
+
+
+def test_exposure_refuses_an_uncommitted_register_or_audit(tmp_path):
+    src = _register_repo(tmp_path)
+    reg = src / c1.REGISTER_REL
+    reg.write_text(reg.read_text() + "\nedit\n")
+    with pytest.raises(ValueError, match="not committed"):
+        c1.build_exposure(ROOT, register_root=src)
+    _git(src, "commit", "-qam", "edit")
+    c1.build_exposure(ROOT, register_root=src)
+    (src / c1.ACCESS_AUDIT_REL).unlink()
+    with pytest.raises(ValueError, match="not committed"):
+        c1.build_exposure(ROOT, register_root=src)
+
+
+def test_c1_draft_overwrite_after_the_freeze_is_caught_by_both_checks(tmp_path):
+    """``python scripts/f12_simulation.py c1-draft`` is not changed to refuse (f12_simulation.py is bound to the noise
+    check and pilot); writing its draft pin over the governed item 11 is caught by verify_c1's digest check and by the
+    code-pin check the hook runs (``c1.code_pin_failures``)."""
+    root = _repo(tmp_path, _item9())
+    assert _fails(root) == [] and c1.code_pin_failures(root) == []
+    p = root / c1.MANIFEST_DIR / "code_hashes_c1.json"
+    draft = {
+        "schema": fs.C1_SCHEMA,
+        "status": "draft, pending Board A C1 verification",
+        "files": dict(IDS["code_sha256"]),
+    }
+    p.write_text(json.dumps(draft, indent=1, sort_keys=True) + "\n")  # what c1-draft writes
+    fails = _fails(root)
+    assert any("code_hashes_c1.json differs from the manifest digest" in f for f in fails), fails
+    pins = c1.code_pin_failures(root)
+    assert any("status" in f for f in pins), pins
+    _git(root, "commit", "-qam", "c1-draft after the freeze")
+    assert any("code_hashes_c1.json differs from the manifest digest" in f for f in _fails(root))
+    assert c1.code_pin_failures(root)
+
+
+def test_code_pin_failures_before_the_freeze_expect_the_draft_pin(tmp_path):
+    root = tmp_path / "r"
+    (root / c1.MANIFEST_DIR).mkdir(parents=True)
+    shutil.copy(ROOT / "scripts/f12_simulation.py", tmp_path / "x.py")
+    obj = {"schema": fs.C1_SCHEMA, "status": "draft, pending Board A C1 verification", "files": {}}
+    (root / c1.MANIFEST_DIR / "code_hashes_c1.json").write_text(json.dumps(obj))
+    assert c1.code_pin_failures(root) == []
+    obj["status"] = c1.FROZEN_STATUS
+    (root / c1.MANIFEST_DIR / "code_hashes_c1.json").write_text(json.dumps(obj))
+    assert any("status" in f for f in c1.code_pin_failures(root))
+    obj["files"] = {"scripts/missing.py": "0" * 64}
+    obj["status"] = "draft, pending Board A C1 verification"
+    (root / c1.MANIFEST_DIR / "code_hashes_c1.json").write_text(json.dumps(obj))
+    assert any("scripts/missing.py" in f for f in c1.code_pin_failures(root))
 
 
 def test_governed_code_hashes_pin_the_frozen_code_and_inputs():
