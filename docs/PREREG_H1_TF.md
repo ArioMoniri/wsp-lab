@@ -6216,3 +6216,26 @@ which are field forecasts and edit-derived inputs, after verifying their hashes.
 missing-reference, sealed, F8 or F9 outcome and no Part A score, opened nothing under `data/evals` and used no GPU. A directory
 walk over `data/` listed, without printing or opening, names under `data/evals` (disclosed in entry 13). (iii) It read F12a.1's
 account of the prescore audits, not the audits. It attests to this session only.
+
+#### A5 chair ruling on F12e (12 Nov 2026, 00:31 UTC, before any G3 outcome): build the two missing registered inputs; no waiver
+
+(a) *Gauge audit: no waiver.* F12.3 and F12a.2(i) apply the F5-pin gauge audit (§ F5 pins, "Gauge audit": Q = H diag(d), H Haar
+r×r from seed `20261110:lol-gauge:` + canonical edit id + exact tensor name, positive-diagonal QR, d_j = 2^((j mod 3) − 1);
+(B, A) → (BQ, Q⁻¹A) in fp64 cast to fp32; tolerance |Δf| ≤ 1e-5 + 1e-4 |f| nats per row; any violation makes WM-R's contrasts
+undefined) to every fitted WM-R model. The chair takes F12e.4's first option: a pinned extension of the token builder writes the
+registered gauge-transformed tokens for every row and supported tensor that has stored low-rank factors, and the simulation
+runner applies the audit to every fitted WM-R model, each seed and each outer fold, retaining all discrepancies. The analytic
+argument that tokens depend on the gauge only through fp32 rounding is recorded as context and does not discharge the audit.
+A waiver or any other discharge would be a design change for Board A, and is not taken.
+(b) *Real-token matrix.* The augmented StatNN comparator receives the v4 pooled statistics computed by the pinned pooling code
+(F12.3; F5 pins, "Augmented comparators"; F12a.2(h) for the zero-edit input), plus WM-R's 42-column masked token for each of
+the 186 matrix slots, zero padding and a presence column, flattened in A5.8.3 order. The 18-column synthetic stand-in in
+`f12_simulation.py` is for synthetic runs only. A pinned, tested tokens-to-matrix builder produces the real matrix from the
+frozen token output and the existing pooled v4 files, verifies every source identity, and its output identity is bound into the
+noise-check, pilot and stage records.
+(c) *Ordering and cost.* Both are implementation of registered requirements, not new design. They change code and input
+identities, so the candidate identities, C1 draft and real-token qualification are re-pinned and re-run, and the qualification
+must pass before the 10,000-panel noise check. The gauge-token build is CPU only, is priced from its first rows before it runs
+in full, and is charged to the F12 inputs (not to the 190 CPU-h simulation ceiling). The pilot's measured cost, which now
+includes StatNN at the real comparator width, decides whether that ceiling holds. The omitted-energy flag (212 of 270 rows above
+0.01; F5 pins: a diagnostic, not an input) is carried to Board A at C1 unchanged. Part A remains held by the programme owner.
