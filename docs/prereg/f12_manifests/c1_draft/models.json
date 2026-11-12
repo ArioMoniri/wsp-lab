@@ -19,7 +19,7 @@
     },
     "qualification": {
      "path": "docs/prereg/f12_manifests/f12f_qualification.json",
-     "sha256": null
+     "sha256": "233e7d7c605741c2d40a7d9fbc3087b5cd49672e52b329cf4a9d177eb27bd527"
     },
     "ruling": "PREREG_H1_TF A5 chair ruling on F12e (a): no waiver; registered gauge-transformed tokens and the runner audit",
     "runner": "scripts/f12_simulation.py gauge_audit / gauge_record: every refitted WM-R head, each seed and each outer fold, on the held-out rows' frozen and gauge-transformed tokens; |delta f| <= 1e-5 + 1e-4 |f| nats per row; all nonzero discrepancies retained; a violation makes C_WM and C_WM,S undefined and the replicate unresolved (validity), a failure (F12a.5(d))"
