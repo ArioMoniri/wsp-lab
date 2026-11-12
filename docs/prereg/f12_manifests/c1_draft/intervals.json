@@ -2,7 +2,7 @@
  "code": [
   {
    "path": "scripts/f12_simulation.py",
-   "sha256": "e8b5f75132365a5080e54a50d94bc3db982802bf3e6589ff7e8680435da98522"
+   "sha256": "f9e777ec4d316a6708fd6d260b9f1e5b108adcb41a92f32f9c58437f7b98659b"
   },
   {
    "path": "scripts/tfv1_requalify.py",
@@ -19,5 +19,5 @@
   "conditional_percentile",
   "joint_percentile"
  ],
- "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A"
+ "status": "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs (F12e); the governed C1 file is written at the C1 freeze and verified by Board A"
 }

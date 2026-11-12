@@ -49,7 +49,7 @@ def _fake_output(tmp_path, *, ineligible=(), mutate=None):
     from safetensors.torch import save_file
 
     out = tmp_path / "tokens"
-    out.mkdir()
+    out.mkdir(parents=True)
     ids = sorted(r["id"] for r in POP["rows"])
     by_id = {r["id"]: r for r in POP["rows"]}
     rng = np.random.default_rng(0)
@@ -87,15 +87,23 @@ def _fake_output(tmp_path, *, ineligible=(), mutate=None):
     if mutate:
         mutate(X, P, E, recs, details)
     save_file(
-        {"X": torch.from_numpy(X), "presence": torch.from_numpy(P), "row_eligible": torch.from_numpy(E)},
+        {
+            "X": torch.from_numpy(X),
+            "presence": torch.from_numpy(P),
+            "row_eligible": torch.from_numpy(E),
+        },
         str(out / "tokens.safetensors"),
         metadata={"row_ids": json.dumps(ids), "columns": json.dumps(ft.COLUMNS)},
     )
     (out / "rows.jsonl").write_text("".join(json.dumps(x, sort_keys=True) + "\n" for x in recs))
-    (out / "detail.jsonl").write_text("".join(json.dumps(x, sort_keys=True) + "\n" for x in details))
+    (out / "detail.jsonl").write_text(
+        "".join(json.dumps(x, sort_keys=True) + "\n" for x in details)
+    )
     (out / "aq.json").write_text(json.dumps({x["id"]: {"a": x["a"]} for x in recs}))
     frames = {s[2]: {"G": {"flags": []}, "A": {"flags": []}} for s in fs.SLOTS}
-    (out / "kframes.json").write_text(json.dumps({"schema": "f12-kframes-v1", "tensors": frames, "counts": {}}))
+    (out / "kframes.json").write_text(
+        json.dumps({"schema": "f12-kframes-v1", "tensors": frames, "counts": {}})
+    )
     (out / "kframes.safetensors").write_bytes(b"frames")
     (out / "pricing.json").write_text("{}")
     files = {p.name: _sha(p.read_bytes()) for p in sorted(out.iterdir())}
@@ -148,13 +156,13 @@ def _checks(report):
 def test_verify_token_files_requires_every_manifest_hash(tmp_path):
     out, man = _fake_output(tmp_path)
     assert set(fq.verify_token_files(man, out)) == set(fq.REQUIRED_FILES)
-    (out / "aq.json").write_text('{"tampered": 1}')
-    with pytest.raises(fq.TokenFileMismatch, match="aq.json"):
-        fq.verify_token_files(man, out)
     man2 = copy.deepcopy(man)
     del man2["files"]["rows.jsonl"]
     with pytest.raises(fq.TokenFileMismatch, match="rows.jsonl"):
         fq.verify_token_files(man2, out)
+    (out / "aq.json").write_text('{"tampered": 1}')
+    with pytest.raises(fq.TokenFileMismatch, match="aq.json"):
+        fq.verify_token_files(man, out)
 
 
 def test_load_output_refuses_unverified_files(tmp_path):
@@ -195,7 +203,7 @@ def test_exclusion_mismatch_fails(tmp_path):
     rep = fq.qualify(man, POP, POP_SHA, out)
     ch = _checks(rep)
     assert ch["exclusions"]["pass"] is False
-    assert rid in json.dumps(ch["exclusions"]["detail"])
+    assert rid in json.dumps(ch["exclusions"]["problems"])
 
 
 def test_nonfinite_or_misplaced_columns_fail_the_schema(tmp_path):
@@ -226,13 +234,16 @@ def test_population_identity_and_fold_tampering_fail(good):
     out, man, tok = good
     pop = copy.deepcopy(POP)
     k145 = pop["s_k"][-1]
-    c = sorted(k145["folds"])[0]
+    c = min(k145["folds"])
     k145["folds"][c] = (k145["folds"][c] + 1) % 5
     ch = _checks(fq.qualify(man, pop, POP_SHA, out, tok=tok))
     assert ch["folds"]["pass"] is False
     man2 = copy.deepcopy(man)
     man2["population_frozen"]["population_json_sha256"] = "0" * 64
-    assert _checks(fq.qualify(man2, POP, POP_SHA, out, tok=tok))["population_identity"]["pass"] is False
+    assert (
+        _checks(fq.qualify(man2, POP, POP_SHA, out, tok=tok))["population_identity"]["pass"]
+        is False
+    )
 
 
 def test_gauge_prerequisites_need_a_k_frame_for_every_present_tensor(good):
@@ -258,9 +269,12 @@ def test_eligible_row_folds_match_population_and_nest():
             train = {c for c, g in f["outer"].items() if g != int(o)}
             assert set(inner) == train and sorted(set(inner.values())) == [0, 1, 2, 3]
         mixed = {m["component_id"] for m in POP["mixed_components"]}
-        for fam, split in f["lofo"].items():
+        for split in f["lofo"].values():
+            # train = every other S_k component (stored as the rule, not as a redundant id list)
             assert not mixed & set(split["eval_components"])
-            assert mixed <= set(split["train_components"]) or not mixed & set(f["outer"])
+            assert set(split["eval_components"]) <= set(f["outer"])
+            assert split["eval_rows"] >= len(split["eval_components"]) > 0
+            assert split["train"] == fq.LOFO_TRAIN_RULE
 
 
 def test_an_excluded_row_leaves_its_s_k_without_top_up():
@@ -286,7 +300,7 @@ def test_k_bins_follow_the_purchase_order():
 
 
 def test_omitted_energy_summary_by_family_and_k_bin(good):
-    out, man, tok = good
+    _out, man, tok = good
     s = fq.omitted_energy_summary(tok["rows"], POP)
     assert s["rows_gt_threshold"] == man["summary"]["omitted_energy_gt_0.01_rows"]
     assert sum(v["gt_threshold"] for v in s["by_family"].values()) == s["rows_gt_threshold"]
@@ -300,7 +314,7 @@ def test_omitted_energy_summary_by_family_and_k_bin(good):
 
 
 def test_token_facts_bind_hashes_identities_folds_and_f12i(good):
-    out, man, tok = good
+    _out, man, tok = good
     msha = _sha(json.dumps(man).encode())
     base = {"state_hash": "base", "tensors": {n: "h" + n for n in fq.base_tensor_names(tok, POP)}}
     facts = fq.token_facts(man, msha, POP, POP_SHA, tok, base_hashes=base)
@@ -312,7 +326,9 @@ def test_token_facts_bind_hashes_identities_folds_and_f12i(good):
     assert set(facts["f12i_lora_parents"]) == set(POP["f12i_lora_roots"])
     for rid, p in facts["f12i_lora_parents"].items():
         assert p["increment_sha256"] == _sha(rid.encode())
-        assert all(fq.layer_of(n) <= 11 for n in p["part1"]) and all(fq.layer_of(n) >= 12 for n in p["part2"])
+        assert all(fq.layer_of(n) <= 11 for n in p["part1"]) and all(
+            fq.layer_of(n) >= 12 for n in p["part2"]
+        )
         assert set(p["support_base_tensor_hashes"]) == set(p["part1"]) | set(p["part2"])
     folds = fq.eligible_row_folds(POP, set(facts["eligibility"]["eligible_ids"]))
     assert facts["folds_sha256"] == fq.folds_sha256(folds)
@@ -321,7 +337,9 @@ def test_token_facts_bind_hashes_identities_folds_and_f12i(good):
 def test_base_tensor_hashes_check_the_state_hash():
     from wsp.features import response_field as rf
 
-    state = {s[2]: torch.full((2, 3), float(i), dtype=torch.bfloat16) for i, s in enumerate(fs.SLOTS)}
+    state = {
+        s[2]: torch.full((2, 3), float(i), dtype=torch.bfloat16) for i, s in enumerate(fs.SLOTS)
+    }
     state["model.norm.weight"] = torch.ones(3, dtype=torch.bfloat16)
     good_hash = rf._hash({n: rf._tensor_hash(t) for n, t in state.items()})
     names = [fs.SLOTS[i][2] for i in DOWN]
@@ -361,7 +379,9 @@ def test_c1_draft_filled_from_committed_token_facts():
     for name in ("population.json", "folds.json", "schemas.json"):
         assert c1.AWAITING not in json.dumps(files[name]), name
     facts = json.loads(fq.FACTS_PATH.read_text())
-    assert files["population.json"]["eligibility"]["n_eligible"] == facts["eligibility"]["n_eligible"]
+    assert (
+        files["population.json"]["eligibility"]["n_eligible"] == facts["eligibility"]["n_eligible"]
+    )
     assert files["folds.json"]["eligible_row_folds_sha256"] == facts["folds_sha256"]
     assert len(files["folds.json"]["eligible_row_folds"]) == len(fs.K_GRID)
     sch = files["schemas.json"]
@@ -371,7 +391,9 @@ def test_c1_draft_filled_from_committed_token_facts():
     assert gauge["F5_gauge_audit"]["satisfied_by_frozen_output"] is False
     f12i = files["f12i_c1.json"]["parent_support_tensor_hashes"]
     assert set(f12i["lora"]) == set(POP["f12i_lora_roots"])
-    assert c1.AWAITING in json.dumps(f12i["astra_and_c4"])  # not in the token output
+    assert "awaiting the F12-I constructions" in json.dumps(
+        f12i["astra_and_c4"]
+    )  # not in the token output
     for name, obj in files.items():  # the committed draft equals the builder's output
         p = fs.ROOT / c1.DRAFT_DIR / name
         assert json.loads(p.read_text()) == json.loads(json.dumps(obj)), name

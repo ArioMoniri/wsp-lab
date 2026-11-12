@@ -2,5 +2,5 @@
  "at_freeze": "the register's rows are copied here with their statuses; every PENDING row must be given by its own session before C1 (Board A F12c condition 1)",
  "register": "docs/prereg/f12_attestations.md",
  "requirement": "F12a.1(c)-(d): statements (i) old development outcomes, (ii) new outcomes, (iii) prescore audits for every decision-maker, code/input builder, extractor, token-run session, chair and approving reviewer through the freeze; one session never attests for another",
- "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A"
+ "status": "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs (F12e); the governed C1 file is written at the C1 freeze and verified by Board A"
 }

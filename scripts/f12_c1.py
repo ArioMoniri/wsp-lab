@@ -64,6 +64,16 @@ DRAFT_STATUS = (
     "at the C1 freeze and verified by Board A"
 )
 C1_CODE_SCHEMA = "f12-code-hashes-c1-v1"
+FACTS_REL = f"{MANIFEST_DIR}/f12e_token_facts.json"
+QUALIFICATION_REL = f"{MANIFEST_DIR}/f12e_qualification.json"
+FILLED_STATUS = (
+    "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs "
+    "(F12e); the governed C1 file is written at the C1 freeze and verified by Board A"
+)
+F12I_AWAITING = (
+    "awaiting the F12-I constructions (scripts/f12_additivity_prepare.py): the Astra and C4 parent, support and base "
+    "tensor hashes and the bitwise part checks are not in the F12 token output"
+)
 
 
 def _sha_file(p) -> str:
@@ -252,9 +262,14 @@ def _rel_sha(root, rel):
     return {"path": rel, "sha256": _sha_file(root / rel)}
 
 
-def build_draft(root=ROOT) -> dict:
-    """The C1 package skeleton (deterministic; no timestamps)."""
+def build_draft(root=ROOT, use_facts=True) -> dict:
+    """The C1 package draft (deterministic; no timestamps). Without the committed token facts
+    (``f12e_token_facts.json``) or with ``use_facts=False`` it is the F12d skeleton whose token-dependent parts say
+    ``AWAITING``; with them those parts are filled (F12e)."""
     root = Path(root)
+    facts = None
+    if use_facts and (root / FACTS_REL).exists():
+        facts = json.loads((root / FACTS_REL).read_text())
     pop = json.loads((root / "docs/prereg/a5_manifests/f12/population.json").read_text())
     pin_rel = f"{MANIFEST_DIR}/noise_payload_restricted_pin.json"
     pin = json.loads((root / pin_rel).read_text())
@@ -365,7 +380,66 @@ def build_draft(root=ROOT) -> dict:
         "at_freeze": "regenerated over the frozen code and promoted only through MANIFEST_C1.sha256 and Board A "
         "verification, never by changing its status string",
     }
+    if facts is not None:
+        _fill_from_facts(root, files, facts, pop)
     return {n: files[n] for n in C1_FILES}
+
+
+def _fill_from_facts(root, files, facts, pop):
+    """F12e: replace every AWAITING token-dependent part with the committed token facts."""
+    from scripts import f12_qualify as fq
+
+    src = _rel_sha(root, FACTS_REL)
+    folds = fq.eligible_row_folds(pop, set(facts["eligibility"]["eligible_ids"]))
+    if fq.folds_sha256(folds) != facts["folds_sha256"]:
+        raise ValueError("eligible-row folds recomputed from population.json differ from the token facts")
+    qual = root / QUALIFICATION_REL
+    qref = _rel_sha(root, QUALIFICATION_REL) if qual.exists() else "f12e qualification report not yet written"
+    for obj in files.values():
+        obj["status"] = FILLED_STATUS
+    files["population.json"]["eligibility"] = {
+        "source": src,
+        "token_manifest": facts["token_manifest"],
+        **{k: facts["eligibility"][k] for k in ("rule", "n_eligible", "eligible_ids_sha256", "excluded",
+                                                 "by_family", "rank_sources", "field_status",
+                                                 "rows_with_unsupported_changed_tensors")},
+    }  # fmt: skip
+    files["folds.json"].pop("eligible_row_folds", None)
+    files["folds.json"] |= {
+        "eligible_row_folds_source": src,
+        "eligible_row_folds_sha256": facts["folds_sha256"],
+        "eligible_row_folds": folds,
+    }
+    files["schemas.json"] |= {
+        "token_input_hashes": {"source": src, "token_manifest": facts["token_manifest"]} | facts["token_inputs"],
+        "g2_manifest_and_probe_cache": facts["identities"],
+        "down_proj_tensor_hashes": {
+            "base_state_hash": facts["base_state_hash"],
+            "base_model": (facts["identities"].get("base") or {}).get("model"),
+            "hash": "wsp.features.response_field._tensor_hash of the bf16 base tensor (state hash re-verified)",
+            "source": facts.get("base_tensor_hashes_file"),
+            "tensors": facts["down_proj_base_tensor_hashes"],
+        },
+    }
+    files["models.json"]["gauge_and_control_audits"] = {
+        "F5_gauge_audit": {
+            "requirement": "F12a.2(i): the F5 gauge audit applies to WM-R; F12a.5(d): a gauge-audit failure counts "
+            "as a replicate failure",
+            "satisfied_by_frozen_output": False,
+            "qualification": qref,
+            "reason": "the frozen token output holds no gauge-transformed tokens or (B, A) factors and "
+            "scripts/f12_simulation.py has no real-token gauge audit; open for the chair and Board A (F12e)",
+        },
+        "permuted_field_eligibility": "A5.8.3 permuted-field eligibility of the descriptive WM-R-perm control "
+        "applies at analysis; the token builder does not compute it",
+    }
+    files["f12i_c1.json"]["parent_support_tensor_hashes"] = {
+        "source": src,
+        "base_state_hash": facts["base_state_hash"],
+        "lora": facts["f12i_lora_parents"],
+        "astra_and_c4": F12I_AWAITING,
+    }
+    files["code_hashes_c1.json"]["token_facts"] = src
 
 
 def write_draft(root=ROOT) -> list:

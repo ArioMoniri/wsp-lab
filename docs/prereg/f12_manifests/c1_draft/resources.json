@@ -26,6 +26,6 @@
   "sha256": "53804434a6a679ebd69a3775f7a26a25a224c397d6f8323c7bec16532221a348"
  },
  "rss_limit_gb": 4,
- "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A",
+ "status": "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs (F12e); the governed C1 file is written at the C1 freeze and verified by Board A",
  "workers_max": 2
 }

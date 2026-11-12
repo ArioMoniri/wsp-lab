@@ -6,8 +6,16 @@
   "sha256": "ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f"
  },
  "descriptive_arms": "K (Gaussian-kernel ridge) and M (width-8 GELU MLP), F12a.2(g)",
- "gauge_and_control_audits": "awaiting the token manifest: F5 gauge audit and permuted-field eligibility on the real tokens",
- "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A",
+ "gauge_and_control_audits": {
+  "F5_gauge_audit": {
+   "qualification": "f12e qualification report not yet written",
+   "reason": "the frozen token output holds no gauge-transformed tokens or (B, A) factors and scripts/f12_simulation.py has no real-token gauge audit; open for the chair and Board A (F12e)",
+   "requirement": "F12a.2(i): the F5 gauge audit applies to WM-R; F12a.5(d): a gauge-audit failure counts as a replicate failure",
+   "satisfied_by_frozen_output": false
+  },
+  "permuted_field_eligibility": "A5.8.3 permuted-field eligibility of the descriptive WM-R-perm control applies at analysis; the token builder does not compute it"
+ },
+ "status": "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs (F12e); the governed C1 file is written at the C1 freeze and verified by Board A",
  "training_and_selection": {
   "batch": 16,
   "head_zero_init": true,

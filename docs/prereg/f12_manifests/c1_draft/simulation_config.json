@@ -17,7 +17,7 @@
    "sha256": "be372fc56657bc4e6a62732e0e7bbce1701027197635b846efee6e8f4948e29c"
   }
  },
- "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A",
+ "status": "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs (F12e); the governed C1 file is written at the C1 freeze and verified by Board A",
  "superseded": {
   "stage1": {
    "path": "docs/prereg/f12_manifests/f12b_stage1_config.json",
