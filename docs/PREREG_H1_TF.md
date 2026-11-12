@@ -6101,3 +6101,118 @@ If code or inputs change after steps 4–5, they are re-pinned and stale evidenc
 - (iii) It read F12a.1's account of the prescore audits and the register's entries, not the audits.
 
 It attests to this session only.
+
+#### A5 note F12e (Thu Nov 12 00:22:33 UTC 2026, before any G3 outcome): real-token qualification, registered noise check and timing pilot
+
+This block is appended; earlier text is not rewritten. It carries out steps 2 and 3 of the "Ordered path to stage 1" in Board
+A's F12c review (`docs/reviews/council/board-a-f12c-2026-11-11.md`) on the frozen F12 token run (manifest
+`docs/prereg/a5_manifests/f12/tokens_manifest.json`, sha256 `424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f`,
+committed in `4565743`). It was written on branch `prereg/f12e` (main `4565743`) while Part A is staged, frozen, released with
+conditions, unscored and held, and before any G3, rotation, ladder, sealed, F8 or F9 outcome had been read. Commits: `072b0d3`
+(tests first), `20bce07` (step 1 code and C1 draft fill), `4ea28a9` (candidate identities), `2910b45` (qualification report)
+and this note's commit. **The real-token qualification failed (first failure: the F5 gauge audit's inputs), so, under the
+stop rule of the brief, the registered noise check (step 4) and the timing pilot (step 5) were not run.** F12e changes no rule,
+releases nothing and does not mark C1 verified. Part A remains held by the programme owner.
+
+**F12e.1 — Step 2: C1 package filled from the token manifest.** `scripts/f12_qualify.py` verifies all seven token files against
+the manifest's sha256 (all equal) before reading them, and writes the token facts
+`docs/prereg/f12_manifests/f12e_token_facts.json` (sha256 `01ba41592580d2ebcdcc2477578b476509b50b3e4c9ea9fe6dda177a5c3e8886`).
+`scripts/f12_c1.py build_draft` fills the C1 draft (`c1_draft/`) from the committed facts:
+- row eligibility (F12a.2(e)): 270 of 270 eligible, none excluded, no unsupported changed tensor, field status ok for all rows;
+- eligible-row folds for every S_k: outer folds, the four inner folds of each outer fold and the leave-one-family-out evaluation
+  sets (the mixed component always trains). With no exclusion they equal `population.json`'s S_k folds at all six k;
+- token input hashes: the seven files, X, presence, row ids, rows, columns and slots, the 270 realised-increment hashes, K frames;
+- G2 manifest (`c4ec7390…09ff`), probe cache, WikiText field and base identities, as recorded in the manifest;
+- the 24 `mlp.down_proj` base tensor hashes, and for the 16 F12-I LoRA roots the parent increment hash, the support split by
+  layer (36 tensors in layers 0–11 and 36 in layers 12–23 for each root; no tensor without a layer index) and the support's base
+  tensor hashes. The 72 base tensor hashes (`f12e_base_tensor_hashes.json`, sha256
+  `1a9c23d1f8c653b2bdde59f8f23e977dffd997a4f003a3e37e095b993881bf09`) come from the pinned base model, whose state hash was
+  re-verified against the manifest's (peak RSS 3.1 GB);
+- gauge and control audits: recorded as **not satisfied by the frozen output** (F12e.2);
+- F12-I Astra and C4 parent, support and tensor hashes: still awaiting the F12-I constructions; they are not in the token output.
+
+The draft code inventory `code_hashes_c1.json` was regenerated (30 files; sha256
+`3f8063105c0a8f0e03d3bab4ff37f88250150195f28abd31fea67e14fa43d682`). `MANIFEST_C1.sha256` is not written and C1 is not marked
+verified. The candidate code, configuration, payload and dependency identities were frozen before step 3 in
+`f12e_candidate_identities.json` (sha256 `294ad3a6380ad73b096a82ac63c1e667a467d788a05110635febdf70562b1169`): the F12 scripts and
+their dependencies, the four F12c configurations, the v2 restricted payload `44d79403…6fb5` and its pin, the token manifest,
+population, resource plan and runtime versions.
+
+**F12e.2 — Step 3: real-token qualification (outcome-free).** Report `docs/prereg/f12_manifests/f12e_qualification.json`
+(sha256 `5bfa4bb5d49b4cace41e18069a8b65454bfecdfc887542d3d1838e20946e6e1c`), run at `4ea28a9` with no identity drift:
+
+| check | result | basis |
+|---|---|---|
+| token files | pass | all seven sha256 equal the manifest |
+| code identity | pass | no drift from the frozen candidate identities |
+| population identity | pass | population json, ids and fold-manifest hashes; sorted row ids; rows.jsonl family, source, holder; rows hash |
+| counts | pass | 270 rows / 234 components; strata abliteration 83, chain 71, lora_sft 29, mixed 1, random_dir 50; existing 123, purchasable 147 |
+| exclusions | pass | flags agree with rows.jsonl; 270 eligible; none excluded; manifest summary consistent |
+| finite schema | pass | 270 × 186 × 42 fp32, all finite; absent slots zero; 6,845 present tokens; column rules (33, 34, 37, 38, 39–41); X, presence and rows hashes reproduce; slot table equals the simulation's |
+| folds | pass | the simulation's purchase order, S_k rows and outer folds equal `population.json` at all six k |
+| nesting | pass | inner folds partition each outer training set, disjoint from held-out; mixed component trains, never evaluated; shared-delta pairs within one component |
+| **gauge** | **fail** | the frozen output holds no gauge-transformed tokens or (B, A) factors, and `f12_simulation.py` has no real-token gauge audit |
+| **simulation matrix inputs** | **fail** | no v4 pooled statistics in the frozen output and no tokens-to-matrix builder |
+
+- *Gauge (F12a.2(i), F12a.5(d), F5 pins).* The audit's prerequisites hold: every present token has a recorded rank and a K
+  frame, and no K block is masked (no `k_cutoff_tie`). But the registered audit evaluates every fitted WM-R model on the
+  gauge-transformed (BQ, Q⁻¹A) inputs, and those inputs do not exist. The simulation's rules text says "the real token builder
+  supplies gauge-transformed tokens"; the builder at `0412799` does not. So a replicate's gauge audit cannot be run, although
+  F12a.5(d) counts its failure as a replicate failure. Columns 16–41 depend on D_t alone and columns 0–15 on (B, A) only through
+  BA, so a gauge change alters tokens only by fp32 rounding. That analytic point is not the registered numerical audit and does
+  not replace it without a ruling.
+- *Simulation matrix inputs.* The simulation reads an `f12-token-matrix-v1` matrix. Its StatNN comparator takes "v4 pooled
+  statistics" plus the 186 × (42 + presence) token block (F12.3, F5 pins, A5.4.1). The simulation's 18-column v4 block is the
+  synthetic generator's stand-in (`v4_stats`). The pinned pooling code (`wsp.features.pool`, feature_version 4, 4 buckets) gives
+  1,242 statistics + 136 spectrum columns. The frozen token output holds neither, and no tokens-to-matrix builder exists. Pooled
+  v4 files exist on disk for all 270 rows (existence only; not opened), but which columns form the block, their identities in
+  C1/C2 and the builder are unregistered. The StatNN cost that the timing pilot measures depends on that width.
+- *Omitted energy (descriptive; no rule changed).* The manifest's `omitted_energy_gt_0.01_rows` is 212 of 270. Per row, the
+  statistic is the largest omitted energy Σ_(j>r) σ_j² / Σ_j σ_j² over its present tokens at the recorded rank r.
+
+  | family | rows | > 0.01 | median | max |
+  |---|---|---|---|---|
+  | abliteration | 83 | 58 | 0.016 | 0.293 |
+  | chain | 105 | 83 | 0.070 | 0.741 |
+  | lora_sft | 29 | 25 | 0.128 | 0.345 |
+  | random_dir | 53 | 46 | 0.499 | 0.737 |
+
+  By k bin (0 = existing rows; otherwise the smallest registered k whose S_k adds the row), rows > 0.01 / rows: k 0 95/123, k 29
+  22/29, k 58 24/30, k 87 21/29, k 116 26/30, k 145 24/29. All 83 chain rows above 0.01 are existing (k 0).
+
+  F12a says nothing about omitted energy. F5.1 and the F5 schema pins, which F12.3's token schema inherits, record it "as a
+  diagnostic, not an input". The K block (columns 0–15) uses the rank-r truncation BA. Columns 16–32 and 35–41 use the
+  untruncated increment. No threshold or rule exists, and none is introduced. This is **flagged for Board A**.
+
+**F12e.3 — Steps 4 and 5 not run.** The brief's stop rule applies at the first failure, and Board A's step 4 runs "on those fixed
+inputs" after step 3. So no `noisecheck:<d>` stream, no `pilot:<r>` stream and no budget-ledger event was used or written. No noise
+payload was opened. The noise check is therefore neither passed nor failed, and it can still run once without a re-seeding
+question. There is no pilot timing, memory or CPU projection. The break-even of about 236.6 CPU-s per alternative replicate
+against 190 CPU-h (F12d.4) is untested, and `pilot_acceptance` is not written.
+
+**F12e.4 — Decisions needed before step 4 (for the chair and Board A; not taken here).**
+1. *Gauge audit.* Either:
+   - a pinned builder extension writes the registered gauge-transformed tokens for every row and tensor (a new C2 input: it
+     re-reads the stored zoo deltas, at an unmeasured CPU cost), and the runner applies the F5 audit to every fitted WM-R model; or
+   - a dated ruling on how F12a.2(i) is discharged.
+2. *Real-token matrix.* The v4 block needs a definition (which pooled columns, their source files and identities), a pinned
+   tokens-to-matrix builder with tests, and that matrix's identity bound into the noise-check, pilot and stage records.
+
+Either change alters the code or input identities. The frozen candidate identities, C1 draft and qualification are then re-pinned
+and re-run, and step 3 must pass before step 4.
+
+**F12e.5 — What remains (review steps 4–8).**
+- Step 4: the 10,000-panel k = 145 noise check on the v2 payload, under the ledger, after a passed step 3.
+- Step 5: the ten-alternative pilot (r = 3000–3009), with its report, process-tree costs and `project_cpu` all-in projection.
+- Step 6: the chair's `pilot_acceptance`, only within 190 CPU-h.
+- Step 7: the final attestations (the PENDING rows of F12d.5); the Astra and C4 F12-I hashes; `MANIFEST_C1.sha256`; Board A's
+  explicit C1 verification and the closure of its continuing conditions, including the gauge and omitted-energy flags above.
+- Step 8: stage 1, only after that verification and the chair's acceptance.
+
+*No-exposure attestation (implementation session, 11 Nov 2026 about 23:52 UTC to this commit).* Entry 13 of
+`docs/prereg/f12_attestations.md` is this session's full attestation (Claude Opus 5.5 implementation sub-agent, worktree
+`.worktrees/prereg/f12e`). (i) It saw no TF-v1 record, ledger outcome or D3 outcome. It **read the real F12 token outputs**,
+which are field forecasts and edit-derived inputs, after verifying their hashes. (ii) It saw no G3, rotation, ladder,
+missing-reference, sealed, F8 or F9 outcome and no Part A score, opened nothing under `data/evals` and used no GPU. A directory
+walk over `data/` listed, without printing or opening, names under `data/evals` (disclosed in entry 13). (iii) It read F12a.1's
+account of the prescore audits, not the audits. It attests to this session only.

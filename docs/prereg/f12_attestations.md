@@ -34,6 +34,7 @@ round-6 member reports. They are predictions and simulation outputs, not outcome
 | 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11 Nov 2026 | through 21:50 UTC 11 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entry 10 below | given to 21:50 UTC; **renewal PENDING** at C1 |
 | 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** |
 | 12 | F12d implementer and v2 restricted-payload extractor (chair-authorised for that step) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12d`, worktree `.worktrees/prereg/f12d`, 11 Nov 2026 about 21:45 UTC to the F12d note commit | F12d note, code, tests, v2 restricted copy and pin, C1 skeleton, resource plan | none seen; handled centred qualification noise (see below) | none | read F12a.1's account and entries 9-10, not the audits | entry 12 below | given (this session only) |
+| 13 | F12e implementer (C1 draft fill, candidate identity freeze, real-token qualification) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12e`, worktree `.worktrees/prereg/f12e`, 11 Nov 2026 about 23:52 UTC to the F12e note commit (12 Nov) | F12e note, `scripts/f12_qualify.py`, the C1 draft fill, token facts, base tensor hashes, candidate identities, qualification report | none seen; read the real F12 token outputs (field forecasts, see below) | none | read F12a.1's account and entries 10 and 12, not the audits | entry 13 below | given (this session only) |
 
 PENDING cells are blank on purpose. Nothing is inferred from a session's role, branch or timing.
 
@@ -149,3 +150,41 @@ used no GPU, and ran no registered noise check, timing pilot, stage 1, coverage 
 *(iii) Prescore audits.* The session read F12a.1's account of the disclosed pre-score audits and entries 9 and 10 of this register,
 which describe them. It did not open the Part A prediction or calibration files, the prescore inventories, the round-6 member
 reports or `SYNTHESIS-r6.md`.
+
+## Entry 13: F12e implementer (given)
+
+*Session.* An implementation sub-agent session (Claude Opus 5.5) working only in `.worktrees/prereg/f12e` on branch `prereg/f12e`,
+from main `4565743`, from 11 Nov 2026 about 23:52 UTC until the commit adding note F12e on 12 Nov 2026. The chair's brief
+authorised it to read the real F12 token outputs under `/home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens/` after verifying them
+against the committed manifest. It attests to this session only and writes no other entry.
+
+*What it read.*
+- Committed files: Board A's F12c review; notes F12a, F12c, F12d, amendment F12b and the chair ruling on F12c, and the A5.4,
+  F5.1, "F5 schema pins" and F12.3 passages of `docs/PREREG_H1_TF.md`; this register (header, table, entries 10 and 12); the
+  F12 scripts, tests and manifests, including `c1_draft/`; `docs/prereg/a5_manifests/f12/tokens_manifest.json` and
+  `population.json`; `src/wsp/features/pool.py` (head) and `response_field._tensor_hash`; the repository hooks.
+- **Real F12 token outputs (field forecasts and edit-derived inputs, not outcomes).** It verified the sha256 of all seven files
+  against the committed manifest (all equal) and then read `tokens.safetensors`, `rows.jsonl`, `detail.jsonl`, `kframes.json`,
+  `aq.json` and `pricing.json` through `scripts/f12_qualify.py`. Their values entered the qualification checks, the token facts
+  and the omitted-energy summary. It printed key names, counts, hashes, flags, omitted-energy quantiles by family and k bin, and
+  the 16 LoRA roots' tensor counts. It printed no field contraction a or q value and no token value.
+- The pinned base model (`Qwen/Qwen3.5-0.8B` at `2fc06364…`) was loaded once on CPU by `a5_power_fields.load_base_state`, which
+  re-verified its state hash, to hash 72 base tensors.
+- `data/`: it listed `data/` and `data/hf/hub` (names), one zoo entry directory (`delta.safetensors`, `edit.json`; names and
+  sizes, not opened), and tested the existence of `data/features/qwen3.5-0.8b/<id>/pooled.safetensors` for the 270 rows without
+  opening any. A `find data/ -maxdepth 4 -name 'pooled*'` with the `data/evals` paths filtered out of its output still walked
+  directory listings under `data/evals`; no file there was opened and none of its names was printed. A `grep -rl` over
+  `docs/prereg` printed the names of Part A manifest files containing `down_proj.weight`; it opened none of them.
+- It opened no noise payload (restricted or raw) and ran no noise check, pilot or simulation replicate.
+- Test runs: the F12 test files serially (OMP 2), and the pre-commit hook's full suite at three commits; the suite's
+  collection-time file access was not audited. No test reads the real token directory.
+
+*(i) Old development outcomes.* None seen. It saw no TF-v1 record, no G0/G1/G6 ledger outcome and no D3 outcome. The token
+outputs include field forecasts (a, q) for the 123 existing roots; these are forecasts, not their recorded outcomes.
+
+*(ii) New outcomes.* None. The session opened nothing under `data/evals`. It saw no G3, rotation, ladder, missing-reference,
+sealed, F8 or F9 outcome and no Part A score, received no summary of one and used no GPU.
+
+*(iii) Prescore audits.* The session read F12a.1's account of the disclosed pre-score audits and entries 10 and 12 of this
+register. It did not open the Part A prediction or calibration files, the prescore inventories, the round-6 member reports or
+`SYNTHESIS-r6.md`.
