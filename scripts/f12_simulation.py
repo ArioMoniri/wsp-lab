@@ -197,7 +197,14 @@ N_LAYERS = 24
 F5_COLS, PROBE_COLS = 39, 3
 N_COLS = F5_COLS + PROBE_COLS
 HIDDEN = 16
-V4_COLS = 18
+V4_COLS = 18  # the synthetic stand-in's v4 block (synthetic runs only; chair ruling on F12e (b))
+# F12f: the real v4 block is the pinned pooling code's output (``wsp.features.pool``, feature_version 4, 4 buckets):
+# 1,242 pooled statistics then 136 spectrum columns, as stored in each row's ``pooled.safetensors``.
+from wsp.features.pool import pooled_dims as _pooled_dims
+
+V4_REAL_COLS = sum(_pooled_dims(4))  # 1,378
+GAUGE_ATOL, GAUGE_RTOL = 1e-5, 1e-4  # F5 pins "Gauge audit": |delta f| <= 1e-5 + 1e-4 |f| nats per row
+MATRIX_MANIFEST = ROOT / "docs/prereg/a5_manifests/f12/matrix_manifest.json"
 
 
 def slot_table():
@@ -564,6 +571,13 @@ MATRIX_KEYS = (
     "row_ids", "component", "family", "origin", "eligible", "sum_a", "sum_q", "v4",
     "token_row", "token_slot", "token_role", "tokens",
 )  # fmt: skip
+# F12f: the real matrix also carries the gauge-transformed tokens (aligned with ``tokens``) and the zero-edit v4
+# statistics x0 (F12a.2(h)); synthetic matrices may omit them (their hash is then unchanged).
+OPTIONAL_MATRIX_KEYS = ("tokens_gauge", "x0_v4")
+
+
+def _matrix_keys(m):
+    return MATRIX_KEYS + tuple(k for k in OPTIONAL_MATRIX_KEYS if k in m)
 
 
 def validate_matrix(m):
@@ -575,8 +589,31 @@ def validate_matrix(m):
             raise ValueError(f"{k} has {len(m[k])} rows, expected {n}")
     if m["tokens"].ndim != 2 or m["tokens"].shape[1] != N_COLS:
         raise ValueError(f"tokens must be [T, {N_COLS}]")
-    if m["v4"].shape != (n, V4_COLS):
-        raise ValueError(f"v4 must be [{n}, {V4_COLS}]")
+    if m["synthetic"]:
+        if m["v4"].shape != (n, V4_COLS):
+            raise ValueError(f"v4 must be [{n}, {V4_COLS}]")
+    else:
+        if m["v4"].shape[1:] == (V4_COLS,) and V4_COLS != V4_REAL_COLS:
+            raise ValueError(f"the {V4_COLS}-column v4 block is the synthetic stand-in, for synthetic runs only "
+                             "(chair ruling on F12e (b))")  # fmt: skip
+        if m["v4"].shape != (n, V4_REAL_COLS):
+            raise ValueError(f"v4 must be [{n}, {V4_REAL_COLS}] (the pinned pooling code)")
+        if "tokens_gauge" not in m:
+            raise ValueError("a real token matrix needs the gauge-transformed tokens (F5 gauge audit)")
+        if "x0_v4" not in m:
+            raise ValueError("a real token matrix needs the zero-edit v4 statistics x0 (F12a.2(h))")
+    if not np.all(np.isfinite(m["v4"])):
+        raise ValueError("non-finite v4 statistics")
+    if "tokens_gauge" in m:
+        if np.shape(m["tokens_gauge"]) != np.shape(m["tokens"]):
+            raise ValueError("gauge-transformed tokens must align with tokens")
+        if not np.all(np.isfinite(m["tokens_gauge"])):
+            raise ValueError("non-finite gauge-transformed tokens")
+    if "x0_v4" in m:
+        if np.shape(m["x0_v4"]) != (m["v4"].shape[1],):
+            raise ValueError("x0_v4 must have the v4 width")
+        if not np.all(np.isfinite(m["x0_v4"])):
+            raise ValueError("non-finite zero-edit v4 statistics x0")
     if len({len(m[k]) for k in ("token_row", "token_slot", "token_role", "tokens")}) != 1:
         raise ValueError("token arrays differ in length")
     if len(set(m["row_ids"].tolist())) != n:
@@ -599,7 +636,7 @@ def validate_matrix(m):
 def matrix_sha256(m) -> str:
     h = hashlib.sha256(TOKEN_SCHEMA.encode())
     h.update(json.dumps(bool(m["synthetic"])).encode())
-    for k in MATRIX_KEYS:
+    for k in _matrix_keys(m):
         a = np.asarray(m[k])
         a = a.astype("U") if a.dtype.kind in "US" else np.ascontiguousarray(a)
         h.update(f"{k}:{a.dtype.str}:{a.shape}".encode())
@@ -609,7 +646,7 @@ def matrix_sha256(m) -> str:
 
 def save_matrix(path, m):
     validate_matrix(m)
-    arrays = {k: np.asarray(m[k]) for k in MATRIX_KEYS}
+    arrays = {k: np.asarray(m[k]) for k in _matrix_keys(m)}
     np.savez_compressed(
         path, schema=np.asarray(m["schema"]), synthetic=np.asarray(m["synthetic"]), **arrays
     )
@@ -617,7 +654,7 @@ def save_matrix(path, m):
 
 def load_matrix(path):
     with np.load(path, allow_pickle=False) as z:
-        m = {k: z[k] for k in MATRIX_KEYS}
+        m = {k: z[k] for k in MATRIX_KEYS + tuple(k for k in OPTIONAL_MATRIX_KEYS if k in z.files)}
         m["schema"] = str(z["schema"])
         m["synthetic"] = bool(z["synthetic"])
     return validate_matrix(m)
@@ -628,12 +665,15 @@ def subset_matrix(m, rows):
     remap = np.full(len(m["row_ids"]), -1)
     remap[rows] = np.arange(len(rows))
     keep = remap[m["token_row"]] >= 0
+    tok_keys = ("token_slot", "token_role", "tokens") + (("tokens_gauge",) if "tokens_gauge" in m else ())
     out = {k: m[k][rows] for k in MATRIX_KEYS if not k.startswith("token")}
-    out.update({k: m[k][keep] for k in ("token_slot", "token_role", "tokens")})
+    out.update({k: m[k][keep] for k in tok_keys})
     out["token_row"] = remap[m["token_row"][keep]]
     order = np.lexsort((out["token_slot"], out["token_row"]))
-    for k in ("token_row", "token_slot", "token_role", "tokens"):
+    for k in ("token_row",) + tok_keys:
         out[k] = out[k][order]
+    if "x0_v4" in m:
+        out["x0_v4"] = m["x0_v4"]
     out["schema"], out["synthetic"] = m["schema"], m["synthetic"]
     return out
 
@@ -793,7 +833,7 @@ def batched_forward(P, x, role, mask):
 class HeadData:
     """Padded token tensors for the rows of one population."""
 
-    def __init__(self, m):
+    def __init__(self, m, tokens_key="tokens"):
         n = len(m["row_ids"])
         counts = np.bincount(m["token_row"], minlength=n)
         T = max(1, int(counts.max()) if n else 1)
@@ -805,11 +845,11 @@ class HeadData:
         X = np.zeros((n, T, N_COLS), dtype=np.float32)
         R = np.zeros((n, T), dtype=np.int64)
         M = np.zeros((n, T), dtype=np.float32)
-        X[m["token_row"], pos] = m["tokens"]
+        X[m["token_row"], pos] = m[tokens_key]
         R[m["token_row"], pos] = m["token_role"]
         M[m["token_row"], pos] = 1.0
         self.X, self.R, self.M = torch.from_numpy(X), torch.from_numpy(R), torch.from_numpy(M)
-        self.tokens = np.asarray(m["tokens"], dtype=np.float64)
+        self.tokens = np.asarray(m[tokens_key], dtype=np.float64)
         self.token_row = m["token_row"]
 
     def stats(self, rows):
@@ -953,7 +993,40 @@ def refit_epochs(best4):
     return max(1, (e[1] + e[2]) // 2)
 
 
-def fit_wmr_fold(data, a, q, y, comps, train, test, cfg):
+def gauge_within_tolerance(f, f_gauge, atol=GAUGE_ATOL, rtol=GAUGE_RTOL):
+    """F5 pins: |f_gauge - f| <= atol + rtol |f| per row (nats); non-finite values fail."""
+    f, fg = np.asarray(f, dtype=np.float64), np.asarray(f_gauge, dtype=np.float64)
+    with np.errstate(invalid="ignore"):
+        ok = np.abs(fg - f) <= atol + rtol * np.abs(f)
+    return ok & np.isfinite(f) & np.isfinite(fg)
+
+
+def gauge_audit(data, data_g, P, stats, scale, rows, seeds, fold):
+    """F5 gauge audit of one outer fold's refitted WM-R heads (one per seed): every held-out row is predicted from
+    its frozen tokens and from its gauge-transformed tokens with the same fitted parameters and the same training
+    standardisation; f is the seed's head prediction in nats (multiplied back by the residual-target SD; F3 does
+    not read tokens). Every nonzero discrepancy is retained; a row outside the tolerance is a violation."""
+    rows = np.asarray(rows)
+    f = predict_heads(data, P, [stats] * len(seeds), rows) * scale
+    fgv = predict_heads(data_g, P, [stats] * len(seeds), rows) * scale
+    fits, disc, viol = [], [], 0
+    for j, s in enumerate(seeds):
+        ok = gauge_within_tolerance(f[j], fgv[j])
+        delta = np.abs(fgv[j] - f[j])
+        nv = int((~ok).sum())
+        viol += nv
+        for i in np.flatnonzero((delta != 0) | ~ok):
+            disc.append({
+                "fold": int(fold), "seed": int(s), "row": int(rows[i]), "f": float(f[j, i]),
+                "f_gauge": float(fgv[j, i]), "delta": float(delta[i]),
+                "tolerance": float(GAUGE_ATOL + GAUGE_RTOL * abs(f[j, i])), "violation": bool(not ok[i]),
+            })  # fmt: skip
+        fits.append({"fold": int(fold), "seed": int(s), "rows": len(rows), "violations": nv,
+                     "max_abs_delta": float(np.nanmax(delta)) if len(rows) else 0.0})  # fmt: skip
+    return {"fits": fits, "violations": viol, "discrepancies": disc}
+
+
+def fit_wmr_fold(data, a, q, y, comps, train, test, cfg, data_g=None, fold=None):
     """One outer fold of WM-R: nested F3 / standardisation / epoch selection, refit, seed average.
 
     F12b.1 (cfg.head_zero_init, cfg.target_standardise): heads start with zero output weights, and
@@ -996,6 +1069,8 @@ def fit_wmr_fold(data, a, q, y, comps, train, test, cfg):
     )
     h = predict_heads(data, P, [st] * len(cfg.seeds), test).mean(0) * sc
     info = {"inner_best": best, "refit_epochs": epochs}
+    if data_g is not None:
+        info["gauge"] = gauge_audit(data, data_g, P, st, sc, test, cfg.seeds, fold)
     if cfg.target_standardise:
         info["target_sd"] = sc
         info["inner_target_sd"] = inner_sd[:N_INNER]
@@ -1793,6 +1868,7 @@ class Context:
         self.fold = np.asarray([folds[c] for c in comps])
         self.a, self.q = m["sum_a"].astype(float), m["sum_q"].astype(float)
         self.data = HeadData(m)
+        self.data_g = HeadData(m, tokens_key="tokens_gauge") if "tokens_gauge" in m else None
         self.F = statnn_features(m)
         self.P = oof_operator(self.a, self.q, self.fold, cfg.ridge_lambda)
         self.payload = payload
@@ -1840,14 +1916,35 @@ class Context:
             if not len(test):
                 continue
             wm[test], iw = fit_wmr_fold(
-                self.data, self.a, self.q, y, self.m["component"], train, test, self.cfg
-            )
+                self.data, self.a, self.q, y, self.m["component"], train, test, self.cfg,
+                data_g=self.data_g, fold=f,
+            )  # fmt: skip
             st[test], isn = fit_statnn_fold(
                 self.F, self.a, self.q, y, self.m["component"], train, test, self.cfg
             )
             info.append({"fold": f, **iw, **isn})
         f3 = self.P @ y
         return f3, wm, st, info
+
+
+def gauge_record(ctx, info):
+    """The replicate's F5 gauge audit over every fitted WM-R model (each seed, each outer fold)."""
+    if ctx.data_g is None:
+        return {"applied": False, "reason": "no gauge-transformed tokens in the matrix (synthetic tokens have no "
+                "factors); a real token matrix always carries them"}  # fmt: skip
+    fits = [x for i in info for x in i["gauge"]["fits"]]
+    disc = [x for i in info for x in i["gauge"]["discrepancies"]]
+    viol = sum(i["gauge"]["violations"] for i in info)
+    return {
+        "applied": True,
+        "rule": "F5 pins: held-out rows, every seed and outer fold; |f_gauge - f| <= 1e-5 + 1e-4 |f| nats per row",
+        "fits": fits,
+        "rows_audited": sum(x["rows"] for x in fits),
+        "violations": viol,
+        "max_abs_delta": max((x["max_abs_delta"] for x in fits), default=0.0),
+        "max_delta_over_tolerance": max((x["delta"] / x["tolerance"] for x in disc), default=0.0),
+        "discrepancies": disc,
+    }
 
 
 def run_replicate(ctx, scenario, r):
@@ -1879,6 +1976,7 @@ def run_replicate(ctx, scenario, r):
     except ValueError as exc:  # registered fit failures (e.g. an empty inner fold); bugs propagate
         rec.update(valid=False, decision="unresolved_validity", failure=f"fit: {exc}")
         return rec
+    gauge = gauge_record(ctx, info)
     A = {k: float(np.abs(y - p).sum()) for k, p in (("F3", f3), ("WM", wm), ("S", st))}
     A["oracle"] = float(np.abs(y - ctx.a - gamma * h).sum())
     rec["A"] = A
@@ -1909,6 +2007,15 @@ def run_replicate(ctx, scenario, r):
                             )
                         },
                     }
+    if gauge["applied"] and gauge["violations"]:
+        # F5 pins / F12.3: a WM-R gauge violation makes WM-R's contrasts undefined; F12.4 step 1 and F12a.5(d): the
+        # replicate is unresolved (validity) and counts as a failure
+        for c in (cw, cs):
+            c["valid"] = False
+            c["undefined"] = "WM-R gauge violation (F5 pins)"
+            c["failures"] = list(c.get("failures", [])) + ["WM-R gauge violation"]
+        rec["failure"] = f"gauge audit: {gauge['violations']} WM-R violation(s) beyond 1e-5 + 1e-4 |f| nats"
+    rec["gauge_audit"] = gauge
     rec["C_WM"], rec["C_WM_S"] = cw, cs
     rec["decision"] = f12_decision(cw, cs)
     rec["valid"] = bool(cw["valid"] and cs["valid"])
@@ -2409,6 +2516,7 @@ C1_DEPENDENCIES = (
     "scripts/a5_build_panels.py",
     "scripts/a5_simulation.py",
     "scripts/tfv1_requalify.py",
+    "src/wsp/features/pool.py",
 )
 CODE_IDENTITY_FILES = ("scripts/f12_simulation.py",) + C1_DEPENDENCIES
 # F12d: C1 is no longer a supplied prerequisite; the validator verifies the committed C1 itself (f12_c1.verify_c1).
@@ -3151,7 +3259,9 @@ def effective_rules(cfg):
         f"{cfg.weight_decay} batch {cfg.batch}, <= {cfg.max_epochs} epochs, patience {cfg.patience}, refit "
         f"floor((e2+e3)/2); epoch selection with seeds {list(cfg.seeds)}; refit seeds averaged; frozen for "
         "simulation and analysis (F12b.1, F12c.1)",
-        "StatNN": f"F3 + LightGBM (A5.8.4; n_jobs {lg['n_jobs']}) on v4 + 186 x (42 + presence); trees "
+        "StatNN": f"F3 + LightGBM (A5.8.4; n_jobs {lg['n_jobs']}) on v4 ({V4_REAL_COLS} columns of the pinned "
+        f"pooling code on real tokens; the {V4_COLS}-column stand-in on synthetic tokens only) + 186 x (42 + "
+        "presence); trees "
         f"{list(cfg.tree_grid)} chosen by mean inner L1 with seed {', '.join(map(str, cfg.statnn_select_seeds))} "
         f"only; outer refit averages seeds {list(cfg.seeds)}; frozen for simulation and analysis (F12b.5, F12c.1)",
         "noise": f"{cfg.noise_draw}: per simulated component one integers(0, 63) payload component; its rows "
@@ -3194,8 +3304,11 @@ def effective_rules(cfg):
         "estimand": "every learned or calibrated C is a ratio of expected row sums; no mean of replicate ratios",
         "release": f"'{RELEASE_FIELD}': fail-closed execution validator; never purchase authority",
         "failure_wording": FAILURE_WORDING,
-        "gauge_audit": "not run on synthetic tokens (no factors); the real token builder supplies "
-        "gauge-transformed tokens",
+        "gauge_audit": "F5 pins (F12a.2(i)): every fitted WM-R model, each seed and each outer fold, predicts "
+        "every held-out row from its frozen and its gauge-transformed tokens (scripts/f12_gauge_tokens.py); "
+        "|delta f| <= 1e-5 + 1e-4 |f| nats per row, f the seed's head prediction in nats; every nonzero "
+        "discrepancy retained; any violation makes C_WM and C_WM,S undefined and the replicate unresolved "
+        "(validity), counted as a failure (F12a.5(d)); not run on synthetic tokens without gauge tokens",
     }
 
 
@@ -3409,7 +3522,12 @@ def guard_out(out: Path):
     return out
 
 
-def _load_matrix_arg(a, out=None):
+def _load_matrix_arg(a, out=None, governed=False):
+    """The run's token matrix. Governed real-token work (budget-ledger runs) refuses the synthetic stand-in and
+    accepts only the real matrix whose identity equals the committed matrix manifest (F12f; chair ruling on F12e (b))."""
+    if governed and a.synthetic:
+        raise SystemExit("governed real-token work refuses the synthetic token matrix and its 18-column v4 stand-in "
+                         "(chair ruling on F12e (b)); use --tokens with the committed real matrix")  # fmt: skip
     if a.synthetic:
         matrix = synthetic_token_matrix()
         src = {"synthetic": True}
@@ -3418,8 +3536,20 @@ def _load_matrix_arg(a, out=None):
             src["path"] = str(out / "synthetic_tokens.npz")
     else:
         matrix = load_matrix(a.tokens)
-        src = {"synthetic": False, "path": str(a.tokens), "file_sha256": sha256_file(a.tokens)}
+        src = {"synthetic": bool(matrix["synthetic"]), "path": str(a.tokens), "file_sha256": sha256_file(a.tokens)}
     src["matrix_sha256"] = matrix_sha256(matrix)
+    if governed:
+        if matrix["synthetic"]:
+            raise SystemExit("governed real-token work refuses a synthetic token matrix (chair ruling on F12e (b))")
+        try:
+            raw = Path(MATRIX_MANIFEST).read_bytes()
+            man = json.loads(raw)
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"governed run: committed matrix manifest unreadable: {exc}") from exc
+        if man.get("matrix_sha256") != src["matrix_sha256"] or man.get("file_sha256") != src["file_sha256"]:
+            raise SystemExit("governed run: the token matrix differs from the committed matrix manifest "
+                             f"({MATRIX_MANIFEST})")  # fmt: skip
+        src["matrix_manifest"] = {"path": str(MATRIX_MANIFEST), "sha256": hashlib.sha256(raw).hexdigest()}
     return matrix, src
 
 
@@ -3537,7 +3667,7 @@ def main_run(argv):
     plan = _budget_plan(a, governed=gname is not None and not a.synthetic)
     started_utc = f12_budget.utc_now()
     out.mkdir(parents=True, exist_ok=True)
-    matrix, token_src = _load_matrix_arg(a, out)
+    matrix, token_src = _load_matrix_arg(a, out, governed=plan is not None)
     if a.restricted_payload is not None:
         try:
             payload = NoisePayload.load_restricted(a.restricted_payload, RESTRICTED_PIN)
@@ -3816,10 +3946,13 @@ def main_noisecheck(argv):
     _budget_args(p)
     a = p.parse_args(argv)
     out = guard_out(a.out)
+    if a.synthetic and any((a.budget_ledger, a.budget_plan, a.operator)):
+        raise SystemExit("governed real-token work refuses the synthetic token matrix and its 18-column v4 stand-in "
+                         "(chair ruling on F12e (b))")  # fmt: skip
     plan = _budget_plan(a, governed=not a.synthetic)
     started_utc = f12_budget.utc_now()
     out.mkdir(parents=True, exist_ok=True)
-    matrix, token_src = _load_matrix_arg(a)
+    matrix, token_src = _load_matrix_arg(a, governed=plan is not None)
     try:
         payload = NoisePayload.load_restricted(a.restricted_payload, RESTRICTED_PIN)
     except (OSError, ValueError, KeyError) as exc:
@@ -3851,6 +3984,7 @@ def main_noisecheck(argv):
         "tokens_synthetic": bool(matrix["synthetic"]),
         "payload_restricted_sha256": sha256_file(a.restricted_payload),
     }
+    res["tokens"] = token_src
     res["code_sha256"] = current_code_identity()
     res["rss_max_mb"] = _maxrss_mb()
     (out / "noise_check.json").write_text(json.dumps(res, sort_keys=True, indent=1))

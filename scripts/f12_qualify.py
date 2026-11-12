@@ -56,8 +56,13 @@ POPULATION = ROOT / "docs/prereg/a5_manifests/f12/population.json"
 MANIFEST_DIR = ROOT / "docs/prereg/f12_manifests"
 FACTS_PATH = MANIFEST_DIR / "f12e_token_facts.json"
 BASE_HASHES_PATH = MANIFEST_DIR / "f12e_base_tensor_hashes.json"
-IDENTITIES_PATH = MANIFEST_DIR / "f12e_candidate_identities.json"
-QUALIFICATION_PATH = MANIFEST_DIR / "f12e_qualification.json"
+F12E_QUALIFICATION_PATH = MANIFEST_DIR / "f12e_qualification.json"
+# F12f: re-pinned identities and the re-run qualification (the F12e records stay as committed)
+IDENTITIES_PATH = MANIFEST_DIR / "f12f_candidate_identities.json"
+QUALIFICATION_PATH = MANIFEST_DIR / "f12f_qualification.json"
+GAUGE_MANIFEST = ROOT / "docs/prereg/a5_manifests/f12/gauge_tokens_manifest.json"
+MATRIX_MANIFEST = ROOT / "docs/prereg/a5_manifests/f12/matrix_manifest.json"
+SNAPSHOT = ROOT / "docs/prereg/a5_manifests/snapshot.json"
 RESTRICTED_SHA256 = "44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5"
 REQUIRED_FILES = (
     "aq.json",
@@ -88,10 +93,14 @@ CANDIDATE_CODE = (
     "scripts/a5_build_panels.py",
     "scripts/a5_simulation.py",
     "scripts/tfv1_requalify.py",
+    "scripts/f12_gauge_tokens.py",
+    "scripts/f12_matrix.py",
+    "src/wsp/features/pool.py",
+    "src/wsp/features/extract.py",
 )
 SCHEMA_FACTS = "f12e-token-facts-v1"
-SCHEMA_QUAL = "f12e-qualification-v1"
-SCHEMA_IDENT = "f12e-candidate-identities-v1"
+SCHEMA_QUAL = "f12f-qualification-v1"
+SCHEMA_IDENT = "f12f-candidate-identities-v1"
 SCHEMA_BASE = "f12e-base-tensor-hashes-v1"
 _LAYER = re.compile(r"(?:^|\.)layers\.(\d+)\.")
 
@@ -617,7 +626,18 @@ def check_nesting(population, folds):
     return _check("nesting", P, detail)
 
 
-def check_gauge(manifest, tok):
+def gauge_inputs(gman, gsha, token_manifest_sha256):
+    """The gauge-token manifest and its verified outputs, or {"error": ...} (F12f)."""
+    from scripts import f12_matrix as fm
+
+    try:
+        data = fm.load_gauge(gman, token_manifest_sha256)
+    except (OSError, ValueError, KeyError) as exc:
+        return {"manifest": gman, "sha256": gsha, "error": str(exc)}
+    return {"manifest": gman, "sha256": gsha, "data": data}
+
+
+def check_gauge(manifest, tok, gauge=None):
     frames = (tok["kframes"] or {}).get("tensors") or {}
     missing_frame, missing_rank, cutoff = [], [], 0
     for rid, det in sorted(tok["detail"].items()):
@@ -631,17 +651,20 @@ def check_gauge(manifest, tok):
                 cutoff += 1
     prereq = not missing_frame and not missing_rank
     inputs = any("gauge" in n for n in (manifest.get("files") or {})) or "gauge" in manifest
-    runner = callable(getattr(fs, "gauge_audit", None))
+    runner = callable(getattr(fs, "gauge_audit", None)) and "tokens_gauge" in getattr(fs, "OPTIONAL_MATRIX_KEYS", ())
     P = []
     if missing_frame:
         P.append(f"{len(missing_frame)} present tokens without a K frame, e.g. {missing_frame[:3]}")
     if missing_rank:
         P.append(f"{len(missing_rank)} rows with tokens but no recorded rank")
-    if not inputs:
+    audit = None
+    if gauge is None and not inputs:
         P.append(
             "the frozen token output holds no gauge-transformed tokens and no (B, A) factors, so the F5 gauge "
             "audit cannot be evaluated on these inputs"
         )
+    elif gauge is not None:
+        audit = _gauge_audit_inputs(gauge, tok, P)
     if not runner:
         P.append(
             "scripts/f12_simulation.py implements no gauge audit for real tokens (its rules text: 'not run on "
@@ -656,20 +679,75 @@ def check_gauge(manifest, tok):
         "k_cutoff_tie_tokens": cutoff,
         "kframe_flag_counts": (manifest.get("kframes") or {}).get("flag_counts"),
         "audit_inputs_in_frozen_output": inputs,
+        "audit_inputs": audit,
         "runner_implements_real_token_audit": runner,
+        "runner_audit": "scripts/f12_simulation.py gauge_audit / gauge_record: every refitted WM-R head (each seed, "
+        "each outer fold) on the held-out rows' frozen and gauge-transformed tokens; violations make C_WM and "
+        "C_WM,S undefined and the replicate unresolved (validity)" if runner else None,
         "analytic_note": "columns 16-41 are functions of D_t alone; columns 0-15 depend on (B, A) only through BA, "
         "M = (Lambda_G^1/2 U_G^T)(BA)(U_A Lambda_A^1/2), so a gauge change alters tokens only by fp32 rounding. "
-        "This is not the registered numerical audit and does not replace it without a ruling.",
+        "This is context (chair ruling on F12e (a)); the registered numerical audit is what the runner applies.",
     }
     return _check("gauge", P, detail)
 
 
-def check_matrix_inputs(manifest):
+def _gauge_audit_inputs(gauge, tok, P):
+    """F12f: the gauge-transformed tokens are complete, verified and consistent with the frozen tokens."""
+    gman = gauge.get("manifest") or {}
+    rec = {"gauge_manifest_sha256": gauge.get("sha256"), "status": gman.get("status")}
+    if "error" in gauge:
+        P.append(f"gauge-token output not verified: {gauge['error']}")
+        return rec
+    if gman.get("status") != "complete":
+        P.append("the gauge-token manifest is not complete")
+    data = gauge["data"]
+    X, Pr = np.asarray(tok["X"]), np.asarray(tok["presence"]).astype(bool)
+    Xg, Pg = np.asarray(data["X_gauge"]), np.asarray(data["presence"]).astype(bool)
+    summ = gman.get("summary") or {}
+    n_rows, n_tok = len(tok["row_ids"]), int(Pr.sum())
+    if list(data["row_ids"]) != list(tok["row_ids"]) or Xg.shape != X.shape or not np.array_equal(Pg, Pr):
+        P.append("gauge-token rows or presence differ from the frozen tokens")
+    else:
+        if not np.array_equal(Xg[..., 16:], X[..., 16:]):
+            P.append("gauge tokens differ from the frozen tokens in columns 16-41")
+        if Xg[~Pr].any() or not np.isfinite(Xg).all():
+            P.append("gauge tokens are non-finite or nonzero in absent slots")
+    if summ.get("n_rows_done") != n_rows or summ.get("n_tokens") != n_tok:
+        P.append(f"gauge-token manifest token count {summ.get('n_tokens')} / rows {summ.get('n_rows_done')} differ "
+                 f"from the frozen {n_tok} / {n_rows}")  # fmt: skip
+    if summ.get("k_reproduced_exact_rows") != n_rows:
+        P.append("the gauge builder did not reproduce every frozen K block bitwise "
+                 f"({summ.get('k_reproduced_exact_rows')} of {n_rows} rows)")  # fmt: skip
+    changed = int(np.any(Xg[..., :16][Pr] != X[..., :16][Pr], axis=1).sum()) if Xg.shape == X.shape else None
+    rec |= {"rows": n_rows, "tokens": n_tok, "tokens_with_changed_k_block": changed,
+            "k_reproduced_exact_rows": summ.get("k_reproduced_exact_rows"),
+            "tokens_reproduced_bitwise": summ.get("tokens_reproduced_bitwise"),
+            "k_block_max_abs_change": summ.get("k_block_max_abs_change"), "cond_max": summ.get("cond_max"),
+            "masked_tokens": summ.get("masked_tokens"), "files": data.get("files")}  # fmt: skip
+    return rec
+
+
+def matrix_inputs(mdoc, msha):
+    """The committed matrix manifest and its matrix, loaded (F12f), or {"error": ...}."""
+    try:
+        m = fs.load_matrix(mdoc["matrix"]["path"])
+        fsha = sha256_file(mdoc["matrix"]["path"])
+    except (OSError, ValueError, KeyError) as exc:
+        return {"manifest": mdoc, "sha256": msha, "error": str(exc)}
+    return {"manifest": mdoc, "sha256": msha, "matrix": m, "file_sha256": fsha}
+
+
+def check_matrix_inputs(manifest, tok=None, gauge=None, matrix=None):
     from wsp.features import pool
 
     stats, spec = pool.pooled_dims(4)
-    has_v4 = any("v4" in n for n in (manifest.get("files") or {})) or "v4" in manifest
-    has_builder = callable(getattr(fs, "matrix_from_tokens", None))
+    has_v4 = any("v4" in n for n in (manifest.get("files") or {})) or "v4" in manifest or matrix is not None
+    try:
+        from scripts import f12_matrix as fm
+
+        has_builder = callable(getattr(fm, "matrix_from_tokens", None))
+    except ImportError:
+        fm, has_builder = None, False
     P = []
     if not has_v4:
         P.append(
@@ -681,20 +759,76 @@ def check_matrix_inputs(manifest):
             "no builder from the f12-tokens-v1 output to the simulation's f12-token-matrix-v1 matrix exists"
         )
     detail = {
-        "simulation_v4_columns": fs.V4_COLS,
-        "simulation_v4_source": "scripts/f12_simulation.py v4_stats: 'Synthetic stand-in for the v4 pooled "
-        "statistics (18 columns)'",
+        "simulation_v4_columns_synthetic": fs.V4_COLS,
         "pinned_pooling_code_v4_width": {
             "stats": stats,
             "spectrum": spec,
             "total": stats + spec,
             "source": "src/wsp/features/pool.py pooled_dims(buckets=4)",
         },
-        "consequence": "the registered real-token matrix cannot be assembled without a definition of its v4 block "
-        "(columns, source files and their identities) and a pinned builder; the StatNN cost measured by the "
-        "timing pilot depends on that width",
     }
+    if matrix is None:
+        if has_builder:
+            P.append("no committed real token matrix was supplied to the qualification")
+    elif "error" in matrix:
+        P.append(f"real token matrix not loadable: {matrix['error']}")
+    else:
+        detail |= _matrix_detail(matrix, tok, gauge, stats + spec, P)
     return _check("simulation_matrix_inputs", P, detail)
+
+
+def _matrix_detail(matrix, tok, gauge, v4_width, P):
+    from scripts import f12_matrix as fm
+
+    mdoc, m = matrix["manifest"], matrix["matrix"]
+    msha = fs.matrix_sha256(m)
+    if mdoc.get("matrix_sha256") != msha or mdoc.get("file_sha256") != matrix["file_sha256"]:
+        P.append("the real token matrix differs from its matrix manifest")
+    if m["synthetic"] or m["v4"].shape[1] != v4_width:
+        P.append(f"the matrix's v4 block is not the pinned pooling code's {v4_width} columns")
+    widths = fm.widths()
+    F_width = m["v4"].shape[1] + fs.N_SLOTS * (fs.N_COLS + 1)
+    if F_width != widths["statnn_total"] or mdoc.get("widths") != widths:
+        P.append("the comparator width differs from the matrix manifest")
+    if tok is not None:
+        X, Pr = np.asarray(tok["X"]), np.asarray(tok["presence"]).astype(bool)
+        rr, ss = np.nonzero(Pr)
+        same = (list(m["row_ids"]) == list(tok["row_ids"]) and m["token_row"].tolist() == rr.tolist()
+                and m["token_slot"].tolist() == ss.tolist()
+                and np.array_equal(m["tokens"], X[rr, ss].astype(np.float64)))  # fmt: skip
+        if not same:
+            P.append("matrix tokens differ from the frozen tokens")
+        a = [tok["rows"][i]["a"] for i in tok["row_ids"]]
+        q = [tok["rows"][i]["q"] for i in tok["row_ids"]]
+        if list(m["sum_a"]) != a or list(m["sum_q"]) != q:
+            P.append("matrix Sum a / Sum q differ from the frozen rows")
+        if not np.array_equal(m["eligible"], np.asarray(tok["row_eligible"]).astype(bool)):
+            P.append("matrix eligibility differs from the frozen rows")
+        if gauge is not None and "data" in gauge and same:
+            if not np.array_equal(m["tokens_gauge"], np.asarray(gauge["data"]["X_gauge"])[rr, ss].astype(np.float64)):
+                P.append("matrix gauge tokens differ from the gauge-token output")
+    if not np.array_equal(m["x0_v4"], fm.x0_v4()):
+        P.append("the matrix's zero-edit x0 differs from the pinned pooling code on the zero delta")
+    return {
+        "matrix_manifest_sha256": matrix["sha256"],
+        "matrix_sha256": msha,
+        "matrix_file_sha256": matrix["file_sha256"],
+        "widths": widths,
+        "rows": len(m["row_ids"]),
+        "tokens": len(m["tokens"]),
+        "x0_all_zero": not m["x0_v4"].any(),
+        "v4_sources": (mdoc.get("sources") or {}).get("features"),
+        "builder": "scripts/f12_matrix.py matrix_from_tokens",
+        "synthetic_stand_in_refused": "f12_simulation.validate_matrix refuses the 18-column stand-in on a "
+        "non-synthetic matrix; governed runs refuse synthetic matrices and any matrix but the committed manifest's",
+    }
+
+
+def omitted_energy_unchanged(report, prior) -> bool:
+    """The omitted-energy flag carried to Board A unchanged (chair ruling on F12e (c))."""
+    return json.dumps(report.get("omitted_energy"), sort_keys=True) == json.dumps(
+        (prior or {}).get("omitted_energy"), sort_keys=True
+    )
 
 
 QUALIFICATION_ORDER = (
@@ -711,7 +845,8 @@ QUALIFICATION_ORDER = (
 )
 
 
-def qualify(manifest, population, population_sha, out_dir, tok=None, identities=None) -> dict:
+def qualify(manifest, population, population_sha, out_dir, tok=None, identities=None, gauge=None,
+            matrix=None) -> dict:
     files = verify_token_files(manifest, out_dir)
     tok = load_output(out_dir) if tok is None else tok
     checks = [_check("token_files", [], {"verified": files})]
@@ -729,8 +864,8 @@ def qualify(manifest, population, population_sha, out_dir, tok=None, identities=
         check_finite_schema(manifest, tok),
         check_folds(population, tok, folds),
         check_nesting(population, folds),
-        check_gauge(manifest, tok),
-        check_matrix_inputs(manifest),
+        check_gauge(manifest, tok, gauge),
+        check_matrix_inputs(manifest, tok, gauge, matrix),
     ]
     first = next((c["check"] for c in checks if not c["pass"]), None)
     return {
@@ -742,8 +877,9 @@ def qualify(manifest, population, population_sha, out_dir, tok=None, identities=
         "first_failure": first,
         "omitted_energy": omitted_energy_summary(tok["rows"], population),
         "eligible_row_folds_sha256": folds_sha256(folds),
-        "outcomes_read": "none: the token run's outputs (field forecasts and edit-derived inputs), the committed "
-        "token manifest and population only; no evaluation record, outcome, noise payload or data/evals file",
+        "outcomes_read": "none: the token run's outputs (field forecasts and edit-derived inputs), the gauge-token "
+        "outputs, the real token matrix (edit-derived v4 statistics), the committed manifests and population only; "
+        "no evaluation record, outcome, noise payload or data/evals file",
     }
 
 
@@ -901,8 +1037,8 @@ def candidate_identities() -> dict:
     plan = MANIFEST_DIR / "f12c_resource_plan.json"
     return {
         "schema": SCHEMA_IDENT,
-        "status": "candidate identities frozen before steps 3-5 of the Board A F12c ordered path use them (F12e); "
-        "not C1 and not a C1 verification",
+        "status": "candidate identities re-frozen (F12f) before the re-run qualification, noise check and timing pilot "
+        "use them; not C1 and not a C1 verification",
         "code": {rel: sha256_file(ROOT / rel) for rel in CANDIDATE_CODE},
         "simulation_code_identity": fs.current_code_identity(),
         "configs": dict(fs.F12C_CONFIG_SHA256),
@@ -914,6 +1050,11 @@ def candidate_identities() -> dict:
             "path": pin_obj["restricted_copy"].get("path"),
         },
         "token_manifest": {"path": _rel(TOKEN_MANIFEST), "sha256": TOKEN_MANIFEST_SHA256},
+        "gauge_manifest": {"path": _rel(GAUGE_MANIFEST), "sha256": sha256_file(GAUGE_MANIFEST)}
+        if GAUGE_MANIFEST.exists() else {"path": _rel(GAUGE_MANIFEST), "sha256": None},
+        "matrix_manifest": {"path": _rel(MATRIX_MANIFEST), "sha256": sha256_file(MATRIX_MANIFEST)}
+        if MATRIX_MANIFEST.exists() else {"path": _rel(MATRIX_MANIFEST), "sha256": None},
+        "snapshot": {"path": _rel(SNAPSHOT), "sha256": sha256_file(SNAPSHOT)},
         "population": {"path": _rel(POPULATION), "sha256": sha256_file(POPULATION)},
         "resource_plan": {"path": _rel(plan), "sha256": sha256_file(plan)},
         "code_hashes_c1_draft": {
@@ -935,8 +1076,12 @@ def identity_drift(ident) -> list:
         rp = ident[key]
         if sha256_file(ROOT / rp["pin"]) != rp["pin_sha256"]:
             out.append(rp["pin"])
-    for key in ("token_manifest", "population", "resource_plan"):
-        if key in ident and sha256_file(ROOT / ident[key]["path"]) != ident[key]["sha256"]:
+    for key in ("token_manifest", "population", "resource_plan", "gauge_manifest", "matrix_manifest", "snapshot"):
+        if key not in ident:
+            continue
+        p = ROOT / ident[key]["path"]
+        got = sha256_file(p) if p.exists() else None
+        if got != ident[key]["sha256"]:
             out.append(ident[key]["path"])
     return out
 

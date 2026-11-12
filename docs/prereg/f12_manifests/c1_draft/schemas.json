@@ -1,5 +1,30 @@
 {
  "base_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+ "comparator_matrix": {
+  "builder": {
+   "path": "scripts/f12_matrix.py",
+   "sha256": "bcee6a6df705d7a234faf8ec177167e7e632b133fdd3d82de5b59054b2d0d97f"
+  },
+  "manifest": {
+   "path": "docs/prereg/a5_manifests/f12/matrix_manifest.json",
+   "sha256": null
+  },
+  "pooling_code": {
+   "path": "src/wsp/features/pool.py",
+   "sha256": "85a6341a446f32761531e0f0a193101114201d9eb08b0e05e6a6d1d42ee94390"
+  },
+  "ruling": "PREREG_H1_TF A5 chair ruling on F12e (b)",
+  "widths": {
+   "slots": 186,
+   "statnn_total": 9376,
+   "token_block": 7998,
+   "token_columns": 42,
+   "v4": 1378,
+   "v4_spectrum": 136,
+   "v4_stats": 1242
+  },
+  "zero_edit_input": "x0_v4: the pinned pooling code on the zero delta (F12a.2(h))"
+ },
  "down_proj_tensor_hashes": {
   "base_model": {
    "dtype": "bfloat16",

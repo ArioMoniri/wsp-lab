@@ -8,6 +8,22 @@
  "descriptive_arms": "K (Gaussian-kernel ridge) and M (width-8 GELU MLP), F12a.2(g)",
  "gauge_and_control_audits": {
   "F5_gauge_audit": {
+   "f12f": {
+    "builder": {
+     "path": "scripts/f12_gauge_tokens.py",
+     "sha256": "e63cdec560d1bd8f16251bbb5410e050ac8b9fd00b4c99c5386ac686da7e68b6"
+    },
+    "gauge_tokens_manifest": {
+     "path": "docs/prereg/a5_manifests/f12/gauge_tokens_manifest.json",
+     "sha256": null
+    },
+    "qualification": {
+     "path": "docs/prereg/f12_manifests/f12f_qualification.json",
+     "sha256": null
+    },
+    "ruling": "PREREG_H1_TF A5 chair ruling on F12e (a): no waiver; registered gauge-transformed tokens and the runner audit",
+    "runner": "scripts/f12_simulation.py gauge_audit / gauge_record: every refitted WM-R head, each seed and each outer fold, on the held-out rows' frozen and gauge-transformed tokens; |delta f| <= 1e-5 + 1e-4 |f| nats per row; all nonzero discrepancies retained; a violation makes C_WM and C_WM,S undefined and the replicate unresolved (validity), a failure (F12a.5(d))"
+   },
    "qualification": {
     "path": "docs/prereg/f12_manifests/f12e_qualification.json",
     "sha256": "5bfa4bb5d49b4cace41e18069a8b65454bfecdfc887542d3d1838e20946e6e1c"

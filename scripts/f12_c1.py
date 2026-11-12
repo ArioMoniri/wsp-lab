@@ -66,6 +66,9 @@ DRAFT_STATUS = (
 C1_CODE_SCHEMA = "f12-code-hashes-c1-v1"
 FACTS_REL = f"{MANIFEST_DIR}/f12e_token_facts.json"
 QUALIFICATION_REL = f"{MANIFEST_DIR}/f12e_qualification.json"
+F12F_QUALIFICATION_REL = f"{MANIFEST_DIR}/f12f_qualification.json"
+GAUGE_MANIFEST_REL = "docs/prereg/a5_manifests/f12/gauge_tokens_manifest.json"
+MATRIX_MANIFEST_REL = "docs/prereg/a5_manifests/f12/matrix_manifest.json"
 FILLED_STATUS = (
     "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs "
     "(F12e); the governed C1 file is written at the C1 freeze and verified by Board A"
@@ -433,6 +436,28 @@ def _fill_from_facts(root, files, facts, pop):
         "permuted_field_eligibility": "A5.8.3 permuted-field eligibility of the descriptive WM-R-perm control "
         "applies at analysis; the token builder does not compute it",
     }
+    g = files["models.json"]["gauge_and_control_audits"]
+    g["F5_gauge_audit"]["f12f"] = {
+        "ruling": "PREREG_H1_TF A5 chair ruling on F12e (a): no waiver; registered gauge-transformed tokens and the "
+        "runner audit",
+        "gauge_tokens_manifest": _rel_or_none(root, GAUGE_MANIFEST_REL),
+        "builder": _rel_sha(root, "scripts/f12_gauge_tokens.py"),
+        "runner": "scripts/f12_simulation.py gauge_audit / gauge_record: every refitted WM-R head, each seed and each "
+        "outer fold, on the held-out rows' frozen and gauge-transformed tokens; |delta f| <= 1e-5 + 1e-4 |f| nats "
+        "per row; all nonzero discrepancies retained; a violation makes C_WM and C_WM,S undefined and the replicate "
+        "unresolved (validity), a failure (F12a.5(d))",
+        "qualification": _rel_or_none(root, F12F_QUALIFICATION_REL),
+    }
+    from scripts import f12_matrix as fm
+
+    files["schemas.json"]["comparator_matrix"] = {
+        "ruling": "PREREG_H1_TF A5 chair ruling on F12e (b)",
+        "manifest": _rel_or_none(root, MATRIX_MANIFEST_REL),
+        "builder": _rel_sha(root, "scripts/f12_matrix.py"),
+        "pooling_code": _rel_sha(root, "src/wsp/features/pool.py"),
+        "widths": fm.widths(),
+        "zero_edit_input": "x0_v4: the pinned pooling code on the zero delta (F12a.2(h))",
+    }
     files["f12i_c1.json"]["parent_support_tensor_hashes"] = {
         "source": src,
         "base_state_hash": facts["base_state_hash"],
@@ -440,6 +465,11 @@ def _fill_from_facts(root, files, facts, pop):
         "astra_and_c4": F12I_AWAITING,
     }
     files["code_hashes_c1.json"]["token_facts"] = src
+
+
+def _rel_or_none(root, rel):
+    p = Path(root) / rel
+    return {"path": rel, "sha256": _sha_file(p) if p.exists() else None}
 
 
 def write_draft(root=ROOT) -> list:
