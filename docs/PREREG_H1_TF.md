@@ -6239,3 +6239,21 @@ must pass before the 10,000-panel noise check. The gauge-token build is CPU only
 in full, and is charged to the F12 inputs (not to the 190 CPU-h simulation ceiling). The pilot's measured cost, which now
 includes StatNN at the real comparator width, decides whether that ceiling holds. The omitted-energy flag (212 of 270 rows above
 0.01; F5 pins: a diagnostic, not an input) is carried to Board A at C1 unchanged. Part A remains held by the programme owner.
+
+#### A5 chair ruling on F12f (12 Nov 2026, 01:16 UTC, before any G3 outcome): gauge-token wall cap, gauge diagonal index, implementing defaults
+
+(a) *Wall cap.* The 10 h wall cap on the gauge-token build was the chair's own brief limit, not a registered one. The build is
+CPU only and uses no GPU, Part A, G5, G7, F8 or F9 allocation. It priced at 9.00 h on a quiet machine and at 17.48 h under
+another programme's load. The chair raises the cap to **24 h wall** for this input build, with the same self-pricing stop: if the
+run's own projection after its first rows exceeds 24 h, it stops for a new dated ruling. It runs at 6 threads, because the
+builder's bitwise reproduction of the frozen tokens depends on the thread count, not on machine load, so contention lengthens the
+wall time without changing results. Its CPU is charged to the F12 inputs, not to the 190 CPU-h simulation ceiling.
+(b) *Gauge diagonal index.* The F5 pin d_j = 2^((j mod 3) − 1) does not state the index base. The chair rules **j = 0, …, r − 1**,
+so d = (1/2, 1, 2, 1/2, …). With this choice the transform is non-trivial at every rank, including rank 1, where Q = 1/2. The
+1-based reading would make Q the identity at rank 1 and the audit vacuous there, which favours passing; it is not taken. The
+builder is changed accordingly before the full run, and the priced-only records of the 1-based variant are kept as superseded.
+(c) *Implementing defaults, for Board A to verify at C1.* The gauge seed's edit id is the population row id (alias rows keep their
+own ids); the audit covers every present token; its tolerance applies to each seed's token-head prediction in nats (F3 reads no
+tokens). *Flagged:* the comparator's v4 block is taken as the pinned pooling code's statistics plus spectrum (1,378 columns;
+matrix width 9,376), whereas the older StatNN baseline used the statistics only. A wider comparator is conservative for WM-R, but
+which block F12.3's "v4 pooled statistics" means is for Board A to confirm at C1; the matrix builder is cheap to re-run.
