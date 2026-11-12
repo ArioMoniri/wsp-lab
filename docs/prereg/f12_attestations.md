@@ -794,3 +794,21 @@ F12-S1), committed the report, ran `select` once and committed the selection.
 - Statements (i) and (iii) are unchanged. **(ii) remains none**: no Part A, F8-E, F8-F or F9 outcome or summary was opened or
   received. Nothing under `data/evals` was opened or listed. No Part A staging, prediction or calibration file was opened. No
   F12f pilot per-replicate record or decision code was read.
+
+*Entry 25, addendum before the coverage target and stage 2 (Thu Nov 12 22:01:49 UTC 2026), same session.* The session fast-forwarded to main
+`893247b` (the chair's acceptance of the F12 coverage target and stage 2) and read that block and the chair's ruling on the
+`Meter.end` fields. It runs the target, stage 2 and assembly as the stage-2 operator `chair-delegated:F12-S2`, changing no
+code, test or configuration.
+- *Read since the last update.* The chair's acceptance. The target and stage-2 configs (scheduling fields and notes only;
+  hashes `be372fc5…` and `ae9340e1…`). In `scripts/f12_simulation.py`: `main_assemble`, `assemble_reports`,
+  `validate_execution`, `release_decision` (source only), `_check_target_report` and `_check_pilot_prereqs`, and the
+  F12c/F12d passages on parts. The prerequisite files were hashed only. From `f12_pilot_acceptance.json` the session printed
+  its three bound hashes, `accepted_utc` and `signed_by`.
+- *Planned disclosure.* `assemble` with the registered `--prereq` set decodes, in process, the committed F12f pilot report
+  (`pilot_report`) and the coverage-target report (`coverage_target`), as the validator requires. Nothing from them is
+  displayed beyond what `assemble` prints. The session will read only completeness, validity counts, timing, memory and
+  hashes from the target, stage-2 and assembled reports. It will read no decision code, rate, interval, target value, gate or
+  release outcome.
+- Statements (i) and (iii) are unchanged. **(ii) remains none**: no Part A, F8-E, F8-F or F9 outcome or summary was opened or
+  received. Nothing under `data/evals` was opened or listed. No Part A staging, prediction or calibration file was opened. No
+  F12f pilot per-replicate record or decision code, and no stage-1 decision code, rate or rule check, was read.
