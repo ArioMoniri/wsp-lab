@@ -1,0 +1,180 @@
+{
+ "schema": "f12d-timing-v1",
+ "report_sha256": "f2e5c386688aa39c75fccbd1796763011c46ba62ac078e2d55c274060689a6bd",
+ "started_utc": "2026-11-12T15:02:48Z",
+ "finished_utc": "2026-11-12T21:43:41Z",
+ "wall_seconds": 24050.905824707006,
+ "workers": 2,
+ "replicate_tasks": 480,
+ "cpu_seconds_per_replicate_mean": 99.9895761136063,
+ "cpu_seconds_per_replicate_max": 159.0430811719998,
+ "cpu_seconds_replicates_sum": 47994.99653453103,
+ "cpu_seconds_total_process_tree": 48005.383622999994,
+ "cpu_seconds_overhead": 10.387088468967704,
+ "worker_max_rss_mb": 1004.59375,
+ "rss_max_mb_parent": 985.6015625,
+ "per_replicate_cpu_by_k_and_scenario": {
+  "0": {
+   "null": {
+    "n": 40,
+    "cpu_mean": 78.798820567475
+   },
+   "alt": {
+    "n": 40,
+    "cpu_mean": 83.71434838492505
+   }
+  },
+  "29": {
+   "null": {
+    "n": 40,
+    "cpu_mean": 83.28749225942492
+   },
+   "alt": {
+    "n": 40,
+    "cpu_mean": 94.28696886767496
+   }
+  },
+  "58": {
+   "null": {
+    "n": 40,
+    "cpu_mean": 90.02959462915003
+   },
+   "alt": {
+    "n": 40,
+    "cpu_mean": 108.30788342127512
+   }
+  },
+  "87": {
+   "null": {
+    "n": 40,
+    "cpu_mean": 93.43094571042529
+   },
+   "alt": {
+    "n": 40,
+    "cpu_mean": 114.81934009372503
+   }
+  },
+  "116": {
+   "null": {
+    "n": 40,
+    "cpu_mean": 99.4703407945749
+   },
+   "alt": {
+    "n": 40,
+    "cpu_mean": 120.80339562507534
+   }
+  },
+  "145": {
+   "null": {
+    "n": 40,
+    "cpu_mean": 105.89108609984996
+   },
+   "alt": {
+    "n": 40,
+    "cpu_mean": 127.03469690969996
+   }
+  }
+ },
+ "projection_f12c_schedule": {
+  "basis": "process CPU seconds per replicate measured in this run; F12c schedule: stage 1 = 40 stress + 40 alternative at each of six k; stage 2 = 1,000 stress + 1,000 alternative + 200 variance-x2 at k*; coverage target = 200 stress at k*; pilot = 10 alternative at k = 145; plus the noise check and overhead; worst case over k*",
+  "label": "projection from measured stress and alternative timing",
+  "stress_timing": "measured",
+  "alternative_timing": "measured",
+  "extrapolations": [
+   "variance-x2 cost per replicate projected at max(stress, alternative)"
+  ],
+  "stage2_by_k": {
+   "0": {
+    "null_s": 78.798820567475,
+    "alt_s": 83.71434838492505,
+    "null_var2_s": 83.71434838492505,
+    "null_var2_from": "max(stress, alternative)",
+    "interpolated": false,
+    "cpu_h": 49.793344063718074
+   },
+   "29": {
+    "null_s": 83.28749225942492,
+    "alt_s": 94.28696886767496,
+    "null_var2_s": 94.28696886767496,
+    "null_var2_from": "max(stress, alternative)",
+    "interpolated": false,
+    "cpu_h": 54.56440413906523
+   },
+   "58": {
+    "null_s": 90.02959462915003,
+    "alt_s": 108.30788342127512,
+    "null_var2_s": 108.30788342127512,
+    "null_var2_from": "max(stress, alternative)",
+    "interpolated": false,
+    "cpu_h": 61.110848537411165
+   },
+   "87": {
+    "null_s": 93.43094571042529,
+    "alt_s": 114.81934009372503,
+    "null_var2_s": 114.81934009372503,
+    "null_var2_from": "max(stress, alternative)",
+    "interpolated": false,
+    "cpu_h": 64.22615383969315
+   },
+   "116": {
+    "null_s": 99.4703407945749,
+    "alt_s": 120.80339562507534,
+    "null_var2_s": 120.80339562507534,
+    "null_var2_from": "max(stress, alternative)",
+    "interpolated": false,
+    "cpu_h": 67.89844876240703
+   },
+   "145": {
+    "null_s": 105.89108609984996,
+    "alt_s": 127.03469690969996,
+    "null_var2_s": 127.03469690969996,
+    "null_var2_from": "max(stress, alternative)",
+    "interpolated": false,
+    "cpu_h": 71.75908955319164
+   }
+  },
+  "stage2_worst_cpu_h": 71.75908955319164,
+  "stage1_cpu_h": 13.331943481814172,
+  "coverage_target_by_k_cpu_h": {
+   "0": 4.377712253748611,
+   "29": 4.6270829033013845,
+   "58": 5.0016441460638905,
+   "87": 5.190608095023627,
+   "116": 5.526130044143049,
+   "145": 5.8828381166583315
+  },
+  "coverage_target_worst_cpu_h": 5.8828381166583315,
+  "pilot_cpu_h": 0.3528741580824999,
+  "pilot_cpu_h_source": "projected (10 x alternative at k = 145)",
+  "noise_cpu_h": 0.005,
+  "noise_cpu_h_source": "projected (resource plan)",
+  "overhead_cpu_h": 0.041666666666666664,
+  "overhead_cpu_h_source": "projected (resource plan: 15 invocations x 10 CPU-s)",
+  "replicates_total_worst_cpu_h": 91.32674530974664,
+  "items_by_kind_cpu_h": {
+   "noise_check": 0.005,
+   "pilot": 0.3528741580824999,
+   "stage1": 13.331943481814172,
+   "target": 5.8828381166583315,
+   "stage2": 71.75908955319164,
+   "overhead": 0.041666666666666664
+  },
+  "units_by_kind": {
+   "noise_check": 1,
+   "pilot": 10,
+   "stage1": 480,
+   "target": 200,
+   "stage2": 2200
+  },
+  "all_in_worst_cpu_h": 91.37341197641331,
+  "all_in_cpu_h": 91.37341197641331
+ },
+ "k_grid": [
+  0,
+  29,
+  58,
+  87,
+  116,
+  145
+ ]
+}
