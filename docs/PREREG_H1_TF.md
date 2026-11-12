@@ -7075,3 +7075,58 @@ listed explicitly. Any bitwise difference stops the requalification and is repor
 investigated by changing code. Projected cost: about 7 h wall, at most 41.7 CPU-h (upper bound), charged to the F12 inputs and
 not to the 190 CPU-h simulation ceiling. The rerun reads stored edit bytes, `edit.json`, the base model, and the G2 field and
 probe cache only, through the hardened read boundary. Part A remains held by the programme owner.
+
+#### A5 note F12-R, addendum (Thu Nov 12 13:45:32 UTC 2026, before any G3 outcome): full token requalification rerun under the chair's ruling of 09:19 UTC
+
+*Commit hook.* As the note already states, the code commit `8c1e0f0` was made with `--no-verify` because the pre-commit
+hook's full suite refused it only on the two C1 pin-drift tripwires (`test_code_hashes_c1_draft_pins_current_bytes`,
+`test_c1_draft_filled_from_committed_token_facts`). Those can pass only after a re-freeze. The chair accepted this. The
+comparison-tool commit `fdb179c` was handled the same way: the hook ran, reported 1574 passed with only those two failing,
+and the commit was made with `--no-verify` for that reason.
+
+*Tooling, before the rerun.* `scripts/f12_tokens_compare.py` has 12 tests, red before the module. It authenticates both
+runs' files against their own manifests and compares every deterministic field:
+- `tokens.safetensors`: header metadata as a mapping, tensor headers, the data section byte for byte, `X` bitwise with
+  differing rows named, `presence` and `row_eligible`;
+- `rows.jsonl`: ids in order, and records as canonical JSON;
+- `detail.jsonl`, `aq.json`, `kframes.json` and `kframes.safetensors`: byte for byte, plus every K-frame tensor;
+- the deterministic keys of `pricing.json` and the deterministic fields of the manifests.
+
+It prints only equality results and hashes. Every exclusion was fixed before the rerun and is listed in the report:
+- `seconds` and the other timing fields;
+- memory, paths, the code identities (changed by design), resume and read-boundary records, the A11 relabel, and the
+  hardened builder's new `checkpoint.json`;
+- the `tokens.safetensors` whole-file sha256, because safetensors writes the `__metadata__` keys in a nondeterministic
+  order (observed while writing the tests);
+- `pricing.json`'s `first_row_id` and `first_row_stored_tensors`, because the frozen run resumed with row 1 from the
+  capped run 2 (`run_tokens_resume.sh`), so those fields record resume history.
+
+A self-check of the tool on the frozen run against itself authenticated the frozen files against `tokens_manifest.json`.
+
+*Rerun.* The hardened `scripts/f12_tokens.py` ran at commit `fdb179c` with clean code files, through agent-tmux, all 270
+rows, 6 threads, no resume, under the ruling's cap of 19,000,000,000 bytes. The guard verified the ruling's
+`resource-cap` line in the committed preregistration. It launched at 09:28:29 UTC with 25,640,480,768 bytes available
+(23,000,000,000 required) and finished at 13:43:45 UTC with status complete and exit 0.
+- Wall time: 15,322 s (4.26 h); the frozen run took 25,091 s.
+- Setup: 2,161 s (field load 183, K frames 1,003, spectral factors 963); rows took 13,084 s.
+- CPU: 74,350 s (user 73,005, system 1,345), i.e. **20.65 CPU-h** at 485 % CPU, against the 41.7 CPU-h upper bound priced.
+- Peak RSS: **17,124,909,056 bytes** (the guard's tree sample peaked at 17,124,769,792), below the 18,050,000,000-byte stop
+  threshold.
+- The session started no other job of its own while the build ran. Evidence:
+  `docs/prereg/a5_manifests/f12/f12r/tokens_manifest_requal.json` and `token_rerun_run.json`.
+
+*Result: identical on every deterministic field* (`token_requalification.json`, commit `d7c8415`):
+- `tokens.safetensors`: data section (sha256 `7447e2e6…c325`), tensor headers and metadata mapping identical; `X` is
+  bitwise identical for all 270 rows; `presence` and `row_eligible` are identical; 6,845 present tokens. The whole-file
+  sha256 differs (`2c77cc94…` against the frozen `f8c5e163…`) only because the two metadata keys are written in the other
+  order: the headers have the same length and bytes.
+- `rows.jsonl`: 270 rows in the same order, identical without `seconds` (deterministic sha256 `8c049400…2a7d` on both
+  sides).
+- `detail.jsonl` (`3480fa5a…`), `aq.json` (`90ab8466…`), `kframes.json` (`b80b9b3a…`) and `kframes.safetensors`
+  (`100a4024…`, 744 tensors): byte-identical.
+- `pricing.json`'s deterministic keys and every deterministic manifest field: identical.
+
+The hardened builder therefore reproduces the frozen F12 tokens bit for bit on authenticated inputs. That is the token
+requalification Board A's F12-C1 condition 1 asks for. It does not restore the dead implementer session's history, and it
+does not verify C1. The frozen token files remain the governed inputs. The pinned C1 code identities listed in note F12-R
+still need the disclosed re-freeze, which is not done here.
