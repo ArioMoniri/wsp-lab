@@ -16,7 +16,7 @@ factors (B, A) at the recorded rank, F5 pins "Increment, rank and energy"):
   sensitive to thread-order rounding), so the gauge acts on exactly the factors behind the frozen tokens;
 * the gauge (F5 pins): Q = H diag(d), H the Haar r x r matrix from seed('20261110:lol-gauge:', '<edit id>:<exact
   tensor name>') via ``torch.Generator('cpu').manual_seed``, ``randn(r, r)`` in fp64 and positive-diagonal QR (a zero
-  diagonal sign counts as +1); d_j = 2^((j mod 3) - 1) for j = 1..r (the sigma_j indexing of the same pins), so
+  diagonal sign counts as +1); d_j = 2^((j mod 3) - 1) for j = 0..r-1 (chair ruling on F12f (b); d = (1/2, 1, 2, ...)), so
   cond(Q) <= 4; (B, A) -> (BQ, Q^-1 A) in fp64 (Q^-1 = diag(1/d) H^T), cast to fp32. ``<edit id>`` is the population
   row id (the canonical zoo edit id; an alias row keeps its own id); r is the recorded rank capped at min(out, in)
   (the frozen ``r_eff``);
@@ -71,7 +71,9 @@ GAUGE_DOMAIN = "20261110:lol-gauge:"
 # audit's own 1e-4 tolerance; the gauge must act on exactly the factors behind the frozen tokens. The frozen run's
 # numerical environment (six threads) is therefore required (``--threads 6``).
 REPRO_RTOL = 0.0
-FROZEN_THREADS = 6
+FROZEN_THREADS = 6  # the builder refuses any other thread count (chair ruling on F12f (a))
+GAUGE_INDEX_BASE = 0  # chair ruling on F12f (b): j = 0, ..., r - 1 (supersedes the 1-based F12f pricing variant)
+DEFAULT_MAX_WALL_HOURS = 24.0  # chair ruling on F12f (a): the self-pricing stop at 24 h wall
 GAUGE_ATOL, GAUGE_RTOL = 1e-5, 1e-4  # F5 pins: |delta f| <= 1e-5 + 1e-4 |f| nats per row (the runner applies it)
 ALLOWED_OUT = ft.ALLOWED_OUT
 DEFAULT_OUT = ALLOWED_OUT / "gauge_tokens"
@@ -109,8 +111,9 @@ def gauge_seed(edit_id: str, tensor: str) -> int:
 
 
 def gauge_d(r: int) -> torch.Tensor:
-    """d_j = 2^((j mod 3) - 1), j = 1..r (fp64)."""
-    return torch.tensor([2.0 ** ((j % 3) - 1) for j in range(1, r + 1)], dtype=torch.float64)
+    """d_j = 2^((j mod 3) - 1), j = 0..r-1 (chair ruling on F12f (b)): d = (1/2, 1, 2, 1/2, ...) (fp64)."""
+    return torch.tensor([2.0 ** ((j % 3) - 1) for j in range(GAUGE_INDEX_BASE, GAUGE_INDEX_BASE + r)],
+                        dtype=torch.float64)  # fmt: skip
 
 
 def gauge_matrix(edit_id: str, tensor: str, r: int) -> dict:
@@ -227,13 +230,16 @@ def check_increment(row_id, D_edit, expected):
 # ---------------------------------------------------------------------------------------------- pricing
 
 
-def pricing(*, setup_seconds, first_seconds, first_tensors, tensor_counts, cap_hours):
+def pricing(*, setup_seconds, first_seconds, first_tensors, tensor_counts, cap_hours, prior_seconds=0.0):
+    """Projected total wall: setup + rows already finished by an earlier attempt (``prior_seconds``) + the rows of
+    this invocation (``tensor_counts``) at the first rows' rate (max of per-row and per-tensor projections)."""
     n = len(first_seconds)
-    naive = setup_seconds + (sum(first_seconds) / n) * len(tensor_counts)
-    weighted = setup_seconds + sum(first_seconds) / max(1, sum(first_tensors)) * sum(tensor_counts)
+    naive = setup_seconds + prior_seconds + (sum(first_seconds) / n) * len(tensor_counts)
+    weighted = setup_seconds + prior_seconds + sum(first_seconds) / max(1, sum(first_tensors)) * sum(tensor_counts)
     projected = max(naive, weighted)
     return {
         "setup_seconds": setup_seconds,
+        "prior_rows_seconds": prior_seconds,
         "first_rows": n,
         "first_row_seconds": list(first_seconds),
         "first_row_present_tensors": list(first_tensors),
@@ -315,6 +321,81 @@ def frozen_inputs(manifest_path=None):
 # -------------------------------------------------------------------------------------------------- run
 
 
+class PriceStop(Exception):
+    def __init__(self, price):
+        super().__init__("priced")
+        self.price = price
+
+
+def _complete_lines(path):
+    """{id: record} of the complete JSON lines of a progress file (a torn final line is dropped)."""
+    out = {}
+    if not path.exists():
+        return out
+    for line in path.read_text().splitlines():
+        try:
+            d = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(d, dict) and "id" in d:
+            out[d["id"]] = d
+    return out
+
+
+def process_rows(ids, compute, out, identity, *, resume, on_new_row=None):
+    """Run ``compute(row id, index) -> (gauge tokens [186, 42], presence [186], row record, per-tensor info)`` over
+    ``ids``, appending each finished row to ``detail.jsonl`` (its present gauge tokens, exact fp32 values) and then
+    ``rows.jsonl``. A row is finished only when both hold it. With ``resume`` the finished rows of an interrupted run
+    with the same ``run_identity.json`` are reloaded and never recomputed; without it an existing output is refused.
+    Returns (gauge tokens [len(ids), 186, 42] fp32, row records in ``ids`` order)."""
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    ident_path, rows_path, detail_path = out / "run_identity.json", out / "rows.jsonl", out / "detail.jsonl"
+    recs, dets = {}, {}
+    if resume:
+        if ident_path.exists() and json.loads(ident_path.read_text()) != identity:
+            raise SourceMismatch(f"{out}: run identity differs from the interrupted run's; refusing to resume")
+        recs, dets = _complete_lines(rows_path), _complete_lines(detail_path)
+        done = [i for i in ids if i in recs and i in dets]
+        recs = {i: recs[i] for i in done}
+        dets = {i: dets[i] for i in done}
+        rows_path.write_text("".join(json.dumps(recs[i], sort_keys=True) + "\n" for i in done))
+        detail_path.write_text("".join(json.dumps(dets[i], sort_keys=True) + "\n" for i in done))
+    elif any(p.exists() and p.read_text().strip() for p in (rows_path, detail_path)):
+        raise SystemExit(f"{out} already holds rows; use --resume to continue it (finished rows are kept)")
+    else:
+        rows_path.write_text("")
+        detail_path.write_text("")
+    ident_path.write_text(json.dumps(identity, sort_keys=True, indent=1) + "\n")
+    Xg = np.zeros((len(ids), len(_slot_names()), ft.N_COLS), dtype=np.float32)
+    for i, rid in enumerate(ids):
+        for slot, tok in (dets.get(rid) or {}).get("gauge_tokens", {}).items():
+            Xg[i, int(slot)] = np.asarray(tok, dtype=np.float32)
+    if resume:
+        log(f"resume: {len(recs)} finished rows kept, {len(ids) - len(recs)} to do")
+    for i, rid in enumerate(ids):
+        if rid in recs:
+            continue
+        row, pres, rec, info = compute(rid, i)
+        Xg[i] = row
+        toks = {str(s): [float(x) for x in row[s]] for s in np.flatnonzero(pres)}
+        with detail_path.open("a") as f:
+            f.write(json.dumps({"id": rid, "gauge_tokens": toks, "per_tensor": info}, sort_keys=True,
+                               allow_nan=False) + "\n")  # fmt: skip
+        with rows_path.open("a") as f:
+            f.write(json.dumps(rec, sort_keys=True, allow_nan=False) + "\n")
+        recs[rid] = rec
+        if on_new_row is not None:
+            on_new_row(rec)
+    return Xg, [recs[r] for r in ids]
+
+
+def _slot_names():
+    from scripts import f12_simulation as fs
+
+    return [s[2] for s in fs.SLOTS]
+
+
 def run(args):
     from safetensors import safe_open
     from safetensors.torch import save_file
@@ -325,7 +406,6 @@ def run(args):
     torch.set_num_threads(args.threads)
     check_out_dir(args.out_dir)
     out = Path(args.out_dir)
-    out.mkdir(parents=True, exist_ok=True)
     man, man_sha, tok_dir, tok_files = frozen_inputs()
     pop_bytes = POPULATION.read_bytes()
     if sha256_bytes(pop_bytes) != man["population_frozen"]["population_json_sha256"]:
@@ -343,9 +423,7 @@ def run(args):
     pop = json.loads(pop_bytes)
     if row_ids != sorted(r["id"] for r in pop["rows"]) or set(rows) != set(row_ids):
         raise SourceMismatch("frozen token rows differ from the population")
-    from scripts import f12_simulation as fs
-
-    slot_names = [s[2] for s in fs.SLOTS]
+    slot_names = _slot_names()
     if sha256_bytes(json.dumps(slot_names).encode()) != man["slots"]["names_sha256"]:
         raise SourceMismatch("slot names differ from the frozen token run's")
     kdoc = json.loads((tok_dir / "kframes.json").read_text())
@@ -353,27 +431,36 @@ def run(args):
     base, base_hash = pf.load_base_state(man["base"]["state_hash"])
     zoo = Path(args.zoo)
     todo = row_ids if args.limit is None else row_ids[: args.limit]
-    counts = [int(P[row_ids.index(i)].sum()) for i in todo]
     setup = time.time() - t_start
-    log(f"setup {setup:.0f}s; {len(todo)} rows, {sum(counts)} present tensors")
-    Xg = np.zeros_like(X)
-    recs, firsts, price = [], [], None
-    rows_path, detail_path = out / "rows.jsonl", out / "detail.jsonl"
-    rows_path.write_text("")
-    detail_path.write_text("")
-    for n, rid in enumerate(todo):
+    identity = {
+        "schema": SCHEMA,
+        "token_manifest_sha256": man_sha,
+        "gauge_index_base": GAUGE_INDEX_BASE,
+        "threads": args.threads,
+        "builder_sha256": pf.sha256_file(ROOT / "scripts/f12_gauge_tokens.py"),
+        "base_state_hash": base_hash,
+    }
+    prior = {r["id"]: r for r in _complete_lines(out / "rows.jsonl").values()} if args.resume else {}
+    prior = {k: v for k, v in prior.items() if k in _complete_lines(out / "detail.jsonl")}
+    remaining = [i for i in todo if i not in prior]
+    counts = [int(P[row_ids.index(i)].sum()) for i in remaining]
+    log(f"setup {setup:.0f}s; {len(todo)} rows ({len(remaining)} to compute), {sum(counts)} present tensors to do")
+    state = {"firsts": [], "price": None}
+
+    def compute(rid, _n):
         i = row_ids.index(rid)
         t0, c0 = time.time(), time.process_time()
         frow = rows[rid]
-        holder = zoo / frow["bytes_holder"]
-        stored = load_entry_delta(holder, base)
+        stored = load_entry_delta(zoo / frow["bytes_holder"], base)
         _W, D, _raw, edited = pf.edit_increments(base, stored, None)
         del stored, _W, _raw
         d_edit = {k: D[k] for k in edited}
         inc = check_increment(rid, d_edit, frow["increment_sha256"])
-        Xg[i], info = row_gauge(d_edit, rid, X[i], P[i], slot_names, frow["rank"], frames, detail[rid])
-        if not np.array_equal(Xg[i][:, 16:], X[i][:, 16:]) or not np.isfinite(Xg[i]).all():
+        row, info = row_gauge(d_edit, rid, X[i], P[i], slot_names, frow["rank"], frames, detail[rid])
+        if not np.array_equal(row[:, 16:], X[i][:, 16:]) or not np.isfinite(row).all():
             raise SourceMismatch(f"{rid}: gauge tokens changed columns 16-41 or are nonfinite")
+        del D, d_edit
+        gc.collect()
         sec, cpu = time.time() - t0, time.process_time() - c0
         changes = [v["k_block_max_abs_change"] for v in info.values()]
         rec = {
@@ -384,46 +471,52 @@ def run(args):
             "k_reproduced_exact": all(v["k_reproduced_exact"] for v in info.values()),
             "tokens_reproduced_bitwise": sum(v["k_reproduced_exact"] for v in info.values()),
             "k_reproduction_max_abs_diff": max((v["k_reproduction_max_abs_diff"] for v in info.values()), default=0.0),
-            "k_reproduction_max_rel_diff": max(
-                (v["k_reproduction_max_abs_diff"] / v["k_reproduction_scale"] for v in info.values()
-                 if v.get("k_reproduction_scale")), default=0.0),  # fmt: skip
             "k_block_max_abs_change": max(changes) if changes else 0.0,
+            "tokens_k_block_changed": sum(c > 0 for c in changes),
             "cond_max": max((v["cond"] for v in info.values()), default=None),
             "masked": sum(v["masked"] for v in info.values()),
             "seconds": sec,
             "cpu_seconds": cpu,
         }
-        recs.append(rec)
-        with rows_path.open("a") as f:
-            f.write(json.dumps(rec, sort_keys=True, allow_nan=False) + "\n")
-        with detail_path.open("a") as f:
-            f.write(json.dumps({"id": rid, "per_tensor": info}, sort_keys=True, allow_nan=False) + "\n")
-        del D, d_edit
-        gc.collect()
-        log(f"{n + 1}/{len(todo)} {rid} tokens={rec['n_tokens']} max_change={rec['k_block_max_abs_change']:.3e} "
-            f"({sec:.1f}s)")  # fmt: skip
-        if price is None:
-            firsts.append((sec, rec["n_tokens"]))
-            if len(firsts) == min(args.price_rows, len(todo)):
-                price = pricing(setup_seconds=setup, first_seconds=[s for s, _ in firsts],
-                                first_tensors=[t for _, t in firsts], tensor_counts=counts,
-                                cap_hours=args.max_wall_hours) | {"threads": args.threads}  # fmt: skip
-                write_json(out / "pricing.json", price)
-                log(f"pricing: {json.dumps(price)}")
-                if not price["within_cap"] or args.price_only:
-                    status = "priced_only"
-                    write_manifest(args, out, status, man_sha, tok_files, base_hash, price, recs, None, t_start)
-                    if not price["within_cap"]:
-                        raise SystemExit(f"price_exceeds_cap: projected {price['projected_wall_hours']:.2f} h > "
-                                         f"{args.max_wall_hours} h")  # fmt: skip
-                    return 0
+        log(f"{rid} r={frow['rank']} tokens={rec['n_tokens']} changed={rec['tokens_k_block_changed']} "
+            f"max_change={rec['k_block_max_abs_change']:.3e} ({sec:.1f}s)")  # fmt: skip
+        return row, P[i], rec, info
+
+    def on_new_row(rec):
+        if state["price"] is not None:
+            return
+        state["firsts"].append((rec["seconds"], rec["n_tokens"]))
+        if len(state["firsts"]) == min(args.price_rows, len(remaining)):
+            f = state["firsts"]
+            price = pricing(setup_seconds=setup, first_seconds=[x for x, _ in f], first_tensors=[t for _, t in f],
+                            tensor_counts=counts, cap_hours=args.max_wall_hours,
+                            prior_seconds=sum(r["seconds"] for r in prior.values())) | {"threads": args.threads}  # fmt: skip
+            state["price"] = price
+            write_json(out / "pricing.json", price)
+            log(f"pricing: {json.dumps(price)}")
+            if not price["within_cap"] or args.price_only:
+                raise PriceStop(price)
+
+    try:
+        Xg_todo, recs = process_rows(todo, compute, out, identity, resume=args.resume, on_new_row=on_new_row)
+    except PriceStop as stop:
+        recs = list(_complete_lines(out / "rows.jsonl").values())
+        write_manifest(args, out, "priced_only", man_sha, tok_files, base_hash, stop.price, recs, None, t_start)
+        if not stop.price["within_cap"]:
+            raise SystemExit(f"price_exceeds_cap: projected {stop.price['projected_wall_hours']:.2f} h > "
+                             f"{args.max_wall_hours} h") from None  # fmt: skip
+        return 0
     complete = args.limit is None and len(recs) == len(row_ids)
+    Xg = None
     if complete:
+        Xg = Xg_todo
+        if not np.array_equal(Xg[..., 16:], X[..., 16:]) or Xg[P == 0].any():
+            raise SourceMismatch("assembled gauge tokens differ from the frozen tokens outside columns 0-15")
         save_file({"X_gauge": torch.from_numpy(Xg), "presence": torch.from_numpy(P)},
                   str(out / "gauge_tokens.safetensors"),
                   metadata={"row_ids": json.dumps(row_ids), "columns": json.dumps(ft.COLUMNS)})  # fmt: skip
     status = "complete" if complete else f"partial ({len(recs)}/{len(row_ids)})"
-    write_manifest(args, out, status, man_sha, tok_files, base_hash, price, recs, Xg if complete else None, t_start)
+    write_manifest(args, out, status, man_sha, tok_files, base_hash, state["price"], recs, Xg, t_start)
     return 0
 
 
@@ -448,7 +541,9 @@ def write_manifest(args, out, status, man_sha, tok_files, base_hash, price, recs
         "construction": {
             "Q": "H diag(d); H Haar r x r: torch.Generator('cpu').manual_seed(seed('20261110:lol-gauge:', "
             "'<row id>:<exact tensor name>')), randn(r, r) fp64, QR with positive diagonal (zero sign -> +1); "
-            "d_j = 2^((j mod 3) - 1), j = 1..r; r = recorded rank capped at min(out, in) (frozen r_eff)",
+            "d_j = 2^((j mod 3) - 1), j = 0..r-1 (chair ruling on F12f (b)); r = recorded rank capped at min(out, "
+            "in) (frozen r_eff); at r = 1, Q = 1/2 exactly, so (B/2, 2A) is exact in floating point and the token is "
+            "bitwise unchanged",
             "factors": "balanced B = U_r diag(sigma_r^1/2), A = diag(sigma_r^1/2) V_r^T of the full thin fp32 SVD of "
             "D_t (f12_tokens.balanced_factors); (B, A) -> (BQ, Q^-1 A) in fp64 (Q^-1 = diag(1/d) H^T), cast to fp32",
             "token": "frozen token with columns 0-15 replaced by the K block of the transformed factors (frozen K "
@@ -478,7 +573,13 @@ def write_manifest(args, out, status, man_sha, tok_files, base_hash, price, recs
             "k_reproduced_exact_rows": sum(r["k_reproduced_exact"] for r in recs),
             "tokens_reproduced_bitwise": sum(r["tokens_reproduced_bitwise"] for r in recs),
             "k_reproduction_max_abs_diff": max((r["k_reproduction_max_abs_diff"] for r in recs), default=None),
-            "k_reproduction_max_rel_diff": max((r["k_reproduction_max_rel_diff"] for r in recs), default=None),
+            "tokens_k_block_changed": sum(r.get("tokens_k_block_changed", 0) for r in recs),
+            "tokens_k_block_changed_by_rank": {
+                str(k): [sum(r.get("tokens_k_block_changed", 0) for r in recs if r["rank"] == k),
+                         sum(r["n_tokens"] for r in recs if r["rank"] == k)]
+                for k in sorted({r["rank"] for r in recs})
+            },  # fmt: skip
+            "gauge_index_base": GAUGE_INDEX_BASE,
             "k_reproduction_rule": "recomputed K block bitwise equal to the frozen columns 0-15 (REPRO_RTOL = 0; "
             "the frozen run's six threads), else fail closed",
             "masked_tokens": sum(r["masked"] for r in recs),
@@ -512,10 +613,15 @@ def main(argv=None):
     p.add_argument("--zoo", default=str(ROOT / "data/zoo/qwen3.5-0.8b"))
     p.add_argument("--limit", type=int)
     p.add_argument("--threads", type=int, default=FROZEN_THREADS)
-    p.add_argument("--max-wall-hours", type=float, default=10.0)
+    p.add_argument("--max-wall-hours", type=float, default=DEFAULT_MAX_WALL_HOURS)
+    p.add_argument("--resume", action="store_true", help="continue an interrupted run; finished rows are kept")
     p.add_argument("--price-rows", type=int, default=3)
     p.add_argument("--price-only", action="store_true", help="stop after pricing the first rows")
-    return run(p.parse_args(argv))
+    a = p.parse_args(argv)
+    if a.threads != FROZEN_THREADS:
+        raise SystemExit(f"the gauge-token builder runs only at {FROZEN_THREADS} threads (bitwise reproduction of the "
+                         "frozen tokens depends on the thread count; chair ruling on F12f (a))")  # fmt: skip
+    return run(a)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,15 @@
+{
+ "basis": "PREREG_H1_TF A5 chair ruling on F12f (12 Nov 2026, 01:16 UTC) (b): the gauge diagonal is indexed j = 0..r-1; the priced-only records of the 1-based variant are kept as superseded (not deleted, bytes unchanged)",
+ "reason": "built with d_j indexed j = 1..r (d = (1, 2, 1/2, ...)); the governed builder uses j = 0..r-1 (d = (1/2, 1, 2, ...)) and runs under the 24 h wall cap of ruling (a). The records remain valid evidence of the price and of bitwise reproduction at six threads (the K-block reproduction check does not depend on the index base).",
+ "schema": "f12f-superseded-records-v1",
+ "superseded": {
+  "docs/prereg/f12_manifests/f12f_gauge_tokens_priced_dedicated.json": {
+   "sha256": "8f57e74dc296d9db8bb1b86f234b974b59f9a0d4edbb7a7d44162e353f634f75",
+   "status": "superseded"
+  },
+  "docs/prereg/f12_manifests/f12f_gauge_tokens_priced_fullrun.json": {
+   "sha256": "3f962ad47072325179d15e485fb36b8e000c9b39e388c6d431cb4399bd88f3c7",
+   "status": "superseded"
+  }
+ }
+}

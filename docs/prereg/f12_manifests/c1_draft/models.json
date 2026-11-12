@@ -11,7 +11,7 @@
    "f12f": {
     "builder": {
      "path": "scripts/f12_gauge_tokens.py",
-     "sha256": "e63cdec560d1bd8f16251bbb5410e050ac8b9fd00b4c99c5386ac686da7e68b6"
+     "sha256": "6f7714ff41a01709cbd78d03fcbef624b16afab3b86bbbbf8d96dbd7ea5c343b"
     },
     "gauge_tokens_manifest": {
      "path": "docs/prereg/a5_manifests/f12/gauge_tokens_manifest.json",
