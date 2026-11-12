@@ -6640,3 +6640,24 @@ script and tests through `code_hashes_c1.json` as before. (d) *Why this is not a
 the frozen file is complete for what it states. Board A is asked to judge whether that distinction holds.
 *Status.* Proposed. F12's C1 freeze does not proceed until Board A accepts, amends or rejects F12g. If rejected, F12's C1 waits
 for the F8 freeze, and the F12 simulation waits with it.
+
+#### A5 chair acceptance of F12g as amended by Board A (12 Nov 2026, 07:19 UTC, before any G3 outcome)
+
+Board A accepted F12g with seven conditions (`docs/reviews/council/board-a-f12g-2026-11-12.md`, commit `00fbb71`). The chair
+adopts F12g in the form Board A accepted it, prospectively, before F12's C1 is frozen. (a) *Scope wording.* Item 9
+`f12i_c1.json` carries Board A's two scope paragraphs verbatim, together with the concrete evidence of its condition 2: all 16
+registered LoRA roots and their 32 planned part ids, supports and boundaries, parent, realised-part, support and base tensor
+hashes, shared-source dependencies, identity and eligibility evidence, and committed, hashed outcome-free construction evidence of
+bitwise realised-part sums with no-op status recorded; the full H₀ᴵ `7ba2957b30755704b670156131cdfe6393fc56051851cb4d094d6ea1d82b961e`;
+Astra's one-part-per-changed-tensor rule; C4's `model.layers.12.mlp.down_proj.weight`, stored `[out, in]` shape `[1024, 3584]`,
+boundary 1792, fail-closed shape requirement and own-definition status; 36 planned parts and 18 planned fulls, 37.44 GPU-min for
+parts, at most 18.72 GPU-min for additional fulls, and the 56.16 GPU-min all-in stop-and-reprice ceiling. (b) *Independence
+statement.* F12g's "the F12 simulation reads no F12-I data" is replaced by Board A's wording: "F12's numerical simulation
+consumes no F12-I construction, forecast or outcome data; governance verification reads the frozen F12 plan in item 9 and
+verifies pinned source/configuration bytes." (c) *Unchanged.* `C1_FILES` and `verify_c1` are not changed. Only the draft builder
+is updated, test-first, with fresh code pins and disclosed effects on earlier identity-bound evidence. F12-I conditions 8–10, the
+Astra drop rule, the scoring order Part A → F8-E → F8-F → F9 → F12 → F12-I and F12's C2 are unchanged. (d) *Entry 5.* For Board
+A's adjudication of the unattestable F12 inputs implementer (condition 5), the chair commissions an independent static access
+audit of the code at `0412799` (`f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`): every file path each opens
+and every field each reads, as evidence for Board A, not as a substitute attestation. (e) Stage 1 still requires Board A's
+separate, explicit C1 verification (condition 7). Part A remains held by the programme owner.
