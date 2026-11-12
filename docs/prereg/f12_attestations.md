@@ -31,12 +31,13 @@ round-6 member reports. They are predictions and simulation outputs, not outcome
 | 7 | F12b drafting (implementation sub-agent) | branch `prereg/f12b`, about 14:10-18:05 UTC | F12b, its code and synthetic diagnostics | none seen (code constants of uncertain provenance disclosed) | none | none read | end of amendment F12b; entry 18 | given (its own session only) |
 | 8 | Board A methods reviewer, F12b review | `review/board-a-f12b` worktree | that review | none knowingly opened; whether displayed material held numerical summaries: not certain | none | summaries only | the review's "Exposure attestation"; entry 19 | given (its own session only) |
 | 9 | F12c implementer (this file's author) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12c`, worktree `.worktrees/prereg/f12c`, 11 Nov 2026 about 18:10 UTC to the F12c commit | F12c note, code, tests, manifests, synthetic checks | see below | none | see below | below | given (this session only); raw-loader account confirmed in entry 20 |
-| 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11-12 Nov 2026 | through 07:40 UTC 12 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entries 10 and 10a | given to 07:40 UTC 12 Nov; **renewal PENDING** at C1 |
-| 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** (entries 12-14 and row 15 so far) |
+| 10 | **Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing) | orchestrating session of the programme, 11-12 Nov 2026 | through 07:40 UTC 12 Nov 2026; to be renewed at the C1 freeze | seen (council briefs, syntheses, earlier development results) | none | read and commissioned | entries 10 and 10a | given through the C1 freeze (entries 10, 10a, 10b) |
+| 11 | Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report | — | — | — | — | — | — | **PENDING** (entries 12-14, row 15 and entry 23 so far) |
 | 15 | Board A methods reviewer, F12c review | `review/board-a-f12c` worktree | that review | none seen | none deliberately; hook-run access **not certain** | summaries only | the review's attestation; entry 21 | given 12 Nov 2026 (its own session only), qualified |
 | 12 | F12d implementer and v2 restricted-payload extractor (chair-authorised for that step) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12d`, worktree `.worktrees/prereg/f12d`, 11 Nov 2026 about 21:45 UTC to the F12d note commit | F12d note, code, tests, v2 restricted copy and pin, C1 skeleton, resource plan | none seen; handled centred qualification noise (see below) | none | read F12a.1's account and entries 9-10, not the audits | entry 12 below | given (this session only) |
 | 13 | F12e implementer (C1 draft fill, candidate identity freeze, real-token qualification) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12e`, worktree `.worktrees/prereg/f12e`, 11 Nov 2026 about 23:52 UTC to the F12e note commit (12 Nov) | F12e note, `scripts/f12_qualify.py`, the C1 draft fill, token facts, base tensor hashes, candidate identities, qualification report | none seen; read the real F12 token outputs (field forecasts, see below) | none | read F12a.1's account and entries 10 and 12, not the audits | entry 13 below | given (this session only) |
 | 14 | F12f implementer (gauge-token builder and pricing, runner gauge audit, comparator-matrix builder, re-qualification code) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12f`, worktree `.worktrees/prereg/f12f`, 12 Nov 2026 about 00:33 UTC to the F12f note commit | F12f note, `scripts/f12_gauge_tokens.py`, `scripts/f12_matrix.py`, the gauge audit in `scripts/f12_simulation.py`, `scripts/f12_qualify.py` / `f12_c1.py` changes, priced-only gauge records | none seen; read the real F12 token outputs and the edit-derived v4 feature files (see below) | none | read F12a.1's account and entries 9, 10, 12 and 13, not the audits | entry 14 below | given (this session only) |
+| 23 | F12 C1 freeze implementer (streaming F12-I LoRA plan driver and evidence, scoped item 9 builder, governed C1 files, `MANIFEST_C1.sha256`, the re-pin before Board A verification) | Claude Opus 5.5 implementation sub-agent, branch `prereg/f12-c1`, worktree `.worktrees/prereg/f12-c1`, 12 Nov 2026 from before 07:14 UTC (start not certain) to the F12-C1 note commit | `scripts/f12_additivity_stream.py`, the additivity plan evidence, the `f12_c1.py` F12g and freeze builders and their tests, the governed C1 files and manifest (`451d45c`, superseded, and the re-freeze), note F12-C1 | seen, summaries (quoted in this register and the PREREG notes) | none | read this register's account of the audits, not the audits | entry 23 below | given (this session only) |
 
 PENDING cells are blank on purpose. Nothing is inferred from a session's role, branch or timing.
 
@@ -533,3 +534,66 @@ chair opened nothing under `data/evals`.
   pass flag and the all-in projection total.
 
 The chair did not read the pilot's per-replicate records or simulated decision codes.
+
+## Entry 10b: chair renewal at the C1 freeze (statement supplied by the chair, recorded verbatim)
+
+> Entry 10b. Session: the same orchestrating chair session as entries 10 and 10a. This renewal covers 07:40 UTC to the C1
+> freeze on 12 Nov 2026 and attests to this session only. (i) Old development outcomes: nothing new beyond entries 10 and 10a.
+> (ii) New outcomes: none. Part A remains unscored and held by the programme owner. No Part A, G3, F8, F9, F12 or F12-I
+> scoring or GPU job was run, and the chair opened nothing under data/evals. (iii) Prescore audits: nothing new beyond entry
+> 10. What the chair read in this interval: the ten attestation statements recorded in entries 15a to 21; Board A's F12g
+> review; the static access audit of the F12 inputs code (its findings and limits); and the C1 freeze implementer's reports.
+> Those reports covered the plan-mode result (16 of 16 LoRA roots bitwise, 0 no-ops), the root-64b10bbaef2b726d cross-check
+> result, peak memory, the C1 file hashes, the manifest sha256, the verify output and the identity-binding findings. The
+> chair did not read per-root increment values, per-replicate pilot records or simulated decision codes. Decisions in this
+> interval: accepting F12g as amended by Board A; commissioning the static access audit; choosing the streaming plan driver;
+> and choosing this re-freeze before Board A verification. None used a Part A, F8, F9, F12 or F12-I outcome.
+
+## Entry 23: F12 C1 freeze implementer (given)
+
+*Session.* An implementation sub-agent session (Claude Opus 5.5) working only in `.worktrees/prereg/f12-c1` on branch
+`prereg/f12-c1`, created from main `5b91d90` and merged with main `1c6a0da` and `11016f6`, on 12 Nov 2026 from before
+07:14 UTC (the exact start is not certain) until the commit adding note F12-C1. It first stopped without promoting anything
+(item 9 could not be filled before F8). It then worked under amendment F12g as accepted by Board A and the chair's
+instructions: the streaming driver, the LoRA evidence, the scoped builder, a first freeze at `451d45c` (superseded before any
+Board A verification), the test fixes and the re-freeze. It attests to this session only and writes no other entry. This entry
+is committed before the re-freeze, so the re-frozen `exposure_c1.json` cites the register including it.
+
+*What it read.*
+- Committed files: `docs/PREREG_H1_TF.md` (F12a.4, F12a.6, F12a.8–F12a.10, the F12d, F12e and F12f notes, the chair rulings on
+  F12e and F12f, the chair correction, the chair pilot acceptance, amendment F12g and the chair acceptance of F12g); Board A's
+  F12c review ("Ordered path to stage 1" and its later sections) and Board A's F12g review in full; this register in full,
+  including the verbatim statements of entries 15–21, which quote old development summaries; the static access audit report
+  (`docs/reviews/council/f12-inputs-access-audit-2026-11-12.md`: its header, findings and method sections and part of its path
+  inventory); the F12 scripts and tests, the relevant parts of `src/wsp/zoo/apply.py`, `src/wsp/zoo/common.py` and
+  `src/wsp/features/rotation.py`; the C1 draft files; the draft code pins; the committed F12-I dry-run manifest, script and the
+  tail of its run log (which prints the dry run's two zero-fit field interaction forecasts I_a and I_q: field forecasts, not
+  outcomes); the candidate identities, qualification and matrix manifest (key names and identity fields); the repository hooks.
+- **Committed noise-check, pilot and pilot-acceptance records.** It parsed `f12f_noise_check.json`, `f12f_pilot_report.json`
+  and `f12_pilot_acceptance.json` and printed only their identity and hash fields (code, payload and matrix identities, file
+  hashes) and the acceptance's projection figures (110.33 CPU-h). A script that printed matching keys walked the whole parsed pilot
+  report in memory; it printed no per-replicate record, decision code or simulated contrast. The session did not read the pilot's
+  progress log.
+- **Stored zoo deltas and the base model (CPU only).** It loaded one LoRA root's dense delta once to measure its size; the
+  streaming driver loaded the 16 registered F12-I LoRA roots' adapters and the pinned base model (state hash verified) in the
+  cross-check run (one root) and the full run (16 roots). Logs printed per-root bitwise and no-op flags, peak RSS and hashes only.
+- **Restricted noise payload.** It computed the sha256 of the v2 restricted copy (`44d79403…6fb5`), parsed it in an isolated
+  interpreter to list its top-level and provenance key names, counted occurrences of two marker words (zero), and copied its
+  bytes unchanged into the governed item 6. It printed no noise value and ran no noise check, pilot or simulation replicate.
+- `data/`: the driver read `data/runs/g2/fields/<objective>/manifest.json` (base state hash) and the 16 roots' adapter files
+  under `data/zoo/qwen3.5-0.8b/`. It listed nothing under `data/` and opened nothing under `data/evals`.
+- Test runs: the F12 test files (OMP 2, serial) and the pre-commit hook's full suite at each of its commits (two runs failed
+  and were not bypassed: one on a stale draft code pin, one on the pinned exposure-test defect that this re-pin fixes); the
+  suite's collection-time file access was not audited.
+- Incidental: `agent-tmux -l` listed other jobs' names on the machine; none was opened.
+
+*(i) Old development outcomes.* Seen as summaries only: the register's statements and the PREREG notes quote old development
+results (for example the D3 θ̂ values, M3 ρ values, the 342-row predictor comparison and the TF-v1 requalification
+half-widths). The session opened no TF-v1 record, G0/G1/G6 ledger outcome or D3 outcome.
+
+*(ii) New outcomes.* None. The session opened nothing under `data/evals`. It saw no G3, rotation, ladder, missing-reference,
+sealed, F8 or F9 outcome and no Part A score, received no summary of one, read no pilot decision code and used no GPU.
+
+*(iii) Prescore audits.* The session read this register's and the PREREG's accounts of the disclosed pre-score audits (including
+entry 10's quoted κ median and entry 9's mention of F11.4's simulated ordered power). It did not open the Part A prediction or
+calibration files, the prescore inventories, the round-6 member reports or `SYNTHESIS-r6.md`.
