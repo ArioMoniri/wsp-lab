@@ -6617,3 +6617,26 @@ pilot's progress log and which no rule uses.
 the F12-I Astra and C4 hashes, `MANIFEST_C1.sha256`, and Board A's explicit C1 verification, including the rank-1 gauge
 invariance, the omitted-energy flag, the v4 block width and the F12f implementing defaults. At two workers the projection implies
 about 55 h of wall time for the simulation programme. Part A remains held by the programme owner.
+
+#### A5 amendment F12g (12 Nov 2026, 07:14 UTC, before any G3 outcome; PROPOSED by the chair, pending Board A): scope of F12's item 9 `f12i_c1.json`
+
+*Why.* F12a.6(c) item 9 puts `f12i_c1.json` in F12's own C1 chain with "parts, supports, boundaries, parent/support/tensor hashes,
+dependencies, full eligibility and prices". Two of F12-I's constructions cannot have tensor hashes until F8 is frozen: the Astra
+two-tensor split needs a qualified F8a.4 replay record, and the C4 column split needs F8a.2's C1-frozen construction. F8 freezes
+only after the Part A ledger is sealed, and Part A is held by the programme owner. As written, F12's outcome-free CPU simulation
+would therefore wait on Part A, although it never reads F12-I. The F12 C1 freeze stopped at this point without promoting anything.
+*Proposal.* (a) F12's item 9 `f12i_c1.json` records, at F12's C1, the F12-I plan as far as it exists without F8: the 16 LoRA roots
+of F12.6(a) with their layer-split supports, part ids, parent and support tensor hashes and bitwise-sum verification; the
+registered definitions of the Astra split (by tensor) and the C4 split (layer-12 `down_proj`, input columns j < in//2 versus
+j ≥ in//2) as rules, with their source requirements; the F12-I chain anchor H₀ᴵ = `7ba2957b…`; and the F12a.10 prices and the
+56.16 GPU-min ceiling. (b) The Astra and C4 construction hashes, eligibility and dependencies are **not part of F12's C1**. They
+are recorded wholly in F12-I's own C1 under `docs/prereg/f12_manifests/f12i/` (F12a.10(a)), frozen after F8a's C1 and the F8a.4
+Astra qualification. Item 9 says so in those words. It does not describe them as pending inside F12's C1, because under this
+amendment they are not F12's to record. (c) Nothing else changes: F12-I keeps its 36 planned parts and F12-I conditions 8–10; a
+failed Astra qualification still drops that pair; F12-I is still scored only after its own C1/C2 and after the Part A, F8-E, F8-F
+and F9 closures, in the registered order; the F12 simulation reads no F12-I data; and F12's C1 binds the F12-I construction
+script and tests through `code_hashes_c1.json` as before. (d) *Why this is not a weakening.* The verifier's refusal of
+"awaiting" text exists to stop an incomplete file being frozen as complete. This amendment instead narrows what item 9 claims, so
+the frozen file is complete for what it states. Board A is asked to judge whether that distinction holds.
+*Status.* Proposed. F12's C1 freeze does not proceed until Board A accepts, amends or rejects F12g. If rejected, F12's C1 waits
+for the F8 freeze, and the F12 simulation waits with it.
