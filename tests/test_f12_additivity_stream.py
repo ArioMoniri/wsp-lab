@@ -85,7 +85,10 @@ def toy(tmp_path, monkeypatch):
         assert expected == STATE_HASH
         return {n: t.clone() for n, t in base.items()}, STATE_HASH
 
-    monkeypatch.setattr(fa.pf, "load_base_state", load_base_state)
+    # F12-R A10 second remedy: the F12 loaders go through the verified loader; tests/test_f12r_base_loader.py tests it
+    monkeypatch.setattr(
+        fa.fbl, "load_verified_base", lambda boundary, expected: load_base_state(expected)
+    )
     # F12-R: toy pins, boundary and resource guard in place of the governed ones (tests/test_f12r_additivity.py
     # tests the governed defaults and the refusals)
     monkeypatch.setattr(fa, "GOVERNED_POPULATION_SHA256", fg.sha256_bytes(pop.read_bytes()))

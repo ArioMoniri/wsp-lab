@@ -268,8 +268,16 @@ def _no_constant(name):
     raise ValueError(f"nonfinite JSON constant {name}")
 
 
+def _finite_float(text):
+    x = float(text)
+    if not math.isfinite(x):
+        raise ValueError(f"nonfinite JSON number {text}")
+    return x
+
+
 def strict_json_loads(text):
-    return json.loads(text, parse_constant=_no_constant)
+    """JSON without NaN/Infinity constants and without overflow literals such as 1e999 (F12-R re-check, A19)."""
+    return json.loads(text, parse_constant=_no_constant, parse_float=_finite_float)
 
 
 # ------------------------------------------------------------------------------- resource authority
@@ -437,11 +445,13 @@ class ResourceGuard:
                     "peak_rss_bytes": int(self.peak_fn()),
                     "stopped_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 }
-                if self._breach_path is not None:
-                    atomic_write_bytes(
-                        Path(self._breach_path), (json.dumps(rec, indent=1) + "\n").encode()
-                    )
-                self.exit_fn(BREACH_EXIT_CODE)
+                try:
+                    if self._breach_path is not None:
+                        atomic_write_bytes(
+                            Path(self._breach_path), (json.dumps(rec, indent=1) + "\n").encode()
+                        )
+                finally:  # the job stops even if the breach record cannot be written
+                    self.exit_fn(BREACH_EXIT_CODE)
                 return
             self._stop.wait(self.interval)
 

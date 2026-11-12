@@ -74,6 +74,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
 from scripts import a5_power_fields as pf
+from scripts import f12_base_loader as fbl
 from scripts import f12_inputs_guard as fg
 from scripts import part_a_predictions as pap
 from wsp.features import response_field as rf
@@ -553,14 +554,9 @@ def g2_state_hash(boundary, g2: Path) -> str:
 
 
 def load_base(boundary, state_hash):
-    """The pinned base through the library (its cache path boundary-checked; the state hash authenticates it)."""
-    cache = hf_cache_dir()
-    boundary.resolve(cache)
-    note = "base model cache, read by transformers; authenticated by the state hash"
-    boundary.reads.append(
-        {"path": str(cache), "resolved": None, "sha256": None, "authenticated": False, "note": note}
-    )
-    return pf.load_base_state(state_hash)
+    """A10 (F12-R second remedy): the base only from its pinned, individually resolved, confined and staged cache
+    leaves, loaded under the confinement hook (``f12_base_loader.load_verified_base``)."""
+    return fbl.load_verified_base(boundary, state_hash)
 
 
 def safetensors_shapes(boundary, path) -> dict:

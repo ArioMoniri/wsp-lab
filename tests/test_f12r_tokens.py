@@ -100,134 +100,60 @@ def test_probe_files_are_bare_names_inside_the_cache(tmp_path):
 
 
 # ------------------------------------------------------------------------------------------- A19
-
-BINDING = {"code": {"scripts/f12_tokens.py": "c0"}, "population_json_sha256": "p", "threads": 6}
-
-
-def _rec(i):
-    return {k: None for k in ft.ROW_KEYS} | {
-        "id": i,
-        "increment_sha256": f"inc-{i}",
-        "seconds": 1.0,
-    }
+# F12-R second remedy (independent re-check): resume is disabled for governed runs. Every run of this builder is
+# governed (its outputs must lie under wsp-data/runs/a5 and it reads the real token inputs), so --resume is refused before
+# any read; the checkpoint/resume code was removed.
 
 
-def _detail(i, value=0.5):
-    return {"id": i, "tokens": {"3": [value] * ft.N_COLS}, "per_tensor": {}, "field_per_tensor": {}}
+def _recheck_counterexample(out):
+    """The re-check's resume directory: one self-consistent row whose a is the overflow literal 1e999."""
+    out.mkdir(parents=True)
+    rec = {k: None for k in ft.ROW_KEYS} | {"id": "a", "increment_sha256": "inc-a", "seconds": 1.0}
+    line = json.dumps(rec, sort_keys=True).replace('"a": null', '"a": 1e999') + "\n"
+    (out / "rows.jsonl").write_text(line)
+    det = {"id": "a", "tokens": {"3": [0.5] * ft.N_COLS}, "per_tensor": {}, "field_per_tensor": {}}
+    dl = json.dumps(det, sort_keys=True) + "\n"
+    (out / "detail.jsonl").write_text(dl)
+    cp = {"schema": "f12-tokens-checkpoint-v1", "binding": {}, "rows": [{"id": "a"}]}
+    (out / "checkpoint.json").write_text(json.dumps(cp))
+    return line
 
 
-def _write_rows(out, ids, sources):
-    rows, detail = out / "rows.jsonl", out / "detail.jsonl"
-    rows.write_text("")
-    detail.write_text("")
-    entries = []
-    ft.write_checkpoint(out, BINDING, entries)
-    for i in ids:
-        rl, dl = ft.append_row(rows, detail, _rec(i), _detail(i))
-        entries.append(ft.checkpoint_entry(i, sources[i], f"inc-{i}", rl, dl))
-        ft.write_checkpoint(out, BINDING, entries)
-    return entries
+def test_recheck_resume_counterexample_refused_before_any_read(tmp_path, monkeypatch):
+    out = ft.ALLOWED_OUT / "f12r_resume_counterexample_never_created"
+    assert not out.exists()
+
+    def no_read(*a, **k):
+        raise AssertionError("an input or resume file was read")
+
+    monkeypatch.setattr(ft, "read_boundary", no_read)
+    monkeypatch.setattr(ft, "check_fresh_out", no_read)
+    monkeypatch.setattr(
+        ft, "check_out_dir", no_read
+    )  # a regression fails here, before any directory is made
+    with pytest.raises(ValueError, match="resume is disabled for governed runs"):
+        ft.main(["--out-dir", str(out), "--manifest", str(tmp_path / "m.json"), "--resume"])
+    assert not out.exists()
+    # the same directory as the re-check built it: refused too, and nothing in it is opened
+    d = tmp_path / "rc"
+    line = _recheck_counterexample(d)
+    assert '"a": 1e999' in line
+    with pytest.raises(ValueError, match="resume is disabled for governed runs"):
+        ft.main(["--out-dir", str(d), "--manifest", str(tmp_path / "m2.json"), "--resume"])
 
 
-@pytest.fixture
-def resumable(tmp_path):
-    out = tmp_path / "out"
-    out.mkdir()
-    sources = {i: {"entry_delta_hash": f"h-{i}", "edit_json_sha256": f"s-{i}"} for i in "abcd"}
-    _write_rows(out, ["a", "b"], sources)
-    return {"out": out, "sources": sources, "todo": list("abcd")}
+def test_resume_code_removed():
+    for name in ("load_checkpoint", "write_checkpoint", "checkpoint_entry", "checkpoint_entries", "_check_row",
+                 "resume_binding"):  # fmt: skip
+        assert not hasattr(ft, name), name
+    assert ft.governed_reasons(ft.argparse.Namespace(out_dir=ft.ALLOWED_OUT / "x"))
 
 
-def _load(r, binding=BINDING, todo=None, sources=None):
-    src = sources or r["sources"]
-    return ft.load_checkpoint(r["out"], binding, todo or r["todo"], lambda i: src[i])
-
-
-def test_resume_from_bound_checkpoint(resumable):
-    done, recs = _load(resumable)
-    assert list(done) == ["a", "b"] and [x["id"] for x in recs] == ["a", "b"]
-
-
-def test_resume_refused_without_checkpoint(resumable):
-    (resumable["out"] / ft.CHECKPOINT).unlink()
-    with pytest.raises(ValueError, match="no bound checkpoint"):
-        _load(resumable)
-
-
-@pytest.mark.parametrize("key", ["code", "population_json_sha256", "threads"])
-def test_resume_refused_on_binding_change(resumable, key):
-    other = json.loads(json.dumps(BINDING))
-    other[key] = {"scripts/f12_tokens.py": "c1"} if key == "code" else "changed"
-    with pytest.raises(ValueError, match=f"binding differs.*{key}"):
-        _load(resumable, binding=other)
-
-
-def test_resume_refused_when_ids_not_the_todo_prefix(resumable):
-    with pytest.raises(ValueError, match="exact prefix"):
-        _load(resumable, todo=list("bacd"))
-
-
-def test_resume_refused_on_changed_row_source(resumable):
-    src = dict(resumable["sources"]) | {
-        "b": {"entry_delta_hash": "other", "edit_json_sha256": "s-b"}
-    }
-    with pytest.raises(ValueError, match="source"):
-        _load(resumable, sources=src)
-
-
-def test_resume_truncates_uncommitted_tail(resumable):
-    out = resumable["out"]
-    with (out / "rows.jsonl").open("a") as f:
-        f.write(json.dumps(_rec("c")) + "\n")  # appended, crashed before the checkpoint
-    with (out / "detail.jsonl").open("a") as f:
-        f.write('{"id": "c", "tok')
-    done, _ = _load(resumable)
-    assert list(done) == ["a", "b"]
-    assert len((out / "rows.jsonl").read_text().splitlines()) == 2
-    assert (out / "detail.jsonl").read_text().endswith("}\n")
-
-
-def test_resume_refused_on_tampered_committed_bytes(resumable):
-    p = resumable["out"] / "detail.jsonl"
-    p.write_text(p.read_text().replace("0.5", "0.6", 1))
-    with pytest.raises(ValueError, match="prefix"):
-        _load(resumable)
-
-
-def test_resume_refused_on_duplicates_nonfinite_and_schema(tmp_path):
-    sources = {i: {"entry_delta_hash": i, "edit_json_sha256": i} for i in "ab"}
-    out = tmp_path / "dup"
-    out.mkdir()
-    entries = _write_rows(out, ["a"], sources)
-    ft.write_checkpoint(out, BINDING, entries + entries)
-    with pytest.raises(ValueError, match="duplicate"):
-        ft.load_checkpoint(out, BINDING, ["a", "a", "b"], lambda i: sources[i])
-    out = tmp_path / "nan"
-    out.mkdir()
-    (out / "rows.jsonl").write_text("")
-    (out / "detail.jsonl").write_text("")
-    rl, dl = ft.append_row(out / "rows.jsonl", out / "detail.jsonl", _rec("a"),
-                           _detail("a") | {"tokens": {"3": [float("nan")] * ft.N_COLS}}, strict=False)  # fmt: skip
-    ft.write_checkpoint(out, BINDING, [ft.checkpoint_entry("a", sources["a"], "inc-a", rl, dl)])
-    with pytest.raises(ValueError, match="nonfinite"):
-        ft.load_checkpoint(out, BINDING, ["a", "b"], lambda i: sources[i])
-    out = tmp_path / "short"
-    out.mkdir()
-    (out / "rows.jsonl").write_text("")
-    (out / "detail.jsonl").write_text("")
-    rl, dl = ft.append_row(out / "rows.jsonl", out / "detail.jsonl", _rec("a"),
-                           _detail("a") | {"tokens": {"3": [0.0] * 5}})  # fmt: skip
-    ft.write_checkpoint(out, BINDING, [ft.checkpoint_entry("a", sources["a"], "inc-a", rl, dl)])
-    with pytest.raises(ValueError, match="token"):
-        ft.load_checkpoint(out, BINDING, ["a", "b"], lambda i: sources[i])
-
-
-def test_checkpoint_written_atomically(resumable, monkeypatch):
-    calls = []
-    real = fg.atomic_write_bytes
-    monkeypatch.setattr(ft.fg, "atomic_write_bytes", lambda p, d: calls.append(p) or real(p, d))
-    ft.write_checkpoint(resumable["out"], BINDING, [])
-    assert calls == [resumable["out"] / ft.CHECKPOINT]
+def test_strict_json_rejects_overflow_literals():
+    for bad in ('{"a": 1e999}', '{"a": -1e999}', "[1e400]"):
+        with pytest.raises(ValueError, match="nonfinite"):
+            fg.strict_json_loads(bad)
+    assert fg.strict_json_loads('{"a": 1e300, "b": 0.5}') == {"a": 1e300, "b": 0.5}
 
 
 def test_completeness_by_exact_ids():

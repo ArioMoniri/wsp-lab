@@ -39,15 +39,14 @@ stored zoo bytes (``bytes_via_alias`` holder for the 45 alias rows) exactly as P
 
 Outputs (``--out-dir`` under ``/home/ubuntu/wsp-data/runs/a5/f12_inputs``): ``tokens.safetensors`` (``X`` [rows, 186,
 42] fp32 in population id order, ``presence`` [rows, 186] uint8, ``row_eligible`` [rows] uint8), ``rows.jsonl`` (one
-record per row: a, q, flags, eligibility, timing), ``detail.jsonl`` (per-tensor values and token vectors; also the
-resume log), ``aq.json`` (id -> a, q), ``kframes.safetensors`` + ``kframes.json`` (the K frame manifest, per-tensor
+record per row: a, q, flags, eligibility, timing), ``detail.jsonl`` (per-tensor values and token vectors), ``aq.json`` (id -> a, q), ``kframes.safetensors`` + ``kframes.json`` (the K frame manifest, per-tensor
 sha256), ``pricing.json``. ``--manifest`` (``docs/prereg/a5_manifests/f12/tokens_manifest.json``) records hashes only.
 Pricing: after the first row the wall time is projected two ways (n_rows x first-row seconds, and first-row seconds
 per supported tensor x each row's stored tensor count), and the run stops (``price_exceeds_cap``) if the larger
 projection, plus setup, exceeds ``--max-wall-hours``.
 
     OMP_NUM_THREADS=6 MKL_NUM_THREADS=6 python scripts/f12_tokens.py \
-        --out-dir /home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens --max-wall-hours 8 [--limit N] [--resume]
+        --out-dir /home/ubuntu/wsp-data/runs/a5/f12_inputs/tokens --max-wall-hours 8 [--limit N]
 
 CPU only. Reads: population.json, the stored zoo deltas (``delta.safetensors`` or ``lora/``) and ``edit.json``, the
 pinned base model, the G2 WikiText field, the G2 probe cache and g2_manifest.json. The intended algorithm opens no
@@ -61,11 +60,11 @@ F12-R (PREREG_H1_TF A5 note F12-R; unexposed adoption A10, A11, A19, A21), no nu
 * inputs are authenticated: population.json against the governed sha256; components.jsonl against its pin and every
   zoo ``edit.json`` against the snapshot's pinned ``edit_json_index_sha256``; each row's stored bytes against its
   ``resolved_delta_hash`` before loading; probe files are bare names inside the probe cache, hash-checked;
-* ``--resume`` only from an atomic ``checkpoint.json`` bound to the code, population/ids/folds, base state, G2
-  manifest/field identity, probe cache and threads, and to each done row's authenticated sources and increment hash;
-  done ids must be the exact prefix of the population order without duplicates, committed bytes must match their
-  checkpointed prefix hashes (an uncommitted tail is truncated), lines must pass schema and finiteness checks; without
-  such a checkpoint resume is refused. Completeness is exact id equality;
+* resume is disabled (A19, F12-R second remedy after the independent re-check): every run of this builder is
+  governed (outputs under wsp-data/runs/a5, real token inputs), so ``--resume`` is refused before any read, and the
+  checkpoint/resume code is removed. Completeness is exact id equality;
+* the base model is loaded only from its pinned, individually resolved and confined cache leaves, staged as regular
+  files and loaded under an audit hook that refuses any other read (``f12_base_loader``; A10 second remedy);
 * the resource authority's cap (4 GB, or a dated chair ruling's cap with ``--chair-ruling``) is enforced at launch
   against the field file size (the field is loaded whole), monitored, and the peak recorded; a fresh run never
   overwrites prior outputs and the manifest is never overwritten.
@@ -94,6 +93,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
 from scripts import a5_power_fields as pf
+from scripts import f12_base_loader as fbl
 from scripts import f12_inputs_guard as fg
 from scripts import part_a_predictions as pap
 from wsp.features import response_chart as rc
@@ -158,10 +158,13 @@ OUTCOMES_STATEMENT = (
 )
 INTENT_LABEL = (
     "algorithmic intent of this code path on authentic inputs; not access telemetry and not a session attestation "
-    "(PREREG_H1_TF F12a.1(c); unexposed adoption A11). Actual reads: read_boundary; resume reads: resume"
+    "(PREREG_H1_TF F12a.1(c); unexposed adoption A11). Actual reads: read_boundary; resume: disabled"
 )
-CHECKPOINT = "checkpoint.json"
-CHECKPOINT_SCHEMA = "f12-tokens-checkpoint-v1"
+CHECKPOINT = "checkpoint.json"  # written by the first F12-R builder before resume was disabled; a prior output
+RESUME_DISABLED = (
+    "disabled: every run of this builder is governed (outputs under wsp-data/runs/a5, real token inputs), and resume "
+    "is refused in governed runs (A19, F12-R independent re-check)"
+)
 ROW_KEYS = (
     "id",
     "family",
@@ -617,7 +620,7 @@ def check_fresh_out(out: Path):
     found = [n for n in OUTPUT_NAMES if (Path(out) / n).exists()]
     if found:
         raise FileExistsError(
-            f"{out} holds outputs {found}; use a new --out-dir (or --resume from a checkpoint)"
+            f"{out} holds outputs {found}; use a new --out-dir (resume is disabled)"
         )
 
 
@@ -695,21 +698,26 @@ def row_source(boundary, zoo: Path, r: dict, edit_sha: dict) -> dict:
     return {"entry_delta_hash": h, "edit_json_sha256": edit_sha[r["id"]]}
 
 
-def resume_binding(code, frozen, base_hash, records, probe_ident, threads) -> dict:
-    """A19: everything a resumed row depends on besides its own sources."""
-    return {
-        "code": dict(code),
-        "population_json_sha256": frozen["population_json_sha256"],
-        "population_ids_sha256": frozen["population_ids_sha256"],
-        "fold_manifest_sha256": frozen["fold_manifest_sha256"],
-        "base_state_hash": base_hash,
-        "g2_manifest_sha256": records["g2_manifest"]["sha256"],
-        "wikitext_field_files": records["wikitext_field"]["files"],
-        "wikitext_identity_sha256": records["wikitext_field"]["identity_sha256"],
-        "probe_content_hash": probe_ident["content_hash"],
-        "probe_files_sha256": probe_ident["files_sha256"],
-        "threads": int(threads),
-    }
+def governed_reasons(args) -> list:
+    """Why a run is governed (resume refused). Never empty for this builder: check_out_dir confines every output to
+    wsp-data/runs/a5/f12_inputs, every run reads the real token inputs, and a launcher-invoked run is governed too."""
+    reasons = [
+        "reads the real F12 token inputs (population, zoo deltas, G2 field and probes, base model)"
+    ]
+    out = Path(os.path.abspath(getattr(args, "out_dir", ALLOWED_OUT)))
+    if out == DATA_ROOT / "runs/a5" or DATA_ROOT / "runs/a5" in out.parents:
+        reasons.append(f"output {out} under {DATA_ROOT / 'runs/a5'}")
+    if os.environ.get("TMUX") or os.environ.get("AGENT_TMUX"):
+        reasons.append("invoked by a launcher (agent-tmux)")
+    return reasons
+
+
+def refuse_resume(args):
+    """A19 (F12-R second remedy): resume is disabled for governed runs, refused before any read."""
+    if getattr(args, "resume", False):
+        raise ValueError(
+            "resume is disabled for governed runs (A19): " + "; ".join(governed_reasons(args))
+        )
 
 
 def append_row(rows_path: Path, detail_path: Path, rec: dict, detail: dict, strict=True):
@@ -723,102 +731,6 @@ def append_row(rows_path: Path, detail_path: Path, rec: dict, detail: dict, stri
     return sha256_bytes(rl.encode()), sha256_bytes(dl.encode())
 
 
-def checkpoint_entry(
-    row_id, source, increment_sha256, rows_line_sha256, detail_line_sha256
-) -> dict:
-    return {
-        "id": row_id,
-        "source": source,
-        "increment_sha256": increment_sha256,
-        "rows_line_sha256": rows_line_sha256,
-        "detail_line_sha256": detail_line_sha256,
-    }
-
-
-def write_checkpoint(out: Path, binding: dict, entries: list) -> str:
-    """Atomic commit point after each row: the binding, the done rows and the committed byte prefixes."""
-    doc = {"schema": CHECKPOINT_SCHEMA, "binding": binding, "rows": entries}
-    for name in ("rows.jsonl", "detail.jsonl"):
-        data = (Path(out) / name).read_bytes()
-        doc[name] = {"bytes": len(data), "sha256": sha256_bytes(data)}
-    return fg.atomic_write_bytes(
-        Path(out) / CHECKPOINT, (json.dumps(doc, sort_keys=True) + "\n").encode()
-    )
-
-
-def _check_row(e, rl, dl):
-    if (
-        sha256_bytes(rl.encode()) != e["rows_line_sha256"]
-        or sha256_bytes(dl.encode()) != e["detail_line_sha256"]
-    ):
-        raise ValueError(f"{e['id']}: committed line differs from its checkpoint hash")
-    rec, det = fg.strict_json_loads(rl), fg.strict_json_loads(dl)
-    if rec.get("id") != e["id"] or det.get("id") != e["id"]:
-        raise ValueError(f"{e['id']}: line id differs from the checkpoint")
-    if set(rec) != set(ROW_KEYS):
-        raise ValueError(f"{e['id']}: row schema differs")
-    if set(det) != DETAIL_KEYS:
-        raise ValueError(f"{e['id']}: detail schema differs")
-    for k, v in det["tokens"].items():
-        if not isinstance(v, list) or len(v) != N_COLS:
-            raise ValueError(f"{e['id']}: token {k} has {len(v)} columns, not {N_COLS}")
-        if not all(fg.finite(x) for x in v):
-            raise ValueError(f"{e['id']}: nonfinite token {k}")
-    if rec["increment_sha256"] != e["increment_sha256"]:
-        raise ValueError(f"{e['id']}: row increment differs from the checkpoint")
-    return rec, det
-
-
-def load_checkpoint(out: Path, binding: dict, todo_ids: list, source_fn, boundary=None):
-    """A19: (done {id: detail}, rows) from a bound checkpoint, or ValueError. No checkpoint, no resume."""
-    out = Path(out)
-    boundary = boundary if boundary is not None else fg.ReadBoundary(allowed=[out])
-    cp_path = out / CHECKPOINT
-    if not cp_path.exists():
-        raise ValueError(
-            f"{out}: no bound checkpoint; resume without one is disabled for governed builds"
-        )
-    for name in (CHECKPOINT, "rows.jsonl", "detail.jsonl"):
-        if (out / name).is_symlink():
-            raise fg.BoundaryError(f"{out / name}: a resume leaf may not be a symlink")
-        boundary.resolve(out / name)
-    cp = fg.strict_json_loads(boundary.read_bytes(cp_path).decode())
-    if cp.get("schema") != CHECKPOINT_SCHEMA:
-        raise ValueError("checkpoint schema differs")
-    if cp["binding"] != binding:
-        keys = sorted(
-            k for k in set(binding) | set(cp["binding"]) if binding.get(k) != cp["binding"].get(k)
-        )
-        raise ValueError(f"resume binding differs: {keys}")
-    entries = cp["rows"]
-    ids = [e["id"] for e in entries]
-    if len(set(ids)) != len(ids):
-        raise ValueError("checkpoint has duplicate ids")
-    if ids != list(todo_ids[: len(ids)]):
-        raise ValueError("checkpoint ids are not the exact prefix of the population order")
-    lines = {}
-    for name in ("rows.jsonl", "detail.jsonl"):
-        p, n = out / name, cp[name]["bytes"]
-        if fg.prefix_sha256(p, n) != cp[name]["sha256"]:
-            raise ValueError(f"{p}: committed prefix differs from the checkpoint")
-        os.truncate(p, n)  # drop an uncommitted tail
-        lines[name] = p.read_text().splitlines(keepends=True)
-        if len(lines[name]) != len(ids):
-            raise ValueError(f"{p}: {len(lines[name])} committed lines, checkpoint has {len(ids)}")
-    done, recs = {}, []
-    for e, rl, dl in zip(entries, lines["rows.jsonl"], lines["detail.jsonl"]):
-        rec, det = _check_row(e, rl, dl)
-        if source_fn(e["id"]) != e["source"]:
-            raise ValueError(f"{e['id']}: row source changed since the checkpoint")
-        done[e["id"]] = det
-        recs.append(rec)
-    return done, recs
-
-
-def checkpoint_entries(out: Path) -> list:
-    return fg.strict_json_loads((Path(out) / CHECKPOINT).read_text())["rows"]
-
-
 def is_complete(done: dict, rows: list, limit) -> bool:
     """Exact id equality (not a length comparison)."""
     ids = [r["id"] for r in rows]
@@ -826,13 +738,9 @@ def is_complete(done: dict, rows: list, limit) -> bool:
 
 
 def load_base(boundary, state_hash):
-    cache = hf_cache_dir()
-    boundary.resolve(cache)
-    note = "base model cache, read by transformers; authenticated by the state hash"
-    boundary.reads.append(
-        {"path": str(cache), "resolved": None, "sha256": None, "authenticated": False, "note": note}
-    )
-    return pf.load_base_state(state_hash)
+    """A10 (F12-R second remedy): the base only from its pinned, individually resolved, confined and staged cache
+    leaves, loaded under the confinement hook (``f12_base_loader.load_verified_base``)."""
+    return fbl.load_verified_base(boundary, state_hash)
 
 
 def write_json(path: Path, obj) -> str:
@@ -954,14 +862,14 @@ def save_frames(frames, out_dir: Path):
 
 
 def run(args):
+    refuse_resume(args)
     t_start = time.time()
     torch.set_num_threads(args.threads)
     check_out_dir(args.out_dir)
     out = Path(args.out_dir)
     if Path(args.manifest).exists():
         raise FileExistsError(f"{args.manifest} exists; a governed manifest is never overwritten")
-    if not args.resume:
-        check_fresh_out(out)
+    check_fresh_out(out)
     out.mkdir(parents=True, exist_ok=True)
     boundary = read_boundary()
     guard = resource_guard(SCRIPT, args.threads, args.rss_cap_bytes, args.chair_ruling)
@@ -1008,30 +916,10 @@ def run(args):
     setup_seconds = time.time() - t_start
     log(f"setup {setup_seconds:.0f}s; {len(todo)} rows")
     rows_path, detail_path = out / "rows.jsonl", out / "detail.jsonl"
-    binding = resume_binding(
-        code_files_identity(), frozen, base_hash, records, probe_ident, args.threads
-    )
-    by_id = {r["id"]: r for r in rows}
-    resume = None
-    if args.resume:
-        done, recs = load_checkpoint(
-            out,
-            binding,
-            [r["id"] for r in todo],
-            lambda i: row_source(boundary, zoo, by_id[i], edit_sha),
-            boundary,
-        )
-        entries = checkpoint_entries(out)
-        resume = {
-            "rows_resumed": len(done),
-            "binding_sha256": sha256_bytes(canonical_json(binding)),
-        }
-        log(f"resume: {len(done)} rows from the bound checkpoint")
-    else:
-        done, recs, entries = {}, [], []
-        rows_path.write_text("")
-        detail_path.write_text("")
-        write_checkpoint(out, binding, entries)
+    resume = RESUME_DISABLED
+    done, recs = {}, []
+    rows_path.write_text("")
+    detail_path.write_text("")
     pricing = None
     n_new = 0
     for n, (r, count) in enumerate(zip(todo, counts), 1):
@@ -1039,9 +927,7 @@ def run(args):
             continue
         t_row = time.time()
         holder = zoo / r["bytes_holder"]
-        src = row_source(
-            boundary, zoo, r, edit_sha
-        )  # stored bytes and edit.json authenticated first
+        row_source(boundary, zoo, r, edit_sha)  # stored bytes and edit.json authenticated first
         edit = read_edit(boundary, zoo, r["id"], edit_sha)
         cfg_path = holder / "lora/adapter_config.json"
         adapter = json.loads(boundary.read_bytes(cfg_path)) if cfg_path.exists() else None
@@ -1089,9 +975,7 @@ def run(args):
             "per_tensor": info,
             "field_per_tensor": fdetail,
         }
-        rl, dl = append_row(rows_path, detail_path, rec, detail)
-        entries.append(checkpoint_entry(r["id"], src, rec["increment_sha256"], rl, dl))
-        write_checkpoint(out, binding, entries)
+        append_row(rows_path, detail_path, rec, detail)
         recs.append(rec)
         done[r["id"]] = detail
         n_new += 1
@@ -1233,7 +1117,7 @@ def write_manifest(
             "presence_sha256": rf._tensor_hash(torch.from_numpy(P)),
             "n_present_tokens": int(P.sum()),
         }
-    for name in ("rows.jsonl", "detail.jsonl", "pricing.json", CHECKPOINT):
+    for name in ("rows.jsonl", "detail.jsonl", "pricing.json"):
         if (out / name).exists():
             files[name] = pf.sha256_file(out / name)
     excl = {r["id"]: r["eligibility"] for r in recs if r["eligibility"] != "eligible"}
