@@ -1,0 +1,322 @@
+{
+ "access_audit": {
+  "findings": [
+   {
+    "Evidence and qualification": "Whole snapshot bytes are read, hashed and parsed (537\u2013565); primary-record dictionary keys select existing roots (327, 150\u2013168). Ledger `gate`, `id`, `aliases` are used (242\u2013253). No record payload is followed.",
+    "Finding": "**SUPPORTED** for no outcome metric-value use on the committed manifests",
+    "Script and tests": "`scripts/f12_population.py`, `tests/test_f12_population.py`"
+   },
+   {
+    "Evidence and qualification": "Reads population, stored edit bytes/configuration, pinned base, G2 field/probe cache and its own resume files (646\u2013719). Contracts fields rather than reading measured edited-model performance. `outcomes_read` is a literal (964\u2013965), not access telemetry. No input path containment guarantee.",
+    "Finding": "**SUPPORTED**, conditional on genuine inputs and resume files",
+    "Script and tests": "`scripts/f12_tokens.py`, `tests/test_f12_tokens.py`"
+   },
+   {
+    "Evidence and qualification": "G2/base/deltas supply constructions and forecasts. The F8a floor literal (74\u201376) reaches output (606\u2013607). Optional Astra `qualified` controls acceptance (405\u2013419). No TF-v1 metric field is extracted; no outcome file is required by the default path.",
+    "Finding": "**PARTLY SUPPORTED** for the broad claim; **SUPPORTED** for no runtime evaluation metric-file load on intended inputs",
+    "Script and tests": "`scripts/f12_additivity_prepare.py`, `tests/test_f12_additivity.py`"
+   }
+  ],
+  "overall": "**Overall: PARTLY SUPPORTED** for the unqualified statement \u201cthe committed F12 inputs code reads no outcome values.\u201d The intended input paths contain no reachable read of a TF-v1 score, per-item evaluation result, new held outcome, or Part A prediction payload. In particular, the 123 existing-root selection uses record membership, not metric values. However, additivity embeds a numerical F8a floor in its output, accepts a qualification disposition that controls construction, and none of these programs establishes an input filesystem sandbox. A narrower claim is **SUPPORTED**: with authentic intended inputs, these entry points do not load evaluation metric values from outcome files. This is a static finding, not a run-history certification.",
+  "path": "docs/reviews/council/f12-inputs-access-audit-2026-11-12.md",
+  "role": "independent static audit commissioned by the chair for Board A F12g condition 5 and register entry 22 / row 5; evidence for Board A, not an attestation for the killed implementer",
+  "sha256": "21f763a7ef6327441715296dd49de85d509a19351bdcf59b8801a20da6cadb32",
+  "target": "commit 04127991845e246c2fab77293654b773674f01a2 (0412799)"
+ },
+ "adjudication": "none in this file: the unattestable sessions (row 5, entry 22), the qualified Board A F12c attestation (entry 21), the direct prescore-audit readers (entries 15b, 15c, 15d), the raw-payload parses (entries 17 and 20), the static access audit's findings and the unexposed adoption review, remedy and re-checks are recorded for Board A to adjudicate at C1 verification (F12g condition 5; Board A F12-C1 condition 1)",
+ "entries": {
+  "10": {
+   "session": "chair",
+   "status": "given through the second C1 freeze (entries 10, 10a, 10b, 10c)"
+  },
+  "11": {
+   "session": "every later C1/C2 builder, analyst and Board A reviewer",
+   "status": "**PENDING** (entries 12-14, row 15 and entries 23-24 so far)"
+  },
+  "15b": {
+   "detail": "portions of PRESCORE_INVENTORY_2.md, the Board A release review, and the top-level keys and summary of predictions_f11.json (its first 55 lines were requested; displayed coverage not certain); direct exposure to F11 calibration-record contents not certain",
+   "prescore_audits": "read directly",
+   "session": "council round 6, representation member"
+  },
+  "15c": {
+   "detail": "predictions_f11.json (summary, predictor block, power-field comparison, one full row and statistics computed over all 52 rows) and f11_calibration_record.json",
+   "prescore_audits": "read directly",
+   "session": "council round 6, world-model member"
+  },
+  "15d": {
+   "detail": "PRESCORE_INVENTORY_2.md and the F11 calibration record; not predictions_f11.json",
+   "prescore_audits": "read directly",
+   "session": "council round 6, metrology member"
+  },
+  "17": {
+   "disclosure": "raw F8a.2 payload parsed: runs/a5/nullsize/inputs.json was read and json.loads parsed the whole object (donor_mean parsed into memory, never accessed, printed or written); during exploration the session printed per-donor means and SDs of centred_noise and the full donors[0] record including its audit and norm fields",
+   "session": "F12 simulation implementer (restricted-copy extractor, v1)"
+  },
+  "20": {
+   "disclosure": "raw F8a.2 payload parsed once (about 18:11 UTC, 11 Nov 2026) by test_real_payload_allowlist_and_panel_mean through the worktree's data symlink; json.loads parsed the whole file and only the allowlisted fields were kept; no value printed, logged or written; whether the file holds donor_mean is not certain to that session",
+   "session": "F12c implementer, confirmation of the raw-loader account"
+  },
+  "21": {
+   "qualification": "the commit hook launched repository-wide pytest, terminated after three progress dots; whether its collection-time filesystem access reached data/evals is not certain; the reviewer cannot give an unqualified no-access attestation",
+   "session": "Board A methods reviewer, F12c review (row 15)",
+   "status": "qualified"
+  },
+  "22": {
+   "after_remedy": "still unattestable for their own interactive history: the unexposed adoption review, the F12-R remedy and the two re-checks register or adopt retained choices; they do not supply either session's personal statement (F12a.1(c)); not adjudicated here",
+   "for_board_a": "the chair records both as unattestable rather than inferring their exposure and asks Board A to rule whether F12a.1(d)'s unexposed-role or exploratory-amendment rule applies to the code they produced",
+   "sessions": [
+    "F12 inputs implementer (row 5; commit 0412799), killed out of memory on 11 Nov 2026 before reporting; its token run's manifest records outcomes_read: none, a code-written record, not a session attestation",
+    "first F12b session, killed out of memory on 11 Nov 2026 before committing anything; its uncommitted diagnostics script was rewritten by the F12b relaunch session (entry 18), which does not know its access"
+   ],
+   "status": "UNATTESTABLE"
+  },
+  "5": {
+   "after_remedy": "still unattestable for their own interactive history: the unexposed adoption review, the F12-R remedy and the two re-checks register or adopt retained choices; they do not supply either session's personal statement (F12a.1(c)); not adjudicated here",
+   "session": "F12 inputs implementer (scripts/f12_population.py, scripts/f12_tokens.py, scripts/f12_additivity_prepare.py; commit 0412799); its delegate session was killed out of memory on 11 Nov 2026 before reporting and cannot be asked",
+   "sources": [
+    "row 5",
+    "22"
+   ],
+   "static_access_audit": "commissioned by the chair (A5 chair acceptance of F12g (d)): an independent static access audit of the code at 0412799 (f12_population.py, f12_tokens.py, f12_additivity_prepare.py), listing every file path each opens and every field each reads; committed as docs/reviews/council/f12-inputs-access-audit-2026-11-12.md (sha256 21f763a7ef6327441715296dd49de85d509a19351bdcf59b8801a20da6cadb32), cited in access_audit; evidence for Board A's adjudication under F12g condition 5, not a substitute attestation; not adjudicated here",
+   "status": "UNATTESTABLE"
+  }
+ },
+ "pending": [
+  "row 11: **PENDING** (entries 12-14, row 15 and entries 23-24 so far)"
+ ],
+ "register": {
+  "path": "docs/prereg/f12_attestations.md",
+  "sha256": "7bb3067dd7f7d485866890705a249096a6079480228da69c506fc54958e045ad"
+ },
+ "requirement": "F12a.1(c)-(d): statements (i) old development outcomes, (ii) new outcomes, (iii) prescore audits for every decision-maker, code/input builder, extractor, token-run session, chair and approving reviewer through the freeze; one session never attests for another; a commit time is not an attestation",
+ "rows": [
+  {
+   "#": "1",
+   "(i) old dev. outcomes": "none opened; only commit metadata and record hashes",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "read the round-6 synthesis and member reports, which summarise Part A predictions and calibration",
+   "covers": "drafting of F12",
+   "identity (as known)": "branch `council/2026-11-11`",
+   "session and role": "F12 drafting (council round 6 implementation sub-agent)",
+   "source": "`docs/PREREG_H1_TF.md`, end of amendment F12",
+   "status": "given (its own session only)"
+  },
+  {
+   "#": "2",
+   "(i) old dev. outcomes": "seen, summaries (all four)",
+   "(ii) new outcomes": "none (all four)",
+   "(iii) prescore audits": "editor: summaries only; representation and metrology: `PRESCORE_INVENTORY_2.md` read directly; world-model: `predictions_f11.json` and `f11_calibration_record.json` read directly; metrology: F11 calibration record read directly",
+   "covers": "round 6",
+   "identity (as known)": "`docs/council/2026-11-11/`; four member sessions (editor, representation, world-model, metrology); chair = entry 10",
+   "session and role": "Council round 6 chair and members (F12 choices)",
+   "source": "entries 15a-15d",
+   "status": "given 12 Nov 2026 (each for its own session)"
+  },
+  {
+   "#": "3",
+   "(i) old dev. outcomes": "seen, summaries; ledger metadata and hashes",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "summaries only; selection manifests read",
+   "covers": "that review",
+   "identity (as known)": "`docs/reviews/council/board-a-f12-2026-11-11.md`",
+   "session and role": "Board A, F12 / F12-I review",
+   "source": "entry 16",
+   "status": "given 12 Nov 2026 (its own session only)"
+  },
+  {
+   "#": "4",
+   "(i) old dev. outcomes": "none",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "read F12a.1's account of the audits",
+   "covers": "F12a",
+   "identity (as known)": "Claude Opus 5.5, branch `prereg/f12a`, about 12:00-12:50 UTC",
+   "session and role": "F12a drafting (implementation sub-agent)",
+   "source": "`docs/PREREG_H1_TF.md`, end of note F12a",
+   "status": "given (its own session only)"
+  },
+  {
+   "#": "5",
+   "(i) old dev. outcomes": "implementer: **cannot attest**; token runs: entry 10",
+   "(ii) new outcomes": "implementer: cannot attest",
+   "(iii) prescore audits": "implementer: cannot attest",
+   "covers": "pinned C1 code and its runs",
+   "identity (as known)": "implementer: delegate session killed out of memory on 11 Nov; token runs: launched by the chair",
+   "session and role": "F12 inputs implementer (`f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`; commit `0412799`) and the token-run sessions (`agent-tmux` jobs `f12-tokens2`, `f12-tokens3`)",
+   "source": "entries 10 and 22",
+   "status": "implementer **UNATTESTABLE** (for Board A); token runs covered by the chair"
+  },
+  {
+   "#": "6",
+   "(i) old dev. outcomes": "seen, summaries; centred qualification noise; raw F8a.2 payload parsed (disclosure)",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "summaries only",
+   "covers": "pinned code; restricted-copy extractor",
+   "identity (as known)": "branch `feat/f12-simulation`",
+   "session and role": "F12 simulation implementer (`f12_simulation.py` at `07e1dc2`; the synthetic smoke run that wrote the restricted payload copy)",
+   "source": "entry 17",
+   "status": "given 12 Nov 2026 (its own session only)"
+  },
+  {
+   "#": "7",
+   "(i) old dev. outcomes": "none seen (code constants of uncertain provenance disclosed)",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "none read",
+   "covers": "F12b, its code and synthetic diagnostics",
+   "identity (as known)": "branch `prereg/f12b`, about 14:10-18:05 UTC",
+   "session and role": "F12b drafting (implementation sub-agent)",
+   "source": "end of amendment F12b; entry 18",
+   "status": "given (its own session only)"
+  },
+  {
+   "#": "8",
+   "(i) old dev. outcomes": "none knowingly opened; whether displayed material held numerical summaries: not certain",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "summaries only",
+   "covers": "that review",
+   "identity (as known)": "`review/board-a-f12b` worktree",
+   "session and role": "Board A methods reviewer, F12b review",
+   "source": "the review's \"Exposure attestation\"; entry 19",
+   "status": "given (its own session only)"
+  },
+  {
+   "#": "9",
+   "(i) old dev. outcomes": "see below",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "see below",
+   "covers": "F12c note, code, tests, manifests, synthetic checks",
+   "identity (as known)": "Claude Opus 5.5 implementation sub-agent, branch `prereg/f12c`, worktree `.worktrees/prereg/f12c`, 11 Nov 2026 about 18:10 UTC to the F12c commit",
+   "session and role": "F12c implementer (this file's author)",
+   "source": "below",
+   "status": "given (this session only); raw-loader account confirmed in entry 20"
+  },
+  {
+   "#": "10",
+   "(i) old dev. outcomes": "seen (council briefs, syntheses, earlier development results)",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "read and commissioned",
+   "covers": "through 07:40 UTC 12 Nov 2026; to be renewed at the C1 freeze",
+   "identity (as known)": "orchestrating session of the programme, 11-12 Nov 2026",
+   "session and role": "**Chair** (approves F12, F12a, F12b, F12c, the pilot projection and the CPU repricing)",
+   "source": "entries 10 and 10a",
+   "status": "given through the second C1 freeze (entries 10, 10a, 10b, 10c)"
+  },
+  {
+   "#": "11",
+   "(i) old dev. outcomes": "\u2014",
+   "(ii) new outcomes": "\u2014",
+   "(iii) prescore audits": "\u2014",
+   "covers": "\u2014",
+   "identity (as known)": "\u2014",
+   "session and role": "Every later C1/C2 builder, analyst and Board A reviewer approving an F12 parameter or the simulation report",
+   "source": "\u2014",
+   "status": "**PENDING** (entries 12-14, row 15 and entries 23-24 so far)"
+  },
+  {
+   "#": "15",
+   "(i) old dev. outcomes": "none seen",
+   "(ii) new outcomes": "none deliberately; hook-run access **not certain**",
+   "(iii) prescore audits": "summaries only",
+   "covers": "that review",
+   "identity (as known)": "`review/board-a-f12c` worktree",
+   "session and role": "Board A methods reviewer, F12c review",
+   "source": "the review's attestation; entry 21",
+   "status": "given 12 Nov 2026 (its own session only), qualified"
+  },
+  {
+   "#": "12",
+   "(i) old dev. outcomes": "none seen; handled centred qualification noise (see below)",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "read F12a.1's account and entries 9-10, not the audits",
+   "covers": "F12d note, code, tests, v2 restricted copy and pin, C1 skeleton, resource plan",
+   "identity (as known)": "Claude Opus 5.5 implementation sub-agent, branch `prereg/f12d`, worktree `.worktrees/prereg/f12d`, 11 Nov 2026 about 21:45 UTC to the F12d note commit",
+   "session and role": "F12d implementer and v2 restricted-payload extractor (chair-authorised for that step)",
+   "source": "entry 12 below",
+   "status": "given (this session only)"
+  },
+  {
+   "#": "13",
+   "(i) old dev. outcomes": "none seen; read the real F12 token outputs (field forecasts, see below)",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "read F12a.1's account and entries 10 and 12, not the audits",
+   "covers": "F12e note, `scripts/f12_qualify.py`, the C1 draft fill, token facts, base tensor hashes, candidate identities, qualification report",
+   "identity (as known)": "Claude Opus 5.5 implementation sub-agent, branch `prereg/f12e`, worktree `.worktrees/prereg/f12e`, 11 Nov 2026 about 23:52 UTC to the F12e note commit (12 Nov)",
+   "session and role": "F12e implementer (C1 draft fill, candidate identity freeze, real-token qualification)",
+   "source": "entry 13 below",
+   "status": "given (this session only)"
+  },
+  {
+   "#": "14",
+   "(i) old dev. outcomes": "none seen; read the real F12 token outputs and the edit-derived v4 feature files (see below)",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "read F12a.1's account and entries 9, 10, 12 and 13, not the audits",
+   "covers": "F12f note, `scripts/f12_gauge_tokens.py`, `scripts/f12_matrix.py`, the gauge audit in `scripts/f12_simulation.py`, `scripts/f12_qualify.py` / `f12_c1.py` changes, priced-only gauge records",
+   "identity (as known)": "Claude Opus 5.5 implementation sub-agent, branch `prereg/f12f`, worktree `.worktrees/prereg/f12f`, 12 Nov 2026 about 00:33 UTC to the F12f note commit",
+   "session and role": "F12f implementer (gauge-token builder and pricing, runner gauge audit, comparator-matrix builder, re-qualification code)",
+   "source": "entry 14 below",
+   "status": "given (this session only)"
+  },
+  {
+   "#": "23",
+   "(i) old dev. outcomes": "seen, summaries (quoted in this register and the PREREG notes)",
+   "(ii) new outcomes": "none",
+   "(iii) prescore audits": "read this register's account of the audits, not the audits",
+   "covers": "`scripts/f12_additivity_stream.py`, the additivity plan evidence, the `f12_c1.py` F12g and freeze builders and their tests, the governed C1 files and manifest (`451d45c`, superseded, and the re-freeze), note F12-C1",
+   "identity (as known)": "Claude Opus 5.5 implementation sub-agent, branch `prereg/f12-c1`, worktree `.worktrees/prereg/f12-c1`, 12 Nov 2026 from before 07:14 UTC (start not certain) to the F12-C1 note commit",
+   "session and role": "F12 C1 freeze implementer (streaming F12-I LoRA plan driver and evidence, scoped item 9 builder, governed C1 files, `MANIFEST_C1.sha256`, the re-pin before Board A verification)",
+   "source": "entry 23 below",
+   "status": "given (this session only)"
+  },
+  {
+   "#": "24",
+   "(i) old dev. outcomes": "seen, summaries (quoted in reviews, this register and the PREREG); snapshot parsed for metadata",
+   "(ii) new outcomes": "**none**",
+   "(iii) prescore audits": "read the reviews' and PREREG's accounts of the audits, not the audits",
+   "covers": "`scripts/f12_inputs_guard.py`, the F12-R changes to `f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`, `f12_additivity_stream.py` and their tests, the plan requalification and the token-rerun price under `docs/prereg/a5_manifests/f12/f12r/`, note F12-R; after the chair's ruling of 09:19 UTC, the comparison tool, the full token requalification rerun and its comparison, the F12-R addendum; after the independent re-check, the A10 confined base loader and its pin, the A19 resume removal, their requalification and the second addendum",
+   "identity (as known)": "Claude Opus 5.5 implementation sub-agent, branch `prereg/f12-remedy`, worktree `.worktrees/prereg/f12-remedy`, 12 Nov 2026 from the worktree's creation off main `e7283e2` to the F12-R note commit; no prior part in F12",
+   "session and role": "F12-R unexposed-role implementer (remedy of adoption flags A10, A11, A19, A21, A24, A25, A26, A30; plan requalification; token-rerun price)",
+   "source": "entry 24 below",
+   "status": "given (this session only)"
+  }
+ ],
+ "status": "C1 file (PREREG_H1_TF F12a.6(c); item 9 scoped by F12g as accepted by Board A): frozen through MANIFEST_C1.sha256; not verified until Board A's separate C1 verification record and review",
+ "unexposed_adoption": {
+  "adoption_review_session_statements": {
+   "A": "**A:** Not every retained choice is registered or adopted. Of 33 itemised choices, 12 are registered/verified, 13 are discretionary/adopted and eight are flagged. Those eight prevent an unconditional adoption of A's retained implementation. This record supplies a concrete remedy specification, not closure of Board A condition 1.",
+   "B": "**B:** Within the conservative envelope of every potentially inherited contribution identified by entry 18, history, the design note and the current pinned/runtime code, every retained choice is now independently adopted or verified against registration: 13 items, five registered and eight adopted, zero flagged. The missing uncommitted predecessor prevents exact authorship attribution, not adoption of the surviving methods enumerated here. This does not supply B's missing personal statement or automatically verify C1.",
+   "Combined": "**Combined:** 46 items: 17 registered, 21 adopted, eight flagged."
+  },
+  "remedy_entry_24": {
+   "register_entry": "Entry 24",
+   "row": {
+    "#": "24",
+    "(i) old dev. outcomes": "seen, summaries (quoted in reviews, this register and the PREREG); snapshot parsed for metadata",
+    "(ii) new outcomes": "**none**",
+    "(iii) prescore audits": "read the reviews' and PREREG's accounts of the audits, not the audits",
+    "covers": "`scripts/f12_inputs_guard.py`, the F12-R changes to `f12_population.py`, `f12_tokens.py`, `f12_additivity_prepare.py`, `f12_additivity_stream.py` and their tests, the plan requalification and the token-rerun price under `docs/prereg/a5_manifests/f12/f12r/`, note F12-R; after the chair's ruling of 09:19 UTC, the comparison tool, the full token requalification rerun and its comparison, the F12-R addendum; after the independent re-check, the A10 confined base loader and its pin, the A19 resume removal, their requalification and the second addendum",
+    "identity (as known)": "Claude Opus 5.5 implementation sub-agent, branch `prereg/f12-remedy`, worktree `.worktrees/prereg/f12-remedy`, 12 Nov 2026 from the worktree's creation off main `e7283e2` to the F12-R note commit; no prior part in F12",
+    "session and role": "F12-R unexposed-role implementer (remedy of adoption flags A10, A11, A19, A21, A24, A25, A26, A30; plan requalification; token-rerun price)",
+    "source": "entry 24 below",
+    "status": "given (this session only)"
+   }
+  },
+  "reviews": {
+   "adoption": {
+    "disposition": "**Disposition: session A is not fully adopted; session B's conservatively identified retained contributions are registered or independently adopted below.** This is the prospective methods review requested by Board A condition 1, not a historical attestation for either killed session, a C1 verification, or permission to run or score. Flagged implementation paths require repair or explicit governed exclusion and requalification before Board A can close the exception.",
+    "path": "docs/reviews/council/f12-unexposed-adoption-2026-11-12.md",
+    "sha256": "e83adf5cfda963ebc773adf23ad614e45b2949a5721075a0f61ffae20ad83024"
+   },
+   "recheck": {
+    "disposition": "**Six remedies ADOPT; A10 and A19 remain STILL FLAGGED. Board A condition 1 cannot yet close for session A.** The evidence supports numerical reproduction of the frozen outputs, but that does not discharge the remaining input-confinement and resume-validation requirements.",
+    "path": "docs/reviews/council/f12-remedy-recheck-2026-11-12.md",
+    "sha256": "1249d0dddb4beb5acf100048d75e44c59e2ba12cf7c45de51563096e49d298e3"
+   },
+   "recheck2": {
+    "disposition": "**A10: ADOPT. A19: ADOPT.** This supplies the remaining independent unexposed-role adoption for session A under F12a.1(c)\u2013(d). It does not supply the deceased implementer's personal history, verify C1, authorise scoring, or discharge the separate package re-freeze and Board A review requirements.",
+    "path": "docs/reviews/council/f12-remedy-recheck2-2026-11-12.md",
+    "sha256": "7ea8e918abd4ad9253950c3d6635d70d2d74377a0616872e9de708b04695f020"
+   }
+  },
+  "session_A": "retained choices registered or adopted by unexposed roles: the adoption review registered or verified 12 and adopted 13 of 33 itemised choices and flagged eight (A10, A11, A19, A21, A24, A25, A26, A30); the unexposed F12-R implementer (register entry 24) remedied them; re-check 1 adopted A11, A21, A24, A25, A26 and A30, and re-check 2 adopted A10 and A19",
+  "session_B": "covered by the adoption review: within its conservative envelope of every potentially inherited contribution, 13 retained items, five registered and eight adopted, zero flagged"
+ }
+}

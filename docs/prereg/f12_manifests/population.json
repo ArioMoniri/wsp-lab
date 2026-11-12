@@ -1,0 +1,47 @@
+{
+ "components": 234,
+ "eligibility": {
+  "by_family": {
+   "abliteration": 83,
+   "chain": 105,
+   "lora_sft": 29,
+   "random_dir": 53
+  },
+  "eligible_ids_sha256": "bd695b4ee6590156d2264b5f4c8dca252a1e63aced35d927a0d940d0eadd6348",
+  "excluded": {},
+  "field_status": {
+   "ok": 270
+  },
+  "n_eligible": 270,
+  "rank_sources": {
+   "adapter_config.r": 29,
+   "params.inner_params.rank": 36,
+   "pinned:abliteration": 83,
+   "pinned:chain:abliteration": 34,
+   "pinned:chain:random_dir": 35,
+   "pinned:random_dir": 53
+  },
+  "rows_with_unsupported_changed_tensors": [],
+  "rule": "F12a.2(e): a row with any supported changed tensor lacking r, a finite SVD or a K frame is excluded from every arm before any fit; excluded rows are not replaced and S_k is never topped up",
+  "source": {
+   "path": "docs/prereg/f12_manifests/f12e_token_facts.json",
+   "sha256": "01ba41592580d2ebcdcc2477578b476509b50b3e4c9ea9fe6dda177a5c3e8886"
+  },
+  "token_manifest": {
+   "path": "docs/prereg/a5_manifests/f12/tokens_manifest.json",
+   "sha256": "424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f"
+  }
+ },
+ "population": {
+  "path": "docs/prereg/a5_manifests/f12/population.json",
+  "sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+ },
+ "population_ids_sha256": "bd695b4ee6590156d2264b5f4c8dca252a1e63aced35d927a0d940d0eadd6348",
+ "rows": 270,
+ "rows_sha256": "1272c1337b611aeba564085adb86576426e2e6a976722d3702d14853b006fed3",
+ "selector": {
+  "path": "scripts/f12_population.py",
+  "sha256": "bcd3cf12974807fdcea4bea99f87053e50a7860f494119fc98a533670502ff33"
+ },
+ "status": "C1 file (PREREG_H1_TF F12a.6(c); item 9 scoped by F12g as accepted by Board A): frozen through MANIFEST_C1.sha256; not verified until Board A's separate C1 verification record and review"
+}
