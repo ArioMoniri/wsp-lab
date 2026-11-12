@@ -21,5 +21,5 @@
  "pin_sha256": "f30dbf3058373e3a52b064eb1b08ff2aa51f3dd9fc0172aedfc5fe41d26b2562",
  "restricted_sha256": "44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5",
  "source_sha256": "67da223ce315e8256a754d05dd0af725f3480fabc46d3b736114072ef11c53de",
- "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A"
+ "status": "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs (F12e); the governed C1 file is written at the C1 freeze and verified by Board A"
 }

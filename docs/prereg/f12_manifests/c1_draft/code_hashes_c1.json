@@ -2,7 +2,11 @@
  "at_freeze": "regenerated over the frozen code and promoted only through MANIFEST_C1.sha256 and Board A verification, never by changing its status string",
  "draft_pin": {
   "path": "docs/prereg/f12_manifests/code_hashes_c1.json",
-  "sha256": "7d34a4cb311029bb6333307ff9d48961439602672abe3a29cd7f4ff7d34114af"
+  "sha256": "3f8063105c0a8f0e03d3bab4ff37f88250150195f28abd31fea67e14fa43d682"
  },
- "status": "draft skeleton, not a C1 file: built before the token manifest exists (F12d); the governed C1 file is written at the C1 freeze and verified by Board A"
+ "status": "draft, not a C1 file: token-dependent parts filled from the frozen token manifest and its verified outputs (F12e); the governed C1 file is written at the C1 freeze and verified by Board A",
+ "token_facts": {
+  "path": "docs/prereg/f12_manifests/f12e_token_facts.json",
+  "sha256": "01ba41592580d2ebcdcc2477578b476509b50b3e4c9ea9fe6dda177a5c3e8886"
+ }
 }

@@ -3382,8 +3382,8 @@ def c1_draft_inventory():
         "status": "draft, pending Board A C1 verification",
         "note": "Draft of F12a.6(c) item 11. Not a C1 file until MANIFEST_C1.sha256 is committed; it is "
         "regenerated (python scripts/f12_simulation.py c1-draft) after any change to a listed file. "
-        "Missing for C1: the token builder's C1 outputs, population/folds/schemas/models/intervals/"
-        "f12i/resources files, the C1 verifier and exposure_c1.json.",
+        "The C1 package draft is c1_draft/ (F12d skeleton; token-dependent parts filled from the frozen token "
+        "manifest by F12e, f12e_token_facts.json); MANIFEST_C1.sha256 and Board A verification are still to come.",
         "files": {rel: sha256_file(ROOT / rel) for rel in sorted(files)},
         "restricted_payload": {
             "sha256": pin["restricted_copy"]["sha256"],

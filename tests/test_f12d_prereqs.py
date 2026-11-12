@@ -331,7 +331,8 @@ def test_prereq_files_are_hashed_as_committed_bytes(tmp_path):
 
 
 def test_c1_draft_skeleton_marks_token_dependent_parts_and_never_verifies(tmp_path):
-    files = c1.build_draft(fs.ROOT)
+    # without token facts (F12e fills them; tests/test_f12e_qualify.py checks the committed filled draft)
+    files = c1.build_draft(fs.ROOT, use_facts=False)
     assert list(files) == list(c1.C1_FILES)
     for name, obj in files.items():
         assert "draft" in obj["status"] and "not a C1 file" in obj["status"], name
@@ -344,10 +345,6 @@ def test_c1_draft_skeleton_marks_token_dependent_parts_and_never_verifies(tmp_pa
         == hashlib.sha256(fs.RESTRICTED_PIN.read_bytes()).hexdigest()
     )
     assert files["resources.json"]["ceiling_cpu_h"] == 190.0
-    # the committed draft skeleton equals the builder's output and is never a passing C1
-    for name, obj in files.items():
-        p = fs.ROOT / c1.DRAFT_DIR / name
-        assert json.loads(p.read_text()) == json.loads(json.dumps(obj)), name
     assert c1.verify_c1(fs.ROOT, code_identity=fs.current_code_identity()) != []
 
 

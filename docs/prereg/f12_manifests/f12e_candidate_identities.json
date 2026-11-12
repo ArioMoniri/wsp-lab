@@ -1,0 +1,63 @@
+{
+ "code": {
+  "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
+  "scripts/a5_simulation.py": "4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a",
+  "scripts/f12_budget.py": "c2df25e58f9cb49e839603c4bfc96de1d45bface60873df67323aff00e538741",
+  "scripts/f12_c1.py": "c5ce342bdbf02478c025f4204d73b03c48e8ca52884accb2bceb946dca50d31e",
+  "scripts/f12_payload_extract.py": "5de91001e242a5687c3fb97988f7093f2d552cf553cdb92f6c2c0f4cb0fa79dd",
+  "scripts/f12_population.py": "7e1c196dcbedd36e2ea7102d6a1ef4e50e23b8381dcc2bbf1cfffce77b2ee45d",
+  "scripts/f12_qualify.py": "a5fa264efe7abc53672e621288153cd94da989533480c83642200c3e0978009d",
+  "scripts/f12_simulation.py": "f9e777ec4d316a6708fd6d260b9f1e5b108adcb41a92f32f9c58437f7b98659b",
+  "scripts/f12_tokens.py": "3188c5c54e51110d0fb161f688c8c94832eed674be80b3c757060951a596092a",
+  "scripts/tfv1_requalify.py": "46f7ab9a4ab3207990fdc0fa888d9f6164fc156f98a0072f33df51d1432e6249"
+ },
+ "code_hashes_c1_draft": {
+  "path": "docs/prereg/f12_manifests/code_hashes_c1.json",
+  "sha256": "3f8063105c0a8f0e03d3bab4ff37f88250150195f28abd31fea67e14fa43d682"
+ },
+ "config_files": {
+  "docs/prereg/f12_manifests/f12c_pilot_config.json": "5e8c8c2aef6bdb049c9470757f5847e406fbc908384abb0c83cf4e1b2254b24e",
+  "docs/prereg/f12_manifests/f12c_stage1_config.json": "7cb10a83a6a2fb0e7e92ee14b2bea21d3efea42d49510e1625e9bcb9df204b01",
+  "docs/prereg/f12_manifests/f12c_stage2_config.json": "ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f",
+  "docs/prereg/f12_manifests/f12c_target_config.json": "be372fc56657bc4e6a62732e0e7bbce1701027197635b846efee6e8f4948e29c"
+ },
+ "configs": {
+  "pilot": "5e8c8c2aef6bdb049c9470757f5847e406fbc908384abb0c83cf4e1b2254b24e",
+  "stage1": "7cb10a83a6a2fb0e7e92ee14b2bea21d3efea42d49510e1625e9bcb9df204b01",
+  "stage2": "ae9340e1778cc4f85fa71020fa6275cc47b7b1a73064c5490bda6f59bc13e40f",
+  "target": "be372fc56657bc4e6a62732e0e7bbce1701027197635b846efee6e8f4948e29c"
+ },
+ "population": {
+  "path": "docs/prereg/a5_manifests/f12/population.json",
+  "sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+ },
+ "resource_plan": {
+  "path": "docs/prereg/f12_manifests/f12c_resource_plan.json",
+  "sha256": "53804434a6a679ebd69a3775f7a26a25a224c397d6f8323c7bec16532221a348"
+ },
+ "restricted_payload": {
+  "path": "/home/ubuntu/wsp-data/runs/a5/f12_sim_dryrun/noise_payload_restricted_v2.json",
+  "pin": "docs/prereg/f12_manifests/noise_payload_restricted_pin.json",
+  "pin_sha256": "f30dbf3058373e3a52b064eb1b08ff2aa51f3dd9fc0172aedfc5fe41d26b2562",
+  "sha256": "44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5"
+ },
+ "schema": "f12e-candidate-identities-v1",
+ "simulation_code_identity": {
+  "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
+  "scripts/a5_simulation.py": "4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a",
+  "scripts/f12_simulation.py": "f9e777ec4d316a6708fd6d260b9f1e5b108adcb41a92f32f9c58437f7b98659b",
+  "scripts/tfv1_requalify.py": "46f7ab9a4ab3207990fdc0fa888d9f6164fc156f98a0072f33df51d1432e6249"
+ },
+ "status": "candidate identities frozen before steps 3-5 of the Board A F12c ordered path use them (F12e); not C1 and not a C1 verification",
+ "token_manifest": {
+  "path": "docs/prereg/a5_manifests/f12/tokens_manifest.json",
+  "sha256": "424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f"
+ },
+ "versions": {
+  "lightgbm": "4.7.0",
+  "numpy": "2.5.4",
+  "python": "3.12.3",
+  "scipy": "1.18.1",
+  "torch": "2.15.0+cu132"
+ }
+}

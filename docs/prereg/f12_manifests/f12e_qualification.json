@@ -1,0 +1,451 @@
+{
+ "candidate_identities": {
+  "path": "docs/prereg/f12_manifests/f12e_candidate_identities.json",
+  "sha256": "294ad3a6380ad73b096a82ac63c1e667a467d788a05110635febdf70562b1169"
+ },
+ "checks": [
+  {
+   "check": "token_files",
+   "detail": {
+    "verified": {
+     "aq.json": "90ab8466ee08b08e2fc003d419cbeb4d87494dc007413fe4f542a961f79d4e67",
+     "detail.jsonl": "3480fa5ae796285313dd44c7c0f31d2e95da1e059ee986293704a3e321012c4a",
+     "kframes.json": "b80b9b3aef8b29c242e13c5a99d9e6096c28aa444fbac7b66454f40f0d256e48",
+     "kframes.safetensors": "100a4024bf09f33820540c21b53bd0512c14bd1d1dfb7c299f647f5aedd0b519",
+     "pricing.json": "1146a853b066fbce80acb06975083e7c9c579b2faafa018e23939d3f2cfecd98",
+     "rows.jsonl": "424c9039c7f3bcb7232465428681072da5ce4bfbe24f98ca1f04d7ca72f863c6",
+     "tokens.safetensors": "f8c5e163fcbcb013fdf6287a6ac19f242f0ec1bd786c7add618cc8af8974a054"
+    }
+   },
+   "n_problems": 0,
+   "pass": true,
+   "problems": []
+  },
+  {
+   "check": "code_identity",
+   "detail": {},
+   "n_problems": 0,
+   "pass": true,
+   "problems": []
+  },
+  {
+   "check": "population_identity",
+   "detail": {
+    "population_json_sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5",
+    "rows": 270
+   },
+   "n_problems": 0,
+   "pass": true,
+   "problems": []
+  },
+  {
+   "check": "counts",
+   "detail": {
+    "component_strata": {
+     "abliteration": 83,
+     "chain": 71,
+     "lora_sft": 29,
+     "mixed": 1,
+     "random_dir": 50
+    },
+    "components": 234,
+    "row_families": {
+     "abliteration": 83,
+     "chain": 105,
+     "lora_sft": 29,
+     "random_dir": 53
+    },
+    "row_sources": {
+     "existing-TF-v1": 123,
+     "purchasable": 147
+    },
+    "rows": 270
+   },
+   "n_problems": 0,
+   "pass": true,
+   "problems": []
+  },
+  {
+   "check": "exclusions",
+   "detail": {
+    "eligible": 270,
+    "excluded": {},
+    "field_status": {
+     "ok": 270
+    },
+    "q_partial_rows": 0,
+    "rank_sources": {
+     "adapter_config.r": 29,
+     "params.inner_params.rank": 36,
+     "pinned:abliteration": 83,
+     "pinned:chain:abliteration": 34,
+     "pinned:chain:random_dir": 35,
+     "pinned:random_dir": 53
+    },
+    "rows_with_unsupported_changed_tensors": [],
+    "rule": "F12a.2(e) / F5 pins: a row with any supported changed tensor lacking r, a finite SVD or a K frame is excluded from every arm and listed; changed tensors outside the 186 slots get no token and are listed"
+   },
+   "n_problems": 0,
+   "pass": true,
+   "problems": []
+  },
+  {
+   "check": "finite_schema",
+   "detail": {
+    "descriptive_max_abs_sum_col35_minus_a": 0.0,
+    "down_proj_tokens": 2648,
+    "down_proj_tokens_with_probe": 2648,
+    "field_present_tokens": 6845,
+    "present_tokens": 6845,
+    "shape": [
+     270,
+     186,
+     42
+    ],
+    "tokens_per_row_quantiles": [
+     2.0,
+     12.0,
+     72.0
+    ]
+   },
+   "n_problems": 0,
+   "pass": true,
+   "problems": []
+  },
+  {
+   "check": "folds",
+   "detail": {
+    "eligible_rows_equal_population": true,
+    "per_k": [
+     {
+      "components": 89,
+      "fold_sizes": {
+       "0": 18,
+       "1": 18,
+       "2": 18,
+       "3": 18,
+       "4": 17
+      },
+      "k": 0,
+      "outer_sha256": "a72ca5bce5bc430f35a7056e58a007f5f01796697b9e031238eafc24d238250b",
+      "rows": 123
+     },
+     {
+      "components": 118,
+      "fold_sizes": {
+       "0": 24,
+       "1": 24,
+       "2": 24,
+       "3": 23,
+       "4": 23
+      },
+      "k": 29,
+      "outer_sha256": "39bd4b94abe56b3b75b9f59cc875cd74c510349ec064dae382956ceb2a418e97",
+      "rows": 152
+     },
+     {
+      "components": 147,
+      "fold_sizes": {
+       "0": 30,
+       "1": 30,
+       "2": 29,
+       "3": 29,
+       "4": 29
+      },
+      "k": 58,
+      "outer_sha256": "bbef9f373f194346d02d5ceb5b3c44b56b490585ed06aabef662ed2454e11b50",
+      "rows": 182
+     },
+     {
+      "components": 176,
+      "fold_sizes": {
+       "0": 36,
+       "1": 35,
+       "2": 35,
+       "3": 35,
+       "4": 35
+      },
+      "k": 87,
+      "outer_sha256": "6ef9c0bf05cee9c9697fb61755f70746ca735a72d291e7c959aeda36e508bacb",
+      "rows": 211
+     },
+     {
+      "components": 205,
+      "fold_sizes": {
+       "0": 41,
+       "1": 41,
+       "2": 41,
+       "3": 41,
+       "4": 41
+      },
+      "k": 116,
+      "outer_sha256": "0bf9932af812d60640f1d39595247f7cc46a0dddce6323be1515e0e5648458d9",
+      "rows": 241
+     },
+     {
+      "components": 234,
+      "fold_sizes": {
+       "0": 47,
+       "1": 47,
+       "2": 47,
+       "3": 47,
+       "4": 46
+      },
+      "k": 145,
+      "outer_sha256": "3fdee6859926e3935d9fa18dc3fac7c4b61a8b30bc60415db27e53585de073de",
+      "rows": 270
+     }
+    ]
+   },
+   "n_problems": 0,
+   "pass": true,
+   "problems": []
+  },
+  {
+   "check": "nesting",
+   "detail": {
+    "lofo_train": "every S_k component outside eval_components; the mixed component always trains and is never evaluated (F12a.1(i))",
+    "rule": "F12a.2(f): F3, standardisation, bandwidth and epoch / lambda / tree-count selection are fitted inside each inner-training split (outer training minus inner fold j), then refitted on outer training; checked here at the fold level (inner folds partition outer training, disjoint from held-out); the model-level nesting is code (fit_wmr_fold, fit_statnn_fold; F12c.1, accepted by Board A) and is not re-tested here",
+    "shared_delta_groups": 3
+   },
+   "n_problems": 0,
+   "pass": true,
+   "problems": []
+  },
+  {
+   "check": "gauge",
+   "detail": {
+    "analytic_note": "columns 16-41 are functions of D_t alone; columns 0-15 depend on (B, A) only through BA, M = (Lambda_G^1/2 U_G^T)(BA)(U_A Lambda_A^1/2), so a gauge change alters tokens only by fp32 rounding. This is not the registered numerical audit and does not replace it without a ruling.",
+    "audit_inputs_in_frozen_output": false,
+    "k_cutoff_tie_tokens": 0,
+    "kframe_flag_counts": {},
+    "prerequisites_pass": true,
+    "requirement": "F12a.2(i): the F5 gauge audit applies to WM-R; F12a.5(d): a replicate failing a gauge audit counts as a failure. F5 pins: for every held-out row and supported tensor with factors, (B, A) -> (BQ, Q^-1 A) with Q = H diag(d) from seed('20261110:lol-gauge:', '<canonical edit id>:<exact tensor name>'), fp64 then fp32; every fitted model evaluated on both inputs; |delta f| <= 1e-5 + 1e-4 |f| nats per row",
+    "runner_implements_real_token_audit": false
+   },
+   "n_problems": 2,
+   "pass": false,
+   "problems": [
+    "the frozen token output holds no gauge-transformed tokens and no (B, A) factors, so the F5 gauge audit cannot be evaluated on these inputs",
+    "scripts/f12_simulation.py implements no gauge audit for real tokens (its rules text: 'not run on synthetic tokens (no factors); the real token builder supplies gauge-transformed tokens')"
+   ]
+  },
+  {
+   "check": "simulation_matrix_inputs",
+   "detail": {
+    "consequence": "the registered real-token matrix cannot be assembled without a definition of its v4 block (columns, source files and their identities) and a pinned builder; the StatNN cost measured by the timing pilot depends on that width",
+    "pinned_pooling_code_v4_width": {
+     "source": "src/wsp/features/pool.py pooled_dims(buckets=4)",
+     "spectrum": 136,
+     "stats": 1242,
+     "total": 1378
+    },
+    "simulation_v4_columns": 18,
+    "simulation_v4_source": "scripts/f12_simulation.py v4_stats: 'Synthetic stand-in for the v4 pooled statistics (18 columns)'"
+   },
+   "n_problems": 2,
+   "pass": false,
+   "problems": [
+    "the frozen token output holds no v4 pooled statistics; the registered StatNN comparator takes v4 pooled statistics plus the 186 x (42 + presence) token block (F12.3, F5 pins, A5.4.1)",
+    "no builder from the f12-tokens-v1 output to the simulation's f12-token-matrix-v1 matrix exists"
+   ]
+  }
+ ],
+ "code": {
+  "scripts/f12_qualify.py": "a5fa264efe7abc53672e621288153cd94da989533480c83642200c3e0978009d"
+ },
+ "counts_expected": {
+  "components": 234,
+  "rows": 270
+ },
+ "eligible_row_folds_sha256": "4d04c0c0579f08a92a150619da6f74632830b2b144650f1ab4a26d81854d8abc",
+ "first_failure": "gauge",
+ "omitted_energy": {
+  "by_family": {
+   "abliteration": {
+    "gt_threshold": 58,
+    "omitted_energy_max_quantiles": {
+     "max": 0.2926030106035853,
+     "median": 0.01572685070216714,
+     "min": 0.005050624713692316,
+     "q25": 0.009397851626133304,
+     "q75": 0.035079197211817945
+    },
+    "rows": 83
+   },
+   "chain": {
+    "gt_threshold": 83,
+    "omitted_energy_max_quantiles": {
+     "max": 0.7410774575610686,
+     "median": 0.06965559102521811,
+     "min": 0.003097674694193556,
+     "q25": 0.012677714784901794,
+     "q75": 0.354155252708167
+    },
+    "rows": 105
+   },
+   "lora_sft": {
+    "gt_threshold": 25,
+    "omitted_energy_max_quantiles": {
+     "max": 0.3445264992584493,
+     "median": 0.1282758897760596,
+     "min": 0.0010464289397982282,
+     "q25": 0.06940970140480994,
+     "q75": 0.2003104006816043
+    },
+    "rows": 29
+   },
+   "random_dir": {
+    "gt_threshold": 46,
+    "omitted_energy_max_quantiles": {
+     "max": 0.7368120889101273,
+     "median": 0.49865709862323565,
+     "min": 0.0036182510471406792,
+     "q25": 0.48950179897544854,
+     "q75": 0.7213586208859842
+    },
+    "rows": 53
+   }
+  },
+  "by_k_bin": {
+   "0": {
+    "gt_threshold": 95,
+    "omitted_energy_max_quantiles": {
+     "max": 0.7410774575610686,
+     "median": 0.06965559102521811,
+     "min": 0.0010464289397982282,
+     "q25": 0.011387241000913434,
+     "q75": 0.26493338939511674
+    },
+    "rows": 123
+   },
+   "116": {
+    "gt_threshold": 26,
+    "omitted_energy_max_quantiles": {
+     "max": 0.7368120889101273,
+     "median": 0.2622718486311477,
+     "min": 0.0037495539968072215,
+     "q25": 0.04582460191935345,
+     "q75": 0.49710177837953473
+    },
+    "rows": 30
+   },
+   "145": {
+    "gt_threshold": 24,
+    "omitted_energy_max_quantiles": {
+     "max": 0.7340017713844367,
+     "median": 0.039887002597070814,
+     "min": 0.0061374774293738305,
+     "q25": 0.01572685070216714,
+     "q75": 0.32402418680315503
+    },
+    "rows": 29
+   },
+   "29": {
+    "gt_threshold": 22,
+    "omitted_energy_max_quantiles": {
+     "max": 0.732610130699778,
+     "median": 0.032982628979052124,
+     "min": 0.006208235304733004,
+     "q25": 0.010060383599988587,
+     "q75": 0.49352809931200814
+    },
+    "rows": 29
+   },
+   "58": {
+    "gt_threshold": 24,
+    "omitted_energy_max_quantiles": {
+     "max": 0.7344106490997653,
+     "median": 0.03488083861028943,
+     "min": 0.005418540176688392,
+     "q25": 0.010752276267725782,
+     "q75": 0.4190741490961171
+    },
+    "rows": 30
+   },
+   "87": {
+    "gt_threshold": 21,
+    "omitted_energy_max_quantiles": {
+     "max": 0.7337580119334869,
+     "median": 0.01456557527273424,
+     "min": 0.0036182510471406792,
+     "q25": 0.008687563891424189,
+     "q75": 0.06940970140480994
+    },
+    "rows": 29
+   }
+  },
+  "gt_threshold_by_family_and_k_bin": {
+   "abliteration": {
+    "0": 2,
+    "116": 6,
+    "145": 13,
+    "29": 11,
+    "58": 12,
+    "87": 14
+   },
+   "chain": {
+    "0": 83,
+    "116": 0,
+    "145": 0,
+    "29": 0,
+    "58": 0,
+    "87": 0
+   },
+   "lora_sft": {
+    "0": 6,
+    "116": 7,
+    "145": 4,
+    "29": 2,
+    "58": 4,
+    "87": 2
+   },
+   "random_dir": {
+    "0": 4,
+    "116": 13,
+    "145": 7,
+    "29": 9,
+    "58": 8,
+    "87": 5
+   }
+  },
+  "gt_threshold_by_rank_source": {
+   "adapter_config.r": 25,
+   "params.inner_params.rank": 34,
+   "pinned:abliteration": 58,
+   "pinned:chain:abliteration": 22,
+   "pinned:chain:random_dir": 27,
+   "pinned:random_dir": 46
+  },
+  "k_bin_rule": "0 = existing rows; k = the smallest registered k > the component's purchase rank",
+  "n_rows": 270,
+  "registered_status": "F5.1 and the F5 schema pins (PREREG_H1_TF): omitted energy is recorded as a diagnostic, not an input; the K block uses the rank-r truncation BA. F12, F12a, F12b, F12c and F12d set no rule on it. Reported descriptively; no rule is changed; flagged for Board A.",
+  "rows_gt_threshold": 212,
+  "statistic": "per row, omitted_energy_max = the largest over its present tokens of sum_{j>r} sigma_j^2 / sum_j sigma_j^2 at the recorded rank r (f12_tokens.balanced_factors)",
+  "threshold": 0.01
+ },
+ "order": [
+  "token_files",
+  "code_identity",
+  "population_identity",
+  "counts",
+  "exclusions",
+  "finite_schema",
+  "folds",
+  "nesting",
+  "gauge",
+  "simulation_matrix_inputs"
+ ],
+ "outcomes_read": "none: the token run's outputs (field forecasts and edit-derived inputs), the committed token manifest and population only; no evaluation record, outcome, noise payload or data/evals file",
+ "pass": false,
+ "population": {
+  "path": "docs/prereg/a5_manifests/f12/population.json",
+  "sha256": "07ab85d31cf8595b9b8dcd095a1f272aceb004cfc79d3296c55373db2e233da5"
+ },
+ "run_at_head": "4ea28a9eb200ae3c7ac9cd620aecdf1a194b3ba1",
+ "schema": "f12e-qualification-v1",
+ "token_manifest": {
+  "path": "docs/prereg/a5_manifests/f12/tokens_manifest.json",
+  "sha256": "424333d9b6b2e19a0586b34096b1968d1de054e6ec625da9bceb4507b567001f"
+ }
+}
