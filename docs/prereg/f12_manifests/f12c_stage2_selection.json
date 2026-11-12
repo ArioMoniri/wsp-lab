@@ -1,0 +1,65 @@
+{
+ "frozen_by": "scripts/f12_simulation.py select (verify_stage1_report + write_selection)",
+ "identities": {
+  "code_sha256": {
+   "scripts/a5_build_panels.py": "cfba620e79b7c3b7c98c0d92d53ec4b2fe7a2ee9f323f8586f8f7a67e1502534",
+   "scripts/a5_simulation.py": "4ce3faa51889c4aa27f4d9580e7aab9343351954146cbbd76e162ccd47a7947a",
+   "scripts/f12_simulation.py": "1ef27e649e512e11b731a1c9a755cb6c53d5d4625bc9c15cd173f3741bc3c384",
+   "scripts/tfv1_requalify.py": "46f7ab9a4ab3207990fdc0fa888d9f6164fc156f98a0072f33df51d1432e6249",
+   "src/wsp/features/pool.py": "85a6341a446f32761531e0f0a193101114201d9eb08b0e05e6a6d1d42ee94390"
+  },
+  "payload_restricted_sha256": "44d794030daba753ddcef5f066d92ed2bcb0271d0e73b5441de1de427d086fb5",
+  "tokens_matrix_sha256": "e721729932bd11a69bbdc04b06000b8cb48d66c52b53e43f5c3d47a99c571b8f",
+  "tokens_synthetic": false
+ },
+ "k_star": 145,
+ "schema": "f12c-stage2-selection-v1",
+ "selection": {
+  "checks": [
+   {
+    "k": 0,
+    "meets": false,
+    "power_rate": 0.025,
+    "stress_rate_max": 0.55
+   },
+   {
+    "k": 29,
+    "meets": false,
+    "power_rate": 0.1,
+    "stress_rate_max": 0.575
+   },
+   {
+    "k": 58,
+    "meets": false,
+    "power_rate": 0.25,
+    "stress_rate_max": 0.325
+   },
+   {
+    "k": 87,
+    "meets": false,
+    "power_rate": 0.3,
+    "stress_rate_max": 0.35
+   },
+   {
+    "k": 116,
+    "meets": false,
+    "power_rate": 0.25,
+    "stress_rate_max": 0.425
+   },
+   {
+    "k": 145,
+    "meets": false,
+    "power_rate": 0.2,
+    "stress_rate_max": 0.3
+   }
+  ],
+  "k": [
+   145
+  ],
+  "rule": "smallest k with pilot power >= 0.9 and every pilot stress rate <= 0.07; stage 2 at that k only, else at 145 only",
+  "rule_met_at": null
+ },
+ "stage1_config_sha256": "7cb10a83a6a2fb0e7e92ee14b2bea21d3efea42d49510e1625e9bcb9df204b01",
+ "stage1_report_sha256": "f2e5c386688aa39c75fccbd1796763011c46ba62ac078e2d55c274060689a6bd",
+ "synthetic": false
+}
