@@ -7499,3 +7499,29 @@ Each runs at most two workers, within the 4 GB per-job limit, under the budget l
 replicates count as failures. The projected remaining cost is about 92 CPU-h, about 46 h of wall time at two workers.
 (e) *What this does not release.* The assembled report goes to Board A for acceptance. Purchase, C2, the before-scheduling
 forecasts, scoring and every Part A, F8 and F9 gate are unchanged. Part A remains held by the programme owner.
+
+#### A5 chair ruling on the externally killed stage-2 part-1 attempt (13 Nov 2026, 07:01 UTC, before any G3 outcome)
+
+(a) *What happened.* At 06:57:46 UTC on 13 Nov the server's daily unattended-upgrade job installed glibc updates (`libc6`
+2.39-0ubuntu8.9 → 8.12). At 06:57:57–58 UTC, systemd restarted `t3-agent-tmux.service` (system journal). That killed every
+tmux session on the machine, including F12 stage-2 part 1 (`null,null_var2`, 1,200 planned units, launched 01:07:53 UTC). The
+attempt's last ledger checkpoint was at 06:55:04 UTC, with 400 of 1,200 units done and 41,631.02 CPU-s. It wrote no report and no
+exit record. Its peak tree RSS was 2.39 GB, there was no budget stop, and its log holds no error. The cause was external to the
+run. Neither the chair nor the operator has read any record from it. The coverage target had already completed (200 of 200
+valid, 5.86 CPU-h; report `d4207e5e…`, committed `ec790fe`).
+(b) *Ruling: a full rerun of part 1 from its start.* This is not an extension and not a repeat-until-pass. Every stage-2
+replicate's noise and training streams are fixed by its planned replicate ID under the frozen configuration. A full rerun of
+part 1 therefore recomputes the same planned replicates, adds no new draw, and has no result from the killed attempt to choose
+from. The rerun uses the same configuration, inputs, selection (k* = 145), prerequisites and planned IDs. It writes to a new
+output directory, and the killed attempt's directory is preserved and not read. No decision is taken from any partial output.
+Part 2 and assembly follow as already accepted.
+(c) *Ledger.* The killed attempt stays open in the ledger with status `running`, which would count its 400 units as done. The
+operator closes it through the pinned `Ledger.append` with an `end` event, status `failed_external`, and its last
+checkpointed CPU (41,631.02 CPU-s, 11.56 CPU-h). The few minutes of CPU after that checkpoint are unrecorded; this is disclosed.
+Under the pinned `projection()`, a non-completed attempt's CPU is spent and its units are never counted as done. The budget
+remains well inside the ceiling: 31.14 CPU-h spent, about 115 CPU-h projected all-in, against 190.
+(d) *Recurrence.* A further unattended upgrade that restarts `t3-agent-tmux.service` would kill the rerun the same way.
+Stopping that requires a system configuration change on a shared machine, which is the programme owner's decision and is not
+made here. If the rerun is killed externally again, this ruling applies again while the budget allows. Each closed attempt is
+recorded, and no partial output is ever read.
+(e) Part A remains held by the programme owner.
