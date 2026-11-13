@@ -1,0 +1,177 @@
+Nov 13 06:57:40 <host> systemd[1]: Starting apt-daily-upgrade.service - Daily apt upgrade and clean activities...
+Nov 13 06:57:46 <host> apt.systemd.daily[3990612]: /usr/bin/unattended-upgrade:567: DeprecationWarning: This process (pid=3990612) is multi-threaded, use of fork() may lead to deadlocks in the child.
+Nov 13 06:57:46 <host> apt.systemd.daily[3990612]:   pid = os.fork()
+Nov 13 06:57:48 <host> systemd[1]: Reexecuting requested from client PID 3990897 ('systemctl') (unit apt-daily-upgrade.service)...
+Nov 13 06:57:48 <host> systemd[1]: Reexecuting.
+Nov 13 06:57:48 <host> systemd[1]: systemd 255.4-1ubuntu8.18 running in system mode (+PAM +AUDIT +SELINUX +APPARMOR +IMA +SMACK +SECCOMP +GCRYPT -GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBFDISK +PCRE2 -PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD -BPF_FRAMEWORK -XKBCOMMON +UTMP +SYSVINIT default-hierarchy=unified)
+Nov 13 06:57:48 <host> systemd[1]: Detected virtualization amazon.
+Nov 13 06:57:48 <host> systemd[1]: Detected architecture x86-64.
+Nov 13 06:57:48 <host> systemd[1]: user.slice: A process of this unit has been killed by the OOM killer.
+Nov 13 06:57:48 <host> systemd[1]: user-1000.slice: A process of this unit has been killed by the OOM killer.
+Nov 13 06:57:48 <host> systemd[1]: system.slice: A process of this unit has been killed by the OOM killer.
+Nov 13 06:57:56 <host> systemd[1]: Starting packagekit.service - PackageKit Daemon...
+Nov 13 06:57:56 <host> systemd[1]: Started packagekit.service - PackageKit Daemon.
+Nov 13 06:57:56 <host> systemd[1]: Stopping acpid.service - ACPI event daemon...
+Nov 13 06:57:56 <host> systemd[1]: Stopping auditd.service - Security Auditing Service...
+Nov 13 06:57:56 <host> systemd[1]: Stopping chrony.service - chrony, an NTP client/server...
+Nov 13 06:57:56 <host> systemd[1]: Stopping containerd.service - containerd container runtime...
+Nov 13 06:57:56 <host> systemd[1]: Stopping cron.service - Regular background program processing daemon...
+Nov 13 06:57:56 <host> systemd[1]: Stopping fail2ban.service - Fail2Ban Service...
+Nov 13 06:57:56 <host> systemd[1]: chrony.service: Deactivated successfully.
+Nov 13 06:57:56 <host> systemd[1]: Stopped chrony.service - chrony, an NTP client/server.
+Nov 13 06:57:56 <host> systemd[1]: chrony.service: Consumed 12.953s CPU time, 3.6M memory peak, 0B memory swap peak.
+Nov 13 06:57:56 <host> systemd[1]: cron.service: Deactivated successfully.
+Nov 13 06:57:56 <host> systemd[1]: Stopped cron.service - Regular background program processing daemon.
+Nov 13 06:57:56 <host> systemd[1]: cron.service: Consumed 5min 56.019s CPU time, 11.7G memory peak, 0B memory swap peak.
+Nov 13 06:57:56 <host> systemd[1]: Starting chrony.service - chrony, an NTP client/server...
+Nov 13 06:57:56 <host> systemd[1]: Started cron.service - Regular background program processing daemon.
+Nov 13 06:57:56 <host> systemd[1]: Stopping fwupd.service - Firmware update daemon...
+Nov 13 06:57:56 <host> systemd[1]: Stopping irqbalance.service - irqbalance daemon...
+Nov 13 06:57:56 <host> systemd[1]: Stopping multipathd.service - Device-Mapper Multipath Device Controller...
+Nov 13 06:57:56 <host> systemd[1]: Stopping nvidia-dcgm.service - NVIDIA DCGM service...
+Nov 13 06:57:56 <host> systemd[1]: Stopping nvidia_gpu_settings_service.service - nvidia_gpu_settings_service AWS Helper Service...
+Nov 13 06:57:56 <host> systemd[1]: Stopping ModemManager.service - Modem Manager...
+Nov 13 06:57:56 <host> systemd[1]: Stopping rsyslog.service - System Logging Service...
+Nov 13 06:57:56 <host> systemd[1]: acpid.service: Deactivated successfully.
+Nov 13 06:57:56 <host> systemd[1]: Stopped acpid.service - ACPI event daemon.
+Nov 13 06:57:56 <host> systemd[1]: Started acpid.service - ACPI event daemon.
+Nov 13 06:57:56 <host> systemd[1]: Stopping snapd.service - Snap Daemon...
+Nov 13 06:57:56 <host> systemd[1]: nvidia_gpu_settings_service.service: Deactivated successfully.
+Nov 13 06:57:56 <host> systemd[1]: Stopped nvidia_gpu_settings_service.service - nvidia_gpu_settings_service AWS Helper Service.
+Nov 13 06:57:56 <host> systemd[1]: Starting nvidia_gpu_settings_service.service - nvidia_gpu_settings_service AWS Helper Service...
+Nov 13 06:57:56 <host> systemd[1]: Stopping ssh.service - OpenBSD Secure Shell server...
+Nov 13 06:57:57 <host> systemd[1]: Stopping systemd-journald.service - Journal Service...
+Nov 13 06:57:57 <host> systemd[1]: netplan-ovs-cleanup.service - OpenVSwitch configuration for cleanup was skipped because of an unmet condition check (ConditionFileIsExecutable=/usr/bin/ovs-vsctl).
+Nov 13 06:57:57 <host> systemd[1]: Stopping systemd-networkd.service - Network Configuration...
+Nov 13 06:57:57 <host> systemd[1]: Stopping systemd-resolved.service - Network Name Resolution...
+Nov 13 06:57:57 <host> systemd[1]: Stopping t3-agent-tmux.service - Persistent tmux workspace for T3 agents...
+Nov 13 06:57:57 <host> systemd[1]: ssh.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped ssh.service - OpenBSD Secure Shell server.
+Nov 13 06:57:57 <host> systemd[1]: Stopping udisks2.service - Disk Manager...
+Nov 13 06:57:57 <host> systemd[1]: irqbalance.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped irqbalance.service - irqbalance daemon.
+Nov 13 06:57:57 <host> systemd[1]: irqbalance.service: Consumed 22.220s CPU time, 1.7M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: Started irqbalance.service - irqbalance daemon.
+Nov 13 06:57:57 <host> systemd[1]: rsyslog.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped rsyslog.service - System Logging Service.
+Nov 13 06:57:57 <host> systemd[1]: rsyslog.service: Consumed 2h 22min 35.107s CPU time, 17.1G memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: auditd.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped auditd.service - Security Auditing Service.
+Nov 13 06:57:57 <host> systemd[1]: auditd.service: Consumed 2.421s CPU time, 3.8M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: Starting auditd.service - Security Auditing Service...
+Nov 13 06:57:57 <host> systemd[1]: Starting rsyslog.service - System Logging Service...
+Nov 13 06:57:57 <host> systemd[1]: containerd.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: containerd.service: Unit process 2057 (containerd-shim) remains running after unit stopped.
+Nov 13 06:57:57 <host> systemd[1]: containerd.service: Unit process 2077 (containerd-shim) remains running after unit stopped.
+Nov 13 06:57:57 <host> systemd[1]: containerd.service: Unit process 1610557 (containerd-shim) remains running after unit stopped.
+Nov 13 06:57:57 <host> systemd[1]: containerd.service: Unit process 3982170 (containerd-shim) remains running after unit stopped.
+Nov 13 06:57:57 <host> systemd[1]: Stopped containerd.service - containerd container runtime.
+Nov 13 06:57:57 <host> systemd[1]: containerd.service: Consumed 19min 42.633s CPU time, 11.6G memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: multipathd.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped multipathd.service - Device-Mapper Multipath Device Controller.
+Nov 13 06:57:57 <host> systemd[1]: multipathd.service: Consumed 30.518s CPU time, 19.9M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: fwupd.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped fwupd.service - Firmware update daemon.
+Nov 13 06:57:57 <host> systemd[1]: fwupd.service: Consumed 30.507s CPU time, 211.7M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: systemd-resolved.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped systemd-resolved.service - Network Name Resolution.
+Nov 13 06:57:57 <host> systemd[1]: systemd-resolved.service: Consumed 26.510s CPU time, 5.7M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: systemd-networkd.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped systemd-networkd.service - Network Configuration.
+Nov 13 06:57:57 <host> systemd[1]: systemd-networkd.service: Consumed 6.141s CPU time, 4.5M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: Starting modprobe@sd_mod.service - Load Kernel Module sd_mod...
+Nov 13 06:57:57 <host> systemd[1]: Starting multipathd.service - Device-Mapper Multipath Device Controller...
+Nov 13 06:57:57 <host> systemd[1]: Stopping soci-snapshotter.service - soci snapshotter containerd plugin...
+Nov 13 06:57:57 <host> systemd[1]: Starting systemd-resolved.service - Network Name Resolution...
+Nov 13 06:57:57 <host> systemd[1]: Stopping systemd-udevd.service - Rule-based Manager for Device Events and Files...
+Nov 13 06:57:57 <host> systemd[1]: soci-snapshotter.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped soci-snapshotter.service - soci snapshotter containerd plugin.
+Nov 13 06:57:57 <host> systemd[1]: soci-snapshotter.service: Consumed 2min 30.416s CPU time, 49.5M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: udisks2.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped udisks2.service - Disk Manager.
+Nov 13 06:57:57 <host> systemd[1]: udisks2.service: Consumed 15.074s CPU time, 6.3M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: ModemManager.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped ModemManager.service - Modem Manager.
+Nov 13 06:57:57 <host> systemd[1]: ModemManager.service: Consumed 1.039s CPU time, 7.0M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: Started chrony.service - chrony, an NTP client/server.
+Nov 13 06:57:57 <host> systemd[1]: modprobe@sd_mod.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Finished modprobe@sd_mod.service - Load Kernel Module sd_mod.
+Nov 13 06:57:57 <host> systemd[1]: Starting fwupd.service - Firmware update daemon...
+Nov 13 06:57:57 <host> systemd[1]: Stopping polkit.service - Authorization Manager...
+Nov 13 06:57:57 <host> systemd[1]: Starting soci-snapshotter.service - soci snapshotter containerd plugin...
+Nov 13 06:57:57 <host> systemd[1]: Starting udisks2.service - Disk Manager...
+Nov 13 06:57:57 <host> systemd[1]: polkit.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped polkit.service - Authorization Manager.
+Nov 13 06:57:57 <host> systemd[1]: polkit.service: Consumed 19.978s CPU time, 7.1M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: Starting polkit.service - Authorization Manager...
+Nov 13 06:57:57 <host> systemd[1]: systemd-udevd.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped systemd-udevd.service - Rule-based Manager for Device Events and Files.
+Nov 13 06:57:57 <host> systemd[1]: systemd-udevd.service: Consumed 1min 27.602s CPU time, 51.5M memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: systemd-journald.service: Deactivated successfully.
+Nov 13 06:57:57 <host> systemd[1]: Stopped systemd-journald.service - Journal Service.
+Nov 13 06:57:57 <host> systemd[1]: systemd-journald.service: Consumed 56min 14.484s CPU time, 3.7G memory peak, 0B memory swap peak.
+Nov 13 06:57:57 <host> systemd[1]: Starting systemd-journald.service - Journal Service...
+Nov 13 06:57:57 <host> systemd[1]: Starting systemd-udevd.service - Rule-based Manager for Device Events and Files...
+Nov 13 06:57:57 <host> systemd[1]: Started multipathd.service - Device-Mapper Multipath Device Controller.
+Nov 13 06:57:57 <host> systemd[1]: Finished nvidia_gpu_settings_service.service - nvidia_gpu_settings_service AWS Helper Service.
+Nov 13 06:57:57 <host> systemd[1]: Started auditd.service - Security Auditing Service.
+Nov 13 06:57:57 <host> systemd[1]: Starting ssh.service - OpenBSD Secure Shell server...
+Nov 13 06:57:57 <host> systemd[1]: Started systemd-journald.service - Journal Service.
+Nov 13 06:57:57 <host> systemd[1]: Started ssh.service - OpenBSD Secure Shell server.
+Nov 13 06:57:57 <host> systemd[1]: Started systemd-resolved.service - Network Name Resolution.
+Nov 13 06:57:57 <host> systemd[1]: Started systemd-udevd.service - Rule-based Manager for Device Events and Files.
+Nov 13 06:57:57 <host> systemd[1]: Starting systemd-networkd.service - Network Configuration...
+Nov 13 06:57:57 <host> systemd[1]: Started polkit.service - Authorization Manager.
+Nov 13 06:57:57 <host> systemd[1]: Starting ModemManager.service - Modem Manager...
+Nov 13 06:57:57 <host> systemd[1]: Started udisks2.service - Disk Manager.
+Nov 13 06:57:57 <host> systemd[1]: Started rsyslog.service - System Logging Service.
+Nov 13 06:57:57 <host> systemd[1]: Started systemd-networkd.service - Network Configuration.
+Nov 13 06:57:57 <host> systemd[1]: Starting systemd-hostnamed.service - Hostname Service...
+Nov 13 06:57:57 <host> systemd[1]: networkd-dispatcher.service: Got notification message from PID 3992634, but reception only permitted for main PID 772
+Nov 13 06:57:57 <host> systemd[1]: Started systemd-hostnamed.service - Hostname Service.
+Nov 13 06:57:57 <host> systemd[1]: Started ModemManager.service - Modem Manager.
+Nov 13 06:57:57 <host> systemd[1]: Started fwupd.service - Firmware update daemon.
+Nov 13 06:57:58 <host> systemd[1]: fail2ban.service: Deactivated successfully.
+Nov 13 06:57:58 <host> systemd[1]: Stopped fail2ban.service - Fail2Ban Service.
+Nov 13 06:57:58 <host> systemd[1]: fail2ban.service: Consumed 10min 8.441s CPU time, 64.2M memory peak, 0B memory swap peak.
+Nov 13 06:57:58 <host> systemd[1]: Started fail2ban.service - Fail2Ban Service.
+Nov 13 06:57:58 <host> systemd[1]: t3-agent-tmux.service: Deactivated successfully.
+Nov 13 06:57:58 <host> systemd[1]: Stopped t3-agent-tmux.service - Persistent tmux workspace for T3 agents.
+Nov 13 06:57:58 <host> systemd[1]: t3-agent-tmux.service: Consumed 5d 7h 33min 49.940s CPU time, 23.1G memory peak, 0B memory swap peak.
+Nov 13 06:57:58 <host> systemd[1]: Starting t3-agent-tmux.service - Persistent tmux workspace for T3 agents...
+Nov 13 06:57:58 <host> systemd[1]: nvidia-dcgm.service: Deactivated successfully.
+Nov 13 06:57:58 <host> systemd[1]: Stopped nvidia-dcgm.service - NVIDIA DCGM service.
+Nov 13 06:57:58 <host> systemd[1]: nvidia-dcgm.service: Consumed 1h 22min 27.396s CPU time, 87.5M memory peak, 0B memory swap peak.
+Nov 13 06:57:58 <host> systemd[1]: Started nvidia-dcgm.service - NVIDIA DCGM service.
+Nov 13 06:57:58 <host> systemd[1]: Finished t3-agent-tmux.service - Persistent tmux workspace for T3 agents.
+Nov 13 06:57:58 <host> systemd[1]: Started soci-snapshotter.service - soci snapshotter containerd plugin.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: Found left-over process 2057 (containerd-shim) in control group while starting unit. Ignoring.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: Found left-over process 2077 (containerd-shim) in control group while starting unit. Ignoring.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: Found left-over process 1610557 (containerd-shim) in control group while starting unit. Ignoring.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: Found left-over process 3982170 (containerd-shim) in control group while starting unit. Ignoring.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies.
+Nov 13 06:57:58 <host> systemd[1]: Starting containerd.service - containerd container runtime...
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: Found left-over process 2057 (containerd-shim) in control group while starting unit. Ignoring.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: Found left-over process 2077 (containerd-shim) in control group while starting unit. Ignoring.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: Found left-over process 1610557 (containerd-shim) in control group while starting unit. Ignoring.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: Found left-over process 3982170 (containerd-shim) in control group while starting unit. Ignoring.
+Nov 13 06:57:58 <host> systemd[1]: containerd.service: This usually indicates unclean termination of a previous run, or service implementation deficiencies.
+Nov 13 06:57:58 <host> systemd[1]: Started containerd.service - containerd container runtime.
+Nov 13 06:57:59 <host> systemd[1]: snapd.service: Deactivated successfully.
+Nov 13 06:57:59 <host> systemd[1]: Stopped snapd.service - Snap Daemon.
+Nov 13 06:57:59 <host> systemd[1]: snapd.service: Consumed 52.144s CPU time, 51.4M memory peak, 0B memory swap peak.
+Nov 13 06:57:59 <host> systemd[1]: Starting snapd.service - Snap Daemon...
+Nov 13 06:58:00 <host> systemd[1]: tmp-syscheck\x2dmountpoint\x2d1443619360.mount: Deactivated successfully.
+Nov 13 06:58:01 <host> systemd[1]: Started snapd.service - Snap Daemon.
+Nov 13 06:58:01 <host> systemd[1]: Starting systemd-timedated.service - Time & Date Service...
+Nov 13 06:58:01 <host> systemd[1]: Started systemd-timedated.service - Time & Date Service.
+Nov 13 06:58:01 <host> kernel: CPU: 2 UID: 0 PID: 3993145 Comm: apt-check Tainted: G           OE       7.0.0-1014-aws #14~24.04.1-Ubuntu PREEMPTLAZY 
+Nov 13 06:58:03 <host> systemd[1]: apt-daily-upgrade.service: Deactivated successfully.
+Nov 13 06:58:03 <host> systemd[1]: Finished apt-daily-upgrade.service - Daily apt upgrade and clean activities.
+Nov 13 06:58:03 <host> systemd[1]: apt-daily-upgrade.service: Consumed 12.257s CPU time, 452.4M memory peak, 0B memory swap peak.

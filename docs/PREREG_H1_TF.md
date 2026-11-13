@@ -7525,3 +7525,41 @@ Stopping that requires a system configuration change on a shared machine, which 
 made here. If the rerun is killed externally again, this ruling applies again while the budget allows. Each closed attempt is
 recorded, and no partial output is ever read.
 (e) Part A remains held by the programme owner.
+
+#### A5 note F12-S2 incident (Fri Nov 13 07:06:24 UTC 2026, before any G3 outcome): stage-2 part 1 killed externally; attempt closed in the ledger
+
+Operator `chair-delegated:F12-S2` (register entry 25), under the chair's ruling on the externally killed stage-2 part-1 attempt
+(main `307aafa`, 13 Nov 2026, 07:01 UTC).
+- *Attempt.* `stage2:null,null_var2` attempt 1 (1,200 planned units) launched 01:07:53 UTC (ledger 01:07:55 UTC). At 06:57:40
+  UTC `apt-daily-upgrade.service` started. Unattended-upgrade installed glibc 2.39-0ubuntu8.12 (06:57:46–55 UTC), systemd
+  re-executed (06:57:48 UTC), and `t3-agent-tmux.service` was stopped and restarted (06:57:57–58 UTC). That ended every tmux
+  session, including this attempt, its two workers, the wrapper and the sampler. The watch detected the vanished process at
+  about 06:58 UTC. There was no exit record and no report, and the output directory
+  `/home/ubuntu/wsp-data/runs/a5/f12_stage2/part_null_nullvar2` is empty. It is preserved and is not reused or read. The last
+  ledger checkpoint was at 06:55:04 UTC: 400 of 1,200 units and 41,631.02 CPU-s. Peak tree RSS was 2.39 GB (PSS 1.82 GB). There
+  was no budget stop, and the progress log holds no non-progress line. No record, decision code or summary of the attempt was
+  read.
+- *Ledger close.* One `end` event was appended at about 07:05 UTC through the pinned `f12_budget.Ledger.append`. It has
+  status `failed_external`, the same job, kind, attempt, operator, planned units, checkpoint and ceiling fields as the
+  attempt's other events, cpu_s 41,631.02 (the last checkpoint), done_units 400 and a `note` citing `307aafa` and the
+  journal times. It carries no `spent_cpu_h` or `projected_total_cpu_h` fields, which are non-authoritative on end events
+  (the chair's acceptance of 12 Nov, 22:00 UTC, (c)). The 118 existing lines are byte-identical: the pre-close ledger is a
+  prefix of the post-close ledger. The CPU of the roughly three minutes after the last checkpoint is unrecorded.
+- *Budget after the close.* `Ledger.spent_cpu_h` gives **31.14 CPU-h**: noise check 0.004, pilot 0.384, stage 1 13.335, target
+  5.855 and the failed part-1 attempt 11.564. `projection()` gives **115.13 CPU-h** all-in against 190, with stage 2 still
+  priced in full (83.96 CPU-h remaining) and overhead 0.03. The failed attempt's CPU is spent, and its units are not counted as
+  done.
+- *Committed record:*
+
+  | file | sha256 |
+  |---|---|
+  | `f12s2_incident1_journal_excerpt.txt` (177 lines, 06:57:30–06:58:10 UTC; systemd, apt and kernel lines; hostname replaced by `<host>` for the secret scan, otherwise byte-identical to the operator's capture `3a5d1b29…`) | `00bc2aa07ea4633c358d9b76ec9f0f59945803236c33274c00c7162d9d65a58f` |
+  | `f12s2_incident1_ledger_preclose.jsonl` (118 events) | `9de0dbc99218f4cb0218aaea1f497a71ebc180405f487bf91704fa163d61e406` |
+  | `f12s2_incident1_ledger_postclose.jsonl` (119 events) | `87140fab4aca796894f8fc1f58a99807d2abc36ca8b3e6bed3a674238c62026e` |
+
+- *Next.* Part 1 is rerun in full from its start, as attempt 2 of the same ledger job, into a new directory
+  (`/home/ubuntu/wsp-data/runs/a5/f12_stage2/part_null_nullvar2_rerun1`). It uses the same config, inputs, selection,
+  coverage-target report, operator and two workers. Part 2 and assembly follow as accepted.
+- *Recurrence disclosure.* The next `apt-daily-upgrade.timer` firing is scheduled for Sat 14 Nov 2026 06:29:40 UTC (systemd
+  timer list, read only). That falls inside the expected stage-2 schedule. No system configuration was changed. Part A remains
+  held by the programme owner.
