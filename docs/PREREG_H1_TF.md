@@ -7581,3 +7581,71 @@ be triggered by this error during part 2.
 `Ledger.spent_cpu_h` plus measured remaining work. The stored `projected_total_cpu_h` of a running stage-2 part is an upper
 bound, not an estimate. The fix, which passes `units_by_kind`, is made at C2 with a test, together with the `Meter.end` fix. No
 run is stopped or changed.
+
+#### A5 note F12-S2 (Sat Nov 14 18:51:24 UTC 2026, before any G3 outcome): F12 coverage target and stage 2 executed
+
+Under the chair's acceptance of the F12 coverage target and stage 2 (12 Nov 2026, 22:00 UTC) and the ruling on the externally
+killed part-1 attempt (`307aafa`), the unexposed operator of register entry 25 (statement (ii) "none"; addendum `c95855a`) ran
+the target, stage 2 and assembly as `chair-delegated:F12-S2`. It used two workers, the budget ledger, the committed selection
+(k\* = 145), the inputs of note F12-S1 and `agent-tmux` jobs, and changed no code, test or configuration. `verify` printed
+`"verified": true` before every commit.
+- *Coverage target* (`f12c_target_config.json`, `--stage1-report` and `--selection`, at `c95855a`). One attempt, from 22:06:08
+  to 01:02:19 UTC (12–13 Nov), exit 0. **5.86 CPU-h** (21,078.03 CPU-s). Peak tree RSS 2.36 GB (PSS 1.79 GB); worker 837 MB,
+  parent 774 MB. 200 of 200 stress records at k = 145 (r = 2000–2199), **200 valid**. Committed at `ec790fe`.
+- *Stage 2* (`f12c_stage2_config.json`, the documented two parts `null,null_var2` and `alt`, each with `--stage1-report`,
+  `--selection` and `--coverage-target-report`). Attempts:
+
+  | ledger job, attempt | status | start – finish (UTC) | CPU-h | peak tree RSS |
+  |---|---|---|---|---|
+  | `stage2:null,null_var2`, 1 | **failed_external** (killed by the unattended-upgrade restart of `t3-agent-tmux`; note F12-S2 incident) | 13 Nov 01:07:53 – 06:57:58 | 11.56 (to the last checkpoint, 400 units) | 2.39 GB |
+  | `stage2:null,null_var2`, 2 (full rerun from start, new directory) | completed | 13 Nov 07:10:49 – 14 Nov 00:27:37 | **34.54** | 2.44 GB |
+  | `stage2:alt`, 1 | completed | 14 Nov 00:28:27 – 18:39:41 | **36.33** | 2.44 GB |
+  | `assembly`, 1 (with the five registered prerequisites) | completed | 14 Nov 18:40:52 – 18:40:59 | 0.0014 | not sampled (about 7 s run) |
+
+  Part timings: part 1 attempt 2 means 104.0 CPU-s per stress replicate and 101.5 CPU-s per variance-×2 replicate (max 136.9);
+  part 2 means 130.8 CPU-s per alternative replicate (max 194.5). Worker and parent peaks: 858 and 1,039 MB, then 861 and
+  1,031 MB. No budget, memory or validity stop occurred in any attempt.
+- *Completeness of the assembled report* (`complete` true, 2,200 of 2,200 planned IDs, each once, at k = 145):
+
+  | scenario | records | r | valid | invalid |
+  |---|---|---|---|---|
+  | stress (null) | 1,000 | 0–999 | 1,000 | 0 |
+  | alternative | 1,000 | 0–999 | 999 | **1** |
+  | variance-×2 | 200 | 0–199 | 200 | 0 |
+
+  **Validity: 2,199 of 2,200 valid.** Under the acceptance the invalid replicate counts as a failure. The operator did not
+  look at which replicate it is or why.
+- *Validation.* `assemble` ran the fail-closed execution validator with `noise_check` (`f12f_noise_check.json`),
+  `pilot_report`, `pilot_timing`, `pilot_acceptance` and `coverage_target` (`f12s2_target_report.json`). It reports
+  **passed, 0 failures**, and Board A acceptance "pending (not checkable by code)". The operator read only the validator's pass
+  flag and failure count, the release field's key names and `complete`. It did not read the eligibility, wording, summary,
+  rates, intervals or any gate outcome. The report goes to Board A unread.
+- *Hashes:*
+
+  | file | sha256 |
+  |---|---|
+  | target report `f12s2_target_report.json` | `d4207e5e3b5384e91903d362d878b0973f1ccd226966fc0d80857f56178bd610` |
+  | target timing `f12s2_target_timing.json` | `46ae4de3701296b38d9b86ccd557777bd112139355302468f1aba3ac930a7f25` |
+  | stage-2 part 1 report (attempt 2; not committed, listed in the assembled report) | `582486e1d6aa113f717adccab05e0212f5bb7b31abaaf1f73eb2f2430da72cf1` |
+  | stage-2 part 2 report (not committed, listed in the assembled report) | `61d8d305e0d37a977c52ea151ebb80045d7e8d1df6413d73d435b63b92b08c10` |
+  | **assembled stage-2 report** `f12s2_stage2_report.json` | `678f98fa061e77f48fde7f6ef8aeddad7fe63f40dc79ee2f40c0053483859306` |
+  | part timings `f12s2_stage2_part1_timing.json`, `f12s2_stage2_part2_timing.json` | `5f2d681c…`, `994877ee…` |
+  | final ledger snapshot `f12s2_budget_ledger_snapshot_final.jsonl` (345 events) | `fe635816c7cf7ac2efdf5f67109459d25ece4dd47a35b5833b3a58b51819fbeb` |
+
+- *Ledger (authoritative, the pinned `Ledger.spent_cpu_h`).* **102.01 CPU-h spent against the 190 CPU-h ceiling**: noise
+  check 0.004, pilot 0.384, stage 1 13.335, target 5.855, stage-2 part 1 attempt 1 (failed_external) 11.564, part 1 attempt 2
+  34.535, part 2 36.331, assembly 0.001. `projection()` gives 102.04 CPU-h, with only overhead (0.03) remaining.
+  *Upper bound.* The barrier's `projected_total_cpu_h` peaked at 149.66 CPU-h, at part 2's launch. It fell to 102.04 CPU-h at
+  part 2's last checkpoint. This is the conservative overstatement described in the chair note of 14 Nov 02:23 UTC: the plan
+  omits `units_by_kind`, so each part is priced at the whole stage-2 item per own unit. It never approached 190.
+- *Correction to note F12-S2 incident.* The closing `end` event of part 1 attempt 1 carries `utc` 2026-11-13T07:01:55Z. That
+  note's "about 07:05 UTC" for the append is wrong. Everything else in it stands.
+- *Recurrence.* The `apt-daily-upgrade` run at 14 Nov 06:29:59 UTC installed nothing and lasted 3 s, and no service
+  restarted. No further external kill occurred.
+- *Commits on `ops/f12-stage1`:* `c95855a` (entry 25 addendum), `ec790fe` (target), `a6741be` (merge of `307aafa`),
+  `b8a8cdb` (incident record), `5494316` (merge of `d27d35e`, PREREG append conflict resolved in time order, no text
+  changed), `22cbd01` (assembled report) and this note. Each bypassed the hook under the tripwire ruling: it was preceded
+  by a full-suite run that failed exactly the three named tests (1585 passed, 3 failed, 5 skipped), a clean secret scan and
+  `verify` true. `core.bare` stayed false.
+- *What follows.* The assembled report goes to Board A for acceptance. Nothing else was run. Purchase, C2, the before-scheduling
+  forecasts, scoring and every Part A, F8 and F9 gate are unchanged. Part A remains held by the programme owner.

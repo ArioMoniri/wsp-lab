@@ -812,3 +812,23 @@ code, test or configuration.
 - Statements (i) and (iii) are unchanged. **(ii) remains none**: no Part A, F8-E, F8-F or F9 outcome or summary was opened or
   received. Nothing under `data/evals` was opened or listed. No Part A staging, prediction or calibration file was opened. No
   F12f pilot per-replicate record or decision code, and no stage-1 decision code, rate or rule check, was read.
+
+*Entry 25, update after the coverage target, stage 2 and assembly (Sat Nov 14 18:51:36 UTC 2026), same session.* The session ran the target, the
+part-1 attempt killed externally, the part-1 rerun, part 2 and assembly (notes F12-S2 incident and F12-S2). It closed the
+killed attempt through the pinned `Ledger.append`, and merged main `307aafa` and `d27d35e`.
+- *Read.* Ledger event fields as before. Progress logs only through the scenario-and-k filter (0 non-progress lines in every
+  job). The timing sidecars. The system journal around the kill, the apt history and unattended-upgrade logs, and the systemd
+  timer list.
+- *Reports.* The session's counting script printed, from the target, the two part reports and the assembled report, only:
+  record counts per scenario and k, the r ranges, `valid` counts, identities, the config file, git heads, `complete`,
+  `parts` and hashes. From the assembled report it also printed the validator's `passed` flag, its failure count and
+  `board_a_acceptance`, and the release field's key names. From the jobs' stdout it printed only key names and `complete`.
+  It printed no decision code, rate, interval, target value, summary, eligibility, wording or gate outcome. `assemble`
+  decoded the pilot report and the target report in process, as disclosed, and nothing from them was displayed. The killed
+  attempt's directory was listed (empty) and never read.
+- *Hook runs.* The full suite ran through `agent-tmux` jobs `f12s2-suite1`–`f12s2-suite8`. `f12s2-suite5` was started on an
+  unresolved merge and stopped by the session; its result was not used. Each run had the disclosed in-process pilot-report
+  decode, nothing displayed.
+- Statements (i) and (iii) are unchanged. **(ii) remains none**: no Part A, F8-E, F8-F or F9 outcome or summary was opened or
+  received. Nothing under `data/evals` was opened or listed. No Part A staging, prediction or calibration file was opened. No
+  F12f pilot per-replicate record or decision code was read.
