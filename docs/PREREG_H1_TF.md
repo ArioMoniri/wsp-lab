@@ -7525,3 +7525,21 @@ Stopping that requires a system configuration change on a shared machine, which 
 made here. If the rerun is killed externally again, this ruling applies again while the budget allows. Each closed attempt is
 recorded, and no partial output is ever read.
 (e) Part A remains held by the programme owner.
+
+#### A5 chair note on the stage-2 budget projection (14 Nov 2026, 02:23 UTC, before any G3 outcome)
+
+During stage-2 part 2, the ledger's projected all-in total rose from about 73 to 145.0 CPU-h. The run itself had not changed. The
+part-1 rerun cost 103.6 CPU-s per unit and part 2 has cost 133.1 CPU-s per unit so far, against 137.4 planned.
+(a) *Cause.* `plan_from_pilot_acceptance` in `scripts/f12_budget.py` passes the plan's `items_by_kind_cpu_h` but not its
+`units_by_kind`. So `projection()` prices the running attempt by dividing the whole stage-2 item (83.96 CPU-h, for 2,200
+replicates) by that attempt's own planned units: 1,200 for part 1, and 1,000 for part 2. That gives a planned rate of about 302
+CPU-s per unit for part 2, about 2.2 times the true planned rate. The projection then takes the larger of that and the observed
+rate.
+(b) *Effect.* The error is conservative and transient. The overstatement is largest at the start of a part, now 145.0 CPU-h, and
+falls with every completed unit towards the true figure. On the measured rates the true all-in total is about 103 CPU-h (69.4 spent
+by the ledger, plus about 900 × 133 CPU-s). Because the projection only falls from here, the live stop against 190 CPU-h cannot
+be triggered by this error during part 2.
+(c) *Disposition.* The function is pinned in C1 item 11 and is not changed now. Until C2, budget figures are read as
+`Ledger.spent_cpu_h` plus measured remaining work. The stored `projected_total_cpu_h` of a running stage-2 part is an upper
+bound, not an estimate. The fix, which passes `units_by_kind`, is made at C2 with a test, together with the `Meter.end` fix. No
+run is stopped or changed.
