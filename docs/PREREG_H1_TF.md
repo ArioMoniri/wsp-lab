@@ -7649,3 +7649,24 @@ the target, stage 2 and assembly as `chair-delegated:F12-S2`. It used two worker
   `verify` true. `core.bare` stayed false.
 - *What follows.* The assembled report goes to Board A for acceptance. Nothing else was run. Purchase, C2, the before-scheduling
   forecasts, scoring and every Part A, F8 and F9 gate are unchanged. Part A remains held by the programme owner.
+
+#### A5 chair acknowledgement of the F12 simulation result (14 Nov 2026, 19:02 UTC, before any G3 outcome)
+
+Board A accepted the committed F12 simulation report as the registered gate evidence
+(`docs/reviews/council/board-a-f12-sim-report-2026-11-14.md`, commit `0961659`). **All 14 registered requirements fail.** The
+ordered power is 218/1,000, with an exact lower bound of 0.180 against the required 0.80. All five stress safety bounds and all
+eight coverage qualifications exceed 0.07. The registered result applies verbatim: "The registered two-comparator decision did
+not meet its power qualification under this alternative; it does not establish absence of a K+F correction." Under F12b.4(d) and
+F12c.3(d) the result is "unresolved — not powered" and "unresolved — not qualified".
+(a) *What follows, as registered.* No F12 purchase or scoring is made. There is no other k, extension, repeat, new target,
+alternative search or second alternative. F12-I stays governed solely by its own C1/C2 and its existing rules; it is not a
+substitute for F12. No outcome was read: the simulation used only real field tokens and centred development noise.
+(b) *What the result means.* At 270 roots, the registered nested learned world model is not detected reliably against both
+comparators. Under the registered alternative, calibrated so the learned head beats the field readout by C = 0.15, the
+ratio-of-sums contrasts are C_WM = 0.172 against the field readout and C_WM,S = 0.045 against StatNN on the same inputs. The
+two-comparator decision fires in 218 of 1,000 replicates. In the linear-signal / ridge-bias stress scenario it fires in 110 of
+1,000, and the bootstrap-t intervals under-cover. This is a statement about the design's sensitivity at this sample size, not
+about the user's thesis, which remains untested by any outcome.
+(c) *What does not change.* The budget closed at 102.01 CPU-h of 190. The Meter.end and projection fixes remain C2 obligations
+for any future use of the code. Any further F12-type test would need a new, prospectively registered amendment with its own
+review, which is the programme owner's decision. Part A remains held by the programme owner.
