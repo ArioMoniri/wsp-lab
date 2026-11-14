@@ -1,0 +1,126 @@
+{
+ "schema": "f12d-timing-v1",
+ "report_sha256": "582486e1d6aa113f717adccab05e0212f5bb7b31abaaf1f73eb2f2430da72cf1",
+ "started_utc": "2026-11-13T07:10:50Z",
+ "finished_utc": "2026-11-14T00:27:36Z",
+ "wall_seconds": 62202.98771583999,
+ "workers": 2,
+ "replicate_tasks": 1200,
+ "cpu_seconds_per_replicate_mean": 103.59617129701915,
+ "cpu_seconds_per_replicate_max": 136.90594458600026,
+ "cpu_seconds_replicates_sum": 124315.40555642298,
+ "cpu_seconds_total_process_tree": 124327.51587,
+ "cpu_seconds_overhead": 12.110313577024499,
+ "worker_max_rss_mb": 857.765625,
+ "rss_max_mb_parent": 1039.12109375,
+ "per_replicate_cpu_by_k_and_scenario": {
+  "145": {
+   "null": {
+    "n": 1000,
+    "cpu_mean": 104.00563173862692
+   },
+   "null_var2": {
+    "n": 200,
+    "cpu_mean": 101.54886908898033
+   }
+  }
+ },
+ "projection_f12c_schedule": {
+  "basis": "process CPU seconds per replicate measured in this run; F12c schedule: stage 1 = 40 stress + 40 alternative at each of six k; stage 2 = 1,000 stress + 1,000 alternative + 200 variance-x2 at k*; coverage target = 200 stress at k*; pilot = 10 alternative at k = 145; plus the noise check and overhead; worst case over k*",
+  "label": "projection; alternative timing extrapolated from stress timing",
+  "stress_timing": "measured",
+  "alternative_timing": "extrapolated from stress (not measured)",
+  "extrapolations": [
+   "alternative cost per replicate extrapolated: stress cost / 0.8875 (the smallest synthetic stress / alternative ratio)",
+   "every k below k = 145 projected at the cost measured at k = 145 (conservative: synthetic per-replicate cost rises with k)"
+  ],
+  "stage2_by_k": {
+   "0": {
+    "null_s": 104.00563173862692,
+    "alt_s": 117.18678169624866,
+    "null_var2_s": 101.54886908898033,
+    "null_var2_from": "measured",
+    "interpolated": true,
+    "cpu_h": 67.0839409035199
+   },
+   "29": {
+    "null_s": 104.00563173862692,
+    "alt_s": 117.18678169624866,
+    "null_var2_s": 101.54886908898033,
+    "null_var2_from": "measured",
+    "interpolated": true,
+    "cpu_h": 67.0839409035199
+   },
+   "58": {
+    "null_s": 104.00563173862692,
+    "alt_s": 117.18678169624866,
+    "null_var2_s": 101.54886908898033,
+    "null_var2_from": "measured",
+    "interpolated": true,
+    "cpu_h": 67.0839409035199
+   },
+   "87": {
+    "null_s": 104.00563173862692,
+    "alt_s": 117.18678169624866,
+    "null_var2_s": 101.54886908898033,
+    "null_var2_from": "measured",
+    "interpolated": true,
+    "cpu_h": 67.0839409035199
+   },
+   "116": {
+    "null_s": 104.00563173862692,
+    "alt_s": 117.18678169624866,
+    "null_var2_s": 101.54886908898033,
+    "null_var2_from": "measured",
+    "interpolated": true,
+    "cpu_h": 67.0839409035199
+   },
+   "145": {
+    "null_s": 104.00563173862692,
+    "alt_s": 117.18678169624866,
+    "null_var2_s": 101.54886908898033,
+    "null_var2_from": "measured",
+    "interpolated": false,
+    "cpu_h": 67.0839409035199
+   }
+  },
+  "stage2_worst_cpu_h": 67.0839409035199,
+  "stage1_cpu_h": 14.74616089565837,
+  "coverage_target_by_k_cpu_h": {
+   "0": 5.7780906521459405,
+   "29": 5.7780906521459405,
+   "58": 5.7780906521459405,
+   "87": 5.7780906521459405,
+   "116": 5.7780906521459405,
+   "145": 5.7780906521459405
+  },
+  "coverage_target_worst_cpu_h": 5.7780906521459405,
+  "pilot_cpu_h": 0.32551883804513515,
+  "pilot_cpu_h_source": "projected (10 x alternative at k = 145)",
+  "noise_cpu_h": 0.005,
+  "noise_cpu_h_source": "projected (resource plan)",
+  "overhead_cpu_h": 0.041666666666666664,
+  "overhead_cpu_h_source": "projected (resource plan: 15 invocations x 10 CPU-s)",
+  "replicates_total_worst_cpu_h": 87.93371128936934,
+  "items_by_kind_cpu_h": {
+   "noise_check": 0.005,
+   "pilot": 0.32551883804513515,
+   "stage1": 14.74616089565837,
+   "target": 5.7780906521459405,
+   "stage2": 67.0839409035199,
+   "overhead": 0.041666666666666664
+  },
+  "units_by_kind": {
+   "noise_check": 1,
+   "pilot": 10,
+   "stage1": 480,
+   "target": 200,
+   "stage2": 2200
+  },
+  "all_in_worst_cpu_h": 87.98037795603601,
+  "all_in_cpu_h": 87.98037795603601
+ },
+ "k_grid": [
+  145
+ ]
+}
