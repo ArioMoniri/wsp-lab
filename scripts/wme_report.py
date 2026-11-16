@@ -392,6 +392,9 @@ def main():
     ap.add_argument(
         "--visit-seconds", type=float, default=None, help="measured all-in seconds per P3 visit"
     )
+    ap.add_argument(
+        "--oracle-seconds", type=float, default=None, help="measured oracle seconds per state"
+    )
     args = ap.parse_args()
     run = ROOT / "data/wme/pilot" / args.run
     ledger = [json.loads(x) for x in (run / "ledger.jsonl").read_text().splitlines()]
@@ -401,9 +404,13 @@ def main():
     field = json.loads((run / "p3_field.json").read_text())["states"]
     p4 = json.loads((run / "p4.json").read_text())
     p5 = json.loads((run / "p5.json").read_text())
-    peak_res = max(r["peak_gpu_reserved_bytes"] for r in ledger)
-    peak_dev = max(r["peak_device_used_bytes_nvidia_smi"] for r in ledger)
-    peak_rss = max(r["peak_process_tree_rss_bytes"] for r in ledger)
+    # Go-M is evaluated on the completed jobs (closed by the job itself, so with measured allocator peaks) in the
+    # final configuration; runs that were stopped or failed are reported separately with their peaks.
+    done = [r for r in ledger if r["cpu_seconds"] is not None]
+    stopped = [r for r in ledger if r["cpu_seconds"] is None]
+    peak_res = max(r["peak_gpu_reserved_bytes"] for r in done)
+    peak_dev = max(r["peak_device_used_bytes_nvidia_smi"] for r in done)
+    peak_rss = max(r["peak_process_tree_rss_bytes"] for r in done)
     swap = max(r["peak_swap_used_bytes"] for r in ledger)
     go_m = {
         "peak_gpu_reserved_GB": peak_res / GB,
@@ -411,6 +418,15 @@ def main():
         "peak_rss_GB": peak_rss / GB,
         "swap_bytes": swap,
         "pass": peak_res <= 28 * GB and peak_dev <= 28 * GB and peak_rss <= 24 * GB and swap == 0,
+        "stopped_or_failed_runs": [
+            {
+                "phase": r["phase"],
+                "peak_device_GB": r["peak_device_used_bytes_nvidia_smi"] / GB,
+                "note": r.get("note"),
+            }
+            for r in stopped
+        ],
+        "cap_breach_any_run": max(r["peak_device_used_bytes_nvidia_smi"] for r in ledger) > 28 * GB,
     }
     go_n = {
         "base_repeat": p1["bitwise_repeat"],
@@ -462,7 +478,9 @@ def main():
     gen = p1["generation"]
     t_gen = gen["seconds"] * 32 / gen["prompts"]
     p2_s = p2["collect_seconds"]
-    t_oracle = float(np.mean(p4["grad_seconds"])) if p4["grad_seconds"] else 0.0
+    t_oracle = args.oracle_seconds or (
+        float(np.mean(p4["grad_seconds"])) if p4["grad_seconds"] else 0.0
+    )
     visits, n_gen = 960, 96
     t_feat = 8 * p2_s + (visits * t_oracle if go_r["pass"] else 0.0)
     t_ll = max(t_state, t_visit)
