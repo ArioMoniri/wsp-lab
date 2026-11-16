@@ -1,0 +1,668 @@
+{
+ "bank": {
+  "formula": "H = (visits*t_ll + N_gen*t_gen + T_features + T_train) / 3600",
+  "gpu_hours": 8.938263561460706,
+  "n_gen": 96,
+  "t_features": 4636.272190093994,
+  "t_gen": 121.92180156707764,
+  "t_ll": 16.49685800075531,
+  "t_train": 0.0,
+  "usd_1gpu": 43.70810881554285,
+  "usd_per_state_1gpu": 0.02240823211769263,
+  "visits": 960
+ },
+ "boot_seconds": 718.0,
+ "capacity_snapshot": {
+  "types": {
+   "gpu_1x_h100_sxm5": {
+    "regions": [],
+    "usd_h": 4.89
+   },
+   "gpu_2x_h100_sxm5": {
+    "regions": [],
+    "usd_h": 9.58
+   },
+   "gpu_4x_h100_sxm5": {
+    "regions": [],
+    "usd_h": 18.76
+   },
+   "gpu_8x_h100_sxm5": {
+    "regions": [],
+    "usd_h": 36.72
+   }
+  },
+  "utc": "2026-11-16T21:50:18Z"
+ },
+ "code_sha": {
+  "p1": "b14df2f",
+  "p2_attempt2": "0d9c231",
+  "p2_g2_and_diag": "cf0dfe1"
+ },
+ "dp_projection": {
+  "1": {
+   "gpu_hours": 9.157194854617119,
+   "usd": 44.77868283907771,
+   "usd_per_h": 4.89,
+   "wall_hours": 9.157194854617119
+  },
+  "2": {
+   "gpu_hours": 9.376126147773531,
+   "usd": 44.91164424783521,
+   "usd_per_h": 9.58,
+   "wall_hours": 4.688063073886766
+  },
+  "4": {
+   "gpu_hours": 9.813988734086355,
+   "usd": 46.02760716286501,
+   "usd_per_h": 18.76,
+   "wall_hours": 2.4534971835215886
+  },
+  "8": {
+   "gpu_hours": 10.689713906712003,
+   "usd": 49.06578683180809,
+   "usd_per_h": 36.72,
+   "wall_hours": 1.3362142383390003
+  }
+ },
+ "environment": {
+  "cpu_count": 26,
+  "cudnn_deterministic": false,
+  "gpu": "NVIDIA H100 80GB HBM3, 81559 MiB, 580.105.08",
+  "mem_total_bytes": 237490835456,
+  "packages": {
+   "accelerate": "1.15.0",
+   "causal_conv1d": "unavailable: ModuleNotFoundError",
+   "fla": "0.6.0",
+   "huggingface_hub": "1.33.0",
+   "numpy": "2.5.4",
+   "safetensors": "0.8.0",
+   "triton": "3.9.0"
+  },
+  "python": "3.12.3",
+  "torch": "2.15.0+cu132",
+  "torch_cuda": "13.2",
+  "transformers": "5.22.1"
+ },
+ "gates": {
+  "Go-C": {
+   "max_seconds": 30.409064054489136,
+   "pass": true,
+   "rule": "lean panel <= 240 s per state",
+   "seconds_per_state": [
+    30.409064054489136,
+    15.847512483596802,
+    15.893433809280396,
+    15.924410820007324,
+    15.945563793182373,
+    15.925488948822021
+   ]
+  },
+  "Go-M": {
+   "configuration": "P1 lean panel + P2 as two 2-layer groups, field items <= 768 tokens",
+   "pass": true,
+   "peak_device_gb": 68.814897152,
+   "peak_rss_gb": 51.474907136,
+   "peak_swap_bytes": 0,
+   "rule": "peak device memory <= 72 GB (C9) and no swap"
+  },
+  "Go-M (single 4-layer group)": {
+   "attempt1_resource_stop_device_gb": 72.728182784,
+   "diagnostic_peak_device_gb": 75.735498752,
+   "pass": false,
+   "rule": "peak device memory <= 72 GB (C9)"
+  },
+  "Go-N": {
+   "pass": true,
+   "repeats": {
+    "base": true,
+    "edit": true,
+    "post_restore": true,
+    "restore_hash": true
+   },
+   "rule": "base, edit and restore repeats bitwise identical"
+  }
+ },
+ "kernels": {
+  "causal_conv1d_fallback_logged_by_transformers": true,
+  "causal_conv1d_used": false,
+  "fla_used": true,
+  "torch_fallbacks": []
+ },
+ "label": "ENGINEERING ONLY",
+ "lambda": {
+  "accounting": "conservative: from the launch request to the API-confirmed termination",
+  "alerts": [],
+  "cost_usd": 5.016073860621452,
+  "instance_hours": 1.025781975587209,
+  "instances": [
+   {
+    "confirmed_status": "terminated",
+    "confirmed_utc": "2026-11-16T22:31:14Z",
+    "hours": 0.04940245323710971,
+    "name": "wsp-wme-27b-calib-20261116",
+    "price_usd_h": 4.89,
+    "region": "us-southeast-1",
+    "terminate_reasons": [],
+    "terminate_utc": null,
+    "terminated_by": "provider (failed boot)",
+    "type": "gpu_1x_h100_sxm5"
+   },
+   {
+    "confirmed_status": "terminated",
+    "confirmed_utc": "2026-11-16T23:36:57Z",
+    "hours": 0.9763795223500994,
+    "name": "wsp-wme-27b-calib-20261116b",
+    "price_usd_h": 4.89,
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "idle"
+    ],
+    "terminate_utc": "2026-11-16T23:35:56Z",
+    "terminated_by": "dead-man terminator",
+    "type": "gpu_1x_h100_sxm5"
+   }
+  ],
+  "mock_tests": "15 passed in tests/test_lambda_deadman.py (idle termination of only the own id with confirmation; not-found confirmation; T_max despite heartbeats; cumulative T_max over instances; launch refusals for prefix, price, capacity, a second live instance and exhausted hours; USD cap; never terminating unregistered or renamed instances, with an alert; exact-name adoption after a lost launch response; alert past T_max + 15 min with retries; API errors logged without the key; tighten-only policy reload; STOP exits only after termination; key read from the env file and absent from repr; watcher liveness stamp)",
+  "refusals": [],
+  "timeline": [
+   "2026-11-16T22:28:16Z launch_request wsp-wme-27b-calib-20261116",
+   "2026-11-16T22:28:18Z launched wsp-wme-27b-calib-20261116",
+   "2026-11-16T22:31:14Z confirmed_terminated wsp-wme-27b-calib-20261116",
+   "2026-11-16T22:38:23Z launch_request wsp-wme-27b-calib-20261116b",
+   "2026-11-16T22:38:25Z launched wsp-wme-27b-calib-20261116b",
+   "2026-11-16T23:35:56Z terminate wsp-wme-27b-calib-20261116b reasons=['idle']",
+   "2026-11-16T23:36:27Z terminate wsp-wme-27b-calib-20261116b reasons=['idle']",
+   "2026-11-16T23:36:57Z confirmed_terminated wsp-wme-27b-calib-20261116b",
+   "2026-11-16T23:37:27Z exit"
+  ]
+ },
+ "load_seconds": 9.152655363082886,
+ "p1": {
+  "all_in_seconds_per_state": [
+   16.858092069625854,
+   16.135623931884766
+  ],
+  "base_digest": "1166ead8e3a268ceff24fc72f55fde302c262f186b57dfe3cf8f4ee72964eccb",
+  "base_seconds": [
+   30.409064054489136,
+   15.847512483596802
+  ],
+  "generation": {
+   "batch": 8,
+   "max_new_tokens": 128,
+   "new_tokens": 1024,
+   "prompts": 8,
+   "seconds": 30.48045039176941
+  },
+  "memory": {
+   "peak_allocated_bytes": 58628899840,
+   "peak_device_bytes": 60432580608,
+   "peak_reserved_bytes": 58902708224,
+   "peak_rss_bytes": 2820079616,
+   "peak_swap_bytes": 0
+  },
+  "n_items": {
+   "gsm8k_gold_lp": 64,
+   "mmlupro_gold_lp": 64,
+   "refusal_margin_harmful": 64,
+   "refusal_margin_harmless": 64,
+   "sycophancy_gap": 64,
+   "wikitext_nll": 64
+  },
+  "per_objective_seconds_first_pass": {
+   "gsm8k_gold_lp": 10.227417945861816,
+   "mmlupro_gold_lp": 12.642171859741211,
+   "refusal_margin_harmful": 13.443984746932983,
+   "refusal_margin_harmless": 4.297017335891724,
+   "sycophancy_gap": 14.59007978439331,
+   "wikitext_nll": 11.7646164894104
+  },
+  "post_restore_seconds": 15.925488948822021,
+  "timing_edits": [
+   {
+    "apply_seconds": 0.8304319381713867,
+    "differs_from_base": true,
+    "digest": "ce77e895bd3883392bc7dab87abcd2bccdb3488e43b25650b1aea718fbbb570f",
+    "edit": "noise",
+    "panel_seconds": [
+     15.893433809280396,
+     15.924410820007324
+    ],
+    "repeat_bitwise": true,
+    "restore_seconds": 0.13422632217407227,
+    "tensor": "model.layers.28.mlp.down_proj.weight"
+   },
+   {
+    "apply_seconds": 0.14145898818969727,
+    "differs_from_base": true,
+    "digest": "e031f761bf1f2d08ae09237c67b74d2489a265cb7cbfaae27db04212af864226",
+    "edit": "scale",
+    "panel_seconds": [
+     15.945563793182373
+    ],
+    "repeat_bitwise": null,
+    "restore_seconds": 0.04860115051269531,
+    "tensor": "model.layers.27.self_attn.o_proj.weight"
+   }
+  ]
+ },
+ "p2": {
+  "diagnostic_peak_allocated_gb_by_objective": {
+   "gsm8k_gold_lp": 64.279248384,
+   "mmlupro_gold_lp": 67.189719552,
+   "refusal_margin_harmful": 68.405131264,
+   "refusal_margin_harmless": 69.69163776,
+   "sycophancy_gap": 74.629730816,
+   "wikitext_nll": 66.649139712
+  },
+  "diagnostic_single_group": {
+   "allocator_ceiling_bytes": 76000000000,
+   "attempts": [],
+   "collect_seconds": 209.22296714782715,
+   "coverage_unsupported": {},
+   "device_stop_bytes": 79000000000,
+   "disk_bytes_written": 49325088692,
+   "factor_bytes_per_module_fp32": {
+    "model.layers.24.linear_attn.out_proj": 255852544,
+    "model.layers.24.mlp.down_proj": 1317011456,
+    "model.layers.25.linear_attn.out_proj": 255852544,
+    "model.layers.25.mlp.down_proj": 1317011456,
+    "model.layers.26.linear_attn.out_proj": 255852544,
+    "model.layers.26.mlp.down_proj": 1317011456,
+    "model.layers.27.mlp.down_proj": 1317011456,
+    "model.layers.27.self_attn.o_proj": 255852544
+   },
+   "field_max_tokens": 1024,
+   "group": [
+    "model.layers.24.mlp.down_proj",
+    "model.layers.24.linear_attn.out_proj",
+    "model.layers.25.mlp.down_proj",
+    "model.layers.25.linear_attn.out_proj",
+    "model.layers.26.mlp.down_proj",
+    "model.layers.26.linear_attn.out_proj",
+    "model.layers.27.mlp.down_proj",
+    "model.layers.27.self_attn.o_proj"
+   ],
+   "group_size_layers": 4,
+   "item_tokens": {
+    "gsm8k_gold_lp": {
+     "max": 106,
+     "sum": 2033
+    },
+    "mmlupro_gold_lp": {
+     "max": 410,
+     "sum": 4848
+    },
+    "refusal_margin_harmful": {
+     "max": 453,
+     "sum": 8337
+    },
+    "refusal_margin_harmless": {
+     "max": 570,
+     "sum": 8545
+    },
+    "sycophancy_gap": {
+     "max": 986,
+     "sum": 11140
+    },
+    "wikitext_nll": {
+     "max": 256,
+     "sum": 6144
+    }
+   },
+   "items_per_objective": 24,
+   "memory": {
+    "peak_allocated_bytes": 74629730816,
+    "peak_device_bytes": 75735498752,
+    "peak_reserved_bytes": 74887200768,
+    "peak_rss_bytes": 10949124096,
+    "peak_swap_bytes": 0
+   },
+   "preflight": {
+    "field_max_tokens": 1024,
+    "longest_tokens": {
+     "gsm8k_gold_lp": [
+      130
+     ],
+     "mmlupro_gold_lp": [
+      712
+     ],
+     "refusal_margin_harmful": [
+      453
+     ],
+     "refusal_margin_harmless": [
+      570
+     ],
+     "sycophancy_gap": [
+      986
+     ],
+     "wikitext_nll": [
+      256
+     ]
+    },
+    "memory": {
+     "peak_allocated_bytes": 68338274816,
+     "peak_device_bytes": 69364350976,
+     "peak_reserved_bytes": 68553801728,
+     "peak_rss_bytes": 10484490240,
+     "peak_swap_bytes": 0
+    },
+    "seconds": 113.10179877281189
+   },
+   "support_layers": [
+    24,
+    25,
+    26,
+    27
+   ],
+   "timing": {
+    "gsm8k_gold_lp.g0": {
+     "gpu_peak_allocated_bytes": 64279248384,
+     "gpu_peak_reserved_bytes": 64867008512,
+     "rss_peak_bytes": 54781186048,
+     "seconds": 11.185385482000129
+    },
+    "mmlupro_gold_lp.g0": {
+     "gpu_peak_allocated_bytes": 67189719552,
+     "gpu_peak_reserved_bytes": 67240984576,
+     "rss_peak_bytes": 54781186048,
+     "seconds": 11.157953845000065
+    },
+    "refusal_margin_harmful.g0": {
+     "gpu_peak_allocated_bytes": 68405131264,
+     "gpu_peak_reserved_bytes": 68526538752,
+     "rss_peak_bytes": 54781186048,
+     "seconds": 13.00700249800002
+    },
+    "refusal_margin_harmless.g0": {
+     "gpu_peak_allocated_bytes": 69691637760,
+     "gpu_peak_reserved_bytes": 69765955584,
+     "rss_peak_bytes": 54781186048,
+     "seconds": 12.544475274999968
+    },
+    "sycophancy_gap.g0": {
+     "gpu_peak_allocated_bytes": 74629730816,
+     "gpu_peak_reserved_bytes": 74887200768,
+     "rss_peak_bytes": 54781186048,
+     "seconds": 11.759158430999832
+    },
+    "wikitext_nll.g0": {
+     "gpu_peak_allocated_bytes": 66649139712,
+     "gpu_peak_reserved_bytes": 67178070016,
+     "rss_peak_bytes": 54781186048,
+     "seconds": 41.93995339899993
+    }
+   }
+  },
+  "host": {
+   "global_peak_rss_bytes": 51474907136
+  },
+  "passing_configuration": {
+   "allocator_ceiling_bytes": 68000000000,
+   "attempts": [
+    {
+     "field_max_tokens": 1024,
+     "memory": {
+      "peak_allocated_bytes": 67813619712,
+      "peak_device_bytes": 67908927488,
+      "peak_reserved_bytes": 67977084928,
+      "peak_rss_bytes": 6710697984,
+      "peak_swap_bytes": 0
+     },
+     "oom": "CUDA out of memory. Tried to allocate 24.00 MiB. GPU 0 has a total capacity of 79.18 GiB of which 15.09 GiB is free. Including non-PyTorch memory, this process has 64.08 GiB memory in use. 63.33 GiB allowed; Of the allocated memory 63.14 GiB is allocated by PyTorch, and 167.61 MiB is reserved by PyT"
+    }
+   ],
+   "collect_seconds": 289.76701188087463,
+   "coverage_unsupported": {},
+   "device_stop_bytes": 72000000000,
+   "disk_bytes_written": 49325098832,
+   "factor_bytes_per_module_fp32": {
+    "model.layers.24.linear_attn.out_proj": 255852544,
+    "model.layers.24.mlp.down_proj": 1317011456,
+    "model.layers.25.linear_attn.out_proj": 255852544,
+    "model.layers.25.mlp.down_proj": 1317011456,
+    "model.layers.26.linear_attn.out_proj": 255852544,
+    "model.layers.26.mlp.down_proj": 1317011456,
+    "model.layers.27.mlp.down_proj": 1317011456,
+    "model.layers.27.self_attn.o_proj": 255852544
+   },
+   "field_max_tokens": 768,
+   "group": [
+    "model.layers.24.mlp.down_proj",
+    "model.layers.24.linear_attn.out_proj",
+    "model.layers.25.mlp.down_proj",
+    "model.layers.25.linear_attn.out_proj",
+    "model.layers.26.mlp.down_proj",
+    "model.layers.26.linear_attn.out_proj",
+    "model.layers.27.mlp.down_proj",
+    "model.layers.27.self_attn.o_proj"
+   ],
+   "group_size_layers": 2,
+   "item_tokens": {
+    "gsm8k_gold_lp": {
+     "max": 106,
+     "sum": 2033
+    },
+    "mmlupro_gold_lp": {
+     "max": 410,
+     "sum": 4848
+    },
+    "refusal_margin_harmful": {
+     "max": 453,
+     "sum": 8337
+    },
+    "refusal_margin_harmless": {
+     "max": 570,
+     "sum": 8545
+    },
+    "sycophancy_gap": {
+     "max": 724,
+     "sum": 10614
+    },
+    "wikitext_nll": {
+     "max": 256,
+     "sum": 6144
+    }
+   },
+   "items_per_objective": 24,
+   "memory": {
+    "peak_allocated_bytes": 66573097984,
+    "peak_device_bytes": 68087185408,
+    "peak_reserved_bytes": 66754445312,
+    "peak_rss_bytes": 6853726208,
+    "peak_swap_bytes": 0
+   },
+   "preflight": {
+    "field_max_tokens": 768,
+    "longest_tokens": {
+     "gsm8k_gold_lp": [
+      130
+     ],
+     "mmlupro_gold_lp": [
+      712
+     ],
+     "refusal_margin_harmful": [
+      453
+     ],
+     "refusal_margin_harmless": [
+      570
+     ],
+     "sycophancy_gap": [
+      764
+     ],
+     "wikitext_nll": [
+      256
+     ]
+    },
+    "memory": {
+     "peak_allocated_bytes": 63888759296,
+     "peak_device_bytes": 68814897152,
+     "peak_reserved_bytes": 64051216384,
+     "peak_rss_bytes": 6749552640,
+     "peak_swap_bytes": 0
+    },
+    "seconds": 116.71454644203186
+   },
+   "spectral_factor_audit_keys": [
+    "damping",
+    "dimension",
+    "lambda_max",
+    "most_negative_ratio",
+    "n_clamped",
+    "omitted_energy",
+    "omitted_trace",
+    "rank",
+    "raw_trace",
+    "zero_trace"
+   ],
+   "spectral_factor_seconds_ffn": 69.88767290115356,
+   "spectral_factor_shape": [
+    17408,
+    17408
+   ],
+   "support_layers": [
+    24,
+    25,
+    26,
+    27
+   ],
+   "timing": {
+    "gsm8k_gold_lp.g0": {
+     "gpu_peak_allocated_bytes": 59666701824,
+     "gpu_peak_reserved_bytes": 60712550400,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 8.514723653999681
+    },
+    "gsm8k_gold_lp.g1": {
+     "gpu_peak_allocated_bytes": 59666701824,
+     "gpu_peak_reserved_bytes": 60641247232,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 8.269668798999646
+    },
+    "mmlupro_gold_lp.g0": {
+     "gpu_peak_allocated_bytes": 62963425792,
+     "gpu_peak_reserved_bytes": 63046680576,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 8.477456502999758
+    },
+    "mmlupro_gold_lp.g1": {
+     "gpu_peak_allocated_bytes": 62703723008,
+     "gpu_peak_reserved_bytes": 62750982144,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 8.260128342999906
+    },
+    "refusal_margin_harmful.g0": {
+     "gpu_peak_allocated_bytes": 64155097088,
+     "gpu_peak_reserved_bytes": 64269320192,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 11.720388117999846
+    },
+    "refusal_margin_harmful.g1": {
+     "gpu_peak_allocated_bytes": 63840753664,
+     "gpu_peak_reserved_bytes": 63954747392,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 11.479118387999733
+    },
+    "refusal_margin_harmless.g0": {
+     "gpu_peak_allocated_bytes": 65412210688,
+     "gpu_peak_reserved_bytes": 65487765504,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 11.724754063999626
+    },
+    "refusal_margin_harmless.g1": {
+     "gpu_peak_allocated_bytes": 65032043520,
+     "gpu_peak_reserved_bytes": 65110278144,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 11.488758435000364
+    },
+    "sycophancy_gap.g0": {
+     "gpu_peak_allocated_bytes": 67040518144,
+     "gpu_peak_reserved_bytes": 67238887424,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 11.005800911999813
+    },
+    "sycophancy_gap.g1": {
+     "gpu_peak_allocated_bytes": 66573097984,
+     "gpu_peak_reserved_bytes": 66754445312,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 8.71280546700018
+    },
+    "wikitext_nll.g0": {
+     "gpu_peak_allocated_bytes": 62466370048,
+     "gpu_peak_reserved_bytes": 62543364096,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 41.26808276100019
+    },
+    "wikitext_nll.g1": {
+     "gpu_peak_allocated_bytes": 62304138752,
+     "gpu_peak_reserved_bytes": 62394466304,
+     "rss_peak_bytes": 54781665280,
+     "seconds": 41.07517138200001
+    }
+   }
+  },
+  "runs": [
+   {
+    "allocator_ceiling_gb": 70,
+    "field_cap_tokens": 1024,
+    "groups": "1 x 4 layers",
+    "outcome": "monitor stop: device 72.73 GB > 72 GB in the preflight (sycophancy item, 986 tokens)",
+    "run": "attempt 1"
+   },
+   {
+    "allocator_ceiling_gb": 68,
+    "field_cap_tokens": "1024 / 768 / 512",
+    "groups": "1 x 4 layers",
+    "outcome": "allocator OOM at every cap (1024: preflight sycophancy; 768 and 512: main pass, refusal margin)",
+    "run": "attempt 2"
+   },
+   {
+    "allocator_ceiling_gb": 68,
+    "field_cap_tokens": "1024 / 768",
+    "groups": "2 x 2 layers",
+    "outcome": "1024: allocator OOM (main pass, sycophancy); 768: complete, 290 s, peak device 68.81 GB",
+    "run": "attempt 3"
+   },
+   {
+    "allocator_ceiling_gb": 76,
+    "field_cap_tokens": 1024,
+    "groups": "1 x 4 layers",
+    "outcome": "complete with the device stop raised to 79 GB: 209 s, peak device 75.74 GB (Go-M FAIL)",
+    "run": "diagnostic"
+   }
+  ]
+ },
+ "prices_usd_h": {
+  "1": 4.89,
+  "2": 9.58,
+  "4": 18.76,
+  "8": 36.72
+ },
+ "scope": "feasibility only: no trajectory, slope, headroom or enhancement quantity; objective values only as hashes",
+ "setup_seconds": 61.0,
+ "target": {
+  "base_hash": "ae8cc9d5d5d027e207a626fa460cfd68a3ad6f9e16b22f26694c2283524482ff",
+  "dtypes": [
+   "torch.bfloat16"
+  ],
+  "model_class": "Qwen3_5ForCausalLM",
+  "n_params": 26895998464,
+  "non_thinking_template": true,
+  "param_bytes": 53791996928,
+  "repo": "Qwen/Qwen3.8-27B",
+  "revision": "37561816e66b5b9153b1b64c10968c18c1e6f4a0",
+  "role_map": {
+   "ffn": 17408,
+   "hidden": 5120,
+   "mismatches": [],
+   "n_full_attention": 16,
+   "n_layers": 64,
+   "n_linear_attention": 48,
+   "tied": false,
+   "vocab": 248320,
+   "writers_checked": 128
+  },
+  "role_prefix_loaded": "model.layers.",
+  "vision_or_mtp_tensors_loaded": 0
+ }
+}
