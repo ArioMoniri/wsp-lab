@@ -97,3 +97,12 @@ def dp_projection(visits, t_state, setup_s, load_s, t_group, n_groups, prices):
 
 def record_hash(obj) -> str:
     return hashlib.sha256(json.dumps(obj, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def support_groups(rm, group_size=4, layers=SUPPORT_LAYERS):
+    """The support layers as consecutive groups of ``group_size`` layers (each group is one collector pass)."""
+    if group_size <= 0 or len(layers) % group_size:
+        raise ValueError(f"group size {group_size} does not divide {len(layers)} layers")
+    return [
+        support_modules(rm, layers[i : i + group_size]) for i in range(0, len(layers), group_size)
+    ]

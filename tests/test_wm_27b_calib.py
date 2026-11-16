@@ -119,3 +119,14 @@ def test_field_token_ladder_steps_down_and_stops():
     assert K.next_field_cap(1024) == 768
     assert K.next_field_cap(768) == 512
     assert K.next_field_cap(512) is None
+
+
+def test_support_groups_split_the_same_four_layers():
+    rm = A.RoleMap.from_config(CFG, prefix=K.PREFIX)
+    one = K.support_groups(rm, 4)
+    two = K.support_groups(rm, 2)
+    assert one == [K.support_modules(rm)]
+    assert len(two) == 2 and [m for g in two for m in g] == one[0]
+    assert all(".24." in m or ".25." in m for m in two[0])
+    with pytest.raises(ValueError):
+        K.support_groups(rm, 3)

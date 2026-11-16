@@ -45,6 +45,7 @@ from wsp.wm import scorers as Sc
 
 PANEL = ROOT / "data/wme/panels/wme-v0-p1"
 ALLOCATOR_BYTES = K.ALLOCATOR_BYTES
+DEVICE_CAP_BYTES = K.GPU_CAP_BYTES  # monitor stop; raised only for the diagnostic peak run
 FIELD_ITEMS = 24
 EDIT_LAYER_NOISE = 28  # mid-depth MLP writer (9B pilot used layer 14 of 32)
 EDIT_LAYER_SCALE = 27  # the gated-attention o_proj in the support group
@@ -110,7 +111,7 @@ class Monitor:
             for k, v in (("rss", rss), ("dev", dev), ("swap", swap)):
                 self.peak[k] = max(self.peak[k], v)
                 self.global_peak[k] = max(self.global_peak[k], v)
-            if _cuda() and dev > K.GPU_CAP_BYTES or rss > self.rss_cap:
+            if _cuda() and dev > DEVICE_CAP_BYTES or rss > self.rss_cap:
                 print(f"RESOURCE STOP rss={rss} dev={dev}", flush=True)
                 os._exit(75)
             time.sleep(0.5)
@@ -458,18 +459,34 @@ def field_panels(tok, pcfg, n_items, max_tokens, longest_first=False):
     return panels, lengths
 
 
-def p2(model, tok, base_hash, rm, mon, work: Path, spectral: bool):
+def p2(
+    model,
+    tok,
+    base_hash,
+    rm,
+    mon,
+    work: Path,
+    spectral: bool,
+    group_size=4,
+    caps=K.FIELD_TOKEN_LADDER,
+):
     """Grouped support-only gradients + model-sampled K-FAC on layers 24-27 (4 down_proj, 3 GatedDeltaNet
     out_proj, 1 attention o_proj); 6 objectives x 24 construction items <= 1024 tokens."""
     pcfg = P.PanelConfig()
     mods = K.support_modules(rm)
+    groups = K.support_groups(rm, group_size)
     out = {
+        "group_size_layers": group_size,
+        "groups": groups,
+        "allocator_ceiling_bytes": ALLOCATOR_BYTES,
+        "device_stop_bytes": DEVICE_CAP_BYTES,
         "support_layers": list(K.SUPPORT_LAYERS),
         "group": mods,
         "items_per_objective": FIELD_ITEMS,
         "attempts": [],
     }
-    cap = K.FIELD_TOKEN_LADDER[0]
+    caps = list(caps)
+    cap = caps.pop(0)
     while True:
         try:
             # H4 preflight: the single longest admissible item per objective, before the main loop
@@ -482,7 +499,7 @@ def p2(model, tok, base_hash, rm, mon, work: Path, spectral: bool):
                     tok,
                     specs,
                     pre_panels,
-                    [mods],
+                    groups,
                     DEVICE,
                     work / "preflight",
                     fisher=True,
@@ -508,7 +525,7 @@ def p2(model, tok, base_hash, rm, mon, work: Path, spectral: bool):
                     tok,
                     specs,
                     panels,
-                    [mods],
+                    groups,
                     DEVICE,
                     work / "field",
                     fisher=True,
@@ -531,9 +548,9 @@ def p2(model, tok, base_hash, rm, mon, work: Path, spectral: bool):
             if _cuda():
                 torch.cuda.empty_cache()
             subprocess.run(["rm", "-rf", str(work / "preflight"), str(work / "field")], check=True)
-            cap = K.next_field_cap(cap)
-            if cap is None:
+            if not caps:
                 raise
+            cap = caps.pop(0)
     out["field_max_tokens"] = cap
     out["collect_seconds"] = s
     out["item_tokens"] = {k: {"sum": sum(v), "max": max(v)} for k, v in lens.items()}
@@ -573,11 +590,17 @@ def main():
     ap.add_argument("--work", default="/tmp/wme27-work")
     ap.add_argument("--no-spectral", action="store_true")
     ap.add_argument("--phases", default="p1,p2")
+    ap.add_argument("--group-size", type=int, default=4)
+    ap.add_argument("--caps", default=",".join(map(str, K.FIELD_TOKEN_LADDER)))
+    ap.add_argument("--allocator-gb", type=float, default=K.ALLOCATOR_BYTES / 1e9)
+    ap.add_argument("--device-cap-gb", type=float, default=K.GPU_CAP_BYTES / 1e9)
     ap.add_argument("--name", default="calib.json")
     ap.add_argument("--toy", action="store_true", help="CPU smoke test on a tiny random model")
     ap.add_argument("--limit", type=int, default=None, help="CPU smoke only: items per objective")
     a = ap.parse_args()
-    global DEVICE, LIMIT
+    global DEVICE, LIMIT, ALLOCATOR_BYTES, DEVICE_CAP_BYTES
+    ALLOCATOR_BYTES = int(a.allocator_gb * 1e9)
+    DEVICE_CAP_BYTES = int(a.device_cap_gb * 1e9)
     if a.toy:
         DEVICE, LIMIT = "cpu", a.limit or 2
     out_dir, work = Path(a.out), Path(a.work)
@@ -602,7 +625,17 @@ def main():
             rec["p1"] = p1(model, tok, base_hash, rm, mon)
             write_json(out_dir / a.name, rec)
         if "p2" in a.phases:
-            rec["p2"] = p2(model, tok, base_hash, rm, mon, work, spectral=not a.no_spectral)
+            rec["p2"] = p2(
+                model,
+                tok,
+                base_hash,
+                rm,
+                mon,
+                work,
+                spectral=not a.no_spectral,
+                group_size=a.group_size,
+                caps=[int(c) for c in a.caps.split(",")],
+            )
         rec["status"] = "complete"
     except Exception:  # noqa: BLE001 -- recorded in the result file
         rec["status"] = "failed"
