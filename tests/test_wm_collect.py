@@ -62,6 +62,12 @@ def last_token_scorer(model, tokenizer, item, device):
     return rf.ScoreBatch(lp.sum(), float(ids.shape[0]), logits, mask)
 
 
+def gathered_nll_scorer(model, tokenizer, item, device):
+    """As nll_scorer, but returns logits gathered at the valid positions ([n_valid, vocab])."""
+    b = nll_scorer(model, tokenizer, item, device)
+    return rf.ScoreBatch(b.score_sum, b.weight, b.logits[b.valid_mask], b.valid_mask)
+
+
 def _panels():
     g = torch.Generator().manual_seed(4)
     items = [torch.randint(0, VOCAB, (2, 6), generator=g) for _ in range(3)]
@@ -213,6 +219,26 @@ def test_artifacts_stream_one_file_per_objective_group(tmp_path):
         re.gradient("toy_nll", "layers.1.down.weight"),
         art.gradient("toy_nll", "layers.1.down.weight"),
     )
+
+
+def test_pre_gathered_logits_give_identical_factors(tmp_path):
+    objs, panels = _panels()
+    gathered = [
+        rf.ObjectiveSpec(
+            "toy_nll", "lower", gathered_nll_scorer, "toy", panels["toy"].text_group_hash
+        )
+    ]
+    a = C.collect_grouped(
+        ToyLM().eval(), None, objs[:1], panels, [SUPPORT], "cpu", out_dir=tmp_path / "a"
+    )
+    b = C.collect_grouped(
+        ToyLM().eval(), None, gathered, panels, [SUPPORT], "cpu", out_dir=tmp_path / "b"
+    )
+    for mod in SUPPORT:
+        for key in ("A", "G"):
+            torch.testing.assert_close(
+                a.factors("toy_nll", mod)[key], b.factors("toy_nll", mod)[key], rtol=0, atol=0
+            )
 
 
 def test_gradients_only_without_factors(tmp_path):

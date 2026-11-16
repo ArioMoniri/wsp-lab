@@ -3,7 +3,9 @@
 ``make_scorer(objective, cfg)(model, tokenizer, item, device) -> response_field.ScoreBatch``: the score sum and
 weight such that ``score_sum / weight`` equals the panel's per-item value (WikiText: NLL sum over the window's
 tokens, weight = number of tokens, so the value is the mean NLL; every other objective: one item, weight 1). The
-valid mask marks the scored next-token positions of every row, with the layout [rows, sequence] of every Linear.
+valid mask marks the scored next-token positions of every row, with the layout [rows, sequence] of every Linear;
+the logits are gathered at those positions only ([n_valid, vocab], row-major), which ``wm.collect`` accepts, so no
+[rows, sequence, vocab] tensor is formed (a 9B memory requirement; ``response_field`` itself needs full logits).
 """
 
 from __future__ import annotations
@@ -36,16 +38,22 @@ def make_scorer(objective: str, cfg: P.PanelConfig):
             tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
         )
         ids, att, mask = _batch(rows, pad, device)
-        logits = model(input_ids=ids, attention_mask=att, use_cache=False).logits
+        hidden = model.model(input_ids=ids, attention_mask=att, use_cache=False).last_hidden_state
+        # LM head only at the scored positions: logits are [n_valid, vocab] (row-major order of the mask)
+        logits = model.lm_head(hidden[mask])
         lp = logits.float().log_softmax(-1)
+        where = {tuple(rc): i for i, rc in enumerate(mask.nonzero().tolist())}
         sums, norm = [], []
         for i, r in enumerate(rows):
-            t = torch.arange(r.score_from, len(r.ids), device=lp.device)
+            pos = torch.tensor(
+                [where[(i, t - 1)] for t in range(r.score_from, len(r.ids))], device=lp.device
+            )
             tgt = torch.tensor(r.ids[r.score_from :], device=lp.device)
-            sums.append(lp[i, t - 1, tgt].sum())
+            sums.append(lp[pos, tgt].sum())
             if r.candidates is not None:
-                c = lp[i, len(r.ids) - 2, torch.tensor(r.candidates, device=lp.device)]
-                norm.append(lp[i, len(r.ids) - 2, r.ids[-1]] - torch.logsumexp(c, 0))
+                k = where[(i, len(r.ids) - 2)]
+                c = lp[k, torch.tensor(r.candidates, device=lp.device)]
+                norm.append(lp[k, r.ids[-1]] - torch.logsumexp(c, 0))
         if objective == "wikitext_nll":
             n = len(rows[0].ids) - rows[0].score_from
             return rf.ScoreBatch(-sums[0], float(n), logits, mask)

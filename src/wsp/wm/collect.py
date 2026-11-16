@@ -121,7 +121,13 @@ def _group_pass(model, tokenizer, obj, panel, group_params, hooked, device, fish
                 batch = obj.scorer(model, tokenizer, item, device)
                 mask = batch.valid_mask.to(device=device, dtype=torch.bool)
                 active["mask"] = mask
-                logits = batch.logits.float()[mask]
+                logits = batch.logits.float()
+                if logits.dim() == mask.dim() + 1 and tuple(logits.shape[:-1]) == tuple(mask.shape):
+                    logits = logits[mask]
+                elif not (logits.dim() == 2 and logits.shape[0] == int(mask.sum())):
+                    raise ValueError(
+                        "logits must be [*mask.shape, vocab] or gathered [n_valid, vocab]"
+                    )
                 if not len(logits):
                     raise ValueError("empty valid-token mask")
                 targets = torch.multinomial(
@@ -306,6 +312,8 @@ def collect_grouped(
                 fname = f"{obj.name}.g{gi}.pt"
                 torch.save(payload, out / fname)
                 del payload
+                if torch.cuda.is_available() and str(device).startswith("cuda"):
+                    torch.cuda.empty_cache()  # release this group's cached blocks before the next pass
                 file_hashes[fname] = hashlib.sha256((out / fname).read_bytes()).hexdigest()
                 cov.update(rows)
                 identity["panels"][obj.name] = {"panel_id": panel.panel_id, "content_hash": content}

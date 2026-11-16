@@ -144,7 +144,7 @@ class Monitor:
                 self.peak_dev = max(self.peak_dev, _gpu_used())
                 self.peak_swap = max(self.peak_swap, _swap_used())
             n += 1
-            if rss > 0.95 * RSS_CAP or self.peak_dev > 0.98 * GPU_CAP + 4_000_000_000:
+            if rss > 0.95 * RSS_CAP or self.peak_dev > GPU_CAP:
                 print(f"RESOURCE STOP rss={rss} dev={self.peak_dev}", flush=True)
                 os._exit(75)
             time.sleep(0.5)
@@ -210,7 +210,14 @@ def write_json(path: Path, obj):
 # ------------------------------------------------------------------ shared
 
 
+ALLOCATOR_BYTES = (
+    27_000_000_000  # allocator ceiling; CUDA context and kernels stay within the 28 GB cap
+)
+
+
 def load(ph: Phase):
+    total = torch.cuda.get_device_properties(0).total_memory
+    torch.cuda.set_per_process_memory_fraction(min(1.0, ALLOCATOR_BYTES / total))
     t = time.time()
     model, tok, cfg, base_hash, _path = hf.load_target(REPO, "cuda")
     load_s = time.time() - t

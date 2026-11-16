@@ -83,8 +83,9 @@ def test_scorer_value_matches_panel(model, obj):
         assert value == pytest.approx(want, rel=1e-4)
     else:
         assert value == pytest.approx(want, rel=1e-4, abs=1e-5)
-    assert b.valid_mask.shape == b.logits.shape[:-1]
-    assert b.valid_mask.any()
+    # logits are gathered at the scored positions only (never a full [rows, seq, vocab] tensor)
+    assert b.valid_mask.dim() == 2 and b.valid_mask.any()
+    assert b.logits.shape == (int(b.valid_mask.sum()), model.config.vocab_size)
 
 
 def test_scorer_is_differentiable(model):
