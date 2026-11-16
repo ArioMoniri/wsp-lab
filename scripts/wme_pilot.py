@@ -766,7 +766,7 @@ def p4(run_dir):
     panels = field_panels(pcfg, tok)
     specs = Sc.objective_specs(list(P.OBJECTIVES), panels, pcfg)
     groups = [support_modules(rm)]
-    field = C.GroupedField.load(run_dir / "field")
+    field = C.GroupedField.load(run_dir / "field", verify=False)  # verified by P3
     sess = session(model, base_hash, rm)
     states, grad_s = {}, []
     for comp in COMPOSITIONS_3:
@@ -783,9 +783,13 @@ def p4(run_dir):
                 ph.log("oracle gradients", comp=">".join(comp[:h]), seconds=round(grad_s[-1], 1))
             states[">".join(comp[:h])] = {"theta_hash": th, "dir": str(d)}
             sess.restore()
-    oracle = {
-        k: C.GroupedField.load(v["dir"]) for k, v in states.items()
-    }  # hash-verified once per state
+    # written by this pipeline with recorded sha256 (checkable offline); re-hashing ~109 GB at ~100 MB/s is skipped
+    oracle = {k: C.GroupedField.load(v["dir"], verify=False) for k, v in states.items()}
+    touched = {}
+    for comp in COMPOSITIONS_3:
+        apply_state(sess, R, {"steps": [(r, 1.0) for r in comp]})
+        touched[comp] = set(sess.touched)
+        sess.restore()
     steps = {}
     for obj in P.OBJECTIVES:
         grads0, facs = load_objective_field(field, obj)
@@ -798,12 +802,8 @@ def p4(run_dir):
                 sess.restore()
                 D = {n: E[n] - prev_E[n] if n in prev_E else E[n] for n in E}
                 og = oracle[key]
-                # every support tensor the oracle collected (the next step may touch another one); CPU
-                g_h = {
-                    n: og.gradient(obj, n)
-                    for n in grads0
-                    if og.coverage[obj].get(n, {}).get("gradient")
-                }
+                # tensors any step of this composition touches (memory-mapped reads); CPU copies
+                g_h = {n: og.gradient(obj, n).clone() for n in touched[comp]}
                 og.drop_cache()
                 static_now = summarise(contract_on(grads0, facs, field, obj, E), obj)["F"]
                 static_prev = (

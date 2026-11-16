@@ -249,3 +249,16 @@ def test_gradients_only_without_factors(tmp_path):
     )
     assert art.factors("toy_nll", SUPPORT[0]) is None
     assert art.gradient("toy_nll", SUPPORT[0] + ".weight").shape == (12, 8)
+
+
+def test_load_verifies_hashes_unless_told_not_to(tmp_path):
+    model = ToyLM().eval()
+    objs, panels = _panels()
+    C.collect_grouped(model, None, objs[:1], panels, [SUPPORT[:2]], "cpu", out_dir=tmp_path)
+    f = tmp_path / "toy_nll.g0.pt"
+    data = bytearray(f.read_bytes())
+    data[-1] ^= 1
+    f.write_bytes(bytes(data))
+    with pytest.raises(ValueError):
+        C.GroupedField.load(tmp_path)
+    assert C.GroupedField.load(tmp_path, verify=False).identity["schema"] == C.SCHEMA

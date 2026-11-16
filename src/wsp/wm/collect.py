@@ -167,13 +167,15 @@ class GroupedField:
         self._kept: dict[tuple, tuple] = {}
 
     @classmethod
-    def load(cls, root) -> GroupedField:
+    def load(cls, root, verify: bool = True) -> GroupedField:
+        """``verify=False`` skips re-hashing the tensor files (they were hashed at write time; use only when the
+        same pipeline wrote them and the hashes remain checkable offline)."""
         root = Path(root)
         man = json.loads((root / "manifest.json").read_text())
         if man["identity"]["schema"] != SCHEMA:
             raise ValueError("grouped field schema mismatch")
         field = cls(root, man["identity"])
-        for f, h in man["file_sha256"].items():
+        for f, h in man["file_sha256"].items() if verify else ():
             if hashlib.sha256((root / f).read_bytes()).hexdigest() != h:
                 raise ValueError(f"{f}: content hash mismatch")
         return field
@@ -181,7 +183,10 @@ class GroupedField:
     def _file(self, objective, group):
         key = f"{objective}.g{group}.pt"
         if key not in self._cache:
-            self._cache[key] = torch.load(self.root / key, map_location="cpu", weights_only=True)
+            # memory-mapped: only the tensors actually used are read from disk
+            self._cache[key] = torch.load(
+                self.root / key, map_location="cpu", weights_only=True, mmap=True
+            )
         return self._cache[key]
 
     def drop_cache(self):
