@@ -283,10 +283,15 @@ def main():
         "base_repeat": p1["bitwise_repeat"],
         "tap_unchanged": p1["tap_outputs_bitwise_unchanged"],
         "restore_hash": p1["restore_returns_base_hash"],
-        "restore_outputs": p1["post_restore_bitwise_equal_base"],
+        # P1's post-restore check compared a WikiText-only evaluation with the full-panel base (different
+        # batch composition, so not like-for-like); it is superseded by P3's full-panel post-restore check.
+        "restore_outputs_p3_full_panel": json.loads((run / "p3_post_restore.json").read_text())[
+            "bitwise_equal_base"
+        ],
         "p3_base_matches_p1": base["matches_p1_bitwise"],
     }
     go_n["pass"] = all(go_n.values())
+    go_n["p1_restore_check_not_like_for_like"] = p1["post_restore_bitwise_equal_base"]
     p3_secs = [s["eval_seconds"] for s in states.values()]
     t_state = max(p1["panel_seconds"][1], float(np.median(p3_secs)))
     go_c = {

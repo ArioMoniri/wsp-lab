@@ -694,6 +694,14 @@ def p3(run_dir):
             "matches_p1_bitwise": base_matches_p1,
         },
     )
+    # like-for-like post-restore check: the full validation panel at the restored base after every edit
+    again, _ = timed_eval(adapter, tok, val, pcfg)
+    post_restore = P.digest(again) == P.digest(base)
+    write_json(
+        run_dir / "p3_post_restore.json",
+        {"bitwise_equal_base": post_restore, "theta_hash": sess.theta_hash()},
+    )
+    ph.log("post-restore base", bitwise=post_restore)
     # static field on every state's cumulative displacement: objective-major, states re-applied on the GPU
     t = time.time()
     fp = {}
@@ -711,7 +719,15 @@ def p3(run_dir):
         run_dir / "p3_field.json",
         {"states": fp, "seconds": time.time() - t, "factors": "raw (no damping/truncation)"},
     )
-    ph.close({"summary": {"states": len(states), "base_matches_p1": base_matches_p1}})
+    ph.close(
+        {
+            "summary": {
+                "states": len(states),
+                "base_matches_p1": base_matches_p1,
+                "post_restore": post_restore,
+            }
+        }
+    )
 
 
 # ------------------------------------------------------------------ P4
