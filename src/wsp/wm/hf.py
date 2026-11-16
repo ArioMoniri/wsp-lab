@@ -35,13 +35,25 @@ def use_reference_kernels():
 
 
 def snapshot_dir(repo: str, revision: str) -> Path:
-    from huggingface_hub import snapshot_download
+    """The pinned snapshot directory in the local HF cache; requires the config, tokenizer and every indexed shard
+    (repository metadata files such as README/LICENSE are not needed and may be absent)."""
+    from huggingface_hub import constants
 
-    path = Path(snapshot_download(repo, revision=revision, local_files_only=True))
-    if path.name != revision:
-        raise ValueError(
-            f"{repo}: cached snapshot {path.name} is not the pinned revision {revision}"
-        )
+    path = (
+        Path(constants.HF_HUB_CACHE) / f"models--{repo.replace('/', '--')}" / "snapshots" / revision
+    )
+    need = [
+        "config.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "model.safetensors.index.json",
+    ]
+    missing = [f for f in need if not (path / f).exists()]
+    if not missing:
+        index = json.loads((path / "model.safetensors.index.json").read_text())
+        missing = [f for f in sorted(set(index["weight_map"].values())) if not (path / f).exists()]
+    if missing:
+        raise FileNotFoundError(f"{repo}@{revision}: missing {missing} in {path}")
     return path
 
 
