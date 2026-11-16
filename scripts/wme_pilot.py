@@ -355,7 +355,13 @@ def support_modules(rm):
     return mods
 
 
-def field_panels(pcfg):
+FIELD_MAX_TOKENS = (
+    1024  # per field item, summed over its rows (outcome-blind, deterministic length filter)
+)
+
+
+def field_panels(pcfg, tok):
+    """First FIELD_ITEMS construction items by id per objective whose rows total <= FIELD_MAX_TOKENS tokens."""
     cons = items("construction")
     scored = set()
     for split in ("validation", "dev"):
@@ -363,7 +369,16 @@ def field_panels(pcfg):
             scored |= {r["hash"] for r in its}
     panels = {}
     for obj, its in cons.items():
-        sel = sorted(its, key=lambda r: r["id"])[:FIELD_ITEMS]
+        sel = []
+        for r in sorted(its, key=lambda r: r["id"]):
+            if sum(len(x.ids) for x in P._rows_for(obj, r, tok, pcfg)) <= FIELD_MAX_TOKENS:
+                sel.append(r)
+            if len(sel) == FIELD_ITEMS:
+                break
+        if len(sel) < FIELD_ITEMS:
+            raise ValueError(
+                f"{obj}: only {len(sel)} construction items within {FIELD_MAX_TOKENS} tokens"
+            )
         panels[f"construction:{obj}"] = Sc.field_panel(
             f"construction:{obj}", sel, scored_groups=tuple(sorted(scored))
         )
@@ -374,7 +389,7 @@ def p2(run_dir):
     ph = Phase(run_dir, "P2")
     model, tok, _cfg, base_hash, rm, _ = load(ph)
     pcfg = P.PanelConfig()
-    panels = field_panels(pcfg)
+    panels = field_panels(pcfg, tok)
     specs = Sc.objective_specs(list(P.OBJECTIVES), panels, pcfg)
     mods = support_modules(rm)
     lin = module_of(rm.writers()[(12, "o")]).rsplit(".", 1)[
@@ -748,7 +763,7 @@ def p4(run_dir):
     pcfg = P.PanelConfig()
     dirs = torch.load(run_dir / "directions_p3.pt", weights_only=False)
     R = roots(rm, dirs)
-    panels = field_panels(pcfg)
+    panels = field_panels(pcfg, tok)
     specs = Sc.objective_specs(list(P.OBJECTIVES), panels, pcfg)
     groups = [support_modules(rm)]
     field = C.GroupedField.load(run_dir / "field")
