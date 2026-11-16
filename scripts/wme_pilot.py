@@ -783,6 +783,9 @@ def p4(run_dir):
                 ph.log("oracle gradients", comp=">".join(comp[:h]), seconds=round(grad_s[-1], 1))
             states[">".join(comp[:h])] = {"theta_hash": th, "dir": str(d)}
             sess.restore()
+    oracle = {
+        k: C.GroupedField.load(v["dir"]) for k, v in states.items()
+    }  # hash-verified once per state
     steps = {}
     for obj in P.OBJECTIVES:
         grads0, facs = load_objective_field(field, obj)
@@ -794,8 +797,9 @@ def p4(run_dir):
                 E = {n: v.clone() for n, v in displacements(sess).items()}
                 sess.restore()
                 D = {n: E[n] - prev_E[n] if n in prev_E else E[n] for n in E}
-                og = C.GroupedField.load(states[key]["dir"])
+                og = oracle[key]
                 g_h = {n: og.gradient(obj, n) for n in grads0}  # CPU; moved per tensor below
+                og.drop_cache()
                 static_now = summarise(contract_on(grads0, facs, field, obj, E), obj)["F"]
                 static_prev = (
                     summarise(contract_on(grads0, facs, field, obj, prev_E), obj)["F"]
