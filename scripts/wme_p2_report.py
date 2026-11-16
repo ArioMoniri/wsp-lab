@@ -298,6 +298,39 @@ def e2_eval(run, model_key):
             ],
             "rows": rows,
         }
+    # DESCRIPTIVE sensitivity (not the gate): guardrails read on each objective's own value scale with the
+    # pilot-1 exploratory margins (scripts/wme_pilot.py GUARD; analogues for the two new objectives)
+    p1_margins = {
+        "wikitext_nll": ("ucb", 0.01),
+        "gsm8k_gold_lp": ("lcb", -0.05),
+        "mathcomp_gold_lp": ("lcb", -0.05),
+        "mmlupro_gold_lp": ("lcb", -0.05),
+        "refusal_margin_harmful": ("lcb", -0.25),
+        "refusal_margin_harmless": ("ucb", 0.25),
+        "sycophancy_real": ("ucb", 0.10),
+    }
+    sens = {}
+    for o in P2.E2_OBJECTIVES:
+        n = 0
+        for c in cands[o]:
+            if G.candidate_key(c) not in scores:
+                continue
+            rec = scores[G.candidate_key(c)]
+            g = stats(rec, o, "value")
+            bad = False
+            for k, (kind, lim) in p1_margins.items():
+                if k == o or k not in rec["records"]:
+                    continue
+                st = stats(rec, k, "value")
+                b = (
+                    st["mean"] + G.Z95 * st["se"]
+                    if kind == "ucb"
+                    else st["mean"] - G.Z95 * st["se"]
+                )
+                bad |= (kind == "ucb" and b > lim) or (kind == "lcb" and b < lim)
+            n += G.gain_lcb(o, g["mean"], g["se"]) > 0 and not bad
+        sens[o] = n
+    out["descriptive_qualifying_with_pilot1_value_scale_margins"] = sens
     if all(n == G.E2_N for n in ncand.values()):
         out["gate"] = G.go_e2(counts, ncand)
     else:
@@ -329,6 +362,119 @@ def e2_eval(run, model_key):
         }
     del by_id
     return out
+
+
+def _f(x, nd=3):
+    if x is None:
+        return "n/a"
+    if isinstance(x, bool):
+        return "yes" if x else "no"
+    if isinstance(x, float) and (math.isnan(x)):
+        return "nan"
+    if abs(x) >= 1000 or (abs(x) < 1e-3 and x != 0):
+        return f"{x:.2e}"
+    return f"{x:.{nd}f}"
+
+
+def render_md(rep) -> str:
+    L = []
+    t, r = rep["T2"], rep["R2"]
+    L.append("| Gate | Rule (pre-declared) | Measured | Result |")
+    L.append("|---|---|---|---|")
+    if t:
+        L.append(
+            f"| Go-T2 (i) | non-control steps resolvable >= 0.50 | {_f(t['resolvability']['noncontrol'])} of "
+            f"{t['resolvability']['n_noncontrol']} (step, objective) pairs | "
+            f"{'PASS' if t['gate']['pass_resolvable'] else 'FAIL'} |"
+        )
+        L.append(
+            f"| Go-T2 (ii) primary | six-objective median refitted-F3u static error at h >= 3 > 2 SE | "
+            f"{_f(t['static_endpoint_median_err_over_se_h3plus'], 2)} SE ({t['static_n_pairs']} pairs) | "
+            f"{'PASS' if t['gate']['pass_static'] else 'FAIL'} |"
+        )
+        L.append(f"| **Go-T2** | (i) and (ii) | | **{'PASS' if t['gate']['pass'] else 'FAIL'}** |")
+    if r:
+        g = r["gate"]
+        L.append(
+            f"| **Go-R2** | trapezoid oracle cuts per-step error >= 20% vs A0 (steps h >= 2) | cut {_f(g['cut'])} "
+            f"(static {_f(g['static_err_over_se'], 2)} SE -> trapezoid {_f(g['trap_err_over_se'], 2)} SE; n = {g['n']}) "
+            f"| **{'PASS' if g['pass'] else 'FAIL'}** |"
+        )
+    for k, e in rep["E2"].items():
+        if not e:
+            continue
+        for o, v in e["objectives"].items():
+            gp = e["gate"].get("pass", {}).get(o)
+            L.append(
+                f"| Go-E2 {k.upper()} {o} | >= 2 of 32 with dev-gain LCB > 0 and no guardrail breach | "
+                f"{v['qualifying']} of {v['n_candidates']} (best LCB {_f(v['best_lcb'], 4)}) | "
+                f"{'PASS' if gp else 'FAIL'} |"
+            )
+    L.append("")
+    if t:
+        L.append(
+            "Resolvability per root (ladder steps) and for compositions; the negative control is separate:\n"
+        )
+        L.append("| Root / group | Family | Control | Resolvable | n pairs |")
+        L.append("|---|---|---|---|---|")
+        for g_, v in t["resolvability_per_root_or_group"].items():
+            L.append(
+                f"| {g_} | {v['family']} | {_f(v['control'])} | {_f(v['resolvable'])} | {v['n']} |"
+            )
+        L.append("")
+        L.append("| Objective | resolvable (non-control) | static median h>=3 (descriptive) |")
+        L.append("|---|---|---|")
+        for o, v in t["resolvability_per_objective_noncontrol"].items():
+            L.append(
+                f"| {o} | {_f(v)} | {_f(t['descriptive']['per_objective_median_h3plus'].get(o), 2)} |"
+            )
+        L.append("")
+        L.append("Ladders (dose: ΔNLL; * = labelled endpoint, side stopped):\n")
+        L.append("| Root | positive side | negative side |")
+        L.append("|---|---|---|")
+        for root, sides in t["ladders"].items():
+            cell = lambda ws: ", ".join(
+                f"{w['dose']:+g}: {w['dnll']:.3f}{'*' if w['endpoint'] else ''}" for w in ws
+            )
+            L.append(f"| {root} | {cell(sides['pos'])} | {cell(sides['neg'])} |")
+        L.append("")
+    for k, e in rep["E2"].items():
+        if not e:
+            continue
+        L.append(f"E2 on {e['model']} @ `{e['revision'][:12]}` (dev items only):\n")
+        L.append(
+            "| Objective | qualifying / 32 | LCB > 0 (any breach) | no breach | best LCB (candidate) | best LCB without breach | breaches by guard |"
+        )
+        L.append("|---|---|---|---|---|---|---|")
+        for o, v in e["objectives"].items():
+            bc = ", ".join(f"{g}: {n}" for g, n in v["breach_counts"].items() if n)
+            L.append(
+                f"| {o} | {v['qualifying']} | {v['n_lcb_positive']} | {v['n_without_breach']} | "
+                f"{_f(v['best_lcb'], 4)} ({v['best_lcb_candidate']}) | {_f(v['best_lcb_without_breach'], 4)} | {bc} |"
+            )
+        L.append("")
+        L.append("| LoRA candidate | gain | LCB | breaches | qualifies |")
+        L.append("|---|---|---|---|---|")
+        for o, v in e["objectives"].items():
+            for x in v["lora"]:
+                L.append(
+                    f"| {x['candidate']} | {_f(x['gain'], 4)} | {_f(x['lcb'], 4)} | {', '.join(x['breaches']) or '-'} "
+                    f"| {_f(x['qualifies'])} |"
+                )
+        L.append("")
+    led = rep["ledger"]
+    L.append(
+        "| Ledger file | Phase | wall s (= GPU s) | CPU s | peak device GB | peak RSS GB | swap B |"
+    )
+    L.append("|---|---|---|---|---|---|---|")
+    for x in led["rows"]:
+        L.append(
+            f"| {x['_file']} | {x['phase']} | {_f(x['wall_seconds'], 0)} | {_f(x['cpu_seconds'], 0)} | "
+            f"{_f((x['peak_device_used_bytes_nvidia_smi'] or 0) / 1e9, 2)} | "
+            f"{_f((x['peak_process_tree_rss_bytes'] or 0) / 1e9, 2)} | {x['peak_swap_used_bytes']} |"
+        )
+    L.append(f"\nTotal GPU-h {led['gpu_hours']:.2f}; CPU-h {led['cpu_hours']:.2f}.")
+    return "\n".join(L)
 
 
 def main():
@@ -393,6 +539,7 @@ def main():
     }
     out = Path(args.out) if args.out else run / "report.json"
     out.write_text(json.dumps(rep, indent=1, sort_keys=True, default=float))
+    out.with_suffix(".md").write_text(render_md(rep) + "\n")
     s = {
         "T2": rep["T2"]
         and {
