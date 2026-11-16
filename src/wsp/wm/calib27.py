@@ -19,6 +19,15 @@ PREFIX = "model.language_model.layers."
 SUPPORT_LAYERS = (24, 25, 26, 27)
 GPU_CAP_BYTES = 72_000_000_000  # C9: kill if peak > 72 GB on an 80 GB GPU
 GO_C_SECONDS = 240.0  # D8: lean panel <= 4 min per state
+# Attempt 1 (allocator 70 GB) read 72.73 GB on nvidia-smi: ~2.7 GB of device memory is outside the allocator.
+NON_ALLOCATOR_ALLOWANCE_BYTES = 3_500_000_000
+ALLOCATOR_BYTES = 68_000_000_000
+FIELD_TOKEN_LADDER = (1024, 768, 512)  # per field item; step down only on an allocator OOM, never past 512
+
+
+def next_field_cap(cap):
+    i = FIELD_TOKEN_LADDER.index(cap)
+    return FIELD_TOKEN_LADDER[i + 1] if i + 1 < len(FIELD_TOKEN_LADDER) else None
 
 
 def support_modules(rm, layers=SUPPORT_LAYERS):

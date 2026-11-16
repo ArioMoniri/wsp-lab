@@ -44,9 +44,8 @@ from wsp.wm import panel as P
 from wsp.wm import scorers as Sc
 
 PANEL = ROOT / "data/wme/panels/wme-v0-p1"
-ALLOCATOR_BYTES = 70_000_000_000
+ALLOCATOR_BYTES = K.ALLOCATOR_BYTES
 FIELD_ITEMS = 24
-FIELD_MAX_TOKENS = 1024
 EDIT_LAYER_NOISE = 28  # mid-depth MLP writer (9B pilot used layer 14 of 32)
 EDIT_LAYER_SCALE = 27  # the gated-attention o_proj in the support group
 DEVICE = "cuda"
@@ -468,49 +467,74 @@ def p2(model, tok, base_hash, rm, mon, work: Path, spectral: bool):
         "support_layers": list(K.SUPPORT_LAYERS),
         "group": mods,
         "items_per_objective": FIELD_ITEMS,
-        "field_max_tokens": FIELD_MAX_TOKENS,
+        "attempts": [],
     }
-    # H4 preflight: the single longest admissible item per objective, before the main loop
-    mon.reset()
-    pre_panels, pre_len = field_panels(tok, pcfg, 1, FIELD_MAX_TOKENS, longest_first=True)
-    specs = Sc.objective_specs(list(P.OBJECTIVES), pre_panels, pcfg)
-    _, s = sync_time(
-        lambda: C.collect_grouped(
-            model,
-            tok,
-            specs,
-            pre_panels,
-            [mods],
-            DEVICE,
-            work / "preflight",
-            fisher=True,
-            theta_hash=base_hash,
-            log=log,
-        )
-    )
-    out["preflight"] = {"seconds": s, "longest_tokens": pre_len, "memory": mon.snapshot()}
-    log("preflight", seconds=round(s, 1), mem=out["preflight"]["memory"])
-    subprocess.run(["rm", "-rf", str(work / "preflight")], check=True)
-    # main collection
-    mon.reset()
-    panels, lens = field_panels(
-        tok, pcfg, FIELD_ITEMS if LIMIT is None else LIMIT, FIELD_MAX_TOKENS
-    )
-    specs = Sc.objective_specs(list(P.OBJECTIVES), panels, pcfg)
-    field, s = sync_time(
-        lambda: C.collect_grouped(
-            model,
-            tok,
-            specs,
-            panels,
-            [mods],
-            DEVICE,
-            work / "field",
-            fisher=True,
-            theta_hash=base_hash,
-            log=log,
-        )
-    )
+    cap = K.FIELD_TOKEN_LADDER[0]
+    while True:
+        try:
+            # H4 preflight: the single longest admissible item per objective, before the main loop
+            mon.reset()
+            pre_panels, pre_len = field_panels(tok, pcfg, 1, cap, longest_first=True)
+            specs = Sc.objective_specs(list(P.OBJECTIVES), pre_panels, pcfg)
+            _, s = sync_time(
+                lambda specs=specs, pre_panels=pre_panels: C.collect_grouped(
+                    model,
+                    tok,
+                    specs,
+                    pre_panels,
+                    [mods],
+                    DEVICE,
+                    work / "preflight",
+                    fisher=True,
+                    theta_hash=base_hash,
+                    log=log,
+                )
+            )
+            out["preflight"] = {
+                "seconds": s,
+                "longest_tokens": pre_len,
+                "memory": mon.snapshot(),
+                "field_max_tokens": cap,
+            }
+            log("preflight", seconds=round(s, 1), cap=cap, mem=out["preflight"]["memory"])
+            subprocess.run(["rm", "-rf", str(work / "preflight")], check=True)
+            mon.reset()
+            n = FIELD_ITEMS if LIMIT is None else LIMIT
+            panels, lens = field_panels(tok, pcfg, n, cap)
+            specs = Sc.objective_specs(list(P.OBJECTIVES), panels, pcfg)
+            field, s = sync_time(
+                lambda specs=specs, panels=panels: C.collect_grouped(
+                    model,
+                    tok,
+                    specs,
+                    panels,
+                    [mods],
+                    DEVICE,
+                    work / "field",
+                    fisher=True,
+                    theta_hash=base_hash,
+                    log=log,
+                )
+            )
+            break
+        except torch.OutOfMemoryError as e:
+            out["attempts"].append(
+                {"field_max_tokens": cap, "oom": str(e)[:300], "memory": mon.snapshot()}
+            )
+            log("allocator OOM", cap=cap)
+            for prm in model.parameters():
+                prm.requires_grad_(False)
+                prm.grad = None
+            import gc
+
+            gc.collect()
+            if _cuda():
+                torch.cuda.empty_cache()
+            subprocess.run(["rm", "-rf", str(work / "preflight"), str(work / "field")], check=True)
+            cap = K.next_field_cap(cap)
+            if cap is None:
+                raise
+    out["field_max_tokens"] = cap
     out["collect_seconds"] = s
     out["item_tokens"] = {k: {"sum": sum(v), "max": max(v)} for k, v in lens.items()}
     out["timing"] = field.identity["timing"]
@@ -548,6 +572,8 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--work", default="/tmp/wme27-work")
     ap.add_argument("--no-spectral", action="store_true")
+    ap.add_argument("--phases", default="p1,p2")
+    ap.add_argument("--name", default="calib.json")
     ap.add_argument("--toy", action="store_true", help="CPU smoke test on a tiny random model")
     ap.add_argument("--limit", type=int, default=None, help="CPU smoke only: items per objective")
     a = ap.parse_args()
@@ -567,14 +593,16 @@ def main():
     mon = Monitor()
     try:
         rec["environment"] = environment()
-        write_json(out_dir / "calib.json", rec)
+        write_json(out_dir / a.name, rec)
         model, tok, _cfg, base_hash, rm, rec["load"] = load(mon, toy=a.toy)
-        write_json(out_dir / "calib.json", rec)
+        write_json(out_dir / a.name, rec)
         rec["kernels"] = kernel_probe(model, tok)
         log("kernels", **rec["kernels"])
-        rec["p1"] = p1(model, tok, base_hash, rm, mon)
-        write_json(out_dir / "calib.json", rec)
-        rec["p2"] = p2(model, tok, base_hash, rm, mon, work, spectral=not a.no_spectral)
+        if "p1" in a.phases:
+            rec["p1"] = p1(model, tok, base_hash, rm, mon)
+            write_json(out_dir / a.name, rec)
+        if "p2" in a.phases:
+            rec["p2"] = p2(model, tok, base_hash, rm, mon, work, spectral=not a.no_spectral)
         rec["status"] = "complete"
     except Exception:  # noqa: BLE001 -- recorded in the result file
         rec["status"] = "failed"
@@ -586,7 +614,7 @@ def main():
     rec["ru_maxrss_bytes"] = r.ru_maxrss * 1024
     mon.snapshot()
     rec["global_peak"] = dict(mon.global_peak)
-    write_json(out_dir / "calib.json", rec)
+    write_json(out_dir / a.name, rec)
     log("done", status=rec["status"], wall=round(rec["wall_seconds"], 1))
     return 0 if rec["status"] == "complete" else 1
 

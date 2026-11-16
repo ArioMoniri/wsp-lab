@@ -106,3 +106,16 @@ def test_dp_projection():
     assert eight["wall_hours"] == pytest.approx((900 + 200 + 120 * 60 + 2 * 600) / 3600)
     assert eight["gpu_hours"] == pytest.approx(8 * eight["wall_hours"])
     assert all(math.isfinite(v["usd"]) for v in p.values())
+
+
+def test_allocator_ceiling_leaves_room_for_non_allocator_memory():
+    # attempt 1: allocator ceiling 70 GB + ~2.7 GB CUDA context/workspaces read 72.73 GB on nvidia-smi
+    assert K.NON_ALLOCATOR_ALLOWANCE_BYTES >= 3_000_000_000
+    assert K.ALLOCATOR_BYTES + K.NON_ALLOCATOR_ALLOWANCE_BYTES <= K.GPU_CAP_BYTES
+
+
+def test_field_token_ladder_steps_down_and_stops():
+    assert K.FIELD_TOKEN_LADDER == (1024, 768, 512)
+    assert K.next_field_cap(1024) == 768
+    assert K.next_field_cap(768) == 512
+    assert K.next_field_cap(512) is None
