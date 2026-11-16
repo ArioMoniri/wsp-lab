@@ -389,6 +389,9 @@ def main():
     ap.add_argument("--run", default="pilot-20261116")
     ap.add_argument("--out", default=None)
     ap.add_argument("--md", default=None, help="write the generated tables (markdown) here")
+    ap.add_argument(
+        "--visit-seconds", type=float, default=None, help="measured all-in seconds per P3 visit"
+    )
     args = ap.parse_args()
     run = ROOT / "data/wme/pilot" / args.run
     ledger = [json.loads(x) for x in (run / "ledger.jsonl").read_text().splitlines()]
@@ -420,17 +423,32 @@ def main():
         ],
         "p3_base_matches_p1": base["matches_p1_bitwise"],
     }
+    # P3 evaluates five composition prefixes twice (shared by a 2-step and a 3-step composition): an edited-state
+    # repeat check (same theta-hash, values compared bitwise)
+    reps = {}
+    for line in (run / "p3_states.jsonl").read_text().splitlines():
+        r = json.loads(line)
+        reps.setdefault(r["id"], []).append(
+            (r["theta_hash"], json.dumps(r["values"], sort_keys=True))
+        )
+    dup = {k: v for k, v in reps.items() if len(v) > 1}
+    go_n["edited_state_repeats_bitwise"] = all(len({x for x in v}) == 1 for v in dup.values())
     go_n["pass"] = all(go_n.values())
+    go_n["n_edited_state_repeats"] = len(dup)
     go_n["p1_restore_check_not_like_for_like"] = p1["post_restore_bitwise_equal_base"]
     p3_secs = [s["eval_seconds"] for s in states.values()]
     t_state = max(p1["panel_seconds"][1], float(np.median(p3_secs)))
-    # all-in seconds per visit (eval + edit apply/restore + tap), from the P3 phase wall less load, the two base
-    # passes and the objective-major field pass
-    p3_led = [r for r in ledger if r["phase"] == "P3"][-1]
-    p3_field_s = json.loads((run / "p3_field.json").read_text())["seconds"]
-    t_visit = (
-        p3_led["wall_seconds"] - p1["load_seconds"] - 2 * base["seconds"] - p3_field_s
-    ) / len(states)
+    # all-in seconds per visit (eval + edit apply/restore + tap): mean interval between consecutive P3 state log
+    # lines (agent-tmux log timestamps), passed with --visit-seconds; otherwise a conservative bound from the P3
+    # phase wall (which also contains direction construction)
+    if args.visit_seconds:
+        t_visit = args.visit_seconds
+    else:
+        p3_led = [r for r in ledger if r["phase"] == "P3"][-1]
+        p3_field_s = json.loads((run / "p3_field.json").read_text())["seconds"]
+        t_visit = (
+            p3_led["wall_seconds"] - p1["load_seconds"] - 2 * base["seconds"] - p3_field_s
+        ) / len(states)
     go_c = {
         "p1_warm_panel_seconds": p1["panel_seconds"][1],
         "p3_median_state_seconds": float(np.median(p3_secs)),

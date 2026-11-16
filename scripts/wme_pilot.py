@@ -798,7 +798,12 @@ def p4(run_dir):
                 sess.restore()
                 D = {n: E[n] - prev_E[n] if n in prev_E else E[n] for n in E}
                 og = oracle[key]
-                g_h = {n: og.gradient(obj, n) for n in grads0}  # CPU; moved per tensor below
+                # every support tensor the oracle collected (the next step may touch another one); CPU
+                g_h = {
+                    n: og.gradient(obj, n)
+                    for n in grads0
+                    if og.coverage[obj].get(n, {}).get("gradient")
+                }
                 og.drop_cache()
                 static_now = summarise(contract_on(grads0, facs, field, obj, E), obj)["F"]
                 static_prev = (
