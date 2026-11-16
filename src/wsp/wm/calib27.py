@@ -22,7 +22,11 @@ GO_C_SECONDS = 240.0  # D8: lean panel <= 4 min per state
 # Attempt 1 (allocator 70 GB) read 72.73 GB on nvidia-smi: ~2.7 GB of device memory is outside the allocator.
 NON_ALLOCATOR_ALLOWANCE_BYTES = 3_500_000_000
 ALLOCATOR_BYTES = 68_000_000_000
-FIELD_TOKEN_LADDER = (1024, 768, 512)  # per field item; step down only on an allocator OOM, never past 512
+FIELD_TOKEN_LADDER = (
+    1024,
+    768,
+    512,
+)  # per field item; step down only on an allocator OOM, never past 512
 
 
 def next_field_cap(cap):
@@ -77,14 +81,19 @@ def bank_hours(visits, t_ll, n_gen, t_gen, t_features, t_train=0.0):
     return (visits * t_ll + n_gen * t_gen + t_features + t_train) / 3600
 
 
-def dp_projection(visits, t_state, setup_s, load_s, t_group, n_groups, prices):
+def dp_projection(visits, t_state, setup_s, load_s, t_group, n_groups, prices, n_gen=0, t_gen=0.0):
     """L1: one model per GPU, states (and field groups) as queue items, no communication; ``prices`` maps the GPU
-    count k to the instance's USD per hour. Wall = setup + load + ceil(visits/k) t_state + ceil(groups/k) t_group.
+    count k to the instance's USD per hour. Wall = setup + load + ceil(visits/k) t_state + ceil(n_gen/k) t_gen
+    + ceil(groups/k) t_group (the D8 bank terms, each spread over k GPUs).
     """
     out = {}
     for k, usd_h in sorted(prices.items()):
         wall = (
-            setup_s + load_s + math.ceil(visits / k) * t_state + math.ceil(n_groups / k) * t_group
+            setup_s
+            + load_s
+            + math.ceil(visits / k) * t_state
+            + math.ceil(n_gen / k) * t_gen
+            + math.ceil(n_groups / k) * t_group
         ) / 3600
         out[k] = {
             "wall_hours": wall,

@@ -130,3 +130,20 @@ def test_support_groups_split_the_same_four_layers():
     assert all(".24." in m or ".25." in m for m in two[0])
     with pytest.raises(ValueError):
         K.support_groups(rm, 3)
+
+
+def test_dp_projection_includes_generation_like_the_bank_formula():
+    p = K.dp_projection(
+        visits=960,
+        t_state=16.5,
+        setup_s=0,
+        load_s=0,
+        t_group=290,
+        n_groups=16,
+        prices={1: 4.89, 8: 36.72},
+        n_gen=96,
+        t_gen=121.9,
+    )
+    h = K.bank_hours(960, 16.5, 96, 121.9, 16 * 290)
+    assert p[1]["wall_hours"] == pytest.approx(h)
+    assert p[8]["wall_hours"] == pytest.approx((120 * 16.5 + 12 * 121.9 + 2 * 290) / 3600)
