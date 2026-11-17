@@ -32,8 +32,8 @@ SALT = "wme-c1-panel-20261117"
 SPLITS = ("test", "dev", "validation", "construction")  # assignment order
 
 
-def _rank(h: str) -> str:
-    return hashlib.sha256(f"{SALT}:{h}".encode()).hexdigest()
+def _rank(h: str, salt: str = SALT) -> str:
+    return hashlib.sha256(f"{salt}:{h}".encode()).hexdigest()
 
 
 def grouped_pool(pools: dict, group_text=X.group_text) -> dict:
@@ -51,8 +51,9 @@ def grouped_pool(pools: dict, group_text=X.group_text) -> dict:
 
 
 def build_c1_panel(
-    pools: dict, sizes: dict, out_dir, exposures: dict, group_text=X.group_text
+    pools: dict, sizes: dict, out_dir, exposures: dict, group_text=X.group_text, salt: str = SALT
 ) -> dict:
+    """``salt`` ranks groups into splits; the 27B panel (``wm.sep27``) passes its own fresh salt."""
     out = Path(out_dir)
     if out.exists():
         raise FileExistsError(f"{out} exists; panels are frozen once built")
@@ -73,7 +74,7 @@ def build_c1_panel(
         exclusion[obj] = dict(
             rep, groups_available=len(by_group), duplicates_dropped=len(kept) - len(by_group)
         )
-        final[obj] = sorted(by_group.values(), key=lambda r: _rank(r["group"]))
+        final[obj] = sorted(by_group.values(), key=lambda r: _rank(r["group"], salt))
     splits = {s: {} for s in SPLITS}
     for obj, rows in final.items():
         need = sum(sizes[obj][s] for s in SPLITS)
@@ -95,7 +96,7 @@ def build_c1_panel(
     if not X.audit_clean(audit):
         raise AssertionError("a written split intersects a registered exposure")
     manifest = {
-        "salt": SALT,
+        "salt": salt,
         "sizes": sizes,
         "split_roles": {s: list(r) for s, r in X.SPLIT_ROLES.items()},
         "separation": X.SEPARATION,

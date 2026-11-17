@@ -1,0 +1,177 @@
+{
+ "calls": [
+  {
+   "failure": null,
+   "input_tokens": 558,
+   "model": "claude-haiku-5-5",
+   "output_tokens": 9,
+   "provider": "claude",
+   "refused": false,
+   "role": "probe",
+   "seconds": 2.0123934745788574,
+   "total": 567,
+   "truncated": false,
+   "usage_source": "provider"
+  },
+  {
+   "failure": null,
+   "input_tokens": 1812,
+   "model": "claude-haiku-5-5",
+   "output_tokens": 656,
+   "provider": "claude",
+   "refused": false,
+   "role": "reader",
+   "seconds": 4.804856538772583,
+   "total": 2468,
+   "truncated": false,
+   "usage_source": "provider"
+  },
+  {
+   "failure": null,
+   "input_tokens": 1728,
+   "model": "claude-haiku-5-5",
+   "output_tokens": 399,
+   "provider": "claude",
+   "refused": false,
+   "role": "thinker",
+   "seconds": 7.424116611480713,
+   "total": 2127,
+   "truncated": false,
+   "usage_source": "provider"
+  },
+  {
+   "failure": null,
+   "input_tokens": 1699,
+   "model": "claude-haiku-5-5",
+   "output_tokens": 601,
+   "provider": "claude",
+   "refused": false,
+   "role": "worker",
+   "seconds": 8.723418712615967,
+   "total": 2300,
+   "truncated": false,
+   "usage_source": "provider"
+  },
+  {
+   "failure": null,
+   "input_tokens": 1774,
+   "model": "claude-haiku-5-5",
+   "output_tokens": 433,
+   "provider": "claude",
+   "refused": false,
+   "role": "verifier",
+   "seconds": 4.826046466827393,
+   "total": 2207,
+   "truncated": false,
+   "usage_source": "provider"
+  },
+  {
+   "failure": null,
+   "input_tokens": 1825,
+   "model": "claude-haiku-5-5",
+   "output_tokens": 516,
+   "provider": "claude",
+   "refused": false,
+   "role": "worker",
+   "seconds": 3.879467725753784,
+   "total": 2341,
+   "truncated": false,
+   "usage_source": "provider"
+  }
+ ],
+ "cap": 20000,
+ "code_sha256": {
+  "scripts/wme_arms_smoke.py": "ad745975f028ebfe403ac7aa240e5359212990eb4567e6039eae730a0d23126b",
+  "src/wsp/wm/arms/llm.py": "8f7a62b2aa7024018941b10dbbdd8e05afe59d68028acd85730209804ff92b29",
+  "src/wsp/wm/arms/readers.py": "500b17dd68247c75ce8d619ba59f1dd1f50256490d39168d9bed07d17442d4a2"
+ },
+ "ledger": {
+  "by_role": {
+   "probe": {
+    "calls": 1,
+    "providers": [
+     "claude:claude-haiku-5-5"
+    ],
+    "tokens": 567
+   },
+   "reader": {
+    "calls": 1,
+    "providers": [
+     "claude:claude-haiku-5-5"
+    ],
+    "tokens": 2468
+   },
+   "thinker": {
+    "calls": 1,
+    "providers": [
+     "claude:claude-haiku-5-5"
+    ],
+    "tokens": 2127
+   },
+   "verifier": {
+    "calls": 1,
+    "providers": [
+     "claude:claude-haiku-5-5"
+    ],
+    "tokens": 2207
+   },
+   "worker": {
+    "calls": 2,
+    "providers": [
+     "claude:claude-haiku-5-5"
+    ],
+    "tokens": 4641
+   }
+  },
+  "calls": 6,
+  "cap": 20000,
+  "estimated_usage_calls": 0,
+  "failures": {},
+  "refusals": 0,
+  "spent": 12010
+ },
+ "model": "claude-haiku-5-5",
+ "not_called": {
+  "codex": "declared per-call overhead 17,772 tokens (local session log): no room under a 20k total",
+  "gemini": "OpenCode agent overhead unmeasured: the 20k cap could not be guaranteed"
+ },
+ "provider": "claude",
+ "status": "ENGINEERING SMOKE - synthetic pool and results; no model, item, bank or outcome",
+ "steps": {
+  "fugu_team": {
+   "calls_by_role": [
+    "thinker",
+    "worker",
+    "verifier",
+    "worker"
+   ],
+   "failure": null,
+   "ranking": [
+    "c00",
+    "c03",
+    "c05",
+    "c01",
+    "c04",
+    "c02"
+   ]
+  },
+  "probe": {
+   "failure": null,
+   "measured_overhead_tokens": 543,
+   "text_ok": true
+  },
+  "wsr_reader": {
+   "failure": null,
+   "ranking": [
+    "c00",
+    "c05",
+    "c04",
+    "c01",
+    "c03",
+    "c02"
+   ]
+  }
+ },
+ "total_tokens": 12010,
+ "within_cap": true
+}
