@@ -320,7 +320,24 @@ def h_report(hdir: Path) -> dict:
         "vs_H2_nonthinking": {p: matched(h1t[: len(h2m)], h2m[: len(h1t)], p) for p in G.PRIMARY},
         "vs_length_matched": {p: matched(h1m[: len(lm)], lm[: len(h1m)], p) for p in G.PRIMARY},
     }
-    fam["H1"]["pass"] = fam["H1"]["gate"]["pass"]
+    # D4: "H1 fails if its gain comes only from responses that exceed the token budget." Operationalised after
+    # amendment 1 (written once interim H1 results were visible; both readings are reported): a qualifying H1
+    # candidate keeps its qualification only if its paired gain on the items untruncated in both base and edit
+    # also has LCB > 0; H1 passes only if a primary benchmark still has >= 2 such candidates.
+    within = {}
+    for p in G.PRIMARY:
+        within[p] = sum(
+            1
+            for r in fam["H1"]["candidates"]
+            if r["qualifies"][p]
+            and (r["primary"][p].get("untruncated_both") or {}).get("lcb", -1) > 0
+        )
+    fam["H1"]["overbudget_rule"] = {
+        "qualifying_with_untruncated_gain_lcb_gt_0": within,
+        "gain_only_from_over_budget_responses": not any(v >= 2 for v in within.values()),
+    }
+    fam["H1"]["pass_gate_only"] = fam["H1"]["gate"]["pass"]
+    fam["H1"]["pass"] = bool(fam["H1"]["gate"]["pass"] and any(v >= 2 for v in within.values()))
     fam["H2"]["pass"] = fam["H2"]["gate"]["pass"]
     fam["H4"]["pass"] = fam["H4"]["gate"]["pass"]
     out["families"] = fam
@@ -573,7 +590,12 @@ def render_md(rep: dict, notes: str = "") -> str:
             if t == "H3":
                 extra = f"beats both controls: {_f(f.get('beats_both_controls'))}"
             if t == "H1":
-                extra = "gain only from over-budget responses impossible (B = max tokens); lengths below"
+                ob = f.get("overbudget_rule", {})
+                extra = (
+                    f"D4 over-budget rule: qualifiers with gain LCB > 0 on items untruncated in both "
+                    f"{ob.get('qualifying_with_untruncated_gain_lcb_gt_0')}; gain only from over-budget responses: "
+                    f"{_f(ob.get('gain_only_from_over_budget_responses'))}"
+                )
             w(
                 f"| {t} | {g['n_evaluated']} | {g['counts']['mmlupro_gen']} | {g['counts']['supergpqa_gen']} | {g['expected_null_qualifiers_per_benchmark']} | {extra} | **{'PASS' if f['pass'] else 'FAIL'}** |"
             )
