@@ -1,0 +1,628 @@
+{
+ "arms": {
+  "access_vocabulary": {
+   "bank": "trajectory-bank states and labels (training exposure only, never read during search)",
+   "construction_e2": "construction/e2 shard items (training data or contrast estimation, \u03b80)",
+   "dev_evaluation": "real evaluation of the arm's own candidates on the full dev panel through the shared BudgetLedger (one bundle each; screens fractional; repeats 0)",
+   "episode_library": "the episode's declared library subsample (primitive identities and recipes, \u03b80)",
+   "episode_pool": "the seeded per-round candidate pool drawn from the episode subsample (\u00a76.5.3 pool mode)",
+   "field": "the shared base field at \u03b80 (support K-FAC + vocabulary rows), R0",
+   "own_dev_results": "this arm's own dev results in this episode, from its own store (no other arm's)",
+   "r0_candidate_description": "per-candidate R0 description: recipe, layers, doses, relative norms and the shared field's a/q features at \u03b80 (unsupported tensors marked, never 0)",
+   "statnn_predictor": "the matched static comparator trained on the bank (R0 inference only)",
+   "steer_contrasts_all_layers": "construction/e2 contrast directions at every layer (\u03b80)",
+   "support_penalty": "the shared support penalty pen(c) (function of the candidate alone)",
+   "wm_predictor": "the WM-E ensemble trained on the bank (R0 inference only)"
+  },
+  "arm_seed_rule": "int(sha256('wme-e2-arm:{arm}:{episode_seed}')[:8], 16)",
+  "bon_steering": {
+   "contrasts": [
+    "syc",
+    "gsm",
+    "mathcomp",
+    "trivia"
+   ],
+   "draw": "B distinct actions uniformly without replacement, seed arm_seed('bon_steering', e)",
+   "layers": "all (9B: 0-31)",
+   "shifts_residual_norm_fraction": [
+    -0.0625,
+    -0.03125,
+    0.03125,
+    0.0625
+   ],
+   "space_size_9b": 512
+  },
+  "exposure": {
+   "bank_trained": "trained on the trajectory bank (validation items, bank states)",
+   "construction_e2_sft": "trained directly on construction/e2 items (the library's shard)",
+   "field_only": "no training; reads the \u03b80 field only",
+   "none": "no training; direct evaluation only",
+   "zero_shot": "zero-shot: no bank, no predictor, no construction data, no fine-tuning"
+  },
+  "forbidden": {
+   "generation_during_search": "generation is never part of search for any arm (\u00a77.1)",
+   "other_arm_results": "another arm's evaluations or store (\u00a76.5.4)",
+   "r2_tap_observations": "no R2 observation enters prediction during search (\u00a76.5.4)",
+   "sealed_test": "sealed test or generation items before every winner is frozen",
+   "validation_labels": "bank/validation labels are training data, not search feedback"
+  },
+  "llm": {
+   "env_allow": [
+    "HOME",
+    "PATH",
+    "LANG",
+    "LC_ALL",
+    "USER",
+    "LOGNAME",
+    "TERM",
+    "TMPDIR",
+    "CLAUDE_CONFIG_DIR",
+    "CODEX_HOME",
+    "XDG_CONFIG_HOME",
+    "XDG_DATA_HOME",
+    "XDG_CACHE_HOME"
+   ],
+   "providers": {
+    "claude": {
+     "class": "ClaudeCLI",
+     "declared_overhead_tokens": 0
+    },
+    "codex": {
+     "class": "CodexCLI",
+     "declared_overhead_tokens": 17772
+    },
+    "gemini": {
+     "class": "OpenCodeCLI",
+     "declared_overhead_tokens": 12000
+    },
+    "mock": {
+     "class": "MockClient",
+     "declared_overhead_tokens": 0
+    }
+   },
+   "smoke_record": {
+    "path": "docs/reviews/wme/wme-arms-smoke-2026-11-17.json",
+    "sha256": "4b0ae60dcdfefd2afe5789254b91812a29abed37630f12bbe08ce4dd652d2e1d"
+   },
+   "truncation_rule": "length stop or output tokens >= limit is a failure",
+   "truncation_stops": [
+    "length",
+    "max_output_tokens",
+    "max_tokens"
+   ]
+  },
+  "lora_sft": {
+   "alpha": 16,
+   "batch_rows": 8,
+   "checkpoint_rule": "n = min(B, 32) evenly spaced steps, last = final step; each one dev bundle",
+   "data": "construction/e2 shard only",
+   "lr": 0.0001,
+   "max_checkpoints": 32,
+   "rank": 8,
+   "seed_rule": "arm_seed('lora_sft', episode_seed)",
+   "targets": "every residual writer (wm.lora.writer_targets)",
+   "task_vector_lambda": 1.0,
+   "warmup": 10
+  },
+  "pool": {
+   "failure_rule": "A truncated, over-token-cap, unparseable or invalid ranking is a failed round: no candidate from it is evaluated, the round's b bundles are forfeited (closed at used + forfeited = B), and there is no retry, repair or fallback ranking.",
+   "max_len": 4,
+   "mutation_fraction": 0.5,
+   "n_incumbents": 4,
+   "pool_size": "[SIM: pool_size]",
+   "round_seed_rule": "int(sha256('wme-e2-pool:{episode_seed}:{round}')[:8], 16)",
+   "rounds": 4
+  },
+  "readers": {
+   "fugu_roles_access": {
+    "thinker": [
+     "episode_pool",
+     "own_dev_results"
+    ],
+    "verifier": [
+     "episode_pool",
+     "own_dev_results",
+     "worker_ranking"
+    ],
+    "worker": [
+     "episode_pool",
+     "thinker_output",
+     "verifier_critique"
+    ]
+   },
+   "max_revisions": 1,
+   "output_contract": "exactly one JSON object (one surrounding code fence allowed); ranking = >= b distinct pool ids; nothing repaired, defaulted or guessed",
+   "primary_contrast": {
+    "gsm8k_gold_lp": "gsm",
+    "mathcomp_gold_lp": "mathcomp",
+    "sycophancy_real": "syc"
+   },
+   "prompt_sha256": {
+    "task_text": "83f80fd69cea176899d76d4f4c1cdea39be3957972a04c733cfced441642a3b5",
+    "thinker_system": "a1dbaa2f0eb7b5afcde7c1fcf18a73edf5cb0ca49f4a9099de925559ce7c36ed",
+    "verifier_system": "4bce54ea6cc9ecb3df840b877f67bb2c277d13a4ce4f3d6f056d2059a2df94e6",
+    "worker_system": "21e8cc3f5d573f2c9b7eef987003c1474fb9a737005ca76ab877ce141659f14b",
+    "wsr_system": "4daa906a99288179404b949748f7fc2178a60cdc553d81a33ea82840f75aff92"
+   },
+   "reader_max_output_tokens": 1024,
+   "role_max_output_tokens": {
+    "thinker": 512,
+    "verifier": 512,
+    "worker": 1024
+   },
+   "scripted_rule": "Frozen rule, in key order: (1) shares a primitive with an own guard-breaching evaluation -> last; (2) more\n    primitives shared with the best own feasible incumbent first; (3) more steps whose contrast matches the primary\n    objective first; (4) larger orientation-signed field a on the primary first (unsupported last); (5) smaller\n    summed relative norm; (6) id.",
+   "token_cap": "[SIM: reader_token_cap]"
+  },
+  "registry": {
+   "bon_steering": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "steer_contrasts_all_layers"
+    ],
+    "action_space": "steer_all_layers",
+    "charged": [
+     "eval_gpu_s"
+    ],
+    "exposure": "none",
+    "exposure_text": "no training; direct evaluation only",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "C",
+    "llm": false,
+    "mode": "direct",
+    "notes": "single rank-one steering actions at all layers from the construction/e2 contrasts; B direct evaluations",
+    "role": "secondary",
+    "token_cap": null,
+    "uses_bank": false
+   },
+   "direct_bon_two_stage": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "episode_library",
+     "episode_pool"
+    ],
+    "action_space": "episode_subsample",
+    "charged": [
+     "eval_gpu_s"
+    ],
+    "exposure": "none",
+    "exposure_text": "no training; direct evaluation only",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "D",
+    "llm": false,
+    "mode": "direct",
+    "notes": "no predictor; stage-1 screen on the first 4 dev groups of every objective (fractional)",
+    "role": "secondary",
+    "token_cap": null,
+    "uses_bank": false
+   },
+   "field_ranked": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "episode_library",
+     "field",
+     "support_penalty"
+    ],
+    "action_space": "episode_subsample",
+    "charged": [
+     "eval_gpu_s",
+     "planner_cpu_s"
+    ],
+    "exposure": "field_only",
+    "exposure_text": "no training; reads the \u03b80 field only",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "R",
+    "llm": false,
+    "mode": "planner",
+    "notes": "FieldOnly scorer, LCB-free search mode",
+    "role": "secondary",
+    "token_cap": null,
+    "uses_bank": false
+   },
+   "fugu_team": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "episode_library",
+     "episode_pool",
+     "r0_candidate_description"
+    ],
+    "action_space": "episode_subsample",
+    "charged": [
+     "eval_gpu_s"
+    ],
+    "exposure": "zero_shot",
+    "exposure_text": "zero-shot: no bank, no predictor, no construction data, no fine-tuning",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "R",
+    "llm": true,
+    "mode": "pool",
+    "notes": "Thinker/Worker/Verifier with access lists (TRINITY/Conductor-style fixed workflow). Not Fugu and not a replication of Fugu: no learned orchestration, no evolution, zero-shot roles.",
+    "role": "secondary",
+    "roles": {
+     "thinker": [
+      "episode_pool",
+      "own_dev_results"
+     ],
+     "verifier": [
+      "episode_pool",
+      "own_dev_results",
+      "worker_ranking"
+     ],
+     "worker": [
+      "episode_pool",
+      "thinker_output",
+      "verifier_critique"
+     ]
+    },
+    "token_cap": "[SIM: reader_token_cap]",
+    "uses_bank": false
+   },
+   "lora_sft": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "construction_e2"
+    ],
+    "action_space": "lora_sft_construction_e2",
+    "charged": [
+     "eval_gpu_s",
+     "train_gpu_s"
+    ],
+    "exposure": "construction_e2_sft",
+    "exposure_text": "trained directly on construction/e2 items (the library's shard)",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "C",
+    "llm": false,
+    "mode": "checkpoints",
+    "notes": "rank-8 LoRA on construction/e2; <= min(B, 32) checkpoint evaluations (1 bundle each); training compute charged",
+    "role": "secondary",
+    "token_cap": null,
+    "uses_bank": false
+   },
+   "random": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "episode_library",
+     "episode_pool"
+    ],
+    "action_space": "episode_subsample",
+    "charged": [
+     "eval_gpu_s"
+    ],
+    "exposure": "none",
+    "exposure_text": "no training; direct evaluation only",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "R",
+    "llm": false,
+    "mode": "pool",
+    "notes": "",
+    "role": "secondary",
+    "token_cap": null,
+    "uses_bank": false
+   },
+   "scripted_reader": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "episode_library",
+     "episode_pool",
+     "r0_candidate_description"
+    ],
+    "action_space": "episode_subsample",
+    "charged": [
+     "eval_gpu_s"
+    ],
+    "exposure": "zero_shot",
+    "exposure_text": "zero-shot: no bank, no predictor, no construction data, no fine-tuning",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "R",
+    "llm": false,
+    "mode": "pool",
+    "notes": "deterministic rule over the same R0 description as the LLM readers",
+    "role": "secondary",
+    "token_cap": null,
+    "uses_bank": false
+   },
+   "statnn": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "episode_library",
+     "field",
+     "support_penalty",
+     "statnn_predictor",
+     "bank"
+    ],
+    "action_space": "episode_subsample",
+    "charged": [
+     "eval_gpu_s",
+     "planner_cpu_s",
+     "predictor_cpu_s"
+    ],
+    "exposure": "bank_trained",
+    "exposure_text": "trained on the trajectory bank (validation items, bank states)",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "P",
+    "llm": false,
+    "mode": "planner",
+    "notes": "",
+    "role": "primary",
+    "token_cap": null,
+    "uses_bank": true
+   },
+   "wm_e": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "episode_library",
+     "field",
+     "support_penalty",
+     "wm_predictor",
+     "bank"
+    ],
+    "action_space": "episode_subsample",
+    "charged": [
+     "eval_gpu_s",
+     "planner_cpu_s",
+     "predictor_cpu_s"
+    ],
+    "exposure": "bank_trained",
+    "exposure_text": "trained on the trajectory bank (validation items, bank states)",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "P",
+    "llm": false,
+    "mode": "planner",
+    "notes": "",
+    "role": "primary",
+    "token_cap": null,
+    "uses_bank": true
+   },
+   "wm_greedy": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "episode_library",
+     "field",
+     "support_penalty",
+     "wm_predictor",
+     "bank"
+    ],
+    "action_space": "episode_subsample",
+    "charged": [
+     "eval_gpu_s",
+     "planner_cpu_s",
+     "predictor_cpu_s"
+    ],
+    "exposure": "bank_trained",
+    "exposure_text": "trained on the trajectory bank (validation items, bank states)",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "R",
+    "llm": false,
+    "mode": "greedy",
+    "notes": "WM-E scorer, one-step greedy extension of own incumbents: isolates planning",
+    "role": "secondary",
+    "token_cap": null,
+    "uses_bank": true
+   },
+   "wsr_reader": {
+    "access": [
+     "dev_evaluation",
+     "own_dev_results",
+     "episode_library",
+     "episode_pool",
+     "r0_candidate_description"
+    ],
+    "action_space": "episode_subsample",
+    "charged": [
+     "eval_gpu_s"
+    ],
+    "exposure": "zero_shot",
+    "exposure_text": "zero-shot: no bank, no predictor, no construction data, no fine-tuning",
+    "field_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+    "group": "R",
+    "llm": true,
+    "mode": "pool",
+    "notes": "single zero-shot LLM reader; truncation counts as failure",
+    "role": "secondary",
+    "token_cap": "[SIM: reader_token_cap]",
+    "uses_bank": false
+   }
+  },
+  "store": "one store per (arm, episode); owner-only reads (spec.StoreRegistry)",
+  "winner_rule": "spec.select_winner: guard bounds mean + z se <= limit (z = 1.96, one-sided 0.025) and dev LCB > 0; max LCB; ties smaller total relative Frobenius norm, then earlier",
+  "wm_greedy": {
+   "extension": "one more distinct primitive at the end; length <= 4; base always extended",
+   "n_incumbents": 4,
+   "scorer": "wm.planner.Planner.score (shared planner scorer; mode lcb or ranks)"
+  },
+  "z_guard": 1.959963984540054
+ },
+ "c27": {
+  "bank_namespace": "wme-bank27",
+  "calibration_report_sha256": "9725e40b9c616b2a4166ea3ef3df28c4ce98b9aaa80c4e4b03f0671ebfa54904",
+  "calibration_timing_edits": [
+   {
+    "family": "noise",
+    "id": "calib27:noise",
+    "model": "Qwen/Qwen3.8-27B",
+    "rho": 0.05,
+    "seed": 7,
+    "source": "docs/reviews/wme/wme-27b-calib-2026-11-16.json",
+    "tensor": [
+     28,
+     "down"
+    ]
+   },
+   {
+    "factor": 1.25,
+    "family": "scale",
+    "id": "calib27:scale",
+    "model": "Qwen/Qwen3.8-27B",
+    "source": "docs/reviews/wme/wme-27b-calib-2026-11-16.json",
+    "tensor": [
+     27,
+     "o"
+    ]
+   }
+  ],
+  "experiment": "27B independent-data replication (fresh panel wme-c27, fresh roots wme-bank27); never pooled with 9B",
+  "field": {
+   "go_m": {
+    "cap_gb": 72.0,
+    "config": "two 2-layer groups, items <= 768 tokens",
+    "peak_gb": 68.81
+   },
+   "layers": [
+    24,
+    25,
+    26,
+    27
+   ],
+   "layers_per_group": 2,
+   "max_item_tokens": 768
+  },
+  "launch_gate_amendment_fields": [
+   "pilot_selection",
+   "final_panel",
+   "model_metric_rules",
+   "sim_ns",
+   "cost_caps",
+   "differences"
+  ],
+  "model": {
+   "repo": "Qwen/Qwen3.8-27B",
+   "revision": "37561816e66b5b9153b1b64c10968c18c1e6f4a0"
+  },
+  "primary_selection": {
+   "inputs": {
+    "model": "Qwen/Qwen3.8-27B",
+    "panel": "wme-c27",
+    "split": "dev"
+   },
+   "min_qualifying": 2,
+   "relation": {
+    "none": "no 27B enhancement objective passed its own dev gate",
+    "replication": "independent-data replication of the 9B primary objective",
+    "separate": "separate experiment on a new selected objective (not a replication of the 9B enhancement claim)"
+   },
+   "tie_order": [
+    "mathcomp_gold_lp",
+    "gsm8k_gold_lp",
+    "sycophancy_real"
+   ]
+  },
+  "required_exposures": {
+   "calib27-20261116": {
+    "manifest": "data/wme/panels/wme-v0-p1/manifest.json",
+    "manifest_sha256": "b84de99f8e45d4bffce14cd6afbd9ebbba115bc2163e366f55aad9ca48fa5de4",
+    "note": "27B engineering calibration (scripts/wme_27b_calib.py) read pilot-1 construction (field), validation (timing) and dev (field-length scan) items",
+    "splits": [
+     "construction",
+     "validation",
+     "dev"
+    ]
+   },
+   "wme-c1": {
+    "manifest": "data/wme/panels/wme-c1/manifest.json",
+    "manifest_sha256": null,
+    "note": "every wme-c1 group, sealed test included (manifest sealed_hashes; sealed files never opened)",
+    "splits": "all"
+   },
+   "wme-p2": {
+    "manifest": "data/wme/panels/wme-p2/manifest.json",
+    "manifest_sha256": "013d461f22695acec54ecf2b0ed133740df8ed7550bed3ae30188061e51d5434",
+    "splits": "all"
+   },
+   "wme-v0-p1": {
+    "manifest": "data/wme/panels/wme-v0-p1/manifest.json",
+    "manifest_sha256": "b84de99f8e45d4bffce14cd6afbd9ebbba115bc2163e366f55aad9ca48fa5de4",
+    "splits": "all"
+   }
+  },
+  "root_joins": {
+   "J3_max_cos": 0.5,
+   "J4_row_jaccard": 0.5,
+   "rule": "J2 and J5 across models; J3 and J4 within the same model; namespace wme-bank27"
+  },
+  "salt": "wme-c27",
+  "tuning_guard": {
+   "design_elements": [
+    "objectives",
+    "families",
+    "nominals",
+    "margins",
+    "B",
+    "N",
+    "arms"
+   ],
+   "forbidden_read_roots": [
+    "data/wme/panels/wme-c1/sealed_test",
+    "data/wme/panels/wme-c1/sealed_gen",
+    "data/wme/runs/wme-c1",
+    "data/wme/winners/wme-c1"
+   ],
+   "labels": {
+    "independent": "independent of 9B confirmatory results",
+    "informed": "informed by 9B confirmatory results"
+   },
+   "source_kinds": {
+    "forbidden": [
+     "9b_test_outcome",
+     "9b_generation_outcome",
+     "9b_winner_test_score",
+     "9b_sealed_read"
+    ],
+    "independent": [
+     "27b_pilot_dev",
+     "27b_calibration_engineering",
+     "outcome_blind",
+     "registration"
+    ],
+    "informed": [
+     "9b_confirmatory_analysis"
+    ]
+   }
+  }
+ },
+ "field": {
+  "shared_spec": "wme-grouped-field-v1 (support writers, K-FAC, wm.collect) + wme-vocab-row-field-v1 (vocabulary rows: lm_head projected_kfac, embed_tokens row_diagonal); unsupported tensors are marked, never 0; one field, shared by every arm",
+  "vocab_rows": {
+   "approximations": {
+    "embed": {
+     "name": "row_diagonal",
+     "rule": "D[r, i] = sum_{p: t_p = r} delta_{p,i}^2 / n over every input position (n = valid positions); q = 1/2 sum D * d^2; one-hot K-FAC A is exactly diagonal, hidden coordinates diagonal by declaration"
+    },
+    "lm_head": {
+     "name": "projected_kfac",
+     "rule": "A = E[x x^T] (hidden^2); G_R = E[delta_R delta_R^T] over the declared rows R (|R|^2), the R-block of K-FAC G; q = 1/2 tr(G_R D_R A D_R^T); exact K-FAC for edits supported on R; raw factors"
+    }
+   },
+   "declared_rows_rule": "lm_head: union of the row sets of the lm_head row_scale bank roots; embed: union of the row sets of the embed_tokens row_scale bank roots plus the inert dead rows (controls.INERT_SPEC['dead_rows']); recorded as the DeclaredRows identity hash at bank build",
+   "max_declared_rows": 4096,
+   "planned_rows": {
+    "embed": 352,
+    "lm_head": 256
+   },
+   "schema": "wme-vocab-row-field-v1",
+   "tied_embeddings": "refused",
+   "unsupported": "signed = q = None, supported = False, with a reason; never 0"
+  }
+ },
+ "generated_from_commit": "00de50b6c4b45b840950efd1e292d0bc3c66caf3",
+ "source_sha256": {
+  "src/wsp/wm/arms/__init__.py": "de2988ab163a8ddd82563fadfe58a9fa2c2170316c5fe364d783f6ed22d6463d",
+  "src/wsp/wm/arms/direct.py": "e26ad5db10f5a55abf353690b6ae1215943d56855efc695a5df76f945993b6d5",
+  "src/wsp/wm/arms/llm.py": "8f7a62b2aa7024018941b10dbbdd8e05afe59d68028acd85730209804ff92b29",
+  "src/wsp/wm/arms/pool.py": "a3bfb1eb41fd2d64c7b1395b111617d28b654df80992191fea57d6c542090328",
+  "src/wsp/wm/arms/readers.py": "87ea56dfd252e97e1c6275e5df1e04179058a8d922ee16662801c45fb85b568d",
+  "src/wsp/wm/arms/spec.py": "e1bb8e3a661f3a8d3e56201788d284f72a3c11a1ada92d11b1ce1caea59942f1",
+  "src/wsp/wm/panel_c1.py": "44c3050ecb8f1bb4e9dc1ae671631df68f30adc4341ec53d2074aa1fc27c56ae",
+  "src/wsp/wm/sep27.py": "06ba3f54de01472787da1a3a598c9c1bc9aa1f6bf071b8e1b2e6562a7dc46926",
+  "src/wsp/wm/vocabfield.py": "bf6f13742061232cf952de9c6cb38a5d7a32afe1a4b9a41349cb9b8f3316acd6"
+ },
+ "status": "DRAFT track-B fragment for PREREG_WME v1 - not frozen; no outcome exists"
+}
