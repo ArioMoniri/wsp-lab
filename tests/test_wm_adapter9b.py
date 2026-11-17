@@ -220,3 +220,42 @@ def test_run_episode_v1_schedule_budget_and_winner(world, fitted):
         E.validate_candidate(c, ep)
     assert res["winner"]["candidate"] == () or res["winner"]["candidate"] in fw.calls
     led.verify_parity()
+
+
+def test_cp_arm_scores_candidates_through_R(world):
+    from wsp.wm import powersim_refit as R1
+    from wsp.wm import wmcp as CP
+
+    rng = np.random.default_rng(0)
+    dirs = [u / np.linalg.norm(u) for u in rng.standard_normal((world.J, world.J))]
+    st = []
+    for i, u in enumerate(dirs[:6]):
+        for s in (1.0, -1.0):
+            t = R1.traj_vec(world, [(u, 0.25 * s), (u, 0.25 * s)])
+            st += [CP.state_from_traj(world, t, h, comp=i) for h in (1, 2)]
+    spec = CP.spec_synthetic(world)
+    cp = CP.CanonicalPathWM(
+        CP.CPConfig(epochs=10), spec, world.base_observation().payload["obs"], n_seeds=2
+    )
+    cp.fit(st, [s["comp"] for s in st])
+    acts = [f"d{j}" for j in range(world.J)]
+    doses = {a: [-1.0, -0.5, 0.5, 1.0] for a in acts}
+
+    def r_of(steps):  # R0: cumulative edit from the recipes, then R(E)
+        E = (
+            sum(dose * world.step * dirs[int(a[1:])] for a, dose in steps)
+            if steps
+            else np.zeros(world.J)
+        )
+        return CP.r_synthetic(world, E)
+
+    arm = AD.CPArm(cp, r_of, acts, doses, primary=0, orient=1.0, q_hat=1.0, guards=[(1, 1.0, 0.5)])
+    out = arm.predict([0, 2], np.array([[0.5, -1.0], [1.0, 1.0]]), None)
+    assert out["value"].shape == (2,) and np.all(out["sigma"] > 0)
+    # path consistency: the same cumulative edit in another order scores identically
+    a = arm.predict([0, 2], np.array([[0.5, -1.0]]), None)["value"]
+    b = arm.predict([2, 0], np.array([[-1.0, 0.5]]), None)["value"]
+    np.testing.assert_allclose(a, b, atol=1e-12)
+    assert arm.draw(np.random.default_rng(0)) in (0, 1)
+    arm.update(None, None)
+    assert arm.n_updates_ignored == 1

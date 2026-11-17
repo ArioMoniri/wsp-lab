@@ -134,3 +134,29 @@ def clopper_pearson(k: int, n: int, level=0.95) -> tuple[float, float]:
 def one_sided_lower(k: int, n: int, level=0.95) -> float:
     """One-sided exact lower bound of a binomial proportion (the "power lower bound" of §8)."""
     return 0.0 if k == 0 else float(stats.beta.ppf(1 - level, k, n - k + 1))
+
+
+def tango_lower(b: int, c: int, n: int, alpha: float = 0.025) -> float:
+    """Tango (1998) score interval for a difference of paired proportions (b = discordant pairs favouring the edit,
+    c = favouring base, n pairs); the one-sided lower limit at ``alpha`` (PREREG_WME v1 §6.7.4)."""
+    from scipy import optimize
+
+    z = stats.norm.ppf(1 - alpha)
+    d_hat = (b - c) / n
+
+    def score(d):
+        A = 2 * n
+        B = -b - c + (2 * n - b + c) * d
+        C = -c * d * (1 - d)
+        q21 = (math.sqrt(max(B * B - 4 * A * C, 0.0)) - B) / (2 * A)
+        var = n * (2 * q21 + d * (1 - d))
+        if var <= 0:
+            return 0.0 if b - c - n * d == 0 else math.copysign(float("inf"), b - c - n * d)
+        return (b - c - n * d) / math.sqrt(var)
+
+    f = lambda d: score(d) - z
+    lo = -1 + 1e-9
+    if f(lo) < 0:
+        return -1.0
+    hi = d_hat + 1e-12 if f(d_hat) < 0 else min(1 - 1e-9, d_hat + 1e-6)
+    return float(optimize.brentq(f, lo, hi))

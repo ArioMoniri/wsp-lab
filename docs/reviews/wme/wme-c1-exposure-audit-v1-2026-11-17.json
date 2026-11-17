@@ -1,0 +1,127 @@
+{
+ "exposures": {
+  "calib27-20261116": {
+   "construction": 384,
+   "dev": 384,
+   "validation": 384
+  },
+  "wme-p2": {
+   "construction": 3392,
+   "dev": 704,
+   "test": 624,
+   "validation": 512
+  },
+  "wme-p2-smoke": {
+   "construction": 3392
+  },
+  "wme-v0-p1": {
+   "construction": 384,
+   "dev": 384,
+   "test": 288,
+   "validation": 384
+  }
+ },
+ "join_seconds": 169.9,
+ "label": "wme-c1 exposure re-audit under the frozen v1 near-duplicate policy (hash-only)",
+ "n_groups": 120518,
+ "n_texts": 193523,
+ "objectives": {
+  "gsm8k_gold_lp": {
+   "available_digest": "9813a1046d27f905ec5d7d7f940d8cd525752d1c35c191ff34ff583dc815e4c6",
+   "available_groups": 7238,
+   "excluded_groups": 1552,
+   "pool_groups": 8790,
+   "pool_items": 8792
+  },
+  "mathcomp_gold_lp": {
+   "available_digest": "5f1215173a0b6f6d07dca9888a146556a610b2bdbe4562d9923bd4d66e6433c5",
+   "available_groups": 4788,
+   "excluded_groups": 1339,
+   "pool_groups": 6127,
+   "pool_items": 6269
+  },
+  "mmlupro_gold_lp": {
+   "available_digest": "c5eecf1a38ae6685f4a424c3c9c2d3a80f185b3fee70e1e03fb5809b449703e3",
+   "available_groups": 5494,
+   "excluded_groups": 474,
+   "pool_groups": 5985,
+   "pool_items": 6051
+  },
+  "refusal_margin_harmful": {
+   "available_digest": "ce45f258fe688d63dd784dbf56048b19fcf292b2dfa345f721505a2bcfabb4c9",
+   "available_groups": 325,
+   "excluded_groups": 379,
+   "pool_groups": 704,
+   "pool_items": 1240
+  },
+  "refusal_margin_harmless": {
+   "available_digest": "9d2c459e5b08bb27ab52e2df0d5215ed5d33cc3201fd473ec8b22e7ea8566b83",
+   "available_groups": 5792,
+   "excluded_groups": 473,
+   "pool_groups": 6265,
+   "pool_items": 6265
+  },
+  "sycophancy_gap": {
+   "available_digest": "f87f295ae24d92fccd46f8aaf98c6eb4cba20f677be5ffcdfafeb9c2f3b47672",
+   "available_groups": 5378,
+   "excluded_groups": 491,
+   "pool_groups": 5977,
+   "pool_items": 6051
+  },
+  "sycophancy_real": {
+   "available_digest": "d4f8fe0ca827cf7c3e65649754e5901888bbb105e2f114bd8fd4a3193e07bd3a",
+   "available_groups": 467,
+   "excluded_groups": 1342,
+   "pool_groups": 1810,
+   "pool_items": 1813
+  },
+  "triviaqa_gen": {
+   "available_digest": "bcb741e050bd13a79f7640e39b41fa7661aa21311ed0ad8e8931f3c30b39ee9c",
+   "available_groups": 84299,
+   "excluded_groups": 1001,
+   "pool_groups": 85300,
+   "pool_items": 156328
+  },
+  "wikitext_nll": {
+   "available_digest": "0488368d40f3b03cd32722f6c3c3c4c90b04a1a91b854608b962482b047bfd83",
+   "available_groups": 303,
+   "excluded_groups": 411,
+   "pool_groups": 714,
+   "pool_items": 714
+  }
+ },
+ "peak_rss_mb": 4278.1,
+ "policy": {
+  "exact_join": "sha256 of wm.panel.normalise",
+  "id": "wme-c1-group-v1",
+  "jaccard": 0.8,
+  "k": 5,
+  "method": "exact prefix-filtered set-similarity join",
+  "normalise": "wm.panel.normalise + punctuation stripped"
+ },
+ "post_exclusion_exposed_hashes": 0,
+ "seconds": 180.9,
+ "sycophancy_real_triviaqa_derived_groups": 256,
+ "triviaqa_incorrect_rule": "(frozen rule, fixed before any count).** TriviaQA has no curated wrong answer. Questions are\n  ranked by sha256(\"wme-v2-triviaqa:<question_id>\"); a question's incorrect answer is the ``value`` of the next\n  question in that cyclic order with the same answer ``type`` whose SQuAD-normalised value is not one of the\n  question's normalised aliases. A question with no such partner is dropped. This differs from sycophancy-eval's\n  curated plausible wrong answers and is disclosed.",
+ "triviaqa_pin": {
+  "config": "rc.nocontext",
+  "files": {
+   "train": {
+    "local": "rc.nocontext-train.parquet",
+    "path": "rc.nocontext/train-00000-of-00001.parquet",
+    "rows": 138384,
+    "sha256": "455223e4a3ba6977611914d96b1b812fe19a6cd4ea3aef4df381f093b297670c"
+   },
+   "validation": {
+    "local": "rc.nocontext-validation.parquet",
+    "path": "rc.nocontext/validation-00000-of-00001.parquet",
+    "rows": 17944,
+    "sha256": "48a5005c0eb4f8a4ae5b9868644297fd5bf1e694aeb3dc9c8ab958cac0d5b201"
+   }
+  },
+  "repo": "mandarjoshi/trivia_qa",
+  "revision": "0f7faf33a3908546c6fd5b73a660e0f8ff173c2f"
+ },
+ "triviaqa_pool_file_sha256": "34dabf2be51b2bd32df2bb41f8d9a217214804d71ff9adc0005f6f8f89e93f7e",
+ "triviaqa_pool_size": 84299
+}

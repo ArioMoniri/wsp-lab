@@ -314,7 +314,7 @@ class ArmContext:
             self.arm, repr(candidate), float(obs.get(seconds_key, 0.0)), kind=kind, theta_hash=th
         )
         rec = dict(obs, candidate=candidate, theta_hash=th, order=len(store["records"]), kind=kind)
-        rec["lcb"] = rec["gain"] - Z_GUARD * rec["se"]
+        rec["lcb"] = gain_lcb(rec)
         rec["guard_ok"] = guard_ok(rec)
         store["records"].append(rec)
         store["by_theta"][th] = rec
@@ -324,15 +324,63 @@ class ArmContext:
         self.ledger.close(self.arm, reason)
 
 
+N_BOOT_T = 9999
+BOOT_SEED = 20261117
+
+
+def guard_bounds_from_items(
+    objective: str, guard_items: dict, groups, n_boot: int = N_BOOT_T, seed: int = BOOT_SEED
+) -> dict:
+    """Registered guard bounds (PREREG_WME v1 §5.1): item-group cluster bootstrap-t, one-sided 0.025, per guard and
+    scale (``guard_items[g][scale]`` = paired per-item changes on that scale)."""
+    from wsp.wm import e2 as E2
+
+    out = {}
+    for j, g in enumerate(E2.GUARD_SETS[objective]):
+        out[g] = {}
+        for k, (sc, _side, _lim) in enumerate(E2.MARGINS[g]):
+            b = E2.bootstrap_t_bounds(
+                guard_items[g][sc], groups, n_boot=n_boot, seed=seed + 31 * j + k
+            )
+            out[g][sc] = {"lcb": b["lcb"], "ucb": b["ucb"]}
+    return out
+
+
 def guard_ok(rec, z: float = Z_GUARD) -> bool:
+    """Registered path (RULING-wme-v2 A5): bootstrap-t bounds from per-item changes (``guard_items``), or bounds
+    already computed that way (``guard_bounds``), checked on both scales by ``wm.e2.guards_pass``. Records without
+    item data (synthetic test fixtures only) fall back to mean + z se."""
+    from wsp.wm import e2 as E2
+
+    if "guard_items" in rec:
+        rec["guard_bounds"] = guard_bounds_from_items(
+            rec["objective"], rec["guard_items"], rec["item_groups"]
+        )
+        rec["guard_method"] = "item-group bootstrap-t (R = 9,999)"
+    if "guard_bounds" in rec:
+        return bool(E2.guards_pass(rec["objective"], rec["guard_bounds"])["pass"])
     return all(m + z * s <= lim for m, s, lim in rec["guards"])
+
+
+def gain_lcb(rec, z: float = Z_GUARD) -> float:
+    """Dev one-sided 0.025 LCB of the oriented gain: item-group bootstrap-t from ``gain_items`` (registered);
+    mean - z se only for synthetic records without item data."""
+    if "gain_items" in rec:
+        from wsp.wm import e2 as E2
+
+        return float(
+            E2.bootstrap_t_bounds(
+                rec["gain_items"], rec["item_groups"], n_boot=N_BOOT_T, seed=BOOT_SEED
+            )["lcb"]
+        )
+    return rec["gain"] - z * rec["se"]
 
 
 def select_winner(records, z: float = Z_GUARD):
     """§6.5.5: feasible (every guard bound, LCB > 0) maximum LCB; ties smaller rel. norm, then earlier; else None."""
     feas = []
     for r in records:
-        lcb = r["gain"] - z * r["se"]
+        lcb = r["lcb"] if "lcb" in r else gain_lcb(r, z)
         if guard_ok(r, z) and lcb > 0 and math.isfinite(lcb):
             feas.append((-lcb, r.get("rel_norm", math.inf), r["order"], r))
     if not feas:
