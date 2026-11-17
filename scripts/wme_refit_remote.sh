@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Runs ON a Lambda CPU-rich instance (no API key there). Full-refit validation of the selected simulation cell
 # (scripts/wme_powersim_refit.py), CPU only, one single-threaded replicate per worker. Progress: out/progress and
-# logs; final state: STATUS.   nohup bash scripts/wme_refit_remote.sh <sha> '<cell json>' <reps_null> <reps_alt> <gamma> &
+# logs; final state: STATUS.   nohup bash scripts/wme_refit_remote.sh <sha> <r_f> <n_blk> <n_cal> <reps_null> <reps_alt> <gamma> &
 set -uo pipefail
 cd "$(dirname "$0")/.."
-SHA="${1:-unknown}"; CELL="$2"; RN="$3"; RA="$4"; G="$5"
+SHA="${1:-unknown}"; RF="$2"; NB="$3"; NC="$4"; RN="$5"; RA="$6"; G="$7"
+CELL="{\"r_f\": $RF, \"n_blk\": $NB, \"n_cal\": $NC}"
 mkdir -p logs out
 stamp() { echo "[$(date -u +%H:%M:%S)] $*"; }
 fail() { echo "FAILED:$1" > STATUS; stamp "FAILED at $1"; exit 1; }

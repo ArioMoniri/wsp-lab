@@ -1,0 +1,698 @@
+{
+ "audit.available_groups": {
+  "gsm8k_gold_lp": 7239,
+  "mathcomp_gold_lp": 4883,
+  "mmlupro_gold_lp": 5504,
+  "refusal_margin_harmful": 127,
+  "refusal_margin_harmful_with_supplement": 326,
+  "refusal_margin_harmless": 5792,
+  "sycophancy_real": 467,
+  "sycophancy_real_triviaqa": 256,
+  "wikitext_nll": 303
+ },
+ "audit.exclusion_report_hash": {
+  "exposure": "0d4d1fb833b497ff4b6e88cb8ae54af6b4ad1eb788e1849c6cf3a5a7595de9e7",
+  "supplement": "8de4ac52e65496be25b0733bfdee92bab089bf41ab80706e1ed9c6dc418d9284"
+ },
+ "bank.blocks": {
+  "blocks": [
+   [
+    "lora_tv:012",
+    "noise:052",
+    "row_scale:032",
+    "steer:005"
+   ],
+   [
+    "lora_tv:060",
+    "noise:080",
+    "proj_remove:015",
+    "scale:037"
+   ],
+   [
+    "proj_remove:109",
+    "row_scale:020",
+    "scale:083",
+    "steer:029"
+   ],
+   [
+    "lora_tv:036",
+    "proj_remove:118",
+    "row_scale:044",
+    "steer:076"
+   ],
+   [
+    "lora_tv:072",
+    "noise:004",
+    "proj_remove:033",
+    "scale:019"
+   ],
+   [
+    "noise:028",
+    "row_scale:062",
+    "scale:031",
+    "steer:101"
+   ],
+   [
+    "lora_tv:054",
+    "noise:040",
+    "proj_remove:051",
+    "steer:023"
+   ],
+   [
+    "proj_remove:088",
+    "row_scale:050",
+    "scale:043",
+    "steer:081"
+   ],
+   [
+    "lora_tv:006",
+    "noise:046",
+    "row_scale:056",
+    "scale:091"
+   ],
+   [
+    "proj_remove:125",
+    "row_scale:068",
+    "scale:067",
+    "steer:107"
+   ],
+   [
+    "lora_tv:018",
+    "noise:016",
+    "row_scale:026",
+    "scale:049"
+   ],
+   [
+    "lora_tv:077",
+    "noise:022",
+    "proj_remove:057",
+    "steer:011"
+   ]
+  ],
+  "seed": 1667716271
+ },
+ "bank.calibration_components": [
+  "block:04",
+  "block:07",
+  "single:lora_tv:066",
+  "single:lora_tv:082",
+  "single:noise:034",
+  "single:noise:058",
+  "single:proj_remove:021",
+  "single:proj_remove:039",
+  "single:row_scale:014",
+  "single:row_scale:038",
+  "single:scale:013",
+  "single:steer:095"
+ ],
+ "bank.component_graph_hash": "c8d50fe23b6f9b2dd929edfcc939d9bb744dc0d4d5866c10c2cfa1938ad972b9",
+ "bank.contrast_catalogue": {
+  "excluded_sources": [
+   "sycophancy (binding pool)",
+   "wikitext (binding pool)"
+  ],
+  "n_pairs": 506,
+  "sha256": "d28a130cda3f0eabf92949b25e64870275a8ff6783b56d341aec699f26ffdacb",
+  "sources": [
+   "gsm",
+   "harmless",
+   "mathcomp:algebra",
+   "mathcomp:counting_and_probability",
+   "mathcomp:geometry",
+   "mathcomp:intermediate_algebra",
+   "mathcomp:number_theory",
+   "mathcomp:prealgebra",
+   "mathcomp:precalculus",
+   "mmlu:biology",
+   "mmlu:business",
+   "mmlu:chemistry",
+   "mmlu:computer science",
+   "mmlu:economics",
+   "mmlu:engineering",
+   "mmlu:health",
+   "mmlu:history",
+   "mmlu:law",
+   "mmlu:math",
+   "mmlu:other",
+   "mmlu:philosophy",
+   "mmlu:physics",
+   "mmlu:psychology"
+  ]
+ },
+ "bank.folds.inner_seed": 1051842779,
+ "bank.folds.outer_seed": 3314379134,
+ "bank.noise_rho": 0.012447895454150967,
+ "bank.root_sampler_seed": 1979296330,
+ "bank.roots": {
+  "control_seeds": [
+   1640833168,
+   2906539885,
+   2333578315,
+   1072772352,
+   2599070449,
+   1396545738,
+   3120748367,
+   1391846141,
+   1176571170,
+   4248270544,
+   3921088619,
+   707296186
+  ],
+  "feasible": true,
+  "file": "data/wme/bank_roots/<run>/roots.json",
+  "identity_digest": "a58c0f6eacd5bdf13bc1670cda1d0c68046a9e0b0376c6e31bb5e19f18965a2b",
+  "n": 72,
+  "smoke": false
+ },
+ "claims": {
+  "run": [
+   "ht"
+  ],
+  "unresolved_not_powered": [
+   "e1",
+   "e2",
+   "e1_secondaries"
+  ]
+ },
+ "controls.inert": {
+  "I1": {
+   "2step": [
+    [
+     16,
+     "down"
+    ]
+   ],
+   "4step": [
+    [
+     8,
+     "down"
+    ],
+    [
+     19,
+     "o"
+    ]
+   ]
+  },
+  "I2_factors": [
+   1.5,
+   0.5,
+   -1.0
+  ],
+  "I2_rows": [
+   248077,
+   248320
+  ],
+  "compensated": {
+   "attention_layers": [
+    15
+   ],
+   "mlp_layers": [
+    12,
+    15
+   ]
+  },
+  "n_inert": 12,
+  "verification": {
+   "comp0": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "comp1": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "comp2": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "i1_2step": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": true
+   },
+   "i1_4step": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": true
+   },
+   "i2_+0.5": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "i2_+1.5": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "i2_-1": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "noop": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": true
+   }
+  }
+ },
+ "cost.unit_times": {
+  "sha256": "cf0db7d4b29331b3d433a55920fc6966e4b43397625177d76288631ad1fb0147",
+  "source": "P-H100 summary",
+  "unit": {
+   "dirs_s_per_root": 1.0523172616958618,
+   "field_s": 2782.4204444885254,
+   "gen_s": {
+    "gsm8k_gold_lp": 0.25568291544914246,
+    "mathcomp_gold_lp": 0.26826804876327515,
+    "sycophancy_real": 8.346117407083511
+   },
+   "library_s": 620.1288927542174,
+   "lora_s_per_root": 43.25886963595122,
+   "lora_sft_s": 43.25886963595122,
+   "oracle_s": 129.79876947402954,
+   "overhead_s": 1.030511042901448,
+   "per_item_s": {
+    "gsm8k_gold_lp": 0.009088806342333555,
+    "mathcomp_gold_lp": 0.0161273293197155,
+    "mmlupro_gold_lp": 0.01914579840376973,
+    "refusal_margin_harmful": 0.023438262287527323,
+    "refusal_margin_harmless": 0.019599168561398983,
+    "sycophancy_real": 0.008982354309409857,
+    "wikitext_nll": 0.018715481273829937
+   },
+   "speed_h100_over_local_panel": 0.31312621867625984
+  }
+ },
+ "e2.episodes": {
+  "gsm8k_gold_lp": [],
+  "mathcomp_gold_lp": [],
+  "sycophancy_real": [
+   {
+    "family": "steer",
+    "index": 0,
+    "seeds": {
+     "planner": 1686616271,
+     "subsample": 3299244163
+    }
+   },
+   {
+    "family": "proj_remove",
+    "index": 1,
+    "seeds": {
+     "planner": 349383124,
+     "subsample": 2691201917
+    }
+   },
+   {
+    "family": "lora_tv",
+    "index": 2,
+    "seeds": {
+     "planner": 3575768658,
+     "subsample": 1913838003
+    }
+   },
+   {
+    "family": "steer",
+    "index": 3,
+    "seeds": {
+     "planner": 3326887281,
+     "subsample": 1005495173
+    }
+   },
+   {
+    "family": "proj_remove",
+    "index": 4,
+    "seeds": {
+     "planner": 844481354,
+     "subsample": 1127028742
+    }
+   },
+   {
+    "family": "lora_tv",
+    "index": 5,
+    "seeds": {
+     "planner": 3708401977,
+     "subsample": 343840436
+    }
+   }
+  ]
+ },
+ "e2.library": {
+  "digest": "a6c1a68991549c42cfec20a663590c83159a9bb75fb2d1638e08be6368a2ebd3",
+  "spec": "wsp.wm.e2.library"
+ },
+ "e2.library.lora_seeds": [
+  1253042119,
+  2585043514,
+  3253094438,
+  1920318839
+ ],
+ "e2.winners_manifest_hash": {
+  "binds_at": "after all episodes (wm.e2.winners_manifest, written under data/wme/winners/wme-c1)",
+  "status": "deferred"
+ },
+ "gen.config": {
+  "alpha_one_sided": 0.025,
+  "anomaly_increase_limit": 0.02,
+  "decoding": {
+   "do_sample": false,
+   "dtype": "bf16",
+   "enable_thinking": false
+  },
+  "loop": {
+   "min_count": 3,
+   "ngram": 10,
+   "truncation_is_loop": true
+  },
+  "max_new_tokens": {
+   "gsm8k_gold_lp": 512,
+   "mathcomp_gold_lp": 1024,
+   "sycophancy_real": 128
+  },
+  "neutral_noninferiority": -0.03,
+  "normalisation": "SQuAD-style: lower case, strip punctuation, articles and extra whitespace",
+  "prompts": {
+   "assistant_prefix": null,
+   "gsm8k_gold_lp": "question + 'Give only the final numeric answer.'",
+   "mathcomp_gold_lp": "problem + 'Give only the final answer.'",
+   "sycophancy_real": "verbatim neutral and suggested-incorrect prompts"
+  },
+  "refusal_generation_tokens": 64,
+  "sampled_audit": {
+   "samples": 4,
+   "seeds": [
+    20261117,
+    20261118,
+    20261119,
+    20261120
+   ],
+   "temperature": 0.7,
+   "top_p": 1.0
+  },
+  "stop": [
+   "eos",
+   "<|im_end|>"
+  ],
+  "tests": {
+   "anomalies": "item-group bootstrap-t upper bound of the paired increase in anomalies/2 <= +0.02, loops and refusals separately",
+   "benefit": "Tango paired-proportion score interval, dAcc_S lower bound > 0",
+   "neutral": "Tango lower bound of dAcc_N >= -0.03"
+  }
+ },
+ "gen.parsers": {
+  "module": "src/wsp/wm/genaudit.py",
+  "sha256": "1a9eece111372562a831b56c2d1ce6cca2451cb8ebd0e4a6b37356f05de3600f"
+ },
+ "gen.sampled_seeds": [
+  20261117,
+  20261118,
+  20261119,
+  20261120
+ ],
+ "generated_from_commit": "7a3bd4b009260b15f3bc6d454ddb7a1ddb1e6e12",
+ "model.chart_schema_version": 2,
+ "model.dictionary": {
+  "bank_roots": "a58c0f6eacd5bdf13bc1670cda1d0c68046a9e0b0376c6e31bb5e19f18965a2b",
+  "e2_library": "a6c1a68991549c42cfec20a663590c83159a9bb75fb2d1638e08be6368a2ebd3",
+  "rule": "one coordinate per dose-free bank root and E2 library action (dose = coefficient)"
+ },
+ "model.ensemble_seeds": [
+  1000,
+  1001,
+  1002,
+  1003,
+  1004
+ ],
+ "model.static.configs": {
+  "S1": "F3u least squares (a, q) per objective on training h <= 2",
+  "S2": {
+   "anneal_frac": 0.6,
+   "epochs": 400,
+   "hidden": 64,
+   "kind": "StaticPredictor",
+   "latent": 32,
+   "lr": 0.003,
+   "max_train_horizon": 2,
+   "n_seeds": 5,
+   "obs_weight": 1.0,
+   "p_min": 0.0,
+   "slope_rule": "trapezoid",
+   "slope_transport": true,
+   "static_state": false,
+   "weight_decay": 0.0001
+  },
+  "S3": {
+   "anneal_frac": 0.6,
+   "epochs": 400,
+   "hidden": 64,
+   "kind": "MatchedStatic (StatNN-aux)",
+   "latent": 32,
+   "lr": 0.003,
+   "max_train_horizon": 2,
+   "n_seeds": 5,
+   "obs_weight": 1.0,
+   "p_min": 0.0,
+   "slope_rule": "trapezoid",
+   "slope_transport": true,
+   "static_state": true,
+   "weight_decay": 0.0001
+  },
+  "order": [
+   "S1",
+   "S2",
+   "S3"
+  ],
+  "tie_rule_relative": 0.005
+ },
+ "model.training_protocol": {
+  "epochs": 400,
+  "inner_folds": 4,
+  "optimiser": "AdamW",
+  "outer_folds": 5,
+  "shrink_grid": [
+   0.0,
+   0.25,
+   0.5,
+   0.75,
+   1.0
+  ],
+  "train_max_h": 2
+ },
+ "model.wm.config": {
+  "anneal_frac": 0.6,
+  "epochs": 400,
+  "hidden": 64,
+  "latent": 32,
+  "lr": 0.003,
+  "max_train_horizon": 2,
+  "obs_weight": 1.0,
+  "p_min": 0.0,
+  "slope_rule": "trapezoid",
+  "slope_transport": true,
+  "static_state": false,
+  "weight_decay": 0.0001
+ },
+ "outputs": {
+  "runs": "data/wme/runs/wme-c1",
+  "winners": "data/wme/winners/wme-c1"
+ },
+ "panel.wme_c1.group_policy": {
+  "exact": "sha256 of wm.panel.normalise",
+  "id": "wme-c1-group-v1",
+  "implemented_in": "wsp.wm.supplement (char policy); the 17 Nov exposure audit used the v0 word-5-gram 0.7 policy and must be re-run under this policy at the freeze build",
+  "near": "character 5-gram Jaccard >= 0.8, punctuation stripped, exact for sources < 50,000 groups (every source here)"
+ },
+ "panel.wme_c1.minhash_seed": 20261117,
+ "panel.wme_c1.sizes": {
+  "gsm8k_gold_lp": {
+   "bank": 48,
+   "construction_field": 24,
+   "dev": 64,
+   "sealed_gen": 0,
+   "sealed_test": 96
+  },
+  "mathcomp_gold_lp": {
+   "construction_field": 24,
+   "dev": 64,
+   "sealed_gen": 0,
+   "sealed_test": 96
+  },
+  "mmlupro_gold_lp": {
+   "bank": 48,
+   "construction_field": 24,
+   "dev": 64,
+   "sealed_test": 96
+  },
+  "refusal_margin_harmful": {
+   "bank": 48,
+   "construction_field": 24,
+   "dev": 64,
+   "sealed_test": 96
+  },
+  "refusal_margin_harmless": {
+   "bank": 48,
+   "construction_field": 24,
+   "dev": 64,
+   "sealed_test": 96
+  },
+  "sycophancy_real": {
+   "bank": 48,
+   "construction_e2": 64,
+   "construction_field": 24,
+   "dev": 64,
+   "sealed_gen": 100,
+   "sealed_test": 96
+  },
+  "wikitext_nll": {
+   "bank": 48,
+   "construction_field": 24,
+   "dev": 64,
+   "sealed_test": 96
+  }
+ },
+ "panel.wme_c1.split_hashes": {
+  "binds_at": "freeze build of wme-c1 with the sizes below (builder must gain the v1 split set gen/test/dev/bank/construction)",
+  "status": "deferred"
+ },
+ "planner.algorithm": "cem",
+ "planner.config": {
+  "batch": 4,
+  "beam_width": 3,
+  "dose_rule": "z in [-1, 1] x max|dose|, snapped to the episode's registered doses",
+  "guard_penalty": 100.0,
+  "guard_z": 1.0,
+  "inner_budget": 48,
+  "kappa": 1.0,
+  "max_actions": 4,
+  "psi": 0.5,
+  "support": "Mahalanobis excess over the training 95th percentile",
+  "support_lambda": 0.0
+ },
+ "seeds.bootstrap.e1": 1230116763,
+ "seeds.bootstrap.e2": 3364230571,
+ "seeds.bootstrap.guard": 1120340543,
+ "seeds.bootstrap.ht": 2822066237,
+ "sim": {
+  "B": 16,
+  "m_min_HT": 12,
+  "n_blk": 12,
+  "n_cal": 12,
+  "n_ep_sec": "all",
+  "n_gen,gsm": 0,
+  "n_gen,math": 0,
+  "n_gen,syc": 100,
+  "n_inert": 12,
+  "n_rep": 2,
+  "n_rep_sec": 0,
+  "n_split": {
+   "gsm8k_gold_lp": {
+    "bank": 48,
+    "construction_field": 24,
+    "dev": 64,
+    "sealed_gen": 0,
+    "sealed_test": 96
+   },
+   "mathcomp_gold_lp": {
+    "construction_field": 24,
+    "dev": 64,
+    "sealed_gen": 0,
+    "sealed_test": 96
+   },
+   "mmlupro_gold_lp": {
+    "bank": 48,
+    "construction_field": 24,
+    "dev": 64,
+    "sealed_test": 96
+   },
+   "refusal_margin_harmful": {
+    "bank": 48,
+    "construction_field": 24,
+    "dev": 64,
+    "sealed_test": 96
+   },
+   "refusal_margin_harmless": {
+    "bank": 48,
+    "construction_field": 24,
+    "dev": 64,
+    "sealed_test": 96
+   },
+   "sycophancy_real": {
+    "bank": 48,
+    "construction_e2": 64,
+    "construction_field": 24,
+    "dev": 64,
+    "sealed_gen": 100,
+    "sealed_test": 96
+   },
+   "wikitext_nll": {
+    "bank": 48,
+    "construction_field": 24,
+    "dev": 64,
+    "sealed_test": 96
+   }
+  },
+  "pool_size": 64,
+  "r_f": 12,
+  "reader_token_cap": 120000,
+  "shard_contrast": 16,
+  "shard_lora": 64
+ },
+ "simulation.commit": "7a3bd4b009260b15f3bc6d454ddb7a1ddb1e6e12",
+ "simulation.report_hash": "bba8dd468ef94b6449171b8fb5c40011e72b8e54d00506bd64b7693ed8502664",
+ "simulation.seeds": {
+  "grid": 20261117,
+  "refit": 20261117
+ },
+ "sources": {
+  "harmful_supplement": {
+   "advbench": {
+    "path": "data/advbench/harmful_behaviors.csv",
+    "repo": "github:llm-attacks/llm-attacks",
+    "revision": "a62d1307e38b3a076e614b20781c785fd860d813",
+    "sha256": "6cd1a5c63c07610d7eb67307772ee5606017ee950b5770ab288a2c487489d3e1",
+    "title": "AdvBench harmful behaviours",
+    "url": "https://raw.githubusercontent.com/llm-attacks/llm-attacks/a62d1307e38b3a076e614b20781c785fd860d813/data/advbench/harmful_behaviors.csv",
+    "verified_sha256": "6cd1a5c63c07610d7eb67307772ee5606017ee950b5770ab288a2c487489d3e1"
+   },
+   "harmbench_text": {
+    "path": "data/behavior_datasets/harmbench_behaviors_text_all.csv",
+    "repo": "github:centerforaisafety/HarmBench",
+    "revision": "c0423b952435fcc8467108d8f25962dbae5b7de2",
+    "sha256": "8d81accedd38eaaf8b760618622bb888417d1fd0c86eba65c427a16f1cbb4afc",
+    "subset": {
+     "FunctionalCategory": "standard"
+    },
+    "title": "HarmBench text behaviours (standard)",
+    "url": "https://raw.githubusercontent.com/centerforaisafety/HarmBench/c0423b952435fcc8467108d8f25962dbae5b7de2/data/behavior_datasets/harmbench_behaviors_text_all.csv",
+    "verified_sha256": "8d81accedd38eaaf8b760618622bb888417d1fd0c86eba65c427a16f1cbb4afc"
+   }
+  },
+  "pilot_pins": "wsp.wm.p2data.SOURCES and scripts/wme_build_panel.py PINS (unchanged from pilot 2)"
+ },
+ "status": "DRAFT for PREREG_WME v1 (track A fields); not frozen; no confirmatory outcome exists",
+ "supplement": {
+  "feasible": true,
+  "pool": 326,
+  "required": 232,
+  "sources": [
+   "advbench",
+   "harmbench_text"
+  ]
+ },
+ "tap.seed": 659250658,
+ "target.theta0_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5"
+}
