@@ -117,7 +117,11 @@ class Ctx:
     def over_cap(self, name=None):
         self.flush()
         name = name or self.cur
-        return self.stage_s.get(name, 0.0) / 3600 >= CAPS_H[name]
+        if self.stage_s.get(name, 0.0) / 3600 >= CAPS_H[name]:
+            return True
+        # amendment 1: the H instance is limited to 17.7 instance-h; <out>/deadline holds the UTC epoch to stop by
+        dl = self.out / "deadline"
+        return dl.exists() and time.time() >= float(dl.read_text().strip())
 
 
 # ------------------------------------------------------------------ engines
@@ -984,19 +988,18 @@ def run(out: Path):
     metas = {arm: rl_arm(ctx, arm) for arm in ("true", "random", "format")}
     ns = metas["true"]["steps"]
     if ns:
-        eval_family(
-            ctx,
-            "H3",
-            [
-                {"kind": "svf", "arm": "true", "step": s, "alpha": a}
-                for s in ckpts(ns, 16 // (8 if SMOKE else 1))
-                for a in (0.5, 1.0)
-            ],
-            "H3",
-        )
+        true = [
+            {"kind": "svf", "arm": "true", "step": s, "alpha": a}
+            for s in ckpts(ns, 16 // (8 if SMOKE else 1))
+            for a in (0.5, 1.0)
+        ]
+        matched = [c for c in true if c["alpha"] == 1.0][
+            1::2
+        ]  # the control fractions (amendment 1 order)
+        ok = eval_family(ctx, "H3", matched, "H3")
         for arm in ("random", "format"):
-            if metas[arm]["steps"]:
-                eval_family(
+            if ok and metas[arm]["steps"]:
+                ok = eval_family(
                     ctx,
                     "H3",
                     [
@@ -1005,9 +1008,15 @@ def run(out: Path):
                     ],
                     f"H3_ctrl_{arm}",
                 )
+        if ok:
+            eval_family(ctx, "H3", [c for c in true if c not in matched], "H3")
         secondaries(ctx, "H3", "H3")
     # H4: refusal-orthogonal projections of the 8 best H1/H2/H3 candidates and of pilot-type gold-answer LoRAs
     ctx.stage("H4")
+    if ctx.over_cap("H4"):
+        ctx.log("H instance limit reached before H4; H4 not run")
+        ctx.flush()
+        return "DONE_PARTIAL"
     refusal_dirs(ctx)
     pt = pilot_type_rows(ctx)
     pmeta = {run: train_lora(ctx, run, rows, "H4") for run, rows in pt.items()}

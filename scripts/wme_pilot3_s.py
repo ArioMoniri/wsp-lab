@@ -85,7 +85,7 @@ CONTRASTS = {
     "mmluharmless": ("mmlu", "harmless"),
     "gsmwiki": ("gsm", "wiki"),
 }
-CAP_GPU_H = 4.5
+CAP_GPU_H = 6.0  # RULING-wme-pilot3 amendment 1 (was 4.5)
 EST = {"jet_forwards": 4.0, "hvp_gradpasses": 3.0}
 SMOKE = False
 

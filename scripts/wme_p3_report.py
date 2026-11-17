@@ -228,6 +228,21 @@ def h_report(hdir: Path) -> dict:
             )
             prim[p]["trunc_rate"] = float(np.mean([x["trunc"] for x in rec["panels"][p]]))
             prim[p]["base_trunc_rate"] = float(np.mean([x["trunc"] for x in base["panels"][p]]))
+            prim[p]["trunc_rate_change"] = prim[p]["trunc_rate"] - prim[p]["base_trunc_rate"]
+            keep = [
+                i
+                for i, (xb, xc) in enumerate(zip(base["panels"][p], rec["panels"][p], strict=True))
+                if not xb["trunc"] and not xc["trunc"]
+            ]
+            if keep:
+                nb = [b[i] for i in keep]
+                nc = [c[i] for i in keep]
+                prim[p]["untruncated_both"] = {
+                    "n": len(keep),
+                    "base_acc": float(np.mean(nb)),
+                    "cand_acc": float(np.mean(nc)),
+                    **{k: v for k, v in G.paired(nb, nc).items() if k in ("mean", "se", "lcb")},
+                }
         gt = G.guard_test(
             [x["refused"] for x in base["panels"]["guard_harmless"]],
             [x["refused"] for x in rec["panels"]["guard_harmless"]],
@@ -524,7 +539,12 @@ def render_md(rep: dict, notes: str = "") -> str:
         w(f"- Guard margins (base bootstrap): {H_['guard_calibration']}.")
         w("")
         w(
-            "| Panel | base (non-thinking, budget B) | thinking ceiling (8192 tokens; never used for selection) | ceiling truncated |"
+            "The thinking-mode run (8,192 new tokens) is **not a valid ceiling at this budget** (amendment 1): a large "
+            "share of its generations is truncated (last column), so it is shown for the record only and is not used."
+        )
+        w("")
+        w(
+            "| Panel | base (non-thinking, budget B) | thinking mode at 8,192 tokens (not a valid ceiling) | thinking truncated |"
         )
         w("|---|---|---|---|")
         for p, v in H_["base"].items():
@@ -567,13 +587,20 @@ def render_md(rep: dict, notes: str = "") -> str:
             w(f"Top {t} candidates by primary LCB:")
             w("")
             w(
-                "| spec | MMLU-Pro Δ (LCB) | SuperGPQA Δ (LCB) | Δ mean length (MMLU-Pro) | over-refusal Δ (UCB) | harmful-compliance Δ (UCB) | guarded | old guard pp UCB | Δproxy MMLU-Pro |"
+                "| spec | MMLU-Pro Δ (LCB) | SuperGPQA Δ (LCB) | MMLU-Pro truncation base→edit | SuperGPQA truncation base→edit "
+                "| MMLU-Pro Δ on items untruncated in both (n; LCB) | SuperGPQA Δ untruncated in both (n; LCB) "
+                "| Δ mean length (MMLU-Pro) | over-refusal Δ (UCB) | harmful-compliance Δ (UCB) | guarded "
+                "| old guard pp UCB | Δproxy MMLU-Pro |"
             )
-            w("|---|---|---|---|---|---|---|---|---|")
+            w("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
             for r in rows:
                 pm, ps, gd = r["primary"]["mmlupro_gen"], r["primary"]["supergpqa_gen"], r["guard"]
+                um, us = pm.get("untruncated_both") or {}, ps.get("untruncated_both") or {}
                 w(
-                    f"| `{json.dumps(r['spec'], sort_keys=True)}` | {_f(pm['mean'])} ({_f(pm['lcb'])}) | {_f(ps['mean'])} ({_f(ps['lcb'])}) | {_f(pm['mean_len_delta'], 1)} | "
+                    f"| `{json.dumps(r['spec'], sort_keys=True)}` | {_f(pm['mean'])} ({_f(pm['lcb'])}) | {_f(ps['mean'])} ({_f(ps['lcb'])}) | "
+                    f"{_f(pm['base_trunc_rate'])}→{_f(pm['trunc_rate'])} | {_f(ps['base_trunc_rate'])}→{_f(ps['trunc_rate'])} | "
+                    f"{_f(um.get('mean'))} ({um.get('n')}; {_f(um.get('lcb'))}) | {_f(us.get('mean'))} ({us.get('n')}; {_f(us.get('lcb'))}) | "
+                    f"{_f(pm['mean_len_delta'], 1)} | "
                     f"{_f(gd['over_refusal_change'])} ({_f(gd['over_refusal_ucb'])}) | {_f(gd['harmful_compliance_change'])} ({_f(gd['harmful_compliance_ucb'])}) | {_f(r['guarded'])} | "
                     f"{_f((r.get('oldguard_pp') or {}).get('ucb'))} | {_f((r.get('dproxy') or {}).get('mmlupro_gen'), 4)} |"
                 )
