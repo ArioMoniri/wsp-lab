@@ -25,11 +25,23 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 
-def _one(args):
-    rep, cell, null, kappa, gamma = args
-    from wsp.wm import powersim_refit as R
+def _mod(version):
+    if version == "v2":
+        from wsp.wm import powersim_refit_v2 as R
+    else:
+        from wsp.wm import powersim_refit as R
+    return R
 
-    r = R.replicate(rep, cell, null, kappa, gamma=gamma)
+
+def _one(args):
+    rep, cell, null, kappa, gamma, version = args
+    R = _mod(version)
+    r = (
+        R.replicate(rep, cell, null, gamma=gamma)
+        if version == "v2"
+        else R.replicate(rep, cell, null, kappa, gamma=gamma)
+    )
+    r["version"] = version
     r["rss_mb"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
     return r
 
@@ -44,9 +56,15 @@ def cmd_run(a):
         for line in res.read_text().splitlines():
             r = json.loads(line)
             done.add((r["rep"], r["null"]))
-    todo = [(i, cell, True, a.kappa, a.gamma) for i in range(a.reps_null) if (i, True) not in done]
+    todo = [
+        (i, cell, True, a.kappa, a.gamma, a.version)
+        for i in range(a.reps_null)
+        if (i, True) not in done
+    ]
     todo += [
-        (i, cell, False, a.kappa, a.gamma) for i in range(a.reps_alt) if (i, False) not in done
+        (i, cell, False, a.kappa, a.gamma, a.version)
+        for i in range(a.reps_alt)
+        if (i, False) not in done
     ]
     todo.sort(key=lambda t: (t[0], t[2]))  # interleave null and alternative
     t0, n = time.time(), 0
@@ -59,6 +77,7 @@ def cmd_run(a):
                 "reps_null": a.reps_null,
                 "reps_alt": a.reps_alt,
                 "procs": a.procs,
+                "version": a.version,
             }
         )
     )
@@ -76,8 +95,7 @@ def cmd_run(a):
 
 
 def cmd_summary(a):
-    from wsp.wm import powersim_refit as R
-
+    R = _mod(a.version)
     rows = [json.loads(x) for x in (Path(a.out) / "results.jsonl").read_text().splitlines()]
     s = R.summarise(rows)
     s["cpu_h"] = sum(r["seconds"] for r in rows) / 3600
@@ -97,6 +115,7 @@ def main():
         "--gamma", type=float, default=0.0, help="alternative path effect (SE units), calibrated"
     )
     ap.add_argument("--procs", type=int, default=6)
+    ap.add_argument("--version", choices=["v1", "v2"], default="v1")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     {"run": cmd_run, "summary": cmd_summary}[a.cmd](a)

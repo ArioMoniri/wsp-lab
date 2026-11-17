@@ -19,6 +19,7 @@ The builder is code only; the panel is built by ``scripts/wme_c1_build_panel.py`
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import os
 import time
@@ -26,6 +27,7 @@ from pathlib import Path
 
 from wsp.wm import exposure as X
 from wsp.wm import panel2 as P2
+from wsp.wm.panel import text_hash
 from wsp.wm.plan import SealedError
 
 SALT = "wme-c1-panel-20261117"
@@ -171,3 +173,122 @@ class SealedTestReader:
             json.dumps({"winners_digest": digest, "sha256": sha, "time": time.time()}, indent=1)
         )
         return [json.loads(line) for line in data.decode().splitlines() if line.strip()]
+
+
+# ------------------------------------------------------------------ v1 builder (RULING-wme-v2 A5)
+
+SPLITS_V1 = ("sealed_gen", "sealed_test", "dev", "bank", "construction")
+_FILES_V1 = {
+    "sealed_gen": "sealed_gen/gen.jsonl",
+    "sealed_test": "sealed_test/test.jsonl",
+    "dev": "open/dev.jsonl",
+    "bank": "open/bank.jsonl",
+    "construction": "open/construction.jsonl",
+}
+
+
+def _text_v1(obj, r, group_text):
+    return r["question"] if obj == "triviaqa_gen" else group_text(obj, r)
+
+
+def build_c1_panel_v1(
+    pools: dict, sizes: dict, out_dir, exposures: dict, group_text=X.group_text, salt: str = SALT
+) -> dict:
+    """PREREG_WME v1 §3.4: groups by the frozen v1 near-duplicate policy computed jointly over every pool
+    (``wm.neardup``); group-level exclusion of every exposed hash; cross-objective groups owned by the first
+    objective in the registered order; per objective, groups ranked by sha256(salt:group) and assigned in the
+    order sealed generation, sealed test, dev, bank, construction (``"rest"`` = every remaining group). Sealed
+    splits go under ``sealed_test/`` and ``sealed_gen/`` (unreachable through ``PlannerItemStore``). Exclusions are
+    never relaxed: a shortfall raises."""
+    from wsp.wm import neardup as ND
+
+    out = Path(out_dir)
+    if out.exists():
+        raise FileExistsError(f"{out} exists; panels are frozen once built")
+    order = [o for o in P2.OBJECTIVES if o in pools] + sorted(
+        o for o in pools if o not in P2.OBJECTIVES
+    )
+    texts, where = {}, {}
+    for obj in order:
+        for i, r in enumerate(pools[obj]):
+            k = f"{obj}\x00{i:07d}"
+            texts[k] = _text_v1(obj, r, group_text)
+            where[k] = (obj, r)
+    rep = ND.groups(texts)
+    exposed = X.all_exposed(exposures)
+    bad = {rep[k] for k in texts if where[k][1]["hash"] in exposed}
+    owner, final, exclusion = {}, {}, {}
+    for obj in order:
+        ks = sorted(k for k in texts if where[k][0] == obj)
+        by = {}
+        for k in sorted(ks, key=lambda k: where[k][1]["hash"]):
+            g = rep[k]
+            if g in bad or owner.setdefault(g, obj) != obj:
+                continue
+            by.setdefault(g, dict(where[k][1], group=text_hash(texts[g])))
+        exclusion[obj] = {
+            "pool_items": len(ks),
+            "excluded_groups": len({rep[k] for k in ks} & bad),
+            "available_groups": len(by),
+        }
+        final[obj] = sorted(by.values(), key=lambda r: _rank(r["group"], salt))
+    splits = {s: {} for s in SPLITS_V1}
+    for obj, rows in final.items():
+        fixed = sum(v for v in sizes[obj].values() if v != "rest")
+        if len(rows) < fixed:
+            raise ValueError(
+                f"{obj}: {len(rows)} groups available for {fixed} requested (never relaxed)"
+            )
+        i = 0
+        for s in SPLITS_V1:
+            n = len(rows) - i if sizes[obj][s] == "rest" else int(sizes[obj][s])
+            splits[s][obj] = sorted(rows[i : i + n], key=lambda r: r["hash"])
+            i += n
+    hashes = {s: {r["hash"] for o in final for r in splits[s][o]} for s in SPLITS_V1}
+    groups = {s: {r["group"] for o in final for r in splits[s][o]} for s in SPLITS_V1}
+    for a_, b_ in itertools.combinations(SPLITS_V1, 2):
+        if hashes[a_] & hashes[b_] or groups[a_] & groups[b_]:
+            raise AssertionError(f"splits {a_} and {b_} intersect")
+    audit = X.intersection_audit({s: hashes[s] for s in SPLITS_V1}, exposures)
+    if not X.audit_clean(audit):
+        raise AssertionError("a written split intersects a registered exposure")
+    for d in ("open", "sealed_test", "sealed_gen"):
+        (out / d).mkdir(parents=True, exist_ok=False) if d != "open" else (out / d).mkdir(
+            parents=True
+        )
+    files = {}
+    for s in SPLITS_V1:
+        lines = [
+            json.dumps(dict(r, objective=o), sort_keys=True) for o in final for r in splits[s][o]
+        ]
+        data = ("\n".join(lines) + ("\n" if lines else "")).encode()
+        (out / _FILES_V1[s]).write_bytes(data)
+        files[_FILES_V1[s]] = hashlib.sha256(data).hexdigest()
+    manifest = {
+        "salt": salt,
+        "version": "wme-c1-v1",
+        "sizes": sizes,
+        "policy": ND.POLICY,
+        "exclusion": exclusion,
+        "exposures": sorted(exposures),
+        "audit": audit,
+        "audit_clean": True,
+        "split_hashes": files,
+        "objectives": {
+            o: {
+                s: {
+                    "n": len(splits[s][o]),
+                    "hashes": [r["hash"] for r in splits[s][o]],
+                    "groups": [r["group"] for r in splits[s][o]],
+                }
+                for s in SPLITS_V1
+            }
+            for o in final
+        },
+        "sealed_hashes": sorted(hashes["sealed_test"] | hashes["sealed_gen"]),
+    }
+    manifest["content_hash"] = hashlib.sha256(
+        json.dumps(files, sort_keys=True).encode()
+    ).hexdigest()
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=1, sort_keys=True))
+    return manifest
