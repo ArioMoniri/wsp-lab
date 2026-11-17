@@ -116,7 +116,10 @@ SIMS = [
     (
         "n_gen,syc",
         _run_note(
-            "e1", "TriviaQA generation items (A4)", "E1 unresolved: generation audit not run"
+            "e1",
+            "TriviaQA generation items (A4)"
+            + ("; N powered at 0.5x the generated effect (v2b A10)" if "v2b" in M else ""),
+            "E1 unresolved: generation audit not run",
         ),
     ),
     ("n_gen,gsm", "not run — not powered"),
