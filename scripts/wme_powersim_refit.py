@@ -56,9 +56,15 @@ def cmd_run(a):
         for line in res.read_text().splitlines():
             r = json.loads(line)
             done.add((r["rep"], r["null"]))
-    todo = [(i, cell, True, a.kappa, a.gamma) for i in range(a.reps_null) if (i, True) not in done]
+    todo = [
+        (i, cell, True, a.kappa, a.gamma, a.version)
+        for i in range(a.reps_null)
+        if (i, True) not in done
+    ]
     todo += [
-        (i, cell, False, a.kappa, a.gamma) for i in range(a.reps_alt) if (i, False) not in done
+        (i, cell, False, a.kappa, a.gamma, a.version)
+        for i in range(a.reps_alt)
+        if (i, False) not in done
     ]
     todo.sort(key=lambda t: (t[0], t[2]))  # interleave null and alternative
     t0, n = time.time(), 0
@@ -71,6 +77,7 @@ def cmd_run(a):
                 "reps_null": a.reps_null,
                 "reps_alt": a.reps_alt,
                 "procs": a.procs,
+                "version": a.version,
             }
         )
     )

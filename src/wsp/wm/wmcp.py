@@ -458,13 +458,23 @@ def v0_base_obs(world):
 
 
 def v0_trajectory(world, spec: RSpec, Es, y, obs) -> dict:
-    """WM-E v0 trajectory whose coordinates are R(E_t) (the history-dependent descriptive arm): cumulative R_t,
-    step-local R_t - R_{t-1}, position, signed overlap cos(dR_t, R_{t-1}) and the cumulative norm column."""
+    """WM-E v0 trajectory whose coordinates are R(E_t) (the history-dependent descriptive arm), from synthetic
+    cumulative edits E_t (or R rows); see :func:`v0_trajectory_r`."""
     Rs = np.stack([r_synthetic(world, E) if len(E) == world.J else E for E in Es])
     if Rs.shape[1] != spec.dim:
         Rs = np.stack([np.concatenate([r[:-1], [0.0], r[-1:]]) for r in Rs])
-    T = len(Rs) - 1
-    d = spec.dim
+    return v0_trajectory_r(spec, Rs, y, obs)
+
+
+def v0_trajectory_r(spec: RSpec, Rs, y=None, obs=None) -> dict:
+    """WM-E v0 (``wm.model``) trajectory on the shared representation, from R rows R(E_0 = 0), ..., R(E_T) (on 9B
+    from :func:`r_from_contractions` of each realised cumulative prefix): cumulative R_t, step-local R_t - R_{t-1},
+    position, signed overlap cos(dR_t, R_{t-1}) and the cumulative norm column. ``y`` defaults to zeros (unknown,
+    planner use); a 1-D ``obs`` is broadcast over the horizon."""
+    Rs = np.asarray(Rs, float)
+    if Rs.ndim != 2 or Rs.shape[1] != spec.dim:
+        raise ValueError(f"R rows must be (T + 1) x {spec.dim}")
+    T, d = len(Rs) - 1, spec.dim
     x = np.zeros((T + 1, 2 * d + 3))
     for t in range(1, T + 1):
         D = Rs[t] - Rs[t - 1]
@@ -472,11 +482,7 @@ def v0_trajectory(world, spec: RSpec, Es, y, obs) -> dict:
         x[t, :d], x[t, d : 2 * d], x[t, -3] = Rs[t], D, t
         x[t, -2] = float(Rs[t - 1] @ D / den) if den > 0 else 0.0
         x[t, -1] = Rs[t, spec.norm_index]
-    e = np.diff(Rs, axis=0)
-    return {
-        "horizon": T,
-        "e": e,
-        "x": x,
-        "y": np.asarray(y)[: T + 1],
-        "obs": np.asarray(obs)[: T + 1],
-    }
+    y = np.zeros((T + 1, spec.n_obj)) if y is None else np.asarray(y)[: T + 1]
+    obs = np.zeros((T + 1, 1)) if obs is None else np.asarray(obs, float)
+    obs = np.broadcast_to(obs, (T + 1, obs.shape[-1])).copy() if obs.ndim == 1 else obs[: T + 1]
+    return {"horizon": T, "e": np.diff(Rs, axis=0), "x": x, "y": y, "obs": obs}

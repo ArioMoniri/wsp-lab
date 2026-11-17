@@ -42,6 +42,16 @@ def sim_ht(rng, g, n_cal, n_bank, n_inert, sc, se_ratio, wm_scale, n_flip=N_FLIP
     tails = sc.get("tails", "normal")
     rows, _ = PV.ht_units(rng, g, n_cal, sc)
     K = 6
+    if len(rows) < 2:  # no (or one) held-out component: H-T is not estimable and never rejects
+        return {
+            "reject": False,
+            "lb": float("nan"),
+            "stat": float("nan"),
+            "ct_hat": float("nan"),
+            "c2i": True,
+            "m": len(rows),
+            "estimable": False,
+        }
     scale = PV._scale_at(n_bank, se_ratio)
     L = np.linalg.cholesky(0.3 * np.ones((K, K)) + 0.7 * np.eye(K))
     e_w, e_s, comp = [], [], []
@@ -163,7 +173,8 @@ def run_cell(claim, cell, scenario, reps, inp, n_flip=N_FLIP_GRID):
             for _ in range(reps)
         ]
         truth = _ht_truth(sc, g, cell["n_cal"], cell["n_bank"], inp["se_ratio"], ws)
-        cov = float(np.mean([truth >= r["lb"] for r in rows]))
+        est = [r for r in rows if r["estimable"]]
+        cov = float(np.mean([truth >= r["lb"] for r in est])) if est else float("nan")
         extra = {
             "coverage": cov,
             "truth_mean_diff": truth,

@@ -405,3 +405,73 @@ class CPArm(PredictorArm):
         value = self.orient * mu[:, self.primary] - self.psi * pen
         guards = [(s * mu[:, k], sig[:, k], lim) for k, s, lim in self.guards]
         return {"value": value, "sigma": sig[:, self.primary], "guards": guards}
+
+
+class V0RArm(PredictorArm):
+    """WM-E v0 (``wm.model``, history-dependent; descriptive under RULING-wme-v2 A1) as a planner scorer on the
+    shared representation R(E) (A5): a candidate's snapped steps give the R rows of its cumulative prefixes
+    (``r_of(steps[:t])``, R0), which :func:`wsp.wm.wmcp.v0_trajectory_r` turns into the model's trajectory. Scoring,
+    guards, ranks mode, draws and the frozen-predictor rule are :class:`PredictorArm`'s; the support penalty and
+    ``embed`` use R(E_c) as :class:`CPArm` does, so every arm shares one support object."""
+
+    def __init__(
+        self,
+        model,
+        base_obs,
+        spec,
+        r_of,
+        actions,
+        doses,
+        primary,
+        orient,
+        q_hat,
+        guards,
+        support=None,
+        psi: float = SUPPORT_PSI,
+        mode: str = "lcb",
+        primitive_of=None,
+    ):
+        super().__init__(
+            model,
+            base_obs,
+            None,
+            actions,
+            doses,
+            primary,
+            orient,
+            q_hat,
+            guards,
+            support=support,
+            psi=psi,
+            mode=mode,
+            K=spec.n_obj,
+            primitive_of=primitive_of,
+        )
+        self.spec, self.r_of = spec, r_of
+
+    def _trajs(self, actions, X):
+        from wsp.wm import wmcp as CP
+
+        base = np.asarray(self.base_obs.payload["obs"], float)
+        out = []
+        for row in np.atleast_2d(np.asarray(X, float)):
+            st = self.steps(actions, row)
+            out.append(
+                CP.v0_trajectory_r(
+                    self.spec, [self.r_of(st[:k]) for k in range(len(st) + 1)], obs=base
+                )
+            )
+        return out
+
+    def _R(self, actions, X):
+        return np.stack(
+            [self.r_of(self.steps(actions, row)) for row in np.atleast_2d(np.asarray(X, float))]
+        )
+
+    def penalty(self, actions, X):
+        if self.support is None:
+            return np.zeros(len(np.atleast_2d(X)))
+        return self.support.penalty(self._R(actions, X))
+
+    def embed(self, actions, X):
+        return self._R(actions, X)

@@ -1,0 +1,181 @@
+{
+ "label": "PREREG_WME v2 full-refit validation (RULING-wme-v2 A6, ruling \u00a74(b)); alternative not re-tuned",
+ "pipeline": "wsp.wm.powersim_refit_v2.replicate: WM-CP vs the R-space static family (S1-S3, inner-fold choice), component-level sign-flip (10,000 flips, one-sided 0.025), C2-I gate (I1 round trips, I2 chart-column controls); C2-S/C2-D by construction",
+ "requirements": {
+  "size_max": 0.035,
+  "coverage_min": 0.965,
+  "power_lb_min": 0.8,
+  "reps_min": 1000,
+  "rerun_reps": 4000
+ },
+ "cells": {
+  "selected": {
+   "cell": {
+    "r_f": 16,
+    "n_blk": 6,
+    "n_cal": 12
+   },
+   "gamma": 3.0,
+   "planned": {
+    "reps_null": 600,
+    "reps_alt": 600
+   },
+   "completed": {
+    "null": 110,
+    "alt": 110
+   },
+   "futility": {
+    "k_required_at_planned": 497,
+    "alt_non_rejections": 110,
+    "cannot_pass": true
+   },
+   "cpu_h": 18.175063748160998,
+   "max_rss_mb": 440.1328125,
+   "results_sha256": "fe9bc29a11afa38ae0e18c74f8567e6fb0aafe7c5ad0213b2984082c5820dddd",
+   "null": {
+    "reps": 110,
+    "rate": 0.03636363636363636,
+    "ci95": [
+     0.009995204344104112,
+     0.09049204996520153
+    ],
+    "power_lb": 0.012514679517368763,
+    "mean_ct": -0.013704082471938337,
+    "mean_stat": -0.12747884404293588,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 4.440892098500626e-16,
+    "static_chosen": {
+     "S1": 26,
+     "S2": 499,
+     "S3": 25
+    },
+    "mean_seconds": 296.44996490478513,
+    "coverage_at_zero": 0.9636363636363636,
+    "pass": false,
+    "exact_zero_share": 0.6272727272727273,
+    "ct_quantiles": [
+     -0.026206864959169348,
+     0.0,
+     0.0009334883627023082
+    ],
+    "share_stat_negative": 0.24545454545454545
+   },
+   "alt": {
+    "reps": 110,
+    "rate": 0.0,
+    "ci95": [
+     0.0,
+     0.032979194032219696
+    ],
+    "power_lb": 0.0,
+    "mean_ct": -0.2603612939337497,
+    "mean_stat": -2.0294438939307913,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 4.440892098500626e-16,
+    "static_chosen": {
+     "S1": 0,
+     "S2": 489,
+     "S3": 61
+    },
+    "mean_seconds": 298.3703032168475,
+    "pass": false,
+    "exact_zero_share": 0.0,
+    "ct_quantiles": [
+     -0.43452512842704927,
+     -0.24786059382115488,
+     -0.06855112519556356
+    ],
+    "share_stat_negative": 0.990909090909091
+   }
+  },
+  "next": {
+   "cell": {
+    "r_f": 20,
+    "n_blk": 6,
+    "n_cal": 12
+   },
+   "gamma": 3.0,
+   "planned": {
+    "reps_null": 60,
+    "reps_alt": 60
+   },
+   "completed": {
+    "null": 30,
+    "alt": 30
+   },
+   "futility": {
+    "k_required_at_planned": 54,
+    "alt_non_rejections": 30,
+    "cannot_pass": true
+   },
+   "cpu_h": 3.7838623793257606,
+   "max_rss_mb": 963.51171875,
+   "results_sha256": "902cfc4b90a10902fd2b025a6a6e5ab2b9fcc049a43650bbfb70b5df9f258281",
+   "null": {
+    "reps": 30,
+    "rate": 0.03333333333333333,
+    "ci95": [
+     0.0008435709266304795,
+     0.17216945563341265
+    ],
+    "power_lb": 0.001708315644465736,
+    "mean_ct": -0.010911222010322009,
+    "mean_stat": -0.03654689681238464,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 1.6653345369377348e-16,
+    "static_chosen": {
+     "S1": 7,
+     "S2": 137,
+     "S3": 6
+    },
+    "mean_seconds": 225.9892255147298,
+    "coverage_at_zero": 0.9666666666666667,
+    "pass": true,
+    "exact_zero_share": 0.7333333333333333,
+    "ct_quantiles": [
+     -3.0378500078875773e-05,
+     0.0,
+     0.0006864756024272283
+    ],
+    "share_stat_negative": 0.1
+   },
+   "alt": {
+    "reps": 30,
+    "rate": 0.0,
+    "ci95": [
+     0.0,
+     0.11570330822202778
+    ],
+    "power_lb": 0.0,
+    "mean_ct": -0.2887814389299087,
+    "mean_stat": -2.321789654916472,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 1.6653345369377348e-16,
+    "static_chosen": {
+     "S1": 0,
+     "S2": 144,
+     "S3": 6
+    },
+    "mean_seconds": 228.07426000436146,
+    "pass": false,
+    "exact_zero_share": 0.0,
+    "ct_quantiles": [
+     -0.5271679772893905,
+     -0.24847391872510283,
+     -0.14932365480187862
+    ],
+    "share_stat_negative": 1.0
+   }
+  }
+ },
+ "passed": {
+  "selected": false,
+  "next": false
+ },
+ "ht": "unresolved \u2014 not powered",
+ "achieved_ct_alt": {
+  "selected": -0.2603612939337497,
+  "next": -0.2887814389299087
+ },
+ "note": "Both runs were stopped under the deterministic futility rule. Selected cell: the stop was triggered at 107 alternative non-rejections (> 600 - 497 = 103); the 110 + 110 replicates complete at copy time are reported. Next cell: 30 + 30 replicates (> 60 - 54 = 6). The Lambda run used commit 2737136 plus the uncommitted v2 refit edits. Those edits are identical in logic to the committed files (the only differences are ruff formatting) and include the task-tuple fix to scripts/wme_powersim_refit.py: at 2737136 the runner crashed at start, and the first launch at 08:23Z produced no results."
+}

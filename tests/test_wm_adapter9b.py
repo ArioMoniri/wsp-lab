@@ -259,3 +259,48 @@ def test_cp_arm_scores_candidates_through_R(world):
     assert arm.draw(np.random.default_rng(0)) in (0, 1)
     arm.update(None, None)
     assert arm.n_updates_ignored == 1
+
+
+def test_v0_arm_on_R_scores_through_wm_model(world):
+    """A5: WM-E v0 (descriptive) on the shared representation R(E) as a 9B planner scorer: the arm's prediction is
+    wm.model's prediction for the R-row trajectory of the candidate's prefixes."""
+    from wsp.wm import model as M
+    from wsp.wm import powersim_refit as R1
+    from wsp.wm import wmcp as CP
+
+    rng = np.random.default_rng(0)
+    dirs = [u / np.linalg.norm(u) for u in rng.standard_normal((world.J, world.J))]
+    spec = CP.spec_synthetic(world)
+    trajs = []
+    for u in dirs[:6]:
+        for s in (1.0, -1.0):
+            t = R1.traj_vec(world, [(u, 0.25 * s), (u, 0.25 * s)])
+            trajs.append(
+                CP.v0_trajectory(
+                    world, spec, [t["x"][h, : world.J] for h in range(3)], t["y"], t["obs"]
+                )
+            )
+    bo = CP.v0_base_obs(world)
+    v0 = M.WMEnsemble(M.WMConfig(epochs=5, slope_transport=False), CP.v0_field(spec), bo, n_seeds=2)
+    v0.fit(trajs, [i // 2 for i in range(len(trajs))])
+    acts = [f"d{j}" for j in range(world.J)]
+    doses = {a: [-1.0, -0.5, 0.5, 1.0] for a in acts}
+
+    def r_of(steps):
+        E = (
+            sum(dose * world.step * dirs[int(a[1:])] for a, dose in steps)
+            if steps
+            else np.zeros(world.J)
+        )
+        return CP.r_synthetic(world, E)
+
+    arm = AD.V0RArm(
+        v0, bo, spec, r_of, acts, doses, primary=0, orient=1.0, q_hat=1.0, guards=[(1, 1.0, 0.5)]
+    )
+    X = np.array([[0.5, -1.0], [1.0, 1.0]])
+    out = arm.predict([0, 2], X, None)
+    steps = arm.steps([0, 2], X[0])
+    tr = CP.v0_trajectory_r(spec, [r_of(steps[:k]) for k in range(3)], obs=bo.payload["obs"])
+    np.testing.assert_allclose(out["value"][0], v0.predict(bo, tr)[0][2, 0], rtol=1e-5, atol=1e-6)
+    np.testing.assert_allclose(arm.embed([0, 2], X)[0], r_of(steps))
+    assert out["sigma"].shape == (2,) and arm.draw(np.random.default_rng(0)) in (0, 1)

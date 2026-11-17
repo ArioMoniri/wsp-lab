@@ -11,7 +11,8 @@ pipeline under test is v2's:
   inverted lower bound; C_T and its bound reported descriptively;
 * gates: C2-S and C2-D hold by construction (asserted: alternative decompositions give identical WM-CP predictions);
   C2-I is a gate: I1 round trips (realised E_T = 0, predicted exactly 0) and I2-style controls, a representation
-  column never non-zero in training ("dead"; E_T != 0, a, q = 0), checked by the v1 simultaneous rule.
+  controls: the embedding-chart column (seen non-zero in training through row_scale roots, as on 9B) set with
+  a = q = 0 and no coordinate content (E_T != 0 for the representation, zero field), checked by the v1 rule.
 """
 
 from __future__ import annotations
@@ -30,6 +31,50 @@ from wsp.wm import wmcp as CP
 K_OUT, K_IN, TIE_REL = 5, 4, 0.005
 
 
+def build_bank_v2(world, g, seed):
+    """``powersim_refit.build_bank`` (same seeds, roots, ladders, blocks and orders) with each step's family
+    recorded, so the embedding-chart column below can be formed."""
+    rng = np.random.default_rng(seed)
+    fam_roots = {f: [] for f in PV.FAMILIES}
+    for f in PV.FAMILIES:
+        for _ in range(g["r_f"]):
+            u = rng.standard_normal(world.J)
+            fam_roots[f].append(u / np.linalg.norm(u))
+    trajs = []
+    for ci, c in enumerate(g["components"]):
+        roots = [(f, fam_roots[f].pop()) for f in c["families"]]
+        for f, r in roots:
+            for sgn in (1.0, -1.0):
+                incs = [sgn * d for d in R1._increments(R1.LADDER_CUM)]
+                t = R1.traj_vec(world, [(r, d) for d in incs])
+                trajs.append(
+                    dict(
+                        t,
+                        comp=ci,
+                        stratum=c["stratum"],
+                        kind="ladder",
+                        step_fams=[f] * 4,
+                        step_doses=incs,
+                    )
+                )
+        if c["stratum"] == "block":
+            order = list(range(len(roots)))
+            rng.shuffle(order)
+            for seq in (order, order[::-1]):
+                t = R1.traj_vec(world, [(roots[i][1], 1.0) for i in seq])
+                trajs.append(
+                    dict(
+                        t,
+                        comp=ci,
+                        stratum="block",
+                        kind="composition",
+                        step_fams=[roots[i][0] for i in seq],
+                        step_doses=[1.0] * len(seq),
+                    )
+                )
+    return trajs
+
+
 def spec_with_dead(world) -> CP.RSpec:
     s = CP.spec_synthetic(world)
     names = s.names[:-1] + ("dead",) + s.names[-1:]
@@ -43,13 +88,19 @@ def _r(world, E, dead=0.0):
 
 
 def states_of(world, trajs):
+    """The "dead" column is the embedding-chart analogue: the signed dose content of row_scale roots (degree 1),
+    non-zero in training whenever a row_scale root is in the history, with non-zero field features there."""
     out = []
     for t in trajs:
         for h in range(1, t["horizon"] + 1):
             E = t["x"][h, : world.J]
+            fams, doses = t.get("step_fams", []), t.get("step_doses", [])
+            chart = world.step * sum(
+                d for f, d in zip(fams[:h], doses[:h], strict=True) if f == "row_scale"
+            )
             out.append(
                 {
-                    "r": _r(world, E),
+                    "r": _r(world, E, chart),
                     "y": np.asarray(t["y"][h], float),
                     "obs": np.asarray(t["obs"][h], float),
                     "h": h,
@@ -115,7 +166,7 @@ def replicate(rep, cell, null, gamma=3.0, cfg=None, n_flip=SF.N_FLIP, seed=PV.SE
     g = PV.graph(cell["r_f"], cell["n_blk"])
     world = S.SynthWorld(kind="saturating", seed=10_000 + rep, n_dirs=R1.J_SHARED, n_obj=6)
     bo = world.base_observation().payload["obs"]
-    raw = R1.build_bank(world, g, seed + rep)
+    raw = build_bank_v2(world, g, seed + rep)
     trajs, se = R1.label(raw, world, 1.0, seed + 7 * rep, null, gamma)
     spec = spec_with_dead(world)
     _cal, fold, rest = R1._alloc(g["components"], cell["n_cal"], seed + 13 * rep)

@@ -163,3 +163,24 @@ def test_v0_descriptive_arm_reads_R(sat):
         w, spec, [np.zeros(w.J), np.zeros(w.J)], np.zeros((2, w.K)), t["obs"][:2]
     )
     assert np.all(v0.predict(CP.v0_base_obs(w), zero)[0] == 0.0)
+
+
+def test_v0_trajectory_from_R_rows_matches_the_synthetic_builder(sat):
+    """A5: wm.model on R(E) for 9B, where R rows come from field contractions rather than a synthetic world."""
+    w, m, dirs = sat
+    spec = m.spec
+    t = R.traj_vec(w, [(dirs[0], 0.25), (dirs[1], -0.25)])
+    a = CP.v0_trajectory(w, spec, [t["x"][h, : w.J] for h in range(3)], t["y"], t["obs"])
+    Rs = [CP.r_synthetic(w, t["x"][h, : w.J]) for h in range(3)]
+    b = CP.v0_trajectory_r(spec, Rs, t["y"], t["obs"])
+    for k in ("x", "e", "y", "obs"):
+        np.testing.assert_array_equal(a[k], b[k])
+    c = CP.v0_trajectory_r(
+        spec, Rs, obs=t["obs"][0]
+    )  # 9B planner use: unknown y, base obs broadcast
+    assert (
+        c["y"].shape == (3, spec.n_obj)
+        and not c["y"].any()
+        and c["obs"].shape == (3, t["obs"].shape[1])
+    )
+    np.testing.assert_array_equal(c["x"], a["x"])
