@@ -141,3 +141,15 @@ def test_proxy_gate():
     r = G.proxy_gate(x, np.random.default_rng(0).normal(0, 1, 40))
     assert r["lb"] <= 0 and r["killed"]
     assert not G.proxy_gate(x[:10], x[:10] * 0)["killed"]  # fewer than 32 candidates: no verdict
+
+
+def test_flexible_mc_extractor():
+    f = G.flexible_mc_letter
+    assert f("blah The answer is (C).") == "C"
+    assert f("so the answer: **D**") == "D"
+    assert f("final \\boxed{B}") == "B"
+    assert f("The correct option is E because") == "E"
+    assert f("I pick **(F)** here") == "F"
+    assert f("options (A) or (G) ... I go with (G)") == "G"
+    assert f("the answer is (A) ... wait, answer: B") == "B"
+    assert f("no letter at all") is None

@@ -8,7 +8,7 @@ STAGE="$(mktemp -d)/wmep3"
 mkdir -p "$STAGE/scripts" "$STAGE/data/wme/panels"
 cp -r "$ROOT/src" "$STAGE/src"
 find "$STAGE/src" -name __pycache__ -prune -exec rm -rf {} +
-cp "$ROOT/scripts/wme_pilot3_s.py" "$ROOT/scripts/wme_pilot3_h.py" "$ROOT/scripts/wme_p3_remote.sh" "$STAGE/scripts/"
+cp "$ROOT/scripts/wme_pilot3_s.py" "$ROOT/scripts/wme_pilot3_h.py" "$ROOT/scripts/wme_p3_remote.sh" "$ROOT/scripts/wme_p3_watch.sh" "$STAGE/scripts/"
 for p in wme-p3s wme-p3h; do
   mkdir -p "$STAGE/data/wme/panels/$p/open"
   cp "$ROOT/data/wme/panels/$p/manifest.json" "$STAGE/data/wme/panels/$p/"

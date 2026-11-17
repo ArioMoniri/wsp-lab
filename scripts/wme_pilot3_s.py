@@ -759,6 +759,7 @@ def main():
         HVP_BATCH_TOKENS, JET_BATCH_TOKENS, JET_MAX_SCORED = 300, 3000, 200
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    (out / "STATUS").write_text("RUNNING")  # amendment 2(d)
     if SMOKE:  # shared local GPU: stay under 8 GB
         torch.cuda.set_per_process_memory_fraction(
             7.5e9 / torch.cuda.get_device_properties(0).total_memory

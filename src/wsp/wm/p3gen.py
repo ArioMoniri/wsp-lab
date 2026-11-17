@@ -95,6 +95,30 @@ def mc_letter(text: str) -> str | None:
     return m[-1].upper() if m else None
 
 
+_FLEX = (
+    re.compile(r"answer is:?\s*\**\s*\(?\s*([A-P])\s*\)?", re.IGNORECASE),
+    re.compile(r"answer\s*:\s*\**\s*\(?\s*([A-P])\b\s*\)?", re.IGNORECASE),
+    re.compile(r"\\boxed\{\s*\(?([A-P])\)?\s*\}"),
+    re.compile(r"correct (?:option|choice) is:?\s*\**\s*\(?\s*([A-P])\b", re.IGNORECASE),
+    re.compile(r"\*\*\s*\(([A-P])\)"),
+)
+_PAREN = re.compile(r"\(([A-P])\)")
+
+
+def flexible_mc_letter(text: str) -> str | None:
+    """Amendment 2 flexible extractor: the last match of any of the answer patterns anywhere; otherwise the last
+    standalone "(X)" in the final 400 characters."""
+    best = None
+    for pat in _FLEX:
+        for m in pat.finditer(text):
+            if best is None or m.start() > best[0]:
+                best = (m.start(), m.group(1).upper())
+    if best is not None:
+        return best[1]
+    tail = _PAREN.findall(text[-400:])
+    return tail[-1].upper() if tail else None
+
+
 def last_boxed(text: str) -> str | None:
     i = text.rfind("\\boxed")
     if i < 0:

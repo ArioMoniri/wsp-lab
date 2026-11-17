@@ -58,9 +58,5 @@ export PYTHONPATH=src
 SCRIPT=scripts/wme_pilot3_s.py; [ "$STAGE" = h ] && SCRIPT=scripts/wme_pilot3_h.py
 $PY $SCRIPT --out out/$STAGE > logs/$STAGE.log 2>&1 &
 pid=$!
-while kill -0 $pid 2>/dev/null; do touch logs/alive; sleep 60; done
-wait $pid; rc=$?
-st=$(cat out/$STAGE/STATUS 2>/dev/null || echo "FAILED:run")
-[ $rc -eq 0 ] || st="FAILED:run"
-stamp "finished rc=$rc status=$st ($(( $(date +%s) - t0 )) s total)"
-echo "$st" > STATUS
+bash scripts/wme_p3_watch.sh $pid $STAGE   # progress-based liveness; writes the final STATUS (amendment 2(d))
+stamp "finished ($(( $(date +%s) - t0 )) s total)"

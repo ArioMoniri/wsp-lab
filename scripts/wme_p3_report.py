@@ -185,8 +185,10 @@ def s_report(sdir: Path) -> dict:
 # ------------------------------------------------------------------ stage H
 
 
-def h_report(hdir: Path) -> dict:
-    status = (hdir / "STATUS").read_text().strip() if (hdir / "STATUS").exists() else "missing"
+def h_report(hdir: Path, guard_audit: Path | None = None, panel: Path | None = None) -> dict:
+    # amendment 2(d): the wrapper's final status (remote/STATUS) wins over the driver's own file
+    sf = hdir / "remote" / "STATUS" if (hdir / "remote" / "STATUS").exists() else hdir / "STATUS"
+    status = sf.read_text().strip() if sf.exists() else "missing"
     if not (hdir / "evals.jsonl").exists():
         return {"status": status, "measured": False}
     evals = jl(hdir / "evals.jsonl")
@@ -359,7 +361,40 @@ def h_report(hdir: Path) -> dict:
             else {"n_candidates": len(xs), "killed": None}
         )
     out["proxy_gate"] = pg
+    # amendment 2(c): guard audit; the guards gate nothing until the rule agrees with the audit >= 0.9
+    audit = (
+        json.loads(Path(guard_audit).read_text())
+        if guard_audit and Path(guard_audit).exists()
+        else None
+    )
+    out["guard_audit"] = audit
+    gates = bool(audit and audit.get("guards_gate"))
+    out["guards_gate"] = gates
+    if not gates:
+        for ft in fam.values():
+            ung = [
+                dict(r, guarded=True, qualifies={p: r["primary"][p]["lcb"] > 0 for p in G.PRIMARY})
+                for r in ft["candidates"]
+            ]
+            ft["gate_without_guard"] = G.family_gate(ung)
+        within = {
+            p: sum(
+                1
+                for r in fam["H1"]["candidates"]
+                if r["primary"][p]["lcb"] > 0
+                and (r["primary"][p].get("untruncated_both") or {}).get("lcb", -1) > 0
+            )
+            for p in G.PRIMARY
+        }
+        fam["H1"]["overbudget_rule_without_guard"] = within
+        fam["H1"]["pass_without_guard"] = bool(
+            fam["H1"]["gate_without_guard"]["pass"] and any(v >= 2 for v in within.values())
+        )
+        fam["H3"]["pass_without_guard"] = bool(
+            fam["H3"]["gate_without_guard"]["pass"] and fam["H3"]["beats_both_controls"]
+        )
     out["any_family_pass"] = any(fam[t]["pass"] for t in fam)
+    out["r3"] = r3_report(by_tag, base, fam, panel)
     out["stage_seconds"] = (
         json.loads((hdir / "stage_seconds.json").read_text())
         if (hdir / "stage_seconds.json").exists()
@@ -681,6 +716,106 @@ def render_md(rep: dict, notes: str = "") -> str:
     return "\n".join(L) + "\n"
 
 
+def r3_report(by_tag, base, fam, panel) -> dict:
+    """Amendment 2(a)/(b): the 4,096-token budget check and the flexible re-parse (descriptive)."""
+    gold = {}
+    if panel and Path(panel).exists():
+        from wsp.wm import p3panel as PP
+
+        dev = PP.read_split(panel, "dev")
+        gold = {it["id"]: G.LETTERS[it["answer_index"]] for p in G.PRIMARY for it in dev[p]}
+    acc = lambda rec, p: float(np.mean([x["correct"] for x in rec["panels"][p]]))
+    tr = lambda rec, p: float(np.mean([x["trunc"] for x in rec["panels"][p]]))
+    key = lambda r: json.dumps(r["spec"], sort_keys=True)
+    out = {"budget4096": {}, "reparse": {}}
+    b4 = {key(r): r for r in by_tag.get("r3_budget4096", [])}
+    h1 = {key(r): r for r in by_tag.get("H1", [])}
+    for k, r in b4.items():
+        row = {p: {"acc_4096": acc(r, p), "trunc_4096": tr(r, p)} for p in G.PRIMARY}
+        if r["spec"]["kind"] == "base":
+            for p in G.PRIMARY:
+                row[p]["acc_2048"] = acc(base, p)
+                row[p]["trunc_2048"] = tr(base, p)
+        elif k in h1:
+            for p in G.PRIMARY:
+                row[p]["acc_2048"] = acc(h1[k], p)
+                row[p]["trunc_2048"] = tr(h1[k], p)
+        out["budget4096"][k] = row
+    bk = json.dumps({"kind": "base"}, sort_keys=True)
+    if bk in b4:
+        b = b4[bk]
+        for k, r in b4.items():
+            if k == bk:
+                continue
+            res = {}
+            for p in G.PRIMARY:
+                bb = [x["correct"] for x in b["panels"][p]]
+                cc = [x["correct"] for x in r["panels"][p]]
+                st = G.paired(bb, cc)
+                keep = [
+                    i
+                    for i, (x, y) in enumerate(zip(b["panels"][p], r["panels"][p], strict=True))
+                    if not x["trunc"] and not y["trunc"]
+                ]
+                ut = G.paired([bb[i] for i in keep], [cc[i] for i in keep]) if keep else None
+                res[p] = {"gain_4096": st, "untruncated_both_4096": ut}
+            # R2 wording rule and the R8 pre-classification (descriptive here)
+            h1_2048 = out["budget4096"][k]
+            r2 = all(
+                res[p]["gain_4096"]["lcb"] > 0
+                and (res[p]["untruncated_both_4096"] or {}).get("lcb", -1) > -0.01
+                for p in G.PRIMARY
+            )
+            r8 = all(
+                out["budget4096"][bk][p]["acc_4096"]
+                >= h1_2048[p].get("acc_2048", float("inf")) - 0.01
+                for p in G.PRIMARY
+            )
+            out["budget4096"][k]["vs_base_4096"] = res
+            out["budget4096"][k]["R2_may_say_improves_accuracy"] = bool(r2)
+            out["budget4096"][k]["R8_preclassified_token_efficiency"] = bool(r8)
+    raw = by_tag.get("r3_raw", [])
+    rb = [r for r in raw if r["spec"] == {"kind": "base"}]
+    for r in raw:
+        row = {}
+        for p in G.PRIMARY:
+            xs = r["panels"][p]
+            strict = float(np.mean([x["correct"] for x in xs]))
+            flex = (
+                [
+                    (not x["trunc"])
+                    and G.flexible_mc_letter(x.get("tail", "")) == gold.get(x["id"])
+                    for x in xs
+                ]
+                if gold
+                else None
+            )
+            row[p] = {
+                "strict_acc": strict,
+                "flexible_acc": float(np.mean(flex)) if flex is not None else None,
+                "unparsed_strict": float(
+                    np.mean([(not x["trunc"]) and x.get("parsed") is None for x in xs])
+                ),
+                "_flex": flex,
+            }
+        out["reparse"][key(r)] = row
+    if rb and gold:
+        bkey = key(rb[0])
+        for k, row in out["reparse"].items():
+            if k == bkey:
+                continue
+            for p in G.PRIMARY:
+                row[p]["gap_strict"] = G.paired(
+                    [x["correct"] for x in rb[0]["panels"][p]],
+                    [x["correct"] for x in next(r for r in raw if key(r) == k)["panels"][p]],
+                )
+                row[p]["gap_flexible"] = G.paired(out["reparse"][bkey][p]["_flex"], row[p]["_flex"])
+    for row in out["reparse"].values():
+        for p in G.PRIMARY:
+            row[p].pop("_flex", None)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--s")
@@ -689,6 +824,8 @@ def main():
     ap.add_argument("--json", required=True)
     ap.add_argument("--md")
     ap.add_argument("--notes")
+    ap.add_argument("--guard-audit")
+    ap.add_argument("--panel", default=str(ROOT / "data/wme/panels/wme-p3h"))
     a = ap.parse_args()
     rep = {
         "label": "EXPLORATORY (WM-E pilot 3)",
@@ -697,7 +834,7 @@ def main():
     if a.s:
         rep["S"] = s_report(Path(a.s))
     if a.h:
-        rep["H"] = h_report(Path(a.h))
+        rep["H"] = h_report(Path(a.h), a.guard_audit, Path(a.panel))
     if a.ledger:
         rep["ledger"] = json.loads(Path(a.ledger).read_text())
     Path(a.json).write_text(json.dumps(rep, indent=1, default=float))

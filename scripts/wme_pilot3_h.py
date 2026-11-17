@@ -45,7 +45,7 @@ from wsp.wm import svf as V
 
 PANEL = ROOT / "data/wme/panels/wme-p3h"
 REPO = "Qwen/Qwen3.5-9B"
-CAPS_H = {"H0": 2.5, "H1": 6.0, "H2": 3.0, "H3": 8.0, "H4": 1.0}
+CAPS_H = {"H0": 2.5, "H1": 6.0, "H2": 3.0, "R3": 1.0, "H3": 8.0, "H4": 1.0}
 MC = ("mmlupro_gen", "supergpqa_gen")
 HOLDOUT_GEN_TOKENS = 2048
 THINK_TOKENS = 8192
@@ -299,7 +299,14 @@ def score(panel, items, outs, thinking=False):
         c = o[0]
         if panel in G.GUARDS or panel == "oldguard_harmless":
             recs.append(
-                {"id": it["id"], "refused": GA.detect_refusal(c["text"]), "len": len(c["ids"])}
+                {
+                    "id": it["id"],
+                    "refused": GA.detect_refusal(c["text"]),
+                    "len": len(c["ids"]),
+                    "text": c[
+                        "text"
+                    ],  # amendment 2(b): raw generation kept (guard answers are <= 96 tokens)
+                }
             )
         else:
             v = G.verify(panel, it, c["text"], c["hit_max"], thinking=thinking)
@@ -309,6 +316,8 @@ def score(panel, items, outs, thinking=False):
                     "correct": bool(v["correct"]),
                     "len": len(c["ids"]),
                     "trunc": c["hit_max"],
+                    "tail": c["text"][-400:],  # amendment 2(b)
+                    "parsed": v["parsed"] if G.KIND[panel] == "mc" else str(v["parsed"]),
                 }
             )
     return recs
@@ -574,10 +583,13 @@ def ckpts(n_steps, k):
 # ------------------------------------------------------------------ evaluation
 
 
-def evaluate(ctx, spec, plist, items_of, tag, thinking=False, extras=True):
+def evaluate(ctx, spec, plist, items_of, tag, thinking=False, extras=True, max_tokens=None):
     """Generate every panel in ``plist`` for one candidate; per-item records; proxy and old-guard extras."""
     path = ctx.out / "evals.jsonl"
-    key = spec_key({**spec, "tag": tag, "panels": sorted(plist), "thinking": thinking})
+    kd = {**spec, "tag": tag, "panels": sorted(plist), "thinking": thinking}
+    if max_tokens:
+        kd["max_tokens"] = int(max_tokens)
+    key = spec_key(kd)
     if not hasattr(ctx, "_evals"):
         ctx._evals = {}
         if path.exists():
@@ -589,12 +601,19 @@ def evaluate(ctx, spec, plist, items_of, tag, thinking=False, extras=True):
     t0 = time.time()
     apply_spec(ctx, spec)
     try:
-        rec = {"key": key, "spec": spec, "tag": tag, "thinking": thinking, "panels": {}}
+        rec = {
+            "key": key,
+            "spec": spec,
+            "tag": tag,
+            "thinking": thinking,
+            "panels": {},
+            "max_tokens": max_tokens,
+        }
         for panel in plist:
             its = items_of(panel)
             if spec["kind"] == "base_rerun":
                 its = its[::-1]
-            mt = THINK_TOKENS if thinking else budget_of(ctx, panel)
+            mt = max_tokens or (THINK_TOKENS if thinking else budget_of(ctx, panel))
             outs = gen(ctx, prompts_for(ctx, panel, its, thinking=thinking), mt)
             recs = score(panel, its, outs, thinking=thinking)
             if spec["kind"] == "base_rerun":
@@ -935,7 +954,29 @@ def pilot_type_rows(ctx):
 # ------------------------------------------------------------------ main
 
 
+def r3(ctx, m1):
+    items = dev_items(ctx)
+    s208 = {"kind": "lora", "run": "h1", "step": m1["steps"], "lam": 1.0}
+    s104 = {"kind": "lora", "run": "h1", "step": ckpts(m1["steps"], 16)[7], "lam": 1.0}
+    plan = [
+        ({"kind": "base"}, CAND_PANELS, "r3_raw", None),
+        (s208, CAND_PANELS, "r3_raw", None),
+        ({"kind": "base"}, MC, "r3_budget4096", 4096),
+        (s208, MC, "r3_budget4096", 4096),
+        (s104, MC, "r3_budget4096", 4096),
+        (s104, CAND_PANELS, "r3_raw", None),
+    ]
+    for spec, plist, tag, mt in plan:
+        if ctx.over_cap("R3"):
+            ctx.log("R3 cap or deadline reached; remaining R3 checks not run", spec=spec, tag=tag)
+            return
+        evaluate(ctx, spec, plist, items, tag, max_tokens=mt)
+
+
 def run(out: Path):
+    (out / "STATUS").write_text(
+        "RUNNING"
+    )  # amendment 2(d): never leave an earlier run's status in place
     ctx = Ctx(out)
     ctx.stage("H0")
     ctx.log("start", smoke=SMOKE)
@@ -983,6 +1024,9 @@ def run(out: Path):
         "H2",
     )
     secondaries(ctx, "H2", "H2")
+    # amendment 2 (SYNTHESIS-r11 R3): raw re-runs at the frozen budget and the 4,096-token budget check
+    ctx.stage("R3")
+    r3(ctx, m1)
     # H3: three RL arms; 16 checkpoints x alpha {0.5, 1} for the true reward; 8 checkpoints alpha 1 per control
     ctx.stage("H3")
     metas = {arm: rl_arm(ctx, arm) for arm in ("true", "random", "format")}
