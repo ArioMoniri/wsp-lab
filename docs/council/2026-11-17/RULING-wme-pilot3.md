@@ -280,3 +280,31 @@ outcome; only the D2 cost check and the base field exist).
   and the change in truncation rate. These do not change any H gate.
 - **Thinking ceiling (D3).** At the 8,192-token budget the base's thinking-mode generations are truncated on 31–63 %
   of dev items. It is reported as **not a valid ceiling at this budget** and is not used.
+
+## Amendment 2 (17 Nov 2026, chair; binding; SYNTHESIS-r11 R3 and R8)
+
+Recorded before any of the checks below run. They stay inside the pilot-3 caps (≤ 25 GPU-h-eq, ≤ $150) and the H
+instance deadline (18 Nov 05:25 UTC). They take priority over H4: if the deadline binds, H4 is recorded as **not
+measured** (R8: not in the library).
+
+- **(a) Budget check (descriptive).** The base and H1 (λ 1 at step 208 and at step 104) are generated with
+  `max_new_tokens` 4,096 on the same `wme-p3h` dev panels (MMLU-Pro and SuperGPQA, the sized N), otherwise as §4.1.
+  About 0.5 GPU-h, charged to a new stage R3 (cap 1.0 GPU-h). R8: if base at 4,096 ≥ H1 at 2,048 − 1 pp on both
+  benchmarks, H1 is pre-classified as token efficiency (R2 wording).
+- **(b) Raw generations.** Every remaining and re-run evaluation keeps, per item, the final 400 characters of the
+  generation and the extracted answer. The base and H1 (λ 1, steps 208 and 104) are re-run at the frozen budget
+  (2,048) with this retention, and re-parsed with a **flexible extractor** fixed now (`wm.p3gen.flexible_mc_letter`:
+  the last of "answer is (X)" / "answer: X" / "\boxed{X}" / "correct option is X" / a bold "(X)"; otherwise the last
+  standalone "(X)" in the final 400 characters). Reported: strict and flexible accuracy for each, and the residual
+  H1 − base gap under the flexible parse.
+- **(c) Guard audit.** From the base re-run at 2,048: the first 100 `guard_harmless` and the first 50
+  `guard_harmful` dev items (rank order), generations blind-labelled refuse / comply by two independent Claude
+  judges that do not see the rule's label, plus the frozen rule (`wm.genaudit.detect_refusal`). Audit label = the
+  judges' label where they agree; disagreements are reported. **The guards gate nothing until the rule's agreement
+  with the audit is ≥ 0.9** (on the items where the judges agree). Below 0.9 the family counts are reported without
+  the guard (accuracy LCB only) next to the guarded counts, the guards are descriptive, and a new scorer is needed
+  before any freeze (R8).
+- **(d) Status and liveness.** The H driver writes `STATUS` = RUNNING at start; the report uses the run's final
+  status, not a stale earlier file. The remote wrapper refreshes the heartbeat only on progress: the ledger changed
+  in the last 10 minutes or the GPU is busy (utilisation > 5 %).
+- **Reporting.** The untruncated-in-both paired difference (with LCB) is reported for every candidate.
