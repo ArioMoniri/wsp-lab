@@ -535,6 +535,14 @@ def render_md(rep: dict, notes: str = "") -> str:
         )
         w("")
         w(f"**Consequence (D2):** {S_['gate']['consequence']}.")
+        if S_.get("partial"):
+            w("")
+            w(
+                "**SYNTHESIS-r11 R8 (binding):** the S rerun is *partial* (stopped at the amended 6.0 GPU-h cap before all "
+                "planned steps were measured). R8's row for S reads \"Partial or fail → transport dropped permanently; no "
+                'further S spending". Under that reading the D2 per-objective passes above do not keep transport; the chair '
+                'decides whether R8\'s "partial" refers to an incomplete run (as here) or to a partial pass.'
+            )
         w("")
         fi = S_["fitted"]
         w(
@@ -678,6 +686,80 @@ def render_md(rep: dict, notes: str = "") -> str:
             w("")
         if "controls" in H_["families"].get("H1", {}):
             w(f"H1 controls (descriptive): `{json.dumps(H_['families']['H1']['controls'])}`")
+            w("")
+        r3 = H_.get("r3") or {}
+        if r3.get("budget4096"):
+            w(
+                "**Amendment 2(a): budget check at 4,096 tokens (descriptive; SYNTHESIS-r11 R2 and R8).**"
+            )
+            w("")
+            w(
+                '| spec | MMLU-Pro acc 2,048 → 4,096 (trunc 2,048 → 4,096) | SuperGPQA acc 2,048 → 4,096 (trunc) | vs base at 4,096: Δ (LCB) MMLU-Pro / SuperGPQA | untruncated-in-both at 4,096: Δ (LCB) | R2 may say "improves accuracy" | R8 pre-classified token efficiency |'
+            )
+            w("|---|---|---|---|---|---|---|")
+            for k, row in r3["budget4096"].items():
+                cells = []
+                for p in G.PRIMARY:
+                    x = row[p]
+                    cells.append(
+                        f"{_f(x.get('acc_2048'))} → {_f(x['acc_4096'])} ({_f(x.get('trunc_2048'))} → {_f(x['trunc_4096'])})"
+                    )
+                vs = row.get("vs_base_4096")
+                if vs:
+                    g = " / ".join(
+                        f"{_f(vs[p]['gain_4096']['mean'])} ({_f(vs[p]['gain_4096']['lcb'])})"
+                        for p in G.PRIMARY
+                    )
+                    u = " / ".join(
+                        f"{_f((vs[p]['untruncated_both_4096'] or {}).get('mean'))} ({_f((vs[p]['untruncated_both_4096'] or {}).get('lcb'))})"
+                        for p in G.PRIMARY
+                    )
+                else:
+                    g = u = "—"
+                w(
+                    f"| `{k}` | {cells[0]} | {cells[1]} | {g} | {u} | {_f(row.get('R2_may_say_improves_accuracy'))} | {_f(row.get('R8_preclassified_token_efficiency'))} |"
+                )
+            w("")
+        if r3.get("reparse"):
+            w("**Amendment 2(b): flexible re-parse at the frozen budget (2,048).**")
+            w("")
+            w(
+                "| spec | MMLU-Pro strict / flexible (unparsed strict) | SuperGPQA strict / flexible (unparsed strict) | gap vs base strict: MMLU-Pro / SuperGPQA | gap vs base flexible: MMLU-Pro / SuperGPQA |"
+            )
+            w("|---|---|---|---|---|")
+            for k, row in r3["reparse"].items():
+                a = " | ".join(
+                    f"{_f(row[p]['strict_acc'])} / {_f(row[p]['flexible_acc'])} ({_f(row[p]['unparsed_strict'])})"
+                    for p in G.PRIMARY
+                )
+                gs = (
+                    " / ".join(
+                        f"{_f(row[p]['gap_strict']['mean'])} ({_f(row[p]['gap_strict']['lcb'])})"
+                        for p in G.PRIMARY
+                    )
+                    if "gap_strict" in row[G.PRIMARY[0]]
+                    else "—"
+                )
+                gf = (
+                    " / ".join(
+                        f"{_f(row[p]['gap_flexible']['mean'])} ({_f(row[p]['gap_flexible']['lcb'])})"
+                        for p in G.PRIMARY
+                    )
+                    if "gap_flexible" in row[G.PRIMARY[0]]
+                    else "—"
+                )
+                w(f"| `{k}` | {a} | {gs} | {gf} |")
+            w("")
+        ga = H_.get("guard_audit")
+        if ga:
+            pg = ga["per_guard"]
+            w(
+                f"**Amendment 2(c): guard audit.** {ga['n_items']} base generations (100 harmless, 50 harmful), two blind "
+                f"Claude judges (agreement {_f(ga['judge_agreement'])}; {ga['judges_agree']} items agreed). Rule vs audit "
+                f"agreement {_f(ga['rule_agreement'])} (harmless {_f(pg['harmless']['rule_agreement'])}, harmful "
+                f"{_f(pg['harmful']['rule_agreement'])}); audit refusal rate on harmless {_f(pg['harmless']['audit_refusal_rate'])} "
+                f"vs rule {_f(pg['harmless']['rule_refusal_rate'])}. Guards gate: **{_f(H_.get('guards_gate'))}** (threshold 0.9)."
+            )
             w("")
         w(
             "**R0 proxy gate (D3):** "
