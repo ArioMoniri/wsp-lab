@@ -184,3 +184,22 @@ def test_v0_trajectory_from_R_rows_matches_the_synthetic_builder(sat):
         and c["obs"].shape == (3, t["obs"].shape[1])
     )
     np.testing.assert_array_equal(c["x"], a["x"])
+
+
+def test_k_rule_is_part_of_the_frozen_config():
+    """RULING-wme-v2b A7: the K rule (k_max, s0 scale) is a config choice frozen in the manifest; exactness holds."""
+    w = S.SynthWorld(kind="saturating", seed=4, n_dirs=6, n_obj=3)
+    st, dirs = _states(w, np.random.default_rng(0))
+    cfg = CP.CPConfig(epochs=5, hidden=16, latent=8, k_max=32, s0_scale=0.5)
+    m = CP.CanonicalPathWM(
+        cfg, CP.spec_synthetic(w), w.base_observation().payload["obs"], n_seeds=2
+    )
+    m.fit(st, [s["comp"] for s in st])
+    h1 = np.median([s["r"][m.spec.norm_index] for s in st if s["h"] == 1])
+    assert m.k_rule["k_max"] == 32 and m.k_rule["s0"] == pytest.approx(0.5 * h1)
+    assert m.k_of(np.array([1e9])) == 32 and m.k_of(np.array([3.2 * m.k_rule["s0"]])) == 4
+    E = 0.5 * w.step * dirs[0]
+    a = m.predict(CP.r_synthetic(w, E))[0]
+    b = m.predict(CP.r_synthetic(w, 0.5 * E + 0.5 * E))[0]
+    np.testing.assert_array_equal(a, b)
+    assert np.all(m.predict(np.zeros(m.spec.dim))[0] == 0.0)
