@@ -17,6 +17,7 @@ PY="$DIR/.venv/bin/python"
 agent-tmux "wme-p3-$LB-dm" "$PY" scripts/lambda_deadman.py "${POL[@]}" watch
 agent-tmux "wme-p3-$LB-poll" "$PY" scripts/wme_lambda_poll.py --dir "$STATE" --name "wsp-wme-p3-$LB-20261117" \
   --types "${TYPES:-gpu_1x_h100_sxm5,gpu_1x_h100_pcie}" --fallback-after-min "${FALLBACK_MIN:-0}" \
+  --late-types "${LATE_TYPES:-}" --late-after-min "${LATE_MIN:-1e9}" \
   --t-max-hours "$TMAX" --max-usd "$USD" \
   --max-price 5.5 --idle-limit-s 1200
 agent-tmux "wme-p3-$LB-drive" env WME_SSH_CONFIG="$WME_SSH_CONFIG" bash scripts/wme_lambda_drive.sh "$BUNDLE" "$SHA" \

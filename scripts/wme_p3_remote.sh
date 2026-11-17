@@ -25,8 +25,12 @@ if [ "$STAGE" = s ]; then
   uv pip install -q --python $PY "torch==2.11.0" --index-url https://download.pytorch.org/whl/cu128 > logs/pip_torch.log 2>&1 || fail torch
   echo "torch==2.11.0" >> constraints.nontorch.txt
   uv pip install -q --python $PY -c constraints.nontorch.txt "transformers==5.22.1" accelerate safetensors numpy scipy \
-    huggingface-hub hf-xet flash-linear-attention fla-core einops kernels jinja2 > logs/pip.log 2>&1 || fail pip
-  uv pip install -q --python $PY -c constraints.nontorch.txt tilelang > logs/pip_tilelang.log 2>&1 || fail tilelang
+    huggingface-hub hf-xet einops jinja2 > logs/pip.log 2>&1 || fail pip
+  # fused GatedDeltaNet kernels only speed up the R2 passes (jets use the reference kernels); optional on aarch64
+  uv pip install -q --python $PY -c constraints.nontorch.txt flash-linear-attention fla-core kernels > logs/pip_fla.log 2>&1 \
+    || stamp "fla not installed (reference kernels everywhere)"
+  uv pip install -q --python $PY -c constraints.nontorch.txt tilelang > logs/pip_tilelang.log 2>&1 || stamp "tilelang not installed"
+  $PY -c "import torch; torch.zeros(1).cuda(); print('cuda ok', torch.__version__, torch.version.cuda)" >> logs/pip.log 2>&1 || fail "cuda-runtime"
 else
   uv pip install -q --python $PY "vllm==0.34.0" > logs/pip_vllm.log 2>&1 || fail vllm
   if [ "${drv%%.*}" -lt 580 ]; then
@@ -48,7 +52,7 @@ HF_HUB_OFFLINE=0 .venv/bin/hf download Qwen/Qwen3.5-9B --revision "$REV" > logs/
 stamp "model downloaded ($(( $(date +%s) - t0 )) s)"
 echo "$(( $(date +%s) - t0 ))" > out/setup_seconds
 uv pip freeze --python $PY > out/remote_freeze.txt 2>/dev/null
-{ echo "driver $drv"; echo "LD_LIBRARY_PATH ${LD_LIBRARY_PATH:-}"; $PY -c "import torch,transformers;print('torch',torch.__version__,'cuda',torch.version.cuda,'transformers',transformers.__version__)"; \
+{ echo "driver $drv"; echo "arch $(uname -m)"; echo "LD_LIBRARY_PATH ${LD_LIBRARY_PATH:-}"; $PY -c "import torch,transformers;print('torch',torch.__version__,'cuda',torch.version.cuda,'transformers',transformers.__version__)"; \
   $PY -c "import vllm;print('vllm',vllm.__version__)" 2>/dev/null; } > out/versions.txt
 export PYTHONPATH=src
 SCRIPT=scripts/wme_pilot3_s.py; [ "$STAGE" = h ] && SCRIPT=scripts/wme_pilot3_h.py
