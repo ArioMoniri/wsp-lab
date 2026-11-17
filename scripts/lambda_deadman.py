@@ -108,11 +108,14 @@ def main():
             print(json.dumps({"status": (info or {}).get("status"), "ip": None}))
             return 1
         SSH_CONFIG.parent.mkdir(parents=True, exist_ok=True)
-        SSH_CONFIG.write_text(
+        block = (
             f"Host {a.alias}\n  HostName {ip}\n  User ubuntu\n  IdentityFile ~/.ssh/id_ed25519\n"
             "  StrictHostKeyChecking accept-new\n  UserKnownHostsFile ~/.config/wsp/wme_known_hosts\n"
             "  ServerAliveInterval 30\n  ServerAliveCountMax 6\n"
         )
+        # upsert: keep other aliases' blocks (several wsp-wme-* instances may be live, each in its own state dir)
+        old = SSH_CONFIG.read_text() if SSH_CONFIG.exists() else ""
+        SSH_CONFIG.write_text(D.upsert_host_block(old, a.alias, block))
         os.chmod(SSH_CONFIG, 0o600)
         print(json.dumps({"status": info.get("status"), "ssh_config": str(SSH_CONFIG)}))
     return 0

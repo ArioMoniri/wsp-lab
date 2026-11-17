@@ -52,6 +52,8 @@ class CPConfig:
     lr: float = 3e-3
     weight_decay: float = 1e-4
     obs_weight: float = 1.0
+    k_max: int = K_MAX  # K rule: K = min(k_max, max(1, ceil(norm / s0)))
+    s0_scale: float = 1.0  # s0 = s0_scale * median training h = 1 norm
 
 
 @dataclasses.dataclass(frozen=True)
@@ -264,12 +266,13 @@ class CanonicalPathWM(_Base):
             for s in fit_states
             if s["h"] == 1 and s["r"][self.spec.norm_index] > 0
         ]
-        s0 = float(np.median(h1)) if h1 else float(np.median(n[n > 0]))
+        s0 = self.cfg.s0_scale * (float(np.median(h1)) if h1 else float(np.median(n[n > 0])))
         self.k_rule = {
-            "rule": "K = 0 if R == 0 else min(K_MAX, max(1, ceil(norm(E_T) / s0)))",
+            "rule": "K = 0 if R == 0 else min(k_max, max(1, ceil(norm(E_T) / s0)))",
             "s0": s0,
-            "k_max": K_MAX,
-            "s0_source": "median cumulative norm of training h = 1 states",
+            "k_max": self.cfg.k_max,
+            "s0_scale": self.cfg.s0_scale,
+            "s0_source": "s0_scale x median cumulative norm of training h = 1 states",
         }
         steps = []
         for r in R:
@@ -282,13 +285,14 @@ class CanonicalPathWM(_Base):
         x = float(np.asarray(norm).ravel()[0])
         if x <= 0:
             return 0
-        return int(min(K_MAX, max(1, math.ceil(x / self.k_rule["s0"] - 1e-12))))
+        return int(min(self.k_rule["k_max"], max(1, math.ceil(x / self.k_rule["s0"] - 1e-12))))
 
     def _path(self, R):
         """[N, K_MAX + 1, d] sub-step representations and the [N, K_MAX] step mask."""
         N, d = R.shape
-        P = np.zeros((N, K_MAX + 1, d))
-        mask = np.zeros((N, K_MAX))
+        KM = self.k_rule["k_max"]
+        P = np.zeros((N, KM + 1, d))
+        mask = np.zeros((N, KM))
         deg = np.asarray(self.spec.degree, float)
         for i, r in enumerate(R):
             k = 0 if not np.any(r != 0) else self.k_of(np.array([r[self.spec.norm_index]]))
@@ -309,7 +313,7 @@ class CanonicalPathWM(_Base):
         o0 = torch.as_tensor(self.onorm(self.base_obs)[None], dtype=torch.float32).expand(N, -1)
         h = net.enc(o0)
         res = torch.zeros(N, self.spec.n_obj)
-        for k in range(K_MAX):
+        for k in range(mask.shape[1]):
             m = mask[:, k : k + 1]
             if not bool(m.any()):
                 break

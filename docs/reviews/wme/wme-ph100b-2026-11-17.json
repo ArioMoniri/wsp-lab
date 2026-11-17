@@ -1,0 +1,238 @@
+{
+ "label": "P-H100b (RULING-wme-v2b A9): sycophancy_real generation timing at larger batches, 9B on 1 x H100 SXM5; ENGINEERING ONLY",
+ "items": "exposed wme-p2 construction sycophancy_real prompts (neutral and suggested); no edit, base model only; no enhancement quantity",
+ "gpu": "NVIDIA H100 80GB HBM3",
+ "versions": "torch 2.11.0+cu128 12.8 transformers 5.22.1",
+ "base_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+ "max_new_tokens": 128,
+ "pass1_first_at_each_batch": {
+  "greedy_b8": {
+   "batch": 8,
+   "prompts": 16,
+   "seconds": 87.53755474090576,
+   "s_per_answer": 5.47109717130661,
+   "new_tokens": 2033,
+   "hit_max": 15,
+   "peak_allocated_bytes": 18522328576,
+   "ok": true,
+   "identical_to_first_batch_size": {
+    "compared": 16,
+    "identical": 16
+   }
+  },
+  "sampled_b8": {
+   "batch": 8,
+   "prompts": 16,
+   "seconds": 7.99714469909668,
+   "s_per_answer": 0.4998215436935425,
+   "new_tokens": 2017,
+   "hit_max": 13,
+   "peak_allocated_bytes": 18522328576,
+   "ok": true
+  },
+  "greedy_b32": {
+   "batch": 32,
+   "prompts": 64,
+   "seconds": 85.90904784202576,
+   "s_per_answer": 1.3423288725316525,
+   "new_tokens": 8155,
+   "hit_max": 62,
+   "peak_allocated_bytes": 20265687040,
+   "ok": true,
+   "identical_to_first_batch_size": {
+    "compared": 16,
+    "identical": 8
+   }
+  },
+  "sampled_b32": {
+   "batch": 32,
+   "prompts": 64,
+   "seconds": 8.241836309432983,
+   "s_per_answer": 0.12877869233489037,
+   "new_tokens": 8131,
+   "hit_max": 62,
+   "peak_allocated_bytes": 20265687040,
+   "ok": true
+  },
+  "greedy_b64": {
+   "batch": 64,
+   "prompts": 128,
+   "seconds": 92.00509285926819,
+   "s_per_answer": 0.7187897879630327,
+   "new_tokens": 16056,
+   "hit_max": 116,
+   "peak_allocated_bytes": 22590180352,
+   "ok": true,
+   "identical_to_first_batch_size": {
+    "compared": 16,
+    "identical": 6
+   }
+  },
+  "sampled_b64": {
+   "batch": 64,
+   "prompts": 128,
+   "seconds": 8.580950260162354,
+   "s_per_answer": 0.06703867390751839,
+   "new_tokens": 15996,
+   "hit_max": 116,
+   "peak_allocated_bytes": 22590180352,
+   "ok": true
+  },
+  "greedy_b128": {
+   "batch": 128,
+   "prompts": 256,
+   "seconds": 96.35943627357483,
+   "s_per_answer": 0.3764040479436517,
+   "new_tokens": 31924,
+   "hit_max": 220,
+   "peak_allocated_bytes": 27239169536,
+   "ok": true,
+   "identical_to_first_batch_size": {
+    "compared": 16,
+    "identical": 7
+   }
+  },
+  "sampled_b128": {
+   "batch": 128,
+   "prompts": 256,
+   "seconds": 9.344645977020264,
+   "s_per_answer": 0.036502523347735405,
+   "new_tokens": 32034,
+   "hit_max": 229,
+   "peak_allocated_bytes": 27239169536,
+   "ok": true
+  },
+  "greedy_b256": {
+   "batch": 256,
+   "prompts": 512,
+   "seconds": 94.83799934387207,
+   "s_per_answer": 0.18523046746850014,
+   "new_tokens": 63438,
+   "hit_max": 428,
+   "peak_allocated_bytes": 36537147904,
+   "ok": true,
+   "identical_to_first_batch_size": {
+    "compared": 16,
+    "identical": 5
+   }
+  },
+  "sampled_b256": {
+   "batch": 256,
+   "prompts": 512,
+   "seconds": 15.010677576065063,
+   "s_per_answer": 0.029317729640752077,
+   "new_tokens": 63767,
+   "hit_max": 443,
+   "peak_allocated_bytes": 36537147904,
+   "ok": true
+  }
+ },
+ "pass2_steady_unseen_prompts": {
+  "warmup_b64": {
+   "batch": 64,
+   "order": 0,
+   "prompts": 128,
+   "seconds": 72.7656877040863,
+   "s_per_answer": 0.5684819351881742,
+   "new_tokens": 15847,
+   "hit_max": 108
+  },
+  "greedy_b64": {
+   "batch": 64,
+   "order": 1,
+   "prompts": 128,
+   "seconds": 10.274896144866943,
+   "s_per_answer": 0.080272626131773,
+   "new_tokens": 15803,
+   "hit_max": 103
+  },
+  "sampled_b64": {
+   "batch": 64,
+   "order": 2,
+   "prompts": 128,
+   "seconds": 9.835217475891113,
+   "s_per_answer": 0.07683763653039932,
+   "new_tokens": 16111,
+   "hit_max": 117
+  },
+  "warmup_b128": {
+   "batch": 128,
+   "order": 0,
+   "prompts": 256,
+   "seconds": 70.13347220420837,
+   "s_per_answer": 0.27395887579768896,
+   "new_tokens": 31647,
+   "hit_max": 208
+  },
+  "greedy_b128": {
+   "batch": 128,
+   "order": 1,
+   "prompts": 256,
+   "seconds": 18.831677436828613,
+   "s_per_answer": 0.07356123998761177,
+   "new_tokens": 32010,
+   "hit_max": 224
+  },
+  "sampled_b128": {
+   "batch": 128,
+   "order": 2,
+   "prompts": 256,
+   "seconds": 26.705536127090454,
+   "s_per_answer": 0.10431850049644709,
+   "new_tokens": 31992,
+   "hit_max": 229
+  },
+  "warmup_b256": {
+   "batch": 256,
+   "order": 0,
+   "prompts": 512,
+   "seconds": 89.15162992477417,
+   "s_per_answer": 0.17412427719682455,
+   "new_tokens": 63489,
+   "hit_max": 429
+  },
+  "greedy_b256": {
+   "batch": 256,
+   "order": 1,
+   "prompts": 512,
+   "seconds": 32.70545530319214,
+   "s_per_answer": 0.06387784238904715,
+   "new_tokens": 63616,
+   "hit_max": 438
+  },
+  "sampled_b256": {
+   "batch": 256,
+   "order": 2,
+   "prompts": 512,
+   "seconds": 16.548593759536743,
+   "s_per_answer": 0.0323214721865952,
+   "new_tokens": 64085,
+   "hit_max": 453
+  }
+ },
+ "reading": "the first generate call at a new batch size pays one-off kernel compilation/autotuning (60-90 s); after a warm-up, unseen prompts at that batch cost 0.03-0.10 s per answer. P-H100's 8.35 s per answer (batch 8, first call) was compilation-dominated.",
+ "greedy_batch_dependence": {
+  "greedy_b32": {
+   "compared": 16,
+   "identical": 8
+  },
+  "greedy_b64": {
+   "compared": 16,
+   "identical": 6
+  },
+  "greedy_b128": {
+   "compared": 16,
+   "identical": 7
+  },
+  "greedy_b256": {
+   "compared": 16,
+   "identical": 5
+  }
+ },
+ "registered": {
+  "batch": 128,
+  "greedy_s_per_answer": 0.07356123998761177,
+  "sampled_s_per_answer": 0.10431850049644709,
+  "rule": "steady-state seconds per answer on unseen prompts at the registered batch (pass 2); the one-off warm-up per run (<= 90 s) is negligible against the generation budget"
+ }
+}

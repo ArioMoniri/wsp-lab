@@ -416,6 +416,8 @@ E1_SCENARIOS = {
     "alt_guard_half": {"tf": 0.10, "gen": 0.05, "guard_shift": 0.5},
     "alt_corr05": {"tf": 0.10, "gen": 0.05, "rho_guard": 0.5},
     "alt_anom02": {"tf": 0.10, "gen": 0.05, "anom_base": 0.02},
+    # RULING-wme-v2b A10: TriviaQA wrong answers are less plausible; N is powered at 0.5x the generated effect
+    "alt_gen_half": {"tf": 0.10, "gen": 0.025},
     "null_zero": {"tf": 0.0, "gen": 0.0, "null": True},
     "null_guard_margin": {"tf": 0.10, "gen": 0.05, "guard_shift": 1.0, "null": True},
     "null_no_transfer": {"tf": 0.10, "gen": 0.0, "null": True},

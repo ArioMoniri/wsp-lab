@@ -1,4 +1,5 @@
 """scripts/cuda_env.sh: per-project CUDA tag detection, LD_LIBRARY_PATH scrubbing, namespaced kernel caches."""
+
 import subprocess
 from pathlib import Path
 
@@ -10,7 +11,11 @@ def _run(venv: Path, ld: str, project: str = "") -> dict:
     if project:
         env["CUDA_ENV_PROJECT"] = project
     out = subprocess.run(
-        ["bash", "-c", f'. "{SCRIPT}" "{venv}"; env'], env=env, capture_output=True, text=True, check=True
+        ["bash", "-c", f'. "{SCRIPT}" "{venv}"; env'],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     return dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
 
@@ -26,7 +31,10 @@ def _fake_venv(tmp_path: Path, cuda: str | None) -> Path:
 
 def test_detects_tag_and_scrubs_global_cuda(tmp_path):
     v = _fake_venv(tmp_path, "12.8")
-    e = _run(v, "/usr/local/cuda-13.2/lib64:/opt/amazon/openmpi/lib:/usr/local/cuda-13.2/extras/CUPTI/lib64")
+    e = _run(
+        v,
+        "/usr/local/cuda-13.2/lib64:/opt/amazon/openmpi/lib:/usr/local/cuda-13.2/extras/CUPTI/lib64",
+    )
     assert e["CUDA_ENV_TAG"] == "cu128"
     assert "cuda-13.2" not in e["LD_LIBRARY_PATH"]
     assert "/opt/amazon/openmpi/lib" in e["LD_LIBRARY_PATH"]

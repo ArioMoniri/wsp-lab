@@ -1,0 +1,57 @@
+{
+ "procedure": "WM-CP config and K rule chosen on synthetic data only (A7): native SynthWorld('saturating') outcomes + noise, never the registered alternative; candidates CPSEL_GRID; criterion the pooled median of WM-CP's own held-out SE-scaled |error| at h = 3-4 over the 5 outer folds of each replicate; ties within 2 % relative go to the earlier (simpler) candidate",
+ "cell": {
+  "r_f": 16,
+  "n_blk": 6,
+  "n_cal": 12
+ },
+ "seeds": [
+  50000,
+  50001,
+  50002,
+  50003,
+  50004,
+  50005
+ ],
+ "grid": {
+  "C0": {},
+  "C1": {
+   "k_max": 32,
+   "s0_scale": 0.5
+  },
+  "C2": {
+   "hidden": 128,
+   "latent": 64
+  },
+  "C3": {
+   "obs_weight": 0.1
+  }
+ },
+ "pooled_median": {
+  "C0": 3.062935699289009,
+  "C1": 3.0950950138843902,
+  "C2": 3.0939153276355555,
+  "C3": 3.026700265357047
+ },
+ "picked": "C0",
+ "frozen_config": {
+  "hidden": 64,
+  "latent": 32,
+  "epochs": 400,
+  "lr": 0.003,
+  "weight_decay": 0.0001,
+  "obs_weight": 1.0,
+  "k_max": 16,
+  "s0_scale": 1.0
+ },
+ "k_max_default": 16,
+ "reps_per_config": {
+  "C0": 6,
+  "C1": 6,
+  "C2": 6,
+  "C3": 6
+ },
+ "cpu_h": 0.8770058368311988,
+ "results_sha256": "2bdde0c06e8731f3fa08f237bcac52cf779aeb05d69feea6628d587a7a8e722e",
+ "label": "RULING-wme-v2b A7: WM-CP config and K-rule selection on synthetic data only"
+}
