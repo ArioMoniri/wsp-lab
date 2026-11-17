@@ -162,9 +162,12 @@ def s_report(sdir: Path) -> dict:
         }
     final = json.loads((sdir / "final.json").read_text()) if (sdir / "final.json").exists() else {}
     base = json.loads((sdir / "base.json").read_text())
+    design = json.loads((sdir / "design.json").read_text())
     return {
         "status": status,
         "measured": True,
+        "steps_planned": len(design["states"]),
+        "partial": final.get("status") == "STOPPED_CAP_PARTIAL",
         "n_steps": len(steps),
         "n_steps_h2": len(S.gate_steps(steps)),
         "cost_check": cc,
@@ -453,7 +456,13 @@ def render_md(rep: dict, notes: str = "") -> str:
     else:
         cc = S_.get("cost_check") or {}
         w(
-            f"- Status {S_['status']}; {S_['n_steps']} steps, {S_['n_steps_h2']} at h ≥ 2 (non-control); split {S_['split_counts']}."
+            f"- Status {S_['status']}; {S_['n_steps']} of {S_.get('steps_planned')} planned steps measured"
+            + (
+                " (stopped at the 6.0 GPU-h cap: PARTIAL; the remaining steps were not measured)"
+                if S_.get("partial")
+                else ""
+            )
+            + f"; {S_['n_steps_h2']} at h ≥ 2 (non-control); split {S_['split_counts']}."
         )
         w(
             f"- D2 cost check (first step): nested jet = {_f(cc.get('jet_forwards'), 2)} plain forwards (estimate 4, stop > 8); "

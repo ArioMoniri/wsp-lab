@@ -711,17 +711,31 @@ def run(out: Path):
             seen_steps[key] = srec
             (out / "s1_status.json").write_text(json.dumps(S1_STATE))
             led.log("step r1", key=key, seconds=round(srec["seconds_r1"], 1))
-        if (time.time() - t_start) / 3600 > CAP_GPU_H - 0.1:
-            led.log("STOP: stage cap")
-            return "STOPPED_CAP"
-    static_pass(out, field, sess, R, keys, names, led)
+        # the stage cap counts instance time across restarts: <out>/deadline holds the UTC epoch at which R1 stops,
+        # leaving time for the static pass over the states visited so far (the steps measured are then reported)
+        dl = out / "deadline"
+        late = dl.exists() and time.time() >= float(dl.read_text().strip())
+        if late or (time.time() - t_start) / 3600 > CAP_GPU_H - 0.1:
+            led.log("STOP: stage cap; static pass over the visited states", steps=len(seen_steps))
+            status = "STOPPED_CAP_PARTIAL"
+            break
+    else:
+        status = "DONE"
+    static_pass(out, field, sess, R, [k for k in keys if k in seen], names, led)
     (out / "s1_status.json").write_text(json.dumps(S1_STATE))
     again = evaluate()
-    led.log("done", post_restore_bitwise_equal_base=again == base["values"])
+    led.log("done", post_restore_bitwise_equal_base=again == base["values"], status=status)
     (out / "final.json").write_text(
-        json.dumps({"post_restore_bitwise_equal_base": again == base["values"]})
+        json.dumps(
+            {
+                "post_restore_bitwise_equal_base": again == base["values"],
+                "status": status,
+                "steps_measured": len(seen_steps),
+                "states_planned": len(keys),
+            }
+        )
     )
-    return "DONE"
+    return status
 
 
 def main():
