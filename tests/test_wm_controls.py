@@ -222,7 +222,26 @@ def test_inert_spec_names_exact_tensors():
     spec = C.INERT_SPEC
     assert spec["dead_rows"]["tensor"] == "model.language_model.embed_tokens.weight"
     assert spec["dead_rows"]["rows_from"] == 248077 and spec["dead_rows"]["rows_to"] == 248320
-    assert spec["k_norm_cancelled"]["layers"] and spec["abs_tol_se"] > 0
+    assert spec["compensated_pairs"]["mlp_layers"] == (12, 13, 14, 15) and spec["abs_tol_se"] > 0
+    assert "k_norm_cancelled" in spec["excluded"]
+
+
+def test_compensated_pairs_are_bitwise_inert_for_a_gated_mlp_in_bf16():
+    torch.manual_seed(0)
+    rm = A.RoleMap(2, 16, 32, 10, ("full_attention", "linear_attention"), tied=False)
+    (up, down), (v, _o) = C.compensated_pairs(rm, mlp_layers=(0,), attention_layers=(0,))
+    assert (
+        up.param("factor") == 2.0
+        and down.param("factor") == 0.5
+        and v.tensor.endswith("v_proj.weight")
+    )
+    with pytest.raises(C.NotInertError):
+        C.compensated_pairs(rm, attention_layers=(1,))
+    x = torch.randn(7, 16).to(torch.bfloat16)
+    Wg, Wu, Wd = (torch.randn(*s).to(torch.bfloat16) / 4 for s in ((32, 16), (32, 16), (16, 32)))
+    Wu2, Wd2 = A.realise(Wu, up.intended_delta(Wu)), A.realise(Wd, down.intended_delta(Wd))
+    mlp = lambda g, u, d: (torch.nn.functional.silu(x @ g.T) * (x @ u.T)) @ d.T
+    assert torch.equal(mlp(Wg, Wu, Wd), mlp(Wg, Wu2, Wd2))
 
 
 def test_dead_vocab_rows_touch_only_never_produced_rows_and_refuse_tied_embeddings():

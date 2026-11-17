@@ -18,9 +18,10 @@
   input-embedding rows with ids >= len(tokenizer) (9B: 248077..248319) are never produced by the tokenizer, and
   the 9B embedding is untied, so the edit is **mathematically** inert for every tokenised input; a tied model
   raises :class:`NotInertError`. (ii) Post-norm-cancelled scales (:func:`post_norm_cancelled_scales`): k_proj of a
-  full-attention layer x2 (bf16-exact), cancelled by k_norm only up to its eps, so it needs **behavioural**
-  verification (:func:`verify_inert`) at the frozen tolerance before use. q_proj is excluded (it carries the
-  output gate). :func:`inert_check` requires the uncertainty (coverage) checks to have passed first and both
+  full-attention layer x2, cancelled by k_norm only up to its eps: on Qwen3.5-0.8B it moved sycophancy values
+  by up to 0.11 nats (mean), so it is **excluded** from the registered controls (audit generator only). (iii)
+  Compensated power-of-two pairs (:func:`compensated_pairs`): up_proj x2 with down_proj x0.5, v_proj x2 with
+  o_proj x0.5; **bitwise** inert, and their support-writer half is visible to the model. :func:`inert_check` requires the uncertainty (coverage) checks to have passed first and both
   |yhat| <= 2 sigma and |yhat| <= an absolute per-objective tolerance, simultaneously over every control, state
   and endpoint (inflated sigma alone cannot pass).
 * **Trust-region strata** (:func:`assign_stratum`, :func:`stratum_report`): frozen assignment by the state's mean
@@ -65,12 +66,26 @@ INERT_SPEC = {
         "invariance": "mathematical (untied embedding; ids never produced by the tokenizer)",
         "verify": "bitwise-equal teacher-forced panel values",
     },
-    "k_norm_cancelled": {
-        "tensor_role": "k (self_attn.k_proj) of full-attention layers",
-        "layers": (11, 15, 19),
-        "factor": 2.0,
-        "invariance": "approximate (RMSNorm eps); behavioural verification required",
-        "verify_tol_se": 0.1,
+    "compensated_pairs": {
+        "mlp_layers": (
+            12,
+            13,
+            14,
+            15,
+        ),  # mlp.up_proj x2 with mlp.down_proj x0.5 (down = support writer)
+        "attention_layers": (
+            15,
+        ),  # self_attn.v_proj x2 with self_attn.o_proj x0.5 (full attention only)
+        "invariance": "bitwise (power-of-two compensation through operations linear in the scaled input; "
+        "verified bitwise-equal on Qwen3.5-0.8B)",
+        "representable": "the support-writer half is a scale action on a support tensor, so a field-nested "
+        "model sees it: the ghost test is not vacuous",
+        "verify": "bitwise-equal teacher-forced panel values",
+    },
+    "excluded": {
+        "k_norm_cancelled": "k_proj x2: approximately inert only (RMSNorm eps); measured on Qwen3.5-0.8B, wme-p2 "
+        "construction items: mean change up to 0.11 nats (sycophancy_real), so not behaviourally inert at "
+        "bf16; also outside the model's input representation (vacuous). Kept as a generator for audits only."
     },
     "endpoints": "all six trajectory endpoints",
     "abs_tol_se": 0.5,
@@ -349,6 +364,30 @@ def post_norm_cancelled_scales(rolemap: A.RoleMap, layers, factor=2.0) -> list:
     ]
     if not out:
         raise NotInertError("no full-attention layer (k_proj + k_norm) among the requested layers")
+    return out
+
+
+def compensated_pairs(rolemap: A.RoleMap, mlp_layers=(), attention_layers=()) -> list:
+    """Bundles of power-of-two compensated scales: (up_proj x2, down_proj x0.5) per MLP layer and (v_proj x2,
+    o_proj x0.5) per full-attention layer. Exact cancellation through operations linear in the scaled input."""
+    out = [
+        [
+            A.scale(rolemap.name(L, "up"), factor=2.0, dose=1.0),
+            A.scale(rolemap.name(L, "down"), factor=0.5, dose=1.0),
+        ]
+        for L in mlp_layers
+    ]
+    for L in attention_layers:
+        if rolemap.layer_types[L] != "full_attention":
+            raise NotInertError(
+                f"layer {L}: linear attention gates and normalises its output; not compensable"
+            )
+        out.append(
+            [
+                A.scale(rolemap.name(L, "v"), factor=2.0, dose=1.0),
+                A.scale(rolemap.name(L, "o"), factor=0.5, dose=1.0),
+            ]
+        )
     return out
 
 
