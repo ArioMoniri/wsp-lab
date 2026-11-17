@@ -1,0 +1,212 @@
+{
+ "label": "PREREG_WME v2b full-refit validation of H-T (RULING-wme-v2b A7/A11, ruling \u00a74(b)); validation seeds 0-119",
+ "pipeline": "wsp.wm.powersim_refit_v2b.replicate: quadratic world + registered A7 alternative (kappa 0.80), WM-CP (frozen CPConfig) vs the R-space static family (S1-S3, inner-fold choice), component-level sign-flip (10,000 flips, one-sided 0.025), C2-I gate; scenarios alt, null_shuffle, null_quadratic",
+ "cell_role": "reference cell (16, 6, 12), the calibration cell; no H-T cell passes the cheap grid, so H-T is not in the A8 selection",
+ "futility_rule": "stop once alternative non-rejections exceed planned - k_req (600 - 497 = 103); passing is then arithmetically impossible",
+ "cells": {
+  "reference": {
+   "cell": {
+    "r_f": 16,
+    "n_blk": 6,
+    "n_cal": 12
+   },
+   "kappa": 0.8,
+   "cfg": {},
+   "planned_reps": 600,
+   "completed": {
+    "alt": 106,
+    "null_shuffle": 106,
+    "null_quadratic": 106
+   },
+   "futility": {
+    "k_required_at_planned": 497,
+    "alt_non_rejections": 104,
+    "cannot_pass": true
+   },
+   "passed": false,
+   "cpu_h": 25.712485180960762,
+   "max_rss_mb": 426.9765625,
+   "alt": {
+    "reps": 106,
+    "rate": 0.018867924528301886,
+    "ci95": [
+     0.0022932169623665266,
+     0.06649819979424872
+    ],
+    "power_lb": 0.003362731174485111,
+    "mean_ct": -0.3274330401618991,
+    "mean_stat": -1.642869315755915,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 4.440892098500626e-16,
+    "static_chosen": {
+     "S1": 346,
+     "S2": 116,
+     "S3": 68
+    },
+    "mean_seconds": 289.0617925895835,
+    "median_static_err": 2.0933601126488006,
+    "pass": false,
+    "ct_quantiles": [
+     -0.625845658505114,
+     -0.346336278541286,
+     -0.04065888547430252
+    ],
+    "median_wm_err": 2.988773799738611
+   },
+   "null_shuffle": {
+    "reps": 106,
+    "rate": 0.02830188679245283,
+    "ci95": [
+     0.0058749954886904935,
+     0.08048651929421614
+    ],
+    "power_lb": 0.007757574683045719,
+    "mean_ct": -0.006506440758817267,
+    "mean_stat": -0.052788760377247175,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 4.440892098500626e-16,
+    "static_chosen": {
+     "S1": 28,
+     "S2": 490,
+     "S3": 12
+    },
+    "mean_seconds": 292.9916532511981,
+    "median_static_err": 3.139817740420465,
+    "coverage_at_zero": 0.9716981132075472,
+    "pass": true,
+    "ct_quantiles": [
+     -0.02385245180075901,
+     0.0,
+     0.0011673400282328217
+    ],
+    "median_wm_err": 3.13245600730603
+   },
+   "null_quadratic": {
+    "reps": 106,
+    "rate": 0.4056603773584906,
+    "ci95": [
+     0.31133978670868634,
+     0.5053915873339944
+    ],
+    "power_lb": 0.32528187347145243,
+    "mean_ct": -0.050937166508349244,
+    "mean_stat": -0.04082143064649134,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 4.440892098500626e-16,
+    "static_chosen": {
+     "S1": 113,
+     "S2": 390,
+     "S3": 27
+    },
+    "mean_seconds": 291.2007678522254,
+    "median_static_err": 0.6896239922293215,
+    "coverage_at_zero": 0.5943396226415094,
+    "pass": false,
+    "ct_quantiles": [
+     -0.3698095667000363,
+     0.0,
+     0.08159544729412926
+    ],
+    "median_wm_err": 0.6783353906564001
+   }
+  }
+ },
+ "calibration_seed_replicates": {
+  "seeds": "70,000-70,017",
+  "summary": {
+   "alt": {
+    "reps": 18,
+    "rate": 0.0,
+    "ci95": [
+     0.0,
+     0.1853019681378522
+    ],
+    "power_lb": 0.0,
+    "mean_ct": -0.34846872832062387,
+    "mean_stat": -1.8489626251170097,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 4.440892098500626e-16,
+    "static_chosen": {
+     "S1": 71,
+     "S2": 10,
+     "S3": 9
+    },
+    "mean_seconds": 379.49053796132404,
+    "median_static_err": 1.9900280193411033,
+    "pass": false,
+    "ct_quantiles": [
+     -0.5464366340616139,
+     -0.3779195121978699,
+     -0.15400179949688025
+    ],
+    "median_wm_err": 2.6979411992828215
+   },
+   "null_shuffle": {
+    "reps": 18,
+    "rate": 0.05555555555555555,
+    "ci95": [
+     0.0014055561673694233,
+     0.27294359967336845
+    ],
+    "power_lb": 0.0028455711315563998,
+    "mean_ct": -0.04888912651984298,
+    "mean_stat": -0.42987888982220146,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 4.440892098500626e-16,
+    "static_chosen": {
+     "S1": 11,
+     "S2": 75,
+     "S3": 4
+    },
+    "mean_seconds": 385.04806113243103,
+    "median_static_err": 3.0436840253680097,
+    "coverage_at_zero": 0.9444444444444444,
+    "pass": false,
+    "ct_quantiles": [
+     -0.06435308831033164,
+     0.0,
+     0.005930608523814364
+    ],
+    "median_wm_err": 3.1512748345283326
+   },
+   "null_quadratic": {
+    "reps": 18,
+    "rate": 0.3333333333333333,
+    "ci95": [
+     0.13342740250612356,
+     0.5900747618279255
+    ],
+    "power_lb": 0.1563436394836529,
+    "mean_ct": -0.09655353418842295,
+    "mean_stat": -0.044272940392653656,
+    "c2i_pass": 1.0,
+    "decomposition_gap_max": 4.440892098500626e-16,
+    "static_chosen": {
+     "S1": 15,
+     "S2": 71,
+     "S3": 4
+    },
+    "mean_seconds": 384.6620824999279,
+    "median_static_err": 0.6839829783536988,
+    "coverage_at_zero": 0.6666666666666666,
+    "pass": false,
+    "ct_quantiles": [
+     -0.3504661154630527,
+     0.0,
+     0.05142553232861554
+    ],
+    "median_wm_err": 0.6818245777074905
+   }
+  }
+ },
+ "ht": "unresolved \u2014 not powered",
+ "achieved_ct_alt": {
+  "reference": -0.3274330401618991,
+  "calibration_seeds": -0.34846872832062387
+ },
+ "results_sha256": "af1d20827a6ce3b0135049b02630d59ee87f10ae196afb496a7a89af1eb0e6ed",
+ "lambda": {
+  "refitA": "wsp-wme-v2bsim-20261117 (gpu_1x_a10), reps 0-59",
+  "refitB": "wsp-wme-v2bsim2-20261117 (gpu_1x_a10), reps 60-119"
+ }
+}

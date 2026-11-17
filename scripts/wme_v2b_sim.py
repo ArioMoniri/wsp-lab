@@ -48,7 +48,13 @@ def _arg(v: str):
     """JSON argument, inline or ``@path`` (the Lambda driver passes arguments unquoted)."""
     if not v:
         return {}
-    return json.loads(Path(v[1:]).read_text() if v.startswith("@") else v)
+    if v.startswith("@"):
+        return json.loads(Path(v[1:]).read_text())
+    if "=" in v and not v.lstrip().startswith(
+        "{"
+    ):  # r_f=16,n_blk=6,n_cal=12 (no braces: survives unquoted shells)
+        return {k: int(x) for k, x in (kv.split("=") for kv in v.split(","))}
+    return json.loads(v)
 
 
 def _cfg(d):

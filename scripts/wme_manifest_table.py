@@ -95,6 +95,18 @@ if V2:
         ),
         ("claims", "§8.5 selection + full refit, ruling §4(b) / A6"),
     ]
+if "v2b" in M:
+    MAN += [
+        ("model.wmcp.selection", "WM-CP config and K rule chosen on synthetic data only (v2b A7)"),
+        (
+            "ht.alternative",
+            "registered physically possible alternative and its calibration (v2b A7)",
+        ),
+        ("caps", "v2b A9"),
+        ("selection.priority", "v2b A8"),
+        ("e1.effect", "v2b A10"),
+        ("cost.generation", "P-H100b (v2b A9)"),
+    ]
 SIMS = [
     ("r_f", None),
     ("n_blk", None),
@@ -133,7 +145,7 @@ SIMS = [
 ]
 lines = [
     "# PREREG_WME "
-    + ("v2 (RULING-wme-v2)" if V2 else "v1")
+    + ("v2 (RULING-wme-v2 + v2b)" if "v2b" in M else "v2 (RULING-wme-v2)" if V2 else "v1")
     + " placeholders → values (track A), for the chair",
     "",
     (

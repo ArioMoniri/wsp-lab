@@ -47,6 +47,7 @@ def test_json_args_inline_or_from_file(tmp_path):
         and SIM._arg(f"@{f}") == {"r_f": 16}
         and SIM._arg("") == {}
     )
+    assert SIM._arg("r_f=16,n_blk=6,n_cal=12") == {"r_f": 16, "n_blk": 6, "n_cal": 12}
     assert SIM.k_required(600) == 497
 
 

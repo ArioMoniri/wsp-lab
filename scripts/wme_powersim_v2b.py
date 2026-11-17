@@ -254,6 +254,7 @@ def cmd_select(a):
         },
         "cheapest_per_rank": per_rank,
         "powerable": powerable,
+        "selected_rank": None if sel is None else {"index": sel[0] + 1, "claim_set": "+".join(run)},
         "claims_run": list(run),
         "unresolved_not_powered": [c for c in claims_all if c not in run] + ["e1_secondaries"],
         "selected": design,
