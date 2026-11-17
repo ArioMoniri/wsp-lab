@@ -233,10 +233,21 @@ class Planner:
         )
         return list(zip(actions, x.tolist(), strict=True)), v
 
-    def beam(self, pred, draw, mode, support, seed, exclude=()):
+    def beam(self, pred, draw, mode, support, seed, exclude=(), seed_nodes=None, canon=None):
+        """Beam over action identities with inner dose optimisation. ``seed_nodes`` (adaptive proposals, PREREG
+        v1 §6.5.4): extra frontier nodes ``(actions, doses)`` entering at the level after their length. ``canon``
+        maps a candidate to the key used for exclusion and de-duplication (default: its own key). With both at
+        their defaults the search is exactly the C6-gated planner."""
+        key = canon or candidate_key
         frontier = [((), np.zeros(0))]
+        seeds = [(tuple(a), np.asarray(d, float)) for a, d in (seed_nodes or [])]
         scored = []
         for level in range(1, self.cfg.max_actions + 1):
+            have = {tuple(sorted(a)) for a, _ in frontier}
+            for a, d in seeds:
+                if len(a) == level - 1 and tuple(sorted(a)) not in have:
+                    frontier.append((a, d))
+                    have.add(tuple(sorted(a)))
             children = []
             for node, warm in frontier:
                 for a in range(self.A):
@@ -259,17 +270,20 @@ class Planner:
                 if len(frontier) < self.cfg.beam_width:
                     frontier.append((acts, np.array([d for _, d in c])))
         scored.sort(key=lambda t: -t[0])
-        return [(v, c) for v, c in scored if candidate_key(c) not in exclude]
+        return [(v, c) for v, c in scored if key(c) not in exclude]
 
-    def propose(self, pred, q, seed, mode, support, exclude=()):
+    def propose(self, pred, q, seed, mode, support, exclude=(), seed_nodes=None, canon=None):
+        key = canon or candidate_key
         rng = np.random.default_rng(seed)
         out, keys = [], set(exclude)
         for slot in range(q):
             draw = pred.draw(rng)
-            for _v, c in self.beam(pred, draw, mode, support, seed + 104729 * slot, keys):
-                if candidate_key(c) not in keys:
+            for _v, c in self.beam(
+                pred, draw, mode, support, seed + 104729 * slot, keys, seed_nodes, canon
+            ):
+                if key(c) not in keys:
                     out.append(c)
-                    keys.add(candidate_key(c))
+                    keys.add(key(c))
                     break
         return out
 
