@@ -18,16 +18,21 @@ G=$(nvidia-smi -L | wc -l)
 stamp "gpus: $G"
 command -v uv >/dev/null || { curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1; }
 export PATH="$HOME/.local/bin:$PATH"
-uv venv -q --python 3.12 .venv || fail venv
+uv venv -q --clear --python 3.12 .venv || fail venv
 PY=.venv/bin/python
 drv=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
-IDX=https://download.pytorch.org/whl/cu132
-[ "$drv" -lt 580 ] && { IDX=https://download.pytorch.org/whl/cu128; stamp "driver $drv < 580: torch from cu128 (deviation)"; }
-stamp "installing torch 2.15.0 from $IDX"
-uv pip install -q --python $PY "torch==2.15.0" --index-url "$IDX" > logs/pip_torch.log 2>&1 || fail torch
-grep -v -E '^torch==|^torchvision==|^nvidia-|^triton==' constraints.txt > constraints.nontorch.txt
+# Lambda platform stack (fixed for every WM-E 9B Lambda run): torch 2.11.0+cu128 runs on the 570 and 580 driver
+# branches alike (torch 2.15 ships only cu132/cu134 wheels, which need driver >= 580). Deviation from the AWS stack.
+TORCH=2.11.0
+IDX=https://download.pytorch.org/whl/cu128
+stamp "driver $drv: installing torch $TORCH from $IDX"
+uv pip install -q --python $PY "torch==$TORCH" --index-url "$IDX" > logs/pip_torch.log 2>&1 || fail torch
+grep -v -E '^torch==|^torchvision==|^nvidia-|^triton==|^setuptools==|^cuda-|^nvidia' constraints.txt > constraints.nontorch.txt
+echo "torch==$TORCH" >> constraints.nontorch.txt   # no later step may move torch off the platform pin
 uv pip install -q --python $PY -c constraints.nontorch.txt transformers accelerate safetensors numpy \
-  huggingface-hub hf-xet flash-linear-attention fla-core einops kernels jinja2 > logs/pip.log 2>&1 || fail pip
+  huggingface-hub hf-xet flash-linear-attention fla-core einops kernels jinja2 scipy > logs/pip.log 2>&1 || fail pip
+# fla refuses the Hopper backward (chunk_bwd_dqkwg) under torch 2.11's Triton 3.6; tilelang is its supported path
+uv pip install -q --python $PY -c constraints.nontorch.txt tilelang > logs/pip_tilelang.log 2>&1 || fail tilelang
 stamp "venv ready ($(( $(date +%s) - t0 )) s)"
 HF_HUB_OFFLINE=0 .venv/bin/hf download Qwen/Qwen3.5-9B --revision "$REV" > logs/download.log 2>&1 || fail download
 stamp "model downloaded ($(( $(date +%s) - t0 )) s)"

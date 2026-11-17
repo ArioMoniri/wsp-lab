@@ -962,3 +962,55 @@ def run_secondary_cell(objective, cell, scenario, reps, inp):
         "power_lb": cp_lower_one_sided(k, reps),
         "null": bool(sc.get("null")),
     }
+
+
+# ------------------------------------------------------------------ LLM reader arms (Claude client only)
+
+# Measured by track B (docs/reviews/wme/wme-arms-2026-11-17.md §3, claude -p): fixed overhead 543 input tokens per
+# call; a reader call at a 6-candidate pool with 2 own results used 1,812 input tokens; +~70 tokens per pool
+# candidate. Own results are assumed at +80 tokens each (assumption). Output limits: reader 1,024; Thinker 512,
+# Worker 1,024, Verifier 512; at most one Worker revision. Codex (~17.8k per call) cannot serve the arms.
+READER = {
+    "overhead": 543,
+    "base_at_6": 1812,
+    "per_candidate": 70,
+    "per_own_result": 80,
+    "out_reader": 1024,
+    "out_team": (512, 1024, 512, 1024),
+}
+CLAUDE_PRICES = {  # $ per 1M tokens (input, output); Anthropic first-party list prices cached 2026-10-06
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-opus-5-5": (4.00, 20.00),
+}
+
+
+def reader_tokens(pool_size: int, B: int) -> dict:
+    """Worst-case tokens per (arm, episode): every call at its output limit, own results at their maximum."""
+    rounds = 4
+    b = B // rounds
+    per = {"wsr": [0, 0], "team": [0, 0]}
+    for r in range(rounds):
+        own = r * b
+        inp = (
+            READER["base_at_6"]
+            + READER["per_candidate"] * (pool_size - 6)
+            + READER["per_own_result"] * (own - 2)
+        )
+        per["wsr"][0] += inp
+        per["wsr"][1] += READER["out_reader"]
+        per["team"][0] += 4 * inp + sum(READER["out_team"][:3])  # Worker revision sees the draft
+        per["team"][1] += sum(READER["out_team"])
+    return {k: {"input": v[0], "output": v[1], "total": v[0] + v[1]} for k, v in per.items()}
+
+
+def reader_cap(pool_size: int, B: int) -> int:
+    """One cap for both LLM arms: the team's worst case, rounded up to the next 10k."""
+    t = reader_tokens(pool_size, B)["team"]["total"]
+    return int(math.ceil(t / 10_000) * 10_000)
+
+
+def reader_usd(pool_size: int, B: int, n_episodes: int, model: str) -> float:
+    pi, po = CLAUDE_PRICES[model]
+    t = reader_tokens(pool_size, B)
+    return n_episodes * sum(v["input"] * pi + v["output"] * po for v in t.values()) / 1e6

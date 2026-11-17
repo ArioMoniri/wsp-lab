@@ -201,7 +201,7 @@ def cmd_worker(a):
         p: {o: {r["id"]: r for r in v} for o, v in its.items()}
         for p, its in (("validation", val_items), ("construction", con_items))
     }
-    units = _units(base_hash, val_items, con_items, a.smoke)
+    units = _units(base_hash, val_items, con_items, a.smoke or a.skip_embed)
     sess = A.EditSession(dict(model.named_parameters()), base_hash=base_hash, rolemap=rm)
     meta = {
         "worker": a.worker,
@@ -387,7 +387,7 @@ def cmd_summarise(a):
     meta = json.loads(next(Path(a.kk or a.k1).glob("meta_*.json")).read_text())
     base_hash = meta["theta0"]
     val_items, con_items = _items(a.smoke)
-    units = _units(base_hash, val_items, con_items, a.smoke)
+    units = _units(base_hash, val_items, con_items, a.smoke or a.skip_embed)
     main = Path(a.kk or a.k1)
     gv = _stats(main, units, "validation")
     stats = {s: dp.paired_stats(gv["base"], g) for s, g in gv.items() if s != "base"}
@@ -498,6 +498,7 @@ def main():
     ap.add_argument("--k1", default=None)
     ap.add_argument("--kk", default=None)
     ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--skip-embed", action="store_true", help="local 32 GB card: no full-vocabulary edits")
     a = ap.parse_args()
     try:
         {"worker": cmd_worker, "extras": cmd_extras, "summarise": cmd_summarise}[a.cmd](a)
