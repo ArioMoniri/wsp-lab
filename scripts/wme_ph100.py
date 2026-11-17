@@ -367,6 +367,125 @@ def cmd_extras(a):
     (out / "extras.json").write_text(json.dumps(rec, indent=1))
 
 
+GENB_BATCHES = (8, 32, 64, 128, 256)
+GENB_BUDGET_S = (
+    1800  # P-H100b wall-clock guard for the timing loop (RULING-wme-v2b A9: <= 1 instance-hour)
+)
+
+
+def cmd_genbatch(a):
+    """P-H100b (RULING-wme-v2b A9): sycophancy_real generation seconds per answer at larger batches, greedy and
+    the registered sampled decoding, on exposed wme-p2 construction prompts (neutral and suggested). Two batches per
+    batch size after a warm-up; greedy agreement with batch 8 on the common prompts is recorded (hash-free: counts
+    only). No enhancement quantity is computed."""
+    import torch
+
+    from wsp.wm import genaudit as GA
+    from wsp.wm import panel2 as P2
+
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    model, tok, _cfg, base_hash, _rm, _embed, load_s = _load()
+    its = sorted(P2.read_open(PANEL, "construction")["sycophancy_real"], key=lambda r: r["id"])
+    prompts = [p for r in its for p in (r["neutral_prompt"], r["suggested_prompt"])]
+    mx = 16 if a.smoke else GA.SPEC_V1["max_new_tokens"]["sycophancy_real"]
+    seed = GA.SPEC_V1["sampled_audit"]["seeds"][0]
+    rec = {
+        "gpu": torch.cuda.get_device_name(0),
+        "load_s": load_s,
+        "base_hash": base_hash,
+        "max_new_tokens": mx,
+        "prompts_available": len(prompts),
+        "runs": {},
+    }
+    t_all = time.time()
+    GA.generate_greedy(
+        model, tok, prompts[:8], max_new_tokens=8, batch=8
+    )  # warm-up (kernel compilation)
+    ref = None
+    for b in (2, 4) if a.smoke else GENB_BATCHES:
+        n = min(len(prompts), 2 * b)
+        for mode in ("greedy", "sampled"):
+            if time.time() - t_all > GENB_BUDGET_S:
+                rec["runs"][f"{mode}_b{b}"] = {"skipped": "wall-clock guard"}
+                continue
+            torch.cuda.synchronize()
+            torch.cuda.reset_peak_memory_stats()
+            t = time.time()
+            try:
+                if mode == "greedy":
+                    o = GA.generate_greedy(model, tok, prompts[:n], max_new_tokens=mx, batch=b)
+                else:
+                    o = GA.generate_sampled(
+                        model, tok, prompts[:n], max_new_tokens=mx, seed=seed, batch=b
+                    )
+                torch.cuda.synchronize()
+                dt = time.time() - t
+                r = {
+                    "batch": b,
+                    "prompts": n,
+                    "seconds": dt,
+                    "s_per_answer": dt / n,
+                    "new_tokens": sum(len(x["ids"]) for x in o),
+                    "hit_max": sum(x["hit_max"] for x in o),
+                    "peak_allocated_bytes": torch.cuda.max_memory_allocated(),
+                    "ok": True,
+                }
+                if mode == "greedy":
+                    if ref is None:
+                        ref = [x["ids"] for x in o]
+                    k = min(len(ref), len(o))
+                    r["identical_to_first_batch_size"] = {
+                        "compared": k,
+                        "identical": sum(ref[i] == o[i]["ids"] for i in range(k)),
+                    }
+            except torch.OutOfMemoryError as e:
+                r = {"batch": b, "ok": False, "error": "OOM", "detail": str(e)[:200]}
+                torch.cuda.empty_cache()
+            rec["runs"][f"{mode}_b{b}"] = r
+            (out / "genbatch.json").write_text(json.dumps(rec, indent=1))
+    rec["seconds_total"] = time.time() - t_all
+    rec["peak_rss_mb"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    (out / "genbatch.json").write_text(json.dumps(rec, indent=1))
+
+
+def cmd_genbatch_steady(a):
+    """P-H100b steady state: per batch size, a warm-up greedy pass, then greedy and sampled passes on UNSEEN prompts
+    (different prompt lengths), so one-off kernel compilation/autotuning is separated from the per-answer cost."""
+    import torch
+
+    from wsp.wm import genaudit as GA
+    from wsp.wm import panel2 as P2
+
+    out = Path(a.out)
+    model, tok, _cfg, base_hash, _rm, _embed, load_s = _load()
+    its = sorted(P2.read_open(PANEL, "construction")["sycophancy_real"], key=lambda r: r["id"])
+    prompts = [p for r in its for p in (r["neutral_prompt"], r["suggested_prompt"])]
+    mx = GA.SPEC_V1["max_new_tokens"]["sycophancy_real"]
+    seed = GA.SPEC_V1["sampled_audit"]["seeds"][0]
+    rec = {"gpu": torch.cuda.get_device_name(0), "load_s": load_s, "base_hash": base_hash, "runs": {}}
+    t_all = time.time()
+    for b in [int(x) for x in a.batches.split(",")]:
+        for i, (mode, lo) in enumerate((("warmup", 0), ("greedy", 2 * b), ("sampled", 4 * b))):
+            if time.time() - t_all > GENB_BUDGET_S:
+                break
+            ps = prompts[a.offset + lo : a.offset + lo + 2 * b]
+            torch.cuda.synchronize()
+            t = time.time()
+            if mode == "sampled":
+                o = GA.generate_sampled(model, tok, ps, max_new_tokens=mx, seed=seed, batch=b)
+            else:
+                o = GA.generate_greedy(model, tok, ps, max_new_tokens=mx, batch=b)
+            torch.cuda.synchronize()
+            dt = time.time() - t
+            rec["runs"][f"{mode}_b{b}"] = {"batch": b, "order": i, "prompts": len(ps), "seconds": dt,
+                                           "s_per_answer": dt / len(ps), "new_tokens": sum(len(x["ids"]) for x in o),
+                                           "hit_max": sum(x["hit_max"] for x in o)}
+            (out / "genbatch_steady.json").write_text(json.dumps(rec, indent=1))
+    rec["seconds_total"] = time.time() - t_all
+    (out / "genbatch_steady.json").write_text(json.dumps(rec, indent=1))
+
+
 def _stats(run_dir, units, panel):
     from wsp.wm import dp
 
@@ -491,17 +610,27 @@ def cmd_summarise(a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["worker", "extras", "summarise"])
+    ap.add_argument("cmd", choices=["worker", "extras", "summarise", "genbatch", "genbatch-steady"])
     ap.add_argument("--out", required=True)
     ap.add_argument("--worker", default="w0")
     ap.add_argument("--work", default="/tmp/wme-ph100-work")
     ap.add_argument("--k1", default=None)
     ap.add_argument("--kk", default=None)
     ap.add_argument("--smoke", action="store_true")
-    ap.add_argument("--skip-embed", action="store_true", help="local 32 GB card: no full-vocabulary edits")
+    ap.add_argument("--batches", default="64,128")
+    ap.add_argument("--offset", type=int, default=512)
+    ap.add_argument(
+        "--skip-embed", action="store_true", help="local 32 GB card: no full-vocabulary edits"
+    )
     a = ap.parse_args()
     try:
-        {"worker": cmd_worker, "extras": cmd_extras, "summarise": cmd_summarise}[a.cmd](a)
+        {
+            "worker": cmd_worker,
+            "extras": cmd_extras,
+            "summarise": cmd_summarise,
+            "genbatch": cmd_genbatch,
+            "genbatch-steady": cmd_genbatch_steady,
+        }[a.cmd](a)
     except Exception:
         traceback.print_exc()
         return 1

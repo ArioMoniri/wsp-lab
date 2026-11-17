@@ -327,10 +327,12 @@ def audit_v1_single(base, edit, items, seed=20261117) -> dict:
     }
 
 
-def generate_greedy(
-    model, tok, user_prompts, max_new_tokens: int, batch: int = 8, device="cuda"
+def _generate(
+    model, tok, user_prompts, max_new_tokens: int, batch: int, device, sample=None
 ) -> list:
-    """Greedy, non-thinking generation through the frozen chat template (left padding)."""
+    """Non-thinking generation through the frozen chat template (left padding), greedy or sampled. Sampled decoding
+    (``sample`` = {temperature, top_p, seed}) reseeds torch before every batch with seed + batch index, so the
+    draws are fixed for a given registered batch size."""
     import torch
 
     from wsp.wm import panel as P
@@ -342,22 +344,29 @@ def generate_greedy(
     if isinstance(im_end, int) and im_end >= 0:
         stop.add(im_end)
     out = []
-    for s in range(0, len(texts), batch):
+    for bi, s in enumerate(range(0, len(texts), batch)):
         enc = [tok.encode(t, add_special_tokens=False) for t in texts[s : s + batch]]
         L = max(map(len, enc))
         ids = torch.tensor([[pad] * (L - len(e)) + e for e in enc], device=device)
         att = torch.tensor([[0] * (L - len(e)) + [1] * len(e) for e in enc], device=device)
+        if sample is None:
+            kw = {"do_sample": False, "temperature": None, "top_p": None, "top_k": None}
+        else:
+            torch.manual_seed(int(sample["seed"]) + bi)
+            kw = {
+                "do_sample": True,
+                "temperature": float(sample["temperature"]),
+                "top_p": float(sample["top_p"]),
+                "top_k": None,
+            }
         with torch.no_grad():
             gen = model.generate(
                 input_ids=ids,
                 attention_mask=att,
-                do_sample=False,
                 max_new_tokens=max_new_tokens,
                 pad_token_id=pad,
                 eos_token_id=sorted(stop),
-                temperature=None,
-                top_p=None,
-                top_k=None,
+                **kw,
             )
         for row in gen[:, L:].tolist():
             cut = next((k for k, t in enumerate(row) if t in stop), None)
@@ -370,3 +379,26 @@ def generate_greedy(
                 }
             )
     return out
+
+
+def generate_greedy(
+    model, tok, user_prompts, max_new_tokens: int, batch: int = 8, device="cuda"
+) -> list:
+    """Greedy, non-thinking generation through the frozen chat template (left padding)."""
+    return _generate(model, tok, user_prompts, max_new_tokens, batch, device)
+
+
+def generate_sampled(
+    model, tok, user_prompts, max_new_tokens: int, seed: int, batch: int = 8, device="cuda"
+) -> list:
+    """The registered sampled audit's decoding (``SPEC_V1['sampled_audit']``: temperature, top_p) for one seed."""
+    sa = SPEC_V1["sampled_audit"]
+    return _generate(
+        model,
+        tok,
+        user_prompts,
+        max_new_tokens,
+        batch,
+        device,
+        sample={"temperature": sa["temperature"], "top_p": sa["top_p"], "seed": seed},
+    )

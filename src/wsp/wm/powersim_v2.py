@@ -52,7 +52,7 @@ def sim_ht(rng, g, n_cal, n_bank, n_inert, sc, se_ratio, wm_scale, n_flip=N_FLIP
             "m": len(rows),
             "estimable": False,
         }
-    scale = PV._scale_at(n_bank, se_ratio)
+    scale = PV._scale_at(n_bank, se_ratio) * sc.get("scale_mult", 1.0)
     L = np.linalg.cholesky(0.3 * np.ones((K, K)) + 0.7 * np.eye(K))
     e_w, e_s, comp = [], [], []
     for ci, (_c, _st, n_u, _n_c, weak) in enumerate(rows):

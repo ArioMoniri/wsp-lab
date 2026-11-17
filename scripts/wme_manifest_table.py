@@ -95,6 +95,18 @@ if V2:
         ),
         ("claims", "§8.5 selection + full refit, ruling §4(b) / A6"),
     ]
+if "v2b" in M:
+    MAN += [
+        ("model.wmcp.selection", "WM-CP config and K rule chosen on synthetic data only (v2b A7)"),
+        (
+            "ht.alternative",
+            "registered physically possible alternative and its calibration (v2b A7)",
+        ),
+        ("caps", "v2b A9"),
+        ("selection.priority", "v2b A8"),
+        ("e1.effect", "v2b A10"),
+        ("cost.generation", "P-H100b (v2b A9)"),
+    ]
 SIMS = [
     ("r_f", None),
     ("n_blk", None),
@@ -104,7 +116,10 @@ SIMS = [
     (
         "n_gen,syc",
         _run_note(
-            "e1", "TriviaQA generation items (A4)", "E1 unresolved: generation audit not run"
+            "e1",
+            "TriviaQA generation items (A4)"
+            + ("; N powered at 0.5x the generated effect (v2b A10)" if "v2b" in M else ""),
+            "E1 unresolved: generation audit not run",
         ),
     ),
     ("n_gen,gsm", "not run — not powered"),
@@ -133,7 +148,7 @@ SIMS = [
 ]
 lines = [
     "# PREREG_WME "
-    + ("v2 (RULING-wme-v2)" if V2 else "v1")
+    + ("v2 (RULING-wme-v2 + v2b)" if "v2b" in M else "v2 (RULING-wme-v2)" if V2 else "v1")
     + " placeholders → values (track A), for the chair",
     "",
     (
