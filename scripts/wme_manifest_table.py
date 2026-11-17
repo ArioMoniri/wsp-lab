@@ -3,7 +3,6 @@
 
 import hashlib
 import json
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,7 +94,7 @@ for k, src in MAN:
 lines += [
     "",
     "## [SIM] values (§8.5 selection; claims run: "
-    + ", ".join(M["claims"]["run"])
+    + (", ".join(M["claims"]["run"]) or "none")
     + "; unresolved — not powered: "
     + ", ".join(M["claims"]["unresolved_not_powered"])
     + ")",

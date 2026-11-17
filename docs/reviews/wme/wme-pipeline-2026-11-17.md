@@ -15,25 +15,32 @@
 - **Branch:** `feat/wme-pipeline` (from main `fd65a59`; main `fe2060e` with track B merged in at `b37101e`).
 - **Machine-readable:** `docs/reviews/wme/wme-ph100-2026-11-17.json` (P-H100, hash-only),
   `wme-ph100-platform-ratio-2026-11-17.json`, `wme-powersim-v1-2026-11-17.json` (grid, selection, pricing),
-  `wme-powersim-refit-2026-11-17.json` (full refit), `wme-supplement-audit-2026-11-17.json`,
+  `wme-powersim-refit-2026-11-17.json` (full refit), `wme-e2-library-audit-2026-11-17.json`, `wme-supplement-audit-2026-11-17.json`,
   `wme-bank-roots-2026-11-17.json` (root identities and the direction audit), `docs/prereg/wme_manifest.json` and
   `docs/prereg/wme_manifest_table.md` (placeholder → value, for the chair).
 
 ## BLUF
 
-- **Powered: H-T only.** Selected cell r_f = 12, n_blk = 12, n_cal = 12, 48 bank groups per objective, n_inert = 12:
-  size 0.002 (CP 95% upper ≤ 0.007), one-sided coverage 0.972, power 0.946 (one-sided CP lower bound 0.933) at the
-  registered C_T = 0.15; 24 held-out components; m_min_HT = 12.
-- **Unresolved — not powered: H-E1, H-E2 and the E1 secondaries.**
-  - **E1:** no grid cell reaches power 0.80 (best 0.50). The binding test is the generated benefit (Tango, +5 pp)
-    on at most 250 TriviaQA groups (256 are available). Every E1 null is controlled (≤ 0.026).
-  - **E2:** *size*, not power. Power is 0.87–0.91 at n_rep = 8, but the null rejection rate is 0.034–0.052 at
-    4,000 replicates against the 0.035 tolerance, falling with episodes per family (median 0.138 at n_rep = 2,
-    0.043 at n_rep = 8). The registered percentile two-way bootstrap, stratified by family, under-covers with few
-    episodes per family. Only a registration change (larger n_rep or a different interval) can fix this; it is a
-    decision for the chair and Board A.
-- **Full-refit validation** of the selected H-T cell: §6 (null and alternative, 600 + 600 replicates on a Lambda
-  CPU instance). The cheap grid passes; the full-refit result and the §4(b) consequence are in §6.
+- **No registered claim is powered within the §1 caps once ruling §4(b) is applied. All four register as
+  "unresolved — not powered":**
+  - **H-T.** The cheap grid passes at r_f = 12, n_blk = 12, n_cal = 12, with 48 bank groups and n_inert = 12:
+    size 0.002, coverage 0.972, power 0.946 (CP lower bound 0.933) at C_T = 0.15.
+  - **H-T full refit** (the nested pipeline refit per replicate):
+    - at that cell, **0/401 rejections under the alternative**, so power is 0. The cause: **C2-I fails in every
+      alternative replicate** (WM-E predicts "ghost" effects for the I1 round trips once it has learned the
+      history dependence), although its lower bound is > 0 in 231/401 and C2-S passes in 300/401;
+    - the null is never rejected (0/401), but coverage among the 58 estimable replicates is 0.81;
+    - the next larger cell (16, 12, 12) fails the same way (C2-I 0/54). The failing gate does not depend on N;
+    - the alternative DGP reached a mean Ĉ_T of only 0.094–0.113, below the registered 0.15.
+  - **H-E1:** best power 0.50. The binding test is the generated benefit (Tango, +5 pp) on at most 250 TriviaQA
+    groups (256 available).
+  - **H-E2:** size, not power. Power is 0.87–0.91 at n_rep = 8, but null rejection is 0.034–0.052 against the
+    0.035 tolerance at 4,000 replicates. The registered family-stratified percentile two-way bootstrap
+    under-covers with few episodes per family.
+  - **E1 secondaries:** no passing cell.
+- **For the chair and Board A** (registration issues, not tuning): (a) the C2-I absolute rule versus a WM-E that
+  genuinely learns order effects; (b) the E2 interval; (c) the E1 generation N against the TriviaQA pool. Each
+  needs a dated amendment before any data; nothing has been changed here.
 - **P-H100 (2 × H100 SXM5):** per-item seconds 0.009–0.023 per objective, 1.03 s overhead per unit; a bank visit
   (6 endpoints × 48 groups) 10.9 s; field K-FAC 348 s per 4-layer group; oracle gradient 130 s per state for all 64
   writers in one pass; greedy sycophancy answer 8.3 s. **Inert edits verified bitwise on 9B construction items**
@@ -44,8 +51,11 @@
   HarmBench (pool 326)** is chosen by the preference order; JBB is not needed.
 - **Projected cost of the selected design:** bank 18.0 GPU-h-eq (cap 35), about $83–$90 on Lambda H100. The
   registered confirmatory work is nil (no powered E claim); the descriptive search design prices at 9.5 GPU-h (cap 50).
-- **Lambda spend (track A): $8.06 for P-H100 (0.84 instance-hours, terminated and confirmed through the API) plus
-  the refit instance (§9).** Cap $60.
+- **Lambda spend (track A): $13.90 of the $60 cap.**
+  - P-H100: $8.06, 0.84 instance-hours.
+  - Full refit: $5.84, 4.53 instance-hours.
+  - Both instances were terminated by the dead-man terminator and confirmed through the API; no `wsp-wme-*`
+    instance is live.
 
 ## 1. What was built (test-first)
 
@@ -242,7 +252,50 @@ replicates at this bank size.
 
 ## 6. Full-refit validation of the selected cell (ruling §4(b))
 
-See §6a below (filled from `wme-powersim-refit-2026-11-17.json`).
+**What is refitted.** Each replicate refits the whole nested H-T pipeline (`wm.powersim_refit`):
+- a fresh synthetic world and bank with the registered graph: r_f roots per family, n_blk blocks of 4 with an
+  order and its reverse, ladders at 0.25, 0.5, 1 and 2, and calibration components drawn first;
+- five outer folds by component, with four inner folds choosing the static member (S1 F3u, S2 StatNN,
+  S3 MatchedStatic) at h = 2;
+- WM-E (`WMEnsemble`, registered configuration, 5 members, component bootstrap);
+- scaled errors at h = 3–4, C_T with the stratified bootstrap-t (R = 9,999), C2-S over all permutations of the
+  step-local inputs on held-out compositions, and C2-I on I1 round trips.
+
+**Data-generating processes.**
+- **Null:** residuals beyond the shared field are shuffled across trajectories with random signs.
+- **Alternative:** a decomposition-dependent effect γ·SE·Σ_s tanh(⟨w_k, D_s⟩/0.3), which a static function of
+  E_T cannot represent. γ = 3 gave the largest mean C_T in calibration (γ = 3/6/12 → 0.066/0.027/−0.049).
+- **This pipeline did not reach the registered C_T = 0.15 on any DGP tried.** That is itself a finding.
+
+| Cell | Hypothesis | Reps | Reject | Mean Ĉ_T | LB > 0 | C2-S pass | C2-I pass | Reject ignoring C2-I |
+|---|---|---|---|---|---|---|---|---|
+| (12, 12, 12) selected | null | 401 | **0** (CP 95% [0, 0.009]) | 0.000 | 11 of 58 estimable | 16 | 401 | 0.000 |
+| (12, 12, 12) selected | alternative | 401 | **0** | 0.094 | 231 | 300 | **0** | 0.501 |
+| (16, 12, 12) next larger | null | 54 | 0 | 0.001 | 4 of 11 estimable | 1 | 54 | 0.000 |
+| (16, 12, 12) next larger | alternative | 54 | 0 | 0.113 | 38 | 38 | **0** | 0.537 |
+
+**Runs.**
+- Selected cell: Lambda gpu_1x_a10, 28 workers, 802 replicates. It was stopped at 800 of the planned 1,200 once
+  the outcome was unambiguous, saving about 3 h and $4. 121.6 CPU-h; max RSS 0.49 GB per worker.
+- Next larger cell: local, 6 workers, 108 replicates; 12.8 CPU-h; max RSS 1.06 GB per worker.
+
+**§4(b) applied.**
+1. The full-refit gates fail at the selected cell: power 0 against ≥ 0.80, and null coverage among estimable
+   replicates 0.81 against ≥ 0.965.
+2. Per the rule, the next larger cell was tested; it fails the same gate.
+3. The failing gate, C2-I, fails for every replicate in which WM-E learned the history dependence, so more
+   components or items cannot fix it.
+4. No cell passes, so **H-T registers "unresolved — not powered".**
+
+**What it means.**
+- Under a world where trajectories matter, the registered C2-I absolute rule (mean |ŷ| over controls ≤ f_k) voids
+  H-T. WM-E then predicts non-zero changes for +d, −d round trips whose true effect is 0, because negative steps
+  after positive ones lie outside its h ≤ 2 training histories.
+- Under the null the gate passes, because WM-E collapses to the field.
+- So, as specified, C2-I cannot distinguish "learned dynamics that mis-extrapolate to round trips" from "ghosts",
+  and its interaction with the training restriction makes H-T unreachable here.
+- Whether to amend it is for the chair and Board A. Options include adding round-trip-shaped histories to
+  training, or scoring C2-I against a calibrated tolerance. This report changes nothing.
 
 ## 7. Projected GPU-h and dollars against the caps
 
@@ -271,13 +324,14 @@ See §6a below (filled from `wme-powersim-refit-2026-11-17.json`).
 
 | Claim | Status | Reason |
 |---|---|---|
-| H-T | **powered** at the selected cell (cheap grid); full refit in §6a | — |
+| H-T | **unresolved — not powered** (ruling §4(b)) | the cheap grid passes at (12, 12, 12), but the full refit fails there and at (16, 12, 12): C2-I voids every alternative replicate (§6) |
 | H-E1 | **unresolved — not powered** | best power 0.50: generated transfer on ≤ 250 TriviaQA groups |
 | H-E2 | **unresolved — not powered** | size 0.034–0.052 > 0.035 at the grid maximum n_rep = 8 (power 0.87–0.91) |
 | E1 secondaries (GSM8K, MATH) | **not run — not powered** | 0 passing cells |
 
-Per §8.5, the bank is still built for H-T. E1 and E2 ingredients run only if the chair amends the registration
-before the freeze. The study does not shrink N to fit.
+**No registered claim can be powered within the §1 caps as v1 is written.** Per §8.5, an unresolved claim is not
+run as a confirmatory test, and the study does not shrink N to fit. The three registration issues in the BLUF are
+for the chair and Board A; each would need a dated amendment before any bank or confirmatory data exist.
 
 ## 9. Lambda
 
@@ -287,9 +341,10 @@ on a GPU box or in a log.
 | Instance | Type | Window (UTC) | Instance-hours | $ | Termination |
 |---|---|---|---|---|---|
 | `wsp-wme-ph100-20261117` | gpu_2x_h100_sxm5 | 01:53–02:43 | 0.8415 | 8.06 | requested; `confirmed_terminated` 02:43:46Z; API status `terminated`; no live `wsp-wme-*` |
-| `wsp-wme-refit-20261117` | gpu_1x_a10 (30 vCPU) | 02:54– | §9a | §9a | §9a |
+| `wsp-wme-refit-20261117` | gpu_1x_a10 (30 vCPU) | 02:54–07:25 | 4.5264 | 5.84 | requested; `confirmed_terminated` 07:25:50Z; API status `terminated`; no live `wsp-wme-*` |
 
-Other instances were not touched.
+**Total: 5.37 instance-hours, $13.90** (P-H100 cap ≤ 3 instance-hours: 0.84 used). Both terminator watchers
+exited after confirmation. Other instances were not touched.
 
 ## 10. Coordination, deviations and open items
 

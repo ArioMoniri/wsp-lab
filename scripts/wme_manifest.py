@@ -28,7 +28,6 @@ from wsp.wm import model as M
 from wsp.wm import ph100 as H
 from wsp.wm import powersim_v1 as PV
 from wsp.wm import rootsampler as RS
-from wsp.wm import supplement as SU
 
 OUT = ROOT / "docs/prereg/wme_manifest.json"
 TABLE = ROOT / "docs/prereg/wme_manifest_table.md"
@@ -276,7 +275,27 @@ def main():
         "outputs": {"runs": "data/wme/runs/wme-c1", "winners": "data/wme/winners/wme-c1"},
     }
     if a.refit:
+        rf = json.loads(Path(a.refit).read_text())
         m["simulation.full_refit_hash"] = sha(a.refit)
+        sel = rf["cells"]["selected_12_12_12"]
+        failed = not (sel["null"]["pass"] and sel["alt"]["pass"])
+        m["claims"]["full_refit"] = {
+            "selected_cell": {
+                k: {x: sel[k][x] for x in ("reps", "rate", "mean_ct", "c2s_n", "c2i_n", "pass")}
+                for k in ("null", "alt")
+            },
+            "next_cell_16_12_12": {
+                k: {x: rf["cells"]["next_16_12_12"][k][x] for x in ("reps", "rate", "c2i_n")}
+                for k in ("null", "alt")
+            },
+            "rule": "ruling §4(b): full-refit gates fail where the cheap grid passed -> next larger cell; no cell "
+            "passes -> unresolved - not powered",
+        }
+        if failed:
+            m["claims"]["run"] = [c for c in m["claims"]["run"] if c != "ht"]
+            m["claims"]["unresolved_not_powered"] = ["ht"] + [
+                c for c in m["claims"]["unresolved_not_powered"] if c != "ht"
+            ]
     OUT.write_text(json.dumps(m, indent=1, sort_keys=True, default=str))
     print(OUT, sha(OUT))
 

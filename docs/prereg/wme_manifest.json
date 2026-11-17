@@ -165,10 +165,42 @@
   "smoke": false
  },
  "claims": {
-  "run": [
-   "ht"
-  ],
+  "full_refit": {
+   "next_cell_16_12_12": {
+    "alt": {
+     "c2i_n": 0,
+     "rate": 0.0,
+     "reps": 54
+    },
+    "null": {
+     "c2i_n": 54,
+     "rate": 0.0,
+     "reps": 54
+    }
+   },
+   "rule": "ruling \u00a74(b): full-refit gates fail where the cheap grid passed -> next larger cell; no cell passes -> unresolved - not powered",
+   "selected_cell": {
+    "alt": {
+     "c2i_n": 0,
+     "c2s_n": 300,
+     "mean_ct": 0.0941824553176943,
+     "pass": false,
+     "rate": 0.0,
+     "reps": 401
+    },
+    "null": {
+     "c2i_n": 401,
+     "c2s_n": 16,
+     "mean_ct": 0.0002325714853073844,
+     "pass": false,
+     "rate": 0.0,
+     "reps": 401
+    }
+   }
+  },
+  "run": [],
   "unresolved_not_powered": [
+   "ht",
    "e1",
    "e2",
    "e1_secondaries"
@@ -423,7 +455,7 @@
   20261119,
   20261120
  ],
- "generated_from_commit": "7a3bd4b009260b15f3bc6d454ddb7a1ddb1e6e12",
+ "generated_from_commit": "e2f836acf45b31392941b77b512bba91d0c322ad",
  "model.chart_schema_version": 2,
  "model.dictionary": {
   "bank_roots": "a58c0f6eacd5bdf13bc1670cda1d0c68046a9e0b0376c6e31bb5e19f18965a2b",
@@ -651,7 +683,8 @@
   "shard_contrast": 16,
   "shard_lora": 64
  },
- "simulation.commit": "7a3bd4b009260b15f3bc6d454ddb7a1ddb1e6e12",
+ "simulation.commit": "e2f836acf45b31392941b77b512bba91d0c322ad",
+ "simulation.full_refit_hash": "424076b96ccf9f1c729900419b2b76fe74f5bf8a8739336f12c87ed95288b5ac",
  "simulation.report_hash": "bba8dd468ef94b6449171b8fb5c40011e72b8e54d00506bd64b7693ed8502664",
  "simulation.seeds": {
   "grid": 20261117,
