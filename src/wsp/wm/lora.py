@@ -166,8 +166,10 @@ def train(
     warmup=10,
     checkpointing=False,
     log=None,
+    on_step=None,
 ) -> dict:
-    """AdamW on the LoRA factors only; mean target-token NLL per batch; stops early at ``max_seconds`` wall."""
+    """AdamW on the LoRA factors only; mean target-token NLL per batch; stops early at ``max_seconds`` wall.
+    ``on_step(step, adapter)`` (optional) runs after every optimiser step (pilot 3: per-step checkpoints)."""
     for p in model.parameters():
         p.requires_grad_(False)
     params = list(adapter.parameters())
@@ -201,6 +203,8 @@ def train(
                     opt.step()
                     losses.append(float(loss.detach()))
                     steps += 1
+                    if on_step is not None:
+                        on_step(steps, adapter)
                     if log and steps % 20 == 0:
                         log("lora step", step=steps, loss=round(sum(losses[-20:]) / 20, 4))
                 if stopped:

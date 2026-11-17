@@ -8,7 +8,7 @@ BUNDLE="${1:?bundle}"; SHA="${2:?sha}"; ALIAS="${3:?alias}"; STATE="${4:?state}"
 shift 6
 DIR="$(cd "$(dirname "$0")/.." && pwd)"; cd "$DIR"
 DM=(".venv/bin/python" "scripts/lambda_deadman.py" --dir "$STATE")
-CFG="$HOME/.config/wsp/wme_ssh_config"
+CFG="${WME_SSH_CONFIG:-$HOME/.config/wsp/wme_ssh_config}"
 SSH=(ssh -F "$CFG" -o ConnectTimeout=10 -o BatchMode=yes "$ALIAS")
 say() { echo "[$(date -u +%H:%M:%S)] $*"; }
 id=""
@@ -41,5 +41,5 @@ scp -F "$CFG" -o BatchMode=yes -q "$BUNDLE" "$ALIAS:$RDIR-bundle.tgz" || { say "
   || { say "remote start failed"; exit 1; }
 say "remote job started"
 "${DM[@]}" heartbeat
-agent-tmux "$(basename "$STATE")-hb" "$DIR/scripts/wme_lambda_hb.sh" "$ALIAS" "$STATE" "$RDIR"
+agent-tmux "$(basename "$STATE")-hb" env WME_SSH_CONFIG="$CFG" "$DIR/scripts/wme_lambda_hb.sh" "$ALIAS" "$STATE" "$RDIR"
 say "heartbeat loop started; driver done"
