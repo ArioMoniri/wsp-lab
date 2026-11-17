@@ -21,8 +21,9 @@ import sys
 from pathlib import Path
 
 os.environ["HF_HOME"] = str(Path.home() / ".cache/huggingface")
-os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
+# online: WikiText-103, SuperGPQA, OR-Bench and LLM-LAT are fetched at pinned revisions (others hit the cache)
+os.environ["HF_DATASETS_OFFLINE"] = "0"
+os.environ["HF_HUB_OFFLINE"] = "0"
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -141,8 +142,6 @@ def load_sources():
     spec.loader.exec_module(b1)
     raw, meta = b1.load_raw()
     files = {}
-    os.environ["HF_DATASETS_OFFLINE"] = "0"
-    os.environ["HF_HUB_OFFLINE"] = "0"
     repo, cfg, rev = PINS["wikitext103"]
     w103 = load_dataset(repo, cfg, revision=rev, split="train")
     cur, arts = [], []
