@@ -1,18 +1,18 @@
 {
  "audit.available_groups": {
-  "gsm8k_gold_lp": 7239,
-  "mathcomp_gold_lp": 4883,
-  "mmlupro_gold_lp": 5504,
-  "refusal_margin_harmful": 127,
-  "refusal_margin_harmful_with_supplement": 326,
+  "gsm8k_gold_lp": 7238,
+  "mathcomp_gold_lp": 4788,
+  "mmlupro_gold_lp": 5494,
+  "refusal_margin_harmful": 325,
   "refusal_margin_harmless": 5792,
+  "sycophancy_gap": 5378,
   "sycophancy_real": 467,
-  "sycophancy_real_triviaqa": 256,
+  "triviaqa_gen": 84299,
   "wikitext_nll": 303
  },
  "audit.exclusion_report_hash": {
-  "exposure": "0d4d1fb833b497ff4b6e88cb8ae54af6b4ad1eb788e1849c6cf3a5a7595de9e7",
-  "supplement": "8de4ac52e65496be25b0733bfdee92bab089bf41ab80706e1ed9c6dc418d9284"
+  "supplement": "8de4ac52e65496be25b0733bfdee92bab089bf41ab80706e1ed9c6dc418d9284",
+  "v1_policy": "79d171b77e5213aa4fe8b957b90d9874b3812d4acf6e7820be53a2f8470790ad"
  },
  "bank.blocks": {
   "blocks": [
@@ -165,47 +165,200 @@
   "smoke": false
  },
  "claims": {
+  "achieved_ct_alt": {
+   "next": -0.2887814389299087,
+   "selected": -0.2603612939337497
+  },
+  "cheap_grid_powerable": {
+   "e1": true,
+   "e2": true,
+   "ht": true
+  },
+  "cheap_grid_selection": [
+   "ht",
+   "e1"
+  ],
+  "design_note": "the design is the pre-refit \u00a78.5 selection (ht+e1), kept unchanged; re-applying \u00a78.5 to the surviving claim set {e1} would select the cheapest e1 design (r_f 8; 40.1 GPU-h-eq): chair's choice",
   "full_refit": {
-   "next_cell_16_12_12": {
+   "next": {
     "alt": {
-     "c2i_n": 0,
+     "c2i_pass": 1.0,
+     "mean_ct": -0.2887814389299087,
+     "mean_stat": -2.321789654916472,
+     "pass": false,
+     "power_lb": 0.0,
      "rate": 0.0,
-     "reps": 54
+     "reps": 30
+    },
+    "cell": {
+     "n_blk": 6,
+     "n_cal": 12,
+     "r_f": 20
+    },
+    "completed": {
+     "alt": 30,
+     "null": 30
+    },
+    "futility": {
+     "alt_non_rejections": 30,
+     "cannot_pass": true,
+     "k_required_at_planned": 54
     },
     "null": {
-     "c2i_n": 54,
-     "rate": 0.0,
-     "reps": 54
+     "c2i_pass": 1.0,
+     "coverage_at_zero": 0.9666666666666667,
+     "mean_ct": -0.010911222010322009,
+     "mean_stat": -0.03654689681238464,
+     "pass": true,
+     "power_lb": 0.001708315644465736,
+     "rate": 0.03333333333333333,
+     "reps": 30
     }
    },
-   "rule": "ruling \u00a74(b): full-refit gates fail where the cheap grid passed -> next larger cell; no cell passes -> unresolved - not powered",
-   "selected_cell": {
+   "selected": {
     "alt": {
-     "c2i_n": 0,
-     "c2s_n": 300,
-     "mean_ct": 0.0941824553176943,
+     "c2i_pass": 1.0,
+     "mean_ct": -0.2603612939337497,
+     "mean_stat": -2.0294438939307913,
      "pass": false,
+     "power_lb": 0.0,
      "rate": 0.0,
-     "reps": 401
+     "reps": 110
+    },
+    "cell": {
+     "n_blk": 6,
+     "n_cal": 12,
+     "r_f": 16
+    },
+    "completed": {
+     "alt": 110,
+     "null": 110
+    },
+    "futility": {
+     "alt_non_rejections": 110,
+     "cannot_pass": true,
+     "k_required_at_planned": 497
     },
     "null": {
-     "c2i_n": 401,
-     "c2s_n": 16,
-     "mean_ct": 0.0002325714853073844,
+     "c2i_pass": 1.0,
+     "coverage_at_zero": 0.9636363636363636,
+     "mean_ct": -0.013704082471938337,
+     "mean_stat": -0.12747884404293588,
      "pass": false,
-     "rate": 0.0,
-     "reps": 401
+     "power_lb": 0.012514679517368763,
+     "rate": 0.03636363636363636,
+     "reps": 110
     }
    }
   },
-  "run": [],
+  "ht_outcome": "unresolved \u2014 not powered",
+  "rule": "ruling \u00a74(b) and RULING-wme-v2 A6",
+  "run": [
+   "e1"
+  ],
   "unresolved_not_powered": [
    "ht",
-   "e1",
    "e2",
    "e1_secondaries"
   ]
  },
+ "controls.c2i": {
+  "I1": {
+   "2step": [
+    [
+     16,
+     "down"
+    ]
+   ],
+   "4step": [
+    [
+     8,
+     "down"
+    ],
+    [
+     19,
+     "o"
+    ]
+   ]
+  },
+  "I2_factors": [
+   1.5,
+   0.5,
+   -1.0
+  ],
+  "I2_rows": [
+   248077,
+   248320
+  ],
+  "compensated": {
+   "attention_layers": [
+    15
+   ],
+   "mlp_layers": [
+    12,
+    15
+   ]
+  },
+  "gate": "hard gate (I1 round trips; I2 never-emitted rows)",
+  "n_inert": 12,
+  "verification": {
+   "comp0": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "comp1": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "comp2": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "i1_2step": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": true
+   },
+   "i1_4step": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": true
+   },
+   "i2_+0.5": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "i2_+1.5": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "i2_-1": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": false
+   },
+   "noop": {
+    "bitwise_equal_to_base": true,
+    "n_values": 240,
+    "power_of_two_safe": true,
+    "theta_equals_base": true
+   }
+  }
+ },
+ "controls.c2s_c2d": "hold by construction for WM-CP (prediction is a function of R(E_T)); reported, never counted as evidence",
  "controls.inert": {
   "I1": {
    "2step": [
@@ -446,8 +599,40 @@
   }
  },
  "gen.parsers": {
+  "functions": [
+   "squad_norm",
+   "classify_v1",
+   "detect_loop_v1",
+   "audit_v1",
+   "audit_v1_single"
+  ],
   "module": "src/wsp/wm/genaudit.py",
-  "sha256": "1a9eece111372562a831b56c2d1ce6cca2451cb8ebd0e4a6b37356f05de3600f"
+  "sha256": "43ec3beb27bec9bd3dc2429501173094e1b579606becd4803c14e9862a2d9b15"
+ },
+ "gen.pool": {
+  "incorrect_answer_rule": "TriviaQA has no curated wrong answer. Questions are ranked by sha256(\"wme-v2-triviaqa:<question_id>\"); a question's incorrect answer is the ``value`` of the next question in that cyclic order with the same answer ``type`` whose SQuAD-normalised value is not one of the question's normalised aliases. A question with no such partner is dropped. This differs from sycophancy-eval's curated plausible wrong answers and is disclosed.",
+  "pool_file_sha256": "34dabf2be51b2bd32df2bb41f8d9a217214804d71ff9adc0005f6f8f89e93f7e",
+  "pool_groups": 84299,
+  "source": {
+   "config": "rc.nocontext",
+   "files": {
+    "train": {
+     "local": "rc.nocontext-train.parquet",
+     "path": "rc.nocontext/train-00000-of-00001.parquet",
+     "rows": 138384,
+     "sha256": "455223e4a3ba6977611914d96b1b812fe19a6cd4ea3aef4df381f093b297670c"
+    },
+    "validation": {
+     "local": "rc.nocontext-validation.parquet",
+     "path": "rc.nocontext/validation-00000-of-00001.parquet",
+     "rows": 17944,
+     "sha256": "48a5005c0eb4f8a4ae5b9868644297fd5bf1e694aeb3dc9c8ab958cac0d5b201"
+    }
+   },
+   "repo": "mandarjoshi/trivia_qa",
+   "revision": "0f7faf33a3908546c6fd5b73a660e0f8ff173c2f"
+  },
+  "template": "wm.p2data NEUTRAL_TEMPLATE / SUGGESTED_TEMPLATE (unchanged)"
  },
  "gen.sampled_seeds": [
   20261117,
@@ -455,8 +640,26 @@
   20261119,
   20261120
  ],
- "generated_from_commit": "e2f836acf45b31392941b77b512bba91d0c322ad",
+ "generated_from_commit": "bfa03d90616e227bb9df1db0577a4d007a346f90",
+ "guards.bounds": "item-group bootstrap-t R = 9,999 on both scales (wm.arms.spec.guard_bounds_from_items)",
+ "inference.e2": {
+  "n_flip": 10000,
+  "seed": 2168497238,
+  "statistic": "mean over the 3 families of the family-mean difference",
+  "test": "family-stratified sign-flip on episode paired differences, one-sided 0.025"
+ },
+ "inference.ht": {
+  "ct": "descriptive, interval by inverting the same test",
+  "interval": "test inversion",
+  "n_flip": 10000,
+  "seed": 279051521,
+  "test": "component-level sign-flip, one-sided 0.025",
+  "unit": "component mean of |e_static| - |e_WM| (SE-scaled)"
+ },
  "model.chart_schema_version": 2,
+ "model.descriptive_arms": [
+  "WM-E v0 history-dependent on R (wmcp.v0_trajectory / v0_field)"
+ ],
  "model.dictionary": {
   "bank_roots": "a58c0f6eacd5bdf13bc1670cda1d0c68046a9e0b0376c6e31bb5e19f18965a2b",
   "e2_library": "a6c1a68991549c42cfec20a663590c83159a9bb75fb2d1638e08be6368a2ebd3",
@@ -469,6 +672,47 @@
   1003,
   1004
  ],
+ "model.primary_ht": "WM-CP (wsp.wm.wmcp.CanonicalPathWM) vs the R-space static family S1 F3uR, S2 StaticR, S3 StaticR-aux (sized to WM-CP +-10 %)",
+ "model.representation": {
+  "builder": "wsp.wm.wmcp.r_from_contractions (collect.contract of the realised cumulative deltas; unsupported q -> 0, flagged)",
+  "chart_schema_version": 2,
+  "degrees": [
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2,
+   1,
+   1,
+   1,
+   1
+  ],
+  "spec_9b_columns": [
+   "a:wikitext_nll",
+   "a:gsm8k_gold_lp",
+   "a:mmlupro_gold_lp",
+   "a:refusal_margin_harmful",
+   "a:refusal_margin_harmless",
+   "a:sycophancy_real",
+   "q:wikitext_nll",
+   "q:gsm8k_gold_lp",
+   "q:mmlupro_gold_lp",
+   "q:refusal_margin_harmful",
+   "q:refusal_margin_harmless",
+   "q:sycophancy_real",
+   "chart:schema:CHART_SCHEMA_VERSION=2",
+   "norm:writers",
+   "norm:embed_rows",
+   "norm"
+  ]
+ },
  "model.static.configs": {
   "S1": "F3u least squares (a, q) per objective on training h <= 2",
   "S2": {
@@ -538,15 +782,31 @@
   "static_state": false,
   "weight_decay": 0.0001
  },
+ "model.wmcp.config": {
+  "epochs": 400,
+  "hidden": 64,
+  "latent": 32,
+  "lr": 0.003,
+  "obs_weight": 1.0,
+  "weight_decay": 0.0001
+ },
+ "model.wmcp.k_rule": {
+  "k_max": 16,
+  "rule": "K = 0 if R(E_T) == 0 else min(K_MAX, max(1, ceil(norm(E_T) / s0)))",
+  "s0": "median cumulative norm of training-component h = 1 states, computed in each fit (training folds only) and recorded with the fitted model"
+ },
  "outputs": {
   "runs": "data/wme/runs/wme-c1",
   "winners": "data/wme/winners/wme-c1"
  },
+ "panel.wme_c1.builder": "wsp.wm.panel_c1.build_c1_panel_v1 (sealed_gen, sealed_test, dev, bank, construction)",
  "panel.wme_c1.group_policy": {
-  "exact": "sha256 of wm.panel.normalise",
+  "exact_join": "sha256 of wm.panel.normalise",
   "id": "wme-c1-group-v1",
-  "implemented_in": "wsp.wm.supplement (char policy); the 17 Nov exposure audit used the v0 word-5-gram 0.7 policy and must be re-run under this policy at the freeze build",
-  "near": "character 5-gram Jaccard >= 0.8, punctuation stripped, exact for sources < 50,000 groups (every source here)"
+  "jaccard": 0.8,
+  "k": 5,
+  "method": "exact prefix-filtered set-similarity join",
+  "normalise": "wm.panel.normalise + punctuation stripped"
  },
  "panel.wme_c1.minhash_seed": 20261117,
  "panel.wme_c1.sizes": {
@@ -586,8 +846,10 @@
    "construction_e2": 64,
    "construction_field": 24,
    "dev": 64,
-   "sealed_gen": 100,
    "sealed_test": 96
+  },
+  "triviaqa_gen": {
+   "sealed_gen": 500
   },
   "wikitext_nll": {
    "bank": 48,
@@ -597,7 +859,7 @@
   }
  },
  "panel.wme_c1.split_hashes": {
-  "binds_at": "freeze build of wme-c1 with the sizes below (builder must gain the v1 split set gen/test/dev/bank/construction)",
+  "binds_at": "freeze build with build_c1_panel_v1 at the sizes below",
   "status": "deferred"
  },
  "planner.algorithm": "cem",
@@ -618,15 +880,17 @@
  "seeds.bootstrap.e2": 3364230571,
  "seeds.bootstrap.guard": 1120340543,
  "seeds.bootstrap.ht": 2822066237,
+ "seeds.signflip.e2": 2168497238,
+ "seeds.signflip.ht": 279051521,
  "sim": {
   "B": 16,
-  "m_min_HT": 12,
-  "n_blk": 12,
+  "m_min_HT": "sign-flip test valid for any m >= 2; requirement checked per cell (v2 grid)",
+  "n_blk": 6,
   "n_cal": 12,
   "n_ep_sec": "all",
   "n_gen,gsm": 0,
   "n_gen,math": 0,
-  "n_gen,syc": 100,
+  "n_gen,syc": 500,
   "n_inert": 12,
   "n_rep": 2,
   "n_rep_sec": 0,
@@ -667,8 +931,10 @@
     "construction_e2": 64,
     "construction_field": 24,
     "dev": 64,
-    "sealed_gen": 100,
     "sealed_test": 96
+   },
+   "triviaqa_gen": {
+    "sealed_gen": 500
    },
    "wikitext_nll": {
     "bank": 48,
@@ -678,17 +944,21 @@
    }
   },
   "pool_size": 64,
-  "r_f": 12,
+  "r_f": 16,
   "reader_token_cap": 120000,
   "shard_contrast": 16,
   "shard_lora": 64
  },
- "simulation.commit": "e2f836acf45b31392941b77b512bba91d0c322ad",
+ "simulation.commit": "bfa03d90616e227bb9df1db0577a4d007a346f90",
  "simulation.full_refit_hash": "424076b96ccf9f1c729900419b2b76fe74f5bf8a8739336f12c87ed95288b5ac",
- "simulation.report_hash": "bba8dd468ef94b6449171b8fb5c40011e72b8e54d00506bd64b7693ed8502664",
+ "simulation.report_hash": {
+  "cheap_v2": "aa2ceffd94210af53050dcdc826e1e628bc1818ec172faf2fee0c12aeacbebaf",
+  "refit_v2": "45d8c88443e00ff6aca4ec491dc8349d317279b3b60a23adb877a8a139814452"
+ },
  "simulation.seeds": {
   "grid": 20261117,
-  "refit": 20261117
+  "refit": 20261117,
+  "signflip": 20261117
  },
  "sources": {
   "harmful_supplement": {
@@ -716,7 +986,7 @@
   },
   "pilot_pins": "wsp.wm.p2data.SOURCES and scripts/wme_build_panel.py PINS (unchanged from pilot 2)"
  },
- "status": "DRAFT for PREREG_WME v1 (track A fields); not frozen; no confirmatory outcome exists",
+ "status": "DRAFT for PREREG_WME v2 (RULING-wme-v2 overlay on the v1 track-A manifest); not frozen",
  "supplement": {
   "feasible": true,
   "pool": 326,
@@ -727,5 +997,9 @@
   ]
  },
  "tap.seed": 659250658,
- "target.theta0_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5"
+ "target.theta0_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+ "v2": {
+  "ruling": "docs/council/2026-11-17/RULING-wme-v2-design.md",
+  "ruling_sha256": "fd2ce5a174915d795b15b5011a271e98a7e7bb7483b01a20837f8c732fb1842e"
+ }
 }

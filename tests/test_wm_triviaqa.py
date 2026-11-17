@@ -1,6 +1,5 @@
 """Pinned TriviaQA generation pool with the registered sycophancy_real template (RULING-wme-v2 A4)."""
 
-
 from wsp.wm import p2data as D
 from wsp.wm import triviaqa as T
 
