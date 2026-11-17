@@ -82,7 +82,10 @@ def test_zero_edit_predicts_exactly_zero_with_zero_sigma(saturating):
     zero = world.trajectory_from_actions([(0, 0.0), (5, 0.0), (2, 0.0), (1, 0.0)])
     mean, sigma = wm.predict(world.base_observation(), zero)
     assert np.array_equal(mean, np.zeros_like(mean)) and np.array_equal(sigma, np.zeros_like(sigma))
-    assert np.array_equal(st.predict(world.base_observation(), zero), np.zeros_like(mean))
+    st_mean, st_sigma = st.predict(world.base_observation(), zero)  # r9 C1.2: (mean, sigma)
+    assert np.array_equal(st_mean, np.zeros_like(mean)) and np.array_equal(
+        st_sigma, np.zeros_like(mean)
+    )
 
 
 def test_ensemble_has_five_distinct_members_and_positive_sigma_off_zero(saturating):

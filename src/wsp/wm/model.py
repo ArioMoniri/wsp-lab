@@ -23,7 +23,10 @@ Per objective k and horizon t (default ``slope_transport=True``):
   observation and slope losses; scheduled sampling replaces the rolled state by ``enc(o_t)`` with probability p
   annealed from 1 to ``p_min``; AdamW. 20% of the training trajectories (horizons <= 2) select a shrinkage
   ``lambda`` of the learned part over the nest from one grid shared by every arm.
-* **Uncertainty.** A 5-seed ensemble; sigma is the across-member standard deviation (times lambda).
+* **Uncertainty (SYNTHESIS-r9 C1).** A 5-member ensemble; ``fit(trajs, components=...)`` resamples members by
+  source-closure component and splits selection by component (``wm.uncertainty``). sigma is
+  ``gate(E_t) sqrt(sigma_F^2 + (lambda sigma_ens)^2)``: the field-residual floor sigma_F keeps sigma > 0 off the
+  zero edit even at lambda = 0 (r9 W4 code finding 1). The static arm gets the identical treatment.
 
 The static baseline receives the same cumulative edit: the same raw-field nest plus an MLP on the cumulative-E
 bookkeeping, the same outcome labels and the same selection rule, without intermediate observations.
@@ -38,6 +41,7 @@ import numpy as np
 import torch
 from torch import nn
 
+from wsp.wm import uncertainty as U
 from wsp.wm.access import R0Guard, r0_only
 
 
@@ -54,6 +58,14 @@ class WMConfig:
     anneal_frac: float = 0.6
     slope_transport: bool = True
     slope_rule: str = "trapezoid"  # or "left": A_hat(h_{t-1}) e_t + 1/2 e_t^T H0 e_t
+    static_state: bool = (
+        False  # MatchedStatic: the state is a function of (o_0, E_t) only (Board A cond. 4)
+    )
+
+
+def aux_ablation(cfg: WMConfig) -> WMConfig:
+    """The auxiliary-target ablation (Board A condition 4): no observation or slope grounding loss."""
+    return dataclasses.replace(cfg, obs_weight=0.0)
 
 
 def teacher_forcing_prob(
@@ -163,6 +175,30 @@ def select_shrink(predict_fn, field_fn, val):
     return min(errs, key=lambda lam: (errs[lam], lam))
 
 
+def split_and_bootstrap(trajs, components, n_members, seed=20261117):
+    """(fit trajectories, selection trajectories, per-member samples of fit-trajectory indices, val indices).
+
+    Without ``components`` (pilot behaviour): the row-level selection split and every member on all fit rows.
+    With ``components``: a component-level selection split and per-member component bootstraps (r9 C1.3)."""
+    if components is None:
+        fit, val = selection_split(trajs)
+        ids = {id(t): i for i, t in enumerate(trajs)}
+        return fit, val, [list(range(len(fit)))] * n_members, [ids[id(t)] for t in val]
+    if len(components) != len(trajs):
+        raise ValueError("one component id per trajectory")
+    fit_i, val_i = U.component_selection_split(components)
+    fit = [trajs[i] for i in fit_i]
+    samples = U.component_bootstrap([components[i] for i in fit_i], n_members, seed)
+    return fit, [trajs[i] for i in val_i], samples, val_i
+
+
+def _by_horizon(trajs):
+    by_h = {}
+    for t in trajs:
+        by_h.setdefault(t["horizon"], []).append(t)
+    return [batch(v) for _, v in sorted(by_h.items())]
+
+
 # ------------------------------------------------------------------ world model member
 
 
@@ -209,6 +245,9 @@ class Member:
             "y_scale": self._t(ctx["y_scale"]),
             "step_scale": self._t(ctx["step_scale"]),
         }
+        if self.cfg.static_state:
+            p["xs"] = self._t(ctx["xs_norm"](b["xs"]) * live)
+            p["E_e"] = self._t(b["E"]) / ctx["e_scale"]
         p["e"] = p["e_raw"] / ctx["e_scale"]
         if self.cfg.slope_transport:
             p["a_scale"] = self._t(ctx["a_scale"])
@@ -218,10 +257,39 @@ class Member:
         b["_prep"] = p
         return p
 
+    def _static_rollout(self, b, p):
+        """MatchedStatic: h_t = h_0 + gate(E_t) step(h_0, xs_t, E_t); y_t = F(E_t) + gate readout(h_0, h_t, xs_t,
+        E_t); the same heads, widths and grounding targets as WM-E, no recurrence and no path sum."""
+        ctx, net, cfg = self.ctx, self.net, self.cfg
+        obs, xs, E = p["obs"], p["xs"], p["E_e"]
+        N, T = obs.shape[0], b["T"]
+        K = len(ctx["y_scale"])
+        h0 = net.enc(obs[:, 0])
+        c0 = net.slope(h0) if cfg.slope_transport else None
+        g0 = (
+            None
+            if cfg.slope_transport
+            else net.readout(torch.cat([h0, torch.zeros_like(xs[:, 0])], -1))
+        )
+        ys, dec, cor = [torch.zeros(N, K, dtype=h0.dtype)], [net.dec(h0)], [None]
+        for t in range(1, T + 1):
+            gate = self._gate(E[:, t])
+            h = h0 + gate * net.step(torch.cat([h0, xs[:, t], E[:, t]], -1))
+            if cfg.slope_transport:
+                r = gate * net.readout(torch.cat([h0, h, xs[:, t], E[:, t]], -1)) * p["y_scale"]
+                cor.append(net.slope(h) - c0)
+            else:
+                r = (net.readout(torch.cat([h, xs[:, t]], -1)) - g0) * p["y_scale"]
+            ys.append(p["f3u"][:, t] + r)
+            dec.append(net.dec(h))
+        return torch.stack(ys, 1), torch.stack(dec, 1), cor, obs
+
     def rollout(self, b, teacher_p=0.0, rng=None):
         """Returns predicted cumulative change [N,T+1,K], decoded obs, slope corrections and normalised obs."""
         ctx, net, cfg = self.ctx, self.net, self.cfg
         p = self._prep(b)
+        if cfg.static_state:
+            return self._static_rollout(b, p)
         obs, xl, e_raw, e = p["obs"], p["xl"], p["e_raw"], p["e"]
         N, T = obs.shape[0], b["T"]
         h = net.enc(obs[:, 0])
@@ -321,13 +389,13 @@ class WMEnsemble:
                 f"training trajectories must have horizon <= {self.cfg.max_train_horizon}"
             )
 
-    def fit(self, trajs):
+    def fit(self, trajs, components=None):
         self._check(trajs)
-        trajs, val = selection_split(trajs)
-        by_h = {}
-        for t in trajs:
-            by_h.setdefault(t["horizon"], []).append(t)
-        batches = [batch(v) for _, v in sorted(by_h.items())]
+        self._all_trajs = list(trajs)
+        trajs, val, samples, self.val_index = split_and_bootstrap(
+            trajs, components, len(self.members)
+        )
+        batches = _by_horizon(trajs)
         cat = lambda k, s=slice(1, None): np.concatenate(
             [b[k][:, s].reshape(-1, b[k].shape[-1]) for b in batches]
         )
@@ -347,6 +415,7 @@ class WMEnsemble:
             "f3u": self.f3u,
             "obs_norm": _Norm(allobs),
             "xl_norm": _Norm(allxl),
+            "xs_norm": _Norm(cat("xs")),
             "e_scale": float(np.abs(cat("e", slice(None))).max()),
             "y_scale": y_scale,
             # scale of the per-step correction: per-step change not explained by the base field on the step
@@ -370,10 +439,17 @@ class WMEnsemble:
             d_slope = J * K
         ctx["dims"] = (allobs.shape[-1], allxl.shape[-1], batches[0]["e"].shape[-1], K, d_slope)
         self.ctx = ctx
-        self.members = [Member(self.cfg, m.seed, ctx).fit(batches) for m in self.members]
+        # member indices refer to the fit trajectories; with components they are component bootstraps
+        self.members = [
+            Member(self.cfg, m.seed, ctx).fit(_by_horizon([trajs[i] for i in s]))
+            for m, s in zip(self.members, samples, strict=True)
+        ]
+        _set_member_samples(self, trajs, samples, components)
         self.shrink = select_shrink(
             lambda t: self._raw_predict(self.base_vec, t)[0], self._field, val
         )
+        self.sigma_floor = U.field_floor(self._field, val or trajs)
+        self.stage_audit = _stage_audit(trajs, val, samples)
         return self
 
     def _raw_predict(self, base_obs_vec, traj):
@@ -385,9 +461,10 @@ class WMEnsemble:
     @r0_only
     def predict(self, base_obs, traj):
         # inference reads the base observation only (R0); intermediate observations are never used
-        mean, sigma = self._raw_predict(np.asarray(base_obs.payload["obs"]), traj)
+        mean, spread = self._raw_predict(np.asarray(base_obs.payload["obs"]), traj)
         f = self._field(traj)
-        return f + self.shrink * (mean - f), self.shrink * sigma
+        gate = U.edit_gate(batch([traj])["E"][0])
+        return f + self.shrink * (mean - f), U.combine(self.sigma_floor, self.shrink, spread, gate)
 
     def _field(self, traj):
         return self.f3u(batch([traj])["E"][0])
@@ -402,8 +479,84 @@ class _StaticNet(nn.Module):
         self.f = _mlp(d, cfg.hidden, K)
 
 
+class MatchedStatic(WMEnsemble):
+    """The static comparator matched to WM-E (Board A condition 4): identical network, parameter count, base
+    features, cumulative oriented representation, labels, auxiliary grounding targets, normalisation, shrinkage
+    grid, seeds and component bootstrap; the state depends on (o_0, E_t) only, so the prediction at T is a function
+    of the realised final edit, independent of its decomposition."""
+
+    def __init__(self, cfg: WMConfig, field, base_obs, n_seeds=5):
+        super().__init__(dataclasses.replace(cfg, static_state=True), field, base_obs, n_seeds)
+
+
+def _stage_audit(fit, val, samples):
+    """Maximum training horizon seen by every learned stage (Board A condition 3: all must be <= 2)."""
+    mh = lambda ts: max((t["horizon"] for t in ts), default=0)
+    return {
+        "normalisation": mh(fit),
+        "members": max(mh([fit[i] for i in s]) for s in samples),
+        "shrinkage": mh(val),
+        "sigma_floor": mh(val or fit),
+        "f3u": 0,  # raw field nest, unit coefficients: no outcome refit
+    }
+
+
+def refit_f3u(f3u: F3u, trajs, max_h: int = 2) -> F3u:
+    """Least-squares F3u refit on training-component states of horizon <= ``max_h`` only (never outer roots)."""
+    if any(t["horizon"] > max_h for t in trajs):
+        raise ValueError(f"F3u refits use horizons <= {max_h} only")
+    bs = [batch([t]) for t in trajs]
+    E = np.concatenate([b["E"][0, 1:] for b in bs])
+    Y = np.concatenate([b["y"][0, 1:] for b in bs])
+    return f3u.fit(E, Y)
+
+
+class AnchorShift:
+    """Anchor-shift static planning comparator (r9 C7; Board A condition 4): the static prediction plus the
+    residual at the nearest evaluated anchor state (cumulative-E distance d), weighted exp(-d^2 / 2 l^2), l = the
+    median pairwise anchor distance. Uses the same real observations a WM planning filter would; no state."""
+
+    def __init__(self, static, base_obs, anchors):
+        self.static, self.guard = static, static.guard
+        self.anchors = []
+        for a in anchors:
+            T = a["horizon"]
+            E = batch([a])["E"][0][T]
+            r = np.asarray(a["y"][T]) - static.predict(base_obs, a)[0][T]
+            self.anchors.append((E, r))
+        Es = np.stack([e for e, _ in self.anchors]) if self.anchors else np.zeros((0, 1))
+        d = np.sqrt(((Es[:, None] - Es[None]) ** 2).sum(-1))
+        pos = d[np.triu_indices(len(Es), 1)]
+        self.length_scale = float(np.median(pos)) if len(pos) else 1.0
+
+    @r0_only
+    def predict(self, base_obs, traj):
+        mean, sigma = self.static.predict(base_obs, traj)
+        mean = mean.copy()
+        E = batch([traj])["E"][0]
+        for t in range(1, len(E)):
+            if not self.anchors or not np.any(E[t] != 0):
+                continue
+            d = [float(np.linalg.norm(E[t] - e)) for e, _ in self.anchors]
+            i = int(np.argmin(d))
+            mean[t] = (
+                mean[t] + np.exp(-(d[i] ** 2) / (2 * self.length_scale**2)) * self.anchors[i][1]
+            )
+        return mean, sigma
+
+
+def _set_member_samples(model, fit_trajs, samples, components):
+    """Record each member's training sample as indices into the trajectories passed to ``fit``."""
+    model.member_samples = None
+    if components is not None:
+        pos = {id(t): i for i, t in enumerate(model._all_trajs)}
+        model.member_samples = [[pos[id(fit_trajs[i])] for i in s] for s in samples]
+
+
 class StaticPredictor:
-    """Same-input static predictor: F3u(E_T) + MLP(cumulative-E bookkeeping) - MLP(0); 5-seed ensemble mean."""
+    """Same-input static predictor: F3u(E_T) + MLP(cumulative-E bookkeeping) - MLP(0); 5-seed ensemble mean.
+
+    ``predict`` returns (mean, sigma) with the WM-E sigma treatment (field floor, component bootstrap; r9 C1.2)."""
 
     def __init__(self, cfg: WMConfig, field, n_seeds=5):
         self.cfg = cfg
@@ -411,14 +564,16 @@ class StaticPredictor:
         self.f3u = F3u(field.payload)
         self.n_seeds = n_seeds
 
-    def fit(self, trajs):
+    def fit(self, trajs, components=None):
         if any(t["horizon"] > self.cfg.max_train_horizon for t in trajs):
             raise ValueError("training trajectories must have horizon <= max_train_horizon")
-        trajs, val = selection_split(trajs)
+        self._all_trajs = list(trajs)
+        trajs, val, samples, self.val_index = split_and_bootstrap(trajs, components, self.n_seeds)
         bs = [batch([t]) for t in trajs]
-        E = np.concatenate([b["E"][0, 1:] for b in bs])
-        XS = np.concatenate([b["xs"][0, 1:] for b in bs])
-        Y = np.concatenate([b["y"][0, 1:] for b in bs])
+        rows = lambda key, idx: np.concatenate([bs[i][key][0, 1:] for i in idx])
+        E = rows("E", range(len(bs)))
+        XS = rows("xs", range(len(bs)))
+        Y = rows("y", range(len(bs)))
         self.f3u.beta[:] = (
             1.0  # the same raw-field nest as the world model (no outcome-fitted coefficients)
         )
@@ -426,10 +581,11 @@ class StaticPredictor:
         self.y_scale = resid.std(0) + 1e-9
         self.norm = _Norm(XS)
         self.nets = []
-        X = torch.as_tensor(self.norm(XS), dtype=torch.float32)
         X0 = torch.as_tensor(self.norm(np.zeros((1, XS.shape[1]))), dtype=torch.float32)
-        T = torch.as_tensor(resid / self.y_scale, dtype=torch.float32)
-        for s in range(self.n_seeds):
+        for s, sample in enumerate(samples):
+            XSs, Es, Ys = rows("xs", sample), rows("E", sample), rows("y", sample)
+            X = torch.as_tensor(self.norm(XSs), dtype=torch.float32)
+            T = torch.as_tensor((Ys - self.f3u(Es)) / self.y_scale, dtype=torch.float32)
             torch.manual_seed(1000 + s)
             net = _StaticNet(XS.shape[1], Y.shape[1], self.cfg).float()
             opt = torch.optim.AdamW(
@@ -441,13 +597,18 @@ class StaticPredictor:
                 loss.backward()
                 opt.step()
             self.nets.append(net)
-        self.shrink = select_shrink(self._raw_predict, self._field, val)
+        _set_member_samples(self, trajs, samples, components)
+        self.shrink = select_shrink(lambda t: self._raw_predict(t)[0], self._field, val)
+        self.sigma_floor = U.field_floor(self._field, val or trajs)
+        self.stage_audit = _stage_audit(trajs, val, samples)
         return self
 
     @r0_only
     def predict(self, base_obs, traj):
         f = self._field(traj)
-        return f + self.shrink * (self._raw_predict(traj) - f)
+        mean, spread = self._raw_predict(traj)
+        gate = U.edit_gate(batch([traj])["E"][0])
+        return f + self.shrink * (mean - f), U.combine(self.sigma_floor, self.shrink, spread, gate)
 
     def _field(self, traj):
         return self.f3u(batch([traj])["E"][0])
@@ -462,8 +623,8 @@ class StaticPredictor:
                 self.norm(np.zeros((1, XS.shape[1]))), dtype=torch.float32
             ).expand_as(X)
             at_zero = (X == X0).all(-1, keepdim=True)  # x(D) = x(0): s(x) - s(x(0)) is exactly 0
-            r = np.mean([torch.where(at_zero, 0.0, n.f(X) - n.f(X0)).numpy() for n in self.nets], 0)
-        return out + r * self.y_scale
+            rs = np.stack([torch.where(at_zero, 0.0, n.f(X) - n.f(X0)).numpy() for n in self.nets])
+        return out + rs.mean(0) * self.y_scale, rs.std(0) * self.y_scale
 
 
 class FieldOnly:

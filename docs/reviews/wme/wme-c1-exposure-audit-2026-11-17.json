@@ -1,0 +1,675 @@
+{
+ "exposure_registry": {
+  "calib27-20261116": {
+   "manifest": "data/wme/panels/wme-v0-p1/manifest.json",
+   "note": "27B engineering calibration (scripts/wme_27b_calib.py) read pilot-1 construction (field), validation (timing) and dev (field-length scan) items",
+   "splits": [
+    "construction",
+    "validation",
+    "dev"
+   ]
+  },
+  "wme-p2": {
+   "manifest": "data/wme/panels/wme-p2/manifest.json",
+   "splits": "all"
+  },
+  "wme-p2-smoke": {
+   "manifest": "data/wme/panels/wme-p2/manifest.json",
+   "note": "Qwen3.5-0.8B engineering smoke runs (construction items only)",
+   "splits": [
+    "construction"
+   ]
+  },
+  "wme-v0-p1": {
+   "manifest": "data/wme/panels/wme-v0-p1/manifest.json",
+   "splits": "all"
+  }
+ },
+ "exposures": {
+  "calib27-20261116": {
+   "construction": 384,
+   "dev": 384,
+   "validation": 384
+  },
+  "wme-p2": {
+   "construction": 3392,
+   "dev": 704,
+   "test": 624,
+   "validation": 512
+  },
+  "wme-p2-smoke": {
+   "construction": 3392
+  },
+  "wme-v0-p1": {
+   "construction": 384,
+   "dev": 384,
+   "test": 288,
+   "validation": 384
+  }
+ },
+ "feasibility": {
+  "gsm8k_gold_lp": {
+   "available_groups": 7239,
+   "feasible": true,
+   "requested": 1344,
+   "sizes": {
+    "construction": 1024,
+    "dev": 128,
+    "test": 128,
+    "validation": 64
+   },
+   "slack": 5895
+  },
+  "mathcomp_gold_lp": {
+   "available_groups": 4883,
+   "feasible": true,
+   "requested": 1344,
+   "sizes": {
+    "construction": 1024,
+    "dev": 128,
+    "test": 128,
+    "validation": 64
+   },
+   "slack": 3539
+  },
+  "mmlupro_gold_lp": {
+   "available_groups": 5504,
+   "feasible": true,
+   "requested": 240,
+   "sizes": {
+    "construction": 64,
+    "dev": 64,
+    "test": 48,
+    "validation": 64
+   },
+   "slack": 5264
+  },
+  "refusal_margin_harmful": {
+   "available_groups": 127,
+   "feasible": true,
+   "requested": 124,
+   "sizes": {
+    "construction": 20,
+    "dev": 32,
+    "test": 32,
+    "validation": 40
+   },
+   "slack": 3
+  },
+  "refusal_margin_harmless": {
+   "available_groups": 5792,
+   "feasible": true,
+   "requested": 240,
+   "sizes": {
+    "construction": 64,
+    "dev": 64,
+    "test": 48,
+    "validation": 64
+   },
+   "slack": 5552
+  },
+  "sycophancy_gap": {
+   "available_groups": 5415,
+   "feasible": true,
+   "requested": 240,
+   "sizes": {
+    "construction": 64,
+    "dev": 64,
+    "test": 48,
+    "validation": 64
+   },
+   "slack": 5175
+  },
+  "sycophancy_real": {
+   "available_groups": 467,
+   "feasible": true,
+   "requested": 448,
+   "sizes": {
+    "construction": 64,
+    "dev": 128,
+    "test": 160,
+    "validation": 96
+   },
+   "slack": 19
+  },
+  "wikitext_nll": {
+   "available_groups": 303,
+   "feasible": true,
+   "requested": 240,
+   "sizes": {
+    "construction": 64,
+    "dev": 64,
+    "test": 48,
+    "validation": 64
+   },
+   "slack": 63
+  }
+ },
+ "label": "hash-only exposure audit (Board A condition 1); no split written, nothing scored",
+ "near_duplicate_policy": {
+  "bands": 32,
+  "jaccard": 0.7,
+  "minhash_perms": 128,
+  "seed": 20261117,
+  "shingle_words": 5
+ },
+ "objectives": {
+  "gsm8k_gold_lp": {
+   "available_digest": "a3cb9fa333d6ff95b92952ea6f7237cfe982c8f580601e0977437dffd86d71a0",
+   "available_groups": 7239,
+   "excluded_groups": 1552,
+   "excluded_items": 1552,
+   "exposed_hashes_matched": 1552,
+   "pool_groups": 8791,
+   "pool_items": 8792,
+   "pool_unique_hashes": 8792,
+   "post_exclusion_intersection_with_exposures": {
+    "calib27-20261116": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2-smoke": {
+     "construction": {
+      "available": 0
+     }
+    },
+    "wme-v0-p1": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    }
+   }
+  },
+  "mathcomp_gold_lp": {
+   "available_digest": "e4d22288dfb2283b818ef02e10e657f4afd06449f14de9d8dc608d3eb3b3f477",
+   "available_groups": 4883,
+   "excluded_groups": 1343,
+   "excluded_items": 1359,
+   "exposed_hashes_matched": 1344,
+   "pool_groups": 6226,
+   "pool_items": 6269,
+   "pool_unique_hashes": 6269,
+   "post_exclusion_intersection_with_exposures": {
+    "calib27-20261116": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2-smoke": {
+     "construction": {
+      "available": 0
+     }
+    },
+    "wme-v0-p1": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    }
+   }
+  },
+  "mmlupro_gold_lp": {
+   "available_digest": "e5ce1d08ecf5b9b73022365d8c78b4740d6c23b435c52336ff7f53714314cb8b",
+   "available_groups": 5504,
+   "excluded_groups": 462,
+   "excluded_items": 465,
+   "exposed_hashes_matched": 462,
+   "pool_groups": 6000,
+   "pool_items": 6051,
+   "pool_unique_hashes": 6051,
+   "post_exclusion_intersection_with_exposures": {
+    "calib27-20261116": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2-smoke": {
+     "construction": {
+      "available": 0
+     }
+    },
+    "wme-v0-p1": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    }
+   }
+  },
+  "refusal_margin_harmful": {
+   "available_digest": "ea688c9804446c14c3a1e8ceca439c9ddebf1024430ea2080c2def8a07f6fcbf",
+   "available_groups": 127,
+   "excluded_groups": 382,
+   "excluded_items": 393,
+   "exposed_hashes_matched": 385,
+   "pool_groups": 509,
+   "pool_items": 520,
+   "pool_unique_hashes": 520,
+   "post_exclusion_intersection_with_exposures": {
+    "calib27-20261116": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2-smoke": {
+     "construction": {
+      "available": 0
+     }
+    },
+    "wme-v0-p1": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    }
+   }
+  },
+  "refusal_margin_harmless": {
+   "available_digest": "844275b88b8daab3108e09d338d21721ed6375b51315f0562b3acc8a9281a742",
+   "available_groups": 5792,
+   "excluded_groups": 473,
+   "excluded_items": 473,
+   "exposed_hashes_matched": 473,
+   "pool_groups": 6265,
+   "pool_items": 6265,
+   "pool_unique_hashes": 6265,
+   "post_exclusion_intersection_with_exposures": {
+    "calib27-20261116": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2-smoke": {
+     "construction": {
+      "available": 0
+     }
+    },
+    "wme-v0-p1": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    }
+   }
+  },
+  "sycophancy_gap": {
+   "available_digest": "76e98eec601e7e0403cb86abc20e9459f16d5ee628697545803e49dc00cb73f9",
+   "available_groups": 5415,
+   "excluded_groups": 479,
+   "excluded_items": 486,
+   "exposed_hashes_matched": 481,
+   "pool_groups": 5990,
+   "pool_items": 6051,
+   "pool_unique_hashes": 6051,
+   "post_exclusion_intersection_with_exposures": {
+    "calib27-20261116": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2-smoke": {
+     "construction": {
+      "available": 0
+     }
+    },
+    "wme-v0-p1": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    }
+   }
+  },
+  "sycophancy_real": {
+   "available_digest": "53289d71e2488b6ea5c614f47884e4b34cded08249b64ab422d545eecdbd3336",
+   "available_groups": 467,
+   "excluded_groups": 1341,
+   "excluded_items": 1345,
+   "exposed_hashes_matched": 1344,
+   "pool_groups": 1809,
+   "pool_items": 1813,
+   "pool_unique_hashes": 1813,
+   "post_exclusion_intersection_with_exposures": {
+    "calib27-20261116": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2-smoke": {
+     "construction": {
+      "available": 0
+     }
+    },
+    "wme-v0-p1": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    }
+   }
+  },
+  "wikitext_nll": {
+   "available_digest": "75421eb4991714fc52e61ebdb6e7b21c952d4064cf1694a009f88d71c634a770",
+   "available_groups": 303,
+   "excluded_groups": 411,
+   "excluded_items": 411,
+   "exposed_hashes_matched": 411,
+   "pool_groups": 714,
+   "pool_items": 714,
+   "pool_unique_hashes": 714,
+   "post_exclusion_intersection_with_exposures": {
+    "calib27-20261116": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    },
+    "wme-p2-smoke": {
+     "construction": {
+      "available": 0
+     }
+    },
+    "wme-v0-p1": {
+     "construction": {
+      "available": 0
+     },
+     "dev": {
+      "available": 0
+     },
+     "test": {
+      "available": 0
+     },
+     "validation": {
+      "available": 0
+     }
+    }
+   }
+  }
+ },
+ "salt": "wme-c1-panel-20261117",
+ "seconds": 15.2,
+ "sources": {
+  "math": {
+   "dropped_math500_overlap": 262,
+   "n_items": 6269,
+   "unique": 6531
+  },
+  "p1_sources": {
+   "gsm8k": {
+    "config": "main",
+    "repo": "openai/gsm8k",
+    "revision": "740312add88f781978c0658806c59bc2815b9866",
+    "splits": {
+     "test": 1319,
+     "train": 7473
+    }
+   },
+   "harmful": {
+    "config": null,
+    "repo": "mlabonne/harmful_behaviors",
+    "revision": "01cead01398926d81f7c52bdb790ee8cf77ebba7",
+    "splits": {
+     "test": 104,
+     "train": 416
+    }
+   },
+   "harmless": {
+    "config": null,
+    "repo": "mlabonne/harmless_alpaca",
+    "revision": "02c6a92cfcf11bb0c387334f8146d149d65b587f",
+    "splits": {
+     "test": 6265,
+     "train": 25058
+    }
+   },
+   "mmlu_pro": {
+    "config": null,
+    "repo": "TIGER-Lab/MMLU-Pro",
+    "revision": "b189ec765aa7ed75c8acfea42df31fdae71f97be",
+    "splits": {
+     "test": 12032,
+     "validation": 70
+    }
+   },
+   "wikitext": {
+    "config": "wikitext-2-raw-v1",
+    "repo": "Salesforce/wikitext",
+    "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+    "splits": {
+     "test": 4358,
+     "train": 36718,
+     "validation": 3760
+    }
+   }
+  },
+  "sycophancy": {
+   "files": {
+    "answer.jsonl": "3da2c2bbf685cf2c6cbfc6bf67449caad6fe1d56b67924087b3792ffba47bcc1"
+   },
+   "license": "MIT",
+   "n_items": 1813,
+   "repo": "meg-tong/sycophancy-eval",
+   "revision": "18f18160e9998e524bbf027c4475bfa7fdeb6949",
+   "verified_sha256": {
+    "answer.jsonl": "3da2c2bbf685cf2c6cbfc6bf67449caad6fe1d56b67924087b3792ffba47bcc1"
+   }
+  }
+ }
+}
