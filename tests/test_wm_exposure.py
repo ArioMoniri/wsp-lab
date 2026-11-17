@@ -1,0 +1,128 @@
+"""wm.exposure: the item-exposure and split contract (Board A condition 1).
+
+* every split of wme-c1 has registered roles; bank labels never use dev or test items;
+* all transformations of one question (neutral/suggested, templates) share one group;
+* a frozen near-duplicate policy (word-5-gram Jaccard >= 0.7 via MinHash LSH, verified exactly);
+* hash-only exposure audits from manifests only (never a sealed or listed file);
+* group-level exclusion and feasible split sizes.
+"""
+
+import json
+import os
+
+import pytest
+
+from wsp.wm import exposure as X
+from wsp.wm.plan import SealedError
+
+
+def test_split_roles_cover_every_use_and_never_put_labels_on_dev_or_test():
+    roles = X.SPLIT_ROLES
+    assert set(roles) == {"construction", "validation", "dev", "test"}
+    used = [r for rs in roles.values() for r in rs]
+    assert len(used) == len(set(used))  # each role has one split
+    for need in X.REQUIRED_ROLES:
+        assert need in used
+    assert X.split_of("bank_labels") == "validation"
+    assert X.split_of("lora_training") == "construction"
+    assert X.split_of("search_feedback") == "dev"
+    assert X.split_of("final_scoring") == "test"
+    assert "trajectory" in X.SEPARATION["validation"]
+
+
+def test_group_key_keeps_question_transformations_together():
+    a = {
+        "question": "What is  the capital of France?",
+        "neutral_prompt": "x",
+        "suggested_prompt": "y",
+    }
+    b = {
+        "question": "what is the capital of france?",
+        "neutral_prompt": "z",
+        "suggested_prompt": "w",
+    }
+    assert X.group_key("sycophancy_real", a) == X.group_key("sycophancy_real", b)
+    m1 = {"question": "Q", "options": ["a", "b"]}
+    assert X.group_key("mmlupro_gold_lp", m1) == X.group_key("sycophancy_gap", m1)  # shared source
+
+
+def test_near_duplicates_are_merged_and_distinct_texts_are_not():
+    base = "the quick brown fox jumps over the lazy dog near the river bank today"
+    texts = {
+        "a": base,
+        "b": base + " again",  # near-duplicate
+        "c": "a completely different sentence about prime numbers and their gaps in arithmetic",
+        "d": "short",
+        "e": "Short",  # exact after normalisation
+    }
+    groups = X.near_duplicate_groups(texts)
+    assert groups["a"] == groups["b"] and groups["a"] != groups["c"]
+    assert groups["d"] == groups["e"] and groups["d"] != groups["a"]
+    assert X.jaccard(X.shingles(base), X.shingles(base + " again")) >= X.NEAR_DUP_JACCARD
+    assert X.near_duplicate_groups(texts) == groups  # deterministic
+
+
+def _manifest(path, splits):
+    man = {
+        "objectives": {"o": {s: {"n": len(h), "hashes": sorted(h)} for s, h in splits.items()}},
+        "sealed_hashes": sorted(splits.get("test", [])),
+        "files": {"sealed_test/test.jsonl": "0" * 64},
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(man))
+    return path
+
+
+def test_manifest_reader_reads_hash_lists_only_and_refuses_other_paths(tmp_path):
+    m = _manifest(tmp_path / "p" / "manifest.json", {"test": {"t1"}, "dev": {"d1"}})
+    sealed = tmp_path / "p" / "sealed_test"
+    sealed.mkdir()
+    (sealed / "test.jsonl").write_text("SECRET\n")
+    os.chmod(sealed / "test.jsonl", 0)  # would raise if anything tried to open it
+    hs = X.manifest_hashes(m)
+    assert hs == {"test": {"t1"}, "dev": {"d1"}}
+    with pytest.raises(SealedError):
+        X.manifest_hashes(sealed / "test.jsonl")
+    other = tmp_path / "p" / "notes.json"
+    other.write_text("{}")
+    with pytest.raises(SealedError):
+        X.manifest_hashes(other)
+    link = tmp_path / "p" / "link" / "manifest.json"
+    link.parent.mkdir()
+    link.symlink_to(m)
+    with pytest.raises(OSError):
+        X.manifest_hashes(link)  # O_NOFOLLOW on the leaf
+
+
+def test_exposure_registry_names_every_pilot_and_the_27b_calibration():
+    names = set(X.EXPOSURES)
+    assert {"wme-v0-p1", "wme-p2", "calib27-20261116", "wme-p2-smoke"} <= names
+    assert X.EXPOSURES["calib27-20261116"]["manifest"].endswith("wme-v0-p1/manifest.json")
+
+
+def test_intersection_audit_and_group_level_exclusion(tmp_path):
+    expos = {"p1": {"test": {"h1"}, "construction": {"h2"}}, "p2": {"dev": {"h9"}}}
+    pool = [
+        {"hash": "h1", "group": "g1"},
+        {"hash": "h1b", "group": "g1"},  # same group as an exposed item -> excluded too
+        {"hash": "h3", "group": "g3"},
+        {"hash": "h2", "group": "g2"},
+    ]
+    kept, report = X.exclude_groups(pool, expos)
+    assert [r["hash"] for r in kept] == ["h3"]
+    assert report["excluded_groups"] == 2 and report["excluded_items"] == 3
+    audit = X.intersection_audit({"construction": {"h3"}, "test": {"h1"}}, expos)
+    assert audit["p1"]["test"]["test"] == 1 and audit["p1"]["construction"]["construction"] == 0
+    assert not X.audit_clean(audit)
+    assert X.audit_clean(X.intersection_audit({"construction": {"h3"}}, expos))
+
+
+def test_feasible_sizes_report_shortfalls_and_never_relax_exclusions():
+    rep = X.feasibility({"sycophancy_real": 469, "gsm8k_gold_lp": 5000}, X.DEFAULT_SIZES)
+    syc = rep["sycophancy_real"]
+    assert syc["available_groups"] == 469 and syc["requested"] == sum(
+        X.DEFAULT_SIZES["sycophancy_real"].values()
+    )
+    assert syc["feasible"] == (syc["requested"] <= 469)
+    assert rep["gsm8k_gold_lp"]["feasible"]
+    assert sum(X.DEFAULT_SIZES["sycophancy_real"].values()) <= 469

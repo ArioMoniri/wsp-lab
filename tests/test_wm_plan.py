@@ -18,7 +18,8 @@ def test_every_arm_gets_identical_budget_and_overdraw_raises():
     with pytest.raises(KeyError):
         led.charge("unknown", candidate="c", seconds=1.0)
     rep = led.report()
-    assert rep["budget"] == 4 and rep["identical_budget"] is True
+    # Board A condition 10: the budget is identical by construction, usage is reported separately
+    assert rep["budget"] == 4 and rep["budget_identical"] is True and rep["equal_usage"] is False
     assert rep["used"] == {"wm": 4, "statnn": 0, "random": 0}
     assert rep["seconds"]["wm"] == 6.0
 
@@ -96,3 +97,58 @@ def test_random_arm_draws_reproducible_candidates():
     assert a == b and len(a) == 5
     assert all(1 <= len(c) <= 2 for c in a)
     assert space.sample(5, seed=2) != a
+
+
+# ------------------------------------------------------------------ bundle definition (Board A condition 10)
+
+
+def test_bundle_kinds_have_registered_unit_rules():
+    led = P.BudgetLedger(budget=4, arms=["a"])
+    for kind in ("evaluated", "intermediate", "checkpoint", "validation", "rejected"):
+        assert P.BUNDLE_KINDS[kind] == 1.0
+    with pytest.raises(ValueError):
+        led.charge("a", "x", 1.0, kind="screen")  # a screen needs its fractional units
+    with pytest.raises(ValueError):
+        led.charge("a", "x", 1.0, kind="oracle")  # oracle derivatives are priced explicitly
+    with pytest.raises(ValueError):
+        led.charge("a", "x", 1.0, kind="generation")  # never part of B
+    with pytest.raises(ValueError):
+        led.charge("a", "x", 1.0, kind="evaluated", units=0.5)  # full kinds are one bundle
+    led.charge("a", "x", 1.0, kind="screen", units=0.25)
+    led.charge("a", "x", 1.0, kind="oracle", units=0.5)
+    assert led.remaining("a") == pytest.approx(3.25)
+    assert "full search-development panel" in P.BUNDLE_DEFINITION
+
+
+def test_repeat_of_an_evaluated_theta_is_served_from_cache_at_zero_units():
+    led = P.BudgetLedger(budget=2, arms=["a", "b"])
+    led.charge("a", "x", 1.0, theta_hash="t" * 64)
+    led.charge("a", "x", 0.0, theta_hash="t" * 64)
+    assert led.remaining("a") == 1 and led.entries("a")[1]["kind"] == "cache"
+    led.charge("b", "x", 1.0, theta_hash="t" * 64)  # another arm pays for its own evaluation
+    assert led.remaining("b") == 1
+
+
+def test_parity_requires_every_arm_closed_at_equal_usage():
+    led = P.BudgetLedger(budget=3, arms=["wm", "statnn"])
+    for _ in range(3):
+        led.charge("wm", "c", 1.0)
+    led.charge("statnn", "c", 1.0)
+    with pytest.raises(P.ParityError):
+        led.verify_parity()
+    led.close("statnn", reason="base fallback: no candidate passes")
+    led.close("wm", reason="budget spent")
+    rep = led.verify_parity()
+    assert rep["equal_usage"] is False and rep["parity"] is True
+    assert rep["forfeited"] == {"wm": 0.0, "statnn": 2.0}
+    with pytest.raises(P.BudgetExceeded):
+        led.charge("statnn", "c", 1.0)  # closed
+
+
+def test_report_by_kind_and_seconds():
+    led = P.BudgetLedger(budget=4, arms=["a"])
+    led.charge("a", "x", 2.0)
+    led.charge("a", "y", 1.0, kind="screen", units=0.5)
+    rep = led.report()
+    assert rep["by_kind"]["a"] == {"evaluated": 1.0, "screen": 0.5}
+    assert rep["units"]["a"] == 1.5 and rep["seconds"]["a"] == 3.0
