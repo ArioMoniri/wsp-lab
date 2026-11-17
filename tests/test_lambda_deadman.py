@@ -349,3 +349,15 @@ def test_tick_stamps_watcher_liveness(env):
     clock.advance(30)
     dm.tick()
     assert dm.state()["last_tick"] == clock()
+
+
+def test_ssh_config_upsert_keeps_other_instances_aliases():
+    from wsp.ops import lambda_deadman as D
+
+    blk = lambda a, ip: f"Host {a}\n  HostName {ip}\n  User ubuntu\n"
+    c = D.upsert_host_block("", "wsp-wme-a", blk("wsp-wme-a", "x"))
+    c = D.upsert_host_block(c, "wsp-wme-b", blk("wsp-wme-b", "y"))
+    c = D.upsert_host_block(c, "wsp-wme-a", blk("wsp-wme-a", "z"))
+    assert (
+        c.count("Host ") == 2 and "HostName y" in c and "HostName z" in c and "HostName x" not in c
+    )

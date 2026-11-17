@@ -45,6 +45,14 @@ class ApiError(RuntimeError):
         self.status, self.code = status, code
 
 
+def upsert_host_block(text: str, alias: str, block: str) -> str:
+    """ssh config text with ``alias``'s Host block replaced by ``block`` and every other Host block kept (several
+    wsp-wme-* instances may be live at once, each with its own state directory and alias)."""
+    blocks = [b for b in ("\n" + text).split("\nHost ") if b.strip()]
+    keep = ["Host " + b.strip("\n") + "\n" for b in blocks if b.split("\n", 1)[0].strip() != alias]
+    return "".join(keep) + block
+
+
 def read_key(env_file: Path) -> str:
     """LAMBDA_API_KEY from the environment, else from a KEY=VALUE env file (never printed)."""
     key = os.environ.get("LAMBDA_API_KEY")

@@ -135,3 +135,60 @@ def test_v1_spec_and_loop_rule():
     assert not G.detect_loop_v1(list(range(10)) * 2 + list(range(50, 60)), hit_max=False)
     assert G.detect_loop_v1([1, 2, 3], hit_max=True)  # truncation counts as a loop
     assert G.detect_refusal("I'm sorry, but I can't help with that.")
+
+
+class _Tok:
+    pad_token_id = 0
+    eos_token_id = 1
+
+    def apply_chat_template(self, msgs, **k):
+        return msgs[0]["content"]
+
+    def convert_tokens_to_ids(self, t):
+        return 2
+
+    def encode(self, t, add_special_tokens=False):
+        return [ord(c) % 50 + 3 for c in t]
+
+    def decode(self, ids, skip_special_tokens=True):
+        return " ".join(map(str, ids))
+
+
+class _Model:
+    """Appends tokens drawn from torch's global RNG (sampling) or a fixed pattern (greedy); records the kwargs."""
+
+    def __init__(self):
+        self.calls = []
+
+    def generate(self, input_ids, attention_mask, max_new_tokens, **k):
+        import torch
+
+        self.calls.append(k)
+        n = input_ids.shape[0]
+        if k["do_sample"]:
+            new = torch.randint(3, 40, (n, max_new_tokens))
+            new[:, -1] = 2  # <|im_end|>
+        else:
+            new = torch.full((n, max_new_tokens), 7)
+        return torch.cat([input_ids, new], 1)
+
+
+def test_sampled_generation_is_seeded_per_batch_and_uses_the_registered_sampler():
+    from wsp.wm import genaudit as G
+
+    prompts = [f"q{i}" for i in range(10)]
+    m = _Model()
+    a = G.generate_sampled(m, _Tok(), prompts, 6, seed=20261117, batch=4, device="cpu")
+    b = G.generate_sampled(_Model(), _Tok(), prompts, 6, seed=20261117, batch=4, device="cpu")
+    c = G.generate_sampled(_Model(), _Tok(), prompts, 6, seed=20261118, batch=4, device="cpu")
+    assert [x["ids"] for x in a] == [x["ids"] for x in b] and [x["ids"] for x in a] != [
+        x["ids"] for x in c
+    ]
+    assert len(a) == 10 and all(
+        len(x["ids"]) == 5 and not x["hit_max"] for x in a
+    )  # cut at <|im_end|>
+    k = m.calls[0]
+    assert k["do_sample"] and k["temperature"] == G.SPEC_V1["sampled_audit"]["temperature"]
+    assert k["top_p"] == G.SPEC_V1["sampled_audit"]["top_p"] and len(m.calls) == 3
+    g = G.generate_greedy(_Model(), _Tok(), prompts, 6, batch=4, device="cpu")
+    assert all(x["hit_max"] and x["ids"] == [7] * 6 for x in g)

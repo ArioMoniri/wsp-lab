@@ -48,3 +48,15 @@ def test_json_args_inline_or_from_file(tmp_path):
         and SIM._arg("") == {}
     )
     assert SIM.k_required(600) == 497
+
+
+def test_cal_combine_pools_every_replicate_and_takes_the_first_crossing():
+    rows = [
+        {"kappa": 1.0, "rep": 0, "errors": [2.0]},
+        {"kappa": 1.0, "rep": 1, "errors": [2.1, 2.1]},
+        {"kappa": 0.5, "rep": 2, "errors": [1.0]},
+        {"kappa": 2.0, "rep": 3, "errors": [3.17]},
+    ]
+    s = SIM.cal_combine(rows)
+    assert s["pooled_median"][1.0] == 2.1 and s["reps"][1.0] == 2
+    assert s["kappa_star"] == pytest.approx(1.0 + 0.07 / 1.07)

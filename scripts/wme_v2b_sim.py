@@ -220,6 +220,47 @@ def cmd_cal_summary(a):
     print(json.dumps(s, indent=1))
 
 
+CAL_RULE = (
+    "kappa* = linear interpolation, at the first crossing of 2.17, of the pooled median static held-out SE-scaled "
+    "|error| (h = 3-4, all objectives) over every calibration replicate at each kappa (seeds CAL_SEED0 + rep)"
+)
+
+
+def cal_combine(rows):
+    import numpy as np
+
+    from wsp.wm import powersim_refit_v2b as RB
+
+    ks = sorted({float(r["kappa"]) for r in rows})
+    med = {
+        k: float(np.median([x for r in rows if float(r["kappa"]) == k for x in r["errors"]]))
+        for k in ks
+    }
+    reps = {k: len({r["rep"] for r in rows if float(r["kappa"]) == k}) for k in ks}
+    star = None
+    for i in range(len(ks) - 1):
+        m0, m1 = med[ks[i]], med[ks[i + 1]]
+        if (m0 - RB.CAL_TARGET) * (m1 - RB.CAL_TARGET) <= 0 and m0 != m1:
+            star = ks[i] + (RB.CAL_TARGET - m0) * (ks[i + 1] - ks[i]) / (m1 - m0)
+            break
+    return {
+        "target": RB.CAL_TARGET,
+        "rule": CAL_RULE,
+        "pooled_median": med,
+        "reps": reps,
+        "kappa_star": star,
+    }
+
+
+def cmd_cal_combine(a):
+    rows = [r for d in a.out.split(",") for r in _rows(d)]
+    s = cal_combine(rows)
+    s["kappa_star_registered"] = None if s["kappa_star"] is None else round(s["kappa_star"], 3)
+    s["dirs"] = a.out.split(",")
+    s["cpu_h"] = sum(r["seconds"] for r in rows) / 3600
+    print(json.dumps(s, indent=1))
+
+
 def cmd_refit(a):
     from wsp.wm import powersim_refit_v2b as RB
 
@@ -302,7 +343,16 @@ def cmd_refit_summary(a):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument(
-        "cmd", choices=["cpsel", "cpsel-summary", "cal", "cal-summary", "refit", "refit-summary"]
+        "cmd",
+        choices=[
+            "cpsel",
+            "cpsel-summary",
+            "cal",
+            "cal-summary",
+            "cal-combine",
+            "refit",
+            "refit-summary",
+        ],
     )
     ap.add_argument("--out", required=True)
     ap.add_argument("--reps", type=int, default=6)
@@ -318,6 +368,7 @@ def main():
         "cpsel-summary": cmd_cpsel_summary,
         "cal": cmd_cal,
         "cal-summary": cmd_cal_summary,
+        "cal-combine": cmd_cal_combine,
         "refit": cmd_refit,
         "refit-summary": cmd_refit_summary,
     }[a.cmd](a)
