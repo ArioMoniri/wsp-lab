@@ -41,7 +41,7 @@ else
     echo "cuda-compat $CD" >> logs/compat.log
   fi
   $PY -c "import torch; torch.zeros(1).cuda(); print('cuda ok', torch.version.cuda)" >> logs/pip.log 2>&1 || fail "cuda-runtime"
-  uv pip install -q --python $PY scipy hf-xet > logs/pip.log 2>&1 || fail pip
+  uv pip install -q --python $PY scipy hf-xet accelerate > logs/pip.log 2>&1 || fail pip
 fi
 stamp "venv ready ($(( $(date +%s) - t0 )) s)"
 HF_HUB_OFFLINE=0 .venv/bin/hf download Qwen/Qwen3.5-9B --revision "$REV" > logs/download.log 2>&1 || fail download
