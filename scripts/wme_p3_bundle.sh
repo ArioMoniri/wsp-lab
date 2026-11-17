@@ -14,7 +14,8 @@ for p in wme-p3s wme-p3h; do
   cp "$ROOT/data/wme/panels/$p/manifest.json" "$STAGE/data/wme/panels/$p/"
   cp "$ROOT/data/wme/panels/$p/open/"*.jsonl "$STAGE/data/wme/panels/$p/open/"
 done
-"$ROOT/.venv/bin/python" -m pip freeze 2>/dev/null | grep -vE '^-e |@ file:' > "$STAGE/constraints.txt" || true
+{ "$ROOT/.venv/bin/python" -m pip freeze 2>/dev/null || uv pip freeze --python "$ROOT/.venv/bin/python"; } \
+  | grep -vE '^-e |@ file:' > "$STAGE/constraints.txt"
 grep -q '^torch==' "$STAGE/constraints.txt"
 if find "$STAGE" -path '*sealed*' | grep -q .; then echo "sealed path in bundle" >&2; exit 1; fi
 tar -C "$(dirname "$STAGE")" -czf "$OUT" wmep3
