@@ -61,7 +61,7 @@ H3 = {
     "lr": 2e-3,
     "beta": 0.05,
     "temperature": 1.0,
-    "micro": 8,
+    "micro": 2,  # equal-size micro-batches keep the same loss; 8 ran out of memory beside the vLLM engine
 }
 SMOKE = False
 
