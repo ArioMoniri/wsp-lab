@@ -69,9 +69,8 @@ FIELD_ITEMS = 24
 JET_ITEMS = 96
 ITEM_MAX_TOKENS = 1024
 JET_BATCH_TOKENS = 12000
-HVP_BATCH_TOKENS = (
-    1200  # the reference GDN kernel keeps per-position copies under backward (~15 GB here)
-)
+HVP_BATCH_TOKENS = 1  # one item per forward-over-reverse micro-batch (memory)
+S1_STATE: dict = {}  # objective -> why S1 is infeasible (memory precondition); persisted in s1_status.json
 JET_MAX_SCORED = (
     768  # vocab-sized fp32 log-probabilities exist (with tangents) at every scored position
 )
@@ -398,12 +397,19 @@ def r1_step(model, jb, hb, p0, D, E):
     for obj in OBJECTIVES:
         js = [J.jets(model, b, p0, Db, Eb) for b in jb[obj]]
         j = {k: torch.cat([x[k] for x in js]).float().cpu() for k in ("J1", "J2", "X")}
-        if (
-            SMOKE and obj != "gsm8k_gold_lp"
-        ):  # the 8 GB local smoke cannot hold the other HVP graphs
-            t = {"gD": float("nan"), "EHD": float("nan"), "DHD": float("nan")}
+        nan = {"gD": float("nan"), "EHD": float("nan"), "DHD": float("nan")}
+        if (SMOKE and obj != "gsm8k_gold_lp") or obj in S1_STATE:
+            t = nan
         else:
-            t = J.hvp_terms(model, hb[obj], p0, Db, Eb)
+            try:
+                torch.cuda.empty_cache()
+                t = J.hvp_terms(model, hb[obj], p0, Db, Eb)
+            except (
+                torch.OutOfMemoryError
+            ) as e:  # S1 memory precondition fails for this objective; S2 continues
+                S1_STATE[obj] = f"OOM in the forward-over-reverse HVP: {str(e)[:160]}"
+                torch.cuda.empty_cache()
+                t = nan
         s2 = J.s2_prediction(j)
         n = s2.numel()
         out[obj] = {
@@ -445,7 +451,13 @@ def cost_check(model, jb, hb, p0, D, E, led):
 
     gradpass()
     _, t_grad = timed(gradpass)
-    _, t_hvp = timed(lambda: J.hvp_terms(model, [h], p0, Db, None))
+    try:
+        torch.cuda.empty_cache()
+        _, t_hvp = timed(lambda: J.hvp_terms(model, [h], p0, Db, None))
+    except torch.OutOfMemoryError as e:
+        S1_STATE[obj] = f"OOM in the cost-check HVP: {str(e)[:160]}"
+        torch.cuda.empty_cache()
+        t_hvp = float("nan")
     rec = {
         "t_forward": t_fwd,
         "t_jet_nested": t_jet,
@@ -453,6 +465,7 @@ def cost_check(model, jb, hb, p0, D, E, led):
         "t_gradpass": t_grad,
         "t_hvp": t_hvp,
         "hvp_gradpasses": t_hvp / t_grad,
+        "s1_infeasible": dict(S1_STATE),
         "estimates": EST,
     }
     led.log("cost factors", **rec)
@@ -592,13 +605,15 @@ def run(out: Path):
     }
     led.log("setup done", states=len(keys), jet_batches={o: len(v) for o, v in jb.items()})
     spath, stpath = out / "states.jsonl", out / "steps.jsonl"
+    if (out / "s1_status.json").exists():
+        S1_STATE.update(json.loads((out / "s1_status.json").read_text()))
     seen, seen_steps = jsonl(spath), jsonl(stpath)
     E_cache: dict = {"": {n: torch.zeros_like(params[n], dtype=torch.float32) for n in names}}
 
     def E(key):
         if key not in E_cache:
             E_cache[key] = displacement(sess, R, key, names)
-            if len(E_cache) > 8:
+            if len(E_cache) > 3:
                 E_cache.pop(next(k for k in E_cache if k))
         return E_cache[key]
 
@@ -667,9 +682,13 @@ def run(out: Path):
                     cc["projected_total_gpu_h"] = (
                         time.time() - t_start + per_state * (len(keys) - 1)
                     ) / 3600
+                    cc["s1_infeasible_after_first_step"] = dict(S1_STATE)
                     cc["stop"] = bool(
                         cc["jet_forwards"] > 2 * EST["jet_forwards"]
-                        or cc["hvp_gradpasses"] > 2 * EST["hvp_gradpasses"]
+                        or (
+                            cc["hvp_gradpasses"] == cc["hvp_gradpasses"]
+                            and cc["hvp_gradpasses"] > 2 * EST["hvp_gradpasses"]
+                        )
                         or cc["projected_total_gpu_h"] > CAP_GPU_H
                     )
                     (out / "cost_check.json").write_text(json.dumps(cc, indent=1))
@@ -690,11 +709,13 @@ def run(out: Path):
             srec["seconds_r1"] = time.time() - t0
             append(stpath, srec)
             seen_steps[key] = srec
+            (out / "s1_status.json").write_text(json.dumps(S1_STATE))
             led.log("step r1", key=key, seconds=round(srec["seconds_r1"], 1))
         if (time.time() - t_start) / 3600 > CAP_GPU_H - 0.1:
             led.log("STOP: stage cap")
             return "STOPPED_CAP"
     static_pass(out, field, sess, R, keys, names, led)
+    (out / "s1_status.json").write_text(json.dumps(S1_STATE))
     again = evaluate()
     led.log("done", post_restore_bitwise_equal_base=again == base["values"])
     (out / "final.json").write_text(

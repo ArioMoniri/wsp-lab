@@ -130,7 +130,8 @@ def load_engines(ctx):
     llm = LLM(
         model=str(path),
         dtype="bfloat16",
-        gpu_memory_utilization=0.15 if SMOKE else 0.45,
+        gpu_memory_utilization=0.12 if SMOKE else 0.45,
+        max_num_seqs=32 if SMOKE else 128,
         max_model_len=12288,
         enable_prefix_caching=False,
         seed=0,
@@ -472,6 +473,20 @@ def sft_data(ctx):
         best = min(rs, key=lambda r: (abs(len(r["ids"]) - L), r["sample"]))
         a = pid(panel, i)
         ctrl.append(Row(a + best["ids"] + [e], len(a)))
+    if SMOKE and not (
+        h1 and h2 and ctrl
+    ):  # engineering smoke only: gold-letter rows so every code path runs
+        gold = []
+        for panel in MC:
+            for i, it in pan[panel].items():
+                a = pid(panel, i)
+                gold.append(
+                    Row(
+                        a + enc(ctx, f"The answer is ({G.LETTERS[it['answer_index']]}).") + [e],
+                        len(a),
+                    )
+                )
+        h1, h2, ctrl = h1 or gold, h2 or gold, ctrl or gold
     stats = {
         "h1_rows": len(h1),
         "h2_rows": len(h2),
@@ -845,10 +860,12 @@ def rl_arm(ctx, arm):
                 ]
                 with torch.no_grad():
                     lp0 = V.token_logps(model, ids, att, msk)
-                with ctx.svf.active():
+                with (
+                    ctx.svf.active()
+                ):  # backward inside: checkpoint recomputation must see the same hooks
                     lp = V.token_logps(model, ids, att, msk)
-                loss, kl = V.pg_loss(lp, lp0, seq_ix, adv[m0 : m0 + len(mb)], H3["beta"])
-                (loss / nmb).backward()
+                    loss, kl = V.pg_loss(lp, lp0, seq_ix, adv[m0 : m0 + len(mb)], H3["beta"])
+                    (loss / nmb).backward()
                 kls.append(kl)
             opt.step()
             torch.save(ctx.svf.state(), d / f"z{step:03d}.pt")
@@ -861,7 +878,7 @@ def rl_arm(ctx, arm):
         model.eval()
         for n in names:
             ctx.svf.zvec(n).requires_grad_(False)
-    meta = {"steps": len(hist), "history": hist, **H3}
+    meta = {**H3, "configured_steps": H3["steps"], "steps": len(hist), "history": hist}
     jwrite(d / "meta.json", meta)
     return meta
 
@@ -1036,9 +1053,9 @@ def main():
 
         snap = Path(constants.HF_HUB_CACHE) / "models--Qwen--Qwen3.5-0.8B/snapshots"
         hf.TARGETS[REPO] = min(snap.iterdir()).name
-        H3 = {**H3, "micro": 4}
-        LORA = {**LORA, "batch_rows": 4}
-        globals().update(HOLDOUT_GEN_TOKENS=256, THINK_TOKENS=512)
+        H3 = {**H3, "micro": 1}
+        LORA = {**LORA, "batch_rows": 1}
+        globals().update(HOLDOUT_GEN_TOKENS=1024, THINK_TOKENS=2048)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     try:

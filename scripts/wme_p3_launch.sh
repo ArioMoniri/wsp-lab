@@ -16,7 +16,8 @@ POL=(--dir "$STATE" --t-max-hours "$TMAX" --max-usd "$USD" --max-price 5.5 --idl
 PY="$DIR/.venv/bin/python"
 agent-tmux "wme-p3-$ST-dm" "$PY" scripts/lambda_deadman.py "${POL[@]}" watch
 agent-tmux "wme-p3-$ST-poll" "$PY" scripts/wme_lambda_poll.py --dir "$STATE" --name "wsp-wme-p3-$ST-20261117" \
-  --types gpu_1x_h100_sxm5,gpu_1x_h100_pcie --fallback-after-min 0 --t-max-hours "$TMAX" --max-usd "$USD" \
+  --types "${TYPES:-gpu_1x_h100_sxm5,gpu_1x_h100_pcie}" --fallback-after-min "${FALLBACK_MIN:-0}" \
+  --t-max-hours "$TMAX" --max-usd "$USD" \
   --max-price 5.5 --idle-limit-s 1200
 agent-tmux "wme-p3-$ST-drive" env WME_SSH_CONFIG="$WME_SSH_CONFIG" bash scripts/wme_lambda_drive.sh "$BUNDLE" "$SHA" \
   "wmep3$ST" "$STATE" wmep3 scripts/wme_p3_remote.sh "$ST"

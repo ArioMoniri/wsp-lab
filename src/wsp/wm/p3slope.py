@@ -82,9 +82,11 @@ def s_gate(steps, objectives) -> dict:
     if not eligible:
         cons = "no objective reaches an oracle cut >= 0.20: no objective can pass; slope transport is dropped"
     elif not passed:
+        killed = [o for o in eligible if per[o]["verdict"] == "KILL"]
+        inconc = [o for o in eligible if per[o]["verdict"] == "inconclusive"]
         cons = (
-            "S1 and S2 fail on every eligible objective: slope transport is dropped (SYNTHESIS-r9 C4); the per-state "
-            "oracle gradients leave the bank"
+            f"S1 and S2 pass on no eligible objective (killed: {killed}; inconclusive, 25-50 % recovery: {inconc}): "
+            "slope transport is dropped (SYNTHESIS-r9 C4); the per-state oracle gradients leave the bank"
         )
     else:
         cons = f"transport kept only for {passed}; every other objective uses static plus a learned residual on WM-CP"
