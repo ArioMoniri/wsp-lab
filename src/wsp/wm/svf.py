@@ -160,12 +160,29 @@ class SVF(nn.Module):
                 h.remove()
 
 
-def token_logps(model, ids, att, score_mask) -> torch.Tensor:
-    """Per-token log-probabilities of ``ids`` at the positions where ``score_mask`` (shifted targets) is True."""
+def token_logps(model, ids, att, score_mask, chunk: int | None = None) -> torch.Tensor:
+    """Per-token log-probabilities of ``ids`` at the positions where ``score_mask`` (shifted targets) is True.
+    ``chunk``: compute the LM head over position chunks, each checkpointed (no full [positions, vocab] tensor kept)."""
     h = model.model(input_ids=ids, attention_mask=att, use_cache=False).last_hidden_state
     pos = score_mask[:, 1:]
-    logits = model.lm_head(h[:, :-1][pos]).float()
-    return logits.log_softmax(-1).gather(-1, ids[:, 1:][pos][:, None]).squeeze(-1)
+    hs, tg = h[:, :-1][pos], ids[:, 1:][pos]
+
+    def part(hc, tc):
+        return model.lm_head(hc).float().log_softmax(-1).gather(-1, tc[:, None]).squeeze(-1)
+
+    if not chunk:
+        return part(hs, tg)
+    from torch.utils.checkpoint import checkpoint
+
+    outs = []
+    for i in range(0, hs.shape[0], chunk):
+        hc, tc = hs[i : i + chunk], tg[i : i + chunk]
+        outs.append(
+            checkpoint(part, hc, tc, use_reentrant=False)
+            if torch.is_grad_enabled()
+            else part(hc, tc)
+        )
+    return torch.cat(outs)
 
 
 def pg_loss(logp, logp0, seq_index, adv, beta: float):

@@ -195,7 +195,9 @@ def h_report(hdir: Path) -> dict:
         by_tag.setdefault(r["tag"], []).append(r)
     base = by_tag["base"][0]
     rerun = by_tag.get("base_rerun", [None])[0]
-    ceiling = by_tag.get("ceiling", [None])[0]
+    ceiling = None
+    if by_tag.get("ceiling"):
+        ceiling = {"panels": {p: v for r in by_tag["ceiling"] for p, v in r["panels"].items()}}
     acc = lambda rec, p: float(np.mean([x["correct"] for x in rec["panels"][p]]))
     out = {"status": status, "measured": True, "budgets": budgets, "sizing": sizing}
     out["guard_calibration"] = {

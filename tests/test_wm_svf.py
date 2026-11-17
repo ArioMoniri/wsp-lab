@@ -103,3 +103,23 @@ def test_pg_loss_and_advantages():
     loss.backward()
     # positive advantage raises its sequence's log-probs, negative lowers them
     assert logp.grad[0] < 0 and logp.grad[1] < 0 and logp.grad[2] > 0
+
+
+def test_chunked_logps_and_ce_match_the_full_computation(tiny):
+    from wsp.wm import lora as LR
+
+    m, _ = tiny
+    ids = torch.randint(2, 120, (2, 11))
+    mask = torch.zeros_like(ids, dtype=torch.bool)
+    mask[:, 4:] = True
+    full = V.token_logps(m, ids, torch.ones_like(ids), mask)
+    part = V.token_logps(m, ids, torch.ones_like(ids), mask, chunk=3)
+    assert torch.allclose(full, part, atol=1e-6)
+    h = torch.randn(7, m.config.hidden_size, requires_grad=True)
+    t = torch.randint(0, 128, (7,))
+    a = torch.nn.functional.cross_entropy(m.lm_head(h).float(), t)
+    b = LR.chunked_ce(m.lm_head, h, t, 3)
+    assert torch.allclose(a, b, atol=1e-6)
+    ga = torch.autograd.grad(a, h)[0]
+    gb = torch.autograd.grad(LR.chunked_ce(m.lm_head, h, t, 3), h)[0]
+    assert torch.allclose(ga, gb, atol=1e-6)

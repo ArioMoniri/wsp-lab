@@ -547,6 +547,7 @@ def train_lora(ctx, run, rows, stage):
         warmup=LORA["warmup"],
         checkpointing=True,
         on_step=on_step,
+        ce_chunk=1024,
     )
     meta = {
         k: log[k]
@@ -711,15 +712,12 @@ def dev_base(ctx):
         allp = MC + G.GUARDS
     evaluate(ctx, {"kind": "base"}, allp, items, "base")
     evaluate(ctx, {"kind": "base_rerun"}, allp, items, "base_rerun")
-    evaluate(
-        ctx,
-        {"kind": "base"},
-        MC + (() if SMOKE else ("gsm8k_gen", "math_gen", "ifeval_gen")),
-        items,
-        "ceiling",
-        thinking=True,
-        extras=False,
-    )
+    # thinking ceiling (descriptive, never used for selection): one record per panel, while the H0 cap allows
+    for p in MC + (() if SMOKE else ("gsm8k_gen", "math_gen", "ifeval_gen")):
+        if ctx.over_cap("H0"):
+            ctx.log("H0 cap reached; thinking ceiling not measured", panel=p)
+            continue
+        evaluate(ctx, {"kind": "base"}, (p,), items, "ceiling", thinking=True, extras=False)
 
 
 def eval_family(ctx, stage, specs, tag):
@@ -859,11 +857,11 @@ def rl_arm(ctx, arm):
                     msk[:, 1:]
                 ]
                 with torch.no_grad():
-                    lp0 = V.token_logps(model, ids, att, msk)
+                    lp0 = V.token_logps(model, ids, att, msk, chunk=1024)
                 with (
                     ctx.svf.active()
                 ):  # backward inside: checkpoint recomputation must see the same hooks
-                    lp = V.token_logps(model, ids, att, msk)
+                    lp = V.token_logps(model, ids, att, msk, chunk=1024)
                     loss, kl = V.pg_loss(lp, lp0, seq_ix, adv[m0 : m0 + len(mb)], H3["beta"])
                     (loss / nmb).backward()
                 kls.append(kl)
