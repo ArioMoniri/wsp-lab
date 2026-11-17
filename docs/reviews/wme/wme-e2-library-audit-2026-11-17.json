@@ -1,0 +1,248 @@
+{
+ "bank_vs_library": {
+  "flagged": [],
+  "max_cos": 0.5,
+  "n_bank": 24,
+  "n_pilot": 24,
+  "pass": true,
+  "worst": {
+   "proj_remove:015": {
+    "against": "e2:gsm@20",
+    "cos": 0.1897287860567683
+   },
+   "proj_remove:021": {
+    "against": "e2:trivia@26",
+    "cos": 0.15659476198415673
+   },
+   "proj_remove:033": {
+    "against": "e2:gsm@22",
+    "cos": 0.21712854338598808
+   },
+   "proj_remove:039": {
+    "against": "e2:mathcomp@26",
+    "cos": 0.32602832464413223
+   },
+   "proj_remove:045": {
+    "against": "e2:mathcomp@26",
+    "cos": 0.4007279534506615
+   },
+   "proj_remove:051": {
+    "against": "e2:mathcomp@24",
+    "cos": 0.4080591667834694
+   },
+   "proj_remove:057": {
+    "against": "e2:mathcomp@26",
+    "cos": 0.4326374586806234
+   },
+   "proj_remove:079": {
+    "against": "e2:mathcomp@28",
+    "cos": 0.1541146118957729
+   },
+   "proj_remove:088": {
+    "against": "e2:gsm@20",
+    "cos": 0.2566533229066564
+   },
+   "proj_remove:109": {
+    "against": "e2:mathcomp@26",
+    "cos": 0.3484465265174128
+   },
+   "proj_remove:118": {
+    "against": "e2:mathcomp@28",
+    "cos": 0.058134669600609944
+   },
+   "proj_remove:125": {
+    "against": "e2:mathcomp@20",
+    "cos": 0.37056278197665965
+   },
+   "steer:005": {
+    "against": "e2:mathcomp@22",
+    "cos": 0.189257322179224
+   },
+   "steer:011": {
+    "against": "e2:gsm@20",
+    "cos": 0.40781836289514295
+   },
+   "steer:023": {
+    "against": "e2:mathcomp@26",
+    "cos": 0.2752195964368956
+   },
+   "steer:029": {
+    "against": "e2:trivia@28",
+    "cos": 0.19414531104878693
+   },
+   "steer:041": {
+    "against": "e2:mathcomp@26",
+    "cos": 0.15378000371943978
+   },
+   "steer:053": {
+    "against": "e2:trivia@20",
+    "cos": 0.10478508927008362
+   },
+   "steer:071": {
+    "against": "e2:mathcomp@26",
+    "cos": 0.34125439882751857
+   },
+   "steer:076": {
+    "against": "e2:mathcomp@20",
+    "cos": 0.17570518170964589
+   },
+   "steer:081": {
+    "against": "e2:mathcomp@26",
+    "cos": 0.23651574455721763
+   },
+   "steer:095": {
+    "against": "e2:mathcomp@28",
+    "cos": 0.23065062066964043
+   },
+   "steer:101": {
+    "against": "e2:mathcomp@30",
+    "cos": 0.36821952429682175
+   },
+   "steer:107": {
+    "against": "e2:mathcomp@24",
+    "cos": 0.3524844306081698
+   }
+  }
+ },
+ "groups_per_source": {
+  "gsm": 32,
+  "harmless": 32,
+  "mathcomp": 32,
+  "syc_neutral": 32,
+  "syc_suggested": 32,
+  "wiki": 32
+ },
+ "label": "E2 library contrast directions vs bank roots and pilots (theta0; disclosure; no evaluation)",
+ "library_digest": "a6c1a68991549c42cfec20a663590c83159a9bb75fb2d1638e08be6368a2ebd3",
+ "library_vs_pilots": {
+  "flagged": [
+   "e2:gsm@20",
+   "e2:gsm@22",
+   "e2:gsm@24",
+   "e2:gsm@26",
+   "e2:gsm@28",
+   "e2:gsm@30",
+   "e2:mathcomp@20",
+   "e2:mathcomp@22",
+   "e2:mathcomp@24",
+   "e2:mathcomp@26",
+   "e2:mathcomp@28",
+   "e2:mathcomp@30",
+   "e2:syc@20",
+   "e2:syc@22",
+   "e2:syc@24",
+   "e2:syc@26",
+   "e2:syc@28",
+   "e2:syc@30",
+   "e2:trivia@20",
+   "e2:trivia@22",
+   "e2:trivia@24",
+   "e2:trivia@26",
+   "e2:trivia@28",
+   "e2:trivia@30"
+  ],
+  "max_cos": 0.5,
+  "n_bank": 24,
+  "n_pilot": 57,
+  "pass": false,
+  "worst": {
+   "e2:gsm@20": {
+    "against": "p2:gsmwiki@14",
+    "cos": 0.7574146901664227
+   },
+   "e2:gsm@22": {
+    "against": "p2:gsmwiki@14",
+    "cos": 0.7187607462588403
+   },
+   "e2:gsm@24": {
+    "against": "p1b:wiki@24",
+    "cos": 0.688103704228323
+   },
+   "e2:gsm@26": {
+    "against": "p1b:wiki@24",
+    "cos": 0.6651656803554261
+   },
+   "e2:gsm@28": {
+    "against": "p1b:wiki@24",
+    "cos": 0.6301068742260474
+   },
+   "e2:gsm@30": {
+    "against": "p1b:wiki@24",
+    "cos": 0.5802101943989695
+   },
+   "e2:mathcomp@20": {
+    "against": "p2e2:mathcomp@20",
+    "cos": 0.9524307154665809
+   },
+   "e2:mathcomp@22": {
+    "against": "p2e2:mathcomp@23",
+    "cos": 0.8875625567154645
+   },
+   "e2:mathcomp@24": {
+    "against": "p2e2:mathcomp@23",
+    "cos": 0.9168269841868086
+   },
+   "e2:mathcomp@26": {
+    "against": "p2e2:mathcomp@26",
+    "cos": 0.9686817269158233
+   },
+   "e2:mathcomp@28": {
+    "against": "p2e2:mathcomp@29",
+    "cos": 0.915329461335759
+   },
+   "e2:mathcomp@30": {
+    "against": "p2e2:mathcomp@29",
+    "cos": 0.8709543082358561
+   },
+   "e2:syc@20": {
+    "against": "p2e2:syc@20",
+    "cos": 0.9862006535396626
+   },
+   "e2:syc@22": {
+    "against": "p2e2:syc@23",
+    "cos": 0.9134318234022284
+   },
+   "e2:syc@24": {
+    "against": "p2e2:syc@23",
+    "cos": 0.9453497725315512
+   },
+   "e2:syc@26": {
+    "against": "p2e2:syc@26",
+    "cos": 0.9812652937851397
+   },
+   "e2:syc@28": {
+    "against": "p2e2:syc@29",
+    "cos": 0.9532300434765222
+   },
+   "e2:syc@30": {
+    "against": "p2e2:syc@29",
+    "cos": 0.9136558381555084
+   },
+   "e2:trivia@20": {
+    "against": "p2:trivia@15",
+    "cos": 0.7441103185296837
+   },
+   "e2:trivia@22": {
+    "against": "p2:trivia@15",
+    "cos": 0.6614971530969621
+   },
+   "e2:trivia@24": {
+    "against": "p2:trivia@12",
+    "cos": 0.6229719357870155
+   },
+   "e2:trivia@26": {
+    "against": "p2e2:mathcomp@26",
+    "cos": 0.5898243587154876
+   },
+   "e2:trivia@28": {
+    "against": "p2:trivia@15",
+    "cos": 0.5730094098473955
+   },
+   "e2:trivia@30": {
+    "against": "p2:trivia@15",
+    "cos": 0.5101635329493498
+   }
+  }
+ },
+ "n_library": 24
+}

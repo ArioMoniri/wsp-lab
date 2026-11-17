@@ -1,0 +1,126 @@
+{
+ "cells": {
+  "next_16_12_12": {
+   "alt": {
+    "c2i_n": 0,
+    "c2i_pass": 0.0,
+    "c2s_n": 38,
+    "c2s_pass": 0.7037037037037037,
+    "ci95": [
+     0.0,
+     0.06603151424442182
+    ],
+    "estimable": 54,
+    "lb_gt0": 38,
+    "mean_ct": 0.11281335838579248,
+    "mean_seconds": 445.31435277726916,
+    "pass": false,
+    "power_lb": 0.0,
+    "rate": 0.0,
+    "rate_without_c2i": 0.5370370370370371,
+    "reps": 54,
+    "static_chosen": {
+     "S1": 0,
+     "S2": 109,
+     "S3": 161
+    }
+   },
+   "cpu_h": 12.817075711488723,
+   "max_rss_mb": 1056.6484375,
+   "null": {
+    "c2i_n": 54,
+    "c2i_pass": 1.0,
+    "c2s_n": 1,
+    "c2s_pass": 0.018518518518518517,
+    "ci95": [
+     0.0,
+     0.06603151424442182
+    ],
+    "coverage_at_zero": 0.6363636363636364,
+    "estimable": 11,
+    "lb_gt0": 4,
+    "mean_ct": 0.0007481481866983871,
+    "mean_seconds": 409.1573613219791,
+    "pass": false,
+    "power_lb": 0.0,
+    "rate": 0.0,
+    "rate_without_c2i": 0.0,
+    "reps": 54,
+    "static_chosen": {
+     "S1": 17,
+     "S2": 243,
+     "S3": 10
+    }
+   }
+  },
+  "selected_12_12_12": {
+   "alt": {
+    "c2i_n": 0,
+    "c2i_pass": 0.0,
+    "c2s_n": 300,
+    "c2s_pass": 0.7481296758104738,
+    "ci95": [
+     0.0,
+     0.009157017437212957
+    ],
+    "estimable": 401,
+    "lb_gt0": 231,
+    "mean_ct": 0.0941824553176943,
+    "mean_seconds": 563.538838518528,
+    "pass": false,
+    "power_lb": 0.0,
+    "rate": 0.0,
+    "rate_without_c2i": 0.5012468827930174,
+    "reps": 401,
+    "static_chosen": {
+     "S1": 7,
+     "S2": 1117,
+     "S3": 881
+    }
+   },
+   "cpu_h": 121.63164951602617,
+   "max_rss_mb": 488.359375,
+   "null": {
+    "c2i_n": 401,
+    "c2i_pass": 1.0,
+    "c2s_n": 16,
+    "c2s_pass": 0.0399002493765586,
+    "ci95": [
+     0.0,
+     0.009157017437212957
+    ],
+    "coverage_at_zero": 0.8103448275862069,
+    "estimable": 58,
+    "lb_gt0": 11,
+    "mean_ct": 0.0002325714853073844,
+    "mean_seconds": 528.416119730086,
+    "pass": false,
+    "power_lb": 0.0,
+    "rate": 0.0,
+    "rate_without_c2i": 0.0,
+    "reps": 401,
+    "static_chosen": {
+     "S1": 72,
+     "S2": 1908,
+     "S3": 25
+    }
+   }
+  }
+ },
+ "dgp": {
+  "alternative": "true residual + gamma x SE x sum_s tanh(<w_k, D_s>/0.3) (decomposition-dependent), gamma = 3 (largest mean C_T found: calibration gamma 3/6/12 gave 0.066/0.027/-0.049)",
+  "bootstrap_R": 9999,
+  "null": "residuals beyond the shared field permuted across trajectories with random signs (shuffle_outcomes)",
+  "se": "sd of y at h <= 2 / 4 (assumption)",
+  "wm_config": "WMConfig defaults (400 epochs, 5 members)",
+  "world": "SynthWorld saturating, 6 objectives, shared 8-dim coefficient space; roots = random unit directions"
+ },
+ "label": "Full-refit validation of the selected v1 H-T cell and the next larger cell (ruling \u00a74(b)); synthetic worlds only",
+ "requirements": {
+  "coverage_min": 0.965,
+  "power_lb_min": 0.8,
+  "reps_min": 1000,
+  "rerun_reps": 4000,
+  "size_max": 0.035
+ }
+}

@@ -1,0 +1,60 @@
+{
+ "se_ratio_h100_over_rtx_same_edits": {
+  "gsm8k_gold_lp": {
+   "median": 1.0943917731383543,
+   "min": 0.9243542985463694,
+   "max": 1.296012880371656,
+   "n": 5
+  },
+  "mathcomp_gold_lp": {
+   "median": 0.9156131318595242,
+   "min": 0.8122301359274942,
+   "max": 0.9428039232682212,
+   "n": 5
+  },
+  "mmlupro_gold_lp": {
+   "median": 1.0003275635476367,
+   "min": 0.9559327148729879,
+   "max": 1.2155048012376262,
+   "n": 5
+  },
+  "refusal_margin_harmful": {
+   "median": 0.9408117455108957,
+   "min": 0.8329372775225642,
+   "max": 1.0900089323834028,
+   "n": 5
+  },
+  "refusal_margin_harmless": {
+   "median": 0.9855756787412926,
+   "min": 0.6503264932575263,
+   "max": 1.2800034998419978,
+   "n": 5
+  },
+  "syc_neutral": {
+   "median": 0.9721678730973952,
+   "min": 0.6979665448116452,
+   "max": 0.9930199811802236,
+   "n": 5
+  },
+  "sycophancy_real": {
+   "median": 0.8506039304481187,
+   "min": 0.7217081464446187,
+   "max": 1.1236806777454584,
+   "n": 5
+  },
+  "wikitext_nll": {
+   "median": 0.9342705712477014,
+   "min": 0.8424708260735599,
+   "max": 1.0120454300059465,
+   "n": 5
+  }
+ },
+ "base_bitwise_equal_across_platforms": false,
+ "states": [
+  "t_noise_down27",
+  "t_noise_o22",
+  "t_projrm_rand_28_31",
+  "t_scale_down5",
+  "t_scale_o9_q"
+ ]
+}

@@ -118,3 +118,20 @@ def test_greedy_generation_smoke_on_08b_construction_items():
     assert all(r["verdict"] in G.VERDICTS for r in recs)
     del model
     torch.cuda.empty_cache()
+
+
+def test_v1_spec_and_loop_rule():
+    from wsp.wm import genaudit as G
+
+    s = G.SPEC_V1
+    assert s["max_new_tokens"] == {
+        "sycophancy_real": 128,
+        "gsm8k_gold_lp": 512,
+        "mathcomp_gold_lp": 1024,
+    }
+    assert s["neutral_noninferiority"] == -0.03 and s["alpha_one_sided"] == 0.025
+    ids = list(range(10)) * 3
+    assert G.detect_loop_v1(ids, hit_max=False)  # a 10-gram occurring 3 times
+    assert not G.detect_loop_v1(list(range(10)) * 2 + list(range(50, 60)), hit_max=False)
+    assert G.detect_loop_v1([1, 2, 3], hit_max=True)  # truncation counts as a loop
+    assert G.detect_refusal("I'm sorry, but I can't help with that.")
