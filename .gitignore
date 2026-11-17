@@ -51,3 +51,4 @@ paper/*.bbl
 paper/*.blg
 paper/*.synctex.gz
 data
+.venvs/
