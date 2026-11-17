@@ -502,7 +502,7 @@ def render_md(rep: dict, notes: str = "") -> str:
         w(
             f"- D2 cost check (first step): nested jet = {_f(cc.get('jet_forwards'), 2)} plain forwards (estimate 4, stop > 8); "
             f"HVP = {_f(cc.get('hvp_gradpasses'), 2)} gradient passes (estimate 3, stop > 6); projected stage "
-            f"{_f(cc.get('projected_total_gpu_h'), 2)} GPU-h (cap 4.5)."
+            f"{_f(cc.get('projected_total_gpu_h'), 2)} GPU-h (stop above the stage cap: 4.5, raised to 6.0 by amendment 1)."
         )
         w(
             f"- Base validation bitwise repeat: {_f(S_.get('base_bitwise_repeat'))}; post-restore bitwise equal: {_f(S_.get('post_restore_bitwise_equal_base'))}."
