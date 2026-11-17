@@ -390,8 +390,33 @@ def render_md(rep: dict, notes: str = "") -> str:
     w("## 1. Stage S: slope transport on fresh wme-p3 steps (D2, D1)")
     w("")
     if not S_.get("measured"):
+        cc = S_.get("cost_check") or {}
         w(
-            f"Stage S status: **{S_.get('status')}** (not measured). Cost check: `{json.dumps(S_.get('cost_check'))}`"
+            f"Stage S status: **{S_.get('status')}**: **not measured** (RULING-wme-pilot3 §2.4: a stopped S is never a pass)."
+        )
+        w("")
+        w("| D2 cost check (first step, 9B, H100) | measured | estimate | stop above | over? |")
+        w("|---|---|---|---|---|")
+        jf, hg, pt = (
+            cc.get("jet_forwards"),
+            cc.get("hvp_gradpasses"),
+            cc.get("projected_total_gpu_h"),
+        )
+        w(
+            f"| nested jet (S2) / plain forward, same kernels | {_f(jf, 2)} | 4 | 8 | {_f(jf is not None and jf > 8)} |"
+        )
+        w(
+            f"| HVP (S1) / gradient pass, same kernels | {_f(hg, 2)} | 3 | 6 | {_f(hg is not None and hg > 6)} |"
+        )
+        w(
+            f"| projected stage total (GPU-h) | {_f(pt, 2)} | — | 4.5 (cap) | {_f(pt is not None and pt > 4.5)} |"
+        )
+        w("")
+        w(
+            f"Timings: plain forward {_f(cc.get('t_forward'), 2)} s, nested jet {_f(cc.get('t_jet_nested'), 2)} s, "
+            f"gradient pass {_f(cc.get('t_gradpass'), 2)} s, HVP {_f(cc.get('t_hvp'), 2)} s; the first step's S1 + S2 for "
+            f"six objectives took {_f(cc.get('t_first_step_r1'), 1)} s; S1 memory-infeasible objectives: "
+            f"{cc.get('s1_infeasible_after_first_step')}."
         )
     else:
         cc = S_.get("cost_check") or {}
@@ -485,6 +510,7 @@ def render_md(rep: dict, notes: str = "") -> str:
         )
         w("")
     H_ = rep.get("H", {})
+    w("")
     w("## 2. Stage H: generated-accuracy headroom (D3, D4, D5)")
     w("")
     if not H_.get("measured"):
