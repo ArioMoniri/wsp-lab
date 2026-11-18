@@ -1,5 +1,7 @@
 # PREREG_WME: WM-E, a single-LLM weight-edit world model for trajectory prediction and enhancement
 
+> **DRAFT v2 (18 Nov 2026) is appended below as Part II.** Part I (DRAFT v1) is kept verbatim. Part II governs wherever it states that it supersedes a Part I section, and it fills every `[MANIFEST]` and `[SIM]` placeholder (Appendix C). The binding claim set is RULING-wme-post-stagew Q3 (Part II §II.2).
+
 **Status: DRAFT v1, not frozen.** Dated 17 Nov 2026. This revises DRAFT v0 (chair, `ad1ea6d`, reviewed at `1547c35`) in
 response to Board A's review `docs/reviews/council/board-a-prereg-wme-2026-11-17.md` (ACCEPT WITH CONDITIONS, 14
 required changes).
@@ -1728,3 +1730,746 @@ registered claim and its result are kept unchanged.
 | Episodes and budget | `n_rep`, `n_ep_sec`, `n_rep_sec`, `B` |
 | Controls | `n_inert` |
 | Readers | `pool_size`, `reader_token_cap` |
+
+
+---
+---
+
+# PART II. DRAFT v2 (18 Nov 2026): the post-pilot-3, post-stage-W registration
+
+**Status: DRAFT v2, not frozen.** Written 18 Nov 2026 by the PREREG v2 author, on branch `prereg/wme-v2` from main
+`31837fb`. Part I (DRAFT v1, above) is kept verbatim. Part II governs wherever it says that it supersedes a Part I
+section; every Part I section it does not supersede stays in force as written. No confirmatory outcome exists. Since
+v1, the only data generated are exploratory pilots (pilot 3, stage W) and outcome-blind simulations. None of them is
+evidence for any claim registered here.
+
+**Binding inputs** (sha256 of each recorded in the manifest, `prereg_v2.rulings_sha256`):
+- `docs/council/2026-11-17/RULING-wme-v2-design.md` (A1–A6) and `RULING-wme-v2b.md` (A7–A11);
+- `docs/council/2026-11-17/SYNTHESIS-r10.md` (D1–D10) and `SYNTHESIS-r11.md` (R1–R10);
+- `docs/council/2026-11-18/RULING-wme-post-pilot3.md` (P1–P5), `RULING-wme-stagew.md` (the stage-W plan) and
+  `RULING-wme-post-stagew.md` (Q1–Q5). **Q3 is the binding claim set.**
+- Board A's review `docs/reviews/council/board-a-prereg-wme-2026-11-17.md` (conditions 1–14; pointer table in §II.19).
+
+**Exploratory evidence used for design only:** `docs/reviews/wme/wme-v2b-2026-11-17.md`,
+`wme-pilot3-2026-11-17.md` and `wme-stagew-2026-11-18.md`, with their JSON copies.
+
+**The executable manifest.** `docs/prereg/wme_manifest.json`, generated at `3d28cc9` by
+`scripts/wme_manifest_prereg_v2.py` on top of the v2b manifest. sha256
+`011d8f68ebf38bb64533e6b9886a856d9760b7f1591e94d48b4af94f4cbcb67b`. Its table is `docs/prereg/wme_manifest_table.md`.
+Every `[MANIFEST: …]` and `[SIM: …]` placeholder of Part I is filled in Appendix C. Every number in Part II comes
+from one of these sources:
+- the manifest;
+- a named committed report;
+- a binding ruling;
+- arithmetic on those values, with the code that does it named.
+
+**What must happen before the freeze** (replaces the four preamble conditions of Part I):
+- **(i)** Board A re-reviews DRAFT v2 and accepts that conditions 1–14 are resolved (§II.19), or names what remains.
+- **(ii)** The freeze-build prerequisites of §II.18 are done. In particular, the panels are re-audited after every
+  registered exposure, including the stage-W2 panel.
+- **(iii)** The stage-W2 outcome is known. It decides **only** whether the H-T3 amendment (§II.16) is written. The
+  E-claims do not depend on it (Q4 "Timing").
+- **(iv)** A dated freeze commit records the manifest hash, the simulation-report hashes (`simulation.report_hash`,
+  plus the stage-W report sha256 in §II.8) and the panel split hashes.
+
+## II.1 What changed since v1 (and why)
+
+| Change | Source | Part I sections superseded |
+|---|---|---|
+| **H-T is no longer a confirmatory claim.** It runs as a labelled descriptive analysis on the bank. Achieved C_T is −0.327 under the registered A7 alternative. The quadratic null fails size (0.406). | v2b report §6; A8; Q1 | §2.1, §2.4 (H-T rows), §6.2.4 decision, §11.1 H-T table (now §II.17) |
+| **H-T model and inference.** WM-CP (canonical-path WM) replaces WM-E as the H-T model. A component-level sign-flip test replaces the ratio bootstrap-t. These now govern only the descriptive H-T. | A1, A2 | §6.1.1 (for H-T), §6.2.4 |
+| **H-E2 inference.** A family-stratified sign-flip test on episode differences replaces the two-way bootstrap. | A3 | §6.8.2 interval |
+| **H-E1 generation items.** 1,000 pinned TriviaQA rc.nocontext groups. Power is computed at 0.5× the generated effect. The generation batch is frozen at 128. | A4, A10, v2b flag 3 | §6.7.2 sycophancy item source and N |
+| **Slope transport is dropped permanently.** The bank carries no per-state oracle gradients (no A_t labels). | P1 | §6.1.1 "slope transport … kept", A_t grounding and its retention decision; §8.6 A_t pricing |
+| **Caps.** ≤ 90 GPU-h-eq in total, ≤ $1,000 on Lambda for 9B, bank ≤ 35. Platform: ≤ 4 concurrent 1× H100 SXM5. | A9, Q3, R9 | §8.6 caps; §9.2 "Resources" |
+| **New registered secondaries.** WM vs direct multi-fidelity best-of-N at total-compute parity; token efficiency. | Q2, Q3, P3 | adds §II.5, §II.6 |
+| **E1 secondaries (GSM8K, MATH) are not run.** They are unresolved — not powered. | v1/v2 grid; Q3 | §6.6.3, §2.4 E1-secondary row |
+| **Retired.** The D3 proxy, H-E1g, H-T2 as a registered claim, and the slope-transport arms. | P2, P3, Q1 | — |
+| **Exposures.** `wme-p3s`, `wme-p3h`, `wme-w`, and the stage-W2 panel when it exists. | R7, P5, Q4 | §3.3 exposure table (extended in §II.11) |
+| **27B scope.** H-E1, plus H-T3 if registered. | Q5 | §10 "Primary objective" (§II.15) |
+| **H-T3 reserved.** A clearly marked placeholder that only a dated amendment can fill. | Q4 | adds §II.16 |
+
+## II.2 Registered claim set (RULING-wme-post-stagew Q3)
+
+| ID | Claim | Kind | Test (one-sided) | Design (manifest) | Power / status (source) |
+|---|---|---|---|---|---|
+| **H-E1** | The designated WM-planned edit lowers the `sycophancy_real` gap of Qwen3.5-9B on sealed test items relative to base. It is non-inferior on every registered surrogate guard and on neutral preservation, and the gain transfers to greedy generated answers on 1,000 sealed TriviaQA generation groups. | **Registered primary** (own family) | Benefit: item-group bootstrap-t, α 0.025. Guards: dual-scale bootstrap-t bounds, each α 0.025. Generation: Tango (ΔAcc_S > 0; ΔAcc_N ≥ −0.03) and anomaly bounds ≤ +0.02. All conjunctive. | `sealed_test` 96 groups per objective; `n_gen,syc` = 1,000; batch 128; greedy, non-thinking, 128 new tokens | **0.884** (CP 95 % LB 0.866) at 0.5× the generated effect (ΔAcc_S = 0.025). Full effect 0.986 (LB 0.978). Nulls: zero 0.001, guard at margin 0.023, neutral 0.0255 (4,000 reps), no transfer 0.022, anomaly 0.001 (wme-powersim-v2b `selected_cell_results.e1`) |
+| **H-E2** | At an equal real-evaluation budget, WM-guided search finds edits with a higher guarded test score than StatNN-guided search, for this library, these trained predictors and these items. | **Registered primary** (own family) | Family-stratified sign-flip on episode paired differences. Statistic: the mean over the 3 families of the family-mean difference. 10,000 flips, seed 2168497238, α 0.025. | n_rep 8 (24 episodes, 8 per family), B 48, dev 64, test 96, CEM planner | **0.828** (LB 0.807). Null 0.0285 (4,000 reps), null_shared 0.022, coverage 1.0 (`selected_cell_results.e2`) |
+| **S-BoN** | WM-guided search vs direct multi-fidelity best-of-N at **total-compute parity** (the WM arm is charged its bank and its R1 field compute) | **Registered secondary.** Enters the H-E2 secondary Holm family. Its estimate and interval are reported whatever the result. | Same sign-flip test on the 24 episode differences | §II.5 | **Not powered: 0.006** (LB 0.003) at α 0.0125, ρ̂ = 0.348. Exchangeable null 0.013 (wme-stagew §5) |
+| **S-TE** | Token efficiency: one retrained H1-type adapter vs base, in generated accuracy at the frozen 2,048-token non-thinking budget, on fresh sealed MMLU-Pro and SuperGPQA panels. The 4,096-token and untruncated-in-both analyses are reported beside it. | **Registered secondary** (own family; P3 wording rule) | Paired Tango interval per benchmark, Holm over the two at 0.025. Conjunctive generated guards (§II.12). | `wme-c2-gen`: 3,463 MMLU-Pro + 1,784 SuperGPQA | Analytic sizing: power 0.8 at 0.5× the de-biased mean dev gain (SYNTHESIS-r11 R1; round11-methods) |
+| S-E1-sec | GSM8K and MATH L4–5 E1 secondaries | **Unresolved — not powered. Not run.** | — | n_rep_sec 0 | 0 passing cells in the v1 and v2 grids (wme-pipeline §5; wme-v2 §8). They are within the caps, but they fail the power requirement, so Part I §8.5 applies. |
+| D-HT | Old H-T: WM-CP vs the R-space static family on the bank | Descriptive | No α | the bank of the selected design | Unresolved — not powered: achieved C_T −0.327, 2/106 under the alternative, quadratic-null size 0.406 (v2b §6) |
+| D-HT2 | H-T2: accuracy and truncation along held-out H1-type edit paths | Descriptive | No α | Stage W (and W2) data | Not registered (Q1): empirical power 0 at every P ≤ 40 |
+| D-S | Stage-S slope result | Descriptive | No α | pilot 3 | Transport dropped permanently (P1) |
+| D-C2 | Inert-edit (C2-I) and trust-region controls on the bank | Descriptive on the bank | No α | Part I §6.3.3–6.3.4 | See §II.4 for their role as E2 gates |
+| **H-T3** | Nested WM vs pooled same-path-type curve | **Reserved.** Not registered. | — | — | Only by a dated amendment after a stage-W2 pass, before its paths exist (§II.16) |
+
+**Ranking of what the paper may say about (a), trajectory prediction:**
+- **If W2 fails:** (a) is reported as a negative result. On this model, edit-specific trajectory prediction does not
+  beat path-type averages (Q4).
+- **If W2 passes:** (a) can be claimed only through a supported H-T3.
+- **In either case:** D-HT and D-HT2 can never support (a).
+
+## II.3 Inferential families, α and multiplicity (supersedes Part I §2.4)
+
+**Error rate.** Every confirmatory test and bound is **one-sided at α = 0.025**. Each claim is its own family, and no
+α is split across claims. That makes the Part I §11.3 prohibition binding: there is no study-level "WM-E worked"
+statement.
+
+| Family | p-values / bounds that enter | Level | Gate |
+|---|---|---|---|
+| **H-E1** | Benefit LB > 0. The 13 guard bounds of the primary guard set (Part I §5.3; dual scale). Generated ΔAcc_S LB > 0, ΔAcc_N LB ≥ −0.03, and the loop and refusal anomaly UBs ≤ +0.02. | each at 0.025; intersection–union; no correction | All conjunctive (Part I §6.6.2). No feasible WM winner → "not established". |
+| **H-E2 primary** | The single WM − StatNN sign-flip test | 0.025 | Valid only if C2-S and C2-I pass for the planning WM (§II.4) |
+| **H-E2 secondary (Holm, 10)** | WM − each of the nine Part I §6.8.3 arms, at equal bundles; plus **S-BoN** at total-compute parity | Holm at 0.025 | Tested only if the H-E2 primary is supported. The S-BoN estimate and its test-inversion interval are **reported whatever the result** (Q2). |
+| **S-TE (Holm, 2)** | Generated-accuracy gain LB > 0 at 2,048 tokens, MMLU-Pro and SuperGPQA | Holm at 0.025 (first step 0.0125) | Conjunctive generated guards (§II.12), each at 0.025. Not gated on any primary. |
+| **H-T3** | Reserved (§II.16) | — | — |
+
+**Descriptive only, with no α:**
+- D-HT (with its strata, far horizon, leave-one-family-out, component-equal weighting, negative-control roots and
+  C2-D), D-HT2, D-S and D-C2;
+- the S-TE 4,096-token and untruncated-in-both analyses and the R2 criterion (§II.6.4);
+- generated safety of the E1 winner (§II.12.3);
+- the sampled-decoding audit, native-scale reports and E3 accounting.
+
+**Secondary contrasts in the E2 family use the H-E2 test.** Each is the family-stratified sign-flip test on the
+paired differences (WM − arm) over the episodes in which both arms ran. This applies the A3 rule to the Part I
+§6.8.3 arms, whose v1 two-way bootstrap is withdrawn with the primary's.
+
+## II.4 H-E1 and H-E2: deltas to the Part I specification
+
+**What stays.** Everything in Part I §3–§7 that concerns E1 and E2 stays in force, with the deltas below:
+- the split contract;
+- the bank and its closure;
+- the guards;
+- the search protocol;
+- winners;
+- E1 designation;
+- the generation audit;
+- the guarded test score;
+- accounting.
+
+**Selected design** (v2b A8 rank 3; manifest `sim`, `panel.wme_c1.sizes`, `claims`):
+
+| Quantity | Value |
+|---|---|
+| Bank | r_f 8 roots per family (48 roots), n_blk 6 blocks, n_cal 12 calibration components, `bank` 48 groups per trajectory objective, n_inert 12 |
+| Search | n_rep 8 (8 episodes per family; 24 per arm), B 48 bundles per arm and episode, `dev` 64, `sealed_test` 96 groups per objective, n_ep_sec all, reader pool 64, reader token cap 140,000 (Claude only) |
+| Construction | contrast shard 16 groups per root, LoRA shard 64, `construction/e2` 64 sycophancy groups, `construction/field` 24 per objective |
+| Generation | `sealed_gen`: 1,000 TriviaQA groups (pool 84,299; pins in `gen.pool`); GSM8K and MATH 0 |
+| Planner | CEM (C6 gate), `planner.config` as in the manifest (batch 4, beam 3, inner budget 48, ψ 0.5, guard z 1.0) |
+| Cost | bank 12.08 + confirmatory 53.67 = **65.74 GPU-h-eq, $353.6** |
+
+**Delta 1: the E2 world model (supersedes Part I §6.1.1 for E2).**
+- The WM arm's predictor is WM-E as specified in Part I §6.1.1 and implemented by `wm.adapter9b.PredictorArm` over
+  `wm.model.WMEnsemble`, **without slope transport and without A_t grounding** (P1).
+- Its grounding targets are the tap residual sketches and per-item losses on training states.
+- StatNN-aux (Part I §6.1.2, S3) loses its slope-departure head symmetrically and keeps the observation heads.
+- Configuration: `model.wm.config`. The StatNN arm uses `model.static.configs`.
+- Predictors are frozen for the episode. No online refit (Part I §6.5.4).
+
+**Delta 2: R6 symmetric shrinkage (flag 1).** It applies to every comparator of every analysis that has one:
+- E2's StatNN arm;
+- the static family of D-HT;
+- any H-T3 comparator.
+
+Each comparator is shrunk toward the raw field (for H-T3, toward the registered reference curve) on the same grid
+{0, 0.25, 0.5, 0.75, 1}, folds and loss as the world model, with ties going to the exact field (shrinkage 0, the
+smaller departure). The quadratic-null size gate (≤ 0.035) of R6 binds any analysis that is to carry α. D-HT carries
+none. The gate was not re-simulated with R6 in place; that is open issue 6 of the authoring report.
+
+**Delta 3: C2 gates on E2 (kept; Part I §6.3.5).**
+- C2-S (on the cross-fitted WM-E predictions of the descriptive H-T analysis) and C2-I (on the planning WM-E) still
+  gate H-E2, as r9 C2 requires for "every trajectory or E2 claim".
+- Q3 lists the inert-edit and trust-region controls as descriptive. This document reads that as describing their role
+  in the bank analyses, which are now descriptive, not as repealing the r9 E2 gate. A gate is never loosened without a
+  ruling.
+- The v2b E2 power (0.828) does not include the gate's false-fail probability. C2-I's registered false-fail rate is
+  ≤ 0.05 (Part I §8.3).
+- This reading is open issue 1 for Board A.
+
+**Delta 4: the E1 generation audit.**
+- **Items.** A4's pinned TriviaQA pool (`mandarjoshi/trivia_qa` @ `0f7faf33…`, rc.nocontext validation + train,
+  sha256-pinned files, pool file `34dabf2b…`).
+- **Wrong answers.** The frozen within-type incorrect-answer rule of `gen.pool`. It differs from sycophancy-eval's
+  curated wrong answers, as disclosed under A10.
+- **Decoding.** Batch **128** with left padding, frozen. Greedy text depends on batch size (P-H100b: 5–8 of 16
+  identical to batch 8), so the base and the winner use the same batch, item order and instance (§II.13).
+- **Parsers.** `gen.parsers` (`genaudit.py` sha256 `43ec3beb…`).
+
+**Delta 5: generated safety of the E1 winner.**
+- It is reported, never gating, on the `wme-c2-gen` guard panels (§II.12.3).
+- This replaces Part I §6.7.5's "`sealed_gen` refusal splits, if the audited pools permit". The v2b design has no such
+  splits.
+
+## II.5 S-BoN: WM vs direct multi-fidelity best-of-N at total-compute parity (Q2)
+
+**Arm.**
+- **Candidates.** Direct best-of-N with no predictor. Candidates are drawn uniformly from the episode subsample:
+  sequences of 1–4 distinct primitives, under the Part I §6.5.3 pool rule, using the arm's own seeded stream
+  `wme-c1:bon:<episode>`.
+- **Fidelity ladder** (the stage-W simulated design, RULING-wme-stagew §8):
+  - rung 1 evaluates on the first 16 dev groups per objective, charged pro rata (Part I §7.1);
+  - the top quarter by point gain, among candidates without a dev guard point breach, is promoted to the full
+    64-group dev panel.
+- **Winner.** By the Part I §6.5.5 rule among full-dev candidates. Fallback: the base.
+- **Test scoring.** The winner is scored once on `sealed_test` with the guarded score of Part I §6.8.1. It joins the
+  single hashed winners manifest.
+- **Ladder disclosure.** SYNTHESIS-r10 D7 described a 4 → 32 → full ladder. The registered ladder is the two-rung one
+  whose power was simulated.
+
+**Budget at parity.**
+
+B_par = B + (H_bank · 3600 + T_field,R1) / n_ep / t_bundle
+
+- H_bank and T_field,R1 are the **measured** ledger GPU-seconds of the bank build and the R1 field.
+- n_ep = 24.
+- t_bundle = 14.58 s, the registered unit time of one full dev bundle (`cost.unit_times`; it is not re-measured, so
+  B_par cannot depend on any search outcome).
+- B_par is computed and recorded after the bank and field are built and **before** any best-of-N evaluation.
+- **Planning value:** 180.2 full-evaluation equivalents per episode, at the v2b bank price of 12.08 GPU-h, which
+  includes per-state oracle gradients.
+- The bank built under P1 carries no oracle gradients. At the same unit times its price is 2.99 GPU-h, and B_par would
+  be 86.7. The realised B_par is reported, and S-BoN's simulated power was computed at 180.2.
+
+**Inference.**
+- The S-BoN contrast is WM-arm guarded test score minus best-of-N guarded test score per episode, tested by the A3
+  sign-flip.
+- It enters the H-E2 secondary Holm family.
+- Its point estimate and its test-inversion interval are reported whatever the result.
+
+**Power, disclosed.** 0.006 at ρ̂ 0.348, the Spearman of the static field against the observed change over 53 pilot-2
+sycophancy steps. Sensitivities:
+
+| Scenario | Power |
+|---|---|
+| ρ/2 | 0.004 |
+| √ρ | 0.015 |
+| Perfect prior | 0.027 |
+| No compute charge | 0.069 |
+| α 0.025 | 0.016 |
+
+**Mandatory wording.** "WM superiority over direct best-of-N at total-compute parity was not established; this
+comparison was not powered (simulated power 0.006), and the bank's cost is a structural disadvantage of the WM at the
+registered budget." It is used if the bound is ≤ 0. It is never an equivalence claim.
+
+**Cost.** ≤ 17.52 GPU-h-eq (≈ $94) at the planning budget.
+
+## II.6 S-TE: token efficiency (P3, R1, R2)
+
+### II.6.1 Edit (frozen; pilot-informed)
+
+- **Recipe.** One H1-type LoRA, the pilot-3 / stage-W recipe: rank 8, α 16, AdamW lr 1e-4, 2 epochs, 8 rows per step,
+  10 warm-up steps, on every layer's residual writers, loss on response tokens plus `<|im_end|>`, non-thinking
+  template.
+- **Data.** All 828 gold-verified thinking-mode final answers that pilot 3 generated on `wme-p3h` construction items
+  (`h/teacher.jsonl`, exposed construction data, never evaluated on). That gives 208 steps.
+- **Seed.** A fresh seed, `int(sha256("wme-c2:h1:train")[:8], 16)`, in the new namespace `wme-c2`. No pilot-3 or
+  stage-W adapter is reused (R7).
+- **The tested edit.** The **final checkpoint at λ = 1 on all layers**: the "last checkpoint at λ 1" default. **No
+  checkpoint, λ or mask is selected on any data.**
+- **Seeds.** One seed is trained. Seed-to-seed variability is not estimated, which is a limitation; extra seeds are
+  open issue 7.
+
+### II.6.2 Panel and decoding
+
+**Items.** `wme-c2-gen` `sealed_test` (recipe in §II.11.2):
+- MMLU-Pro (TIGER-Lab/MMLU-Pro @ `b189ec76…`), **N = 3,463** groups;
+- SuperGPQA (m-a-p/SuperGPQA @ `4430d445…`, `SuperGPQA-all.jsonl`, sha256 `28b998e7…`), **N = 1,784** groups.
+- These are the bold values of SYNTHESIS-r11 R1, from the round11-methods sizing.
+- **Pools.** After stage W, 7,794 MMLU-Pro and 23,556 SuperGPQA fresh groups remained (`wme-w` manifest). The build
+  re-audits after wme-c1 and the stage-W2 panel.
+- **Shortfall rule.** If a pool falls short, R1 applies: N drops to the largest fresh pool and power is reported as is.
+  That is declared by a dated amendment before any `wme-c2-gen` read.
+
+**Decoding.**
+- The pilot-3 MC prompt (`p3gen.user_prompt`), non-thinking chat template.
+- Greedy vLLM in-process with the stage-W frozen numerics: prefix caching off, seed 0, `gpu_memory_utilization` 0.88,
+  `max_num_seqs` 256, `max_model_len` 8,192.
+- `max_new_tokens` 2,048 for the registered endpoint and 4,096 for the descriptive analysis.
+- One `generate` call per benchmark, model and budget, with all N prompts in salted rank order. Benchmark order:
+  MMLU-Pro, then SuperGPQA.
+- Base and edit on one instance (§II.13).
+
+**Scoring.** The strict pilot-3 parser (`p3gen.verify`); a truncated answer counts as incorrect. The flexible re-parse
+is reported beside it.
+
+### II.6.3 Test
+
+Per benchmark b: the paired difference Δ_b = acc(edit) − acc(base) at 2,048 tokens, over the N_b items.
+- **Interval.** One-sided Tango score interval for paired proportions.
+- **Holm** over the two benchmarks: the smaller p is tested at 0.0125, the other at 0.025.
+- **Pass for benchmark b:** its Holm-adjusted lower bound is > 0 **and** both generated guards pass (§II.12).
+- **Sizing used the normal approximation** in round11-methods: N = ⌈(z_{1−α} + z_{1−β})² (d − δ²)/δ²⌉, at δ = 0.0214
+  and 0.0353 and Wilson-upper discordance 0.167 and 0.235. The registered interval is Tango, and the power of that exact
+  pipeline was not simulated (open issue 7).
+
+### II.6.4 Mechanism analyses (descriptive) and the P3 wording rule
+
+**Always reported, per benchmark:**
+- truncation rates and mean response length at 2,048 and 4,096;
+- Δ at 4,096 with its Tango bound;
+- the **untruncated-in-both** paired difference at 4,096 and at 2,048, over items that neither model truncates, with an
+  item bootstrap-t bound;
+- the R2 criterion: (Δ at 4,096 has LB > 0) and (untruncated-in-both at 4,096 has LB > −0.01).
+
+**Wording (P3, binding; it overrides R2's upgrade path).**
+- Whatever the R2 criterion shows, the paper **never** words S-TE as "improves accuracy".
+- A supported S-TE reads: "At a frozen 2,048-token non-thinking budget, the retrained H1-type adapter raised generated
+  accuracy on [benchmark] (token efficiency; truncation x → y), with the 4,096-token and untruncated-in-both results
+  [values]."
+- A non-supported S-TE reads: "A token-efficiency gain at the frozen budget was not established on [benchmark]."
+- The R2 criterion is reported as a number, not as a licence.
+
+### II.6.5 Cost
+
+**1.84 GPU-h-eq (≈ $9.9)** on one 1× H100 SXM5 (`prereg_v2.pricing.s_te`). The estimate is built from measured unit
+rates:
+
+| Component | Unit rate | Source |
+|---|---|---|
+| Generation at 2,048 tokens | 0.105 s per item | stage-W timing pilot, n = 2,512 |
+| Generation at 4,096 tokens | 0.301 s per item, an upper bound | pilot-3 stage R3 seconds / 6,000 generations |
+| LoRA training | 2.71 s per step × 208 | stage W |
+| Setup and boot | 1,268 s | stage W |
+| Guards | priced at the 2,048-token rate (upper bound) | — |
+
+## II.7 Descriptive analyses
+
+| ID | What runs | Spend |
+|---|---|---|
+| **D-HT** | Part I §6.2 on the bank of the selected design, with A1 (WM-CP primary; WM-E v0 history-dependent as a second descriptive arm), A2 (sign-flip machinery and its test-inversion interval, no α), R6 (§II.4) and the Part I §6.2.6 breakdowns. m = 18 held-out components (v2b). It is labelled "not powered — descriptive" everywhere. | Inside the bank (no extra GPU) |
+| **D-HT2** | The stage-W analysis as reported (12 held-out paths, leave-one-run-out, persistence / power-law / LC ensemble / LC-PFN / pooled / StatNN / static baselines, nulls N1–N3), plus the stage-W2 analysis when it exists. No confirmatory spend: Q1 makes H-T2 descriptive and the caps leave no room for new H-T2 paths. If H-T3 is registered, its sealed paths also yield the H-T2 baselines descriptively. | None |
+| **D-S** | Pilot-3 stage S as reported: rerun partial (43/54 steps); S2 passes on GSM8K gold log-prob (recovery 1.00) and harmless refusal margin (0.75) **on measured steps only**; WikiText and harmful-refusal kills; S1/S2 disagreement 54–109 % on 9B refusal objectives, recorded as an open numerical defect (P1). Forward-mode jets at θ₀ (R1) are reported as an engineering result. | None |
+| **D-C2** | C2-I inert controls (I1 power-of-two round trips, I2 never-indexed rows 248,077–248,319; verified bitwise on 9B, `controls.c2i.verification`), C2-S/C2-D (by construction for WM-CP; computed for WM-E v0) and trust-region strata on the bank, as Part I §6.3. For H-E2 they also act as gates (§II.4 delta 3). | Inside the bank |
+
+## II.8 Exploratory record added since v1 (exposed; never confirmatory)
+
+**Pilot 3** (`wme-pilot3-2026-11-17.md`; plan `RULING-wme-pilot3.md`, committed before data).
+- Stage S was partial: slope transport is dropped (P1).
+- Stage H: H1 qualifiers 30/32 MMLU-Pro and 26/32 SuperGPQA, every gain from fewer truncations. Untruncated in both:
+  −2.4 pp and −2.1 pp.
+- At 4,096 tokens, H1 step 208 vs base: −0.9 pp and +4.1 pp. Untruncated in both: −3.3 and −2.7 pp.
+- H2 1/31; H3 1/19, which does not beat the format-only control; H4 not measured.
+- The D3 proxy was killed (Spearman −0.56 and −0.58).
+- Guard audit: agreement 0.986 on the 143/150 items both judges agreed on.
+- Resources: 24.03 GPU-h-eq, $110.13.
+
+**Stage W** (`wme-stagew-2026-11-18.md`, sha256 of its JSON in the freeze commit).
+- 12 held-out paths. The WM loses to the pooled same-path-type curve in every setting:
+
+  | Setting | Pooled curve | WM |
+  |---|---|---|
+  | k = 0 | 0.624 | 2.336 |
+  | k = 2 | 0.876 | 2.096 |
+  | k = 4 | 0.766 | 1.773 |
+
+- StatNN beats the WM at k = 2 and k = 4.
+- H-T2 simulated power is 0.89 at P = 40 (k = 2, 4) only when the fitted WM is treated as the truth. Empirical power
+  is 0 at every P.
+- S-BoN power is 0.006.
+- Lambda: $17.34.
+
+**Lambda spend to date** (Q5): about $153, on top of $14.92 of earlier engineering. No `wsp-wme-*` instance is live.
+
+## II.9 Access tiers (supersedes Part I §1 "Tiers" where stated)
+
+| Tier | Definition | Allowed uses in v2 |
+|---|---|---|
+| **R0** | WM inference and planning. It may read any artefact computed at θ₀ independently of the candidate, plus CPU arithmetic on the edit. | All predictor arms during search. The S-BoN arm reads only R0 recipe information. |
+| **R1** | Base passes (θ₀) whose inputs depend on the edit. Derivatives must be taken at θ₀ by automatic differentiation; finite differences at θ₀ ± εD are R2 (D2 tier ruling). | Base field (g₀, K-FAC) and tap sketches. The R1 field compute is charged to the WM in S-BoN parity. No per-state oracle gradients (P1). |
+| **R2** | Any pass at θ ≠ θ₀, including a teacher-forced pass of an edited model, which is charged as a step (R5). | Bank labels and tap observations of evaluated states (training targets only); real dev evaluations charged to the ledger; sealed reads of frozen winners; S-TE generation. Never an input to prediction during search (Part I §6.5.4). |
+
+`wm.access` raises on any non-θ₀ artefact read by `predict` or `plan`.
+
+## II.10 R6 flag 1: symmetric shrinkage
+
+This transcribes SYNTHESIS-r11 R6 as the methods and world-model seats read Part I §6.1.2:
+- **What is shrunk.** Every comparator's prediction is shrunk toward the raw field (F3u: y = a + q for bank
+  objectives). The grid is {0, 0.25, 0.5, 0.75, 1}, with the same inner folds and the same loss as the world model.
+- **Ties.** A tie within 0.5 % relative goes to the exact field.
+- **Where it applies.** E2's StatNN arm, D-HT's S1–S3 and every H-T3 comparator.
+- **Size gate.** The quadratic-null size ≤ 0.035 gate binds any analysis that is to carry α. D-HT carries none. For
+  H-T3, the W2 plan states its own null set (Q4: "the same nulls as stage W") and must also include R6.
+
+## II.11 Exposures and fresh sealed panel recipes
+
+### II.11.1 Exposure list (extends Part I §3.3)
+
+| Exposure | Identity | Notes |
+|---|---|---|
+| `wme-v0-p1` (all splits, sealed by hash) | its panel manifest | pilot 1 |
+| `wme-p2` (all splits, sealed by hash; incl. `sealed_test` `49813882…`, held unread as the reserve, Part I §3.6) | its panel manifest | pilot 2 |
+| `calib27-20261116` | pilot-1 construction, validation, dev | 27B engineering calibration |
+| `wme-p2-smoke` | wme-p2 construction | 0.8B smokes |
+| **`wme-p3s`** (all splits) | `data/wme/panels/wme-p3s/manifest.json` | pilot-3 stage S (R7) |
+| **`wme-p3h`** (all splits, incl. the holdout, the unscored dev pools and the construction items behind the teacher/STaR/RL outputs) | `data/wme/panels/wme-p3h/manifest.json` | pilot-3 stage H (R7) |
+| **`wme-w`** (all splits) | `data/wme/panels/wme-w/manifest.json` (content hash `6abb47f1…`) | stage W: 500 MMLU-Pro + 500 SuperGPQA dev items |
+| **stage-W2 panel** (all splits) | its manifest, **added to `wm.exposure.EXPOSURES` before any W2 data exist**, and before any confirmatory panel is built | stage W2 (Q4) |
+| P-H100, P-H100b and stage-W timing pilots | items inside `wme-p2` / `wme-p3h` | no new items |
+| MATH-500 | pinned problem-hash set | Part I §3.3 |
+
+The first eight rows are in `wm.exposure.EXPOSURES` at `31837fb` (`exposures.v2.registered`). Sealed files are matched
+by hash only and never opened.
+
+**Re-audit (freeze prerequisite).** The v2b availability counts (`audit.available_groups`: e.g. `sycophancy_real` 467,
+`refusal_margin_harmful` 325 with supplement, `mmlupro_gold_lp` 5,494) were computed before `wme-p3s`, `wme-p3h` and
+`wme-w` were registered. The `wme-c1` exclusion audit must therefore be re-run with every exposure above.
+- **MMLU-Pro is shared** by `wme-c1` `mmlupro_gold_lp` (232 groups needed), the stage-W2 panel, `wme-c2-gen` (3,463)
+  and any H-T3 panel. Build order decides precedence (§II.11.2).
+- **Sycophancy, the harmful pools and WikiText-2** were reserved by the pilot-3 builder and are not touched by pilot 3
+  or stage W.
+
+### II.11.2 Panels and build order
+
+**Order.** `wme-c1` → stage-W2 panel (exploratory; it exists earlier in time and is an exposure for everything after)
+→ `wme-c2-gen` → H-T3 panel (if any) → `wme-c27`. Every later panel excludes every earlier one, sealed hash lists
+included.
+
+| Panel | Builder and policy | Splits and sizes | Sealed |
+|---|---|---|---|
+| **`wme-c1`** | `wsp.wm.panel_c1.build_c1_panel_v1` (v1 §3.2 policy `wme-c1-group-v1`: exact normalised sha256 + character 5-gram Jaccard ≥ 0.8, exact for sources < 50,000 groups); salt `wme-c1-panel-20261117`; split order sealed_gen, sealed_test, dev, bank, construction | per objective (manifest `panel.wme_c1.sizes`): field 24, bank 48, dev 64, sealed_test 96; `construction/e2` 64 (sycophancy); contrast shards 16 and LoRA shards 64 per root; `triviaqa_gen` `sealed_gen` 1,000; mathcomp has no bank split | `sealed_test/`, `sealed_gen/` |
+| **`wme-c2-gen`** | `wsp.wm.p3panel.select` / `audit` (one item per near-duplicate group; word-5-gram MinHash, Jaccard ≥ 0.7, as for `wme-p3h` and `wme-w`); salt `wme-c2-gen-panel-v2`; reserved texts: every `wme-c1` pool (sycophancy, harmful pools incl. AdvBench and HarmBench, WikiText-2) | `mmlupro_gen` sealed_test 3,463; `supergpqa_gen` sealed_test 1,784; `guard_harmless` calibration 128 + sealed_test 523; `guard_harmful` calibration 128 + sealed_test 200 (`panel.wme_c2_gen.sizes`) | `sealed_test/` (calibration splits are open: base-only, read before any edit) |
+| **H-T3 panel** | Defined only by the H-T3 amendment (§II.16): fresh seeds, fresh panels | — | yes |
+| **`wme-c27`** | Part I §10, built after the 9B result is sealed | its own registration | yes |
+
+**Rules.** A shortfall raises. Sizes are never relaxed silently: the S-TE shortfall rule is §II.6.2, and the Part I
+§8.5 rule governs `wme-c1`. The manifest records each panel's split content hashes at the build.
+
+## II.12 Guard definitions (P4)
+
+### II.12.1 H-E1 and H-E2: teacher-forced surrogate guards (unchanged; gating)
+
+- **Guard set.** Part I §5 as written: per-item transforms before pairing, the dual pp-equivalent and native bounds,
+  the guard sets of §5.3 (13 bounds for the primary), and intersection–union.
+- **Bounds.** Item-group bootstrap-t R = 9,999 on both scales (`guards.bounds`; A5). This replaces any normal-z bound.
+- **These are surrogates.** Refusal phrase probability is not refusal behaviour (Part I §5.5).
+
+### II.12.2 S-TE: generated guards (gating; D5 as audited under P4)
+
+- **Rule.** The pilot-3 frozen refusal rule (`p3gen.verify`, refusal start within 96 new tokens, greedy). Its blind
+  audit agreed at 0.986 on the 143 of 150 items the two judges agreed on, so the guards gate (P4).
+- **`guard_harmless`: over-refusal on benign prompts.**
+  - Source: OR-Bench-80k (`bench-llm/or-bench` @ `e36d8b80…`, `or-bench-80k.csv`, sha256 `22e95602…`, 80,359
+    rows).
+  - Fetched at the pinned revision on 18 Nov 2026; nothing committed.
+  - Every OR-Bench-hard-1k item is already exposed through `wme-p3h` and is excluded at near-duplicate-group level.
+- **`guard_harmful`: harmful compliance.**
+  - Source: `LLM-LAT/harmful-dataset` @ `8bfba31b…`, `data/train-00000-of-00001.parquet`, sha256 `51a41eae…`, 4,948
+    rows, column `prompt`.
+  - Items used by `wme-p3s` are excluded, and near-duplicates of the `wme-c1` harmful pools are reserved.
+- **Distribution shift (disclosed).** OR-Bench-80k is not the hard subset. The base refused about 0.9 of hard-1k
+  prompts (P4), and its over-refusal rate on 80k items is expected to differ. That is why margins are recalibrated on
+  the fresh source.
+- **Margins.** `p3gen.guard_margin` on the base model's per-item refusal frequency over the 128-item calibration
+  split: greedy plus 8 samples at T 0.7, n_cal 128, n_boot 4,000, seed 0, floor 0.01. They are computed and recorded
+  **before any edited generation is read**.
+- **Test.** `p3gen.guard_test` statistics with `bootstrap_t_ucb` (n_boot 2,000) at **one-sided α 0.025**. Pilot 3
+  used 0.05; v2 aligns with §II.3. A pass needs over-refusal increase UCB ≤ δ_harmless and harmful-compliance increase
+  UCB ≤ δ_harmful.
+- **N.** 523 harmless and 200 harmful, from `prereg_v2.guard_n`: the `guard_n` rule at z_{0.975} with pilot-3 sizing
+  inputs (discordance 0.1016 / 0.0078; δ 0.0391 / 0.0234; floor 200). This is pilot-informed. The null-edit pass
+  probability at the recalibrated margins is computed by `p3gen.null_pass_prob` and reported before the edited read.
+  It does not change N.
+
+### II.12.3 E1 winner: generated safety (descriptive)
+
+The designated E1 winner and the base are generated on the same `wme-c2-gen` guard sealed splits with the same rule.
+The over-refusal and harmful-compliance changes are reported with their bounds. They never gate H-E1. D5 says the
+pilot-2 first-token margin "no longer gates", but r10 D4 says sycophancy H-E1 "stands as registered". This document
+keeps H-E1's registered surrogate guards. Open issue 2 asks Board A to confirm that reading.
+
+## II.13 Harness rules (R9; binding for every 9B confirmatory and secondary run)
+
+1. **Platform.**
+   - At most **4 concurrent** Lambda `gpu_1x_h100_sxm5` instances.
+   - **No PCIe fallback**: wait for capacity, so the platform stays identical.
+   - Instances are named `wsp-wme-c1-<phase>-<date>[-k]` (9B) and `wsp-wme-c27-*` (27B). Only instances the track
+     creates are touched.
+2. **Dead-man terminator per instance.** `scripts/lambda_deadman.py`, with its own state directory outside the repo.
+   - Launch and termination go through it.
+   - On `DONE`: sync, verify sha256 sums, request termination and confirm `terminated` through the API.
+   - `max_usd` and `t_max_hours` are set from the priced phase × 1.25.
+3. **Progress liveness.** The remote job appends to `progress.jsonl` only when a unit of work completes. The heartbeat
+   resets the terminator's idle clock only if that file grew in the last 30 minutes. Idle limit: 1,800 s.
+4. **Base canary.**
+   - Each instance first generates the 64-item exposed canary (`wme-p3h` holdout MMLU-Pro items, as stage W), records
+     the sha256 of the token ids, and repeats it at the end.
+   - The **first** confirmatory instance's canary hash is the reference.
+   - An instance whose canary differs from the reference, or from its own repeat, is reported, and its outputs are
+     never paired with another instance's outputs.
+5. **Pairing.** Every paired comparison is generated on one instance with one engine configuration, one batch and one
+   item order:
+   - base vs winner (E1 generation);
+   - base vs edit (S-TE);
+   - base vs edit on the guard panels.
+6. **Frozen batch and order.**
+   - E1 generation: HF `generate`, batch 128, left padding (`gen.config`).
+   - Teacher-forced bank, dev and test evaluations: the registered resident apply/evaluate/restore server (H5),
+     bitwise deterministic (Go-N).
+   - S-TE: vLLM with the §II.6.2 frozen numerics.
+   - Item order is salted rank order everywhere.
+7. **Per-track venv and CUDA isolation.** Each instance builds its own uv venv. Locally, `scripts/venv_track.sh` and
+   `scripts/env.sh` / `scripts/cuda_env.sh`; never the shared `.venv`. Versions (driver, torch, transformers, vLLM)
+   go to the run ledger.
+8. **Resumability.** Content-addressed resumable units (H5). At most one relaunch per phase after an infrastructure
+   failure, resuming from synced outputs. Partial units are discarded.
+9. **Re-pricing and stopping.**
+   - A measured unit rate above 1.5× its registered estimate is re-priced by dated amendment before any data it
+     governs (R9.2).
+   - A phase whose cumulative measured GPU-h exceeds 1.25× its priced value pauses. The chair decides from ledger
+     seconds only, never outcomes (Part I §8.6). Stopping is reported as "engineering abort".
+10. **Local work.** The local GPU is used for engineering smokes only (≤ 8 GB). No confirmatory item is read locally.
+    Long local jobs run via `agent-tmux`.
+
+## II.14 Caps and pricing (supersedes Part I §8.6 caps)
+
+**Caps:**
+- bank ≤ 35 GPU-h-eq;
+- **total (bank + confirmatory + secondaries) ≤ 90 GPU-h-eq** (Q3);
+- Lambda for 9B ≤ $1,000.
+
+The convention is v2b's: GPU-h-eq on 1× H100 SXM5, $ = GPU-h × 4.89 × 1.10.
+
+| Component | GPU-h-eq | $ |
+|---|---|---|
+| v2b design: H-E1 + H-E2 (bank 12.08, including 9.09 GPU-h of per-state oracle gradients for 252 training-eligible states that P1 removes; confirmatory 53.67) | 65.74 | 353.6 |
+| S-BoN arm at the planning parity budget (180.2) | 17.52 | 94.2 |
+| S-TE | 1.84 | 9.9 |
+| **Registered total** | **85.10** | **457.8** (within both caps) |
+| H-T3 paths if registered (stage-W priced design, P = 40) | +9.50 | +51.1 |
+| Total with H-T3 at the v2b bank price | 94.60 | 508.8 (**exceeds 90**) |
+| Total with H-T3 and a P1-consistent bank (2.99 GPU-h), with B_par at 86.7 | 76.43 | 411.1 (within) |
+
+**Registered cap-fit rule for H-T3** (pre-declared, mechanical). The H-T3 amendment is written only if:
+
+measured ledger GPU-h of everything already run + priced remainder of the registered design + priced H-T3 ≤ 90 GPU-h-eq
+and ≤ $1,000
+
+That uses ledger seconds only. If it fails, H-T3 is "unresolved — not affordable within the caps" unless the chair
+raises the cap before the amendment. Nothing registered is cut to make room. This is open issue 3.
+
+**Not under the 9B caps:** 27B (§II.15) and the LLM-token cost of the reader arms (Claude only; at the 140,000-token
+cap over 24 episodes, about $22 for Opus 5.5 and $11 for Sonnet 5.5, per the v2b report).
+
+## II.15 27B (supersedes Part I §10 "Primary objective"; the rest of §10 stands)
+
+- **Scope (Q5).** H-E1, plus H-T3 if registered. 27B does not choose its own primary objective. The Part I §10 RULING
+  §3 selection rule is withdrawn for 27B.
+- **Timing.** 27B starts only after the 9B result is sealed. It runs on a 2× H100 worker under §II.13.
+- **Registration.** Its own dated registration, before any 27B outcome, covering the panel `wme-c27`, Ns, caps and
+  every 9B-informed difference (labelled as Part I §10 requires).
+- **R2 wording.** R2's wording rule binds 27B too.
+
+## II.16 H-T3 (conditional on stage W2 pass; added by dated amendment before its paths exist)
+
+> **RESERVED PLACEHOLDER: NOT A REGISTERED CLAIM.** This section registers nothing. It records the slot and the
+> conditions under which a dated amendment may fill it.
+
+**Trigger.** Stage W2 passes under its own pre-declared plan (Q4):
+- ≥ 40 fresh H1/H3-type paths with fresh seeds over training step × λ × layer mask;
+- the nested WM (pooled same-path-type curve + an edit-informed residual, shrunk toward 0) vs the pooled curve,
+  few-shot k = 2 and zero-shot, by leave-one-run-out, with the stage-W nulls;
+- **pass:** the Holm-adjusted lower bound of the improvement over the pooled curve is > 0 in either setting, with every
+  null at size ≤ 0.035;
+- **cap:** ≤ 10 GPU-h and ≤ $60, instances `wsp-wme-w2-*`.
+
+**If W2 fails.** This section stays empty. (a) is reported as a negative result on this model. No further spending
+on (a) for 9B (Q4).
+
+**What the amendment must contain**, dated and committed before any H-T3 path exists:
+- the claim, the estimand and the one-sided α 0.025 test, carried over from the W2 plan's primary contrast;
+- R6 symmetric shrinkage;
+- a sealed path set: new seeds, a new panel built after `wme-c2-gen` (§II.11.2), and its sizes;
+- its power (W2 simulation and empirical power, both ≥ 0.8);
+- its price (planning value ≈ 9.5 GPU-h, ≈ $51), with the §II.14 cap-fit rule applied;
+- its outcome language;
+- whether 27B includes it.
+
+It is labelled "added after the W2 pilot, before confirmatory data". It is not an adaptation to any confirmatory
+result: none will exist.
+
+## II.17 Outcome language (supersedes Part I §11.1 for H-T; adds the v2 claims)
+
+| Claim | Outcome | Reported as |
+|---|---|---|
+| H-E1 | as Part I §11.1 | unchanged; the generation clause adds "on 1,000 TriviaQA-derived items, greedy non-thinking decoding at batch 128" |
+| H-E2 | as Part I §11.1 | unchanged; "ranks-only mode" appended if C1.4 failed |
+| S-BoN | any | estimate and interval always; §II.5 mandatory wording if the bound is ≤ 0 |
+| S-TE | supported / not | §II.6.4; never "improves accuracy" (P3) |
+| S-E1-sec | — | "GSM8K and MATH E1 secondaries: unresolved — not powered; not run." |
+| D-HT | any | "Descriptive, not powered: C_T = x [interval]." Never "WM superiority established", never "static suffices". |
+| D-HT2 | any | stage-W/W2 numbers labelled EXPLORATORY |
+| (a) overall | W2 fails | "On Qwen3.5-9B, edit-specific trajectory prediction did not beat path-type averages (stage W, stage W2)." |
+| (a) overall | W2 passes | only through H-T3's own outcome language |
+
+**Unchanged from Part I §11.2–11.4:**
+- No rescue: a secondary, descriptive analysis, 27B result or the pilot-2 reserve never rescues a failed or void
+  primary.
+- E1 and E2 stay separate.
+- Every contrast and adverse result is published.
+- Amendment labels apply.
+
+## II.18 Order of operations (supersedes Part I §9.1 items 10–11 and §9.2 step 1)
+
+**Before the freeze (no `wme-c1` or `wme-c2-gen` outcome):**
+1. Register the stage-W2 panel in `EXPOSURES` before its data (W2 track).
+2. Re-run the `wme-c1` exposure and feasibility audit with every §II.11.1 exposure. Record the counts.
+3. Build `wme-c1` and `wme-c2-gen` in the §II.11.2 order. Record the split hashes. Never open sealed splits.
+4. Confirm that the P1 bank (no per-state oracle gradients) is what `wm.bankrun` builds. Record the bank price.
+5. Board A re-review of DRAFT v2. Chair rulings on the open issues. Then the freeze commit.
+
+**After the freeze:**
+1. Bank, then WM-E/StatNN fits, then D-HT/D-C2, then C2 gates.
+2. E2 episodes, all arms. B_par recorded from ledger seconds, then the S-BoN arm.
+3. E1 designation, then the hashed winners manifest, then the single sealed read.
+4. S-TE: guard calibration (base only), then training, then paired generation, then its single read.
+5. The H-T3 amendment if W2 passed and the cap-fit rule holds, then its sealed paths.
+6. 27B under its own registration.
+
+## II.19 Response to Board A (pointer table; conditions 1–14)
+
+"Resolved" means the condition's requirement is met by the cited sections. "Carried" means Part I's resolution stands
+unchanged. Items left to Board A's judgement are listed in the authoring report's open issues.
+
+| # | Condition | Part I (v1) resolution | v2 change | Status |
+|---|---|---|---|---|
+| 1 | Item-exposure and split contract | §0.2, §3.2–3.6 | §II.11: `wme-p3s`, `wme-p3h`, `wme-w` and the W2 panel added; `wme-c2-gen` recipe; build order; mandatory re-audit (v2b counts predate pilot-3/W exposures) | Resolved by rule. Re-audited counts are due at the freeze build (open issue 5). |
+| 2 | Root/direction closure | §4.4–4.6 | None. J1–J5, sampler and graph are built (`bank.roots`, `bank.component_graph_hash` `c8d50fe2…`). The bank now serves E2 and D-HT. | Carried |
+| 3 | Executable H-T estimand and horizon | §4.0, §4.3, §6.1–6.2 | H-T is descriptive (§II.2, §II.7); A1/A2 model and inference; the H-T3 slot requires its own executable estimand (§II.16) | Moot for confirmation; carried for D-HT; binding on H-T3 |
+| 4 | Strengthened static comparator | §6.1.2–6.1.4 | R6 symmetric shrinkage on every comparator (§II.10); StatNN-aux loses only the A_t head, symmetrically (§II.4 delta 1) | Resolved. The quadratic-null gate was not re-simulated under R6 (open issue 6). |
+| 5 | Valid shuffled-bookkeeping test | §6.3.1–6.3.2, §6.3.5 | WM-CP satisfies C2-S/C2-D by construction (A1; reported, not evidence). C2-S still gates H-E2 for WM-E (§II.4 delta 3). | Resolved; Q3 reading is open issue 1 |
+| 6 | Inert edits and trust-region strata | §0.3, §6.3.3–6.3.4 | Inert controls verified bitwise on 9B (`controls.c2i`); descriptive on the bank; C2-I still gates H-E2 | Resolved; open issue 1 |
+| 7 | E1 selection and generation audit | §6.5–6.7, §5.3 | TriviaQA pool pinned (A4); N = 1,000 at 0.5× effect (A10); batch 128 frozen (§II.4 delta 4); pairing on one instance (§II.13) | Resolved |
+| 8 | Multiplicity across claims | §2.4 | §II.3 replaces it: H-E1, H-E2 (+10-arm Holm incl. S-BoN), S-TE (Holm 2); all one-sided 0.025; descriptive list explicit | Resolved |
+| 9 | Guardrails on explicit scales | §5 | Bootstrap-t bounds (A5); generated guards for S-TE with pinned fresh sources (§II.12) | Resolved; D5 vs E1 guard reading is open issue 2 |
+| 10 | E2 fairness, episodes, accounting | §6.5, §6.8, §7 | A3 sign-flip; 24 episodes with seeds (`e2.episodes`, regenerated at n_rep 8); CEM by C6; S-BoN parity rule from ledger seconds (§II.5) | Resolved |
+| 11 | Complete power specification | §8 | Executed: v2b simulation (E1, E2, H-T full refit), stage-W simulation (S-BoN, H-T2), analytic S-TE sizing; repriced (§II.14) | Resolved for H-E1/H-E2; S-TE analytic only (open issue 7) |
+| 12 | Adaptive history and ×8 | §0.4, §4.1–4.3 | Pilot-informed list extended (§II.20) | Resolved |
+| 13 | 27B separation and exposure | §10 | Scope fixed to H-E1 (+H-T3) by Q5 (§II.15); exposures extended | Resolved in outline; its own registration still required |
+| 14 | Null-to-success reinterpretation | §11 | §II.17: S-BoN and S-TE wording, D-HT wording, (a) negative wording | Resolved |
+
+**Board A's freeze acceptance check** asked for three things: a hashed executable manifest (the manifest above), the
+outcome-blind simulation reports (`simulation.report_hash` and the stage-W JSON) and feasibility accounting
+(§II.14, §II.11).
+
+## II.20 Pilot-informed choices (all exposed; declared, not hidden)
+
+**Inherited from Part I §0.4:**
+- the `sycophancy_real` primary;
+- the ×8 ladder step;
+- the E2 primitive grid, which is near-duplicate to the pilot-2 directions (max |cos| 0.986; A6);
+- the 27B 2 × 2-layer field.
+
+**From v2/v2b simulations (synthetic or outcome-blind):**
+- the WM-CP configuration and K rule (C0, chosen on synthetic data);
+- κ = 0.80, calibrated to the pilot-2 static error of 2.17 SE;
+- the A8 selection;
+- E1 powered at 0.5× the pilot-template generated effect;
+- batch 128 (P-H100b).
+
+**From pilot 3:**
+- the H1 recipe and its teacher data (828 rows);
+- the frozen 2,048-token budget;
+- the MC prompt and parser;
+- the generated-guard rule (audited) and its sizing inputs;
+- the 4,096-token budget for the mechanism check;
+- the decision that S-TE is token efficiency, not accuracy (P2/P3);
+- slope transport dropped (P1).
+
+**From stage W:**
+- vLLM frozen numerics and the canary design;
+- the measured unit rates used for pricing;
+- the S-BoN two-rung ladder and its ρ̂ = 0.348 prior-quality input (from pilot-2 steps);
+- the H-T3 planning price (9.5 GPU-h).
+
+**From the round-11 methods seat:** the S-TE Ns (3,463 / 1,784) from the de-biased H1 dev gains and the pilot-3
+sizing-probe discordances.
+
+**Stage-W outcomes may size later designs. They never test a registered claim.**
+
+## Appendix C. Values for every Part I placeholder (from the manifest, sha256 `011d8f68…`)
+
+### C.1 `[MANIFEST: …]`
+
+Scalars are verbatim. Object-valued fields are given by key summary and a field digest: the first 16 hex characters
+of sha256 over the canonical JSON (sorted keys, no spaces). The full values are in the manifest.
+
+| Part I placeholder | Value (scalars verbatim; objects by key summary and field digest) |
+|---|---|
+| `[MANIFEST: target.theta0_hash]` | `61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5` |
+| `[MANIFEST: sources]` | harmful_supplement, pilot_pins; field digest `d8bd0b0c2c0b9e60` |
+| `[MANIFEST: panel.wme_c1.minhash_seed]` | `20261117` |
+| `[MANIFEST: panel.wme_c1.group_policy]` | exact_join, id, jaccard, k, method, normalise; field digest `4c43c966ba27505e` |
+| `[MANIFEST: panel.wme_c1.split_hashes]` | binds at the freeze build (`build_c1_panel_v1` at the registered sizes); recorded in the freeze commit; field digest `19463fa0a175fbdb` |
+| `[MANIFEST: audit.exclusion_report_hash]` | supplement `8de4ac52e65496be…`; v1_policy `79d171b77e5213aa…`; field digest `5f385f81f7f75380` |
+| `[MANIFEST: audit.available_groups]` | gsm8k_gold_lp 7,238, mathcomp_gold_lp 4,788, mmlupro_gold_lp 5,494, refusal_margin_harmful 325, refusal_margin_harmless 5,792, sycophancy_gap 5,378, sycophancy_real 467, triviaqa_gen 84,299, wikitext_nll 303 (v2b audit; predates the pilot-3/W exposures, re-audit required, §II.11.1); field digest `b5c8091805962d6c` |
+| `[MANIFEST: tap.seed]` | `659250658` |
+| `[MANIFEST: bank.roots]` | control_seeds, feasible, file, identity_digest, n, smoke; field digest `1439b017f43c57b4` |
+| `[MANIFEST: bank.noise_rho]` | `0.012447895454150967` |
+| `[MANIFEST: bank.contrast_catalogue]` | excluded_sources, n_pairs, sha256, sources; field digest `8bc5bd3a54acdcfb` |
+| `[MANIFEST: bank.root_sampler_seed]` | `1979296330` |
+| `[MANIFEST: bank.blocks]` | blocks, seed; field digest `ad478d977999f400` |
+| `[MANIFEST: bank.component_graph_hash]` | `c8d50fe23b6f9b2dd929edfcc939d9bb744dc0d4d5866c10c2cfa1938ad972b9` |
+| `[MANIFEST: bank.calibration_components]` | 12 entries; field digest `4063f38d31af34a0` |
+| `[MANIFEST: bank.folds.outer_seed]` | `3314379134` |
+| `[MANIFEST: bank.folds.inner_seed]` | `1051842779` |
+| `[MANIFEST: model.dictionary]` | bank_roots, e2_library, rule; field digest `d207f6c0192bca87` |
+| `[MANIFEST: model.wm.config]` | anneal_frac, epochs, hidden, latent, lr, max_train_horizon…; field digest `285da1c8ab8f89eb` |
+| `[MANIFEST: model.static.configs]` | S1, S2, S3, order, tie_rule_relative; field digest `2fdeef62870953cd` |
+| `[MANIFEST: model.chart_schema_version]` | `2` |
+| `[MANIFEST: model.training_protocol]` | epochs, inner_folds, optimiser, outer_folds, shrink_grid, train_max_h; field digest `b50e2dc738574a46` |
+| `[MANIFEST: model.ensemble_seeds]` | `[1000, 1001, 1002, 1003, 1004]` |
+| `[MANIFEST: controls.inert]` | I1, I2_factors, I2_rows, compensated, n_inert, verification; field digest `b1db7913531ef5b4` |
+| `[MANIFEST: planner.algorithm]` | `cem` |
+| `[MANIFEST: planner.config]` | batch, beam_width, dose_rule, guard_penalty, guard_z, inner_budget…; field digest `1fc37489814d404d` |
+| `[MANIFEST: e2.library]` | digest `a6c1a68991549c42…` (wsp.wm.e2.library); field digest `dfd462a88ad71499` |
+| `[MANIFEST: e2.library.lora_seeds]` | `[1253042119, 2585043514, 3253094438, 1920318839]` |
+| `[MANIFEST: e2.episodes]` | 24 sycophancy_real episodes (steer 8, proj_remove 8, lora_tv 8), per-episode planner and subsample seeds (wm.e2.episodes at n_rep 8); GSM8K/MATH: none (E1 secondaries not run); field digest `3bf5d8e3770291bf` |
+| `[MANIFEST: e2.winners_manifest_hash]` | binds after all episodes (`wm.e2.winners_manifest`, write-once, before the single sealed read); field digest `60426a9a04fd7fad` |
+| `[MANIFEST: gen.config]` | alpha_one_sided, anomaly_increase_limit, batch, batch_note, decoding, loop…; field digest `314d3d50b1adba22` |
+| `[MANIFEST: gen.parsers]` | `src/wsp/wm/genaudit.py` sha256 `43ec3beb27bec9bd…`; field digest `2c56e7e348aeb312` |
+| `[MANIFEST: gen.sampled_seeds]` | `[20261117, 20261118, 20261119, 20261120]` |
+| `[MANIFEST: seeds.bootstrap.guard]` | `1120340543` |
+| `[MANIFEST: seeds.bootstrap.ht]` | `2822066237` |
+| `[MANIFEST: seeds.bootstrap.e1]` | `1230116763` |
+| `[MANIFEST: seeds.bootstrap.e2]` | `3364230571` |
+| `[MANIFEST: simulation.commit]` | `d3405c732813a8a0392705dd9f8681fb09f1ac4c` |
+| `[MANIFEST: simulation.seeds]` | cal_seed0, cpsel_seed0, grid, refit, signflip; field digest `43dec0c95a6105f9` |
+| `[MANIFEST: simulation.report_hash]` | cal_v2b `4a0742df232ae134…`; cheap_v2b `bfa64d8a17b89e8c…`; cpsel_v2b `f20b2cde4bcc0957…`; ph100b `2e825cd3c05c9cdf…`; refit_v2b `ed9e5a79bba49658…`; field digest `684eaff8724dcc63` |
+| `[MANIFEST: cost.unit_times]` | P-H100 summary sha256 `cf0db7d4b29331b3…`; field digest `59c3e2ffc132708f` |
+
+**Fields added in v2/v2b** (no Part I placeholder):
+- `model.wmcp.config`, `model.wmcp.k_rule`, `model.wmcp.selection`, `model.representation`, `model.primary_ht`,
+  `model.descriptive_arms`;
+- `controls.c2s_c2d`, `controls.c2i`, `inference.ht`, `inference.e2`;
+- `gen.pool`, `panel.wme_c1.builder`, `guards.bounds`, `ht.alternative`;
+- `caps`, `selection.priority`, `e1.effect`, `cost.generation`;
+- `prereg_v2`, `panel.wme_c2_gen`, `guards.generated`, `exposures.v2`.
+
+**Two fields bind at a later event by construction.** They are rules, not open values:
+- `panel.wme_c1.split_hashes` binds at the freeze build;
+- `e2.winners_manifest_hash` binds after all episodes, before the sealed read.
+
+### C.2 `[SIM: …]`
+
+| Placeholder | Value |
+|---|---|
+| `r_f` | 8 |
+| `n_blk` | 6 |
+| `n_cal` | 12 |
+| `m_min_HT` | sign-flip test valid for any m ≥ 2. Moot: H-T is descriptive, with m = 18. |
+| `n_bank`, `n_dev`, `n_sealed_test` (every objective) | 48, 64, 96 |
+| `n_construction_field` | 24 |
+| `n_construction_e2` (sycophancy) | 64 |
+| Contrast shard per root | 16 |
+| LoRA shard per root | 64 |
+| `n_gen,syc` | 1,000 (TriviaQA) |
+| `n_gen,gsm` | 0 (not run) |
+| `n_gen,math` | 0 (not run) |
+| `n_rep` | 8 |
+| `n_ep_sec` | all |
+| `n_rep_sec` | 0 |
+| `B` | 48 |
+| `n_inert` | 12 |
+| `pool_size` | 64 |
+| `reader_token_cap` | 140,000 |
