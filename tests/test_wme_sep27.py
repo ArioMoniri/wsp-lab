@@ -27,6 +27,8 @@ def test_registry_requires_every_exposure_including_c1_sealed_and_calibration():
     )  # sealed test included (via the manifest's sealed_hashes)
     assert reg["calib27-20261116"]["splits"] == ["construction", "validation", "dev"]
     assert {"wme-v0-p1", "wme-p2"} <= set(S27.REQUIRED_EXPOSURES)
+    # SYNTHESIS-r11 R7: the pilot-3 panels are exposures for every later panel, the 27B one included
+    assert {"wme-p3s", "wme-p3h"} <= set(S27.REQUIRED_EXPOSURES)
 
 
 def _write_manifest(path, by_split, sealed=()):
@@ -46,6 +48,8 @@ def _fake_root(tmp_path, with_c1=True):
     _write_manifest(
         tmp_path / "data/wme/panels/wme-p2/manifest.json", {"construction": ["p2c"]}, sealed=["p2t"]
     )
+    for p3 in ("wme-p3s", "wme-p3h"):
+        _write_manifest(tmp_path / f"data/wme/panels/{p3}/manifest.json", {"construction": [p3]})
     if with_c1:
         _write_manifest(
             tmp_path / "data/wme/panels/wme-c1/manifest.json", {"dev": ["c1d"]}, sealed=["c1t"]
@@ -56,6 +60,7 @@ def _fake_root(tmp_path, with_c1=True):
 def test_load_exposures_never_skips_a_missing_manifest(tmp_path):
     ex = S27.load_exposures27(_fake_root(tmp_path))
     assert "c1t" in ex["wme-c1"]["test"] and "p2t" in ex["wme-p2"]["test"]
+    assert "wme-p3h" in ex["wme-p3h"]["construction"]
     with pytest.raises(S27.MissingExposure):
         S27.load_exposures27(_fake_root(tmp_path / "b", with_c1=False))
 
@@ -82,6 +87,8 @@ def test_build_c27_panel_uses_fresh_salt_and_excludes_by_manifest_identity(tmp_p
         "wme-v0-p1": {"construction": {"h002"}},
         "wme-p2": {"test": {"h003"}},
         "calib27-20261116": {"dev": set()},
+        "wme-p3s": {"construction": set()},
+        "wme-p3h": {"dev": set()},
     }
     sizes = {"gsm8k_gold_lp": {"construction": 4, "validation": 4, "dev": 4, "test": 4}}
     man = S27.build_c27_panel(pool, sizes, tmp_path / "c27", exposures)

@@ -9,6 +9,7 @@
 
 import json
 import os
+from pathlib import Path
 
 import pytest
 
@@ -126,3 +127,48 @@ def test_feasible_sizes_report_shortfalls_and_never_relax_exclusions():
     assert syc["feasible"] == (syc["requested"] <= 469)
     assert rep["gsm8k_gold_lp"]["feasible"]
     assert sum(X.DEFAULT_SIZES["sycophancy_real"].values()) <= 469
+
+
+def test_pilot3_panels_are_registered_exposures_with_every_split():
+    """SYNTHESIS-r11 R7 / RULING-wme-post-pilot3 P5: wme-p3s and wme-p3h, all splits (unscored dev rests included)."""
+    for name in ("wme-p3s", "wme-p3h"):
+        spec = X.EXPOSURES[name]
+        assert spec["splits"] == "all"
+        assert spec["manifest"] == f"data/wme/panels/{name}/manifest.json"
+    # every earlier exposure is still registered
+    assert {"wme-v0-p1", "wme-p2", "calib27-20261116", "wme-p2-smoke"} <= set(X.EXPOSURES)
+
+
+def test_pilot3_registration_reads_holdout_and_dev_rest_hashes(tmp_path):
+    """'all' keeps every split a manifest lists, including non-standard ones such as wme-p3h's holdout."""
+    for name in ("wme-p3s", "wme-p3h"):
+        d = tmp_path / "data/wme/panels" / name
+        d.mkdir(parents=True)
+        objs = {
+            "a": {"construction": {"hashes": [f"{name}c"]}, "holdout": {"hashes": [f"{name}h"]}},
+            "b": {
+                "dev": {"hashes": [f"{name}d1", f"{name}d2"]},
+                "validation": {"hashes": [f"{name}v"]},
+            },
+        }
+        (d / "manifest.json").write_text(json.dumps({"objectives": objs, "sealed_hashes": []}))
+    reg = {k: X.EXPOSURES[k] for k in ("wme-p3s", "wme-p3h")}
+    ex = X.load_exposures(tmp_path, reg)
+    assert set(ex["wme-p3h"]) == {"construction", "holdout", "dev", "validation", "test"}
+    assert {"wme-p3hh", "wme-p3hd2"} <= X.all_exposed(ex)
+    assert len(X.all_exposed(ex)) == 10
+
+
+@pytest.mark.skipif(
+    not (Path(__file__).resolve().parents[1] / "data/wme/panels/wme-p3h/manifest.json").exists(),
+    reason="pilot-3 panel manifests not present",
+)
+def test_real_pilot3_manifests_load_and_cover_every_used_split():
+    root = Path(__file__).resolve().parents[1]
+    reg = {k: X.EXPOSURES[k] for k in ("wme-p3s", "wme-p3h")}
+    ex = X.load_exposures(root, reg)
+    assert {"construction", "validation"} <= set(ex["wme-p3s"])
+    assert {"construction", "holdout", "dev"} <= set(ex["wme-p3h"])
+    assert (
+        len(ex["wme-p3h"]["dev"]) >= 2000
+    )  # MC dev pools plus guard dev rests (unscored items included)
