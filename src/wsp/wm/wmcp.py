@@ -236,7 +236,7 @@ class _Base:
         f = field(R, self.spec)
         res = self._raw(R).mean(0)
         errs = {lam: float(np.abs(f + lam * res - Y).mean()) for lam in SHRINK_GRID}
-        return min(errs, key=lambda lam: (errs[lam], lam))
+        return _tie_to_field(errs, getattr(self, "shrink_tie_rel", 0.0))
 
     def predict_batch(self, R):
         R = np.atleast_2d(np.asarray(R, float))
@@ -432,6 +432,48 @@ class F3uR:
         r = np.asarray(r, float)
         K = self.spec.n_obj
         return r[:K] * self.beta[:, 0] + r[K : 2 * K] * self.beta[:, 1], None
+
+
+def _tie_to_field(errs: dict, tie_rel: float = 0.0) -> float:
+    """The smallest shrinkage whose loss is within ``tie_rel`` (relative) of the best: ties go toward the exact field.
+    ``tie_rel = 0`` is the original rule (exact ties to the smaller shrinkage)."""
+    best = min(errs.values())
+    return min(lam for lam, e in errs.items() if e <= best * (1 + tie_rel) + 1e-15)
+
+
+class ShrunkF3uR(F3uR):
+    """S1 under SYNTHESIS-r11 R6 (flag 1): the F3u refit shrunk toward the raw field F = a + q,
+    prediction F + lam (F3u - F), with lam on :data:`SHRINK_GRID` chosen on the same component-level selection split,
+    with the same loss (mean raw |error|) and the same tie rule as WM-CP; the refit uses the fit part only, as WM-CP's
+    members do."""
+
+    def __init__(self, spec: RSpec, tie_rel: float = 0.0):
+        super().__init__(spec)
+        self.shrink, self.shrink_tie_rel = 1.0, float(tie_rel)
+
+    def fit(self, states, components=None):
+        if any(s["h"] > 2 for s in states):
+            raise ValueError("training states must have h <= 2")
+        states = list(states)
+        if components is None:
+            super().fit(states)
+            self.shrink = 1.0
+            return self
+        fit, val, _samples, _ = M.split_and_bootstrap(states, components, 1)
+        super().fit(fit)
+        if val:
+            R = np.stack([s["r"] for s in val])
+            Y = np.stack([s["y"] for s in val])
+            f = field(R, self.spec)
+            res = np.stack([super(ShrunkF3uR, self).predict(r)[0] for r in R]) - f
+            errs = {lam: float(np.abs(f + lam * res - Y).mean()) for lam in SHRINK_GRID}
+            self.shrink = _tie_to_field(errs, self.shrink_tie_rel)
+        return self
+
+    def predict(self, r):
+        r = np.asarray(r, float)
+        f = field(r[None], self.spec)[0]
+        return f + self.shrink * (super().predict(r)[0] - f), None
 
 
 def param_count(model) -> int:

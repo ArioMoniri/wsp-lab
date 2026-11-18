@@ -45,6 +45,26 @@ CAL_TARGET = 2.17
 SCENARIOS = ("alt", "null_shuffle", "null_quadratic")
 NULLS = ("null_shuffle", "null_quadratic")
 CAL_SEED0 = 70_000  # calibration replicates (kappa); validation uses rep = 0, 1, ...
+# SYNTHESIS-r11 R6 / PREREG v2 §II.10 (flag 1): every arm shrunk toward the raw field on the same grid, split and loss,
+# ties within 0.5 % (relative) to the smaller shrinkage, i.e. toward the exact field; applied to WM-CP and S1-S3 alike.
+R6_TIE_REL = 0.005
+
+
+def members_r6(cfg, spec, bo, ref_params=None):
+    """The static family under R6: S1 is the F3u refit shrunk toward the field; S2/S3 keep their shrinkage with the R6
+    tie rule. Same constructors otherwise (``powersim_refit_v2._members``)."""
+
+    def s2():
+        m = CP.StaticR(cfg, spec, bo, n_seeds=5, aux=False)
+        m.shrink_tie_rel = R6_TIE_REL
+        return m
+
+    def s3():
+        m = R2._s3(cfg, spec, bo, ref_params)
+        m.shrink_tie_rel = R6_TIE_REL
+        return m
+
+    return {"S1": lambda: CP.ShrunkF3uR(spec, R6_TIE_REL), "S2": s2, "S3": s3}
 
 
 def rho(z):
@@ -220,21 +240,33 @@ def cp_errors(rep, cell, cfg, seed=PV.SEED, world_kind="saturating") -> np.ndarr
     return np.concatenate(out)
 
 
-def replicate(rep, cell, scenario, kappa, cfg=None, n_flip=SF.N_FLIP, seed=PV.SEED, n_inert=12):
+def replicate(
+    rep, cell, scenario, kappa, cfg=None, n_flip=SF.N_FLIP, seed=PV.SEED, n_inert=12, r6=False
+):
+    """One full-refit replicate. ``r6=True`` applies R6 symmetric shrinkage (:data:`R6_TIE_REL`, :func:`members_r6`);
+    the default reproduces the v2b pipeline exactly."""
     t0 = time.time()
     torch.set_num_threads(1)
     cfg = cfg or CP.CPConfig()
     _g, world, bo, trajs, se, spec, fold, rest, allst = _setup(rep, cell, scenario, kappa, seed)
     e_w, e_s, comps, chosen, inert_ok, gap = [], [], [], [], [], []
-    med_static = []
+    med_static, shr_w, shr_s = [], [], []
     for k in range(R2.K_OUT):
         held = {c for c in rest if fold[c] == k}
         train = [s for s in allst if s["comp"] in rest and fold[s["comp"]] != k and s["h"] <= 2]
-        cp = CP.CanonicalPathWM(cfg, spec, bo, n_seeds=5).fit(train, [s["comp"] for s in train])
+        cp = CP.CanonicalPathWM(cfg, spec, bo, n_seeds=5)
+        if r6:
+            cp.shrink_tie_rel = R6_TIE_REL
+        cp.fit(train, [s["comp"] for s in train])
         ref = CP.param_count(cp)
-        name, _ = R2.choose_static(cfg, spec, bo, train, se, seed + 31 * rep + k, ref)
+        members = members_r6 if r6 else R2._members
+        name, _ = R2.choose_static(
+            cfg, spec, bo, train, se, seed + 31 * rep + k, ref, members=members
+        )
         chosen.append(name)
-        st = R2._members(cfg, spec, bo, ref)[name]().fit(train, [s["comp"] for s in train])
+        st = members(cfg, spec, bo, ref)[name]().fit(train, [s["comp"] for s in train])
+        shr_w.append(float(cp.shrink))
+        shr_s.append(float(getattr(st, "shrink", float("nan"))))
         test = [s for s in allst if s["comp"] in held and s["h"] in (3, 4)]
         if test:
             ew, es = R2._err(cp, test, se), R2._err(st, test, se)
@@ -280,6 +312,9 @@ def replicate(rep, cell, scenario, kappa, cfg=None, n_flip=SF.N_FLIP, seed=PV.SE
         "rep": rep,
         "scenario": scenario,
         "kappa": kappa,
+        "r6": bool(r6),
+        "shrink_wm": shr_w,
+        "shrink_static": shr_s,
         "stat": r["stat"],
         "p": r["p"],
         "lb": r["lb"],
