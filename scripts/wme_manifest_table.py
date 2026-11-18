@@ -46,7 +46,7 @@ MAN = [
     ("planner.config", "adapter9b.PLANNER_CONFIG"),
     ("e2.library", "wm.e2.library digest"),
     ("e2.library.lora_seeds", "wm.e2"),
-    ("e2.episodes", "wm.e2.episodes at the selected n_rep (E2 unresolved: not run)"),
+    ("e2.episodes", "wm.e2.episodes at the selected n_rep"),
     ("e2.winners_manifest_hash", "DEFERRED: after the episodes"),
     ("gen.config", "genaudit.SPEC_V1"),
     ("gen.parsers", "sha256 of genaudit.py"),
@@ -200,5 +200,46 @@ lines += [
     + str(M["supplement"]["required"])
     + ").",
 ]
+if "prereg_v2" in M:
+    pv = M["prereg_v2"]
+    pr = pv["pricing"]
+    lines[0] = (
+        "# PREREG_WME v2 (RULING-wme-v2 + v2b + post-stage-W claim set) placeholders → values, for the chair"
+    )
+    lines += [
+        "",
+        "## PREREG v2 claim set (RULING-wme-post-stagew Q3; `prereg_v2` in the manifest)",
+        "",
+        "| Claim | Status / family | Key values |",
+        "|---|---|---|",
+    ]
+    for cid, c in pv["claims"].items():
+        rest = {k: v for k, v in c.items() if k != "type"}
+        lines.append(f"| {cid} | {c['type']} | `{short(rest, 160)}` |")
+    lines += [
+        "",
+        "## PREREG v2 pricing (GPU-h-eq on 1× H100 SXM5; $ = GPU-h × 4.89 × 1.10)",
+        "",
+        "| Scenario | Total GPU-h-eq | $ (9B) | Within ≤ 90 GPU-h-eq and ≤ $1,000 |",
+        "|---|---|---|---|",
+    ]
+    for k in ("registered_total", "with_ht3_at_v2b_price", "p1_consistent_with_ht3"):
+        c = pr[k]
+        lines.append(
+            f"| {k} | {c['total_gpu_h']:.2f} | {c['usd_9b']:.1f} | {'yes' if c['within'] else 'no'} |"
+        )
+    lines += [
+        "",
+        (
+            f"S-TE: {pr['s_te']['gpu_h']:.2f} GPU-h-eq; S-BoN: {pr['s_bon']['gpu_h']:.2f} GPU-h-eq at the planning parity "
+            f"budget {pr['s_bon']['budget']:.1f}; per-state oracle gradients inside the v2b bank price: "
+            f"{pr['v2b_design']['per_state_oracle_gpu_h_included']:.2f} GPU-h ({pr['v2b_design']['training_eligible_states']} states)."
+        ),
+        "",
+        "| v2 field | Value (abridged) |",
+        "|---|---|",
+    ]
+    for k in ("panel.wme_c2_gen", "guards.generated", "exposures.v2"):
+        lines.append(f"| `{k}` | `{short(M[k], 220)}` |")
 (ROOT / "docs/prereg/wme_manifest_table.md").write_text("\n".join(lines) + "\n")
 print(len(lines))
