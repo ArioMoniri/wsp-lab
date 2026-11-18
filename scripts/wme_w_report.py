@@ -368,6 +368,10 @@ def main():
         J(rw / "timing.json", {"rows": []}),
     )
     an, sim, e2 = J(run / "analysis.json"), J(run / "ht2sim.json"), J(run / "e2sim.json")
+    if an:
+        an["run"] = (
+            "data/wme/stagew/run-20261118/remote/w"  # repository-relative (no local paths in docs)
+        )
     evals = lines(rw / "evals.jsonl")
     led = lines(rw / "ledger.jsonl")
     canary = lines(rw / "canary.jsonl")
@@ -567,6 +571,23 @@ def main():
                 f"\nFutility rule applied at P = {sim['futility']['at_P']}: smaller P not simulated (plan §7)."
             )
         w("")
+    if sim:
+        simok = {
+            k: [int(P) for P, c in sim["grid"].items() if c["alt"]["rate"][k] >= PW.POWER_MIN]
+            for k in ("0", "2", "4")
+        }
+        empok = {
+            k: [int(P) for P, e in sim["empirical"].items() if e.get(k, 0) >= PW.POWER_MIN]
+            for k in ("0", "2", "4")
+        }
+        w(
+            "Rule applied: simulated power ≥ 0.8 at P = "
+            + "; ".join(f"{SETTING_NAME[k]}: {sorted(v) or 'none'}" for k, v in simok.items())
+            + ". Empirical power ≥ 0.8 at P = "
+            + "; ".join(f"{SETTING_NAME[k]}: {sorted(v) or 'none'}" for k, v in empok.items())
+            + ". The simulated alternative treats the fitted WM as the truth; on the measured paths the WM loses to "
+            "the feature-free pooled curve of its path type in every setting, so the empirical criterion fails.\n"
+        )
     w(
         "**H-T2 registration recommendation:** "
         + (
