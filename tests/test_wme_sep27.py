@@ -29,6 +29,8 @@ def test_registry_requires_every_exposure_including_c1_sealed_and_calibration():
     assert {"wme-v0-p1", "wme-p2"} <= set(S27.REQUIRED_EXPOSURES)
     # SYNTHESIS-r11 R7: the pilot-3 panels are exposures for every later panel, the 27B one included
     assert {"wme-p3s", "wme-p3h"} <= set(S27.REQUIRED_EXPOSURES)
+    # RULING-wme-post-stagew Q4: the stage-W dev panel is an exposure for every later panel, the 27B one included
+    assert "wme-w" in S27.REQUIRED_EXPOSURES
 
 
 def _write_manifest(path, by_split, sealed=()):
@@ -89,6 +91,7 @@ def test_build_c27_panel_uses_fresh_salt_and_excludes_by_manifest_identity(tmp_p
         "calib27-20261116": {"dev": set()},
         "wme-p3s": {"construction": set()},
         "wme-p3h": {"dev": set()},
+        "wme-w": {"dev": set()},
     }
     sizes = {"gsm8k_gold_lp": {"construction": 4, "validation": 4, "dev": 4, "test": 4}}
     man = S27.build_c27_panel(pool, sizes, tmp_path / "c27", exposures)

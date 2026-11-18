@@ -60,7 +60,15 @@ EXPOSURES_27 = dict(
         }
     },
 )
-REQUIRED_EXPOSURES = ("wme-c1", "wme-v0-p1", "wme-p2", "calib27-20261116", "wme-p3s", "wme-p3h")
+REQUIRED_EXPOSURES = (
+    "wme-c1",
+    "wme-v0-p1",
+    "wme-p2",
+    "calib27-20261116",
+    "wme-p3s",
+    "wme-p3h",
+    "wme-w",  # RULING-wme-post-stagew Q4: the stage-W dev panel
+)
 CALIB_REPORT = "docs/reviews/wme/wme-27b-calib-2026-11-16.json"
 CALIB_TIMING_EDITS = (
     {
