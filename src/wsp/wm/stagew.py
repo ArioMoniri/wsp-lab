@@ -1008,3 +1008,44 @@ def synthetic_world(seed=0, n_runs=4, edit_effect=True, path_sd=0.15, cells=None
         "N": N_DEV,
         "truth": truth,
     }
+
+
+# ------------------------------------------------------------------ fresh panel wme-w
+
+
+def _mc_row(r, prefix):
+    from wsp.wm.panel import text_hash
+
+    g = r["question"] + "||" + "||".join(r["options"])
+    h = text_hash(g)
+    return {
+        "kind": prefix,
+        "question": r["question"],
+        "options": list(r["options"]),
+        "answer_index": int(r["answer_index"]),
+        "hash": h,
+        "id": f"{prefix}:{h[:16]}",
+        "gtext": g,
+    }
+
+
+def panel_pools(mmlu_pro_rows, supergpqa_rows) -> dict:
+    """Pool items exactly as the pilot-3 builder forms them (ids 'mmlug:' / 'sgpqa:', group text = question + options)."""
+    return {
+        "mmlupro_gen": [_mc_row(r, "mmlug") for r in mmlu_pro_rows],
+        "supergpqa_gen": [_mc_row(r, "sgpqa") for r in supergpqa_rows],
+    }
+
+
+def panel_select(pools, exposed, n: int = N_DEV) -> dict:
+    """One joint near-duplicate family over both benchmarks; every group with an exposed hash dropped; one item per
+    group; dev = the first n groups in salted rank order; asserted disjoint and exposure-free."""
+    from wsp.wm import p3panel as PP
+
+    fams = {"mc": {"pools": pools}}
+    sizes = {p: {"dev": n} for p in PANELS}
+    res = PP.select(fams, PANELS, sizes, SALT, set(exposed), {p: ("dev",) for p in PANELS})
+    res["audit"] = PP.audit(res["splits"], set(exposed))
+    if not res["audit"]["clean"]:
+        raise RuntimeError(f"panel audit failed: {res['audit']}")
+    return res

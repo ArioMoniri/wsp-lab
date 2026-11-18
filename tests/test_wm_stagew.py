@@ -295,3 +295,46 @@ def test_lcpfn_wrapper_batches_curves_when_available():
     P = m.predict(xk, Y, np.arange(3, 9, dtype=float))
     assert P.shape == (6, 2) and np.all(np.isfinite(P)) and np.all((P >= 0) & (P <= 1))
     assert P[:, 0].mean() > 0.4  # an improving curve stays above its early values
+
+
+# ------------------------------------------------------------------ fresh panel
+
+
+def _mc_items(prefix, n, shared=()):
+    out = []
+    for i in range(n):
+        q = (
+            shared[i]
+            if i < len(shared)
+            else f"{prefix} question number {i} about topic {i * 7} with words"
+        )
+        out.append({"question": q, "options": ["a", "b", "c"], "answer_index": 0})
+    return out
+
+
+def test_panel_selection_excludes_every_exposure_and_near_duplicates():
+    from wsp.wm.panel import text_hash
+
+    mm = _mc_items("mmlu", 60)
+    sg = _mc_items("sgpqa", 60)
+    pools = W.panel_pools(mm, sg)
+    exposed = {pools["mmlupro_gen"][0]["hash"], pools["supergpqa_gen"][3]["hash"]}
+    # a near-duplicate of an exposed MMLU-Pro question appears in SuperGPQA: it must go too
+    sg2 = _mc_items("sgpqa", 60, shared=[mm[0]["question"] + " extra"])
+    pools2 = W.panel_pools(mm, sg2)
+    res = W.panel_select(pools2, exposed, n=20)
+    used = {r["hash"] for p in res["splits"].values() for rows in p.values() for r in rows}
+    assert not used & exposed
+    assert pools2["supergpqa_gen"][0]["hash"] not in used
+    assert {p: len(v["dev"]) for p, v in res["splits"].items()} == {
+        "mmlupro_gen": 20,
+        "supergpqa_gen": 20,
+    }
+    assert res["audit"]["clean"]
+    assert res == W.panel_select(pools2, exposed, n=20)  # deterministic salted order
+    with pytest.raises(ValueError):
+        W.panel_select(pools2, exposed, n=60)  # never relaxed
+    assert all(
+        r["hash"] == text_hash(r["question"] + "||" + "||".join(r["options"]))
+        for r in pools["mmlupro_gen"]
+    )
