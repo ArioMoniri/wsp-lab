@@ -137,12 +137,12 @@ def _s3(cfg, spec, bo, ref_params):
     return m
 
 
-def choose_static(cfg, spec, bo, train, se, seed, ref_params):
+def choose_static(cfg, spec, bo, train, se, seed, ref_params, members=None):
     comps = sorted({s["comp"] for s in train})
     order = list(np.random.default_rng(seed).permutation(comps))
     inner = {c: i % K_IN for i, c in enumerate(order)}
     loss = {}
-    for name, ctor in _members(cfg, spec, bo, ref_params).items():
+    for name, ctor in (members or _members)(cfg, spec, bo, ref_params).items():
         tot = 0.0
         for k in range(K_IN):
             fit = [s for s in train if inner[s["comp"]] != k]

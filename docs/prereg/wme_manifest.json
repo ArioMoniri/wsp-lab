@@ -857,7 +857,7 @@
   20261119,
   20261120
  ],
- "generated_from_commit": "3d28cc95b4714edb13af8951acf9d0d573f09569",
+ "generated_from_commit": "43345cf53434e3333209c9eecf2fe2f465ee040d",
  "guards.bounds": "item-group bootstrap-t R = 9,999 on both scales (wm.arms.spec.guard_bounds_from_items)",
  "guards.generated": {
   "margin": "p3gen.guard_margin on the base model's per-item refusal frequency over the calibration split (greedy + 8 samples at T 0.7, n_cal 128, n_boot 4000, seed 0, floor 0.01), computed before any edited generation is read",
@@ -1283,7 +1283,7 @@
  "prereg_v2": {
   "claims": {
    "D-C2": {
-    "type": "descriptive on the bank (inert-edit and trust-region controls)"
+    "type": "descriptive for every arm and analysis (RULING-wme-prereg-v2-issues item 1); validity preconditions halt the run"
    },
    "D-HT": {
     "type": "descriptive (old H-T, WM-CP vs the static family, on the bank)"
@@ -1341,8 +1341,67 @@
    },
    "S-BoN": {
     "null_exchangeable": 0.013,
+    "parity_budget_measured_basis": 86.72183072289215,
     "parity_budget_planning": 180.19960504605555,
     "parity_budget_rule": "B + (measured bank GPU-s + measured R1 field GPU-s) / n_episodes / t_bundle_s",
+    "power_at_measured_parity": {
+     "measured_parity": {
+      "alpha": 0.0125,
+      "budget_bon": 86.72183072289215,
+      "ci95_upper": 0.033587428098608846,
+      "power_lb": 0.01660287643451063,
+      "rate": 0.024
+     },
+     "measured_parity_alpha_0.0025": {
+      "alpha": 0.0025,
+      "budget_bon": 86.72183072289215,
+      "ci95_upper": 0.011807823003840638,
+      "power_lb": 0.0026161408492456103,
+      "rate": 0.006
+     },
+     "measured_parity_alpha_0.025": {
+      "alpha": 0.025,
+      "budget_bon": 86.72183072289215,
+      "ci95_upper": 0.04838992666597339,
+      "power_lb": 0.02771206682848596,
+      "rate": 0.037
+     },
+     "null_exchangeable": {
+      "alpha": 0.0125,
+      "budget_bon": 48,
+      "ci95_upper": 0.020589286529908307,
+      "power_lb": 0.007706232724005364,
+      "rate": 0.013
+     },
+     "perfect_prior_parity": {
+      "alpha": 0.0125,
+      "budget_bon": 86.72183072289215,
+      "ci95_upper": 0.07603407387212639,
+      "power_lb": 0.04992904948382041,
+      "rate": 0.062
+     },
+     "planning_no_charge": {
+      "alpha": 0.0125,
+      "budget_bon": 48,
+      "ci95_upper": 0.08365362007291141,
+      "power_lb": 0.05627373971811428,
+      "rate": 0.069
+     },
+     "rho_half_parity": {
+      "alpha": 0.0125,
+      "budget_bon": 86.72183072289215,
+      "ci95_upper": 0.019370199285059248,
+      "power_lb": 0.006938388047866691,
+      "rate": 0.012
+     },
+     "rho_sqrt_parity": {
+      "alpha": 0.0125,
+      "budget_bon": 86.72183072289215,
+      "ci95_upper": 0.07056455491525891,
+      "power_lb": 0.04542470779387225,
+      "rate": 0.057
+     }
+    },
     "power_at_parity": {
      "alpha": 0.0125,
      "budget_bon": 180.19960504605555,
@@ -1356,6 +1415,7 @@
      "rho": 0.34836147331933043
     },
     "rho_hat": 0.34836147331933043,
+    "ruling": "RULING-wme-prereg-v2-issues item 4: the measured parity budget; claim stays secondary",
     "type": "registered secondary in the H-E2 secondary Holm family; reported whatever the result"
    },
    "S-E1-sec": {
@@ -1441,6 +1501,42 @@
     "training_eligible_states": 252,
     "usd_9b": 353.6311747313743
    },
+   "v2c": {
+    "bank_gpu_h": 2.9908152670749097,
+    "confirmatory_gpu_h": 53.66619236655922,
+    "design_total_gpu_h": 56.65700763363413,
+    "design_usd_9b": 304.758044061318,
+    "note_on_ruling_arithmetic": "the ruling quotes 76.43 GPU-h-eq 'with no H-T3'; 76.43 is this total with H-T3 included (v2 report, p1_consistent_with_ht3); without H-T3 it is 66.93, leaving 23.07; H-T3 (9.50) fits under either reading",
+    "registered_total": {
+     "cap_total_gpu_h": 90.0,
+     "cap_usd_9b": 1000.0,
+     "parts_gpu_h": {
+      "S-BoN arm at the P1 parity budget": 8.429245237286363,
+      "S-TE": 1.844836772316389,
+      "design H-E1 + H-E2 (bank without P1-removed oracle gradients + confirmatory)": 56.65700763363413
+     },
+     "remaining_for_ht3_gpu_h": 23.068910356763112,
+     "total_gpu_h": 66.93108964323689,
+     "usd_9b": 360.0223311909712,
+     "within": true
+    },
+    "rule": "RULING-wme-prereg-v2-issues item 3: <= 90 GPU-h-eq for bank + confirmatory combined; bank re-priced without the per-state oracle gradients that P1 removed (powersim_v2b.price, oracle_s = 0, same unit times)",
+    "s_bon_budget": 86.72183072289215,
+    "s_bon_gpu_h": 8.429245237286363,
+    "with_ht3": {
+     "cap_total_gpu_h": 90.0,
+     "cap_usd_9b": 1000.0,
+     "parts_gpu_h": {
+      "H-T3 paths (if registered)": 9.495642630014153,
+      "S-BoN arm at the P1 parity budget": 8.429245237286363,
+      "S-TE": 1.844836772316389,
+      "design H-E1 + H-E2 (bank without P1-removed oracle gradients + confirmatory)": 56.65700763363413
+     },
+     "total_gpu_h": 76.42673227325103,
+     "usd_9b": 411.0993928978173,
+     "within": true
+    }
+   },
    "with_ht3_at_v2b_price": {
     "cap_total_gpu_h": 90.0,
     "cap_usd_9b": 1000.0,
@@ -1455,6 +1551,100 @@
     "within": false
    }
   },
+  "r6_resimulation": {
+   "alt": {
+    "ci95": [
+     0.00023658703676259868,
+     0.05097254256944198
+    ],
+    "ct_quantiles": [
+     -0.2599277135580324,
+     -0.15848489188216686,
+     -0.05267485296239802
+    ],
+    "mean_ct": -0.1551364140918141,
+    "power_gate": "FAIL (futility: cannot reach the CP lower bound 0.80)",
+    "power_lb": 0.0004792617004651021,
+    "rate": 0.009345794392523364,
+    "reps": 107,
+    "shrink_static_counts": {
+     "0.0": 112,
+     "0.25": 206,
+     "0.5": 127,
+     "0.75": 50,
+     "1.0": 40
+    },
+    "shrink_wm_counts": {
+     "0.0": 395,
+     "0.25": 135,
+     "0.5": 5
+    },
+    "static_chosen": {
+     "S1": 517,
+     "S2": 12,
+     "S3": 6
+    }
+   },
+   "config": {
+    "cell": {
+     "n_blk": 6,
+     "n_cal": 12,
+     "r_f": 16
+    },
+    "kappa": 0.8,
+    "limits": {
+     "alt_max_non_rejections": 103,
+     "null_max_rejections": 21
+    },
+    "procs": 5,
+    "r6": true,
+    "reps": 600,
+    "ruling": "docs/council/2026-11-18/RULING-wme-prereg-v2-issues.md item 6",
+    "scenarios": [
+     "null_quadratic",
+     "alt"
+    ],
+    "seeds": "validation replicates 0..599 (powersim_v1.SEED; v2b)"
+   },
+   "consequence": "size > 0.035: R6 must be redesigned before the freeze (ruling item 6); binds only the descriptive H-T and any H-T3",
+   "cpu_h": 19.672005277209813,
+   "null_quadratic": {
+    "ci95": [
+     0.04918165656171257,
+     0.11493518238488193
+    ],
+    "coverage_at_zero": 0.9225352112676056,
+    "mean_ct": -0.04074399512050517,
+    "rate": 0.07746478873239436,
+    "reps": 284,
+    "shrink_static_counts": {
+     "0.0": 1302,
+     "0.25": 73,
+     "0.5": 32,
+     "0.75": 13
+    },
+    "shrink_wm_counts": {
+     "0.0": 1372,
+     "0.25": 48
+    },
+    "size_gate": "FAIL (rejections exceed floor(0.035 x planned))",
+    "static_chosen": {
+     "S1": 1387,
+     "S2": 31,
+     "S3": 2
+    }
+   },
+   "pipeline": "powersim_refit_v2b.replicate(r6=True): WM-CP and S1-S3 shrunk toward the raw field on the same selection split, grid {0, .25, .5, .75, 1} and loss; ties within 0.5 % to the field; S1 = ShrunkF3uR",
+   "ruling": "RULING-wme-prereg-v2-issues item 6",
+   "stop": {
+    "alt_done": 107,
+    "alt_futile": true,
+    "alt_non_rejections": 106,
+    "null_done": 284,
+    "null_rejections": 22,
+    "size_fail": true
+   }
+  },
   "rulings_sha256": {
    "docs/council/2026-11-17/RULING-wme-v2-design.md": "fd2ce5a174915d795b15b5011a271e98a7e7bb7483b01a20837f8c732fb1842e",
    "docs/council/2026-11-17/RULING-wme-v2b.md": "c964ba0086c464f19cc1ea8391b89588b0598ab406386ee5d187969432e85b73",
@@ -1462,10 +1652,21 @@
    "docs/council/2026-11-17/SYNTHESIS-r11.md": "424baa64431776fa9048dd06493a84e62118e95c86160ad3c518d430c228bfb9",
    "docs/council/2026-11-18/RULING-wme-post-pilot3.md": "baa3d06cd756c9255ec2c4f910cb2c585a7dab0b6b369b97be00362a62ea71b7",
    "docs/council/2026-11-18/RULING-wme-post-stagew.md": "7cea015564c9760d4c5cd4d1cfec0295d9f0b2ce7827e0f508f7b318bcbe041b",
+   "docs/council/2026-11-18/RULING-wme-prereg-v2-issues.md": "fb74dc829ee5a3fbb2477b6f411cd68787d82558f5097903a8e1dbfe0af966d2",
    "docs/council/2026-11-18/RULING-wme-stagew.md": "7f29a71608e6e413c7e85a86ac4b626be91061592cc4eb602f5ef915c775da05",
    "docs/reviews/council/board-a-prereg-wme-2026-11-17.md": "2bbfcb0fe9417832d51427e75b43c753cc2b5f85b6e86042a1900bfbde9d759a"
   },
-  "status": "DRAFT v2 (18 Nov 2026); not frozen; registered claim set of RULING-wme-post-stagew Q3"
+  "status": "DRAFT v2 (18 Nov 2026); not frozen; registered claim set of RULING-wme-post-stagew Q3",
+  "v2c_rules": {
+   "1": "C2 controls descriptive for every arm; validity preconditions (halt for repair, never scored): inert-edit bitwise identity, 1-vs-2-GPU bitwise parity, base canary",
+   "2": "H-E1 keeps its teacher-forced refusal guards; generated guards descriptive for H-E1, gating S-TE only",
+   "3": "<= 90 GPU-h-eq bank + confirmatory combined; P1 bank price registered",
+   "4": "S-BoN parity budget measured; power restated; secondary",
+   "5": "re-audit at the panel build mandatory; shortfall -> largest fresh count, power restated before any read; shared MMLU-Pro pool split by a salted deterministic assignment written before the build",
+   "6": "R6 re-simulated (pv.r6_resimulation)",
+   "7": "S-TE as authored (analytic power, one seed, guards alpha 0.025, N 523/200)",
+   "8": "E2 guided by WM-E (the v2b ensemble); WM-CP is the H-T path model"
+  }
  },
  "seeds.bootstrap.e1": 1230116763,
  "seeds.bootstrap.e2": 3364230571,
@@ -1553,7 +1754,9 @@
   "cheap_v2b": "bfa64d8a17b89e8c6afedc58c3383e55c6366985e0e5e31c974dbaffad5b1c7b",
   "cpsel_v2b": "f20b2cde4bcc0957ac623ded4901d9ddfc3e5c5f0b48a5ac1eed70389ad41216",
   "ph100b": "2e825cd3c05c9cdf3aa9ea9f79d256e176596bac30983d50001a90d2409e2857",
-  "refit_v2b": "ed9e5a79bba49658db0fc1fb1055d32299bb6166e28eb0ed7f0fd707e48d8fef"
+  "r6_v2c": "0fd6e6640089021113c8109a79cced747f37e378bd0f6791a62c2e4e40553fd7",
+  "refit_v2b": "ed9e5a79bba49658db0fc1fb1055d32299bb6166e28eb0ed7f0fd707e48d8fef",
+  "sbon_v2c": "716a49e11bd60a02ea82b823e5468238778aba2731f9a66725a0701d9cb5eefb"
  },
  "simulation.seeds": {
   "cal_seed0": 70000,
@@ -1588,7 +1791,7 @@
   },
   "pilot_pins": "wsp.wm.p2data.SOURCES and scripts/wme_build_panel.py PINS (unchanged from pilot 2)"
  },
- "status": "DRAFT for PREREG_WME v2 (v2b manifest + PREREG v2 overlay: RULING-wme-post-stagew claim set); not frozen",
+ "status": "DRAFT for PREREG_WME v2 (v2b manifest + PREREG v2 overlay + RULING-wme-prereg-v2-issues); not frozen",
  "supplement": {
   "feasible": true,
   "pool": 326,

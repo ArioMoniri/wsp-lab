@@ -1,0 +1,123 @@
+{
+ "label": "S-BoN power at the P1 (measured-basis) parity budget; RULING-wme-prereg-v2-issues item 4",
+ "inputs": {
+  "stand_in": {
+   "proj_remove": "steer"
+  },
+  "rho_hat": 0.34836147331933043,
+  "rho_n_steps": 53,
+  "syc_se_64": 0.020269668727723025,
+  "jitter_sd": 0.05835312137495547,
+  "n_episodes": 24,
+  "B": 48,
+  "n_dev": 64,
+  "n_test": 96,
+  "t_bundle_s": 14.579798132181168,
+  "overhead_s": 1.030511042901448,
+  "bank_gpu_h": 2.9908152670749097,
+  "field_s": 2782.4204444885254,
+  "budget_bon": 86.72183072289215,
+  "library_size": 512,
+  "p_dev_guard_error": 0.1,
+  "bank_gpu_h_v2b": 12.076729130256979
+ },
+ "results": {
+  "measured_parity": {
+   "rate": 0.024,
+   "reps": 1000,
+   "power_lb": 0.01660287643451063,
+   "ci95_upper": 0.033587428098608846,
+   "mean_d": 0.002638227058953646,
+   "mean_true_gain_diff": -0.06295172741589918,
+   "rho": 0.34836147331933043,
+   "budget_wm": 48,
+   "budget_bon": 86.72183072289215,
+   "alpha": 0.0125
+  },
+  "null_exchangeable": {
+   "rate": 0.013,
+   "reps": 1000,
+   "power_lb": 0.007706232724005364,
+   "ci95_upper": 0.020589286529908307,
+   "mean_d": -0.0003598333624909366,
+   "mean_true_gain_diff": -0.003033093785226901,
+   "rho": 0.0,
+   "budget_wm": 48,
+   "budget_bon": 48,
+   "alpha": 0.0125
+  },
+  "rho_half_parity": {
+   "rate": 0.012,
+   "reps": 1000,
+   "power_lb": 0.006938388047866691,
+   "ci95_upper": 0.019370199285059248,
+   "mean_d": -0.0007639682780118244,
+   "mean_true_gain_diff": -0.06987699020540913,
+   "rho": 0.17418073665966521,
+   "budget_wm": 48,
+   "budget_bon": 86.72183072289215,
+   "alpha": 0.0125
+  },
+  "rho_sqrt_parity": {
+   "rate": 0.057,
+   "reps": 1000,
+   "power_lb": 0.04542470779387225,
+   "ci95_upper": 0.07056455491525891,
+   "mean_d": 0.005298537185055956,
+   "mean_true_gain_diff": -0.040519992615236304,
+   "rho": 0.5902215459633191,
+   "budget_wm": 48,
+   "budget_bon": 86.72183072289215,
+   "alpha": 0.0125
+  },
+  "planning_no_charge": {
+   "rate": 0.069,
+   "reps": 1000,
+   "power_lb": 0.05627373971811428,
+   "ci95_upper": 0.08365362007291141,
+   "mean_d": 0.009403756520756456,
+   "mean_true_gain_diff": 0.022633116619525055,
+   "rho": 0.34836147331933043,
+   "budget_wm": 48,
+   "budget_bon": 48,
+   "alpha": 0.0125
+  },
+  "perfect_prior_parity": {
+   "rate": 0.062,
+   "reps": 1000,
+   "power_lb": 0.04992904948382041,
+   "ci95_upper": 0.07603407387212639,
+   "mean_d": 0.005337882640361916,
+   "mean_true_gain_diff": -0.038262569157559406,
+   "rho": 1.0,
+   "budget_wm": 48,
+   "budget_bon": 86.72183072289215,
+   "alpha": 0.0125
+  },
+  "measured_parity_alpha_0.025": {
+   "rate": 0.037,
+   "reps": 1000,
+   "power_lb": 0.02771206682848596,
+   "ci95_upper": 0.04838992666597339,
+   "mean_d": 0.0022863857801076657,
+   "mean_true_gain_diff": -0.05778493366690921,
+   "rho": 0.34836147331933043,
+   "budget_wm": 48,
+   "budget_bon": 86.72183072289215,
+   "alpha": 0.025
+  },
+  "measured_parity_alpha_0.0025": {
+   "rate": 0.006,
+   "reps": 1000,
+   "power_lb": 0.0026161408492456103,
+   "ci95_upper": 0.011807823003840638,
+   "mean_d": 0.0037145315756574337,
+   "mean_true_gain_diff": -0.06090854168518167,
+   "rho": 0.34836147331933043,
+   "budget_wm": 48,
+   "budget_bon": 86.72183072289215,
+   "alpha": 0.0025
+  }
+ },
+ "seconds": 117.01620197296143
+}

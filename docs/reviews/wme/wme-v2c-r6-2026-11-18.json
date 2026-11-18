@@ -1,0 +1,128 @@
+{
+ "config": {
+  "cell": {
+   "r_f": 16,
+   "n_blk": 6,
+   "n_cal": 12
+  },
+  "kappa": 0.8,
+  "reps": 600,
+  "procs": 5,
+  "scenarios": [
+   "null_quadratic",
+   "alt"
+  ],
+  "r6": true,
+  "limits": {
+   "null_max_rejections": 21,
+   "alt_max_non_rejections": 103
+  },
+  "seeds": "validation replicates 0..599 (powersim_v1.SEED; v2b)",
+  "ruling": "docs/council/2026-11-18/RULING-wme-prereg-v2-issues.md item 6"
+ },
+ "stop": {
+  "size_fail": true,
+  "alt_futile": true,
+  "null_rejections": 22,
+  "null_done": 284,
+  "alt_non_rejections": 106,
+  "alt_done": 107
+ },
+ "cpu_h": 19.672005277209813,
+ "max_rss_mb": 941.96875,
+ "alt": {
+  "reps": 107,
+  "rate": 0.009345794392523364,
+  "ci95": [
+   0.00023658703676259868,
+   0.05097254256944198
+  ],
+  "power_lb": 0.0004792617004651021,
+  "mean_ct": -0.1551364140918141,
+  "mean_stat": -0.9856935917412618,
+  "c2i_pass": 1.0,
+  "decomposition_gap_max": 4.440892098500626e-16,
+  "static_chosen": {
+   "S1": 517,
+   "S2": 12,
+   "S3": 6
+  },
+  "mean_seconds": 181.5056389091171,
+  "median_static_err": 2.348685536867988,
+  "pass": false,
+  "ct_quantiles": [
+   -0.2599277135580324,
+   -0.15848489188216686,
+   -0.05267485296239802
+  ],
+  "median_wm_err": 2.9903426857905906,
+  "shrink_wm_counts": {
+   "0.0": 395,
+   "0.25": 135,
+   "0.5": 5
+  },
+  "shrink_static_counts": {
+   "0.0": 112,
+   "0.25": 206,
+   "0.5": 127,
+   "0.75": 50,
+   "1.0": 40
+  },
+  "power_gate": "FAIL (futility: cannot reach the CP lower bound 0.80)"
+ },
+ "null_quadratic": {
+  "reps": 284,
+  "rate": 0.07746478873239436,
+  "ci95": [
+   0.04918165656171257,
+   0.11493518238488193
+  ],
+  "power_lb": 0.05302277991047151,
+  "mean_ct": -0.04074399512050517,
+  "mean_stat": -0.03230173955106042,
+  "c2i_pass": 1.0,
+  "decomposition_gap_max": 4.440892098500626e-16,
+  "static_chosen": {
+   "S1": 1387,
+   "S2": 31,
+   "S3": 2
+  },
+  "mean_seconds": 180.97928040380208,
+  "median_static_err": 0.6757838815382105,
+  "coverage_at_zero": 0.9225352112676056,
+  "pass": false,
+  "ct_quantiles": [
+   -0.1693354603517375,
+   0.0,
+   0.005559848576566065
+  ],
+  "median_wm_err": 0.677415405214074,
+  "shrink_wm_counts": {
+   "0.0": 1372,
+   "0.25": 48
+  },
+  "shrink_static_counts": {
+   "0.0": 1302,
+   "0.25": 73,
+   "0.5": 32,
+   "0.75": 13
+  },
+  "size_point": 0.07746478873239436,
+  "size_ci95": [
+   0.04918165656171257,
+   0.11493518238488193
+  ],
+  "size_gate": "FAIL (rejections exceed floor(0.035 x planned))"
+ },
+ "diagnosis": {
+  "null_quadratic_rejections": 22,
+  "rejections_with_wm_at_field_in_every_fold_and_static_shrink_gt0_in_some_fold": 22,
+  "rejections_with_ct_gt0": 22,
+  "null_quadratic_exact_ties_ct0": 172,
+  "folds_static_shrink_gt0": 118,
+  "folds_wm_shrink_gt0": 48,
+  "folds_total": 1420,
+  "note": "diagnosis only; no redesign (RULING-wme-prereg-v2-issues item 6)"
+ },
+ "label": "EXPLORATORY SYNTHETIC SIMULATION: R6 re-simulation, RULING-wme-prereg-v2-issues item 6; code 0acba4b; run data under data/wme/sim/v2c-r6-20261118 (untracked)"
+}
