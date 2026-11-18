@@ -218,3 +218,92 @@ Every v2b value is unchanged.
   failed (`test_f12d_prereqs` ×2, `test_f12e_qualify` ×1). Both commits therefore used `--no-verify`, as their
   messages say.
 - Nothing was merged or pushed.
+
+
+---
+
+## Addendum v2c (18 Nov 2026): RULING-wme-prereg-v2-issues items 1–8 applied; items 3, 4 and 6 run
+
+> **SYNTHETIC CPU SIMULATIONS AND DESIGN TEXT; NO OUTCOMES.**
+> - **Where:** branch `prereg/wme-v2c`, from main `a8197c2` (which contains v2, merged).
+> - **What did not happen:** no GPU, Lambda, `data/evals` or sealed split; nothing merged or pushed.
+> - **How the runs were made:** both CPU jobs ran through `agent-tmux` (`v2c-r6`, `v2c-sbon`). Their code was
+>   committed at `0acba4b` before either ran.
+
+### BLUF
+
+| Item | Result |
+|---|---|
+| **6. R6 quadratic-null size** | **0.077** (22/284; CP 95 % 0.049–0.115; coverage 0.923) > 0.035: **FAIL**. Stopped by the pre-declared rule. No redesign here. v2b without R6: 0.406. |
+| **6. A7 alternative power with R6** | **0.009** (1/107; CP LB 0.0005), stopped for futility; mean Ĉ_T -0.155 (v2b: −0.327). **FAIL**. |
+| **4. S-BoN power at the measured parity budget (B_par 86.72)** | 0.024 (CP LB 0.017) at α 0.0125; 0.037 at 0.025 (Holm's last step); 0.006 at 0.0025 (first step); exchangeable null 0.013. Still not powered; stays a secondary. |
+| **3. Re-priced totals** | Bank without the P1-removed oracle gradients: 2.99 GPU-h-eq (was 12.08). Registered total: **66.93 GPU-h-eq, $360.0**. Remaining under 90: 23.07. With H-T3: 76.43 ($411.1). |
+| Ruling arithmetic | The ruling's "76.43 with no H-T3 / 13.57 remaining" is the total *with* H-T3. The consequence is unchanged, because H-T3's 9.50 fits either way. Flagged for the chair. |
+| Items 1, 2, 5, 7, 8 | Applied as text in `docs/PREREG_WME.md` §II.21: C2 descriptive with validity preconditions; H-E1 guards; re-audit plus a salted MMLU-Pro split rule; S-TE as authored; E2 = WM-E |
+
+### Item 6: R6 re-simulation
+
+**Pipeline.**
+- The v2b full refit with `r6=True`.
+- WM-CP and S1–S3 are all shrunk toward the raw field: same component-level selection split, grid and loss, with
+  ties within 0.5 % going to the field.
+- S1 is a new `ShrunkF3uR`, the F3u refit shrunk toward the field.
+
+**Design.**
+- The reference cell (16, 6, 12), κ 0.80, validation replicates from 0, and 600 planned per scenario.
+- Pre-declared stopping: the quadratic null fails once its rejections exceed 21; the alternative is futile once its
+  non-rejections exceed 103.
+
+| Scenario | Replicates (stopped) | Rejections | Rate (CP 95 %) | Coverage at 0 | Mean Ĉ_T [10 %, 50 %, 90 %] | Median error: static / WM-CP (SE) | Static chosen (folds) | Gate |
+|---|---|---|---|---|---|---|---|---|
+| **null_quadratic** | 284 of 600 (size-fail rule) | 22 | **0.077** (0.049–0.115) | 0.923 | -0.041 [-0.169, 0.000, 0.006] | 0.676 / 0.677 | S1 1387, S2 31, S3 2 | **FAIL: size > 0.035** |
+| **alt (A7, κ 0.80)** | 107 of 600 (futility rule) | 1 | **0.009** (CP LB 0.0005) | — | -0.155 [-0.260, -0.158, -0.053] | 2.349 / 2.990 | S1 517, S2 12, S3 6 | **FAIL: power** |
+
+**Shrinkage chosen** (folds; each replicate has 5):
+- null: WM-CP {'0.0': 1372, '0.25': 48}; static {'0.0': 1302, '0.25': 73, '0.5': 32, '0.75': 13};
+- alt: WM-CP {'0.0': 395, '0.25': 135, '0.5': 5}; static {'0.0': 112, '0.25': 206, '0.5': 127, '0.75': 50, '1.0': 40}.
+
+**Cost.** 19.7 CPU-h; peak worker RSS 942 MB.
+
+**For comparison, v2b without R6** (same cell and κ; validation seeds 0–119, overlapping these; 106 replicates): quadratic null 0.406 (coverage 0.594); alternative 2/106, mean Ĉ_T −0.327.
+
+**Mechanism (diagnosis only; no redesign, per the ruling).** All 22 quadratic-null rejections have the same pattern: WM-CP at shrinkage 0 (the exact field, which is the truth in this world) in every fold, while the selected static member (mostly S1, the shrunk F3u refit) chose a shrinkage > 0 in at least one fold; every one has Ĉ_T > 0. Of 284 null replicates, 172 are exact ties (Ĉ_T = 0). Over 1420 folds the static member left the field in 118 and WM-CP in 48. R6 removes most of v2b's size inflation (0.406 → 0.077), but the static member's selected shrinkage still departs from the field more often than WM-CP's, and the component sign-flip test rejects on those small, same-signed differences.
+
+**Consequence.** **The quadratic-null size with R6 is 0.077 > 0.035, so R6 must be redesigned before the freeze**, as ruling item 6 requires. The run stopped by its pre-declared rule, and the author has not redesigned anything. This binds only the descriptive H-T analysis and any later H-T3. H-E1, H-E2 and the secondaries are unaffected. Under the A7 alternative the static map still wins: power 0.009, mean Ĉ_T -0.155.
+
+### Item 4: S-BoN
+
+`scripts/wme_v2c_sbon.py` uses the stage-W inputs and seeds, with the bank charge at the P1 price, so B_par =
+48 + (2.99 × 3,600 + 2,782) / 24 / 14.58 = 86.72. The full table is in PREREG §II.21.4. A smaller best-of-N budget
+raises the WM's chance, but power stays ≤ 0.069 in every scenario. JSON:
+`docs/reviews/wme/wme-v2c-sbon-2026-11-18.json`.
+
+### Item 3: pricing
+
+| Component | GPU-h-eq |
+|---|---|
+| Bank (P1) | 2.99 |
+| Confirmatory | 53.67 |
+| Design total | 56.66 ($304.8) |
+| S-BoN | 8.43 |
+| S-TE | 1.84 |
+| **Total** | **66.93 ($360.0)** |
+
+The test `test_p1_bank_price_removes_exactly_the_oracle_gradients` checks that the difference is exactly 252 states
+× 129.8 s.
+
+### Files
+
+| Kind | Files |
+|---|---|
+| Code (`0acba4b`) | `wmcp._tie_to_field` and `ShrunkF3uR`; `powersim_refit_v2.choose_static(members=)`; `powersim_refit_v2b.replicate(r6=)`, `members_r6`, `R6_TIE_REL`; `scripts/wme_v2c_r6.py`; `scripts/wme_v2c_sbon.py`; `tests/test_wme_r6.py` (6) |
+| Report commit | `scripts/wme_manifest_prereg_v2c.py`; table rows; `test_wme_prereg_v2.py` (+1); the manifest (sha256 `02bbb488d4456525f0ac0688fe83438c1492376e29598b7b27e07930d5c66d55`) and table; `docs/PREREG_WME.md` §II.21; the two JSONs; this addendum; session log |
+
+**Run data.** `data/wme/sim/v2c-r6-20261118/` and `data/wme/sim/v2c-sbon-20261118.json` (untracked).
+
+### Remaining open items
+
+1. **R6 redesign.** R6 fails its size gate (§II.21.6). The ruling requires a redesign before the freeze, and the author did not attempt one. One diagnostic fact for whoever redesigns: every rejection is the static member leaving the field while WM-CP stays on it. It binds only D-HT and H-T3.
+2. **Ruling arithmetic.** The chair should confirm the corrected 66.93 / 23.07 (§II.21.3).
+3. **The availability re-audit and MMLU-Pro split file** are produced at the panel build. The W2 panel must exist
+   first.
