@@ -31,8 +31,12 @@ prog "vllm installed"
 if [ "${drv%%.*}" -lt 580 ]; then
   stamp "driver $drv < 580: installing cuda-compat-13-0"
   ( sudo apt-get update -qq && sudo apt-get install -y -qq cuda-compat-13-0 ) > logs/compat.log 2>&1 || {
-    deb=$(curl -s https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ | grep -o 'cuda-compat-13-0_[^"]*_amd64.deb' | sort -V | tail -1)
-    curl -sLO "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/$deb" && sudo dpkg -i "$deb" >> logs/compat.log 2>&1; }
+    # fallback: the .deb from NVIDIA's repo index for this Ubuntu release (the index quotes hrefs with ' or ", so
+    # the file name is matched by its own character class; fixed after slot b's first instance failed here)
+    REPO="https://developer.download.nvidia.com/compute/cuda/repos/ubuntu$(. /etc/os-release; echo "${VERSION_ID//./}")/x86_64"
+    deb=$(curl -s "$REPO/" | grep -oE 'cuda-compat-13-0_[0-9][0-9A-Za-z.+~-]*_amd64\.deb' | sort -uV | tail -1)
+    stamp "cuda-compat fallback: $deb"
+    [ -n "$deb" ] && curl -sLO "$REPO/$deb" && sudo dpkg -i "$deb" >> logs/compat.log 2>&1; }
   CD=$(ls -d /usr/local/cuda-13*/compat 2>/dev/null | head -1)
   [ -n "$CD" ] || fail "cuda-compat"
   export LD_LIBRARY_PATH="$CD:${LD_LIBRARY_PATH:-}"
