@@ -635,16 +635,24 @@ def _score(pred, y, n, k):
     return float(np.mean(np.abs(pred[k:] - y[k:]) / se[k:]))
 
 
-def _shrinks(world, runs):
-    """Zero-shot s per learned arm from inner leave-one-run-out folds on the training runs (same loss, same grid)."""
+def fold_groups(runs, n_folds=None) -> list:
+    """Leave-one-run-out (``n_folds`` None) or runs dealt round-robin into ``n_folds`` folds."""
+    runs = list(runs)
+    if n_folds is None or n_folds >= len(runs):
+        return [[r] for r in runs]
+    return [runs[i::n_folds] for i in range(n_folds)]
+
+
+def _shrinks(world, runs, n_inner=None):
+    """Zero-shot s per learned arm from inner folds on the training runs (same loss, same grid, every arm)."""
     y0 = world["base"]["y"]
     loss = {a: {s: 0.0 for s in SHRINK_GRID} for a in ("wm", "statnn", "static")}
     if len(runs) < 2:
         return {a: 1.0 for a in loss}
-    for q in runs:
-        arms = _fit_arms(world, [r for r in runs if r != q])
+    for Q in fold_groups(runs, n_inner):
+        arms = _fit_arms(world, [r for r in runs if r not in Q])
         for p in world["paths"]:
-            if p["type"] not in "SLM" or p["runs"][0] != q:
+            if p["type"] not in "SLM" or p["runs"][0] not in Q:
                 continue
             X = np.stack([world["members"][k]["phi"] for k in p["keys"]])
             y = np.stack([world["members"][k]["y"] for k in p["keys"]])
@@ -687,7 +695,9 @@ def _one_thread(fn):
 
 
 @_one_thread
-def analyse(world, n_flip=10_000, lcpfn=None, inner=True, ks=KS, seed=0) -> dict:
+def analyse(
+    world, n_flip=10_000, lcpfn=None, inner=True, ks=KS, seed=0, n_folds=None, n_inner=None
+) -> dict:
     """Leave-one-run-out H-T2 analysis on S/L/M paths; per setting per arm per path scores, contrasts, tests."""
     N, y0 = world["N"], world["base"]["y"]
     runs = _runs(world)
@@ -696,11 +706,11 @@ def analyse(world, n_flip=10_000, lcpfn=None, inner=True, ks=KS, seed=0) -> dict
     ptype = []
     zs = {"pred": [], "true": [], "statnn": []}
     shr = {}
-    for r in runs:
-        tr = [q for q in runs if q != r]
+    for F in fold_groups(runs, n_folds):
+        tr = [q for q in runs if q not in F]
         arms = _fit_arms(world, tr)
-        s = _shrinks(world, tr) if inner else {a: 1.0 for a in ("wm", "statnn", "static")}
-        shr[r] = s
+        s = _shrinks(world, tr, n_inner) if inner else {a: 1.0 for a in ("wm", "statnn", "static")}
+        shr["+".join(F)] = s
         pooled = {}
         for t in "SLM":
             ch = [
@@ -712,7 +722,7 @@ def analyse(world, n_flip=10_000, lcpfn=None, inner=True, ks=KS, seed=0) -> dict
                 y0[None, :] + pooled_curve(ch) if ch else np.repeat(y0[None, :], N_POINTS, 0)
             )
         for p in world["paths"]:
-            if p["type"] not in "SLM" or p["runs"][0] != r:
+            if p["type"] not in "SLM" or p["runs"][0] not in F:
                 continue
             pid.append(p["id"])
             ptype.append(p["type"])
