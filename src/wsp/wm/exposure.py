@@ -103,6 +103,12 @@ EXPOSURES = {
         "splits": "all",
         "note": "pilot-3 stage H (generated accuracy): construction, holdout and dev pools of every panel",
     },
+    # RULING-wme-stagew §2: the stage-W dev panel is exposed before wme-c2-gen is built
+    "wme-w": {
+        "manifest": "data/wme/panels/wme-w/manifest.json",
+        "splits": "all",
+        "note": "stage W (EXPLORATORY): 500 MMLU-Pro and 500 SuperGPQA dev items scored for every library member",
+    },
 }
 
 # Proposed sizes (groups) for PREREG v1; the power simulation (wm.powersim) may change them before the freeze.

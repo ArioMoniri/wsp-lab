@@ -1049,3 +1049,79 @@ def panel_select(pools, exposed, n: int = N_DEV) -> dict:
     if not res["audit"]["clean"]:
         raise RuntimeError(f"panel audit failed: {res['audit']}")
     return res
+
+
+# ------------------------------------------------------------------ loading a stage-W run
+
+
+def configure_layers(n_layers: int) -> None:
+    """Layer groups follow the model's depth (32 layers on the 9B: fine 4, coarse 8)."""
+    global N_LAYERS, FINE_GROUP, COARSE_GROUP
+    if n_layers % 8:
+        raise ValueError(n_layers)
+    N_LAYERS, FINE_GROUP, COARSE_GROUP = n_layers, n_layers // 8, n_layers // 4
+
+
+def _ck(s):
+    r, t = s.split(":")
+    return r, int(t)
+
+
+def load_run(d) -> dict:
+    """A stage-W run directory (train_meta.json, features.npz, evals.jsonl) -> the analysis world. Only paths whose
+    8 points were all evaluated are kept; the others are listed in ``incomplete``."""
+    from pathlib import Path
+
+    d = Path(d)
+    tm = json.loads((d / "train_meta.json").read_text())
+    configure_layers(int(tm["n_layers"]))
+    z = np.load(d / "features.npz")
+    cks = [_ck(str(s)) for s in z["ckpts"]]
+    sq = {c: z["sq"][i] for i, c in enumerate(cks)}
+    j1 = {c: z["j1"][:, :, i, :] for i, c in enumerate(cks)}
+    cross = {}
+    for i, s in enumerate(z["cross_pairs"]):
+        a, b = str(s).split("|")
+        cross[_ck(a) + _ck(b)] = z["cross"][i]
+    recs = {}
+    for line in (d / "evals.jsonl").read_text().splitlines():
+        r = json.loads(line)
+        recs[r["key"]] = r
+    base = recs["base"]
+    cells = {p: item_cells(base["panels"][p]) for p in PANELS}
+    N = len(base["panels"][PANELS[0]])
+
+    def mk(rec, phi):
+        counts = {p: cell_counts(rec["panels"][p], cells[p]) for p in PANELS}
+        return {"phi": phi, "counts": counts, "y": y_of(counts)}
+
+    members = {
+        k: mk(r, member_features(r["spec"], sq, cross, j1))
+        for k, r in recs.items()
+        if r["tag"] == "member"
+    }
+    paths = make_paths({r: int(s) for r, s in tm["final_steps"].items()})
+    complete = [p for p in paths if all(k in members for k in p["keys"])]
+    world = {
+        "cells": cells,
+        "members": members,
+        "base": mk(base, np.zeros(len(FEATURES))),
+        "paths": complete,
+        "N": N,
+        "incomplete": [p["id"] for p in paths if p not in complete],
+        "n_layers": int(tm["n_layers"]),
+    }
+    if "base_rerun" in recs:
+        world["base_rerun"] = mk(recs["base_rerun"], np.zeros(len(FEATURES)))
+        world["base_rerun_discordance"] = {
+            p: float(
+                np.mean(
+                    [
+                        a["correct"] != b["correct"]
+                        for a, b in zip(base["panels"][p], recs["base_rerun"]["panels"][p])
+                    ]
+                )
+            )
+            for p in PANELS
+        }
+    return world

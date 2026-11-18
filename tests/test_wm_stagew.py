@@ -338,3 +338,69 @@ def test_panel_selection_excludes_every_exposure_and_near_duplicates():
         r["hash"] == text_hash(r["question"] + "||" + "||".join(r["options"]))
         for r in pools["mmlupro_gen"]
     )
+
+
+def _write_fake_run(d, rng):
+    import json as js
+
+    steps = {r: 16 for r in W.RUN_ORDER}
+    paths = W.make_paths(steps)
+    ck = [(r, s) for r in W.RUN_ORDER for s in W.ckpt_steps(16)]
+    L = 32
+    (d / "train_meta.json").write_text(
+        js.dumps(
+            {
+                "final_steps": steps,
+                "ckpts": {r: W.ckpt_steps(16) for r in W.RUN_ORDER},
+                "n_layers": L,
+            }
+        )
+    )
+    np.savez(
+        d / "features.npz",
+        ckpts=np.array([f"{r}:{s}" for r, s in ck]),
+        sq=rng.random((len(ck), L)),
+        cross_pairs=np.array(["r1:16|r2:16", "r3:16|r4:16"]),
+        cross=0.1 * rng.random((2, L)),
+        j1=rng.standard_normal((3, 4, len(ck), L)),
+        feature_items=np.array(["a|b"] * 4),
+    )
+
+    def panels():
+        return {
+            p: [
+                {
+                    "id": f"{p}{i}",
+                    "correct": bool(c),
+                    "trunc": bool(t),
+                    "len": 2048 if t else int(rng.integers(50, 2000)),
+                }
+                for i, (c, t) in enumerate(zip(rng.random(40) < 0.5, rng.random(40) < 0.2))
+            ]
+            for p in W.PANELS
+        }
+
+    lines = [{"key": "base", "tag": "base", "spec": W.BASE, "panels": panels()}]
+    lines.append({"key": "base_rerun", "tag": "base_rerun", "spec": W.BASE, "panels": panels()})
+    q = W.queue(paths)
+    for k in q[:-3]:  # the last merge path stays incomplete
+        lines.append({"key": k, "tag": "member", "spec": W.unkey(k), "panels": panels()})
+    for r in lines:
+        for v in r["panels"].values():
+            for x in v:
+                x["correct"] = x["correct"] and not x["trunc"]
+    (d / "evals.jsonl").write_text("\n".join(js.dumps(r) for r in lines) + "\n")
+    return paths
+
+
+def test_load_run_builds_the_analysis_world(tmp_path):
+    rng = np.random.default_rng(5)
+    _write_fake_run(tmp_path, rng)
+    w = W.load_run(tmp_path)
+    assert len(w["paths"]) == 13 and w["incomplete"] == ["X:r3-r4"]
+    assert w["N"] == 40 and set(w["base_rerun_discordance"]) == set(W.PANELS)
+    k = w["paths"][0]["keys"][2]
+    m = w["members"][k]
+    assert m["phi"].shape == (7,) and np.all(m["phi"][:4] > 0)
+    assert m["counts"]["mmlupro_gen"][:, 0].sum() == 40
+    assert np.all(w["base"]["phi"] == 0)

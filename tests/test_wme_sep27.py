@@ -48,7 +48,7 @@ def _fake_root(tmp_path, with_c1=True):
     _write_manifest(
         tmp_path / "data/wme/panels/wme-p2/manifest.json", {"construction": ["p2c"]}, sealed=["p2t"]
     )
-    for p3 in ("wme-p3s", "wme-p3h"):
+    for p3 in ("wme-p3s", "wme-p3h", "wme-w"):
         _write_manifest(tmp_path / f"data/wme/panels/{p3}/manifest.json", {"construction": [p3]})
     if with_c1:
         _write_manifest(

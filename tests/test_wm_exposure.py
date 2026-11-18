@@ -135,6 +135,11 @@ def test_pilot3_panels_are_registered_exposures_with_every_split():
         spec = X.EXPOSURES[name]
         assert spec["splits"] == "all"
         assert spec["manifest"] == f"data/wme/panels/{name}/manifest.json"
+    assert X.EXPOSURES["wme-w"] == {
+        "manifest": "data/wme/panels/wme-w/manifest.json",
+        "splits": "all",
+        "note": X.EXPOSURES["wme-w"]["note"],
+    }
     # every earlier exposure is still registered
     assert {"wme-v0-p1", "wme-p2", "calib27-20261116", "wme-p2-smoke"} <= set(X.EXPOSURES)
 
