@@ -7,7 +7,7 @@
 set -uo pipefail
 ALIAS="${1:?ssh alias}"; STATE="${2:?state dir}"; RDIR="${3:?remote dir}"
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
-CFG="$HOME/.config/wsp/wme_ssh_config"
+CFG="${WME_SSH_CONFIG:-$HOME/.config/wsp/wme_ssh_config}"
 while [ ! -f "$STATE/HB_STOP" ]; do
   if ssh -F "$CFG" -o ConnectTimeout=10 -o BatchMode=yes "$ALIAS" \
       "test -n \"\$(find ~/$RDIR/logs ~/$RDIR/out -type f -mmin -10 2>/dev/null | head -1)\"" 2>/dev/null; then

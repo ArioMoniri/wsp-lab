@@ -152,6 +152,19 @@ def _batch(rows, pad_id, device):
     return ids.to(device), att.to(device), mask.to(device), tgt.to(device)
 
 
+def chunked_ce(head, h, tgt, chunk: int):
+    """Mean cross-entropy of ``head(h)`` against ``tgt`` over position chunks, each checkpointed (bounded memory)."""
+    from torch.utils.checkpoint import checkpoint
+
+    def part(hc, tc):
+        return nn.functional.cross_entropy(head(hc).float(), tc, reduction="sum")
+
+    tot = h.new_zeros((), dtype=torch.float32)
+    for i in range(0, h.shape[0], chunk):
+        tot = tot + checkpoint(part, h[i : i + chunk], tgt[i : i + chunk], use_reentrant=False)
+    return tot / h.shape[0]
+
+
 def train(
     model,
     adapter: LoRA,
@@ -166,8 +179,13 @@ def train(
     warmup=10,
     checkpointing=False,
     log=None,
+    on_step=None,
+    ce_chunk=None,
 ) -> dict:
-    """AdamW on the LoRA factors only; mean target-token NLL per batch; stops early at ``max_seconds`` wall."""
+    """AdamW on the LoRA factors only; mean target-token NLL per batch; stops early at ``max_seconds`` wall.
+    ``on_step(step, adapter)`` (optional) runs after every optimiser step (pilot 3: per-step checkpoints).
+    ``ce_chunk`` (optional): the same mean cross-entropy computed over chunks of target positions with the LM head
+    recomputed in backward, so no full [targets, vocab] logit tensor is kept (long generated targets)."""
     for p in model.parameters():
         p.requires_grad_(False)
     params = list(adapter.parameters())
@@ -192,8 +210,11 @@ def train(
                     h = model.model(
                         input_ids=ids, attention_mask=att, use_cache=False
                     ).last_hidden_state
-                    logits = model.lm_head(h[mask]).float()
-                    loss = nn.functional.cross_entropy(logits, tgt[mask])
+                    if ce_chunk:
+                        loss = chunked_ce(model.lm_head, h[mask], tgt[mask], ce_chunk)
+                    else:
+                        logits = model.lm_head(h[mask]).float()
+                        loss = nn.functional.cross_entropy(logits, tgt[mask])
                     for g in opt.param_groups:
                         g["lr"] = lr * min(1.0, (steps + 1) / max(1, warmup))
                     opt.zero_grad(set_to_none=True)
@@ -201,6 +222,8 @@ def train(
                     opt.step()
                     losses.append(float(loss.detach()))
                     steps += 1
+                    if on_step is not None:
+                        on_step(steps, adapter)
                     if log and steps % 20 == 0:
                         log("lora step", step=steps, loss=round(sum(losses[-20:]) / 20, 4))
                 if stopped:

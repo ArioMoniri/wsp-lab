@@ -27,7 +27,7 @@ from wsp.ops import lambda_deadman as D
 
 STATE_DIR = Path.home() / ".local/state/wsp-wme-deadman"
 ENV_FILE = Path.home() / ".config/wsp/env"
-SSH_CONFIG = Path.home() / ".config/wsp/wme_ssh_config"
+SSH_CONFIG = Path(os.environ.get("WME_SSH_CONFIG", Path.home() / ".config/wsp/wme_ssh_config"))
 
 
 def main():
