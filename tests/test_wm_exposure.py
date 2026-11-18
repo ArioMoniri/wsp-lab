@@ -204,3 +204,24 @@ def test_real_stagew_manifest_loads_every_dev_hash():
     ex = X.load_exposures(root, {"wme-w": X.EXPOSURES["wme-w"]})
     assert len(ex["wme-w"]["dev"]) == 1000  # 500 per benchmark
     assert X.all_exposed(ex) == ex["wme-w"]["dev"]
+
+
+def test_stagew2_panel_is_registered_before_any_w2_generation():
+    """RULING-wme-stagew2 §2: wme-w2 (all splits) is an exposure for every later panel (H-T3, wme-c2-gen, 27B)."""
+    assert X.EXPOSURES["wme-w2"]["manifest"] == "data/wme/panels/wme-w2/manifest.json"
+    assert X.EXPOSURES["wme-w2"]["splits"] == "all"
+    from wsp.wm import sep27 as S27
+
+    assert "wme-w2" in S27.REQUIRED_EXPOSURES
+
+
+@pytest.mark.skipif(
+    not (Path(__file__).resolve().parents[1] / "data/wme/panels/wme-w2/manifest.json").exists(),
+    reason="stage-W2 panel manifest not present",
+)
+def test_real_stagew2_manifest_is_disjoint_from_every_earlier_exposure():
+    root = Path(__file__).resolve().parents[1]
+    w2 = X.load_exposures(root, {"wme-w2": X.EXPOSURES["wme-w2"]})
+    assert len(w2["wme-w2"]["dev"]) == 1000
+    earlier = {k: v for k, v in X.EXPOSURES.items() if k != "wme-w2"}
+    assert not X.all_exposed(w2) & X.all_exposed(X.load_exposures(root, earlier))

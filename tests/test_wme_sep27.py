@@ -50,7 +50,7 @@ def _fake_root(tmp_path, with_c1=True):
     _write_manifest(
         tmp_path / "data/wme/panels/wme-p2/manifest.json", {"construction": ["p2c"]}, sealed=["p2t"]
     )
-    for p3 in ("wme-p3s", "wme-p3h", "wme-w"):
+    for p3 in ("wme-p3s", "wme-p3h", "wme-w", "wme-w2"):
         _write_manifest(tmp_path / f"data/wme/panels/{p3}/manifest.json", {"construction": [p3]})
     if with_c1:
         _write_manifest(
@@ -92,6 +92,7 @@ def test_build_c27_panel_uses_fresh_salt_and_excludes_by_manifest_identity(tmp_p
         "wme-p3s": {"construction": set()},
         "wme-p3h": {"dev": set()},
         "wme-w": {"dev": set()},
+        "wme-w2": {"dev": set()},
     }
     sizes = {"gsm8k_gold_lp": {"construction": 4, "validation": 4, "dev": 4, "test": 4}}
     man = S27.build_c27_panel(pool, sizes, tmp_path / "c27", exposures)
