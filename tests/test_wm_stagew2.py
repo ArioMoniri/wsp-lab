@@ -437,3 +437,26 @@ def test_load_runs_merges_slots_and_keeps_only_complete_paths(tmp_path):
     np.testing.assert_allclose(
         w["members"][lk[1]]["phi"][4:], 2 * w["members"][lk[0]]["phi"][4:], rtol=1e-9
     )
+
+
+def test_null_decisions_split_across_chunks_equal_one_pass():
+    w = _world(seed=41, n_runs=5)
+    a = W2.null_decisions(w, "n2", range(4), seed=3)
+    b = W2.null_decisions(w, "n2", range(2), seed=3) + W2.null_decisions(
+        w, "n2", range(2, 4), seed=3
+    )
+    assert [r["pass"] for r in a] == [r["pass"] for r in b]
+    assert [r["d_mean"] for r in a] == [r["d_mean"] for r in b]
+    s = W2.summarize_null(a)
+    assert s["reps"] == 4 and 0 <= s["size"] <= s["size_cp_upper95"] <= 1
+
+
+def test_ht3_power_grows_with_runs_and_vanishes_without_effect():
+    rng = np.random.default_rng(0)
+    runs = np.repeat([f"r{i}" for i in range(15)], 3)
+    d = 0.5 + rng.normal(0, 0.5, 45)
+    p15 = W2.ht3_power(d, runs, 15, reps=60, seed=1)
+    p30 = W2.ht3_power(d, runs, 30, reps=60, seed=1)
+    assert p30 >= p15 and p30 > 0.5
+    z = W2.ht3_power(d - d.mean(), runs, 15, reps=60, seed=1)
+    assert z <= 0.1

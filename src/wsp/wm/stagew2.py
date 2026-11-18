@@ -493,6 +493,34 @@ def n3_world(world, cal, rng) -> dict:
     return w
 
 
+def null_decisions(world, kind: str, idx, seed: int = 0, cal=None, n_flip=N_FLIP) -> list:
+    """Pass-rule decisions of the null replicates ``idx`` (seeded by (seed, kind, index); order-free, so replicates
+    can be split across processes)."""
+    rows = []
+    for s in idx:
+        if kind == "n3":
+            w = n3_world(world, cal, np.random.default_rng([seed, 3, s]))
+        else:
+            w = null_world(world, kind, seed=seed * 100_000 + s)
+        rows.append(dict(decision(arrays(w), n_flip=n_flip, seed=s), rep=int(s)))
+    return rows
+
+
+def summarize_null(rows) -> dict:
+    n_pass = int(sum(r["pass"] for r in rows))
+    reps = len(rows)
+    return {
+        "reps": reps,
+        "size": n_pass / reps,
+        "n_pass": n_pass,
+        "size_cp_upper95": cp_upper(n_pass, reps),
+        "reject_rate": {
+            k: float(np.mean([r["reject"][k] for r in rows])) for k in rows[0]["reject"]
+        },
+        "mean_d": {k: float(np.mean([r["d_mean"][k] for r in rows])) for k in rows[0]["d_mean"]},
+    }
+
+
 def null_sizes(
     world, kinds=("n1", "n2", "n3"), reps: int = NULL_REPS, seed: int = 0, n_flip=N_FLIP
 ) -> dict:
@@ -500,28 +528,70 @@ def null_sizes(
     out = {}
     cal = calibrate_n3(world) if "n3" in kinds else None
     for kind in kinds:
-        rows = []
-        for s in range(reps):
-            if kind == "n3":
-                w = n3_world(world, cal, np.random.default_rng([seed, 3, s]))
-            else:
-                w = null_world(world, kind, seed=seed * 100_000 + s)
-            rows.append(decision(arrays(w), n_flip=n_flip, seed=s))
-        n_pass = int(sum(r["pass"] for r in rows))
-        out[kind] = {
-            "reps": reps,
-            "size": n_pass / reps,
-            "n_pass": n_pass,
-            "reject_rate": {
-                k: float(np.mean([r["reject"][k] for r in rows])) for k in rows[0]["reject"]
-            },
-            "mean_d": {
-                k: float(np.mean([r["d_mean"][k] for r in rows])) for k in rows[0]["d_mean"]
-            },
-        }
+        out[kind] = summarize_null(null_decisions(world, kind, range(reps), seed, cal, n_flip))
         if kind == "n3":
             out[kind]["tau"] = cal["tau"]
     return out
+
+
+def comparator_contrasts(nested: dict, comp: dict, A) -> dict:
+    """Secondary comparators (descriptive): ``nested`` = :func:`analyse` output, ``comp`` = ``wm.stagew.analyse``
+    output on the same world; per setting and comparator mean E, C, mean d (comparator - nested) overall and per
+    type, and the run-cluster p and lower bound at alpha 0.025 (unadjusted)."""
+    out = {}
+    pos = {p: i for i, p in enumerate(nested["paths"])}
+    for k, st in nested["settings"].items():
+        cs = comp["settings"][k]
+        en = np.asarray(st["E"]["nested"])
+        res = {}
+        for arm, v in cs["E"].items():
+            arm_name = "wm_unnested" if arm == "wm" else arm
+            e = np.zeros(len(en))
+            for pid, val in zip(comp["paths"], v):
+                e[pos[pid]] = val
+            d = e - en
+            t = cluster_test(d, A["runs"], alpha=ALPHA)
+            res[arm_name] = {
+                "mean_E": float(e.mean()),
+                "C": float(1 - en.mean() / e.mean()) if e.mean() > 0 else float("nan"),
+                "d_mean": float(d.mean()),
+                "by_type": {
+                    ty: float(d[A["types"] == ty].mean())
+                    for ty in "SLM"
+                    if (A["types"] == ty).any()
+                },
+                "p": t["p"],
+                "lb": t["lb"],
+            }
+        out[k] = res
+    return out
+
+
+R_GRID = (15, 18, 21, 24, 27, 30)
+HT3_ALPHA = 0.0125
+HT3_SHIFT = 0.5
+HT3_REPS = 2000
+POWER_MIN = 0.8
+
+
+def ht3_power(
+    d, runs, R: int, reps: int = HT3_REPS, seed: int = 0, shift: float = HT3_SHIFT
+) -> float:
+    """Run-cluster bootstrap power: W2's per-path improvements shifted to ``shift`` x the observed mean, R runs drawn
+    with replacement (a run's paths as a unit), the run-cluster sign-flip at alpha 0.0125."""
+    d = np.asarray(d, float)
+    runs = np.asarray(runs)
+    d = d - (1 - shift) * d.mean()
+    us = list(dict.fromkeys(runs.tolist()))
+    groups = [d[runs == u] for u in us]
+    rng = np.random.default_rng([seed, R])
+    hit = 0
+    for b in range(reps):
+        pick = rng.integers(len(groups), size=R)
+        dd = np.concatenate([groups[i] for i in pick])
+        rr = np.concatenate([np.full(len(groups[i]), n) for n, i in enumerate(pick)])
+        hit += cluster_test(dd, rr, alpha=HT3_ALPHA, seed=b)["p"] <= HT3_ALPHA
+    return hit / reps
 
 
 def cp_upper(k: int, n: int, conf: float = 0.95) -> float:
