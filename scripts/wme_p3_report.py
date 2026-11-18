@@ -302,13 +302,16 @@ def h_report(hdir: Path, guard_audit: Path | None = None, panel: Path | None = N
         return sorted(rs, key=lambda r: r["spec"]["step"])
 
     # H3: true-reward alpha 1 at the control fractions (every other of 16) vs each control's 8 checkpoints
-    h3t = ordered("H3", alpha=1.0)
-    h3m = h3t[1::2] if len(h3t) >= 2 else h3t
+    # the arms share one 48-step schedule, so a control checkpoint matches the true-reward checkpoint (alpha 1) of
+    # the same step (amendment 1 evaluated these first)
+    h3t = {r["spec"]["step"]: r for r in ordered("H3", alpha=1.0)}
     h3 = {}
     for arm in ("random", "format"):
-        c = ordered(f"H3_ctrl_{arm}")
-        h3[arm] = {p: matched(h3m[: len(c)], c, p) for p in G.PRIMARY}
-    beats = {arm: any((v or {}).get("beats") for v in h3[arm].values()) for arm in h3}
+        c = [r for r in ordered(f"H3_ctrl_{arm}") if r["spec"]["step"] in h3t]
+        t = [h3t[r["spec"]["step"]] for r in c]
+        h3[arm] = {p: matched(t, c, p) for p in G.PRIMARY}
+        h3[arm]["matched_steps"] = [r["spec"]["step"] for r in c]
+    beats = {arm: any((h3[arm].get(p) or {}).get("beats") for p in G.PRIMARY) for arm in h3}
     q = [p for p in G.PRIMARY if fam["H3"]["gate"]["counts"].get(p, 0) >= 2]
     beats_q = {arm: any((h3[arm].get(p) or {}).get("beats") for p in q) for arm in h3}
     fam["H3"]["controls"] = h3
@@ -649,7 +652,7 @@ def render_md(rep: dict, notes: str = "") -> str:
                     f"{_f(ob.get('gain_only_from_over_budget_responses'))}"
                 )
             w(
-                f"| {t} | {g['n_evaluated']} | {g['counts']['mmlupro_gen']} | {g['counts']['supergpqa_gen']} | {g['expected_null_qualifiers_per_benchmark']} | {extra} | **{'PASS' if f['pass'] else 'FAIL'}** |"
+                f"| {t} | {g['n_evaluated']} | {g['counts']['mmlupro_gen']} | {g['counts']['supergpqa_gen']} | {g['expected_null_qualifiers_per_benchmark']} | {extra} | **{'PASS' if f['pass'] else ('NOT MEASURED' if g['n_evaluated'] == 0 else 'FAIL')}** |"
             )
         w("")
         for t, f in H_["families"].items():
