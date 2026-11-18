@@ -241,5 +241,33 @@ if "prereg_v2" in M:
     ]
     for k in ("panel.wme_c2_gen", "guards.generated", "exposures.v2"):
         lines.append(f"| `{k}` | `{short(M[k], 220)}` |")
+    if "v2c" in pr:
+        v = pr["v2c"]
+        lines += [
+            "",
+            "## RULING-wme-prereg-v2-issues (v2c): registered price, S-BoN and R6",
+            "",
+            "| Quantity | Value |",
+            "|---|---|",
+            f"| Bank without P1-removed oracle gradients | {v['bank_gpu_h']:.2f} GPU-h-eq |",
+            f"| Design H-E1 + H-E2 | {v['design_total_gpu_h']:.2f} GPU-h-eq |",
+            f"| S-BoN arm at parity budget {v['s_bon_budget']:.2f} | {v['s_bon_gpu_h']:.2f} GPU-h-eq |",
+            (
+                f"| **Registered total** | **{v['registered_total']['total_gpu_h']:.2f} GPU-h-eq, "
+                f"${v['registered_total']['usd_9b']:.1f}**; remaining for H-T3 "
+                f"{v['registered_total']['remaining_for_ht3_gpu_h']:.2f} |"
+            ),
+            f"| With H-T3 | {v['with_ht3']['total_gpu_h']:.2f} GPU-h-eq, ${v['with_ht3']['usd_9b']:.1f} |",
+        ]
+        sb = pv["claims"]["S-BoN"]["power_at_measured_parity"]
+        for k, r in sb.items():
+            lines.append(
+                f"| S-BoN {k} (alpha {r['alpha']}, budget {r['budget_bon']:.1f}) | {r['rate']:.3f} "
+                f"(CP LB {r['power_lb']:.3f}) |"
+            )
+        r6 = pv.get("r6_resimulation", {})
+        for sc in ("null_quadratic", "alt"):
+            if sc in r6:
+                lines.append(f"| R6 {sc} | `{short(r6[sc], 220)}` |")
 (ROOT / "docs/prereg/wme_manifest_table.md").write_text("\n".join(lines) + "\n")
 print(len(lines))

@@ -84,3 +84,29 @@ def test_cap_check():
     assert not bad["within"]
     with pytest.raises(ValueError):
         P.cap_check({"a": -1.0})
+
+
+def test_p1_bank_price_removes_exactly_the_oracle_gradients():
+    # RULING-wme-prereg-v2-issues item 3: same pricing code and unit times, oracle_s = 0
+    import json
+    from pathlib import Path
+
+    from wsp.wm import powersim_v1 as PV
+    from wsp.wm import powersim_v2b as PB
+
+    root = Path(__file__).resolve().parents[1]
+    v2b = json.loads((root / "docs/reviews/wme/wme-powersim-v2b-2026-11-17.json").read_text())
+    unit = json.loads((root / "docs/prereg/wme_manifest.json").read_text())["cost.unit_times"][
+        "unit"
+    ]
+    sel, g = v2b["selected"], v2b["generation"]
+    full = PB.price(sel, unit, g["greedy_s_per_answer"], g["sampled_s_per_answer"])
+    p1 = PB.price(
+        sel, dict(unit, oracle_s=0.0), g["greedy_s_per_answer"], g["sampled_s_per_answer"]
+    )
+    n_a = PV.graph(sel["r_f"], sel["n_blk"])["visits"]["training_eligible"]
+    assert full["total_gpu_h"] == pytest.approx(v2b["price"]["total_gpu_h"])
+    assert full["bank_gpu_h"] - p1["bank_gpu_h"] == pytest.approx(n_a * unit["oracle_s"] / 3600)
+    assert p1["confirmatory_gpu_h"] == pytest.approx(full["confirmatory_gpu_h"])
+    b_par = P.parity_budget(48, p1["bank_gpu_h"], unit["field_s"], 24, v2b["price"]["t_bundle_s"])
+    assert 48 < b_par < 180.2
