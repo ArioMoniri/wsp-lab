@@ -32,3 +32,17 @@ any confirmatory data exists.
 1. The author applies items 1–8 and runs items 3, 4 and 6 (CPU only).
 2. Then Board A gives its independent review of v2.
 3. Then the freeze.
+
+## Addendum, 18 Nov 2026, after the CPU re-runs (f0fd5cf)
+
+- **Item 3 correction (the author is right).** Without H-T3, the total is **66.93 GPU-h-eq (≈ $360)**, leaving
+  23.07 under the cap. With H-T3 it is 76.43 (≈ $411). Both totals fit.
+- **Item 6 outcome.** The quadratic-null size with R6 is 0.077 (> 0.035), and the A7 power is 0.009. **The ruling
+  is not to redesign before the freeze.**
+  - H-T is descriptive, so no registered claim depends on the static-field comparator.
+  - Any H-T3 uses its own pre-declared comparator (the pooled path-type curve) and its own nulls. It does not use the
+    static-field selection.
+  - The descriptive H-T analysis must state the 0.077 null size and the mechanism: the static comparator leaves the
+    field more often than WM-CP does. It may not report any WM-CP advantage as evidence.
+- **S-BoN** power at the measured parity budget is 0.024. It stays a reported secondary.
+- **Freeze path.** Board A reviews v2 as amended (§II.21). The freeze follows if Board A accepts.
