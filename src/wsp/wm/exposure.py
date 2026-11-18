@@ -91,6 +91,24 @@ EXPOSURES = {
         "splits": ["construction"],
         "note": "Qwen3.5-0.8B engineering smoke runs (construction items only)",
     },
+    # SYNTHESIS-r11 R7, RULING-wme-post-pilot3 P5: every split of both pilot-3 panels, including the holdout split,
+    # the unscored rest of the dev pools and the construction items behind the teacher, STaR and RL outputs
+    "wme-p3s": {
+        "manifest": "data/wme/panels/wme-p3s/manifest.json",
+        "splits": "all",
+        "note": "pilot-3 stage S (slope transport): construction and validation items of six objectives",
+    },
+    "wme-p3h": {
+        "manifest": "data/wme/panels/wme-p3h/manifest.json",
+        "splits": "all",
+        "note": "pilot-3 stage H (generated accuracy): construction, holdout and dev pools of every panel",
+    },
+    # RULING-wme-stagew §2: the stage-W dev panel is exposed before wme-c2-gen is built
+    "wme-w": {
+        "manifest": "data/wme/panels/wme-w/manifest.json",
+        "splits": "all",
+        "note": "stage W (EXPLORATORY): 500 MMLU-Pro and 500 SuperGPQA dev items scored for every library member",
+    },
 }
 
 # Proposed sizes (groups) for PREREG v1; the power simulation (wm.powersim) may change them before the freeze.
