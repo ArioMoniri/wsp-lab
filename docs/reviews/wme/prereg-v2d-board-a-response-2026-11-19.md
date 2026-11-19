@@ -243,7 +243,29 @@ assignment leaves no room to select favourable items.
 | **A. Root-shard lineage** | **Lineage.** `scripts/wme_v2f_root_lineage.py` re-runs the builder's own plan (`build_c1_panel_v2e(lineage=True)`, nothing written). It reproduces the built `wme-c1` hash and group lists in all 40 units (digests only), then maps every root member. **Counts:** 1,728 original groups and 1,761 members map to 1,723 final union groups and 1,723 written construction representatives. The remainder is 25 in-pool members and 13 members found only in the MMLU-Pro proxy pool (not a panel source). **Checks:** 0 root members or groups in any `wme-c1` evaluation split; 0 in `wme-c2-gen`. **Digest:** mapping sha256 `c28022f9c152a3443fc09705d9e09a281822d078d1a812269ed5e8fd9a9dfdc5` (report `docs/reviews/wme/wme-v2f-root-lineage-2026-11-19.json`). **Wording:** amended to "group reservation with representative deduplication". **Exception:** the construction-only exposure exception is registered (422 written / 428 member hashes); evaluation exclusions stay absolute. **Response bullet:** corrected above. |
 | **B. Runtime contract** | **Guard.** `harness.run_units(*, guard)` is mandatory. `runguard.ProductionGuard` provides launch attestations, a persistent replayed event log, persistent retry and canary state, per-attempt result keys, eligibility-gated resume (first canary-valid in order; retained-ineligible kept; pending incomplete), charged failures, and an absolute cap on max(unit time, authoritative instance time). **Tests.** CPU tests in `tests/test_wme_runguard.py`, including the combined orchestration test (failure, failed end canary, process restart, relaunch, exhaustion/fallback, first-valid selection). Full suite: only the 3 pinned tripwires fail. |
 
-**Status.** Changes 1, 2, 4, 5 and 7 were closed by Board A. Change 3 is closed by v2e and the lineage above. Change 6
-is closed in code by v2f, with the launch checks to run on the confirmatory stack. Both blockers await Board A's
-check.
+**Status (as written at v2f; superseded by "Update v2g" below).** Changes 1, 2, 4, 5 and 7 were closed by Board A.
+Change 3 is closed by v2e and the lineage above. Change 6 is closed in code by v2f, with the launch checks to run on
+the confirmatory stack. Both blockers await Board A's check.
+
+## Update v2g (19 Nov 2026): Board A final re-check, blocker B gaps 1-4
+
+> **Context.** Board A's final re-check (`docs/reviews/council/board-a-prereg-wme-v2-final-2026-11-19.md`) closed
+> blocker A and found four runtime gaps in B.
+> - Branch `prereg/wme-v2g`, from main `d0d946c`.
+> - These are technical repairs in `src/wsp/wm/runguard.py` (code `e217056`); PREREG §II.25.
+
+| Gap | Repair | Regression test (`tests/test_wme_runguard.py`) |
+|---|---|---|
+| 1. Instance lifecycle: a unit ran without an instance (91 h); reopen reset 89 h to 0 h | `begin` requires a registered active instance (`InstanceNotOpen`). Opening is idempotent and keeps the earliest opening. Closed ids are never reopened. Authoritative records override local times via `reconcile_instance`. The cap uses that time. | `test_probe_gap1_no_unit_runs_without_an_open_instance`, `test_probe_gap1_restart_and_reopen_never_reset_instance_time` |
+| 2. A changed engine-config digest returned the old payload | The full attestation digest is persisted. A mismatch raises `ContractMismatch` unless a persisted technical `ContractTransition` is recorded. Results and canaries are per contract (`superseded_contract`). | `test_probe_gap2_changed_engine_config_cannot_return_old_payload` |
+| 3. A lost end canary blocked retries | `declare_lost` is a persisted technical disposition: an authoritative close (time charged), retained-ineligible attempts, no fabricated canary, attempt counts kept, and the remaining attempts or fallback allowed. | `test_probe_gap3_lost_end_canary_allows_the_remaining_attempts` |
+| 4. A changed fallback value changed the resumed result | The fallback payload and its sha256 are persisted and verified (`FallbackMismatch`); `resolve` returns the persisted payload. | `test_probe_gap4_changed_fallback_value_is_refused_on_resume` |
+
+**Combined test.** `test_orchestration_failure_canary_restart_preemption_exhaustion_and_first_valid_selection` now
+includes a preempted-instance path.
+
+**Suite.** 2,286 passed; only the 3 pinned tripwires fail.
+
+**Status.** Blocker A was closed by Board A. Blocker B's four gaps are repaired in code and await Board A's check.
+The confirmatory-stack checks remain launch preconditions.
 
