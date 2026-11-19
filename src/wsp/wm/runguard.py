@@ -1,50 +1,68 @@
 """Validity, repair and stopping contract of the 9B confirmatory runs, enforced in the production path
-(PREREG_WME §II.13, §II.21.1, §II.22.6, §II.24.2; Board A v2 required change 6 and confirmation blocker B).
+(PREREG_WME §II.13, §II.21.1, §II.22.6, §II.24.2, §II.25, §II.26, §II.27; Board A v2 change 6 and blocker B).
 
 ``harness.run_units`` takes a **mandatory** guard. Confirmatory phases use :class:`ProductionGuard`; engineering
 smokes and toy workers must pass an explicit :class:`EngineeringGuard` (results are plain, never eligible evidence).
 
-**ProductionGuard** keeps one append-only, fsync'd event log (``events.jsonl`` in its state directory). Every
-counter is rebuilt by replaying it, so a new process or a new instance resumes with the same state:
+**One authoritative study log (§II.27).** A study state directory holds exactly one append-only, fsync'd log
+(``study.jsonl``, :class:`StudyLog`). Every record carries a global, gap-free sequence number and the sha256 of the
+previous record (a hash chain); ``study.jsonl.head`` holds the sequence and hash of the last appended record.
+Everything the guard knows (the combined ledger and clock, attempt and relaunch counters, canaries, contract
+generations, instance lifecycle, loss dispositions, fallbacks and the owner epoch) is a pure function of that log
+(:class:`StudyState`, applied one record at a time). There are no other state files.
 
-* **Launch validity.** Construction requires a :class:`LaunchAttestation` (inert identity and output bitwise, 1-vs-2-GPU
-  parity bitwise, the canary reference hash, the engine-configuration hash, evidence references). Before any unit
-  the instance's latest canary must equal the reference, otherwise :class:`CanaryMismatch` halts the run.
-* **Attempts and relaunches.** At most :data:`UNIT_ATTEMPTS` = 3 attempts per unit **in total, across processes,
-  instances and relaunches** (an attempt whose result is later made ineligible by a failed canary counts); then the
-  unit's registered fallback is recorded. At most :data:`PHASE_RELAUNCHES` = 1 relaunch per phase.
-* **Failures.** A failed attempt's measured seconds are charged to the ledger. A failure is retried only if the
-  caller's classifier maps it to one of :data:`TECHNICAL_CAUSES`; anything else halts (re-raised, still charged).
-* **Results and eligibility.** Each successful attempt is stored under its own key (``<unit>.a<n>``) with its event
-  sequence number and instance. A result is **eligible** only if the instance's last canary before it and its first
-  canary after it both match the reference. ``resolve`` (used by ``run_units`` for skip/resume) returns the **first
-  eligible attempt in sequence order**, whatever its value; attempts before a failed canary stay stored as
-  *retained, ineligible*; pending attempts (no closing canary yet) are not complete. Units with no eligible attempt
-  are re-run on resume while attempts remain.
-* **Instance lifecycle (§II.25).** No unit runs unless the guard's instance is registered and active
-  (:class:`InstanceNotOpen`). A duplicate opening is idempotent and keeps the earliest opening; a closed id cannot be
-  reopened; authoritative records (provider API, dead-man ledger: ``reconcile_instance``) override local times.
-* **Contract binding (§II.25).** The digest of the full attestation is persisted. A guard rebuilt with a different
-  contract refuses to run or return results (:class:`ContractMismatch`) unless an explicit, persisted, technical
-  :class:`ContractTransition` is recorded; results and canaries count only under the contract they were made in.
-* **Lost instances (§II.25).** ``declare_lost`` (technical, outcome-blind, persisted) closes a preempted instance at
-  its authoritative termination (charged), makes its unbracketed attempts retained-ineligible without any
-  fabricated canary, keeps their attempt counts, and lets the remaining attempts or the fallback proceed elsewhere.
-* **Registered fallback (§II.25).** The fallback payload and its sha256 are persisted at registration and with every
-  fallback; a guard rebuilt with a different fallback is refused (:class:`FallbackMismatch`).
-* **Absolute cap.** The charged total is the larger of (i) the measured GPU-seconds of every attempt, successful or
-  failed, and (ii) the authoritative instance time (open-to-close, open instances to now, times GPUs per instance;
-  setup, download, idle and canaries included). Before every attempt, charged + the priced unit estimate must stay
-  <= :data:`CAP_GPU_H` and <= :data:`CAP_USD`, else :class:`CapExceeded` (engineering abort, no override). A phase above
+**Every public operation is serialised against the shared log.** It takes an exclusive OS lock (``fcntl.flock`` on
+``study.jsonl.lock``), reads and verifies the log tail appended since the object's cached sequence, re-validates
+against that current state, and only then appends, all under the same lock. Validation and mutation therefore use
+one snapshot, a stale object automatically sees the current state, and sequence numbers stay globally unique.
+
+**Owner epoch.** Constructing a :class:`ProductionGuard` makes it the production owner: it appends an
+``owner_epoch`` record with the next epoch. Every operation of an object whose epoch is no longer the current one is
+refused (:class:`StaleGuard`) before anything is read out or written. A contract transition always constructs a new
+owner, so an older object can never act under a superseded contract generation.
+
+**Torn or truncated logs fail closed.** A partial last line, an invalid record, a broken hash chain, a log shorter
+than its head record or a changed already-read record raises :class:`LogCorrupt` on every operation. The only
+automatic reconciliation is :func:`repair_torn_tail` for a partial last line (a crash mid-append): it quarantines the
+torn bytes, cuts the log back to its last complete verified record and appends an audited ``log_repaired`` record,
+which also ends the current ownership. Any other damage needs an audited manual restoration.
+
+The registered rules enforced on that state (unchanged in substance from §II.22.6-§II.26):
+
+* **Launch validity.** Construction requires a :class:`LaunchAttestation`. Before any unit the instance's latest
+  canary under the current contract generation must equal the reference, otherwise :class:`CanaryMismatch`.
+* **Attempts and relaunches.** At most :data:`UNIT_ATTEMPTS` = 3 attempts per unit in total, counted from the log
+  across processes, objects, instances and relaunches; then the registered fallback. At most
+  :data:`PHASE_RELAUNCHES` = 1 relaunch per phase.
+* **Failures.** A failed attempt's measured seconds are charged. A failure is retried only if the classifier maps it
+  to one of :data:`TECHNICAL_CAUSES`; anything else halts (re-raised, still charged).
+* **Results and eligibility.** Each successful attempt is stored under its own key (``<unit>.a<n>``, n global per
+  unit) with the sha256 of its payload. It is eligible only if the instance's last canary before the attempt started
+  and its first canary after the result, both under the same instance, contract and generation and before the
+  instance's closure, equal that generation's reference. ``resolve`` returns the first eligible attempt in log order
+  (its payload digest verified), else the registered fallback, else nothing.
+* **Instance lifecycle.** Units and canaries need a registered, active, not-lost instance (:class:`InstanceNotOpen`).
+  Closing, loss or authoritative termination irreversibly disposes of attempts lacking a closing canary.
+* **Clock.** Every reading goes through :meth:`CombinedLedger.tick`; a backward reading persists ``clock_halt`` and
+  raises :class:`ClockInconsistent` until :meth:`CombinedLedger.clear_clock_halt` (authoritative termination of every
+  instance active at the halt, and a recovered clock). Each instance is charged max(local, authoritative); no
+  clamping.
+* **Contract generations.** Every attestation or :class:`ContractTransition` is a new generation; attempts and
+  canaries bind to (digest, generation); supersession is irreversible.
+* **Absolute cap.** Charged total = max(measured unit GPU time, instance time); before every attempt, charged +
+  the priced unit estimate must stay <= :data:`CAP_GPU_H` and <= :data:`CAP_USD` (:class:`CapExceeded`); a phase above
   1.25x its price raises :class:`PhasePause`.
 """
 
 from __future__ import annotations
 
+import fcntl
+import hashlib
 import json
 import os
 import re
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -64,6 +82,9 @@ TECHNICAL_CAUSES = (
     "code_defect_crash",
 )
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
+GENESIS = "0" * 64
+LOCK_TIMEOUT_S = 60.0
+LOG_NAME = "study.jsonl"
 
 
 class CapExceeded(RuntimeError):
@@ -102,26 +123,428 @@ class FallbackMismatch(RuntimeError):
     pass
 
 
-def _append(path: Path, rec: dict):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "a") as f:
-        f.write(json.dumps(rec, sort_keys=True) + "\n")
-        f.flush()
-        os.fsync(f.fileno())
+class StaleGuard(RuntimeError):
+    """An operation by an object whose owner epoch (or contract generation) is no longer current."""
 
 
-def _read(path: Path) -> list:
-    if not path.exists():
-        return []
-    return [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
+class LogCorrupt(RuntimeError):
+    """The study log is torn, truncated or fails its hash chain: fail closed until reconciled."""
 
 
-# ------------------------------------------------------------------ persistent building blocks
+class StudyLocked(RuntimeError):
+    """The study lock could not be acquired within :data:`LOCK_TIMEOUT_S`."""
 
 
-class CombinedLedger:
-    """Append-only ledger of measured GPU seconds per phase (successful and failed attempts) and of instance time;
-    one per 9B study.
+class UnitResolved(RuntimeError):
+    """An attempt was requested for a unit that already has an eligible result or its fallback."""
+
+
+class ResultMismatch(RuntimeError):
+    """A stored attempt payload does not match the digest recorded in the study log."""
+
+
+def _canon(obj) -> str:
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"))
+
+
+def _digest(obj) -> str:
+    return hashlib.sha256(_canon(obj).encode()).hexdigest()
+
+
+def record_hash(rec: dict) -> str:
+    """sha256 of the canonical JSON of a log record without its own ``hash`` field."""
+    return _digest({k: v for k, v in rec.items() if k != "hash"})
+
+
+# ------------------------------------------------------------------ the derived state
+
+
+class StudyState:
+    """Everything known about a study, derived only by replaying its log, one record at a time."""
+
+    def __init__(self):
+        self.n = 0
+        self.epoch = 0
+        self.contracts: list = []  # attestation / contract_transition records; index = generation
+        self.fallbacks: dict = {}  # phase -> fallback_registered record
+        self.max_tick = float("-inf")
+        self.halted = False
+        self.halt_active: list = []
+        self.authoritative_since_halt: set = set()
+        self.opened: dict = {}  # instance -> [t, gpus] of its first opening
+        self.closed: dict = {}  # instance -> t of its first local close
+        self.auth: dict = {}  # instance -> max authoritative GPU-seconds
+        self.closure: dict = {}  # instance -> seq of its first close / authoritative / loss record
+        self.lost: dict = {}  # instance -> seq of its loss disposition
+        self.unit_s: dict = {}  # phase -> measured GPU-seconds (successful and failed attempts)
+        self.attempts: dict = {}  # unit -> attempts started
+        self.inflight: dict = {}  # unit -> attempt_start record awaiting its outcome
+        self.last_cause: dict = {}  # unit -> cause of its last failure
+        self.relaunches: dict = {}  # phase -> relaunches used
+        self.repairs: list = []
+        self.canaries: dict = {}  # (instance, generation, contract) -> [[seq, sha]]
+        self.ok: dict = {}  # unit -> [attempt_ok records] in log order
+        self.disposed: set = set()  # attempt_ok seqs disposed irreversibly
+        self.fallback_units: dict = {}  # unit -> its first fallback record
+
+    @property
+    def generation(self):
+        return len(self.contracts) - 1 if self.contracts else None
+
+    @property
+    def contract(self):
+        return self.contracts[-1]["digest"] if self.contracts else None
+
+    def apply(self, r: dict):
+        self.n = r["seq"]
+        t = r["type"]
+        if "t" in r:
+            self.max_tick = max(self.max_tick, float(r["t"]))
+        if t == "owner_epoch":
+            self.epoch = r["epoch"]
+        elif t == "log_repaired":
+            self.epoch += 1  # a repair ends the current ownership
+        elif t in ("attestation", "contract_transition"):
+            self.contracts.append(r)
+        elif t == "fallback_registered":
+            self.fallbacks.setdefault(r["phase"], r)
+        elif t == "clock_halt":
+            self.halted, self.halt_active = True, list(r["active"])
+            self.authoritative_since_halt = set()
+        elif t == "clock_resolved":
+            self.halted, self.halt_active = False, []
+        elif t == "unit_time":
+            self.unit_s[r["phase"]] = self.unit_s.get(r["phase"], 0.0) + float(r["gpu_s"])
+        elif t == "instance_open":
+            self.opened.setdefault(r["instance"], [float(r["t"]), int(r["gpus"])])
+        elif t == "instance_close":
+            self.closed.setdefault(r["instance"], float(r["t"]))
+            self.closure.setdefault(r["instance"], r["seq"])
+        elif t == "instance_authoritative":
+            d = (float(r["terminated_at"]) - float(r["launched_at"])) * int(r["gpus"])
+            self.auth[r["instance"]] = max(self.auth.get(r["instance"], 0.0), d)
+            self.closure.setdefault(r["instance"], r["seq"])
+            if self.halted:
+                self.authoritative_since_halt.add(r["instance"])
+        elif t == "instance_lost":
+            self.lost.setdefault(r["instance"], r["seq"])
+            self.closure.setdefault(r["instance"], r["seq"])
+        elif t == "canary":
+            key = (r["instance"], r["generation"], r["contract"])
+            self.canaries.setdefault(key, []).append([r["seq"], r["sha"]])
+        elif t == "attempt_start":
+            self.attempts[r["unit"]] = self.attempts.get(r["unit"], 0) + 1
+            self.inflight[r["unit"]] = r
+        elif t == "attempt_fail":
+            self.inflight.pop(r["unit"], None)
+            self.last_cause[r["unit"]] = r["cause"]
+        elif t == "attempt_ok":
+            self.inflight.pop(r["unit"], None)
+            self.ok.setdefault(r["unit"], []).append(r)
+        elif t == "attempt_disposed":
+            self.disposed.add(r["attempt_seq"])
+        elif t == "fallback":
+            self.fallback_units.setdefault(r["unit"], r)
+        elif t == "relaunch":
+            self.relaunches[r["phase"]] = self.relaunches.get(r["phase"], 0) + 1
+        elif t == "repair":
+            self.repairs.append(r)
+
+    # -------------------------------------------------- queries
+    def instance_state(self, instance: str) -> str:
+        if instance in self.closed or instance in self.auth:
+            return "closed"
+        return "active" if instance in self.opened else "unknown"
+
+    def active_instances(self) -> list:
+        return sorted(i for i in self.opened if self.instance_state(i) == "active")
+
+    def charges(self, now: float) -> dict:
+        """{instance: charged GPU-hours} at ``now``: max(local open-to-close, authoritative); never negative."""
+        out = {}
+        for inst in set(self.opened) | set(self.auth):
+            local = 0.0
+            if inst in self.opened:
+                t0, g = self.opened[inst]
+                local = (self.closed.get(inst, now) - t0) * g
+            if local < 0:
+                raise ClockInconsistent(f"{inst}: negative local duration")
+            out[inst] = max(local, self.auth.get(inst, 0.0)) / 3600
+        return out
+
+    def status(self, a: dict) -> str:
+        """Eligibility of an ``attempt_ok`` record under the current contract generation."""
+        if a["generation"] != self.generation or a["contract"] != self.contract:
+            return "superseded_contract"
+        if a["seq"] in self.disposed:
+            return "retained_ineligible"
+        ref = self.contracts[a["generation"]]["canary_reference"]
+        close = self.closure.get(a["instance"])
+        cans = [
+            c
+            for c in self.canaries.get((a["instance"], a["generation"], a["contract"]), [])
+            if close is None or c[0] < close
+        ]
+        before = [sha for q, sha in cans if q < a["start_seq"]]
+        after = [sha for q, sha in cans if q > a["seq"]]
+        if not before or before[-1] != ref:
+            return "retained_ineligible"
+        if not after:
+            return "retained_ineligible" if close is not None else "pending"
+        return "eligible" if after[0] == ref else "retained_ineligible"
+
+    def snapshot(self) -> dict:
+        d = {}
+        for k, v in vars(self).items():
+            if isinstance(v, set):
+                v = sorted(v)
+            elif isinstance(v, dict):
+                v = {str(kk): vv for kk, vv in v.items()}
+            d[k] = v
+        return json.loads(json.dumps(d, sort_keys=True, default=str))
+
+
+# ------------------------------------------------------------------ the single authoritative log
+
+
+class StudyLog:
+    """The one append-only, hash-chained, fsync'd study log (``path``; in memory when ``path`` is None).
+
+    Use :meth:`locked` around every read-validate-append: it takes the exclusive OS lock, then reads and verifies the
+    tail appended since this object's cached sequence. :meth:`append` is only allowed under the lock."""
+
+    def __init__(self, path=None, *, load: bool = True, lock_timeout: float = LOCK_TIMEOUT_S):
+        self.path = Path(path) if path is not None else None
+        self.lock_timeout = lock_timeout
+        self._reset()
+        self._depth = 0
+        self._fd = None
+        if self.path is not None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            if load:
+                with self.locked():
+                    pass
+
+    def _reset(self):
+        self.records: list = []
+        self.state = StudyState()
+        self._offset = 0
+        self._last_line = b""
+
+    @property
+    def lock_path(self) -> Path:
+        return self.path.with_name(self.path.name + ".lock")
+
+    @property
+    def head_path(self) -> Path:
+        return self.path.with_name(self.path.name + ".head")
+
+    @property
+    def tail(self) -> str:
+        return self.records[-1]["hash"] if self.records else GENESIS
+
+    # -------------------------------------------------- locking
+    def _acquire(self):
+        fd = os.open(self.lock_path, os.O_RDWR | os.O_CREAT, 0o644)
+        deadline = time.monotonic() + self.lock_timeout
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() > deadline:
+                    os.close(fd)
+                    raise StudyLocked(f"{self.lock_path}: lock not acquired") from None
+                time.sleep(0.005)
+        self._fd = fd
+
+    def _release(self):
+        if self._fd is not None:
+            try:
+                fcntl.flock(self._fd, fcntl.LOCK_UN)
+            finally:
+                os.close(self._fd)
+                self._fd = None
+
+    @contextmanager
+    def locked(self):
+        """Exclusive lock + verified re-read of the tail; re-entrant within this object. Yields the state."""
+        if self.path is not None and self._depth == 0:
+            self._acquire()
+            try:
+                self._refresh()
+            except BaseException:
+                self._release()
+                raise
+        self._depth += 1
+        try:
+            yield self.state
+        finally:
+            self._depth -= 1
+            if self.path is not None and self._depth == 0:
+                self._release()
+
+    # -------------------------------------------------- reading and verification
+    def _read_head(self) -> dict:
+        if not self.head_path.exists():
+            return {"seq": 0, "hash": GENESIS}
+        try:
+            h = json.loads(self.head_path.read_text())
+            return {"seq": int(h["seq"]), "hash": str(h["hash"])}
+        except (ValueError, KeyError, TypeError) as exc:
+            raise LogCorrupt(f"{self.head_path}: unreadable head record") from exc
+
+    def _ingest(self, line: bytes):
+        n = len(self.records) + 1
+        try:
+            rec = json.loads(line)
+        except ValueError as exc:
+            raise LogCorrupt(f"record {n} is not valid JSON") from exc
+        if (
+            not isinstance(rec, dict)
+            or rec.get("seq") != n
+            or rec.get("prev") != self.tail
+            or rec.get("hash") != record_hash(rec)
+        ):
+            raise LogCorrupt(f"record {n}: sequence or hash chain broken")
+        self.records.append(rec)
+        self.state.apply(rec)
+        self._offset += len(line)
+        self._last_line = line
+
+    def _refresh(self):
+        head = self._read_head()
+        if not self.path.exists():
+            if self._offset or head["seq"]:
+                raise LogCorrupt(f"{self.path} is missing")
+            return
+        with open(self.path, "rb") as f:
+            size = os.fstat(f.fileno()).st_size
+            if size < self._offset:
+                raise LogCorrupt(f"{self.path} is shorter than already read (truncated)")
+            if self._last_line:
+                f.seek(self._offset - len(self._last_line))
+                if f.read(len(self._last_line)) != self._last_line:
+                    raise LogCorrupt(f"{self.path}: an already-read record changed")
+            f.seek(self._offset)
+            data = f.read()
+        if data and not data.endswith(b"\n"):
+            raise LogCorrupt(
+                f"{self.path}: a partial (torn) last record; reconcile with repair_torn_tail()"
+            )
+        for line in data.splitlines(keepends=True):
+            self._ingest(line)
+        if head["seq"] > len(self.records):
+            raise LogCorrupt(f"{self.path} ends before its head record {head['seq']} (truncated)")
+        if head["seq"] and self.records[head["seq"] - 1]["hash"] != head["hash"]:
+            raise LogCorrupt(f"{self.path}: head record does not match the log")
+
+    # -------------------------------------------------- appending
+    def append(self, type_: str, **fields) -> dict:
+        if self.path is not None and self._depth == 0:
+            raise RuntimeError("append outside the study lock")
+        rec = {**fields, "type": type_, "seq": len(self.records) + 1, "prev": self.tail}
+        rec["hash"] = record_hash(rec)
+        line = (_canon(rec) + "\n").encode()
+        rec = json.loads(line)
+        if self.path is not None:
+            with open(self.path, "ab") as f:
+                f.write(line)
+                f.flush()
+                os.fsync(f.fileno())
+            tmp = self.head_path.with_name(self.head_path.name + ".tmp")
+            with open(tmp, "w") as f:
+                f.write(json.dumps({"seq": rec["seq"], "hash": rec["hash"]}))
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, self.head_path)
+            self._offset += len(line)
+            self._last_line = line
+        self.records.append(rec)
+        self.state.apply(rec)
+        return rec
+
+    # -------------------------------------------------- the one automatic reconciliation
+    def repair_torn_tail(self, source: str, description: str) -> dict:
+        """Audited repair of a partial last line (a crash mid-append): quarantine the torn bytes to
+        ``<log>.torn-<seq>``, cut the log back to its last complete record (which must verify in full) and append
+        ``log_repaired``, which ends the current ownership. Any other damage stays fail-closed."""
+        if not source or not description:
+            raise ValueError("name the source and describe the repair")
+        self._acquire()
+        self._depth += 1
+        try:
+            data = self.path.read_bytes() if self.path.exists() else b""
+            cut = data.rfind(b"\n") + 1
+            torn = data[cut:]
+            if not torn:
+                raise ValueError("no torn last record to repair")
+            self._reset()
+            for line in data[:cut].splitlines(keepends=True):
+                self._ingest(line)
+            head = self._read_head()
+            if head["seq"] > len(self.records) or (
+                head["seq"] and self.records[head["seq"] - 1]["hash"] != head["hash"]
+            ):
+                raise LogCorrupt("the complete records do not reach the head; manual restoration")
+            q = self.path.with_name(f"{self.path.name}.torn-{len(self.records) + 1}")
+            with open(q, "wb") as f:
+                f.write(torn)
+                f.flush()
+                os.fsync(f.fileno())
+            with open(self.path, "r+b") as f:
+                f.truncate(cut)
+                f.flush()
+                os.fsync(f.fileno())
+            return self.append(
+                "log_repaired",
+                source=source,
+                description=description,
+                torn_bytes=len(torn),
+                torn_sha256=hashlib.sha256(torn).hexdigest(),
+                quarantine=q.name,
+            )
+        finally:
+            self._depth -= 1
+            self._release()
+
+
+def repair_torn_tail(state_dir, source: str, description: str) -> dict:
+    """Reconcile a study state directory whose log ends in a partial record (see :meth:`StudyLog.repair_torn_tail`)."""
+    return StudyLog(Path(state_dir) / LOG_NAME, load=False).repair_torn_tail(source, description)
+
+
+def read_study(state_dir) -> StudyState:
+    """A verified, read-only replay of a study state directory (takes the lock; writes nothing)."""
+    return StudyLog(Path(state_dir) / LOG_NAME).state
+
+
+# ------------------------------------------------------------------ views over the log
+
+
+class _View:
+    def __init__(self, log=None, fence=None, ctx=None):
+        self.log = log if isinstance(log, StudyLog) else StudyLog(log)
+        self._fence = fence
+        self._ctx = ctx or dict
+
+    @contextmanager
+    def _op(self):
+        """A mutating or result-returning operation: lock, re-read, fence, then act on the yielded state."""
+        with self.log.locked() as s:
+            if self._fence is not None:
+                self._fence()
+            yield s
+
+    def _read(self):
+        return self.log.locked()
+
+    def _append(self, type_, **fields):
+        return self.log.append(type_, **{**self._ctx(), **fields})
+
+
+class CombinedLedger(_View):
+    """The combined ledger and clock of one 9B study: a view of the study log (``log``: a :class:`StudyLog` or a path).
 
     **Clock discipline (fail closed, §II.26).** Every clock reading goes through :meth:`tick`, which persists each
     new maximum. A reading below the recorded maximum persists a ``clock_halt`` and raises :class:`ClockInconsistent`;
@@ -131,194 +554,145 @@ class CombinedLedger:
     or above the recorded maximum and an authoritative termination for every instance active when the clock halted.
     Nothing is clamped."""
 
-    def __init__(self, path, priced_gpu_h: dict, clock=time.time):
-        self.path = Path(path)
+    def __init__(self, log, priced_gpu_h: dict, clock=time.time, fence=None, ctx=None):
+        super().__init__(log, fence, ctx)
         self.priced = dict(priced_gpu_h)
         self.clock = clock
-        self.rows = _read(self.path)
 
-    def _write(self, r: dict):
-        self.rows.append(r)
-        _append(self.path, r)
+    @property
+    def rows(self) -> list:
+        with self._read():
+            return list(self.log.records)
 
     # -------------------------------------------------- clock
     def max_tick(self) -> float:
-        return max((r["t"] for r in self.rows if "t" in r), default=float("-inf"))
+        with self._read() as s:
+            return s.max_tick
 
     def halted(self) -> bool:
-        st = False
-        for r in self.rows:
-            if r.get("kind") == "clock_halt":
-                st = True
-            elif r.get("kind") == "clock_resolved":
-                st = False
-        return st
+        with self._read() as s:
+            return s.halted
 
     def tick(self) -> float:
         """A trusted clock reading: persisted if it is a new maximum; a backward reading halts (persisted)."""
-        if self.halted():
-            raise ClockInconsistent(
-                "the clock is halted; reconcile authoritatively and clear_clock_halt()"
-            )
-        now = float(self.clock())
-        mt = self.max_tick()
-        if now < mt:
-            self._write(
-                {
-                    "kind": "clock_halt",
-                    "observed": now,
-                    "max_tick": mt,
-                    "active": self.active_instances(),
-                }
-            )
-            raise ClockInconsistent(
-                f"clock reading {now} is earlier than the recorded {mt}; halted"
-            )
-        if now > mt:
-            self._write({"kind": "tick", "t": now})
-        return now
+        with self._op() as s:
+            if s.halted:
+                raise ClockInconsistent(
+                    "the clock is halted; reconcile authoritatively and clear_clock_halt()"
+                )
+            now = float(self.clock())
+            if now < s.max_tick:
+                mt = s.max_tick
+                self._append("clock_halt", observed=now, max_tick=mt, active=s.active_instances())
+                raise ClockInconsistent(
+                    f"clock reading {now} is earlier than the recorded {mt}; halted"
+                )
+            if now > s.max_tick:
+                self._append("tick", t=now)
+            return now
 
     def _trusted_now(self) -> float:
         """The last trusted time while halted (never a reading from the inconsistent clock)."""
-        return self.max_tick() if self.halted() else self.tick()
+        with self._op() as s:
+            return s.max_tick if s.halted else self.tick()
 
     def clear_clock_halt(self, source: str, description: str):
-        if not self.halted():
-            raise ValueError("the clock is not halted")
-        if not source or not description:
-            raise ValueError("name the authoritative source and describe the clock repair")
-        halt = max(i for i, r in enumerate(self.rows) if r.get("kind") == "clock_halt")
-        need = set(self.rows[halt].get("active", []))
-        have = {
-            r["instance"]
-            for r in self.rows[halt + 1 :]
-            if r.get("kind") == "instance_authoritative"
-        }
-        if need - have:
-            raise ClockInconsistent(f"authoritative termination missing for {sorted(need - have)}")
-        now = float(self.clock())
-        if now < self.max_tick():
-            raise ClockInconsistent("the clock is still behind the recorded maximum")
-        self._write({"kind": "clock_resolved", "source": source, "description": description})
-        self.tick()
+        with self._op() as s:
+            if not s.halted:
+                raise ValueError("the clock is not halted")
+            if not source or not description:
+                raise ValueError("name the authoritative source and describe the clock repair")
+            need = set(s.halt_active) - s.authoritative_since_halt
+            if need:
+                raise ClockInconsistent(f"authoritative termination missing for {sorted(need)}")
+            if float(self.clock()) < s.max_tick:
+                raise ClockInconsistent("the clock is still behind the recorded maximum")
+            self._append("clock_resolved", source=source, description=description)
+            self.tick()
 
     # -------------------------------------------------- units
     def add(self, phase: str, gpu_seconds: float, note: str = "", status: str = "ok"):
-        if phase not in self.priced:
-            raise KeyError(f"unpriced phase {phase}")
-        if gpu_seconds < 0:
-            raise ClockInconsistent("a negative measured duration")
-        self._write(
-            {
-                "kind": "unit",
-                "phase": phase,
-                "gpu_s": float(gpu_seconds),
-                "note": note,
-                "status": status,
-            }
-        )
+        with self._op():
+            if phase not in self.priced:
+                raise KeyError(f"unpriced phase {phase}")
+            if gpu_seconds < 0:
+                raise ClockInconsistent("a negative measured duration")
+            self._append(
+                "unit_time", phase=phase, gpu_s=float(gpu_seconds), note=note, status=status
+            )
 
     # -------------------------------------------------- instances
     def instance_state(self, instance: str) -> str:
         """``unknown``, ``active`` or ``closed`` (a local close or an authoritative termination; final)."""
-        st = "unknown"
-        for r in self.rows:
-            if r.get("instance") != instance:
-                continue
-            if r.get("kind") == "instance_open" and st == "unknown":
-                st = "active"
-            elif r.get("kind") in ("instance_close", "instance_authoritative"):
-                st = "closed"
-        return st
+        with self._read() as s:
+            return s.instance_state(instance)
 
     def active_instances(self) -> list:
-        return sorted(
-            {r["instance"] for r in self.rows if r.get("kind") == "instance_open"}
-            - {
-                r["instance"]
-                for r in self.rows
-                if r.get("kind") in ("instance_close", "instance_authoritative")
-            }
-        )
+        with self._read() as s:
+            return s.active_instances()
 
     def instance_open(self, instance: str, gpus: int) -> bool:
         """Idempotent for an active instance (the earliest opening is kept); a closed id is never reopened."""
-        st = self.instance_state(instance)
-        if st == "active":
-            self.tick()
-            return False
-        if st == "closed":
-            raise ValueError(f"{instance} is closed; a replacement instance needs a new id")
-        self._write(
-            {"kind": "instance_open", "instance": instance, "gpus": int(gpus), "t": self.tick()}
-        )
-        return True
+        with self._op() as s:
+            st = s.instance_state(instance)
+            if st == "closed":
+                raise ValueError(f"{instance} is closed; a replacement instance needs a new id")
+            t = self.tick()
+            if st == "active":
+                self._append("instance_resume", instance=instance)
+                return False
+            self._append("instance_open", instance=instance, gpus=int(gpus), t=t)
+            return True
 
     def instance_close(self, instance: str):
-        if self.instance_state(instance) != "active":
-            raise ValueError(f"{instance} is not active")
-        self._write({"kind": "instance_close", "instance": instance, "t": self.tick()})
+        with self._op() as s:
+            if s.instance_state(instance) != "active":
+                raise ValueError(f"{instance} is not active")
+            self._append("instance_close", instance=instance, t=self.tick())
 
-    def reconcile_instance(
-        self, instance: str, launched_at: float, terminated_at: float, gpus: int, source: str
-    ):
-        """A complete authoritative record (provider API or dead-man terminator ledger). It closes the instance
-        (locally at the last trusted time) and can only add time: the instance is charged max(local, authoritative).
-        Allowed while the clock is halted (it is the way out of a halt)."""
+    @staticmethod
+    def check_authoritative(launched_at, terminated_at, source):
         if not source:
             raise ValueError("name the authoritative source")
         if terminated_at is None or launched_at is None:
             raise ValueError("an authoritative record needs both launch and termination")
         if float(terminated_at) < float(launched_at):
             raise ClockInconsistent("authoritative termination before launch")
-        if self.instance_state(instance) == "active":
-            self._write({"kind": "instance_close", "instance": instance, "t": self._trusted_now()})
-        self._write(
-            {
-                "kind": "instance_authoritative",
-                "instance": instance,
-                "launched_at": float(launched_at),
-                "terminated_at": float(terminated_at),
-                "gpus": int(gpus),
-                "source": source,
-            }
-        )
+
+    def reconcile_instance(
+        self, instance, launched_at, terminated_at, gpus, source, close_at: float | None = None
+    ):
+        """A complete authoritative record (provider API or dead-man terminator ledger). It closes the instance
+        (locally at the last trusted time) and can only add time: the instance is charged max(local, authoritative).
+        Allowed while the clock is halted (it is the way out of a halt)."""
+        self.check_authoritative(launched_at, terminated_at, source)
+        with self._op() as s:
+            if s.instance_state(instance) == "active":
+                t = self._trusted_now() if close_at is None else float(close_at)
+                self._append("instance_close", instance=instance, t=t)
+            self._append(
+                "instance_authoritative",
+                instance=instance,
+                launched_at=float(launched_at),
+                terminated_at=float(terminated_at),
+                gpus=int(gpus),
+                source=source,
+            )
 
     def instance_charges(self, now: float | None = None) -> dict:
         """{instance: charged GPU-hours}; every term is non-negative by construction."""
-        now = self.tick() if now is None else float(now)
-        if now < self.max_tick():
-            raise ClockInconsistent("a query time earlier than the recorded maximum")
-        opened, closed, auth = {}, {}, {}
-        for r in self.rows:
-            k = r.get("kind")
-            if k == "instance_open":
-                opened.setdefault(r["instance"], (r["t"], r["gpus"]))
-            elif k == "instance_close":
-                closed.setdefault(r["instance"], r["t"])
-            elif k == "instance_authoritative":
-                d = (r["terminated_at"] - r["launched_at"]) * r["gpus"]
-                auth[r["instance"]] = max(auth.get(r["instance"], 0.0), d)
-        out = {}
-        for inst in set(opened) | set(auth):
-            local = 0.0
-            if inst in opened:
-                t0, g = opened[inst]
-                local = (closed.get(inst, now) - t0) * g
-            if local < 0:
-                raise ClockInconsistent(f"{inst}: negative local duration")
-            out[inst] = max(local, auth.get(inst, 0.0)) / 3600
-        return out
+        if now is None:
+            now = self.tick()
+        with self._read() as s:
+            if float(now) < s.max_tick:
+                raise ClockInconsistent("a query time earlier than the recorded maximum")
+            return s.charges(float(now))
 
     def unit_gpu_h(self, phase: str | None = None) -> float:
-        return (
-            sum(
-                r["gpu_s"]
-                for r in self.rows
-                if r.get("kind", "unit") == "unit" and phase in (None, r["phase"])
-            )
-            / 3600
-        )
+        with self._read() as s:
+            if phase is not None:
+                return s.unit_s.get(phase, 0.0) / 3600
+            return sum(s.unit_s.values()) / 3600
 
     def instance_gpu_h(self, now: float | None = None) -> float:
         return sum(self.instance_charges(now).values())
@@ -337,58 +711,59 @@ class CombinedLedger:
         return max(0.0, min(CAP_USD - self.usd(), (CAP_GPU_H - self.gpu_h()) * USD_PER_GPU_H))
 
     def check_before(self, phase: str, est_gpu_h: float):
-        tot = self.gpu_h() + est_gpu_h
-        if tot > CAP_GPU_H or tot * USD_PER_GPU_H > CAP_USD:
-            raise CapExceeded(
-                f"combined cap: {self.gpu_h():.3f} + {est_gpu_h:.3f} GPU-h-eq > {CAP_GPU_H} or $ > {CAP_USD}"
-            )
-        if self.unit_gpu_h(phase) + est_gpu_h > PHASE_PAUSE * self.priced[phase]:
-            raise PhasePause(
-                f"{phase}: above {PHASE_PAUSE} x its priced {self.priced[phase]} GPU-h"
-            )
+        with self._op():
+            tot = self.gpu_h() + est_gpu_h
+            if tot > CAP_GPU_H or tot * USD_PER_GPU_H > CAP_USD:
+                raise CapExceeded(
+                    f"combined cap: {tot - est_gpu_h:.3f} + {est_gpu_h:.3f} GPU-h-eq > {CAP_GPU_H} or $ > {CAP_USD}"
+                )
+            if self.unit_gpu_h(phase) + est_gpu_h > PHASE_PAUSE * self.priced[phase]:
+                raise PhasePause(
+                    f"{phase}: above {PHASE_PAUSE} x its priced {self.priced[phase]} GPU-h"
+                )
 
 
-class RetryPolicy:
-    """Attempt and relaunch counters; persisted to ``path`` (JSONL) when given, so a restart resumes the counts."""
+class RetryPolicy(_View):
+    """Attempt and relaunch counters and repair records: a view of the study log (in memory when ``log`` is None)."""
 
-    def __init__(self, path=None):
-        self.path = Path(path) if path else None
-        self.attempts: dict = {}
-        self.relaunches: dict = {}
-        self.repairs: list = []
-        for r in _read(self.path) if self.path else []:
-            if r["kind"] == "attempt":
-                self.attempts[r["unit"]] = r["n"]
-            elif r["kind"] == "relaunch":
-                self.relaunches[r["phase"]] = r["n"]
-            elif r["kind"] == "repair":
-                self.repairs.append(r)
+    @property
+    def attempts(self) -> dict:
+        with self._read() as s:
+            return dict(s.attempts)
 
-    def _log(self, rec):
-        if self.path:
-            _append(self.path, rec)
+    @property
+    def relaunches(self) -> dict:
+        with self._read() as s:
+            return dict(s.relaunches)
 
-    def attempt(self, unit: str, cause: str | None = None) -> int:
+    @property
+    def repairs(self) -> list:
+        with self._read() as s:
+            return list(s.repairs)
+
+    def attempt(self, unit: str, cause: str | None = None, **fields) -> int:
         if cause is not None and cause not in TECHNICAL_CAUSES:
             raise ValueError(f"retry cause {cause!r} is not a registered technical cause")
-        n = self.attempts.get(unit, 0) + 1
-        if n > UNIT_ATTEMPTS:
-            raise RetryExhausted(
-                f"{unit}: {UNIT_ATTEMPTS} attempts used; take its registered fallback"
-            )
-        self.attempts[unit] = n
-        self._log({"kind": "attempt", "unit": unit, "n": n, "cause": cause})
-        return n
+        with self._op() as s:
+            n = s.attempts.get(unit, 0) + 1
+            if n > UNIT_ATTEMPTS:
+                raise RetryExhausted(
+                    f"{unit}: {UNIT_ATTEMPTS} attempts used; take its registered fallback"
+                )
+            self._append("attempt_start", unit=unit, n=n, cause=cause, **fields)
+            return n
 
-    def relaunch(self, phase: str, cause: str):
+    def relaunch(self, phase: str, cause: str, **fields) -> int:
         if cause not in TECHNICAL_CAUSES:
             raise ValueError(f"relaunch cause {cause!r} is not a registered technical cause")
-        n = self.relaunches.get(phase, 0) + 1
-        if n > PHASE_RELAUNCHES:
-            raise RetryExhausted(f"{phase}: the one registered relaunch is used; engineering abort")
-        self.relaunches[phase] = n
-        self._log({"kind": "relaunch", "phase": phase, "n": n, "cause": cause})
-        return n
+        with self._op() as s:
+            n = s.relaunches.get(phase, 0) + 1
+            if n > PHASE_RELAUNCHES:
+                raise RetryExhausted(
+                    f"{phase}: the one registered relaunch is used; engineering abort"
+                )
+            self._append("relaunch", phase=phase, n=n, cause=cause, **fields)
+            return n
 
     def repair(self, cause: str, description: str, commit: str, outcome_blind: bool) -> dict:
         if cause not in TECHNICAL_CAUSES:
@@ -397,57 +772,10 @@ class RetryPolicy:
             raise ValueError("repairs must be decided without reading any outcome")
         if not description or len(commit) < 7:
             raise ValueError("a repair needs a description and the code commit")
-        r = {
-            "kind": "repair",
-            "cause": cause,
-            "description": description,
-            "commit": commit,
-            "outcome_blind": True,
-        }
-        self.repairs.append(r)
-        self._log(r)
-        return r
-
-
-class CanaryBook:
-    """Canary events (instance, order, sha256) against one reference; persisted to ``path`` when given. The order is a
-    time or an event sequence number."""
-
-    def __init__(self, reference: str, path=None):
-        self.reference = reference
-        self.path = Path(path) if path else None
-        self.events: dict = {}
-        for r in _read(self.path) if self.path else []:
-            self.events.setdefault(r["instance"], []).append((float(r["t"]), r["sha"]))
-
-    def canary(self, instance: str, t: float, sha: str):
-        self.events.setdefault(instance, []).append((float(t), sha))
-        if self.path:
-            _append(self.path, {"instance": instance, "t": float(t), "sha": sha})
-
-    def last(self, instance: str):
-        ev = sorted(self.events.get(instance, []))
-        return ev[-1][1] if ev else None
-
-    def status(self, instance: str, t: float) -> str:
-        ev = sorted(self.events.get(instance, []))
-        before = [s for u, s in ev if u <= t]
-        after = [s for u, s in ev if u > t]
-        if not before or before[-1] != self.reference:
-            return "retained_ineligible"
-        if not after:
-            return "pending"
-        return "eligible" if after[0] == self.reference else "retained_ineligible"
-
-    def eligible(self, instance: str, t: float) -> bool:
-        return self.status(instance, t) == "eligible"
-
-    def eligible_result(self, attempts):
-        """``attempts`` [(instance, order, result)] of one unit: the first eligible attempt in order, or None."""
-        for inst, t, res in sorted(attempts, key=lambda a: a[1]):
-            if self.eligible(inst, t):
-                return res
-        return None
+        with self._op():
+            return self._append(
+                "repair", cause=cause, description=description, commit=commit, outcome_blind=True
+            )
 
 
 # ------------------------------------------------------------------ guards for harness.run_units
@@ -510,19 +838,15 @@ class LaunchAttestation:
             raise NotAttested("cite the evidence (report paths and hashes) for each attestation")
 
 
-def _digest(obj) -> str:
-    import hashlib
-
-    return hashlib.sha256(
-        json.dumps(obj, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
+def _att_fields(att: LaunchAttestation) -> dict:
+    d = {k: getattr(att, k) for k in att.__dataclass_fields__}
+    d["evidence"] = sorted(d["evidence"])
+    return d
 
 
 def contract_digest(att: LaunchAttestation) -> str:
     """The registered run contract: every attestation field (evidence order-free)."""
-    d = {k: getattr(att, k) for k in att.__dataclass_fields__}
-    d["evidence"] = sorted(d["evidence"])
-    return _digest(d)
+    return _digest(_att_fields(att))
 
 
 @dataclass
@@ -546,7 +870,7 @@ class ContractTransition:
 
 
 class ProductionGuard:
-    """The mandatory confirmatory guard (see the module docstring, §II.25 and §II.26)."""
+    """The mandatory confirmatory guard and production owner of one study state directory (module docstring)."""
 
     confirmatory = True
 
@@ -566,139 +890,147 @@ class ProductionGuard:
         attestation.check()
         self.state = Path(state_dir)
         self.state.mkdir(parents=True, exist_ok=True)
+        legacy = [
+            n for n in ("events.jsonl", "ledger.jsonl", "retry.jsonl") if (self.state / n).exists()
+        ]
+        if legacy:
+            raise ValueError(f"{self.state}: pre-§II.27 state files {legacy}; one study log only")
         self.phase, self.instance, self.est = phase, instance, float(est_unit_gpu_h)
         self.attestation = attestation
         self.technical = technical or (lambda exc: None)
         self.clock = clock
-        self.ledger = CombinedLedger(self.state / "ledger.jsonl", priced_gpu_h, clock=clock)
-        self.retry = RetryPolicy(self.state / "retry.jsonl")
-        self.events_path = self.state / "events.jsonl"
-        self.events = _read(self.events_path)
-        # ---- the run contract and its generation (gap 2; §II.26)
-        new = contract_digest(attestation)
-        contracts = self._contract_events()
-        self.generation = len(contracts) - 1
-        self.contract = contracts[-1]["digest"] if contracts else None
-        if not contracts:
-            self.generation, self.contract = 0, new
-            self._event("attestation", digest=new, **self._att_fields(attestation))
-        elif contracts[-1]["digest"] != new:
-            if transition is None:
-                raise ContractMismatch(
-                    f"persisted contract {contracts[-1]['digest'][:12]} != {new[:12]}: refuse to run or return "
-                    "results without an explicit ContractTransition"
-                )
-            transition.check()
-            self.generation, self.contract = len(contracts), new
-            self._event(
-                "contract_transition",
-                digest=new,
-                previous=contracts[-1]["digest"],
-                previous_generation=len(contracts) - 1,
-                cause=transition.cause,
-                description=transition.description,
-                commit=transition.commit,
-                outcome_blind=True,
-                **self._att_fields(attestation),
-            )
-        elif transition is not None:
-            raise ValueError("a ContractTransition was given but the contract is unchanged")
-        self.references = {e["generation"]: e["canary_reference"] for e in self._contract_events()}
-        # ---- the registered fallback (gap 4)
+        self.epoch = self.contract = self.generation = None
+        self.log = StudyLog(self.state / LOG_NAME)
+        ctx = lambda: {"epoch": self.epoch, "phase": self.phase}
+        self.ledger = CombinedLedger(
+            self.log, priced_gpu_h, clock=clock, fence=self._fence, ctx=ctx
+        )
+        self.retry = RetryPolicy(self.log, fence=self._fence, ctx=ctx)
         try:
             fb_digest = _digest(fallback_value)
         except TypeError as exc:
             raise ValueError("the registered fallback must be JSON-serialisable") from exc
-        reg = [e for e in self.events if e["type"] == "fallback_registered" and e["phase"] == phase]
-        if not reg:
-            self._event("fallback_registered", payload=fallback_value, payload_sha256=fb_digest)
-        elif reg[0]["payload_sha256"] != fb_digest:
-            raise FallbackMismatch(
-                f"registered fallback {reg[0]['payload_sha256'][:12]} != {fb_digest[:12]}; refuse"
+        new = contract_digest(attestation)
+        with self.log.locked() as s:
+            # validate everything first; a refused construction writes nothing
+            if s.contracts and s.contract != new:
+                if transition is None:
+                    raise ContractMismatch(
+                        f"persisted contract {s.contract[:12]} != {new[:12]}: refuse to run or return "
+                        "results without an explicit ContractTransition"
+                    )
+                transition.check()
+            elif transition is not None:
+                raise ValueError("a ContractTransition was given but there is no other contract")
+            reg = s.fallbacks.get(phase)
+            if reg is not None and reg["payload_sha256"] != fb_digest:
+                raise FallbackMismatch(
+                    f"registered fallback {reg['payload_sha256'][:12]} != {fb_digest[:12]}; refuse"
+                )
+            # take ownership, then record the contract and the fallback under it
+            self.epoch = s.epoch + 1
+            self.log.append("owner_epoch", epoch=self.epoch, phase=phase, instance=instance)
+            if not s.contracts:
+                self._append("attestation", digest=new, generation=0, **_att_fields(attestation))
+            elif s.contract != new:
+                self._append(
+                    "contract_transition",
+                    digest=new,
+                    generation=len(s.contracts),
+                    previous=s.contract,
+                    previous_generation=s.generation,
+                    cause=transition.cause,
+                    description=transition.description,
+                    commit=transition.commit,
+                    outcome_blind=True,
+                    **_att_fields(attestation),
+                )
+            if reg is None:
+                self._append(
+                    "fallback_registered", payload=fallback_value, payload_sha256=fb_digest
+                )
+            self.contract, self.generation = s.contract, s.generation
+            self.fallback_payload = s.fallbacks[phase]["payload"]
+            self.fallback_sha256 = fb_digest
+
+    # -------------------------------------------------- serialisation and fencing
+    def _fence(self):
+        s = self.log.state
+        if self.epoch is None:
+            return
+        if s.epoch != self.epoch:
+            raise StaleGuard(
+                f"owner epoch {self.epoch} is superseded by {s.epoch}; construct a new guard"
             )
-        self.fallback_payload = reg[0]["payload"] if reg else fallback_value
-        self.fallback_sha256 = fb_digest
+        if s.generation != self.generation or s.contract != self.contract:
+            raise StaleGuard("the contract generation changed; construct a new guard")
 
-    def _contract_events(self):
-        return [e for e in self.events if e["type"] in ("attestation", "contract_transition")]
+    @contextmanager
+    def _op(self):
+        with self.log.locked() as s:
+            self._fence()
+            yield s
 
-    @staticmethod
-    def _att_fields(att):
-        d = {k: getattr(att, k) for k in att.__dataclass_fields__}
-        d["evidence"] = sorted(d["evidence"])
-        return d
+    def _append(self, type_, **fields):
+        return self.log.append(type_, **{"epoch": self.epoch, "phase": self.phase, **fields})
 
-    # -------------------------------------------------- event log and sequence numbers
-    def _seq(self) -> int:
-        return max((e["seq"] for e in self.events), default=0) + 1
+    @property
+    def events(self) -> list:
+        """The current study log (re-read and verified)."""
+        with self.log.locked():
+            return list(self.log.records)
 
-    def _event(self, type_, **kw) -> dict:
-        e = {
-            "seq": self._seq(),
-            "type": type_,
-            "instance": self.instance,
-            "phase": self.phase,
-            "contract": getattr(self, "contract", None),
-            "generation": getattr(self, "generation", 0),
-            **kw,
-        }
-        self.events.append(e)
-        _append(self.events_path, e)
-        return e
-
-    # -------------------------------------------------- lifecycle (gaps 1 and 3)
-    def _lost(self, instance) -> bool:
-        return any(
-            e["type"] == "instance_lost" and e["lost_instance"] == instance for e in self.events
-        )
-
-    def _require_active(self):
+    # -------------------------------------------------- lifecycle
+    def _require_active(self, s):
         self.ledger.tick()  # fail closed on an inconsistent clock
-        if self.ledger.instance_state(self.instance) != "active" or self._lost(self.instance):
+        if s.instance_state(self.instance) != "active" or self.instance in s.lost:
             raise InstanceNotOpen(f"{self.instance}: no validated open instance")
 
     def validate(self):
-        """Lifecycle, clock and contract validation; ``run_units`` calls it before any ``resolve``."""
-        self._require_active()
+        """Owner epoch, log integrity, contract generation, clock and lifecycle; ``run_units`` calls it first."""
+        with self._op() as s:
+            self._require_active(s)
 
     def open_instance(self, gpus: int = 1):
-        if self._lost(self.instance):
-            raise InstanceNotOpen(f"{self.instance} was declared lost; relaunch on a new instance")
-        new = self.ledger.instance_open(self.instance, gpus)
-        self._event("instance_open" if new else "instance_resume", gpus=gpus)
-
-    def _closure_seq(self, instance):
-        s = [
-            e["seq"]
-            for e in self.events
-            if e["type"] in ("instance_close", "instance_lost", "instance_reconciled")
-            and e.get("target", e.get("lost_instance", e["instance"])) == instance
-        ]
-        return min(s) if s else None
-
-    def _dispose_unbracketed(self, instance, reason):
-        """Irreversibly mark attempts on ``instance`` lacking a closing canary as retained-ineligible."""
-        for a in self.events:
-            if (
-                a["type"] == "attempt_ok"
-                and a["instance"] == instance
-                and self.attempt_status(a) == "pending"
-            ):
-                self._event(
-                    "attempt_disposed", target=instance, attempt_seq=a["seq"], reason=reason
+        with self._op() as s:
+            if self.instance in s.lost:
+                raise InstanceNotOpen(
+                    f"{self.instance} was declared lost; relaunch on a new instance"
                 )
+            self.ledger.instance_open(self.instance, gpus)
+
+    def _dispose_unbracketed(self, s, instance, reason):
+        """Irreversibly mark attempts on ``instance`` lacking a closing canary as retained-ineligible."""
+        pend = [
+            a
+            for oks in s.ok.values()
+            for a in oks
+            if a["instance"] == instance and s.status(a) == "pending"
+        ]
+        for a in sorted(pend, key=lambda a: a["seq"]):
+            self._append(
+                "attempt_disposed",
+                instance=instance,
+                unit=a["unit"],
+                attempt_seq=a["seq"],
+                reason=reason,
+            )
 
     def close_instance(self):
-        self._require_active()
-        self._dispose_unbracketed(self.instance, "closed without a closing canary")
-        self.ledger.instance_close(self.instance)
-        self._event("instance_close", target=self.instance)
+        with self._op() as s:
+            self._require_active(s)
+            self._dispose_unbracketed(s, self.instance, "closed without a closing canary")
+            self.ledger.instance_close(self.instance)
 
     def reconcile_instance(self, launched_at, terminated_at, gpus, source, instance=None):
         inst = instance or self.instance
-        self._dispose_unbracketed(inst, f"authoritatively terminated ({source})")
-        self.ledger.reconcile_instance(inst, launched_at, terminated_at, gpus, source)
-        self._event("instance_reconciled", target=inst, source=source, terminated_at=terminated_at)
+        CombinedLedger.check_authoritative(launched_at, terminated_at, source)
+        with self._op() as s:
+            close_at = self.ledger._trusted_now() if s.instance_state(inst) == "active" else None
+            self._dispose_unbracketed(s, inst, f"authoritatively terminated ({source})")
+            self.ledger.reconcile_instance(
+                inst, launched_at, terminated_at, gpus, source, close_at=close_at
+            )
 
     def declare_lost(
         self,
@@ -720,88 +1052,75 @@ class ProductionGuard:
             raise ValueError("a loss disposition must be decided without reading any outcome")
         if not description or len(commit) < 7:
             raise ValueError("a loss disposition needs a description and the code commit")
-        if self._lost(instance):
-            raise ValueError(f"{instance} is already declared lost")
-        self._dispose_unbracketed(instance, f"lost: {cause}")
-        if self.ledger.instance_state(instance) == "active":
-            opened = [
-                r
-                for r in self.ledger.rows
-                if r.get("kind") == "instance_open" and r["instance"] == instance
-            ]
-            t0 = opened[0]["t"] if launched_at is None else launched_at
-            end = self.ledger._trusted_now() if terminated_at is None else terminated_at
-            self.ledger.reconcile_instance(instance, t0, end, opened[0]["gpus"], source)
-        self._event(
-            "instance_lost",
-            lost_instance=instance,
-            cause=cause,
-            description=description,
-            commit=commit,
-            outcome_blind=True,
-            terminated_at=terminated_at,
-        )
+        with self._op() as s:
+            if instance in s.lost:
+                raise ValueError(f"{instance} is already declared lost")
+            active = s.instance_state(instance) == "active"
+            if active:
+                now = self.ledger._trusted_now()
+                t0 = s.opened[instance][0] if launched_at is None else launched_at
+                end = now if terminated_at is None else terminated_at
+                CombinedLedger.check_authoritative(t0, end, source)
+            self._dispose_unbracketed(s, instance, f"lost: {cause}")
+            if active:
+                self.ledger.reconcile_instance(
+                    instance, t0, end, s.opened[instance][1], source, close_at=now
+                )
+            self._append(
+                "instance_lost",
+                instance=instance,
+                cause=cause,
+                description=description,
+                commit=commit,
+                outcome_blind=True,
+                terminated_at=terminated_at,
+            )
 
     def canary(self, sha: str) -> bool:
-        self._require_active()  # never for a closed, lost or unregistered instance
-        self._event("canary", sha=sha)
-        return sha == self.attestation.canary_reference
+        with self._op() as s:
+            self._require_active(s)  # never for a closed, lost or unregistered instance
+            self._append(
+                "canary",
+                instance=self.instance,
+                generation=self.generation,
+                contract=self.contract,
+                sha=sha,
+            )
+            return sha == s.contracts[self.generation]["canary_reference"]
 
     def relaunch(self, cause: str, new_instance: str):
-        self.ledger.tick()
-        self.retry.relaunch(self.phase, cause)
-        self._event("relaunch", cause=cause, new_instance=new_instance)
-        self.instance = new_instance
+        with self._op():
+            self.ledger.tick()
+            self.retry.relaunch(
+                self.phase, cause, instance=self.instance, new_instance=new_instance
+            )
+            self.instance = new_instance
 
-    # -------------------------------------------------- eligibility (per contract generation)
+    # -------------------------------------------------- eligibility (current state only)
     def attempt_status(self, a) -> str:
-        if a.get("generation") != self.generation or a.get("contract") != self.contract:
-            return "superseded_contract"
-        if any(
-            e["type"] == "attempt_disposed" and e["attempt_seq"] == a["seq"] for e in self.events
-        ):
-            return "retained_ineligible"
-        ref = self.references[a["generation"]]
-        close = self._closure_seq(a["instance"])
-        cans = [
-            e
-            for e in self.events
-            if e["type"] == "canary"
-            and e["instance"] == a["instance"]
-            and e.get("generation") == a["generation"]
-            and e.get("contract") == a["contract"]
-            and (close is None or e["seq"] < close)
-        ]
-        before = [e for e in cans if e["seq"] < a["seq"]]
-        after = [e for e in cans if e["seq"] > a["seq"]]
-        if not before or before[-1]["sha"] != ref:
-            return "retained_ineligible"
-        if not after:
-            return "retained_ineligible" if close is not None else "pending"
-        return "eligible" if after[0]["sha"] == ref else "retained_ineligible"
-
-    def _attempts(self, key):
-        return [e for e in self.events if e["type"] == "attempt_ok" and e["unit"] == key]
+        with self.log.locked() as s:
+            return s.status(a)
 
     def unit_status(self, key) -> dict:
-        st = [(a["attempt_key"], self.attempt_status(a)) for a in self._attempts(key)]
-        fb = any(e["type"] == "fallback" and e["unit"] == key for e in self.events)
-        return {"attempts": st, "fallback": fb}
+        with self.log.locked() as s:
+            return {
+                "attempts": [(a["attempt_key"], s.status(a)) for a in s.ok.get(key, [])],
+                "fallback": key in s.fallback_units,
+            }
 
     # -------------------------------------------------- unit protocol used by harness.run_units
-    def resolve(self, store, key):
-        if self.ledger.halted():
-            raise ClockInconsistent(
-                "the clock is halted; no result is returned until it is cleared"
-            )
-        for a in sorted(self._attempts(key), key=lambda a: a["seq"]):
-            if self.attempt_status(a) == "eligible":
-                return store.read(a["attempt_key"])
-        fbs = [e for e in self.events if e["type"] == "fallback" and e["unit"] == key]
-        if fbs:
-            fb = fbs[0]
+    def _resolved(self, s, store, key):
+        for a in s.ok.get(key, []):
+            if s.status(a) == "eligible":
+                payload = store.read(a["attempt_key"])
+                if _digest(payload) != a["payload_sha256"]:
+                    raise ResultMismatch(f"{a['attempt_key']}: stored payload != logged digest")
+                return payload
+        fb = s.fallback_units.get(key)
+        if fb is not None:
+            reg = s.fallbacks[fb["phase"]]
             if (
-                fb["payload_sha256"] != self.fallback_sha256
+                fb["payload_sha256"] != reg["payload_sha256"]
                 or _digest(fb["payload"]) != fb["payload_sha256"]
             ):
                 raise FallbackMismatch(f"{key}: persisted fallback does not verify")
@@ -812,76 +1131,117 @@ class ProductionGuard:
             }
         return None
 
+    def resolve(self, store, key):
+        with self._op() as s:
+            if s.halted:
+                raise ClockInconsistent(
+                    "the clock is halted; no result is returned until it is cleared"
+                )
+            return self._resolved(s, store, key)
+
     def begin(self, key, label) -> int:
-        self._require_active()
-        cans = [
-            e
-            for e in self.events
-            if e["type"] == "canary"
-            and e["instance"] == self.instance
-            and e.get("generation") == self.generation
-            and e.get("contract") == self.contract
-        ]
-        if not cans or cans[-1]["sha"] != self.attestation.canary_reference:
-            raise CanaryMismatch(
-                f"{self.instance}: no passing canary since the last unit; halt for repair"
+        with self._op() as s:
+            self._require_active(s)
+            cans = s.canaries.get((self.instance, self.generation, self.contract), [])
+            if not cans or cans[-1][1] != s.contracts[self.generation]["canary_reference"]:
+                raise CanaryMismatch(
+                    f"{self.instance}: no passing canary since the last unit; halt for repair"
+                )
+            if key in s.fallback_units or any(s.status(a) == "eligible" for a in s.ok.get(key, [])):
+                raise UnitResolved(f"{label}: already has an eligible result or its fallback")
+            if any(s.status(a) == "pending" for a in s.ok.get(key, [])):
+                raise CanaryMismatch(
+                    f"{label}: an attempt is pending its closing canary; close it (or declare its instance lost)"
+                )
+            self.ledger.check_before(self.phase, self.est)
+            return self.retry.attempt(
+                key,
+                s.last_cause.get(key),
+                label=label,
+                instance=self.instance,
+                generation=self.generation,
+                contract=self.contract,
             )
-        if any(self.attempt_status(a) == "pending" for a in self._attempts(key)):
-            raise CanaryMismatch(
-                f"{label}: an attempt is pending its closing canary; close it (or declare its instance lost)"
-            )
-        self.ledger.check_before(self.phase, self.est)
-        prev = [e for e in self.events if e["type"] == "attempt_fail" and e["unit"] == key]
-        n = self.retry.attempt(key, prev[-1]["cause"] if prev else None)
-        self._event("attempt_start", unit=key, label=label, n=n)
-        return n
+
+    def _inflight(self, s, key, n=None):
+        st = s.inflight.get(key)
+        if st is None or st["epoch"] != self.epoch or (n is not None and st["n"] != n):
+            raise StaleGuard(f"{key}: no in-flight attempt of this owner")
+        return st
 
     def failed(self, key, label, seconds, exc):
-        self.ledger.add(self.phase, seconds, note=f"{label} failed", status="failed")
-        cause = self.technical(exc)
-        self._event(
-            "attempt_fail",
-            unit=key,
-            label=label,
-            seconds=seconds,
-            cause=cause,
-            error=type(exc).__name__,
-        )
+        with self._op() as s:
+            st = self._inflight(s, key)
+            self.ledger.add(self.phase, seconds, note=f"{label} failed", status="failed")
+            cause = self.technical(exc)
+            self._append(
+                "attempt_fail",
+                unit=key,
+                label=label,
+                n=st["n"],
+                start_seq=st["seq"],
+                seconds=seconds,
+                cause=cause,
+                error=type(exc).__name__,
+            )
         if cause not in TECHNICAL_CAUSES:
             raise exc
 
     def succeeded(self, store, key, label, n, payload, seconds, theta0):
-        akey = f"{key}.a{n}"
-        store.write(akey, payload, theta_after=theta0)
-        self.ledger.add(self.phase, seconds, note=str(label))
-        self._event("attempt_ok", unit=key, label=label, n=n, attempt_key=akey, seconds=seconds)
+        with self._op() as s:
+            st = self._inflight(s, key, n)
+            self.ledger.add(self.phase, seconds, note=str(label))  # charged even if refused below
+            self._require_active(s)  # the instance is still active and the clock consistent
+            akey = f"{key}.a{n}"
+            store.write(akey, payload, theta_after=theta0)
+            self._append(
+                "attempt_ok",
+                unit=key,
+                label=label,
+                n=n,
+                attempt_key=akey,
+                start_seq=st["seq"],
+                instance=st["instance"],
+                generation=st["generation"],
+                contract=st["contract"],
+                payload_sha256=_digest(payload),
+                seconds=seconds,
+            )
         return {"status": "pending_canary", "attempt_key": akey}
 
     def fallback(self, key, label):
-        self._event(
-            "fallback",
-            unit=key,
-            label=label,
-            payload=self.fallback_payload,
-            payload_sha256=self.fallback_sha256,
-        )
-        return {
-            "fallback": True,
-            "value": self.fallback_payload,
-            "payload_sha256": self.fallback_sha256,
-        }
+        with self._op() as s:
+            fb = s.fallback_units.get(key)
+            if fb is None:
+                if s.attempts.get(key, 0) < UNIT_ATTEMPTS:
+                    raise ValueError(f"{label}: attempts remain; no fallback yet")
+                if any(s.status(a) == "eligible" for a in s.ok.get(key, [])):
+                    raise UnitResolved(f"{label}: has an eligible result")
+                reg = s.fallbacks[self.phase]
+                fb = self._append(
+                    "fallback",
+                    unit=key,
+                    label=label,
+                    payload=reg["payload"],
+                    payload_sha256=reg["payload_sha256"],
+                )
+            return {
+                "fallback": True,
+                "value": fb["payload"],
+                "payload_sha256": fb["payload_sha256"],
+            }
 
     def report(self) -> dict:
-        units = sorted({e["unit"] for e in self.events if "unit" in e})
-        return {
-            "contract": self.contract,
-            "generation": self.generation,
-            "units": {u: self.unit_status(u) for u in units},
-            "charged_gpu_h": self.ledger.gpu_h(),
-            "unit_gpu_h": self.ledger.unit_gpu_h(),
-            "instance_gpu_h": self.ledger.instance_gpu_h(),
-            "relaunches": dict(self.retry.relaunches),
-            "lost_instances": sorted(
-                {e["lost_instance"] for e in self.events if e["type"] == "instance_lost"}
-            ),
-        }
+        with self._op() as s:
+            units = sorted(set(s.ok) | set(s.attempts) | set(s.fallback_units))
+            return {
+                "epoch": s.epoch,
+                "contract": s.contract,
+                "generation": s.generation,
+                "units": {u: self.unit_status(u) for u in units},
+                "charged_gpu_h": self.ledger.gpu_h(),
+                "unit_gpu_h": self.ledger.unit_gpu_h(),
+                "instance_gpu_h": self.ledger.instance_gpu_h(),
+                "relaunches": dict(s.relaunches),
+                "lost_instances": sorted(s.lost),
+            }

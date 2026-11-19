@@ -294,4 +294,49 @@ coverage counts are in §II.26.2.
 **Suite.** 2,290 passed; only the 3 pinned tripwires fail.
 
 **Status.** Blocker A and gap 4 were closed by Board A. Blocker B's three remaining gaps are repaired in code and await
-Board A's check. The confirmatory-stack checks remain launch preconditions.
+Board A's check. The confirmatory-stack checks remain launch preconditions. *(Superseded by Update v2i: Board A's freeze re-check
+2 found the stale-object root cause.)*
+
+
+## Update v2i (19 Nov 2026): Board A freeze re-check 2, stale objects fenced
+
+> **Context.** Board A's freeze re-check 2 (`docs/reviews/council/board-a-prereg-wme-v2-freeze2-2026-11-19.md`)
+> rejected on one root cause: stale guard objects were not fenced against shared persisted state.
+> - Branch `prereg/wme-v2i`, from main `e54776b`.
+> - A structural repair in `src/wsp/wm/runguard.py` (code `a53fdbc`); PREREG §II.27.
+
+**Design.**
+- **One log.** One authoritative, append-only, fsync'd, hash-chained study log per state directory, with a global
+  gap-free sequence and a head record. The ledger, clock, retry and relaunch counters, canaries, contract generations,
+  lifecycle, loss dispositions, fallbacks and owner epoch are all replayed from it; the separate logs are merged.
+- **Lock and re-read on every operation.** Every public operation takes an exclusive `fcntl.flock`, re-reads and
+  verifies the tail, re-validates on that current state, then appends under the same lock.
+- **Owner epoch.** Constructing a guard appends `owner_epoch`. Older objects raise `StaleGuard` before returning or
+  writing anything.
+- **Fail closed on log damage.** Torn, truncated or chain-broken logs raise `LogCorrupt`. A torn tail has one audited
+  repair, which also ends the ownership.
+
+| Board A reproduction | Regression test (`tests/test_wme_runguard.py`) |
+|---|---|
+| B2: a stale guard returned a superseded result | `test_probe_freeze2_stale_guard_cannot_return_a_superseded_result` |
+| B3: a stale same-id guard accepted a post-loss canary | `test_probe_freeze2_stale_same_id_guard_cannot_accept_a_post_loss_canary` |
+| A stale guard ran a fourth attempt after exhaustion | `test_probe_freeze2_stale_guard_cannot_run_a_fourth_attempt_after_exhaustion` |
+| Duplicate sequence numbers | `test_probe_freeze2_overlapping_objects_never_duplicate_sequence_numbers` |
+
+Further tests:
+- `test_unfenced_views_always_act_on_the_current_log`
+- `test_lock_serialises_concurrent_processes`
+- `test_torn_or_truncated_log_fails_closed_until_reconciled`
+
+**Property test.** The property test now keeps every guard object it constructs and reuses older ones at random. It
+also takes over ownership during units and tears appends. Its invariants come from an independent replay of the raw
+log bytes, which answers Board A's oracle remarks on I2–I6.
+- **Run:** 5,000 sequences × 40 steps on disk-backed temporary storage; passed, 0 failures; 16,048 calls through older objects refused with the log unchanged; 1,300 takeovers during units; 2,512 operations refused on torn logs and 1,797 audited repairs.
+- **Mutations:** removing the lock and the re-read (m4) is detected at sequence 1 in every mode; removing the epoch fence (m5) is detected at sequence 1 (full) and 26 (I2, without the fencing assertion); removing only the OS lock (m6) is not visible to single-process sequences and is detected by the concurrent-process check; unmutated controls pass 300 sequences in every mode and the concurrent check.
+- **Additional defects found:** The property test found **no runtime defect** in the repaired guard: 0 failures in the registered run, the development runs and the default-suite runs. One test bug was found and fixed during development: the torn-log step consulted the model before calling a guard. m6 is not detectable by a single-process sequence, which cannot interleave inside an operation; the lock is covered by the concurrent-process check and by `test_lock_serialises_concurrent_processes`. With the I0 checks off, m4 is caught by the implementation's own fail-closed chain verification, not by a result-level invariant. With the lock and re-read in place, the epoch fence's removal is caught by I2's one-owner rule. These detections are reported as observed.
+
+**Suite.** 2,297 passed; only the 3 pinned tripwires fail.
+
+**Status.** Blocker A and fallback identity were closed by Board A. Blocker B's stale-object root cause is repaired in
+code and awaits Board A's check. The confirmatory-stack checks remain launch preconditions, now including the
+deployed ownership and fencing path and a host-local lock for the shared state.

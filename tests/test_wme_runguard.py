@@ -1,6 +1,12 @@
 """Validity/repair/stopping contract enforced in the production path (wsp.wm.runguard, harness.run_units;
 Board A v2 change 6 and confirmation blocker B)."""
 
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from wsp.wm import harness as H
@@ -69,9 +75,13 @@ def test_counters_persist_across_restarts(tmp_path):
         rp2.relaunch("e2", "infrastructure")
     with pytest.raises(ValueError):
         rp2.attempt("v", "winner looked bad")
-    cb = RG.CanaryBook(REF, tmp_path / "c.jsonl")
-    cb.canary("i1", 1, REF)
-    assert RG.CanaryBook(REF, tmp_path / "c.jsonl").last("i1") == REF
+    # one log: the ledger and the counters are views of the same hash-chained records (§II.27)
+    led = RG.CombinedLedger(tmp_path / "r.jsonl", {"e2": 1.0})
+    led.add("e2", 60.0)
+    rp3 = RG.RetryPolicy(tmp_path / "r.jsonl")
+    assert rp3.attempts == {"u": 3} and rp3.relaunches == {"e2": 1}
+    assert led.unit_gpu_h() == pytest.approx(60 / 3600)
+    assert [r["seq"] for r in led.rows] == list(range(1, len(led.rows) + 1))
 
 
 def test_repairs_must_be_technical_and_outcome_blind():
@@ -314,7 +324,9 @@ def test_orchestration_failure_canary_restart_preemption_exhaustion_and_first_va
     out = H.run_units(store, UNITS, fn, "t" * 64, "p", guard=g)
     assert out["u1"]["status"] == out["u2"]["status"] == "pending_canary"
     assert out["u3"]["fallback"] and out["u3"]["value"] == "base" and calls["u3"] == 3
-    assert len([r for r in g.ledger.rows if r.get("status") == "failed"]) == 4
+    assert (
+        len([r for r in g.ledger.rows if r["type"] == "unit_time" and r["status"] == "failed"]) == 4
+    )
     assert not g.canary(BAD)  # failed end canary: u1.a1 and u2.a2 are retained-ineligible
     g.retry.repair(
         "canary_mismatch", "re-pinned the CUDA library path", "abcdef1", outcome_blind=True
@@ -386,7 +398,7 @@ def test_non_technical_failure_halts_but_is_charged(tmp_path):
 
     with pytest.raises(ValueError):
         H.run_units(H.UnitStore(tmp_path / "u"), [({"u": 9}, "u9")], fn, "t" * 64, "p", guard=g)
-    assert [r["status"] for r in g.ledger.rows if r.get("kind") == "unit"] == ["failed"]
+    assert [r["status"] for r in g.ledger.rows if r["type"] == "unit_time"] == ["failed"]
 
 
 # ------------------------------------------------------------------ Board A freeze re-check probes (§II.26)
@@ -477,3 +489,199 @@ def test_probe_freeze_canary_after_loss_cannot_revive_an_attempt(tmp_path):
     ]
     assert any(e["type"] == "attempt_disposed" for e in stale.events)
     assert stale.resolve(store, _key(1)) == {"unit": "u1", "on": "i2"}
+
+
+# ------------------------------------------------------------------ Board A freeze re-check 2 probes (§II.27)
+
+
+def test_probe_freeze2_stale_guard_cannot_return_a_superseded_result(tmp_path):
+    clk, store, st = Clock(), H.UnitStore(tmp_path / "u"), tmp_path / "s"
+    g0 = _mk(st, "i1", clk)
+    g0.open_instance()
+    g0.canary(REF)
+    H.run_units(store, UNITS[:1], lambda r: {"generation": 0}, "t" * 64, "p", guard=g0)
+    g0.canary(REF)
+    assert g0.resolve(store, _key(1)) == {"generation": 0}
+    b = RG.LaunchAttestation(True, True, REF, "d" * 64, ATTEST.evidence)
+    tr = RG.ContractTransition("driver_or_cuda", "driver change", "abcdef1", True)
+    g1 = _mk(st, "i1", clk, att=b, transition=tr)
+    g2 = _mk(st, "i1", clk, att=ATTEST, transition=tr)  # A -> B -> A: generation 2
+    for _ in range(3):
+        g2 = _mk(st, "i1", clk)  # repeated reconstruction keeps generation 2
+    assert g2.generation == 2 and g2.resolve(store, _key(1)) is None
+    g2.canary(REF)
+    H.run_units(store, UNITS[:1], lambda r: {"generation": 2}, "t" * 64, "p", guard=g2)
+    g2.canary(REF)
+    assert g2.resolve(store, _key(1)) == {"generation": 2}
+
+    def never(recipe):
+        raise AssertionError("a resolved unit is never recomputed")
+
+    n = len(g2.events)
+    for stale in (g0, g1):  # the retained generation-0 and generation-1 objects
+        with pytest.raises(RG.StaleGuard):
+            H.run_units(store, UNITS[:1], never, "t" * 64, "p", guard=stale)
+        with pytest.raises(RG.StaleGuard):
+            stale.resolve(store, _key(1))
+        with pytest.raises(RG.StaleGuard):
+            stale.canary(REF)
+    assert len(g2.events) == n  # the stale objects wrote nothing
+    assert H.run_units(store, UNITS[:1], never, "t" * 64, "p", guard=g2) == {
+        "u1": {"generation": 2}
+    }
+
+
+def test_probe_freeze2_stale_same_id_guard_cannot_accept_a_post_loss_canary(tmp_path):
+    clk, store, st = Clock(), H.UnitStore(tmp_path / "u"), tmp_path / "s"
+    live = _mk(st, "i1", clk)
+    live.open_instance()
+    live.canary(REF)
+    H.run_units(store, UNITS[:1], _ok, "t" * 64, "p", guard=live)  # .a1 pending its closing canary
+    other = _mk(st, "i1", clk)  # a second object for the same state directory and instance id
+    clk.t = H1
+    other.declare_lost("i1", "preemption_or_capacity", "preempted", "abcdef1", True)
+    n = len(other.events)
+    with pytest.raises(RG.StaleGuard):  # the retained object can no longer record evidence
+        live.canary(REF)
+    with pytest.raises(RG.StaleGuard):
+        H.run_units(store, UNITS[:1], _ok, "t" * 64, "p", guard=live)
+    assert len(other.events) == n
+    assert other.unit_status(_key(1))["attempts"] == [(f"{_key(1)}.a1", "retained_ineligible")]
+    with pytest.raises(RG.InstanceNotOpen):  # and the current owner refuses a canary for a lost id
+        other.canary(REF)
+    fresh = _mk(st, "i1", clk)
+    with pytest.raises(RG.InstanceNotOpen):
+        fresh.canary(REF)
+    assert fresh.resolve(store, _key(1)) is None
+
+
+def test_probe_freeze2_stale_guard_cannot_run_a_fourth_attempt_after_exhaustion(tmp_path):
+    clk, store, st = Clock(), H.UnitStore(tmp_path / "u"), tmp_path / "s"
+    g0 = _mk(st, "i1", clk)
+    g0.open_instance()
+    g0.canary(REF)
+    stale = _mk(st, "i1", clk)
+    g = _mk(st, "i1", clk)
+    calls = []
+
+    def fail(recipe):
+        calls.append("failure")
+        raise MemoryError("OOM")
+
+    def succeed(recipe):
+        calls.append("fourth execution")
+        return {"unit": "u1"}
+
+    out = H.run_units(store, UNITS[:1], fail, "t" * 64, "p", guard=g)
+    assert out["u1"]["fallback"] and calls == ["failure"] * 3
+    with pytest.raises(RG.StaleGuard):
+        H.run_units(store, UNITS[:1], succeed, "t" * 64, "p", guard=stale)
+    assert calls == ["failure"] * 3  # never executed a fourth time
+    assert H.run_units(store, UNITS[:1], succeed, "t" * 64, "p", guard=g)["u1"]["value"] == "base"
+    g2 = _mk(st, "i1", clk)
+    assert H.run_units(store, UNITS[:1], succeed, "t" * 64, "p", guard=g2)["u1"]["value"] == "base"
+    with pytest.raises(RG.UnitResolved):
+        g2.begin(_key(1), "u1")
+    assert calls == ["failure"] * 3
+    assert RG.RetryPolicy(st / RG.LOG_NAME).attempts == {_key(1): 3}
+    assert sum(1 for e in g2.events if e["type"] == "fallback") == 1
+
+
+def test_probe_freeze2_overlapping_objects_never_duplicate_sequence_numbers(tmp_path):
+    clk, st = Clock(), tmp_path / "s"
+    a = _mk(st, "i1", clk)
+    a.open_instance()
+    b = _mk(st, "i1", clk)  # overlapping owner
+    with pytest.raises(RG.StaleGuard):
+        a.canary(REF)
+    assert b.canary(REF)
+    led_a = RG.CombinedLedger(st / RG.LOG_NAME, {"e2": 200.0}, clock=clk)  # unfenced views
+    led_b = RG.CombinedLedger(st / RG.LOG_NAME, {"e2": 200.0}, clock=clk)
+    for _ in range(5):
+        led_a.add("e2", 1.0)
+        led_b.add("e2", 1.0)
+        b.canary(REF)
+    b.retry.repair("infrastructure", "x", "abcdef1", outcome_blind=True)
+    recs = [json.loads(x) for x in (st / RG.LOG_NAME).read_text().splitlines()]
+    assert [r["seq"] for r in recs] == list(range(1, len(recs) + 1))
+    assert all(r["prev"] == (recs[i - 1]["hash"] if i else RG.GENESIS) for i, r in enumerate(recs))
+    assert all(r["hash"] == RG.record_hash(r) for r in recs)
+    assert led_a.unit_gpu_h() == led_b.unit_gpu_h() == pytest.approx(10 / 3600)
+    assert RG.read_study(st).snapshot() == RG.StudyLog(st / RG.LOG_NAME).state.snapshot()
+    assert b.events == recs
+
+
+def test_unfenced_views_always_act_on_the_current_log(tmp_path):
+    p = tmp_path / RG.LOG_NAME
+    led1, led2 = RG.CombinedLedger(p, {"e2": 200.0}), RG.CombinedLedger(p, {"e2": 200.0})
+    led1.add("e2", 89.5 * 3600)
+    with pytest.raises(RG.CapExceeded):  # led2 re-reads the tail under the lock: no stale snapshot
+        led2.check_before("e2", 0.6)
+    r1, r2 = RG.RetryPolicy(p), RG.RetryPolicy(p)
+    assert [r1.attempt("u", None if i == 0 else "out_of_memory") for i in range(3)] == [1, 2, 3]
+    with pytest.raises(RG.RetryExhausted):
+        r2.attempt("u", "out_of_memory")
+
+
+_APPEND = """
+import sys
+from wsp.wm import runguard as RG
+led = RG.CombinedLedger(sys.argv[1], {"e2": 1e6})
+for _ in range(int(sys.argv[2])):
+    led.add("e2", 1.0)
+"""
+
+
+def test_lock_serialises_concurrent_processes(tmp_path):
+    path = tmp_path / RG.LOG_NAME
+    env = {**os.environ, "PYTHONPATH": str(Path(RG.__file__).parents[2])}
+    procs = [
+        subprocess.Popen([sys.executable, "-c", _APPEND, str(path), "40"], env=env)
+        for _ in range(4)
+    ]
+    assert [p.wait(120) for p in procs] == [0, 0, 0, 0]
+    st = RG.StudyLog(path).state  # verifies the whole chain
+    assert st.n == 160 and st.unit_s["e2"] == pytest.approx(160.0)
+
+
+def test_torn_or_truncated_log_fails_closed_until_reconciled(tmp_path):
+    clk, st = Clock(), tmp_path / "s"
+    g = _mk(st, "i1", clk)
+    g.open_instance()
+    g.canary(REF)
+    log = st / RG.LOG_NAME
+    torn = b'{"seq": 99, "type": "can'
+    with open(log, "ab") as f:  # a crash in the middle of an append
+        f.write(torn)
+    with pytest.raises(RG.LogCorrupt):
+        g.canary(REF)
+    with pytest.raises(RG.LogCorrupt):
+        _mk(st, "i1", clk)
+    with pytest.raises(RG.LogCorrupt):
+        RG.read_study(st)
+    rec = RG.repair_torn_tail(st, "operator", "crash during an append; torn bytes quarantined")
+    assert rec["type"] == "log_repaired" and (st / rec["quarantine"]).read_bytes() == torn
+    with pytest.raises(RG.StaleGuard):  # the repair ends the ownership
+        g.canary(REF)
+    g2 = _mk(st, "i1", clk)
+    assert g2.canary(REF)
+    data = log.read_bytes()
+    log.write_bytes(
+        data[: data.rstrip(b"\n").rfind(b"\n") + 1]
+    )  # a complete record lost from the end
+    with pytest.raises(RG.LogCorrupt):
+        g2.canary(REF)
+    with pytest.raises(RG.LogCorrupt):  # detected against the head record on a fresh load
+        RG.read_study(st)
+    with pytest.raises(ValueError):  # not a torn tail: no automatic repair
+        RG.repair_torn_tail(st, "operator", "x")
+    lines = data.splitlines(keepends=True)
+    i = next(k for k, x in enumerate(lines) if b'"instance_open"' in x)
+    lines[i] = lines[i].replace(b'"gpus":1', b'"gpus":8')  # an altered middle record
+    log.write_bytes(b"".join(lines))
+    with pytest.raises(RG.LogCorrupt):
+        RG.read_study(st)
+    (tmp_path / "old").mkdir()
+    (tmp_path / "old" / "events.jsonl").write_text("")
+    with pytest.raises(ValueError):  # the pre-§II.27 multi-file layout is refused
+        _mk(tmp_path / "old", "i1", clk)
