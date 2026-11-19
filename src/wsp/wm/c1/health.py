@@ -13,9 +13,11 @@ Controller side
     ``ProductionGuard.incident`` (the guard then refuses to issue any unit, ``runguard.HealthHalt``, until the
     incident is diagnosed and reported to the chair, ``resolve_incidents``):
 
-    * ``gpu_idle``: a unit in flight and GPU utilisation below 20 % for more than 15 min (worker clock:
-      ``t - max(low_since, inflight.since) > 900 s``); a heartbeat without GPU telemetry for that long with a unit
-      in flight is ``gpu_telemetry_missing``;
+    * ``gpu_idle``: a unit of a GPU kind (:data:`KIND_CLASS`) in flight and GPU utilisation below 20 % for more than
+      15 min (worker clock: ``t - max(low_since, inflight.since) > 900 s``); a heartbeat without GPU telemetry for
+      that long is ``gpu_telemetry_missing``;
+    * ``no_progress``: a unit of a CPU kind (E2 planner search, fits; addendum 2, answer 3) with no progress
+      (``Ctx.check`` / ``Ctx.progress``) for more than 15 min;
     * ``worker_error``: an error result, a traceback in a result payload, or a traceback / error line in the
       worker log;
     * ``canary_mismatch``: a canary that does not equal the reference;
@@ -55,6 +57,34 @@ STAGES = (
     ("ste_generate", ("ste_generate",)),
 )
 STAGE_OF = {k: i for i, (_s, kinds) in enumerate(STAGES) for k in kinds}
+NO_PROGRESS_LIMIT_S = 15 * 60.0
+# RULING-wme-c1-phasel addendum 2, answer 3: the GPU-idle rule applies only to kinds that use the GPU; CPU kinds (the
+# E2 planner search, the fits; the analysis runs on the controller, no worker unit) are checked by a progress
+# heartbeat instead. Every handler kind of the worker registry is classified (tests enforce it).
+GPU_KINDS = (
+    "canary",
+    "field_group",
+    "field_vocab",
+    "bank_base",
+    "bank_side",
+    "bank_comp",
+    "bank_inert",
+    "library",
+    "dev_base",
+    "dev_eval",
+    "sbon_arm",
+    "sealed_eval",
+    "e1_gen",
+    "ste_calibrate",
+    "ste_train",
+    "ste_generate",
+    "inert_identity",
+    "parity",
+    "gen_repeat",
+    "timing",
+)
+CPU_KINDS = ("fit", "e2_arm", "theta_of", "describe", "edit_bundles", "rstats", "hello")
+KIND_CLASS = {**dict.fromkeys(GPU_KINDS, "gpu"), **dict.fromkeys(CPU_KINDS, "cpu")}
 TRACE_RE = re.compile(
     r"Traceback \(most recent call last\)|^\s*(?:[\w.]+(?:Error|Exception)|CUDA error|RuntimeError)\b[:\s]",
     re.MULTILINE,
@@ -147,12 +177,19 @@ class Sampler:
 
     def set_inflight(self, req: dict | None):
         with self._lock:
+            now = float(self.clock())
             self.inflight = (
                 None
                 if req is None
-                else {"id": req["id"], "kind": req["kind"], "since": float(self.clock())}
+                else {"id": req["id"], "kind": req["kind"], "since": now, "last_progress": now}
             )
         self.beat()
+
+    def note_progress(self):
+        """A handler sub-step completed (``Ctx.check`` / ``Ctx.progress``): the CPU-kind progress heartbeat."""
+        with self._lock:
+            if self.inflight is not None:
+                self.inflight["last_progress"] = float(self.clock())
 
     def beat(self) -> dict:
         t = float(self.clock())
@@ -163,7 +200,8 @@ class Sampler:
                     self.low_since = t if self.low_since is None else self.low_since
                 else:
                     self.low_since = None
-            hb = {"t": t, "gpu": gpu, "low_since": self.low_since, "inflight": self.inflight}
+            inf = None if self.inflight is None else dict(self.inflight)
+            hb = {"t": t, "gpu": gpu, "low_since": self.low_since, "inflight": inf}
         tmp = self.root / f".{HEARTBEAT}.tmp"
         tmp.write_text(json.dumps(hb))
         os.replace(tmp, self.root / HEARTBEAT)
@@ -191,24 +229,43 @@ class Sampler:
 # ------------------------------------------------------------------ controller side
 
 
-def idle_check(hb: dict | None) -> tuple[str, dict] | None:
-    """The GPU-idle rule on one heartbeat (worker clock). Returns (kind, detail) or None."""
+def idle_check(
+    hb: dict | None,
+    classes: dict | None = None,
+    idle_limit_s: float = IDLE_LIMIT_S,
+    progress_limit_s: float = NO_PROGRESS_LIMIT_S,
+) -> tuple[str, dict] | None:
+    """The idle rules on one heartbeat (worker clock). Returns (kind, detail) or None.
+
+    * GPU kinds: utilisation < 20 % for more than 15 min (``gpu_idle``), or no GPU telemetry for that long
+      (``gpu_telemetry_missing``); progress does not excuse an idle GPU.
+    * CPU kinds: more than 15 min without progress (``no_progress``), counted from the later of the unit's start and
+      its last progress; GPU utilisation is not checked.
+    A kind missing from ``classes`` is treated as a GPU kind (the stricter rule)."""
     if not hb or not hb.get("inflight"):
         return None
-    t, since = float(hb["t"]), float(hb["inflight"]["since"])
+    inf = hb["inflight"]
+    t, since = float(hb["t"]), float(inf["since"])
+    cls = (KIND_CLASS if classes is None else classes).get(inf.get("kind"), "gpu")
+    if cls == "cpu":
+        last = max(since, float(inf.get("last_progress") or since))
+        if t - last > progress_limit_s:
+            return "no_progress", {"inflight": inf, "stalled_s": t - last, "class": "cpu"}
+        return None
     if not hb.get("gpu"):
-        if t - since > IDLE_LIMIT_S:
-            return "gpu_telemetry_missing", {"inflight": hb["inflight"], "for_s": t - since}
+        if t - since > idle_limit_s:
+            return "gpu_telemetry_missing", {"inflight": inf, "for_s": t - since}
         return None
     if hb.get("low_since") is None:
         return None
     low_for = t - max(float(hb["low_since"]), since)
-    if low_for > IDLE_LIMIT_S:
+    if low_for > idle_limit_s:
         return "gpu_idle", {
-            "inflight": hb["inflight"],
+            "inflight": inf,
             "low_for_s": low_for,
             "gpu": hb["gpu"],
             "threshold_pct": UTIL_LOW_PCT,
+            "class": "gpu",
         }
     return None
 
@@ -225,7 +282,22 @@ def payload_traceback(payload) -> bool:
 class HealthMonitor:
     """Controller-side incident rules and chunk-boundary summaries for one study (state in ``<runs>/health``)."""
 
-    def __init__(self, runs_dir, transport=None, clock=time.time, log=None, order=None):
+    def __init__(
+        self,
+        runs_dir,
+        transport=None,
+        clock=time.time,
+        log=None,
+        order=None,
+        classes=None,
+        limits=None,
+    ):
+        # fixture classes / limits / poll interval only in the CPU drill; production uses the registered values
+        self.classes = dict(KIND_CLASS if classes is None else classes)
+        lim = dict(limits or {})
+        self.idle_limit_s = float(lim.get("idle_s", IDLE_LIMIT_S))
+        self.progress_limit_s = float(lim.get("progress_s", NO_PROGRESS_LIMIT_S))
+        self.poll_min_s = float(lim.get("poll_s", POLL_MIN_S))
         self.stages = tuple(order or STAGES)  # a fixture order only in the CPU drill
         self.stage_of = {k: i for i, (_s, kinds) in enumerate(self.stages) for k in kinds}
         self.dir = Path(runs_dir) / "health"
@@ -322,12 +394,12 @@ class HealthMonitor:
         if self.t is None or not hasattr(self.t, "heartbeat"):
             return
         now = float(self.clock())
-        if now - self._last_poll < POLL_MIN_S:
+        if now - self._last_poll < self.poll_min_s:
             return
         self._last_poll = now
         hb = self.t.heartbeat()
         self.last_hb = hb
-        r = idle_check(hb)
+        r = idle_check(hb, self.classes, self.idle_limit_s, self.progress_limit_s)
         if r is not None:
             self._incident(guard, r[0], r[1])
             raise HealthIncident(f"{r[0]}: {json.dumps(r[1], default=str)[:300]}")

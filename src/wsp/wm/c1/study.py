@@ -88,9 +88,13 @@ class Study:
         log=print,
         health: bool = True,
         health_order=None,
+        health_kinds=None,
+        health_limits=None,
     ):
         self.health = health  # §II.31 run-health rules on every issued unit (engineering drills may opt out)
         self.health_order = health_order  # None: the registered §II.18 order (a fixture order only in the drill)
+        self.health_kinds = health_kinds  # None: health.KIND_CLASS (fixture classes only in the drill)
+        self.health_limits = health_limits  # None: the registered 15-min limits (shortened only in the drill)
         self.monitor = None
         self.state = Path(state_dir)
         self.runs = Path(runs_dir)
@@ -166,7 +170,12 @@ class Study:
 
             if self.monitor is None or self.monitor.t is not transport:
                 self.monitor = HL.HealthMonitor(
-                    self.runs, transport, log=self.log, order=self.health_order
+                    self.runs,
+                    transport,
+                    log=self.log,
+                    order=self.health_order,
+                    classes=self.health_kinds,
+                    limits=self.health_limits,
                 )
             mon = self.monitor
             fn = mon.wrap_fn(guard, fn)

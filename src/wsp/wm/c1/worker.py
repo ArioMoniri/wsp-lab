@@ -66,10 +66,14 @@ class Ctx:
         if f is not None and int(f.get("epoch", -1)) > int(self.req["epoch"]):
             raise Fenced(f"fence epoch {f['epoch']} > request epoch {self.req['epoch']}")
         self.worker.touch()
+        if self.worker.sampler is not None:
+            self.worker.sampler.note_progress()
 
     def progress(self, event: str, **kw):
         """Sub-unit progress (a completed evaluation inside a long unit)."""
         self.worker.progress({"id": self.req["id"], "kind": self.req["kind"], "event": event, **kw})
+        if self.worker.sampler is not None:
+            self.worker.sampler.note_progress()
 
 
 class Worker:

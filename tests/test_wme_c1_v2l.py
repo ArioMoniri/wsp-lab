@@ -335,10 +335,11 @@ def test_sampler_heartbeat_carries_gpu_utilisation_memory_and_the_inflight_reque
         ]
 
     s = HL.Sampler(tmp_path, sample=sample, clock=clk)
-    s.set_inflight({"id": "r1", "kind": "e2_arm"})
+    s.set_inflight({"id": "r1", "kind": "sealed_eval"})
     hb = json.loads((tmp_path / HL.HEARTBEAT).read_text())
     assert hb["gpu"][0]["util_pct"] == 5.0 and hb["gpu"][0]["mem_used_mib"] == 1000.0
-    assert hb["inflight"] == {"id": "r1", "kind": "e2_arm", "since": 0.0} and hb["low_since"] == 0.0
+    assert hb["inflight"] == {"id": "r1", "kind": "sealed_eval", "since": 0.0, "last_progress": 0.0}
+    assert hb["low_since"] == 0.0
     clk.t = 60.0
     assert s.beat()["low_since"] == 0.0  # still low: the run continues
     clk.t = 120.0
@@ -361,7 +362,7 @@ def test_parse_nvidia_smi():
 
 
 def test_gpu_idle_rule():
-    inf = {"id": "r", "kind": "e2_arm", "since": 1000.0}
+    inf = {"id": "r", "kind": "sealed_eval", "since": 1000.0}
     g = [{"index": 0, "util_pct": 3.0, "mem_used_mib": 1.0, "mem_total_mib": 2.0}]
     assert (
         HL.idle_check({"t": 1000.0 + 901, "gpu": g, "low_since": 500.0, "inflight": inf})[0]
@@ -479,7 +480,7 @@ def test_monitor_error_canary_and_idle_rules(tmp_path):
     rec = mon.wrap_canary(g, lambda: {"pass": False, "composite": "d" * 64, "engines": {}})()
     assert rec["pass"] is False and g.open_incidents()[-1]["kind"] == "canary_mismatch"
     g.resolve_incidents("f", "f")
-    inf = {"id": "r", "kind": "e2_arm", "since": 0.0}
+    inf = {"id": "r", "kind": "sealed_eval", "since": 0.0}
     gpu = [{"index": 0, "util_pct": 2.0, "mem_used_mib": 1.0, "mem_total_mib": 2.0}]
     mon.t.hb = {"t": 950.0, "gpu": gpu, "low_since": 0.0, "inflight": inf}
     clk.t = 100.0
@@ -543,7 +544,9 @@ def _bindings_in_subprocess(block: bool) -> dict:
         + "from wsp.wm.c1 import genengine as GE\nprint(json.dumps(GE.kernel_bindings()))\n"
     )
     env = dict(os.environ, CUDA_VISIBLE_DEVICES="")
-    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env, check=True)
+    out = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, env=env, check=True
+    )
     return json.loads(out.stdout.strip().splitlines()[-1])
 
 
@@ -558,3 +561,86 @@ def test_kernel_bindings_resolve_the_real_implementation_not_the_wrapper_name():
     assert live["torch_chunk_gated_delta_rule"].startswith("fla.")
     with pytest.raises(RuntimeError, match="linear-attention"):
         GE.check_model(model(), live)
+
+
+# ------------------------------------------------------------------ addendum 2, answer 3: GPU kinds vs CPU kinds
+
+
+def test_every_registered_handler_kind_is_classified_gpu_or_cpu():
+    import importlib
+
+    from wsp.wm.c1 import serve as S
+
+    importlib.import_module(
+        "wsp.wm.c1.serve_more"
+    )  # registers E2, sealed, generation, S-TE and launch handlers
+    kinds = set(S.HANDLERS)
+    assert kinds <= set(HL.KIND_CLASS), sorted(kinds - set(HL.KIND_CLASS))
+    assert set(HL.KIND_CLASS.values()) == {"gpu", "cpu"}
+    # the chair's named CPU kinds: the E2 planner search (e2_arm) and the fits
+    assert HL.KIND_CLASS["e2_arm"] == HL.KIND_CLASS["fit"] == "cpu"
+    for k in ("field_group", "bank_side", "sealed_eval", "e1_gen", "ste_train", "canary"):
+        assert HL.KIND_CLASS[k] == "gpu"
+    # every unit kind of the registered §II.18 order is classified
+    assert set(HL.STAGE_OF) <= set(HL.KIND_CLASS)
+
+
+def hb(kind, t, since, low_since=None, last_progress=None, gpu=True):
+    g = [{"index": 0, "util_pct": 2.0, "mem_used_mib": 1.0, "mem_total_mib": 2.0}] if gpu else None
+    inf = {"id": "r", "kind": kind, "since": since}
+    if last_progress is not None:
+        inf["last_progress"] = last_progress
+    return {"t": t, "gpu": g, "low_since": low_since, "inflight": inf}
+
+
+def test_gpu_idle_rule_applies_only_to_gpu_kinds():
+    # a GPU kind idle for > 15 min is an incident even while it reports progress
+    r = HL.idle_check(hb("sealed_eval", 1000.0, 0.0, low_since=0.0, last_progress=999.0))
+    assert r[0] == "gpu_idle"
+    # a CPU kind (planner search) idle on the GPU for an hour but progressing is not
+    assert HL.idle_check(hb("e2_arm", 3600.0, 0.0, low_since=0.0, last_progress=3500.0)) is None
+    assert HL.idle_check(hb("fit", 3600.0, 0.0, low_since=0.0, last_progress=3000.0)) is None
+    # a CPU kind needs no GPU telemetry
+    assert HL.idle_check(hb("fit", 3600.0, 0.0, last_progress=3000.0, gpu=False)) is None
+
+
+def test_cpu_kinds_without_progress_for_15_min_are_an_incident():
+    r = HL.idle_check(hb("e2_arm", 1000.0, 0.0, low_since=None, last_progress=99.0))
+    assert r[0] == "no_progress" and r[1]["stalled_s"] == pytest.approx(901.0)
+    assert HL.idle_check(hb("e2_arm", 1000.0, 0.0, last_progress=101.0)) is None
+    # no progress since the unit started counts from its start
+    assert HL.idle_check(hb("fit", 901.0, 0.0))[0] == "no_progress"
+    assert HL.idle_check(hb("fit", 899.0, 0.0)) is None
+    # the GPU being busy does not excuse a stalled CPU kind
+    busy = hb("fit", 2000.0, 0.0, last_progress=10.0)
+    busy["gpu"][0]["util_pct"] = 95.0
+    assert HL.idle_check(busy)[0] == "no_progress"
+
+
+def test_worker_progress_moves_the_cpu_progress_heartbeat(tmp_path):
+    from wsp.wm.c1 import worker as W
+
+    clk = Clock()
+    s = HL.Sampler(tmp_path, sample=lambda: None, clock=clk)
+    s.set_inflight({"id": "r1", "kind": "fit"})
+    assert s.beat()["inflight"]["last_progress"] == 0.0
+    clk.t = 50.0
+    w = W.Worker(tmp_path, {}, sampler=s)
+    ctx = W.Ctx(w, {"id": "r1", "kind": "fit", "epoch": 0}, tmp_path)
+    ctx.progress("inner fold 1 done")
+    clk.t = 80.0
+    ctx.check()  # a handler sub-step boundary is progress too
+    hb_ = s.beat()
+    assert hb_["inflight"]["last_progress"] == 80.0 and hb_["inflight"]["since"] == 0.0
+
+
+def test_monitor_raises_no_progress_for_a_stalled_cpu_unit(tmp_path):
+    clk = Clock()
+    g = open_guard(tmp_path, clk)
+    mon = HL.HealthMonitor(
+        tmp_path / "runs", FakeT(hb=hb("e2_arm", 1000.0, 0.0, last_progress=50.0)), clock=clk
+    )
+    clk.t = 100.0
+    with pytest.raises(HL.HealthIncident):
+        mon.poll(g)
+    assert g.open_incidents()[-1]["kind"] == "no_progress"

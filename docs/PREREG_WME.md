@@ -4078,3 +4078,34 @@ are incidents and halt for review; no exemption is introduced here.
 
 **Tests.** `tests/test_wme_c1_v2l.py`, `tests/test_wme_c1_genops.py`, and the CPU drill (scenario H: run-health halt,
 refusal and resumption).
+
+### II.31.7 Note (19 Nov 2026, v2m): chair answers to the v2l questions (ruling addendum 2)
+
+Appended before any data. These answers bind §II.31 and are part of the Board A check
+(`RULING-wme-c1-phasel.md`, addendum 2).
+
+1. **"The E1 generation prompts" (§II.31.2).** They mean the E1 generation settings: the template, greedy, 128 new
+   tokens, non-thinking, and the stop rule. Under C1(b) these settings are applied to the **64 exposed canary items**,
+   never to sealed items. This confirms the reading recorded in §II.31.2.
+2. **vLLM batching under C1(b).** vLLM's scheduler chooses its own batch sizes; "batch 128" binds only the HF engine.
+   The base–winner pairing and the item order of the results are unchanged.
+3. **Scope of the GPU-idle rule.** This replaces §II.31.5 item 2's first bullet. Every worker request kind is
+   classified as GPU or CPU in `wm.c1.health.KIND_CLASS`, and a test enforces that the classification covers the
+   whole handler registry.
+   - **GPU kinds.** The < 20 % for > 15 min rule (and the missing-telemetry rule) applies only to units whose kind uses
+     the GPU: the canary, field, bank, library, dev and S-BoN evaluations, the sealed read, E1 generation, S-TE, and the
+     Phase L checks. Progress does not excuse an idle GPU.
+   - **CPU kinds.** These are `e2_arm` (the E2 planner search), `fit`, and the small helper requests. They are checked
+     by a progress heartbeat instead: more than 15 minutes without progress is a `no_progress` incident, counted from
+     the later of the unit's start and its last progress. Progress means the handler reaching a sub-step boundary
+     (`Ctx.check`) or reporting sub-unit progress (`Ctx.progress`); the worker heartbeat carries `last_progress`.
+   - **Analysis** runs on the controller and is not a worker unit.
+   - **Billing.** The instance is billed and charged against the cap in both cases.
+   - **Drill evidence.** CPU drill scenario `H_gpu_and_cpu_kinds` (`docs/reviews/wme/wme-c1-drill-v2m-2026-11-19.json`)
+     covers:
+     - a CPU kind progressing on an idle GPU, which raises no incident;
+     - a GPU kind progressing on an idle GPU, which raises `gpu_idle`, is resolved, and then completes;
+     - a CPU kind without progress, which raises `no_progress`, is resolved, and then completes.
+4. **Halt on every error.** This stays, as the user asked. After an error the run waits for review, and the registered
+   retry budget is unchanged (a halt consumes no attempt). The implementation agent stays in its turn while any
+   instance is live, so that a halt is diagnosed promptly.
