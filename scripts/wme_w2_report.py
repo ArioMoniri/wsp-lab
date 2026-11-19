@@ -517,7 +517,7 @@ def md(o):
             "through cuda-compat 580; its canaries and base generation are bitwise identical to the driver-580 hosts."
         )
     w(
-        "- Capacity: no 1x H100 SXM5 was available for about 2.3 h after the pollers started; boot times above are from the launch "
+        "- Capacity: no launch request for a 1x H100 SXM5 succeeded for about 2.3 h after the pollers started (19:26-21:46 UTC); boot times above are from the launch "
         "request of the instance that produced the data."
     )
     w(
