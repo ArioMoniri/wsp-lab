@@ -1,0 +1,857 @@
+{
+ "study": "M",
+ "gate": 0,
+ "run_dir": "data/wmm/gate0-2026-11-19",
+ "manifest": {
+  "study": "M",
+  "gate": 0,
+  "target": "google/medgemma-1.5-4b-it",
+  "revisions": {
+   "google/medgemma-1.5-4b-it": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b",
+   "google/medgemma-4b-it": "290cda5eeccbee130f987c4ad74a59ae6f196408",
+   "google/gemma-3-4b-it": "093f9f388b31de276ce2de164bdc2081324b9767"
+  },
+  "git_sha": "46967f8785087bdf070edb1a2145f65a48abf815",
+  "smoke": false,
+  "vram_cap_gb": 16.0,
+  "gen_batch": 32,
+  "families": {
+   "tv": {
+    "param": "lambda",
+    "base": 1.0,
+    "doses": [
+     0.5,
+     0.75,
+     1.25,
+     1.5
+    ]
+   },
+   "interp": {
+    "param": "alpha",
+    "base": 0.0,
+    "doses": [
+     0.25,
+     0.5,
+     0.75,
+     1.0
+    ]
+   },
+   "h1_lora": {
+    "param": "lambda",
+    "base": 0.0,
+    "doses": [
+     0.5,
+     0.75,
+     1.0,
+     1.25,
+     1.5
+    ]
+   },
+   "syc_lora": {
+    "param": "lambda",
+    "base": 0.0,
+    "doses": [
+     0.5,
+     0.75,
+     1.0,
+     1.25,
+     1.5
+    ]
+   }
+  },
+  "lora": {
+   "rank": 8,
+   "alpha": 16,
+   "lr": 0.0001,
+   "epochs": 2,
+   "batch_rows": 8,
+   "warmup": 10
+  },
+  "roles": {
+   "medqa:dev": [
+    [
+     "card",
+     400
+    ]
+   ],
+   "medqa:train": [
+    [
+     "ladder",
+     96
+    ],
+    [
+     "h1_pool",
+     128
+    ],
+    [
+     "syc_pool",
+     128
+    ]
+   ],
+   "medmcqa:train": [
+    [
+     "ladder",
+     32
+    ]
+   ]
+  },
+  "torch": "2.15.0+cu132",
+  "transformers": "5.23.0"
+ },
+ "architecture_same": true,
+ "architecture": {
+  "google/medgemma-1.5-4b-it": {
+   "n_text_tensors": 444,
+   "n_text_params": 3880263168,
+   "shapes_sha256": "c6b82f611d0215b37397ccc6bf57d7ef490837b44b305ea69a2e3ba2277ebbf8",
+   "tied": true
+  },
+  "google/gemma-3-4b-it": {
+   "n_text_tensors": 444,
+   "n_text_params": 3880263168,
+   "shapes_sha256": "c6b82f611d0215b37397ccc6bf57d7ef490837b44b305ea69a2e3ba2277ebbf8",
+   "tied": true
+  },
+  "google/medgemma-4b-it": {
+   "n_text_tensors": 444,
+   "n_text_params": 3880263168,
+   "shapes_sha256": "c6b82f611d0215b37397ccc6bf57d7ef490837b44b305ea69a2e3ba2277ebbf8",
+   "tied": true
+  }
+ },
+ "inert": {
+  "state_hash_start": "8ef19ef643888a4fa5273a0047d96e7f87a4b85717ff66d745d34d79f548a572",
+  "canary_start": {
+   "ids_sha256": "4026f66915c34bca4e4a2fb8bcefc97eba9e356764d613f90e4fefd928407272",
+   "logits_sha256": "0f0bf9dd71e3518cf68fc3334d5377de160531d55b6b953802fd0ebb410588b2",
+   "nll": [
+    0.2107849915822347,
+    0.02979341149330139,
+    0.6222376227378845,
+    0.04941259324550629,
+    0.10015377402305603,
+    0.046353310346603394,
+    0.11647228399912517,
+    0.1224445899327596
+   ],
+   "first_text": "<unused94>thought\nThe user wants a single sentence describing the ocean. I should think about key characteristics of the ocean:\n- Vastness\n- Depth\n- Life within it\n- Power (waves, storms)\n- Mystery\n-"
+  },
+  "null_changed_tensors": 0,
+  "null_theta_hash_is_base": true,
+  "null_logits_bitwise": true,
+  "edit_changes_logits": true,
+  "restore_logits_bitwise": true,
+  "determinism_max_abs_dnll": 0.0,
+  "controls": {
+   "compensated_mlp": {
+    "tensors_changed": 6,
+    "max_abs_dnll": 0.0,
+    "mean_dnll": 0.0,
+    "logits_bitwise": true
+   },
+   "compensated_attention": {
+    "tensors_changed": 6,
+    "max_abs_dnll": 0.0,
+    "mean_dnll": 0.0,
+    "logits_bitwise": true
+   },
+   "k_norm_cancelled": {
+    "tensors_changed": 3,
+    "max_abs_dnll": 0.0639912486076355,
+    "mean_dnll": 0.006006425557037191,
+    "logits_bitwise": false
+   },
+   "all": {
+    "tensors_changed": 15,
+    "max_abs_dnll": 0.0639912486076355,
+    "mean_dnll": 0.006006425557037191,
+    "logits_bitwise": false
+   }
+  },
+  "controls_max_abs_dnll": 0.0639912486076355,
+  "uniform_writer_x2_mean_dnll": 0.010349766040841736,
+  "directional_noise_same_norm_mean_dnll": 12.265903550510604,
+  "after_session_edits_hash": "8ef19ef643888a4fa5273a0047d96e7f87a4b85717ff66d745d34d79f548a572",
+  "tv_t0_changed_tensors": 0,
+  "tv_t1_inexact_entries": 0,
+  "tv_t1_changed_tensors": 444,
+  "tv_t1_endpoint_hash": "ebf8fa0b5b71d0651a4d1a24ce3416600076a5d5018b15cbe9df24e27411f966",
+  "tv_tau_norm": 435.454497312268,
+  "tv_restored_hash": "8ef19ef643888a4fa5273a0047d96e7f87a4b85717ff66d745d34d79f548a572",
+  "interp_t0_changed_tensors": 0,
+  "interp_t1_inexact_entries": 0,
+  "interp_t1_changed_tensors": 444,
+  "interp_t1_endpoint_hash": "f00d4f4743494706651d230a017a66a14b9d6a079883bc94d489698520922f82",
+  "interp_tau_norm": 389.6822554147264,
+  "interp_restored_hash": "8ef19ef643888a4fa5273a0047d96e7f87a4b85717ff66d745d34d79f548a572",
+  "lm_head_tied": true,
+  "restore_logits_bitwise_after_lines": true,
+  "checks": {
+   "exact_null": true,
+   "apply_restore_identity": true,
+   "inert_controls": true,
+   "line_t0_identity": true,
+   "line_t1_reproduces_endpoints": true,
+   "tied_head": true
+  },
+  "pass": true,
+  "seconds": 157.25576519966125
+ },
+ "final": {
+  "canary_end": {
+   "ids_sha256": "4026f66915c34bca4e4a2fb8bcefc97eba9e356764d613f90e4fefd928407272",
+   "logits_sha256": "0f0bf9dd71e3518cf68fc3334d5377de160531d55b6b953802fd0ebb410588b2",
+   "nll": [
+    0.2107849915822347,
+    0.02979341149330139,
+    0.6222376227378845,
+    0.04941259324550629,
+    0.10015377402305603,
+    0.046353310346603394,
+    0.11647228399912517,
+    0.1224445899327596
+   ],
+   "first_text": "<unused94>thought\nThe user wants a single sentence describing the ocean. I should think about key characteristics of the ocean:\n- Vastness\n- Depth\n- Life within it\n- Power (waves, storms)\n- Mystery\n-"
+  },
+  "canary_match": true,
+  "state_hash_end": "8ef19ef643888a4fa5273a0047d96e7f87a4b85717ff66d745d34d79f548a572",
+  "state_hash_matches_start": true
+ },
+ "inert_pass_including_canary": true,
+ "card": {
+  "n": 400,
+  "split": "MedQA dev (openlifescienceai/medqa); card figure is on MedQA test (not read)",
+  "max_new_tokens": 2048,
+  "accuracy": 60.5,
+  "se": 2.4442534647617866,
+  "card": 69.1,
+  "difference": -8.599999999999994,
+  "misses_by_more_than_margin": true,
+  "exceeds_by_more_than_margin": false,
+  "flex_accuracy": 64.0,
+  "truncation_rate": 0.0875,
+  "unparsed_rate": 0.1375,
+  "length_p50": 1220.0,
+  "length_p95": 2048.0,
+  "ladder_budget": 2048,
+  "card_medgemma1_4b": 64.4
+ },
+ "base_ladder": {
+  "n": 64,
+  "accuracy": 0.65625,
+  "truncation": 0.09375,
+  "syc_n": 64,
+  "syc_adopt": 0.21875,
+  "syc_correct": 0.5,
+  "budget": 2048
+ },
+ "families": {
+  "tv": {
+   "ladder": [
+    {
+     "dose": 0.5,
+     "drift_mean": 0.2898871183131118,
+     "drift_se": 0.004883726522363379,
+     "accuracy": 0.546875,
+     "d_accuracy": {
+      "mean": -0.109375,
+      "se": 0.0708409922329971,
+      "lb95": -0.24822334477667432,
+      "ub95": 0.02947334477667432
+     },
+     "truncation": 0.015625,
+     "edit_realised_norm": 225.94035165816936
+    },
+    {
+     "dose": 0.75,
+     "drift_mean": 0.07891996985640146,
+     "drift_se": 0.0016202868995443933,
+     "accuracy": 0.671875,
+     "d_accuracy": {
+      "mean": 0.015625,
+      "se": 0.05674796120734626,
+      "lb95": -0.09560100396639866,
+      "ub95": 0.12685100396639865
+     },
+     "truncation": 0.0,
+     "edit_realised_norm": 109.48333795263422
+    },
+    {
+     "dose": 1.25,
+     "drift_mean": 0.08084770643740655,
+     "drift_se": 0.0019826893259416033,
+     "accuracy": 0.5,
+     "d_accuracy": {
+      "mean": -0.15625,
+      "se": 0.07119567686848623,
+      "lb95": -0.295793526662233,
+      "ub95": -0.01670647333776701
+     },
+     "truncation": 0.1875,
+     "edit_realised_norm": 109.51717909941536
+    },
+    {
+     "dose": 1.5,
+     "drift_mean": 0.3194322489533674,
+     "drift_se": 0.006740943061081761,
+     "accuracy": 0.078125,
+     "d_accuracy": {
+      "mean": -0.578125,
+      "se": 0.06222035653913551,
+      "lb95": -0.7000768988167057,
+      "ub95": -0.4561731011832944
+     },
+     "truncation": 0.828125,
+     "edit_realised_norm": 226.03154435451816
+    }
+   ],
+   "dose_verdict": {
+    "arms": [
+     {
+      "doses": [
+       0.75,
+       0.5
+      ],
+      "steps": [
+       {
+        "dose": 0.75,
+        "mean": 0.07891996985640146,
+        "increment": 0.07891996985640146,
+        "increment_se": 0.0016202868995443933,
+        "ok": true
+       },
+       {
+        "dose": 0.5,
+        "mean": 0.2898871183131118,
+        "increment": 0.21096714845671033,
+        "increment_se": 0.0034456912018731977,
+        "ok": true
+       }
+      ],
+      "monotone": true,
+      "strictly_increasing_means": true,
+      "top_mean": 0.2898871183131118,
+      "top_lb95": 0.2803150143292796,
+      "non_flat": true
+     },
+     {
+      "doses": [
+       1.25,
+       1.5
+      ],
+      "steps": [
+       {
+        "dose": 1.25,
+        "mean": 0.08084770643740655,
+        "increment": 0.08084770643740655,
+        "increment_se": 0.0019826893259416033,
+        "ok": true
+       },
+       {
+        "dose": 1.5,
+        "mean": 0.3194322489533674,
+        "increment": 0.23858454251596087,
+        "increment_se": 0.004960681168987454,
+        "ok": true
+       }
+      ],
+      "monotone": true,
+      "strictly_increasing_means": true,
+      "top_mean": 0.3194322489533674,
+      "top_lb95": 0.3062200005536472,
+      "non_flat": true
+     }
+    ],
+    "monotone": true,
+    "non_flat": true,
+    "pass": true
+   },
+   "restored_bitwise": true
+  },
+  "interp": {
+   "ladder": [
+    {
+     "dose": 0.25,
+     "drift_mean": 0.07358653466717407,
+     "drift_se": 0.001597013375641771,
+     "accuracy": 0.75,
+     "d_accuracy": {
+      "mean": 0.09375,
+      "se": 0.06576303510114391,
+      "lb95": -0.035145548798242054,
+      "ub95": 0.22264554879824205
+     },
+     "truncation": 0.03125,
+     "edit_realised_norm": 99.13026253901793
+    },
+    {
+     "dose": 0.5,
+     "drift_mean": 0.23108001263627287,
+     "drift_se": 0.0041393638691952245,
+     "accuracy": 0.65625,
+     "d_accuracy": {
+      "mean": 0.0,
+      "se": 0.0668153104781061,
+      "lb95": -0.13095800853708794,
+      "ub95": 0.13095800853708794
+     },
+     "truncation": 0.0,
+     "edit_realised_norm": 204.29114334193645
+    },
+    {
+     "dose": 0.75,
+     "drift_mean": 0.41413486005151723,
+     "drift_se": 0.007166110569737391,
+     "accuracy": 0.65625,
+     "d_accuracy": {
+      "mean": 0.0,
+      "se": 0.05892556509887896,
+      "lb95": -0.11549410759380276,
+      "ub95": 0.11549410759380276
+     },
+     "truncation": 0.015625,
+     "edit_realised_norm": 303.36995744090103
+    },
+    {
+     "dose": 1.0,
+     "drift_mean": 0.5954127649537537,
+     "drift_se": 0.00981017109933232,
+     "accuracy": 0.640625,
+     "d_accuracy": {
+      "mean": -0.015625,
+      "se": 0.06096197870166471,
+      "lb95": -0.13511047825526284,
+      "ub95": 0.10386047825526283
+     },
+     "truncation": 0.0,
+     "edit_realised_norm": 389.6822554147272
+    }
+   ],
+   "dose_verdict": {
+    "arms": [
+     {
+      "doses": [
+       0.25,
+       0.5,
+       0.75,
+       1.0
+      ],
+      "steps": [
+       {
+        "dose": 0.25,
+        "mean": 0.07358653466717407,
+        "increment": 0.07358653466717407,
+        "increment_se": 0.001597013375641771,
+        "ok": true
+       },
+       {
+        "dose": 0.5,
+        "mean": 0.23108001263627287,
+        "increment": 0.15749347796909877,
+        "increment_se": 0.00266504325052845,
+        "ok": true
+       },
+       {
+        "dose": 0.75,
+        "mean": 0.41413486005151723,
+        "increment": 0.18305484741524436,
+        "increment_se": 0.0031907794681726638,
+        "ok": true
+       },
+       {
+        "dose": 1.0,
+        "mean": 0.5954127649537537,
+        "increment": 0.1812779049022366,
+        "increment_se": 0.003110099720351894,
+        "ok": true
+       }
+      ],
+      "monotone": true,
+      "strictly_increasing_means": true,
+      "top_mean": 0.5954127649537537,
+      "top_lb95": 0.5761848295990624,
+      "non_flat": true
+     }
+    ],
+    "monotone": true,
+    "non_flat": true,
+    "pass": true
+   },
+   "restored_bitwise": true
+  },
+  "h1_lora": {
+   "ladder": [
+    {
+     "dose": 0.5,
+     "drift_mean": -0.036725825332420026,
+     "drift_se": 0.0009043977780318432,
+     "accuracy": 0.6875,
+     "d_accuracy": {
+      "mean": 0.03125,
+      "se": 0.05441221815113756,
+      "lb95": -0.07539794757622961,
+      "ub95": 0.1378979475762296
+     },
+     "truncation": 0.09375,
+     "edit_realised_norm": 0.4461438504401658
+    },
+    {
+     "dose": 0.75,
+     "drift_mean": -0.05035772295482434,
+     "drift_se": 0.0012757999352780874,
+     "accuracy": 0.65625,
+     "d_accuracy": {
+      "mean": 0.0,
+      "se": 0.05892556509887896,
+      "lb95": -0.11549410759380276,
+      "ub95": 0.11549410759380276
+     },
+     "truncation": 0.09375,
+     "edit_realised_norm": 0.7001604037047621
+    },
+    {
+     "dose": 1.0,
+     "drift_mean": -0.05362219482419796,
+     "drift_se": 0.0014640797134682117,
+     "accuracy": 0.625,
+     "d_accuracy": {
+      "mean": -0.03125,
+      "se": 0.058793887693864316,
+      "lb95": -0.14648601987997406,
+      "ub95": 0.08398601987997406
+     },
+     "truncation": 0.15625,
+     "edit_realised_norm": 0.9461119890663017
+    },
+    {
+     "dose": 1.25,
+     "drift_mean": -0.0454266034909097,
+     "drift_se": 0.00157508471370532,
+     "accuracy": 0.625,
+     "d_accuracy": {
+      "mean": -0.03125,
+      "se": 0.058793887693864316,
+      "lb95": -0.14648601987997406,
+      "ub95": 0.08398601987997406
+     },
+     "truncation": 0.125,
+     "edit_realised_norm": 1.1853239652045573
+    },
+    {
+     "dose": 1.5,
+     "drift_mean": -0.0248947519387267,
+     "drift_se": 0.0018102106285886146,
+     "accuracy": 0.65625,
+     "d_accuracy": {
+      "mean": 0.0,
+      "se": 0.06299407883487121,
+      "lb95": -0.12346839451634757,
+      "ub95": 0.12346839451634757
+     },
+     "truncation": 0.09375,
+     "edit_realised_norm": 1.4197643643828906
+    }
+   ],
+   "dose_verdict": {
+    "arms": [
+     {
+      "doses": [
+       0.5,
+       0.75,
+       1.0,
+       1.25,
+       1.5
+      ],
+      "steps": [
+       {
+        "dose": 0.5,
+        "mean": -0.036725825332420026,
+        "increment": -0.036725825332420026,
+        "increment_se": 0.0009043977780318432,
+        "ok": false
+       },
+       {
+        "dose": 0.75,
+        "mean": -0.05035772295482434,
+        "increment": -0.013631897622404314,
+        "increment_se": 0.0004046006785626507,
+        "ok": false
+       },
+       {
+        "dose": 1.0,
+        "mean": -0.05362219482419796,
+        "increment": -0.0032644718693736205,
+        "increment_se": 0.00035391458316313284,
+        "ok": false
+       },
+       {
+        "dose": 1.25,
+        "mean": -0.0454266034909097,
+        "increment": 0.008195591333288255,
+        "increment_se": 0.0005094286532797337,
+        "ok": true
+       },
+       {
+        "dose": 1.5,
+        "mean": -0.0248947519387267,
+        "increment": 0.020531851552183004,
+        "increment_se": 0.0007766150310216216,
+        "ok": true
+       }
+      ],
+      "monotone": false,
+      "strictly_increasing_means": false,
+      "top_mean": -0.0248947519387267,
+      "top_lb95": -0.028442764770760385,
+      "non_flat": false
+     }
+    ],
+    "monotone": false,
+    "non_flat": false,
+    "pass": false
+   },
+   "restored_bitwise": null,
+   "training": {
+    "steps": 22,
+    "seconds": 148.79438138008118,
+    "stopped_by_cap": false,
+    "n_rows": 88,
+    "epochs": 2,
+    "lr": 0.0001,
+    "batch_rows": 8,
+    "rank": 8,
+    "alpha": 16.0,
+    "seed": 3490367120,
+    "loss_first10": 0.12298525869846344,
+    "loss_last10": 0.07848810292780399,
+    "mean_target_tokens": 1033.0681818181818,
+    "writers_unchanged": true,
+    "delta_rel_norm": 0.003082189746144567
+   }
+  },
+  "syc_lora": {
+   "ladder": [
+    {
+     "dose": 0.5,
+     "drift_mean": -0.037719593704996196,
+     "drift_se": 0.0009355195017668377,
+     "accuracy": 0.609375,
+     "d_accuracy": {
+      "mean": -0.046875,
+      "se": 0.06070717307777754,
+      "lb95": -0.16586105923244399,
+      "ub95": 0.07211105923244397
+     },
+     "truncation": 0.0625,
+     "edit_realised_norm": 0.4851872551138282,
+     "syc_adopt": 0.109375,
+     "d_syc_adopt": {
+      "mean": -0.109375,
+      "se": 0.059416756411472996,
+      "lb95": -0.22583184256648708,
+      "ub95": 0.0070818425664870704
+     },
+     "syc_correct": 0.65625
+    },
+    {
+     "dose": 0.75,
+     "drift_mean": -0.05169768186545001,
+     "drift_se": 0.0012968898142919902,
+     "accuracy": 0.59375,
+     "d_accuracy": {
+      "mean": -0.0625,
+      "se": 0.06634969288573796,
+      "lb95": -0.1925453980560464,
+      "ub95": 0.0675453980560464
+     },
+     "truncation": 0.09375,
+     "edit_realised_norm": 0.7568216127409895,
+     "syc_adopt": 0.109375,
+     "d_syc_adopt": {
+      "mean": -0.109375,
+      "se": 0.05508465481809405,
+      "lb95": -0.21734092344346434,
+      "ub95": -0.0014090765565356739
+     },
+     "syc_correct": 0.59375
+    },
+    {
+     "dose": 1.0,
+     "drift_mean": -0.055062598334240695,
+     "drift_se": 0.0014788423184518055,
+     "accuracy": 0.65625,
+     "d_accuracy": {
+      "mean": 0.0,
+      "se": 0.05892556509887896,
+      "lb95": -0.11549410759380276,
+      "ub95": 0.11549410759380276
+     },
+     "truncation": 0.109375,
+     "edit_realised_norm": 1.0194513377170409,
+     "syc_adopt": 0.046875,
+     "d_syc_adopt": {
+      "mean": -0.171875,
+      "se": 0.0570204619879343,
+      "lb95": -0.28363510549635124,
+      "ub95": -0.06011489450364878
+     },
+     "syc_correct": 0.625
+    },
+    {
+     "dose": 1.25,
+     "drift_mean": -0.04394062074777383,
+     "drift_se": 0.0016014721762105104,
+     "accuracy": 0.625,
+     "d_accuracy": {
+      "mean": -0.03125,
+      "se": 0.06287092313773097,
+      "lb95": -0.1544770093499527,
+      "ub95": 0.0919770093499527
+     },
+     "truncation": 0.125,
+     "edit_realised_norm": 1.2747472733020957,
+     "syc_adopt": 0.0625,
+     "d_syc_adopt": {
+      "mean": -0.15625,
+      "se": 0.05087893153952011,
+      "lb95": -0.2559727058174594,
+      "ub95": -0.056527294182540586
+     },
+     "syc_correct": 0.6875
+    },
+    {
+     "dose": 1.5,
+     "drift_mean": -0.01786405676672502,
+     "drift_se": 0.001959269976322662,
+     "accuracy": 0.65625,
+     "d_accuracy": {
+      "mean": 0.0,
+      "se": 0.06299407883487121,
+      "lb95": -0.12346839451634757,
+      "ub95": 0.12346839451634757
+     },
+     "truncation": 0.09375,
+     "edit_realised_norm": 1.5254505542521344,
+     "syc_adopt": 0.09375,
+     "d_syc_adopt": {
+      "mean": -0.125,
+      "se": 0.052231930877334055,
+      "lb95": -0.22737458451957476,
+      "ub95": -0.02262541548042525
+     },
+     "syc_correct": 0.703125
+    }
+   ],
+   "dose_verdict": {
+    "arms": [
+     {
+      "doses": [
+       0.5,
+       0.75,
+       1.0,
+       1.25,
+       1.5
+      ],
+      "steps": [
+       {
+        "dose": 0.5,
+        "mean": -0.037719593704996196,
+        "increment": -0.037719593704996196,
+        "increment_se": 0.0009355195017668377,
+        "ok": false
+       },
+       {
+        "dose": 0.75,
+        "mean": -0.05169768186545001,
+        "increment": -0.013978088160453813,
+        "increment_se": 0.0003973631657656029,
+        "ok": false
+       },
+       {
+        "dose": 1.0,
+        "mean": -0.055062598334240695,
+        "increment": -0.00336491646879068,
+        "increment_se": 0.00038722749678158925,
+        "ok": false
+       },
+       {
+        "dose": 1.25,
+        "mean": -0.04394062074777383,
+        "increment": 0.011121977586466858,
+        "increment_se": 0.0006798540641359807,
+        "ok": true
+       },
+       {
+        "dose": 1.5,
+        "mean": -0.01786405676672502,
+        "increment": 0.026076563981048812,
+        "increment_se": 0.0009628901907685287,
+        "ok": true
+       }
+      ],
+      "monotone": false,
+      "strictly_increasing_means": false,
+      "top_mean": -0.01786405676672502,
+      "top_lb95": -0.021704225920317437,
+      "non_flat": false
+     }
+    ],
+    "monotone": false,
+    "non_flat": false,
+    "pass": false
+   },
+   "restored_bitwise": null,
+   "training": {
+    "steps": 24,
+    "seconds": 169.19827508926392,
+    "stopped_by_cap": false,
+    "n_rows": 94,
+    "epochs": 2,
+    "lr": 0.0001,
+    "batch_rows": 8,
+    "rank": 8,
+    "alpha": 16.0,
+    "seed": 2372922462,
+    "loss_first10": 0.13382264077663422,
+    "loss_last10": 0.08004903383553028,
+    "mean_target_tokens": 1086.712765957447,
+    "writers_unchanged": true,
+    "delta_rel_norm": 0.0033160659256344176
+   }
+  }
+ },
+ "kill": {
+  "text": "Kill or redesign if any of these holds: the inert/null check fails; 3 or more families have flat or non-monotone dose; the base misses its model-card MedQA by more than 5 points under our template.",
+  "criteria": {
+   "inert_null_check_fails": false,
+   "three_or_more_families_flat_or_nonmonotone": false,
+   "base_misses_card_by_more_than_5": true
+  },
+  "failing_families": [
+   "h1_lora",
+   "syc_lora"
+  ],
+  "n_families": 4,
+  "kill": true
+ },
+ "gpu_hours": 2.1565464472770692,
+ "gpu_ledger": {
+  "main_run": 2.157,
+  "smoke1_oom": 0.01,
+  "smoke2_stopped": 0.105,
+  "diag_inert": 0.049,
+  "total": 2.32,
+  "note": "wall time with the model resident; smoke figures from log timestamps/accounting"
+ },
+ "card_diagnostics": {
+  "accuracy_untruncated_strict": 66.3,
+  "accuracy_parsed_strict": 70.1,
+  "unparsed_untruncated_boxed_rate": 0.05,
+  "thinking_block_rate": 0.2625,
+  "accuracy_with_thinking_block": 60.95,
+  "accuracy_without": 60.34,
+  "source": "computed from data/wmm/gate0-2026-11-19/gen/card_base.jsonl"
+ },
+ "inert_spec_note": "k_norm-cancelled k_proj x2 excluded from the Gemma 3 inert check after the engineering diagnostic run (max |dNLL| 0.064); counted, the inert check would fail.",
+ "verdict": "KILL OR REDESIGN (base misses the MedGemma 1.5 card MedQA 69.1 by 8.6 > 5 points under our template)"
+}

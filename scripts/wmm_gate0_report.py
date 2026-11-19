@@ -2,7 +2,7 @@
 """Study M Gate 0 report: reads a ``scripts/wmm_gate0.py`` run directory and writes the verdict JSON and markdown
 tables (dose verdicts by the pre-specified rules in ``wsp.wm.wmm_gate0``).
 
-    wmm_gate0_report.py RUN_DIR OUT_JSON
+    wmm_gate0_report.py RUN_DIR OUT_JSON [OUT_TABLES_MD]
 """
 
 from __future__ import annotations
@@ -14,9 +14,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-import numpy as np  # noqa: E402
+import numpy as np
 
-from wsp.wm import wmm_gate0 as W  # noqa: E402
+from wsp.wm import wmm_gate0 as W
 
 
 def rd(run, name):
@@ -31,7 +31,12 @@ def paired(a, b):
 
 def main():
     run, out = Path(sys.argv[1]), Path(sys.argv[2])
-    inert, card, base, final = rd(run, "inert"), rd(run, "card"), rd(run, "ladder_base_nll"), rd(run, "final")
+    inert, card, base, final = (
+        rd(run, "inert"),
+        rd(run, "card"),
+        rd(run, "ladder_base_nll"),
+        rd(run, "final"),
+    )
     arch, acct, man = rd(run, "architecture"), rd(run, "accounting"), rd(run, "manifest")
     fams, dose = {}, {}
     for fam in W.FAMILIES:
@@ -56,7 +61,11 @@ def main():
                 r["d_syc_adopt"] = paired(v["syc_adopt"], base["syc_adopt"])
                 r["syc_correct"] = float(np.mean(v["syc_correct"]))
             rows.append(r)
-        restored = rep.get("restored_hash") == inert["state_hash_start"] if "restored_hash" in rep else None
+        restored = (
+            rep.get("restored_hash") == inert["state_hash_start"]
+            if "restored_hash" in rep
+            else None
+        )
         fams[fam] = {"ladder": rows, "dose_verdict": dose[fam], "restored_bitwise": restored}
         if fam.endswith("lora"):
             fams[fam]["training"] = rd(run, f"lora_{fam}")
@@ -68,7 +77,10 @@ def main():
         "run_dir": str(run),
         "manifest": man,
         "architecture_same": arch["same"],
-        "architecture": {k: {kk: v[kk] for kk in ("n_text_tensors", "n_text_params", "shapes_sha256", "tied")} for k, v in arch["signatures"].items()},
+        "architecture": {
+            k: {kk: v[kk] for kk in ("n_text_tensors", "n_text_params", "shapes_sha256", "tied")}
+            for k, v in arch["signatures"].items()
+        },
         "inert": inert,
         "final": final,
         "inert_pass_including_canary": inert_pass,
@@ -87,7 +99,49 @@ def main():
         "gpu_hours": acct["gpu_hours"],
     }
     out.write_text(json.dumps(res, indent=1, default=float))
-    print(json.dumps({"kill": kill, "gpu_hours": acct["gpu_hours"], "card": card["accuracy"]}, indent=1))
+    if len(sys.argv) > 3:
+        Path(sys.argv[3]).write_text(tables(res))
+    print(
+        json.dumps(
+            {"kill": kill, "gpu_hours": acct["gpu_hours"], "card": card["accuracy"]}, indent=1
+        )
+    )
+
+
+def f(x, d=3):
+    return "—" if x is None else f"{x:.{d}f}"
+
+
+def tables(res) -> str:
+    """Markdown tables of the dose ladders and verdicts (pasted into the review)."""
+    out = []
+    for fam, v in res["families"].items():
+        dv = v["dose_verdict"]
+        out.append(f"#### {fam} ({W.FAMILIES[fam]['param']}; base {W.FAMILIES[fam]['base']})\n")
+        syc = any("syc_adopt" in r for r in v["ladder"])
+        head = "| dose | drift (nats/token) ± SE | accuracy (64) | Δacc [95% CI] | truncated |"
+        sep = "|---|---|---|---|---|"
+        if syc:
+            head += " syc adopt | Δadopt [95% CI] | syc correct |"
+            sep += "---|---|---|"
+        out += [head, sep]
+        for r in v["ladder"]:
+            d = r["d_accuracy"]
+            row = (
+                f"| {r['dose']:g} | {f(r['drift_mean'], 4)} ± {f(r['drift_se'], 4)} | {f(r['accuracy'])} | "
+                f"{f(d['mean'])} [{f(d['lb95'])}, {f(d['ub95'])}] | {f(r['truncation'])} |"
+            )
+            if syc:
+                a = r["d_syc_adopt"]
+                row += f" {f(r['syc_adopt'])} | {f(a['mean'])} [{f(a['lb95'])}, {f(a['ub95'])}] | {f(r['syc_correct'])} |"
+            out.append(row)
+        arms = "; ".join(
+            f"arm {a['doses']}: monotone {a['monotone']}, top mean {f(a['top_mean'], 4)}, LB {f(a['top_lb95'], 4)}, "
+            f"non-flat {a['non_flat']}"
+            for a in dv["arms"]
+        )
+        out.append(f"\nVerdict: **{'PASS' if dv['pass'] else 'FAIL'}** ({arms}).\n")
+    return "\n".join(out) + "\n"
 
 
 if __name__ == "__main__":
