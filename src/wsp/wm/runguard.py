@@ -21,6 +21,17 @@ counter is rebuilt by replaying it, so a new process or a new instance resumes w
   eligible attempt in sequence order**, whatever its value; attempts before a failed canary stay stored as
   *retained, ineligible*; pending attempts (no closing canary yet) are not complete. Units with no eligible attempt
   are re-run on resume while attempts remain.
+* **Instance lifecycle (§II.25).** No unit runs unless the guard's instance is registered and active
+  (:class:`InstanceNotOpen`). A duplicate opening is idempotent and keeps the earliest opening; a closed id cannot be
+  reopened; authoritative records (provider API, dead-man ledger: ``reconcile_instance``) override local times.
+* **Contract binding (§II.25).** The digest of the full attestation is persisted. A guard rebuilt with a different
+  contract refuses to run or return results (:class:`ContractMismatch`) unless an explicit, persisted, technical
+  :class:`ContractTransition` is recorded; results and canaries count only under the contract they were made in.
+* **Lost instances (§II.25).** ``declare_lost`` (technical, outcome-blind, persisted) closes a preempted instance at
+  its authoritative termination (charged), makes its unbracketed attempts retained-ineligible without any
+  fabricated canary, keeps their attempt counts, and lets the remaining attempts or the fallback proceed elsewhere.
+* **Registered fallback (§II.25).** The fallback payload and its sha256 are persisted at registration and with every
+  fallback; a guard rebuilt with a different fallback is refused (:class:`FallbackMismatch`).
 * **Absolute cap.** The charged total is the larger of (i) the measured GPU-seconds of every attempt, successful or
   failed, and (ii) the authoritative instance time (open-to-close, open instances to now, times GPUs per instance;
   setup, download, idle and canaries included). Before every attempt, charged + the priced unit estimate must stay
@@ -75,6 +86,18 @@ class NotAttested(ValueError):
     pass
 
 
+class InstanceNotOpen(RuntimeError):
+    pass
+
+
+class ContractMismatch(RuntimeError):
+    pass
+
+
+class FallbackMismatch(RuntimeError):
+    pass
+
+
 def _append(path: Path, rec: dict):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "a") as f:
@@ -115,7 +138,30 @@ class CombinedLedger:
         self.rows.append(r)
         _append(self.path, r)
 
-    def instance_open(self, instance: str, gpus: int, t: float | None = None):
+    def instance_state(self, instance: str) -> str:
+        """``unknown``, ``active`` or ``closed`` (a local close or an authoritative termination)."""
+        st = "unknown"
+        for r in self.rows:
+            if r.get("instance") != instance:
+                continue
+            if r.get("kind") == "instance_open" and st == "unknown":
+                st = "active"
+            elif r.get("kind") == "instance_close" or (
+                r.get("kind") == "instance_authoritative" and r.get("terminated_at") is not None
+            ):
+                st = "closed"
+            elif r.get("kind") == "instance_authoritative" and st == "unknown":
+                st = "active"
+        return st
+
+    def instance_open(self, instance: str, gpus: int, t: float | None = None) -> bool:
+        """Register an instance opening. Idempotent for an active instance (the earliest opening is kept; a restart
+        never resets time); a closed instance id cannot be reopened (a replacement needs a new id)."""
+        st = self.instance_state(instance)
+        if st == "active":
+            return False
+        if st == "closed":
+            raise ValueError(f"{instance} is closed; a replacement instance needs a new id")
         r = {
             "kind": "instance_open",
             "instance": instance,
@@ -124,9 +170,40 @@ class CombinedLedger:
         }
         self.rows.append(r)
         _append(self.path, r)
+        return True
 
     def instance_close(self, instance: str, t: float | None = None):
+        if self.instance_state(instance) != "active":
+            raise ValueError(f"{instance} is not active")
         r = {"kind": "instance_close", "instance": instance, "t": self.clock() if t is None else t}
+        self.rows.append(r)
+        _append(self.path, r)
+
+    def reconcile_instance(
+        self, instance: str, launched_at: float, terminated_at, gpus: int, source: str
+    ):
+        """An authoritative instance record (provider API or dead-man terminator ledger). It overrides the local
+        opening and closing for that instance; ``terminated_at`` None means still running (counted to now). The
+        authoritative launch can only be earlier than or equal to a local opening."""
+        if not source:
+            raise ValueError("name the authoritative source")
+        local = [
+            r["t"]
+            for r in self.rows
+            if r.get("kind") == "instance_open" and r["instance"] == instance
+        ]
+        if local and launched_at > min(local):
+            raise ValueError("an authoritative launch cannot be later than the recorded opening")
+        if terminated_at is not None and terminated_at < launched_at:
+            raise ValueError("termination before launch")
+        r = {
+            "kind": "instance_authoritative",
+            "instance": instance,
+            "launched_at": float(launched_at),
+            "terminated_at": None if terminated_at is None else float(terminated_at),
+            "gpus": int(gpus),
+            "source": source,
+        }
         self.rows.append(r)
         _append(self.path, r)
 
@@ -141,15 +218,27 @@ class CombinedLedger:
         )
 
     def instance_gpu_h(self, now: float | None = None) -> float:
+        """Per instance: the latest authoritative record if any, else the earliest local opening to the local close
+        (or to now while active); times GPUs."""
         now = self.clock() if now is None else now
-        opened, total = {}, 0.0
+        auth, opened, closed = {}, {}, {}
         for r in self.rows:
-            if r.get("kind") == "instance_open":
-                opened[r["instance"]] = (r["t"], r["gpus"])
-            elif r.get("kind") == "instance_close" and r["instance"] in opened:
-                t0, g = opened.pop(r["instance"])
-                total += (r["t"] - t0) * g
-        total += sum((now - t0) * g for t0, g in opened.values())
+            k = r.get("kind")
+            if k == "instance_authoritative":
+                auth[r["instance"]] = r
+            elif k == "instance_open":
+                opened.setdefault(r["instance"], (r["t"], r["gpus"]))
+            elif k == "instance_close":
+                closed.setdefault(r["instance"], r["t"])
+        total = 0.0
+        for inst in set(auth) | set(opened):
+            if inst in auth:
+                a = auth[inst]
+                end = now if a["terminated_at"] is None else a["terminated_at"]
+                total += (end - a["launched_at"]) * a["gpus"]
+            else:
+                t0, g = opened[inst]
+                total += (closed.get(inst, now) - t0) * g
         return total / 3600
 
     def gpu_h(self, phase: str | None = None) -> float:
@@ -336,8 +425,43 @@ class LaunchAttestation:
             raise NotAttested("cite the evidence (report paths and hashes) for each attestation")
 
 
+def _digest(obj) -> str:
+    import hashlib
+
+    return hashlib.sha256(
+        json.dumps(obj, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def contract_digest(att: LaunchAttestation) -> str:
+    """The registered run contract: every attestation field (evidence order-free)."""
+    d = {k: getattr(att, k) for k in att.__dataclass_fields__}
+    d["evidence"] = sorted(d["evidence"])
+    return _digest(d)
+
+
+@dataclass
+class ContractTransition:
+    """An explicit, persisted, auditable technical repair that changes the run contract (e.g. a driver update that
+    changes the engine-config digest). Results made under the earlier contract never become eligible under the new
+    one; the new contract needs its own canaries."""
+
+    cause: str
+    description: str
+    commit: str
+    outcome_blind: bool
+
+    def check(self):
+        if self.cause not in TECHNICAL_CAUSES:
+            raise ValueError(f"transition cause {self.cause!r} is not a registered technical cause")
+        if self.outcome_blind is not True:
+            raise ValueError("a contract transition must be decided without reading any outcome")
+        if not self.description or len(self.commit) < 7:
+            raise ValueError("a contract transition needs a description and the code commit")
+
+
 class ProductionGuard:
-    """The mandatory confirmatory guard (see the module docstring)."""
+    """The mandatory confirmatory guard (see the module docstring and §II.25)."""
 
     confirmatory = True
 
@@ -352,6 +476,7 @@ class ProductionGuard:
         technical=None,
         fallback_value=None,
         clock=time.time,
+        transition: ContractTransition | None = None,
     ):
         attestation.check()
         self.state = Path(state_dir)
@@ -359,18 +484,61 @@ class ProductionGuard:
         self.phase, self.instance, self.est = phase, instance, float(est_unit_gpu_h)
         self.attestation = attestation
         self.technical = technical or (lambda exc: None)
-        self.fallback_value = fallback_value
         self.clock = clock
         self.ledger = CombinedLedger(self.state / "ledger.jsonl", priced_gpu_h, clock=clock)
         self.retry = RetryPolicy(self.state / "retry.jsonl")
-        self.canaries = CanaryBook(attestation.canary_reference, self.state / "canary.jsonl")
         self.events_path = self.state / "events.jsonl"
         self.events = _read(self.events_path)
-        if not any(e["type"] == "attestation" for e in self.events):
+        # ---- the run contract (gap 2)
+        new = contract_digest(attestation)
+        contracts = [e for e in self.events if e["type"] in ("attestation", "contract_transition")]
+        self.contract = new
+        if not contracts:
+            self._event("attestation", digest=new, **self._att_fields(attestation))
+        elif contracts[-1]["digest"] != new:
+            if transition is None:
+                raise ContractMismatch(
+                    f"persisted contract {contracts[-1]['digest'][:12]} != {new[:12]}: refuse to run or return "
+                    "results without an explicit ContractTransition"
+                )
+            transition.check()
             self._event(
-                "attestation",
-                **{k: getattr(attestation, k) for k in attestation.__dataclass_fields__},
+                "contract_transition",
+                digest=new,
+                previous=contracts[-1]["digest"],
+                cause=transition.cause,
+                description=transition.description,
+                commit=transition.commit,
+                outcome_blind=True,
+                **self._att_fields(attestation),
             )
+        elif transition is not None:
+            raise ValueError("a ContractTransition was given but the contract is unchanged")
+        self.references = {
+            e["digest"]: e["canary_reference"]
+            for e in self.events
+            if e["type"] in ("attestation", "contract_transition")
+        }
+        # ---- the registered fallback (gap 4)
+        try:
+            fb_digest = _digest(fallback_value)
+        except TypeError as exc:
+            raise ValueError("the registered fallback must be JSON-serialisable") from exc
+        reg = [e for e in self.events if e["type"] == "fallback_registered" and e["phase"] == phase]
+        if not reg:
+            self._event("fallback_registered", payload=fallback_value, payload_sha256=fb_digest)
+        elif reg[0]["payload_sha256"] != fb_digest:
+            raise FallbackMismatch(
+                f"registered fallback {reg[0]['payload_sha256'][:12]} != {fb_digest[:12]}; refuse"
+            )
+        self.fallback_payload = reg[0]["payload"] if reg else fallback_value
+        self.fallback_sha256 = fb_digest
+
+    @staticmethod
+    def _att_fields(att):
+        d = {k: getattr(att, k) for k in att.__dataclass_fields__}
+        d["evidence"] = sorted(d["evidence"])
+        return d
 
     # -------------------------------------------------- event log and sequence numbers
     def _seq(self) -> int:
@@ -382,24 +550,78 @@ class ProductionGuard:
             "type": type_,
             "instance": self.instance,
             "phase": self.phase,
+            "contract": getattr(self, "contract", None),
             **kw,
         }
         self.events.append(e)
         _append(self.events_path, e)
         return e
 
-    # -------------------------------------------------- instances and canaries
+    # -------------------------------------------------- instances and canaries (gaps 1 and 3)
+    def _lost(self, instance) -> bool:
+        return any(
+            e["type"] == "instance_lost" and e["lost_instance"] == instance for e in self.events
+        )
+
     def open_instance(self, gpus: int = 1):
-        self.ledger.instance_open(self.instance, gpus)
-        self._event("instance_open", gpus=gpus)
+        if self._lost(self.instance):
+            raise InstanceNotOpen(f"{self.instance} was declared lost; relaunch on a new instance")
+        new = self.ledger.instance_open(self.instance, gpus)
+        self._event("instance_open" if new else "instance_resume", gpus=gpus)
 
     def close_instance(self):
         self.ledger.instance_close(self.instance)
         self._event("instance_close")
 
+    def reconcile_instance(self, launched_at, terminated_at, gpus, source, instance=None):
+        inst = instance or self.instance
+        self.ledger.reconcile_instance(inst, launched_at, terminated_at, gpus, source)
+        self._event("instance_reconciled", target=inst, source=source, terminated_at=terminated_at)
+
+    def declare_lost(
+        self,
+        instance: str,
+        cause: str,
+        description: str,
+        commit: str,
+        outcome_blind: bool,
+        terminated_at=None,
+        source: str = "operator: provider termination record",
+    ):
+        """Technical disposition for an instance lost before its closing canary (preemption, crash): its
+        unbracketed attempts become retained-ineligible (no canary is fabricated), its attempt counts stay, and
+        its instance time is charged to ``terminated_at`` (now if unknown)."""
+        if cause not in TECHNICAL_CAUSES:
+            raise ValueError(f"loss cause {cause!r} is not a registered technical cause")
+        if outcome_blind is not True:
+            raise ValueError("a loss disposition must be decided without reading any outcome")
+        if not description or len(commit) < 7:
+            raise ValueError("a loss disposition needs a description and the code commit")
+        if self.ledger.instance_state(instance) == "active":
+            opened = [
+                r["t"]
+                for r in self.ledger.rows
+                if r.get("kind") == "instance_open" and r["instance"] == instance
+            ]
+            g = [
+                r["gpus"]
+                for r in self.ledger.rows
+                if r.get("kind") == "instance_open" and r["instance"] == instance
+            ]
+            end = self.clock() if terminated_at is None else terminated_at
+            self.ledger.reconcile_instance(instance, min(opened), end, g[0], source)
+        self._event(
+            "instance_lost",
+            lost_instance=instance,
+            cause=cause,
+            description=description,
+            commit=commit,
+            outcome_blind=True,
+            terminated_at=terminated_at,
+        )
+
     def canary(self, sha: str) -> bool:
-        e = self._event("canary", sha=sha)
-        self.canaries.canary(self.instance, e["seq"], sha)
+        self._event("canary", sha=sha)
         return sha == self.attestation.canary_reference
 
     def relaunch(self, cause: str, new_instance: str):
@@ -407,37 +629,73 @@ class ProductionGuard:
         self._event("relaunch", cause=cause, new_instance=new_instance)
         self.instance = new_instance
 
-    # -------------------------------------------------- unit protocol used by harness.run_units
+    # -------------------------------------------------- eligibility (per contract)
+    def attempt_status(self, a) -> str:
+        if a.get("contract") != self.contract:
+            return "superseded_contract"
+        ref = self.references[a["contract"]]
+        cans = [
+            e
+            for e in self.events
+            if e["type"] == "canary"
+            and e["instance"] == a["instance"]
+            and e.get("contract") == a["contract"]
+        ]
+        before = [e for e in cans if e["seq"] < a["seq"]]
+        after = [e for e in cans if e["seq"] > a["seq"]]
+        if not before or before[-1]["sha"] != ref:
+            return "retained_ineligible"
+        if not after:
+            return "retained_ineligible" if self._lost(a["instance"]) else "pending"
+        return "eligible" if after[0]["sha"] == ref else "retained_ineligible"
+
     def _attempts(self, key):
         return [e for e in self.events if e["type"] == "attempt_ok" and e["unit"] == key]
 
     def unit_status(self, key) -> dict:
-        att = self._attempts(key)
-        st = [(a["attempt_key"], self.canaries.status(a["instance"], a["seq"])) for a in att]
+        st = [(a["attempt_key"], self.attempt_status(a)) for a in self._attempts(key)]
         fb = any(e["type"] == "fallback" and e["unit"] == key for e in self.events)
         return {"attempts": st, "fallback": fb}
 
+    # -------------------------------------------------- unit protocol used by harness.run_units
     def resolve(self, store, key):
         for a in sorted(self._attempts(key), key=lambda a: a["seq"]):
-            if self.canaries.eligible(a["instance"], a["seq"]):
+            if self.attempt_status(a) == "eligible":
                 return store.read(a["attempt_key"])
-        if any(e["type"] == "fallback" and e["unit"] == key for e in self.events):
-            return {"fallback": True, "value": self.fallback_value}
+        fbs = [e for e in self.events if e["type"] == "fallback" and e["unit"] == key]
+        if fbs:
+            fb = fbs[0]
+            if (
+                fb["payload_sha256"] != self.fallback_sha256
+                or _digest(fb["payload"]) != fb["payload_sha256"]
+            ):
+                raise FallbackMismatch(f"{key}: persisted fallback does not verify")
+            return {
+                "fallback": True,
+                "value": fb["payload"],
+                "payload_sha256": fb["payload_sha256"],
+            }
         return None
 
     def begin(self, key, label) -> int:
-        if self.canaries.last(self.instance) != self.attestation.canary_reference:
+        if self.ledger.instance_state(self.instance) != "active" or self._lost(self.instance):
+            raise InstanceNotOpen(
+                f"{self.instance}: no validated open instance; open_instance() first"
+            )
+        cans = [
+            e
+            for e in self.events
+            if e["type"] == "canary"
+            and e["instance"] == self.instance
+            and e.get("contract") == self.contract
+        ]
+        if not cans or cans[-1]["sha"] != self.attestation.canary_reference:
             raise CanaryMismatch(
                 f"{self.instance}: no passing canary since the last unit; halt for repair"
             )
-        if any(
-            e["type"] == "attempt_ok"
-            and e["unit"] == key
-            and self.canaries.status(e["instance"], e["seq"]) == "pending"
-            for e in self.events
-        ):
+        if any(self.attempt_status(a) == "pending" for a in self._attempts(key)):
             raise CanaryMismatch(
-                f"{label}: an attempt is pending its closing canary; close it before re-running"
+                f"{label}: an attempt is pending its closing canary; close it (or declare its instance lost)"
             )
         self.ledger.check_before(self.phase, self.est)
         prev = [e for e in self.events if e["type"] == "attempt_fail" and e["unit"] == key]
@@ -467,15 +725,29 @@ class ProductionGuard:
         return {"status": "pending_canary", "attempt_key": akey}
 
     def fallback(self, key, label):
-        self._event("fallback", unit=key, label=label)
-        return {"fallback": True, "value": self.fallback_value}
+        self._event(
+            "fallback",
+            unit=key,
+            label=label,
+            payload=self.fallback_payload,
+            payload_sha256=self.fallback_sha256,
+        )
+        return {
+            "fallback": True,
+            "value": self.fallback_payload,
+            "payload_sha256": self.fallback_sha256,
+        }
 
     def report(self) -> dict:
         units = sorted({e["unit"] for e in self.events if "unit" in e})
         return {
+            "contract": self.contract,
             "units": {u: self.unit_status(u) for u in units},
             "charged_gpu_h": self.ledger.gpu_h(),
             "unit_gpu_h": self.ledger.unit_gpu_h(),
             "instance_gpu_h": self.ledger.instance_gpu_h(),
             "relaunches": dict(self.retry.relaunches),
+            "lost_instances": sorted(
+                {e["lost_instance"] for e in self.events if e["type"] == "instance_lost"}
+            ),
         }
