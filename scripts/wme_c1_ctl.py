@@ -563,6 +563,121 @@ def cmd_status(a):
     print(json.dumps(out, indent=1, default=str))
 
 
+AMENDMENTS = [
+    {
+        "section": "§II.29",
+        "label": "v2j (19 Nov 2026): execution specification of the frozen design (G1-G21), outcome-blind, before any data",
+        "adaptation": False,
+    },
+    {
+        "section": "§II.30",
+        "label": "v2k (19 Nov 2026): bank re-pricing rule for unpriced kept-factor and R(E) work, before any data",
+        "adaptation": False,
+    },
+]
+
+
+def cmd_results(a):
+    """Assemble the results bundle from eligible stage payloads and the fetched result files, then the report."""
+    from wsp.wm.c1 import bundle as BU
+    from wsp.wm.c1 import controller as CO
+
+    out = RUNS / "bundle"
+    out.mkdir(parents=True, exist_ok=True)
+    saved = lambda s: (
+        json.loads((RUNS / "stages" / f"{s}.json").read_text())
+        if (RUNS / "stages" / f"{s}.json").exists()
+        else None
+    )
+    tr, rem = (
+        remote_for("main", a.iid)
+        if a.iid
+        else (None, C.Remote(T.LocalTransport(RUNS / "ctl_local"), RUNS / "ctl"))
+    )
+    co = CO.Controller(SD.Study(STUDY, RUNS, load_att(), "", PANEL_ID), rem, tr, "", 1)
+    files = {"bank.json"}
+    prep = saved("prep")
+    if prep:
+        BU.write(out / "fits.json", BU.fits_json(prep))
+        files.add("fits.json")
+    e2, sb = saved("e2"), saved("sbon")
+    if e2:
+        BU.write(out / "e2.json", BU.e2_json(e2, sb or {}))
+        files.add("e2.json")
+    w = saved("winners")
+    if w:
+        man = json.loads(Path(w["path"]).read_bytes())
+        BU.write(out / "winners.json", {"manifest": man, "sha256": w["sha256"], "e1": w["e1"]})
+        files.add("winners.json")
+        sealed = saved("sealed")
+        if sealed:
+            BU.write(out / "sealed.json", BU.sealed_json(sealed, man))
+            files.add("sealed.json")
+    gen = saved("gen")
+    if gen and not gen.get("skipped"):
+        import gzip
+
+        rows, items = [], None
+        for lab, p in sorted(gen.items()):
+            if p is None or p.get("fallback"):
+                continue
+            f = co.find_file("gen_e1_outputs.jsonl.gz", p["files"]["gen_e1_outputs.jsonl.gz"])
+            rows += gzip.open(f, "rt").read().splitlines()
+            items = items or co.find_file(
+                "gen_e1_items.jsonl.gz", p["files"]["gen_e1_items.jsonl.gz"]
+            )
+        with gzip.open(out / "gen_e1_outputs.jsonl.gz", "wt") as fh:
+            fh.write("\n".join(rows) + "\n")
+        shutil.copyfile(items, out / "gen_e1_items.jsonl.gz")
+        g0 = gen.get("gen:greedy") or {}
+        BU.write(
+            out / "gen_e1.json",
+            {
+                "items": "gen_e1_items.jsonl.gz",
+                "outputs": "gen_e1_outputs.jsonl.gz",
+                "winner": g0.get("winner"),
+                "config": g0.get("config"),
+            },
+        )
+        files |= {"gen_e1.json", "gen_e1_outputs.jsonl.gz", "gen_e1_items.jsonl.gz"}
+    ste = saved("ste")
+    if ste:
+        g = ste["generate"]
+        for n in ("ste_outputs.jsonl.gz", "ste_guards.jsonl.gz"):
+            shutil.copyfile(co.find_file(n, g["files"][n]), out / n)
+        BU.write(
+            out / "ste.json",
+            {
+                "margins": g["margins"],
+                "null_pass_prob": ste["calibrate"].get("null_pass_prob"),
+                "calibration": ste["calibrate"],
+                "outputs": "ste_outputs.jsonl.gz",
+                "guards": "ste_guards.jsonl.gz",
+                "n": g["n"],
+                "canary": g.get("canary"),
+                "train": ste["train"],
+            },
+        )
+        files |= {"ste.json", "ste_outputs.jsonl.gz", "ste_guards.jsonl.gz"}
+    dm = json.loads((LO.STATE / "state.json").read_text())
+    BU.write(out / "ledger.json", BU.ledger_json(STUDY, dm, AMENDMENTS))
+    files.add("ledger.json")
+    h = BU.finish(out, files)
+    log("bundle", out, h)
+    if a.report:
+        subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts/wme_c1_report.py"),
+                "--bundle",
+                str(out),
+                "--date",
+                a.date,
+            ],
+            check=True,
+        )
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -586,6 +701,10 @@ def main():
     c.add_argument("--iid", required=True)
     c.add_argument("--phase", default="confirmatory")
     sub.add_parser("status")
+    rs = sub.add_parser("results")
+    rs.add_argument("--iid", default=None)
+    rs.add_argument("--report", action="store_true")
+    rs.add_argument("--date", default="2026-11-21")
     a = ap.parse_args()
     {
         "bundle": cmd_bundle,
@@ -595,6 +714,7 @@ def main():
         "run": cmd_run,
         "close": cmd_close,
         "status": cmd_status,
+        "results": cmd_results,
     }[a.cmd](a)
 
 
