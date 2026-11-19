@@ -3281,3 +3281,49 @@ The §II.22.6 rules are now enforced by code, not just documented:
 |---|---|
 | A. Root-shard lineage | Repaired. Rule wording amended (§II.24.1). Lineage mapping, digest and reconciliation published. Exception registered. Evaluation exclusions absolute, with 0 intersections. |
 | B. Runtime contract | Repaired. Mandatory guard, launch attestations, persistent counters and canaries, eligibility-gated resume, failed and instance-time accounting. CPU orchestration test. |
+
+
+## II.25 Amendment v2g (19 Nov 2026): the four runtime gaps of Board A's final re-check
+
+**What this amendment is.** It is dated 19 Nov 2026 and is made before any confirmatory outcome exists. It repairs
+the four gaps Board A's final re-check (`docs/reviews/council/board-a-prereg-wme-v2-final-2026-11-19.md`) found in
+blocker B. Board A closed blocker A.
+
+**What it is not.** These are technical repairs in `src/wsp/wm/runguard.py`. There is no scientific change: the
+registered rules of §II.22.6 and §II.24.2 are unchanged and are now enforced in the cases Board A's probes reached.
+
+**Code and manifest.**
+- Code `e217056`.
+- Manifest sha256 `f25ea7795dbea8cf662d7f0d73c4bc285579f36c9e6cb273afded43978f6077d` (field `harness.runguard`).
+
+**What it supersedes.** It supersedes §II.24.2's claim of complete enforcement where the table below adds a
+condition.
+
+| Gap (Board A probe) | Repair | CPU regression test (`tests/test_wme_runguard.py`) |
+|---|---|---|
+| **1. Instance lifecycle.** Probes: a unit ran 91 h with no registered instance; reopening after a restart reset 89 h to 0 h. | `ProductionGuard.begin` refuses any unit unless the guard's instance is registered and active and not declared lost (`InstanceNotOpen`). `CombinedLedger.instance_open` is idempotent for an active instance: it keeps the earliest opening and a restart logs `instance_resume`. A closed instance id can never be reopened, so a replacement needs a new id. `reconcile_instance` records authoritative launch and termination times from the provider API or the dead-man ledger; they override local times, and an authoritative launch later than the recorded opening is refused. The absolute 90 GPU-h-eq / $1,000 cap uses this time (max with measured unit time). | `test_probe_gap1_no_unit_runs_without_an_open_instance`, `test_probe_gap1_restart_and_reopen_never_reset_instance_time` |
+| **2. Resume binds the contract.** Probe: a guard rebuilt with a changed engine-config digest returned the old payload. | The sha256 of the full attestation (inert identity, parity, canary reference, engine-config digest, evidence) is persisted. Rebuilding with a different contract raises `ContractMismatch`: no run and no results. The only exception is an explicit `ContractTransition`, which must be technical, outcome-blind and carry a description and code commit. It is persisted with the previous and new digests, and it is required again to return to any other contract. Every event carries its contract. Results and canaries count only under the contract they were made in, so earlier results become `superseded_contract` and are never eligible under the new contract, which needs its own canaries. | `test_probe_gap2_changed_engine_config_cannot_return_old_payload` |
+| **3. Lost end canary.** Probe: a pending attempt on a preempted instance blocked every retry. | `declare_lost(instance, cause, description, commit, outcome_blind, terminated_at)` is a persisted technical disposition. It closes the lost instance at its authoritative termination (now, if unknown), so its time is charged. Its unbracketed attempts become **retained-ineligible**; **no closing canary is fabricated**. Their attempt counts are kept, and the remaining registered attempts or the fallback proceed on the replacement instance after the registered relaunch. A lost instance cannot be reopened. | `test_probe_gap3_lost_end_canary_allows_the_remaining_attempts` |
+| **4. Fallback identity.** Probe: a changed `fallback_value` changed the resumed result. | The registered fallback payload and its sha256 are persisted at the first construction and with every fallback event. A guard rebuilt with a different fallback raises `FallbackMismatch`. `resolve` returns the persisted payload after verifying its digest. | `test_probe_gap4_changed_fallback_value_is_refused_on_resume` |
+
+**Combined orchestration test:**
+`test_orchestration_failure_canary_restart_preemption_exhaustion_and_first_valid_selection`. It runs, in one
+sequence:
+1. a missing instance, then a missing canary, both refused;
+2. a technical failure, retried and charged;
+3. a unit exhausting 3 attempts and taking its registered fallback;
+4. a failed end canary, with an outcome-blind repair recorded;
+5. a process restart that keeps instance time and every counter;
+6. a **preempted instance with no closing canary**, declared lost;
+7. the registered relaunch, with the next unit taking its last attempt and another unit exhausting into its persisted
+   fallback;
+8. the second relaunch, refused;
+9. resume in a fresh process returning the first eligible attempt, whatever its value, without recomputation.
+
+**Not claimed.** The confirmatory-stack launch preconditions Board A lists remain preconditions for launch. They are
+not performed here and are not a freeze blocker:
+- inert, parity and canary checks on the pinned engines;
+- committed canary references;
+- the deployed restart path;
+- dead-man reconciliation;
+- bound evidence and the registered fallbacks.
