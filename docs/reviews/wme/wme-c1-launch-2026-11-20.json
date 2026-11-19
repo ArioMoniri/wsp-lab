@@ -1,0 +1,75 @@
+{
+ "date": "2026-11-20",
+ "all_met": false,
+ "decision": "LAUNCH BLOCKED: precondition 1 (HF-generate engine) failed; per the run brief and \u00a7II.28.3 the run stops, the instance is terminated and the chair is informed. No confirmatory unit was started; no wme-c1 or wme-c2-gen item was evaluated; no sealed file was read.",
+ "rows": [
+  {
+   "precondition": "1 Pinned-engine inert identity",
+   "met": false,
+   "evidence": "teacher-forced: 8/8 constructions bitwise equal to base, I1 theta-hash = base; vLLM: 5/5 bitwise; **HF generate: 0/5** \u2014 base HF canary itself not reproducible (see row 3)"
+  },
+  {
+   "precondition": "2 Real 1-vs-2-GPU parity",
+   "met": true,
+   "evidence": "teacher-forced chunks k=1 vs k=2 bitwise True; GPU0 vs GPU1 every chunk True; vLLM GPU0 = GPU1 True (b34cc04e97b4d243\u2026, equal to the registered stage-W canary b34cc04e\u2026); HF generate GPU0 = GPU1 False"
+  },
+  {
+   "precondition": "3 Committed per-engine canary references",
+   "met": false,
+   "evidence": "not reached on a confirmatory instance; the HF-generate canary is not reproducible: three runs on one instance gave c9bb1a34d0a1\u2026 (GPU0), a8173098ef52\u2026 (GPU1), 68c050840bfe\u2026 (GPU0, later); teacher-forced canary stable 86a8c5594676\u2026"
+  },
+  {
+   "precondition": "4 Evidence and fallback binding",
+   "met": null,
+   "evidence": "not reached (no confirmatory instance, no study log)"
+  },
+  {
+   "precondition": "5 Unique physical-instance identities",
+   "met": null,
+   "evidence": "not reached for a confirmatory instance; the check instance recorded GPU-UUID and machine-id digests"
+  },
+  {
+   "precondition": "6 Deployed persistence and repair",
+   "met": true,
+   "evidence": "CPU deployment drill: all 7 scenarios pass (wme-c1-drill-2026-11-19.json)"
+  },
+  {
+   "precondition": "7 Authoritative time and dead-man reconciliation",
+   "met": null,
+   "evidence": "not reached (no study log to reconcile into); both check instances terminated and API-confirmed in the dead-man ledger"
+  },
+  {
+   "precondition": "8 ProductionGuard only",
+   "met": null,
+   "evidence": "no confirmatory unit run; the c1 path uses only ProductionGuard"
+  }
+ ],
+ "evidence": {
+  "docs/reviews/wme/wme-c1-launch-parity-2026-11-19.json": "1e7bf367845767a19ab4bf26acc59e030b86c57fbf9b4bce92977fb154826844"
+ },
+ "ledger": [
+  {
+   "instance": "d10681e8\u2026",
+   "type": "gpu_2x_h100_sxm5",
+   "outcome": "never left booting; provider 'unhealthy', ~60 min in 'terminating'",
+   "hours": 1.511,
+   "gpu_h_eq": 3.023,
+   "usd": 14.48,
+   "terminated_confirmed": true
+  },
+  {
+   "instance": "c1fb8fba\u2026",
+   "type": "gpu_2x_h100_sxm5",
+   "outcome": "parity + inert identity checks",
+   "hours": 0.394,
+   "gpu_h_eq": 0.789,
+   "usd": 3.78,
+   "terminated_confirmed": true
+  }
+ ],
+ "ledger_total": {
+  "gpu_h_eq": 3.812,
+  "usd_provider": 18.26,
+  "usd_ledger_convention": 20.5
+ }
+}
