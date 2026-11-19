@@ -1,0 +1,299 @@
+{
+ "cross_process": "a first execution of both variants (same code except the kernel-binding probe fix) gave the same hashes: torch24 det cc93a890\u2026 reg 471c24ba\u2026; fla24 det cce41f44\u2026 reg fa8289fe\u2026",
+ "earlier_attempts": [
+  "64 items, torch path: OOM (8 GB cap), twice (with and without expandable_segments)",
+  "64 items, fla: OOM",
+  "32 items, torch path: OOM"
+ ],
+ "label": "PREREG_WME \u00a7II.31 C1(a) local engineering test (RULING-wme-c1-phasel C4.1): Qwen3.5-0.8B on the local GPU, exposed hf_gen canary items only; engineering evidence, not the Phase L decision",
+ "variants": {
+  "fla_local_kernels_check_bypassed": {
+   "attn_implementation": "sdpa",
+   "binding_check_bypassed": true,
+   "engine_deterministic": {
+    "amendment": "PREREG_WME \u00a7II.31 (v2l)",
+    "batch": 128,
+    "deterministic": {
+     "CUBLAS_WORKSPACE_CONFIG": ":4096:8 (process-wide, set before the first CUDA call)",
+     "attention": "SDPA math backend only (flash, memory-efficient and cuDNN attention off); model attn_implementation in ['sdpa', 'eager']",
+     "cudnn": {
+      "benchmark": false,
+      "deterministic": true
+     },
+     "linear_attention": "transformers torch path (no fla / causal_conv1d / kernels-hub function bound)",
+     "scope": "inside each HF generate call; teacher-forced evaluation unchanged",
+     "torch.use_deterministic_algorithms": {
+      "mode": true,
+      "warn_only": false
+     }
+    },
+    "engine": "hf generate (wm.genaudit, unchanged)",
+    "greedy": true,
+    "max_new_tokens": 128,
+    "mode": "hf_deterministic",
+    "non_thinking": true,
+    "order": "file order; contiguous chunks of 128 (the last the remainder); one generate call per chunk",
+    "padding": "left",
+    "sampled_audit": "T 0.7, top-p 1.0, gen.sampled_seeds",
+    "stop": [
+     "eos",
+     "<|im_end|>"
+    ]
+   },
+   "fla_blocked": false,
+   "items": {
+    "n": 24,
+    "set": "wme-p3h holdout mmlupro_gen (hf_gen canary set), first 24 of 64"
+   },
+   "kernel_bindings": {
+    "causal_conv1d_fn": "transformers.models.qwen3_5.modeling_qwen3_5",
+    "causal_conv1d_update": "transformers.models.qwen3_5.modeling_qwen3_5",
+    "torch_chunk_gated_delta_rule": "fla.ops.gated_delta_rule.chunk",
+    "torch_recurrent_gated_delta_rule": "fla.ops.gated_delta_rule.fused_recurrent"
+   },
+   "label": "PREREG_WME \u00a7II.31 C1(a) local engineering test (exposed canary items; Qwen3.5-0.8B; not 9B, not confirmatory)",
+   "model": {
+    "repo": "Qwen/Qwen3.5-0.8B",
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "theta": "441df3a6e2ea76ed0a879607e31d718844d4ce1a24f2b867a3824f66a23407c2"
+   },
+   "peak_vram_gb": 3.181342124938965,
+   "runs": [
+    {
+     "i": 0,
+     "mode": "hf_deterministic",
+     "seconds": 4.922318696975708,
+     "sha256": "cce41f44db09c9978b11f82814e84251c8a4fbb1e5de06cbd5d4a7587dcbbab7"
+    },
+    {
+     "i": 0,
+     "mode": "hf_registered",
+     "seconds": 4.276293039321899,
+     "sha256": "fa8289fe4471dc52000ec827f19fada5c2729be26b00d9b791bf2af6e929911e"
+    },
+    {
+     "i": 1,
+     "mode": "hf_deterministic",
+     "seconds": 4.9522058963775635,
+     "sha256": "cce41f44db09c9978b11f82814e84251c8a4fbb1e5de06cbd5d4a7587dcbbab7"
+    },
+    {
+     "i": 1,
+     "mode": "hf_registered",
+     "seconds": 4.311738729476929,
+     "sha256": "fa8289fe4471dc52000ec827f19fada5c2729be26b00d9b791bf2af6e929911e"
+    },
+    {
+     "i": 2,
+     "mode": "hf_deterministic",
+     "seconds": 4.972151279449463,
+     "sha256": "cce41f44db09c9978b11f82814e84251c8a4fbb1e5de06cbd5d4a7587dcbbab7"
+    },
+    {
+     "i": 2,
+     "mode": "hf_registered",
+     "seconds": 4.322322607040405,
+     "sha256": "fa8289fe4471dc52000ec827f19fada5c2729be26b00d9b791bf2af6e929911e"
+    }
+   ],
+   "settings": {
+    "batch": 128,
+    "max_new_tokens": 128
+   },
+   "summary": {
+    "det_eq_registered_hash": false,
+    "hf_deterministic": {
+     "bitwise_3_of_3": true,
+     "hashes": [
+      "cce41f44db09c9978b11f82814e84251c8a4fbb1e5de06cbd5d4a7587dcbbab7",
+      "cce41f44db09c9978b11f82814e84251c8a4fbb1e5de06cbd5d4a7587dcbbab7",
+      "cce41f44db09c9978b11f82814e84251c8a4fbb1e5de06cbd5d4a7587dcbbab7"
+     ],
+     "median_s": 4.9522058963775635,
+     "seconds": [
+      4.922318696975708,
+      4.9522058963775635,
+      4.972151279449463
+     ]
+    },
+    "hf_registered": {
+     "bitwise_3_of_3": true,
+     "hashes": [
+      "fa8289fe4471dc52000ec827f19fada5c2729be26b00d9b791bf2af6e929911e",
+      "fa8289fe4471dc52000ec827f19fada5c2729be26b00d9b791bf2af6e929911e",
+      "fa8289fe4471dc52000ec827f19fada5c2729be26b00d9b791bf2af6e929911e"
+     ],
+     "median_s": 4.311738729476929,
+     "seconds": [
+      4.276293039321899,
+      4.311738729476929,
+      4.322322607040405
+     ]
+    },
+    "throughput_ratio_det_over_registered": 1.148540346965395
+   },
+   "versions": {
+    "cuda": "13.2",
+    "gpu": [
+     "NVIDIA RTX PRO 4500 Blackwell Server Edition"
+    ],
+    "numpy": "2.5.5",
+    "python": "3.12.3",
+    "torch": "2.15.0+cu132",
+    "transformers": "5.23.0",
+    "vllm": null
+   },
+   "vram_cap_gb": 8.0,
+   "warmup": {
+    "mode": "hf_registered",
+    "seconds": 5.3884077072143555,
+    "sha256": "fa8289fe4471dc52000ec827f19fada5c2729be26b00d9b791bf2af6e929911e"
+   }
+  },
+  "torch_path_pinned_lock_kernels": {
+   "attn_implementation": "sdpa",
+   "binding_check_bypassed": false,
+   "engine_deterministic": {
+    "amendment": "PREREG_WME \u00a7II.31 (v2l)",
+    "batch": 128,
+    "deterministic": {
+     "CUBLAS_WORKSPACE_CONFIG": ":4096:8 (process-wide, set before the first CUDA call)",
+     "attention": "SDPA math backend only (flash, memory-efficient and cuDNN attention off); model attn_implementation in ['sdpa', 'eager']",
+     "cudnn": {
+      "benchmark": false,
+      "deterministic": true
+     },
+     "linear_attention": "transformers torch path (no fla / causal_conv1d / kernels-hub function bound)",
+     "scope": "inside each HF generate call; teacher-forced evaluation unchanged",
+     "torch.use_deterministic_algorithms": {
+      "mode": true,
+      "warn_only": false
+     }
+    },
+    "engine": "hf generate (wm.genaudit, unchanged)",
+    "greedy": true,
+    "max_new_tokens": 128,
+    "mode": "hf_deterministic",
+    "non_thinking": true,
+    "order": "file order; contiguous chunks of 128 (the last the remainder); one generate call per chunk",
+    "padding": "left",
+    "sampled_audit": "T 0.7, top-p 1.0, gen.sampled_seeds",
+    "stop": [
+     "eos",
+     "<|im_end|>"
+    ]
+   },
+   "fla_blocked": true,
+   "items": {
+    "n": 24,
+    "set": "wme-p3h holdout mmlupro_gen (hf_gen canary set), first 24 of 64"
+   },
+   "kernel_bindings": {
+    "causal_conv1d_fn": "transformers.models.qwen3_5.modeling_qwen3_5",
+    "causal_conv1d_update": "transformers.models.qwen3_5.modeling_qwen3_5",
+    "torch_chunk_gated_delta_rule": "transformers.models.qwen3_5.modeling_qwen3_5",
+    "torch_recurrent_gated_delta_rule": "transformers.models.qwen3_5.modeling_qwen3_5"
+   },
+   "label": "PREREG_WME \u00a7II.31 C1(a) local engineering test (exposed canary items; Qwen3.5-0.8B; not 9B, not confirmatory)",
+   "model": {
+    "repo": "Qwen/Qwen3.5-0.8B",
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "theta": "441df3a6e2ea76ed0a879607e31d718844d4ce1a24f2b867a3824f66a23407c2"
+   },
+   "peak_vram_gb": 3.521397590637207,
+   "runs": [
+    {
+     "i": 0,
+     "mode": "hf_deterministic",
+     "seconds": 5.773489236831665,
+     "sha256": "cc93a8902de3c7f215b5751caf7d07bb5152b6f4a509d03c00b2f37fd059aa03"
+    },
+    {
+     "i": 0,
+     "mode": "hf_registered",
+     "seconds": 5.016024351119995,
+     "sha256": "471c24ba2816440116f39b99dafb81c1e1a37afcf7e52416a69b591fc8af5753"
+    },
+    {
+     "i": 1,
+     "mode": "hf_deterministic",
+     "seconds": 5.553096532821655,
+     "sha256": "cc93a8902de3c7f215b5751caf7d07bb5152b6f4a509d03c00b2f37fd059aa03"
+    },
+    {
+     "i": 1,
+     "mode": "hf_registered",
+     "seconds": 4.864101409912109,
+     "sha256": "471c24ba2816440116f39b99dafb81c1e1a37afcf7e52416a69b591fc8af5753"
+    },
+    {
+     "i": 2,
+     "mode": "hf_deterministic",
+     "seconds": 5.554576396942139,
+     "sha256": "cc93a8902de3c7f215b5751caf7d07bb5152b6f4a509d03c00b2f37fd059aa03"
+    },
+    {
+     "i": 2,
+     "mode": "hf_registered",
+     "seconds": 4.883373022079468,
+     "sha256": "471c24ba2816440116f39b99dafb81c1e1a37afcf7e52416a69b591fc8af5753"
+    }
+   ],
+   "settings": {
+    "batch": 128,
+    "max_new_tokens": 128
+   },
+   "summary": {
+    "det_eq_registered_hash": false,
+    "hf_deterministic": {
+     "bitwise_3_of_3": true,
+     "hashes": [
+      "cc93a8902de3c7f215b5751caf7d07bb5152b6f4a509d03c00b2f37fd059aa03",
+      "cc93a8902de3c7f215b5751caf7d07bb5152b6f4a509d03c00b2f37fd059aa03",
+      "cc93a8902de3c7f215b5751caf7d07bb5152b6f4a509d03c00b2f37fd059aa03"
+     ],
+     "median_s": 5.554576396942139,
+     "seconds": [
+      5.773489236831665,
+      5.553096532821655,
+      5.554576396942139
+     ]
+    },
+    "hf_registered": {
+     "bitwise_3_of_3": true,
+     "hashes": [
+      "471c24ba2816440116f39b99dafb81c1e1a37afcf7e52416a69b591fc8af5753",
+      "471c24ba2816440116f39b99dafb81c1e1a37afcf7e52416a69b591fc8af5753",
+      "471c24ba2816440116f39b99dafb81c1e1a37afcf7e52416a69b591fc8af5753"
+     ],
+     "median_s": 4.883373022079468,
+     "seconds": [
+      5.016024351119995,
+      4.864101409912109,
+      4.883373022079468
+     ]
+    },
+    "throughput_ratio_det_over_registered": 1.137446672991787
+   },
+   "versions": {
+    "cuda": "13.2",
+    "gpu": [
+     "NVIDIA RTX PRO 4500 Blackwell Server Edition"
+    ],
+    "numpy": "2.5.5",
+    "python": "3.12.3",
+    "torch": "2.15.0+cu132",
+    "transformers": "5.23.0",
+    "vllm": null
+   },
+   "vram_cap_gb": 8.0,
+   "warmup": {
+    "mode": "hf_registered",
+    "seconds": 5.855407953262329,
+    "sha256": "471c24ba2816440116f39b99dafb81c1e1a37afcf7e52416a69b591fc8af5753"
+   }
+  }
+ },
+ "vram_limit_gb": 8,
+ "why_24_items": "under the 8 GB limit one left-padded prefill batch of the 64 items (longest prompt 1,574 tokens, item index 24 and 28 >1,000) does not fit on either kernel path (OOM at 8 GB with 64 and with 32 items); the first 24 items in file order (longest 549 tokens) are one batch under the batch-128 rule"
+}

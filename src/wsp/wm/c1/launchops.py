@@ -48,14 +48,16 @@ def _inert_endpoints(rt, m):
 def h_inert_identity(rt, req, ctx):
     import torch
 
+    from wsp.wm.c1 import genengine as GE
     from wsp.wm.c1 import vllmops as VO
 
     m = rt.hf()
     m.at_base()
+    hf_gen = GE.GEN_ENGINE != "vllm"  # under C1(b) the generation identity is the vLLM rows below
     tf_items = MO.tf_canary_items(MO.PANEL_P2)
     gen_items = MO.gen_canary_items()
     base_tf = m.canary_tf(tf_items)
-    base_hf = m.canary_hf(gen_items)
+    base_hf = m.canary_hf(gen_items) if hf_gen else None
     rows, vllm_states = [], []
     for spec, steps in _inert_endpoints(rt, m):
         m.at_base()
@@ -67,18 +69,8 @@ def h_inert_identity(rt, req, ctx):
             tf = MO.sha_values(MO.flatten_values(res, MO.CANARY_TF_OBJECTIVES))
             hf = None
             if spec["kind"] in ("i1", "i2"):
-                from wsp.wm import genaudit as GA
-                from wsp.wm import p3gen as G
-
-                o = GA.generate_greedy(
-                    m.model,
-                    m.tok,
-                    [G.user_prompt("mmlupro_gen", it) for it in gen_items],
-                    MO.CANARY_HF["max_new_tokens"],
-                    batch=MO.CANARY_HF["batch"],
-                    device="cuda",
-                )
-                hf = MO.sha_ids([r["ids"] for r in o])
+                if hf_gen:
+                    hf = _hf_at_state(m, gen_items)  # at the inert state (canary_hf resets to base)
                 tensors = {}
                 for n in m.sess.touched:
                     if n == m.embed:
@@ -150,6 +142,22 @@ def h_inert_identity(rt, req, ctx):
     }, {}
 
 
+def _hf_at_state(m, gen_items) -> str:
+    """The hf_gen canary call at the model's current state, through the recorded generation engine."""
+    from wsp.wm import p3gen as G
+    from wsp.wm.c1 import genengine as GE
+
+    o = GE.hf_generate(
+        m.model,
+        m.tok,
+        [G.user_prompt("mmlupro_gen", it) for it in gen_items],
+        MO.CANARY_HF["max_new_tokens"],
+        MO.CANARY_HF["batch"],
+        "cuda",
+    )
+    return MO.sha_ids([r["ids"] for r in o])
+
+
 def MO_tokenizer(rt):
     from transformers import AutoTokenizer
 
@@ -204,7 +212,11 @@ def h_parity(rt, req, ctx):
     g1 = json.loads(p.stdout.strip().splitlines()[-1])
     k2 = {i: (k1[i] if i % 2 == 0 else g1["chunks"][str(i)]) for i in range(n)}
     gpu1_all = {i: g1["chunks"][str(i)] for i in range(n)}
-    eng0 = {"tf": m.canary_tf(), "hf_gen": m.canary_hf()}
+    from wsp.wm.c1 import genengine as GE
+
+    eng0 = {"tf": m.canary_tf()}
+    if GE.GEN_ENGINE != "vllm":
+        eng0["hf_gen"] = m.canary_hf()
     res = {
         "chunks_k1": k1,
         "chunks_k2": k2,
@@ -234,15 +246,19 @@ def h_parity(rt, req, ctx):
 
 
 def _gpu1_main(cfg):
+    from wsp.wm.c1 import genengine as GE
     from wsp.wm.c1 import serve as S
 
+    GE.prepare_process()
     c = S.Config.make("/tmp/wme-c1-gpu1", smoke=cfg["smoke"], vllm=cfg["vllm"])
     rt = S.Runtime(c)
     m = rt.hf()
     out = {
         "chunks": {str(i): v for i, v in score_chunks(m, range(len(_chunks()))).items()},
-        "canary": {"tf": m.canary_tf(), "hf_gen": m.canary_hf()},
+        "canary": {"tf": m.canary_tf()},
     }
+    if GE.GEN_ENGINE != "vllm":
+        out["canary"]["hf_gen"] = m.canary_hf()
     if cfg["vllm"]:
         from wsp.wm import p3gen as G
         from wsp.wm.c1 import vllmops as VO
@@ -260,6 +276,33 @@ def _gpu1_main(cfg):
 
 if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[1] == "gpu1":
     _gpu1_main(json.loads(sys.argv[2]))
+
+
+@register("gen_repeat")
+def h_gen_repeat(rt, req, ctx):
+    """§II.31 C1(a) Phase L check on one GPU: ``n`` (3) runs of the hf_gen canary under the deterministic engine,
+    then one run of the registered (non-deterministic) path for the throughput ratio only (its hash is recorded,
+    never used as a reference). Exposed canary items only."""
+    from wsp.wm.c1 import genengine as GE
+
+    n = int((req.get("args") or {}).get("n", 3))
+    m = rt.hf()
+    items = MO.gen_canary_items()
+    det = []
+    for _ in range(n):
+        h, s = m.canary_hf_timed(items, mode="hf_deterministic")
+        det.append({"sha256": h, "seconds": s})
+        ctx.check()
+    h_reg, s_reg = m.canary_hf_timed(items, mode="hf_registered")
+    t_det = sorted(r["seconds"] for r in det)[len(det) // 2]
+    return {
+        "deterministic": det,
+        "registered": {"sha256": h_reg, "seconds": s_reg},
+        "repeat_bitwise": len({r["sha256"] for r in det}) == 1,
+        "t_det_median_s": t_det,
+        "throughput_ratio": t_det / s_reg,
+        "engine": GE.config("hf_deterministic"),
+    }, {}
 
 
 @register("timing")

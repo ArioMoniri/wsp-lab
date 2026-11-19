@@ -9,7 +9,9 @@ ssh config alias kept outside the repository; the host address is never printed 
 * ``set_fence(epoch, instance)``: publish the current owner epoch (takeover stops older requests);
 * ``alive_age()``: seconds since the worker's last ``alive`` touch (None if unknown);
 * ``progress_age()``: seconds since ``progress.jsonl`` last grew (dead-man heartbeat source, §II.13 item 3);
-* ``cancel(rid)``: withdraw a not-yet-started request.
+* ``cancel(rid)``: withdraw a not-yet-started request;
+* ``heartbeat()``: the worker's ``heartbeat.json`` (GPU utilisation/memory, in-flight request; ``wm.c1.health``);
+* ``read_log(offset)``: (new worker-log text from byte ``offset``, new offset) for the run-health error scan.
 """
 
 from __future__ import annotations
@@ -25,9 +27,14 @@ from pathlib import Path
 from wsp.wm.c1 import protocol as P
 
 
+LOG_REL = "../logs/worker.log"  # scripts/wme_c1_remote_worker.sh: the worker root is <remote>/w
+LOG_CHUNK = 1 << 20
+
+
 class LocalTransport:
-    def __init__(self, root):
+    def __init__(self, root, log_path=None):
         self.root = Path(root)
+        self.log_path = Path(log_path) if log_path is not None else self.root / LOG_REL
         for d in ("inbox", "outbox"):
             (self.root / d).mkdir(parents=True, exist_ok=True)
 
@@ -61,6 +68,23 @@ class LocalTransport:
 
     def progress_age(self):
         return self._age("progress.jsonl")
+
+    def heartbeat(self):
+        p = self.root / "heartbeat.json"
+        try:
+            return json.loads(p.read_text()) if p.exists() else None
+        except json.JSONDecodeError:
+            return None
+
+    def read_log(self, offset: int) -> tuple[str, int]:
+        if not self.log_path.exists():
+            return "", int(offset)
+        size = self.log_path.stat().st_size
+        offset = 0 if size < offset else int(offset)  # a rotated / truncated log restarts at 0
+        with open(self.log_path, "rb") as f:
+            f.seek(offset)
+            data = f.read(LOG_CHUNK)
+        return data.decode(errors="replace"), offset + len(data)
 
     def push(self, local) -> str:
         """Content-addressed upload: ``uploads/<sha256><suffix>`` on the worker; returns the worker path."""
@@ -166,6 +190,25 @@ class SSHTransport:
 
     def progress_age(self):
         return self._age("progress.jsonl")
+
+    def heartbeat(self):
+        p = shlex.quote(f"{self.rroot}/heartbeat.json")
+        out = self.sh(f"cat {p} 2>/dev/null || true").strip()
+        try:
+            return json.loads(out) if out else None
+        except json.JSONDecodeError:
+            return None
+
+    def read_log(self, offset: int) -> tuple[str, int]:
+        p = shlex.quote(f"{self.rroot}/{LOG_REL}")
+        size = self.sh(f"stat -c %s {p} 2>/dev/null || echo 0").strip()
+        size = int(size or 0)
+        offset = 0 if size < offset else int(offset)
+        if size == offset:
+            return "", offset
+        n = min(size - offset, LOG_CHUNK)
+        data = self.sh(f"tail -c +{offset + 1} {p} | head -c {n}")
+        return data, offset + n
 
     def push(self, local) -> str:
         local = Path(local)

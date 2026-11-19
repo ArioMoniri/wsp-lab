@@ -6,9 +6,11 @@ import hashlib
 import importlib.util
 import json
 import types
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
+
 import torch
 from torch import nn
 
@@ -76,7 +78,8 @@ def fake_model_ctx():
     m = MO.ModelCtx.__new__(MO.ModelCtx)
     m.base_hash = "b" * 64
     m.sess = A.EditSession(params, base_hash=m.base_hash, rolemap=rm)
-    m.rm, m.device, m.model, m.tok = rm, "cpu", object(), object()
+    m.rm, m.device, m.tok = rm, "cpu", object()
+    m.model = SimpleNamespace(config=SimpleNamespace(_attn_implementation="sdpa"))
     m.embed = "model.embed_tokens.weight"
     return m
 
@@ -242,6 +245,12 @@ def test_prompts_match_builder_templates():
 
 @pytest.fixture
 def gen_calls(monkeypatch):
+    from wsp.wm.c1 import genengine as GE
+
+    monkeypatch.setenv(GE.CUBLAS_ENV, GE.CUBLAS_WORKSPACE)
+    monkeypatch.setattr(
+        GE, "kernel_bindings", lambda: dict.fromkeys(GE.LINEAR_ATTN_FUNCS, GE.QWEN35_MODULE)
+    )
     calls = []
 
     def fake(seed):
@@ -254,6 +263,7 @@ def gen_calls(monkeypatch):
                     "batch": batch,
                     "seed": s,
                     "theta": RUN["m"].theta_hash(),
+                    "deterministic": torch.are_deterministic_algorithms_enabled(),
                 }
             )
             return [
@@ -307,6 +317,9 @@ def test_e1_gen_pairs_base_and_winner(tmp_path, gen_calls):
         assert c["prompts"] == (neutral if k % 2 == 0 else suggested)
         assert c["theta"] == (m.base_hash if (k // 2) % 2 == 0 else win_theta)
         assert c["seed"] == (None if k < 4 else 20261118)
+        assert c["deterministic"] is True  # §II.31 C1(a): inside every HF generate call
+    assert not torch.are_deterministic_algorithms_enabled()  # scoped: restored after the call
+    assert payload["gen_engine"]["mode"] == "hf_deterministic"
     assert m.theta_hash() == m.base_hash and not m.sess.touched
     rows = GO.read_jsonl_gz(files[GO.OUTPUTS])
     assert len(rows) == 2 * 2 * 2 * len(items) == payload["n_rows"]
@@ -791,3 +804,108 @@ def test_train_job_uses_the_registered_recipe(tmp_path, monkeypatch):
     assert meta["factors_sha256"] == GO.sha256_file(job["factors_path"])
     with pytest.raises(RuntimeError, match="registered 828"):
         ST.train_job(dict(job, smoke=False))
+
+
+# ------------------------------------------------------------------ §II.31 C1(b): the vLLM switch (inactive)
+
+
+class GTok(Tok):
+    eos_token_id = 1
+
+    def convert_tokens_to_ids(self, t):
+        return 2 if t == "<|im_end|>" else -1
+
+
+def vllm_e1_spawn(jobs):
+    def spawn(job, workdir, **kw):
+        jobs.append(job)
+        return {
+            "seconds": 1.0,
+            "blocks": [
+                {
+                    "name": b["name"],
+                    "seconds": 0.1,
+                    "outputs": [
+                        {"text": f"v{i}", "ids": [i, 9], "hit_max": False}
+                        for i in range(len(b["prompts"]))
+                    ],
+                    "ids_sha256": MO.sha_ids([[i, 9] for i in range(len(b["prompts"]))]),
+                }
+                for b in job["blocks"]
+            ],
+        }
+
+    return spawn
+
+
+def test_gen_engine_default_is_hf_deterministic():
+    from wsp.wm.c1 import genengine as GE
+
+    assert GE.GEN_ENGINE == "hf_deterministic"  # C1(b) stays inactive until selected at Phase L
+
+
+def test_e1_gen_under_the_vllm_engine_uses_registered_settings(tmp_path, monkeypatch):
+    from wsp.wm.c1 import genengine as GE
+
+    monkeypatch.setattr(GE, "GEN_ENGINE", "vllm")
+    monkeypatch.setattr(GA, "generate_greedy", lambda *a, **k: pytest.fail("HF generate used"))
+    monkeypatch.setattr(GA, "generate_sampled", lambda *a, **k: pytest.fail("HF generate used"))
+    jobs = []
+    monkeypatch.setattr(VO, "spawn", vllm_e1_spawn(jobs))
+    m = fake_model_ctx()
+    m.tok = GTok()
+    items = trivia_items()
+    rt = RT(tmp_path / "state", m)
+    req = e1_req(tmp_path, m, items, ["greedy", "sampled:20261118"])
+    win_theta = req["args"]["winner"]["theta_hash"]
+    payload, files = GO.h_e1_gen(rt, req, Ctx(tmp_path / "scratch"))
+    assert rt.released == 1 and len(jobs) == 1  # HF released before the one vLLM child job
+    blocks = jobs[0]["blocks"]
+    assert len(blocks) == 8
+    neutral = [GO.prompts_for(it)["neutral"] for it in items]
+    for k, b in enumerate(blocks):
+        assert b["max_tokens"] == 128 and b["stop_token_ids"] == [1, 2]
+        user = neutral if k % 2 == 0 else [GO.prompts_for(it)["suggested"] for it in items]
+        assert b["prompts"] == [f"<u>{u}</u><a>" for u in user]  # the HF path's chat_prompt text
+        winner = (k // 2) % 2 == 1
+        assert b["state"]["kind"] == ("tensors" if winner else "base")
+        if k < 4:
+            assert "sample" not in b
+        else:
+            assert b["sample"] == {"temperature": 0.7, "top_p": 1.0, "seed": 20261118}
+    assert m.tok.thinking and not any(m.tok.thinking)  # non-thinking
+    assert payload["gen_engine"]["mode"] == "vllm"
+    assert [b["theta_hash"] for b in payload["blocks"]][:4] == [m.base_hash] * 2 + [win_theta] * 2
+    assert payload["theta0"] == m.base_hash and payload["n_rows"] == 8 * len(items)
+    wt = torch.load(blocks[2]["state"]["path"], weights_only=False)
+    assert set(wt) == {(0, "down"), (1, "o")}  # the winner's realised tensors
+    assert m.theta_hash() == m.base_hash and not m.sess.touched
+
+
+def test_canary_under_the_vllm_engine_adds_a_second_vllm_canary(tmp_path, monkeypatch):
+    from wsp.wm.c1 import genengine as GE
+
+    monkeypatch.setattr(GE, "GEN_ENGINE", "vllm")
+    monkeypatch.setattr(MO, "gen_canary_items", lambda: mc_items(3, "c"))
+    monkeypatch.setattr(MO, "tf_canary_items", lambda *a: {})
+    monkeypatch.setattr(S, "_gen_canary_prompts", lambda rt: ["p0", "p1", "p2"])
+    jobs = []
+    monkeypatch.setattr(VO, "spawn", vllm_e1_spawn(jobs))
+
+    class M:
+        tok = GTok()
+
+        def canary_tf(self, items):
+            return "a" * 64
+
+        def canary_hf(self, *a, **k):
+            pytest.fail("HF generation canary under the vLLM engine")
+
+    rt = RT(tmp_path / "state", M())
+    rt.cfg.vllm = True
+    payload, _ = S.h_canary(rt, {"args": {}}, Ctx(tmp_path / "s"))
+    assert set(payload["engines"]) == GE.canary_engines("vllm") == {"tf", "vllm_gen", "vllm"}
+    b0, b1 = jobs[0]["blocks"]
+    assert b0["max_tokens"] == VO.CANARY_TOKENS and "stop_token_ids" not in b0  # stage-W block unchanged
+    assert b1["name"] == "vllm_gen" and b1["max_tokens"] == 128 and b1["stop_token_ids"] == [1, 2]
+    assert len(b1["prompts"]) == 3

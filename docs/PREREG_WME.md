@@ -3871,3 +3871,210 @@ sizes, fp64 GPU eigendecomposition by the registered `spectral_factor` rule, and
 12288- and 4096-dimensional factors (6 objectives × 32 layers × the A and G factors of `down` and `o`); 13,095 is
 the upper bound on per-tensor contributions of the bound bank plan (1,032 states). The value and its inputs are
 recorded in the launch report. The confirmatory, S-BoN and S-TE prices are unchanged.
+
+## II.31 Amendment v2l (19 Nov 2026): deterministic generation engine, pre-declared vLLM fallback, cap 110 GPU-h-eq, run-health duties
+
+**What this amendment is.** Dated 19 Nov 2026. It is appended before any `wme-c1` or `wme-c2-gen` data: no confirmatory
+unit has run, and no sealed file has been read. It implements the chair ruling
+`docs/council/2026-11-19/RULING-wme-c1-phasel.md` (C1–C4) and its addendum, and is flagged to the chair. Board A checks
+it before the Phase L re-run.
+
+Its trigger is an outcome-blind engineering failure on exposed canary items only. On the pinned stack, HF `generate`
+at batch 128 is not bitwise reproducible (`docs/reviews/wme/wme-c1-launch-2026-11-20.md`). Under Part I §11.4, nothing
+here is an adaptation.
+
+It changes no claim, test, α, N, margin, seed, prompt, parser, item order or stopping rule. It changes the following:
+- the generation engine's configuration (C1(a)), with a pre-declared engine fallback (C1(b));
+- the absolute GPU-hour cap (C3: 90 → 110 GPU-h-eq);
+- the run-health duties (addendum).
+
+### II.31.1 C1(a): the deterministic HF-generate engine configuration (active)
+
+**The recorded flag.** `wsp.wm.c1.genengine.GEN_ENGINE = "hf_deterministic"`. Its full configuration
+(`genengine.config()`) is part of the launch engine config (`scripts/wme_c1_ctl.py engine_config()`,
+`hf_generate.engine`), whose sha256 the launch attestation binds.
+
+**Engine and inputs: unchanged.** The engine is the registered path `wm.genaudit.generate_greedy` / `generate_sampled`;
+`genaudit.py` is unchanged, so the `gen.parsers` sha256 `43ec3beb…` still holds. The chat template is non-thinking,
+padding is left, and the prompts and the stop rule (eos, `<|im_end|>`) are as registered. Generation is greedy at 128
+new tokens; the sampled audit uses T 0.7, top-p 1.0 and the `gen.sampled_seeds`.
+
+Batch composition and order are fixed. Items are taken in file order, in contiguous chunks of 128 (the last chunk is
+the remainder), with one `generate` call per chunk.
+
+**Added around every HF `generate` call.** These settings are scoped to the call (`genengine.deterministic`) and the
+previous state is restored afterwards:
+1. `torch.use_deterministic_algorithms(True)`, not warn-only.
+2. `CUBLAS_WORKSPACE_CONFIG=:4096:8`. This is process-wide: the worker sets it before the first CUDA call, and so does
+   the GPU-1 parity process.
+3. cuDNN: deterministic on, benchmarking off.
+4. Attention: SDPA restricted to the math backend (`torch.nn.attention.sdpa_kernel([SDPBackend.MATH])`). Flash,
+   memory-efficient and cuDNN attention are off, and the model's attention implementation must be `sdpa` or `eager`.
+5. The gated-delta-net linear attention must run on the transformers torch path. The engine refuses to run if an
+   `fla`, `causal_conv1d` or hub-kernel function is bound; the pinned lock installs none.
+
+**Where it applies.** Every HF generation of the run: the `hf_gen` canary, the HF part of the inert-identity check
+(precondition 1), the GPU-0 vs GPU-1 canary comparison (precondition 2), and E1 greedy and sampled generation.
+
+**Where it does not apply.**
+- Teacher-forced evaluation runs outside the scoped settings. Only the process-wide cuBLAS workspace setting is
+  shared, and the teacher-forced canary reference is measured under it at the Phase L re-run.
+- The vLLM child process runs without `CUBLAS_WORKSPACE_CONFIG`, i.e. on the stage-W numerics, as before.
+
+**Pass rule (Phase L re-run, the 64 exposed `hf_gen` canary items; `genengine.gen_pass`).** C1(a) passes only if all of
+the following hold:
+1. 3 of 3 runs on one GPU give bitwise-identical token-id sha256s (`launchops` handler `gen_repeat`).
+2. GPU 0 and GPU 1 give bitwise-identical `hf_gen` canaries (the `parity` handler).
+3. The HF part of the pinned-engine inert identity (precondition 1) is bitwise under C1(a).
+
+The other §II.28.3 preconditions are unchanged.
+
+**Throughput (recorded).** At the Phase L re-run, on the same instance and items, `gen_repeat` also runs one call of
+the registered path. This run is used for timing only; its hash is recorded but is never a reference. From it:
+- r = t_det / t_reg, where t_det is the median of the three deterministic runs and t_reg is the registered-path run;
+- G_E1 = the registered E1-generation GPU-h. Answers = 1,000 `sealed_gen` items × 2 prompts × 2 models, i.e. 4,000
+  greedy and 16,000 sampled. The per-answer seconds are those registered in the manifest's generation cost (0.0736 s
+  greedy, 0.1043 s sampled), so G_E1 = 0.545 GPU-h;
+- Δ = max(0, (r − 1) × G_E1).
+
+The local engineering result for C1(a) (Qwen3.5-0.8B, $0) is reported in
+`docs/reviews/wme/wme-c1-v2l-local-2026-11-19.md`. It is engineering evidence only; Phase L on the pinned H100 stack
+decides.
+
+### II.31.2 C1(b): the pre-declared vLLM fallback (inactive) and the exact trigger
+
+**Trigger (`genengine.select_engine`, evaluated once at the Phase L re-run, outcome-blind).** C1(b) is selected if and
+only if either of these holds:
+1. C1(a) fails the pass rule of §II.31.1 (items 1, 2 or 3).
+2. C1(a)'s throughput breaches the C3 cap projection. Let P = 86 GPU-h-eq (the ruling's projected-total upper bound),
+   S_L = the realised Phase L spend (all Phase L check instances, as charged), and C = the cap in force (§II.31.4). The
+   breach is P + S_L ≤ C < P + S_L + Δ. A shortfall that already exists without Δ (P + S_L > C) is not attributable to
+   C1(a): the cap rule governs it (the run stops at the cap), and it does not select C1(b).
+
+Otherwise C1(a) stays. The evaluation (r, Δ, P, S_L, C, the pass-rule booleans and the selected engine) is written to
+the Phase L evidence.
+
+**Activation.** If C1(b) is selected:
+1. A commit sets `GEN_ENGINE = "vllm"` before any confirmatory unit. Its configuration enters the engine-config digest.
+2. Preconditions 1–3 are re-checked for the vLLM generation engines:
+   - inert identity on the vLLM rows;
+   - GPU 0 = GPU 1 for both vLLM canaries;
+   - committed references for the canary set {`tf`, `vllm_gen`, `vllm`}.
+
+**C1(b) configuration (`genengine.config("vllm")`).** E1 generation and the generation canary run on the pinned vLLM
+engine (`wm.c1.vllmops`, stage-W frozen numerics: `gpu_memory_utilization` 0.88, `max_num_seqs` 256, `max_model_len`
+8,192, prefix caching off, seed 0, bf16), with every other setting as registered:
+- greedy, 128 new tokens, non-thinking;
+- the HF path's exact prompt text (`panel.chat_prompt`);
+- the registered stop rule (eos and `<|im_end|>` as `stop_token_ids`; trailing stop ids stripped);
+- the sampled audit at T 0.7, top-p 1.0, with `SamplingParams(seed=<registered seed>)` per request.
+
+**Pairing (§II.13 item 5) is kept.**
+1. The E1 winner is realised on the resident HF model, with its theta-hash asserted equal to the designated one.
+2. Its exact bf16 tensors are saved, and the HF model is released.
+3. One vLLM child job generates every (decoding, model, prompt) block, with the winner as the `tensors` state.
+
+So base and winner share one instance, engine configuration and item order. vLLM schedules its own batches;
+"batch 128" applies only to the HF engine.
+
+**What C1(b) replaces.**
+- It replaces the engine named in §II.4 delta 4 ("Decoding") and in §II.13 item 6's E1 line.
+- The `hf_gen` canary becomes a second vLLM canary, `vllm_gen`.
+
+*Interpretation, flagged to the chair and Board A.* The ruling's "second vLLM canary on the E1 generation prompts" is
+implemented as the E1 generation settings (128 tokens, the registered stop ids, the `panel.chat_prompt` text) applied to
+the same 64 exposed canary items. The E1 `sealed_gen` prompts are sealed and are never used as a canary.
+
+The stage-W `vllm` canary (2,048 tokens) is unchanged.
+
+### II.31.3 C2: v2j and v2k accepted as ruled
+
+§II.29 (v2j) is accepted, including:
+- G1: the hash-bound 72-root, 12-block graph; `c8d50fe2…` binds over the §II.4 prose.
+- G2: `claude-opus-5-5` for the reader arms.
+- G3a: the chart column is 0.
+- G18: π is the mean over the 8 samples.
+- The 8 realised inert controls, with the shortfall reported.
+
+§II.30 (v2k), the bank re-pricing rule, is accepted. Both stand unchanged.
+
+### II.31.4 C3: the cap (user decision, recorded before any data)
+
+**The cap.** The absolute cap is **110 GPU-h-eq**, which replaces the registered 90. This is the user's decision,
+recorded by the chair in the ruling addendum of 19 Nov 2026.
+
+Everything else is unchanged:
+- the combined-spend limit of **$1,000** for the 9B study;
+- the 4.89 × 1.10 USD/GPU-h ledger convention;
+- the 1.25× phase pauses;
+- the charge rule max(measured unit time, authoritative instance time). Every study instance is charged, including the
+  Phase L check instances (3.81 GPU-h-eq so far).
+
+**Implementation.**
+- **Cap generation 0.** The study log records the cap as cap generation 0 (`runguard.CapGeneration`, `study.CAP`):
+  dated 2026-11-19, decided by the user, source this section. It is written by the first `ProductionGuard` and bound to
+  the contract generation it was recorded under.
+- **Enforcement.** `CombinedLedger.check_before` enforces the cap in force.
+- **Dead-man allowance.** The allowance is the remaining cap: max GPU-h = cap − charged, and `max_usd` = dead-man spend
+  + remaining GPU-h × the provider price. The persisted dead-man policy is re-based once per new cap generation and
+  otherwise only tightens. Before the study log exists, the Phase L check instances are charged from the dead-man
+  ledger.
+
+**Later raises.** A later raise:
+- is the chair's decision only;
+- is announced to the user when it is made;
+- is logged as a dated cap-generation entry, here (an appended dated line under this section) and in the study log,
+  before the units it funds;
+- never takes combined Lambda spend beyond $1,000. The guard refuses any cap above $1,000 at the ledger convention, any
+  lower cap, and any chair raise not marked as announced.
+
+A cap generation is not a contract transition: no result or canary is superseded. A raise never changes a claim, α, N,
+margin or stopping rule.
+
+### II.31.5 Run-health duties (ruling addendum; every instance-hour)
+
+1. **Heartbeat.** The worker heartbeat (`wm.c1.health.Sampler`, every 30 s; `heartbeat.json`) carries GPU utilisation
+   and memory per GPU (NVML, else `nvidia-smi`) and the request in flight.
+2. **Incidents.** The controller (`health.HealthMonitor`) treats each of the following as an incident:
+   - GPU utilisation below 20 % (maximum over GPUs) for more than 15 minutes while a unit is in flight, measured on the
+     worker clock from the later of the unit's start and the start of the low run. A heartbeat without GPU telemetry
+     for that long counts too.
+   - Any traceback or error: an error result, a traceback in a result payload, or a traceback or error line in the
+     worker log.
+   - A canary that does not equal the reference.
+   - A unit whose kind is unregistered, or whose §II.18 stage is not the current stage or the next one. That covers
+     going back, and skipping a stage that the registered data flow did not declare skipped (e.g. E1 not designated).
+     The §II.18 stage order is: bank field → bank states → fits → E2 → S-BoN → sealed read → E1 generation → S-TE
+     calibration → training → generation.
+3. **On an incident.**
+   - The controller persists an `incident` record in the study log and stops issuing: `ProductionGuard.begin` raises
+     `HealthHalt` before any attempt is recorded, so a halt never consumes an attempt.
+   - An in-flight request that tripped the idle rule is withdrawn.
+   - The controller diagnoses and reports to the chair.
+   - Issuing resumes only after an `incidents_resolved` record that names the diagnosis and the chair report.
+   - A technical failure that the registered retry policy (§II.22.6) would retry is retried only after resumption, with
+     the same attempt budget.
+4. **Health summary.** At every chunk boundary, the controller writes a health summary to `<runs>/health/summary.jsonl`
+   and `latest.json`. It records the canary result, GPU utilisation and memory, open incidents, the current stage, the
+   charge, the cap in force and the remaining GPU-h.
+5. **Agent duty.** The implementation agent checks health at every chunk boundary and does not end its turn while an
+   instance is live.
+
+*Flagged to the chair (engineering, outcome-blind).* Some registered units may legitimately keep the GPU below 20 % for
+more than 15 minutes. Examples: the E2 planner's CPU-side CEM (Phase 0 measured about 6 s of planner CPU per proposal
+slot), and controller-side LLM-reader waits if the worker holds a request meanwhile. Under the rule as written, these
+are incidents and halt for review; no exemption is introduced here.
+
+### II.31.6 Code and tests
+
+**Code.**
+- New modules: `src/wsp/wm/c1/genengine.py` and `src/wsp/wm/c1/health.py`.
+- `src/wsp/wm/runguard.py`: `CapGeneration`, the `cap_generation`, `incident` and `incidents_resolved` records, and
+  `HealthHalt`.
+- `src/wsp/wm/c1/lambda_ops.py` (`tighten`, `deadman_gpu_h`).
+- The generation callers: `modelops`, `launchops` (`gen_repeat`), `genops`, `serve`.
+- `vllmops` (`stop_token_ids`, `child_env`).
+- `worker`, `transport`, `ctl`, `study`, `controller`, and `scripts/wme_c1_ctl.py`.
+
+**Tests.** `tests/test_wme_c1_v2l.py`, `tests/test_wme_c1_genops.py`, and the CPU drill (scenario H: run-health halt,
+refusal and resumption).

@@ -73,8 +73,9 @@ class Ctx:
 
 
 class Worker:
-    def __init__(self, root, handlers: dict, poll_s: float = 1.0, log=None):
+    def __init__(self, root, handlers: dict, poll_s: float = 1.0, log=None, sampler=None):
         self.root = Path(root)
+        self.sampler = sampler  # wm.c1.health.Sampler: GPU utilisation/memory heartbeat (§II.31)
         self.handlers = dict(handlers)
         self.poll_s = poll_s
         self.log = log or (lambda *a: print(*a, file=sys.stderr, flush=True))
@@ -152,6 +153,8 @@ class Worker:
             "started_at": ctx.t0,
         }
         status = "ok"
+        if self.sampler is not None:
+            self.sampler.set_inflight(req)
         try:
             fn = self.handlers.get(req["kind"])
             if fn is None:
@@ -185,6 +188,8 @@ class Worker:
             self._write_result(req, rec, {})
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
+            if self.sampler is not None:
+                self.sampler.set_inflight(None)
         os.replace(path, self.root / "done" / path.name)
         self.progress(
             {"id": req["id"], "kind": req["kind"], "event": status, "seconds": time.time() - ctx.t0}
@@ -196,6 +201,8 @@ class Worker:
 
     def serve(self, stop_file: str = "STOP", max_idle_s: float | None = None):
         idle_since = time.time()
+        if self.sampler is not None:
+            self.sampler.start()
         while not (self.root / stop_file).exists():
             self.touch()
             todo = self.pending()
