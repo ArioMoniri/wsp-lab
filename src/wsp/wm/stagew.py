@@ -718,9 +718,8 @@ def analyse(
                 for p in world["paths"]
                 if p["type"] == t and p["runs"][0] in tr
             ]
-            pooled[t] = (
-                y0[None, :] + pooled_curve(ch) if ch else np.repeat(y0[None, :], N_POINTS, 0)
-            )
+            n_pts = next((len(p["keys"]) for p in world["paths"] if p["type"] == t), N_POINTS)
+            pooled[t] = y0[None, :] + pooled_curve(ch) if ch else np.repeat(y0[None, :], n_pts, 0)
         for p in world["paths"]:
             if p["type"] not in "SLM" or p["runs"][0] not in F:
                 continue
@@ -739,7 +738,7 @@ def analyse(
                 if k == 0:
                     for a, ra in raw.items():
                         preds[a] = y0[None, :] + s[a] * (ra - y0[None, :])
-                    preds["persistence"] = np.repeat(y0[None, :], N_POINTS, 0)
+                    preds["persistence"] = np.repeat(y0[None, :], len(ms), 0)
                     preds["pooled"] = pooled[p["type"]]
                 else:
                     off = arms["wm"].fit_offsets(ms[:k])

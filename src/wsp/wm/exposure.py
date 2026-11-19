@@ -109,6 +109,12 @@ EXPOSURES = {
         "splits": "all",
         "note": "stage W (EXPLORATORY): 500 MMLU-Pro and 500 SuperGPQA dev items scored for every library member",
     },
+    # RULING-wme-stagew2 §2: the stage-W2 dev panel is exposed before any W2 generation (and before an H-T3 panel)
+    "wme-w2": {
+        "manifest": "data/wme/panels/wme-w2/manifest.json",
+        "splits": "all",
+        "note": "stage W2 (EXPLORATORY): 500 MMLU-Pro and 500 SuperGPQA dev items scored for every W2 member",
+    },
 }
 
 # Proposed sizes (groups) for PREREG v1; the power simulation (wm.powersim) may change them before the freeze.
