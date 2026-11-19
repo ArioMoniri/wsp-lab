@@ -141,7 +141,10 @@ def _ok(recipe):
 def test_probe_gap1_no_unit_runs_without_an_open_instance(tmp_path):
     clk = Clock()
     g = _mk(tmp_path / "s", "i1", clk)
-    g.canary(REF)
+    with pytest.raises(
+        RG.InstanceNotOpen
+    ):  # no canary either without a registered instance (§II.26)
+        g.canary(REF)
     clk.t = 91 * H1  # 91 hours pass with no registered instance
     with pytest.raises(RG.InstanceNotOpen):
         H.run_units(H.UnitStore(tmp_path / "u"), UNITS[:1], _ok, "t" * 64, "p", guard=g)
@@ -256,9 +259,8 @@ def test_probe_gap3_lost_end_canary_allows_the_remaining_attempts(tmp_path):
     )
     assert g2.unit_status(_key(1))["attempts"][0][1] == "retained_ineligible"
     assert g2.ledger.instance_state("i1") == "closed"
-    assert g2.ledger.instance_gpu_h() == pytest.approx(
-        1.5 + 0.0
-    )  # i1 charged to its termination; i2 just opened
+    # i1 is charged max(local time to the loss declaration, 2.0 h; its termination record, 1.5 h); i2 just opened
+    assert g2.ledger.instance_gpu_h() == pytest.approx(2.0)
     out = H.run_units(store, UNITS[:1], _ok, "t" * 64, "p", guard=g2)
     assert out["u1"]["attempt_key"].endswith(".a2")  # the attempt count is kept
     with pytest.raises(ValueError):
@@ -385,3 +387,93 @@ def test_non_technical_failure_halts_but_is_charged(tmp_path):
     with pytest.raises(ValueError):
         H.run_units(H.UnitStore(tmp_path / "u"), [({"u": 9}, "u9")], fn, "t" * 64, "p", guard=g)
     assert [r["status"] for r in g.ledger.rows if r.get("kind") == "unit"] == ["failed"]
+
+
+# ------------------------------------------------------------------ Board A freeze re-check probes (§II.26)
+
+
+def test_probe_freeze_clock_rollback_cannot_credit_another_instance(tmp_path):
+    clk = Clock()
+    clk.t = 100 * H1
+    g = _mk(tmp_path / "s", "i1", clk)
+    g.open_instance()
+    clk.t = 10 * H1  # the wall clock moves backward 90 h
+    with pytest.raises(RG.ClockInconsistent):  # fail closed: no negative duration is ever recorded
+        g.close_instance()
+    with pytest.raises(
+        RG.ClockInconsistent
+    ):  # halted: nothing proceeds until authoritative reconciliation
+        g.relaunch("infrastructure", "i2")
+    assert g.ledger.halted()
+    with pytest.raises(RG.ClockInconsistent):  # clearing needs the authoritative termination of i1
+        g.ledger.clear_clock_halt("ntp", "clock re-synchronised")
+    g.reconcile_instance(
+        launched_at=100 * H1, terminated_at=101 * H1, gpus=1, source="provider API"
+    )
+    with pytest.raises(RG.ClockInconsistent):  # and a clock at or above the recorded maximum
+        g.ledger.clear_clock_halt("ntp", "clock re-synchronised")
+    clk.t = 101 * H1
+    g.ledger.clear_clock_halt("ntp", "clock re-synchronised")
+    charges = g.ledger.instance_charges()
+    assert all(v >= 0 for v in charges.values()) and charges["i1"] == pytest.approx(1.0)
+    g.relaunch("infrastructure", "i2")
+    g.open_instance()
+    g.canary(REF)
+    clk.t = 192 * H1  # i2 open 91 h: the cap stops the next unit (no credit from i1)
+    with pytest.raises(RG.CapExceeded):
+        H.run_units(H.UnitStore(tmp_path / "u"), UNITS[:1], _ok, "t" * 64, "p", guard=g)
+
+
+def test_probe_freeze_contract_rollback_does_not_revive_old_results(tmp_path):
+    clk, store = Clock(), H.UnitStore(tmp_path / "u")
+    g = _mk(tmp_path / "s", "i1", clk)
+    g.open_instance()
+    g.canary(REF)
+    H.run_units(store, UNITS[:1], _ok, "t" * 64, "p", guard=g)
+    g.canary(REF)
+    assert g.resolve(store, _key(1)) == {"unit": "u1"}
+    b = RG.LaunchAttestation(True, True, REF, "d" * 64, ATTEST.evidence)
+    tr = RG.ContractTransition("driver_or_cuda", "driver change", "abcdef1", True)
+    gb = _mk(tmp_path / "s", "i1", clk, att=b, transition=tr)
+    assert gb.generation == 1 and gb.resolve(store, _key(1)) is None
+    ga = _mk(tmp_path / "s", "i1", clk, att=ATTEST, transition=tr)  # back to the original digest
+    assert ga.generation == 2 and ga.contract == g.contract
+    assert ga.resolve(store, _key(1)) is None  # the generation-0 result stays superseded
+    assert ga.unit_status(_key(1))["attempts"][0][1] == "superseded_contract"
+    called = []
+
+    def fn(recipe):
+        called.append(1)
+        return {"unit": "u1", "generation": 2}
+
+    with pytest.raises(RG.CanaryMismatch):  # generation-0 canaries do not count for generation 2
+        H.run_units(store, UNITS[:1], fn, "t" * 64, "p", guard=ga)
+    ga.canary(REF)
+    H.run_units(store, UNITS[:1], fn, "t" * 64, "p", guard=ga)
+    assert called == [1]
+
+
+def test_probe_freeze_canary_after_loss_cannot_revive_an_attempt(tmp_path):
+    clk, store = Clock(), H.UnitStore(tmp_path / "u")
+    g = _mk(tmp_path / "s", "i1", clk)
+    g.open_instance()
+    g.canary(REF)
+    H.run_units(store, UNITS[:1], _ok, "t" * 64, "p", guard=g)  # a1 pending; i1 is then lost
+    clk.t = H1
+    g.declare_lost("i1", "preemption_or_capacity", "preempted", "abcdef1", True)
+    g.relaunch("preemption_or_capacity", "i2")
+    g.open_instance()
+    g.canary(REF)
+    H.run_units(store, UNITS[:1], lambda r: {"unit": "u1", "on": "i2"}, "t" * 64, "p", guard=g)
+    g.canary(REF)
+    stale = _mk(tmp_path / "s", "i1", clk)  # a stale guard with the lost instance's id
+    with pytest.raises(RG.InstanceNotOpen):  # no canary for a closed or lost instance
+        stale.canary(REF)
+    with pytest.raises(RG.InstanceNotOpen):  # run_units validates before resolving anything
+        H.run_units(store, UNITS[:1], _ok, "t" * 64, "p", guard=stale)
+    assert [s for _, s in stale.unit_status(_key(1))["attempts"]] == [
+        "retained_ineligible",
+        "eligible",
+    ]
+    assert any(e["type"] == "attempt_disposed" for e in stale.events)
+    assert stale.resolve(store, _key(1)) == {"unit": "u1", "on": "i2"}

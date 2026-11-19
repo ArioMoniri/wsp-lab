@@ -90,6 +90,10 @@ class InstanceNotOpen(RuntimeError):
     pass
 
 
+class ClockInconsistent(RuntimeError):
+    pass
+
+
 class ContractMismatch(RuntimeError):
     pass
 
@@ -116,8 +120,16 @@ def _read(path: Path) -> list:
 
 
 class CombinedLedger:
-    """Append-only ledger of measured GPU seconds per phase (successful and failed attempts) and of authoritative
-    instance time; one per 9B study."""
+    """Append-only ledger of measured GPU seconds per phase (successful and failed attempts) and of instance time;
+    one per 9B study.
+
+    **Clock discipline (fail closed, §II.26).** Every clock reading goes through :meth:`tick`, which persists each
+    new maximum. A reading below the recorded maximum persists a ``clock_halt`` and raises :class:`ClockInconsistent`;
+    while halted every timed operation raises. Local instance times are ticks, so a local duration is never negative
+    and never offsets another instance. An authoritative record (complete: launch and termination) can only add time:
+    each instance is charged max(local duration, authoritative duration). :meth:`clear_clock_halt` requires a clock at
+    or above the recorded maximum and an authoritative termination for every instance active when the clock halted.
+    Nothing is clamped."""
 
     def __init__(self, path, priced_gpu_h: dict, clock=time.time):
         self.path = Path(path)
@@ -125,87 +137,178 @@ class CombinedLedger:
         self.clock = clock
         self.rows = _read(self.path)
 
-    def add(self, phase: str, gpu_seconds: float, note: str = "", status: str = "ok"):
-        if phase not in self.priced:
-            raise KeyError(f"unpriced phase {phase}")
-        r = {
-            "kind": "unit",
-            "phase": phase,
-            "gpu_s": float(gpu_seconds),
-            "note": note,
-            "status": status,
-        }
+    def _write(self, r: dict):
         self.rows.append(r)
         _append(self.path, r)
 
+    # -------------------------------------------------- clock
+    def max_tick(self) -> float:
+        return max((r["t"] for r in self.rows if "t" in r), default=float("-inf"))
+
+    def halted(self) -> bool:
+        st = False
+        for r in self.rows:
+            if r.get("kind") == "clock_halt":
+                st = True
+            elif r.get("kind") == "clock_resolved":
+                st = False
+        return st
+
+    def tick(self) -> float:
+        """A trusted clock reading: persisted if it is a new maximum; a backward reading halts (persisted)."""
+        if self.halted():
+            raise ClockInconsistent(
+                "the clock is halted; reconcile authoritatively and clear_clock_halt()"
+            )
+        now = float(self.clock())
+        mt = self.max_tick()
+        if now < mt:
+            self._write(
+                {
+                    "kind": "clock_halt",
+                    "observed": now,
+                    "max_tick": mt,
+                    "active": self.active_instances(),
+                }
+            )
+            raise ClockInconsistent(
+                f"clock reading {now} is earlier than the recorded {mt}; halted"
+            )
+        if now > mt:
+            self._write({"kind": "tick", "t": now})
+        return now
+
+    def _trusted_now(self) -> float:
+        """The last trusted time while halted (never a reading from the inconsistent clock)."""
+        return self.max_tick() if self.halted() else self.tick()
+
+    def clear_clock_halt(self, source: str, description: str):
+        if not self.halted():
+            raise ValueError("the clock is not halted")
+        if not source or not description:
+            raise ValueError("name the authoritative source and describe the clock repair")
+        halt = max(i for i, r in enumerate(self.rows) if r.get("kind") == "clock_halt")
+        need = set(self.rows[halt].get("active", []))
+        have = {
+            r["instance"]
+            for r in self.rows[halt + 1 :]
+            if r.get("kind") == "instance_authoritative"
+        }
+        if need - have:
+            raise ClockInconsistent(f"authoritative termination missing for {sorted(need - have)}")
+        now = float(self.clock())
+        if now < self.max_tick():
+            raise ClockInconsistent("the clock is still behind the recorded maximum")
+        self._write({"kind": "clock_resolved", "source": source, "description": description})
+        self.tick()
+
+    # -------------------------------------------------- units
+    def add(self, phase: str, gpu_seconds: float, note: str = "", status: str = "ok"):
+        if phase not in self.priced:
+            raise KeyError(f"unpriced phase {phase}")
+        if gpu_seconds < 0:
+            raise ClockInconsistent("a negative measured duration")
+        self._write(
+            {
+                "kind": "unit",
+                "phase": phase,
+                "gpu_s": float(gpu_seconds),
+                "note": note,
+                "status": status,
+            }
+        )
+
+    # -------------------------------------------------- instances
     def instance_state(self, instance: str) -> str:
-        """``unknown``, ``active`` or ``closed`` (a local close or an authoritative termination)."""
+        """``unknown``, ``active`` or ``closed`` (a local close or an authoritative termination; final)."""
         st = "unknown"
         for r in self.rows:
             if r.get("instance") != instance:
                 continue
             if r.get("kind") == "instance_open" and st == "unknown":
                 st = "active"
-            elif r.get("kind") == "instance_close" or (
-                r.get("kind") == "instance_authoritative" and r.get("terminated_at") is not None
-            ):
+            elif r.get("kind") in ("instance_close", "instance_authoritative"):
                 st = "closed"
-            elif r.get("kind") == "instance_authoritative" and st == "unknown":
-                st = "active"
         return st
 
-    def instance_open(self, instance: str, gpus: int, t: float | None = None) -> bool:
-        """Register an instance opening. Idempotent for an active instance (the earliest opening is kept; a restart
-        never resets time); a closed instance id cannot be reopened (a replacement needs a new id)."""
+    def active_instances(self) -> list:
+        return sorted(
+            {r["instance"] for r in self.rows if r.get("kind") == "instance_open"}
+            - {
+                r["instance"]
+                for r in self.rows
+                if r.get("kind") in ("instance_close", "instance_authoritative")
+            }
+        )
+
+    def instance_open(self, instance: str, gpus: int) -> bool:
+        """Idempotent for an active instance (the earliest opening is kept); a closed id is never reopened."""
         st = self.instance_state(instance)
         if st == "active":
+            self.tick()
             return False
         if st == "closed":
             raise ValueError(f"{instance} is closed; a replacement instance needs a new id")
-        r = {
-            "kind": "instance_open",
-            "instance": instance,
-            "gpus": int(gpus),
-            "t": self.clock() if t is None else t,
-        }
-        self.rows.append(r)
-        _append(self.path, r)
+        self._write(
+            {"kind": "instance_open", "instance": instance, "gpus": int(gpus), "t": self.tick()}
+        )
         return True
 
-    def instance_close(self, instance: str, t: float | None = None):
+    def instance_close(self, instance: str):
         if self.instance_state(instance) != "active":
             raise ValueError(f"{instance} is not active")
-        r = {"kind": "instance_close", "instance": instance, "t": self.clock() if t is None else t}
-        self.rows.append(r)
-        _append(self.path, r)
+        self._write({"kind": "instance_close", "instance": instance, "t": self.tick()})
 
     def reconcile_instance(
-        self, instance: str, launched_at: float, terminated_at, gpus: int, source: str
+        self, instance: str, launched_at: float, terminated_at: float, gpus: int, source: str
     ):
-        """An authoritative instance record (provider API or dead-man terminator ledger). It overrides the local
-        opening and closing for that instance; ``terminated_at`` None means still running (counted to now). The
-        authoritative launch can only be earlier than or equal to a local opening."""
+        """A complete authoritative record (provider API or dead-man terminator ledger). It closes the instance
+        (locally at the last trusted time) and can only add time: the instance is charged max(local, authoritative).
+        Allowed while the clock is halted (it is the way out of a halt)."""
         if not source:
             raise ValueError("name the authoritative source")
-        local = [
-            r["t"]
-            for r in self.rows
-            if r.get("kind") == "instance_open" and r["instance"] == instance
-        ]
-        if local and launched_at > min(local):
-            raise ValueError("an authoritative launch cannot be later than the recorded opening")
-        if terminated_at is not None and terminated_at < launched_at:
-            raise ValueError("termination before launch")
-        r = {
-            "kind": "instance_authoritative",
-            "instance": instance,
-            "launched_at": float(launched_at),
-            "terminated_at": None if terminated_at is None else float(terminated_at),
-            "gpus": int(gpus),
-            "source": source,
-        }
-        self.rows.append(r)
-        _append(self.path, r)
+        if terminated_at is None or launched_at is None:
+            raise ValueError("an authoritative record needs both launch and termination")
+        if float(terminated_at) < float(launched_at):
+            raise ClockInconsistent("authoritative termination before launch")
+        if self.instance_state(instance) == "active":
+            self._write({"kind": "instance_close", "instance": instance, "t": self._trusted_now()})
+        self._write(
+            {
+                "kind": "instance_authoritative",
+                "instance": instance,
+                "launched_at": float(launched_at),
+                "terminated_at": float(terminated_at),
+                "gpus": int(gpus),
+                "source": source,
+            }
+        )
+
+    def instance_charges(self, now: float | None = None) -> dict:
+        """{instance: charged GPU-hours}; every term is non-negative by construction."""
+        now = self.tick() if now is None else float(now)
+        if now < self.max_tick():
+            raise ClockInconsistent("a query time earlier than the recorded maximum")
+        opened, closed, auth = {}, {}, {}
+        for r in self.rows:
+            k = r.get("kind")
+            if k == "instance_open":
+                opened.setdefault(r["instance"], (r["t"], r["gpus"]))
+            elif k == "instance_close":
+                closed.setdefault(r["instance"], r["t"])
+            elif k == "instance_authoritative":
+                d = (r["terminated_at"] - r["launched_at"]) * r["gpus"]
+                auth[r["instance"]] = max(auth.get(r["instance"], 0.0), d)
+        out = {}
+        for inst in set(opened) | set(auth):
+            local = 0.0
+            if inst in opened:
+                t0, g = opened[inst]
+                local = (closed.get(inst, now) - t0) * g
+            if local < 0:
+                raise ClockInconsistent(f"{inst}: negative local duration")
+            out[inst] = max(local, auth.get(inst, 0.0)) / 3600
+        return out
 
     def unit_gpu_h(self, phase: str | None = None) -> float:
         return (
@@ -218,28 +321,7 @@ class CombinedLedger:
         )
 
     def instance_gpu_h(self, now: float | None = None) -> float:
-        """Per instance: the latest authoritative record if any, else the earliest local opening to the local close
-        (or to now while active); times GPUs."""
-        now = self.clock() if now is None else now
-        auth, opened, closed = {}, {}, {}
-        for r in self.rows:
-            k = r.get("kind")
-            if k == "instance_authoritative":
-                auth[r["instance"]] = r
-            elif k == "instance_open":
-                opened.setdefault(r["instance"], (r["t"], r["gpus"]))
-            elif k == "instance_close":
-                closed.setdefault(r["instance"], r["t"])
-        total = 0.0
-        for inst in set(auth) | set(opened):
-            if inst in auth:
-                a = auth[inst]
-                end = now if a["terminated_at"] is None else a["terminated_at"]
-                total += (end - a["launched_at"]) * a["gpus"]
-            else:
-                t0, g = opened[inst]
-                total += (closed.get(inst, now) - t0) * g
-        return total / 3600
+        return sum(self.instance_charges(now).values())
 
     def gpu_h(self, phase: str | None = None) -> float:
         """Phase totals are measured unit time; the study total is the larger of unit and instance time."""
@@ -383,6 +465,9 @@ class EngineeringGuard:
         self.purpose = purpose
         self.clock = time.time
 
+    def validate(self):
+        return None
+
     def resolve(self, store, key):
         return store.read(key) if store.done(key) else None
 
@@ -461,7 +546,7 @@ class ContractTransition:
 
 
 class ProductionGuard:
-    """The mandatory confirmatory guard (see the module docstring and §II.25)."""
+    """The mandatory confirmatory guard (see the module docstring, §II.25 and §II.26)."""
 
     confirmatory = True
 
@@ -489,11 +574,13 @@ class ProductionGuard:
         self.retry = RetryPolicy(self.state / "retry.jsonl")
         self.events_path = self.state / "events.jsonl"
         self.events = _read(self.events_path)
-        # ---- the run contract (gap 2)
+        # ---- the run contract and its generation (gap 2; §II.26)
         new = contract_digest(attestation)
-        contracts = [e for e in self.events if e["type"] in ("attestation", "contract_transition")]
-        self.contract = new
+        contracts = self._contract_events()
+        self.generation = len(contracts) - 1
+        self.contract = contracts[-1]["digest"] if contracts else None
         if not contracts:
+            self.generation, self.contract = 0, new
             self._event("attestation", digest=new, **self._att_fields(attestation))
         elif contracts[-1]["digest"] != new:
             if transition is None:
@@ -502,10 +589,12 @@ class ProductionGuard:
                     "results without an explicit ContractTransition"
                 )
             transition.check()
+            self.generation, self.contract = len(contracts), new
             self._event(
                 "contract_transition",
                 digest=new,
                 previous=contracts[-1]["digest"],
+                previous_generation=len(contracts) - 1,
                 cause=transition.cause,
                 description=transition.description,
                 commit=transition.commit,
@@ -514,11 +603,7 @@ class ProductionGuard:
             )
         elif transition is not None:
             raise ValueError("a ContractTransition was given but the contract is unchanged")
-        self.references = {
-            e["digest"]: e["canary_reference"]
-            for e in self.events
-            if e["type"] in ("attestation", "contract_transition")
-        }
+        self.references = {e["generation"]: e["canary_reference"] for e in self._contract_events()}
         # ---- the registered fallback (gap 4)
         try:
             fb_digest = _digest(fallback_value)
@@ -533,6 +618,9 @@ class ProductionGuard:
             )
         self.fallback_payload = reg[0]["payload"] if reg else fallback_value
         self.fallback_sha256 = fb_digest
+
+    def _contract_events(self):
+        return [e for e in self.events if e["type"] in ("attestation", "contract_transition")]
 
     @staticmethod
     def _att_fields(att):
@@ -551,17 +639,27 @@ class ProductionGuard:
             "instance": self.instance,
             "phase": self.phase,
             "contract": getattr(self, "contract", None),
+            "generation": getattr(self, "generation", 0),
             **kw,
         }
         self.events.append(e)
         _append(self.events_path, e)
         return e
 
-    # -------------------------------------------------- instances and canaries (gaps 1 and 3)
+    # -------------------------------------------------- lifecycle (gaps 1 and 3)
     def _lost(self, instance) -> bool:
         return any(
             e["type"] == "instance_lost" and e["lost_instance"] == instance for e in self.events
         )
+
+    def _require_active(self):
+        self.ledger.tick()  # fail closed on an inconsistent clock
+        if self.ledger.instance_state(self.instance) != "active" or self._lost(self.instance):
+            raise InstanceNotOpen(f"{self.instance}: no validated open instance")
+
+    def validate(self):
+        """Lifecycle, clock and contract validation; ``run_units`` calls it before any ``resolve``."""
+        self._require_active()
 
     def open_instance(self, gpus: int = 1):
         if self._lost(self.instance):
@@ -569,12 +667,36 @@ class ProductionGuard:
         new = self.ledger.instance_open(self.instance, gpus)
         self._event("instance_open" if new else "instance_resume", gpus=gpus)
 
+    def _closure_seq(self, instance):
+        s = [
+            e["seq"]
+            for e in self.events
+            if e["type"] in ("instance_close", "instance_lost", "instance_reconciled")
+            and e.get("target", e.get("lost_instance", e["instance"])) == instance
+        ]
+        return min(s) if s else None
+
+    def _dispose_unbracketed(self, instance, reason):
+        """Irreversibly mark attempts on ``instance`` lacking a closing canary as retained-ineligible."""
+        for a in self.events:
+            if (
+                a["type"] == "attempt_ok"
+                and a["instance"] == instance
+                and self.attempt_status(a) == "pending"
+            ):
+                self._event(
+                    "attempt_disposed", target=instance, attempt_seq=a["seq"], reason=reason
+                )
+
     def close_instance(self):
+        self._require_active()
+        self._dispose_unbracketed(self.instance, "closed without a closing canary")
         self.ledger.instance_close(self.instance)
-        self._event("instance_close")
+        self._event("instance_close", target=self.instance)
 
     def reconcile_instance(self, launched_at, terminated_at, gpus, source, instance=None):
         inst = instance or self.instance
+        self._dispose_unbracketed(inst, f"authoritatively terminated ({source})")
         self.ledger.reconcile_instance(inst, launched_at, terminated_at, gpus, source)
         self._event("instance_reconciled", target=inst, source=source, terminated_at=terminated_at)
 
@@ -585,31 +707,31 @@ class ProductionGuard:
         description: str,
         commit: str,
         outcome_blind: bool,
+        launched_at=None,
         terminated_at=None,
         source: str = "operator: provider termination record",
     ):
-        """Technical disposition for an instance lost before its closing canary (preemption, crash): its
-        unbracketed attempts become retained-ineligible (no canary is fabricated), its attempt counts stay, and
-        its instance time is charged to ``terminated_at`` (now if unknown)."""
+        """Technical disposition for an instance lost before its closing canary (preemption, crash). Its unbracketed
+        attempts become retained-ineligible irreversibly (no canary is fabricated, and no canary can be recorded for
+        it afterwards); attempt counts stay; its time is charged (max of local and the termination record)."""
         if cause not in TECHNICAL_CAUSES:
             raise ValueError(f"loss cause {cause!r} is not a registered technical cause")
         if outcome_blind is not True:
             raise ValueError("a loss disposition must be decided without reading any outcome")
         if not description or len(commit) < 7:
             raise ValueError("a loss disposition needs a description and the code commit")
+        if self._lost(instance):
+            raise ValueError(f"{instance} is already declared lost")
+        self._dispose_unbracketed(instance, f"lost: {cause}")
         if self.ledger.instance_state(instance) == "active":
             opened = [
-                r["t"]
+                r
                 for r in self.ledger.rows
                 if r.get("kind") == "instance_open" and r["instance"] == instance
             ]
-            g = [
-                r["gpus"]
-                for r in self.ledger.rows
-                if r.get("kind") == "instance_open" and r["instance"] == instance
-            ]
-            end = self.clock() if terminated_at is None else terminated_at
-            self.ledger.reconcile_instance(instance, min(opened), end, g[0], source)
+            t0 = opened[0]["t"] if launched_at is None else launched_at
+            end = self.ledger._trusted_now() if terminated_at is None else terminated_at
+            self.ledger.reconcile_instance(instance, t0, end, opened[0]["gpus"], source)
         self._event(
             "instance_lost",
             lost_instance=instance,
@@ -621,32 +743,41 @@ class ProductionGuard:
         )
 
     def canary(self, sha: str) -> bool:
+        self._require_active()  # never for a closed, lost or unregistered instance
         self._event("canary", sha=sha)
         return sha == self.attestation.canary_reference
 
     def relaunch(self, cause: str, new_instance: str):
+        self.ledger.tick()
         self.retry.relaunch(self.phase, cause)
         self._event("relaunch", cause=cause, new_instance=new_instance)
         self.instance = new_instance
 
-    # -------------------------------------------------- eligibility (per contract)
+    # -------------------------------------------------- eligibility (per contract generation)
     def attempt_status(self, a) -> str:
-        if a.get("contract") != self.contract:
+        if a.get("generation") != self.generation or a.get("contract") != self.contract:
             return "superseded_contract"
-        ref = self.references[a["contract"]]
+        if any(
+            e["type"] == "attempt_disposed" and e["attempt_seq"] == a["seq"] for e in self.events
+        ):
+            return "retained_ineligible"
+        ref = self.references[a["generation"]]
+        close = self._closure_seq(a["instance"])
         cans = [
             e
             for e in self.events
             if e["type"] == "canary"
             and e["instance"] == a["instance"]
+            and e.get("generation") == a["generation"]
             and e.get("contract") == a["contract"]
+            and (close is None or e["seq"] < close)
         ]
         before = [e for e in cans if e["seq"] < a["seq"]]
         after = [e for e in cans if e["seq"] > a["seq"]]
         if not before or before[-1]["sha"] != ref:
             return "retained_ineligible"
         if not after:
-            return "retained_ineligible" if self._lost(a["instance"]) else "pending"
+            return "retained_ineligible" if close is not None else "pending"
         return "eligible" if after[0]["sha"] == ref else "retained_ineligible"
 
     def _attempts(self, key):
@@ -659,6 +790,10 @@ class ProductionGuard:
 
     # -------------------------------------------------- unit protocol used by harness.run_units
     def resolve(self, store, key):
+        if self.ledger.halted():
+            raise ClockInconsistent(
+                "the clock is halted; no result is returned until it is cleared"
+            )
         for a in sorted(self._attempts(key), key=lambda a: a["seq"]):
             if self.attempt_status(a) == "eligible":
                 return store.read(a["attempt_key"])
@@ -678,15 +813,13 @@ class ProductionGuard:
         return None
 
     def begin(self, key, label) -> int:
-        if self.ledger.instance_state(self.instance) != "active" or self._lost(self.instance):
-            raise InstanceNotOpen(
-                f"{self.instance}: no validated open instance; open_instance() first"
-            )
+        self._require_active()
         cans = [
             e
             for e in self.events
             if e["type"] == "canary"
             and e["instance"] == self.instance
+            and e.get("generation") == self.generation
             and e.get("contract") == self.contract
         ]
         if not cans or cans[-1]["sha"] != self.attestation.canary_reference:
@@ -742,6 +875,7 @@ class ProductionGuard:
         units = sorted({e["unit"] for e in self.events if "unit" in e})
         return {
             "contract": self.contract,
+            "generation": self.generation,
             "units": {u: self.unit_status(u) for u in units},
             "charged_gpu_h": self.ledger.gpu_h(),
             "unit_gpu_h": self.ledger.unit_gpu_h(),
