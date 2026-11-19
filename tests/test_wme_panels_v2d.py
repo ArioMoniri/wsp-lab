@@ -218,3 +218,17 @@ def test_registry_before_orders_the_confirmatory_panels():
     assert "wme-w2" in reg and "wme-c1" not in reg and "wme-c2-gen" not in reg
     reg2 = X.registry_before("wme-c2-gen")
     assert "wme-c1" in reg2 and "wme-c2-gen" not in reg2
+
+
+def test_consumers_are_dealt_only_groups_with_an_item_in_their_own_pool():
+    items = _mmlu(40)
+    c1_pool = {r["hash"] for r in items[:20]}
+    a = V.allocate(
+        _pool(items), set(), (("c1", 8, "raise"), ("c2", 10, "reduce")), eligible={"c1": c1_pool}
+    )
+    rep = V.joint_groups(_pool(items))
+    groups = {rep[h] for h, c in a["assignment"].items() if c == "c1"}
+    assert groups and all(any(rep[h] == g for h in c1_pool) for g in groups)
+    assert a["consumers"][0]["assigned_groups"] == 8
+    with pytest.raises(ValueError):
+        V.allocate(_pool(items), set(), (("c1", 25, "raise"),), eligible={"c1": c1_pool})

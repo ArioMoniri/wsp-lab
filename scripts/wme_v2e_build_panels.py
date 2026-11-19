@@ -146,7 +146,14 @@ def main():
     exp1 = X.load_exposures(ROOT, X.registry_before("wme-c1"))
     V.require_exposures(exp1)
     pre = {h: V.C1_ROOT_CONSUMER for h in reserved_items if h in mm_pool}
-    alloc = V.allocate(mm_pool, X.all_exposed(exp1), V.CONSUMERS, preassigned=pre)
+    eligible = {
+        V.CONSUMERS[0][0]: {r["hash"] for r in pools["mmlupro_gold_lp"]},
+        V.CONSUMERS[1][0]: {r["hash"] for r in mc["mmlupro_gen"]},
+    }
+    alloc = V.allocate(
+        mm_pool, X.all_exposed(exp1), V.CONSUMERS, preassigned=pre, eligible=eligible
+    )
+    log["mmlu_pools"] = {k: len(v) for k, v in eligible.items()} | {"union": len(mm_pool)}
     ALLOC.parent.mkdir(parents=True, exist_ok=True)
     ALLOC.write_text(json.dumps(alloc, sort_keys=True))
     log["allocation_s"] = round(time.time() - t0)

@@ -98,12 +98,19 @@ def _canon(obj) -> str:
 
 
 def allocate(
-    pool: dict, exposed: set, consumers=CONSUMERS, salt: str = ALLOC_SALT, preassigned=None
+    pool: dict,
+    exposed: set,
+    consumers=CONSUMERS,
+    salt: str = ALLOC_SALT,
+    preassigned=None,
+    eligible=None,
 ) -> dict:
     """``pool`` {item hash: text}. Returns the allocation record (assignment {hash: consumer | "reserve"}).
 
     ``preassigned`` {item hash: consumer}: groups already committed before the allocation (the bank roots'
-    construction shards, PREREG §II.23.3) go whole to that consumer, whatever their exposure, and are not dealt."""
+    construction shards, PREREG §II.23.3) go whole to that consumer, whatever their exposure, and are not dealt.
+    ``eligible`` {consumer: item hashes}: a consumer is dealt only groups with at least one item in its own pool;
+    a skipped group stays in rank order for the next consumer (or the reserve)."""
     rep = joint_groups(pool)
     members: dict = {}
     for h, r in rep.items():
@@ -121,16 +128,25 @@ def allocate(
     for r, c in pre.items():
         for h in members[r]:
             assignment[h] = c
+    queue = list(ok)
     for name, need, rule in consumers:
-        n = min(need, len(ok) - i)
+        el = None if eligible is None or name not in eligible else set(eligible[name])
+        take, rest = [], []
+        for r in queue:
+            if len(take) < need and (el is None or set(members[r]) & el):
+                take.append(r)
+            else:
+                rest.append(r)
+        n = len(take)
         if n < need and rule == "raise":
-            raise ValueError(f"{name}: {len(ok) - i} fresh groups for {need} (never relaxed)")
-        for r in ok[i : i + n]:
+            raise ValueError(f"{name}: {n} eligible fresh groups for {need} (never relaxed)")
+        for r in take:
             for h in members[r]:
                 assignment[h] = name
         out.append({"consumer": name, "required": need, "assigned_groups": n, **shortfall(need, n)})
+        queue = rest
         i += n
-    for r in ok[i:]:
+    for r in queue:
         for h in members[r]:
             assignment[h] = "reserve"
     rec = {
