@@ -58,11 +58,12 @@ NOT_IN_BUDGET = ("generation",)
 class BudgetLedger:
     def __init__(self, budget: int, arms):
         arms = list(arms)
-        if int(budget) <= 0:
+        if float(budget) <= 0:
             raise ValueError("budget must be positive")
         if not arms or len(set(arms)) != len(arms):
             raise ValueError("arms must be unique and nonempty")
-        self.budget = int(budget)
+        # an integer B for the E2 arms; a non-integer budget for S-BoN's measured parity budget (PREREG §II.22.7)
+        self.budget = int(budget) if float(budget).is_integer() else float(budget)
         self.arms = arms
         self._entries = {a: [] for a in arms}
         self._closed = {}

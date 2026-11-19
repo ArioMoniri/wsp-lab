@@ -128,3 +128,39 @@ def e2_test(
         m = fam == f
         w[m] = 1.0 / (N_FAMILIES * m.sum())
     return dict(test(d, weights=w, n_flip=n_flip, seed=seed, alpha=alpha), n_episodes=len(d))
+
+
+RB_N_BOOT = 9999
+RB_SEED = 20261119
+
+
+def rb_e2_test(
+    d, families, n_boot: int = RB_N_BOOT, seed: int = RB_SEED, alpha: float = ALPHA
+) -> dict:
+    """RB-E2, the pre-declared robustness analysis of H-E2 (PREREG_WME §II.22.4): the family-weighted mean paired
+    difference (the statistic of :func:`e2_test`) with a one-sided studentised bootstrap lower bound; episodes are
+    resampled with replacement within family. Rejects iff the lower bound > 0."""
+    d = np.asarray(d, float)
+    fam = np.asarray(families)
+    fs = np.unique(fam)
+    if len(fs) != N_FAMILIES:
+        raise ValueError(f"RB-E2 needs episodes from all {N_FAMILIES} families")
+    groups = [d[fam == f] for f in fs]
+
+    def stat_se(gs):
+        m = np.mean([g.mean() for g in gs])
+        v = sum(g.var(ddof=1) / len(g) for g in gs if len(g) > 1) / N_FAMILIES**2
+        return m, math.sqrt(v)
+
+    m, se = stat_se(groups)
+    if se == 0:
+        return {"stat": float(m), "lb": float(m), "reject": bool(m > 0), "degenerate": True}
+    rng = np.random.default_rng(seed)
+    ts = np.empty(n_boot)
+    for b in range(n_boot):
+        gs = [g[rng.integers(0, len(g), len(g))] for g in groups]
+        mb, sb = stat_se(gs)
+        ts[b] = (mb - m) / sb if sb > 0 else 0.0
+    q = float(np.quantile(ts, 1 - alpha))
+    lb = m - q * se
+    return {"stat": float(m), "lb": float(lb), "reject": bool(lb > 0), "degenerate": False}
