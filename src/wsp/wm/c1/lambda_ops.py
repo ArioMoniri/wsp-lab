@@ -115,7 +115,7 @@ def wait_live(dm: D.Deadman, timeout_s=36000, poll_s=15, heartbeat=True):
     raise TimeoutError("no live instance")
 
 
-def wait_active_ssh(dm: D.Deadman, iid: str, alias: str, timeout_s=1800, poll_s=15):
+def wait_active_ssh(dm: D.Deadman, iid: str, alias: str, timeout_s=2700, poll_s=15):
     t0 = time.time()
     SSH_CONFIG.parent.mkdir(parents=True, exist_ok=True)
     while time.time() - t0 < timeout_s:

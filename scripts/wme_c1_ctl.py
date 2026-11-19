@@ -440,9 +440,14 @@ def cmd_phasel_main(a):
         st.guard(ph, inst)
     g = st.guard("bank", inst)
     tr.set_fence(g.epoch, inst)
-    if a.parity_iid:
-        la, te = LO.reconcile(g, LO.STATE, a.parity_iid, 2)
-        log(f"parity instance reconciled: {(te - la) / 3600 * 2:.3f} GPU-h-eq")
+    # every earlier study instance (the parity check, failed boots) enters the combined charge (precondition 7)
+    dms = json.loads((LO.STATE / "state.json").read_text())
+    for oid, rec in sorted(dms["instances"].items()):
+        if oid == a.iid or rec.get("confirmed_terminated_at") is None:
+            continue
+        gp = LO.GPUS.get(rec.get("type"), 1)
+        la, te = LO.reconcile(g, LO.STATE, oid, gp)
+        log(f"earlier instance {rec.get('name')} reconciled: {(te - la) / 3600 * gp:.3f} GPU-h-eq")
     g.open_instance(1)
     rec = C.run_canary(g, rem)
     log("start canary", rec["pass"])
