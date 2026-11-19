@@ -50,22 +50,13 @@ def sha_file(p):
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 
-def main():
-    t0 = time.time()
-    from wsp.wm import exposure as X
-    from wsp.wm import p3gen as G
+def c1_inputs(man: dict):
+    """The wme-c1 inputs exactly as the build uses them (also imported by scripts/wme_v2f_root_lineage.py):
+    the c1 source pools (+ the harmful supplement and the TriviaQA pool), the registered sizes, the fresh
+    construction minimums, and the bank-root shard items mapped through ``panel_c1.grouped_pool``."""
     from wsp.wm import panel_c1 as C1
-    from wsp.wm import panels_v2d as V
-    from wsp.wm import stagew as W
     from wsp.wm import supplement as SU
     from wsp.wm import triviaqa as TQ
-    from wsp.wm.panel import text_hash
-
-    for d in ("wme-c1", "wme-c2-gen"):
-        if (PANELS / d).exists():
-            raise SystemExit(f"{PANELS / d} exists; panels are frozen once built")
-    man = json.loads((ROOT / "docs/prereg/wme_manifest.json").read_text())
-    log = {"t0": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
 
     # ---- pools of wme-c1 (as the v1 audit and the root sampler formed them)
     aud = _mod("c1audit", "scripts/wme_c1_exposure_audit.py")
@@ -76,12 +67,13 @@ def main():
     for r in roots["roots"]:
         root_groups |= set(r.get("contrast_source_groups", []) or [])
         root_groups |= set(r.get("adapter_source_groups", []) or [])
-    reserved_items, found = set(), set()
-    for rows in grouped.values():
+    reserved_items, found, root_orig = set(), set(), {}
+    for obj, rows in grouped.items():
         for r in rows:
             if r["group"] in root_groups:
                 reserved_items.add(r["hash"])
                 found.add(r["group"])
+                root_orig[r["hash"]] = (obj, r["group"])
     if found != root_groups:
         raise SystemExit(f"{len(root_groups - found)} root-shard groups not found in the pools")
     pools = dict(base_pools)
@@ -121,6 +113,29 @@ def main():
             "construction": "rest",
         }
         cmin[o] = s.get("construction_field", 0) + s.get("construction_e2", 0)
+
+    return pools, sizes, cmin, reserved_items, root_groups, meta_c1, root_orig
+
+
+def main():
+    t0 = time.time()
+    from wsp.wm import exposure as X
+    from wsp.wm import p3gen as G
+    from wsp.wm import panel_c1 as C1
+    from wsp.wm import panels_v2d as V
+    from wsp.wm import stagew as W
+    from wsp.wm import supplement as SU
+    from wsp.wm import triviaqa as TQ
+    from wsp.wm.panel import text_hash
+
+    for d in ("wme-c1", "wme-c2-gen"):
+        if (PANELS / d).exists():
+            raise SystemExit(f"{PANELS / d} exists; panels are frozen once built")
+    man = json.loads((ROOT / "docs/prereg/wme_manifest.json").read_text())
+    log = {"t0": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+
+    pools, sizes, cmin, reserved_items, root_groups, meta_c1, _ = c1_inputs(man)
+    sizes_reg = man["panel.wme_c1.sizes"]
 
     # ---- MMLU-Pro sources of both builders (same hash: text_hash(question || options))
     b1 = _mod("b1", "scripts/wme_build_panel.py")

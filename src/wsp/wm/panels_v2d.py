@@ -363,6 +363,7 @@ def build_c1_panel_v2e(
     salt: str = PC.SALT,
     construction_min: dict | None = None,
     dry_run: bool = False,
+    lineage: bool = False,
 ):
     """``wme-c1`` under the v1 policy (``panel_c1.build_c1_panel_v1``'s grouping, exclusion, ownership, salted order
     and split order) with two v2e rules (PREREG §II.23.3):
@@ -377,7 +378,7 @@ def build_c1_panel_v2e(
     remaining fresh group) plus the reserved groups; ``construction_min[obj]`` (field + e2 shards) is checked."""
     require_exposures(exposures)
     out = Path(out_dir)
-    if out.exists() and not dry_run:
+    if out.exists() and not (dry_run or lineage):
         raise FileExistsError(f"{out} exists; panels are frozen once built")
     pools = dict(pools)
     if "mmlupro_gold_lp" in pools:
@@ -479,6 +480,20 @@ def build_c1_panel_v2e(
         raise AssertionError(
             "an evaluation split, or an unreserved construction item, hits an exposure"
         )
+    if lineage:
+        # the builder's own lineage, nothing written: every pool item's final (union-policy) group and owner, and the
+        # planned split hash and group lists (PREREG §II.24.1)
+        return {
+            "item_group": {where[k][1]["hash"]: PC.text_hash(texts[rep[k]]) for k in texts},
+            "group_owner": {PC.text_hash(texts[g]): o for g, o in owner.items()},
+            "splits": {
+                s: {o: [r["hash"] for r in splits[s][o]] for o in order} for s in PC.SPLITS_V1
+            },
+            "groups": {
+                s: {o: [r["group"] for r in splits[s][o]] for o in order} for s in PC.SPLITS_V1
+            },
+            "reserved_representatives": sorted(resv_hashes),
+        }
     for d in ("open", "sealed_test", "sealed_gen"):
         (out / d).mkdir(parents=True, exist_ok=False) if d != "open" else (out / d).mkdir(
             parents=True
