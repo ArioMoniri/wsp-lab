@@ -113,9 +113,14 @@ def test_run_units_skips_verified_units(tmp_path):
     calls = []
     units = [({"i": i}, f"r{i}") for i in range(4)]
     fn = lambda recipe: calls.append(recipe["i"]) or {"v": recipe["i"] * 2}
-    H.run_units(st, units, fn, theta0="t" * 64, panel="p" * 64)
-    H.run_units(st, units, fn, theta0="t" * 64, panel="p" * 64)
+    from wsp.wm.runguard import EngineeringGuard
+
+    g = EngineeringGuard("test")
+    H.run_units(st, units, fn, theta0="t" * 64, panel="p" * 64, guard=g)
+    H.run_units(st, units, fn, theta0="t" * 64, panel="p" * 64, guard=g)
     assert calls == [0, 1, 2, 3]
+    with pytest.raises(ValueError):
+        H.run_units(st, units, fn, theta0="t" * 64, panel="p" * 64, guard=None)
 
 
 def _env():

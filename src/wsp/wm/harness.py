@@ -24,6 +24,8 @@ import sys
 import time
 from pathlib import Path
 
+from wsp.wm.runguard import RetryExhausted
+
 DEVICE_CAP_BYTES = 27_000_000_000
 
 
@@ -166,29 +168,42 @@ class UnitStore:
 
 
 def run_units(
-    store: UnitStore, units, fn, theta0: str, panel: str, on_start=None, guard=None
+    store: UnitStore, units, fn, theta0: str, panel: str, *, guard, on_start=None
 ) -> dict:
-    """``units``: [(recipe, label)]; ``fn(recipe) -> payload``. Verified units are skipped.
+    """``units``: [(recipe, label)]; ``fn(recipe) -> payload``. The ``guard`` is mandatory: a confirmatory phase
+    passes ``runguard.ProductionGuard`` (attested launch, persistent attempts/canaries/ledger, eligibility-gated
+    resume, absolute cap); engineering runs pass an explicit ``runguard.EngineeringGuard``.
 
-    ``guard`` (``wm.runguard.UnitGuard``, mandatory for every confirmatory phase) is asked before each unit; it
-    raises ``runguard.CapExceeded`` at the absolute combined cap and ``runguard.PhasePause`` at 1.25x the phase
-    price, and records each unit's measured GPU seconds afterwards."""
+    Per unit: ``guard.resolve`` returns a complete (for production: the first canary-eligible) result, which is
+    reused; otherwise attempts run until one succeeds, a non-technical failure halts (re-raised), or the attempt
+    limit is reached and the registered fallback is recorded. Failed attempts' seconds are charged."""
+    if guard is None:
+        raise ValueError(
+            "run_units needs a guard (runguard.ProductionGuard, or an explicit EngineeringGuard)"
+        )
     out = {}
     for recipe, label in units:
         k = unit_key(recipe, theta0, panel)
-        if store.done(k):
-            out[label] = store.read(k)
+        res = guard.resolve(store, k)
+        if res is not None:
+            out[label] = res
             continue
-        if guard is not None:
-            guard.before_unit(label)
-        if on_start:
-            on_start(k, label)
-        t0 = time.time()
-        payload = fn(recipe)
-        store.write(k, payload, theta_after=theta0)
-        if guard is not None:
-            guard.after_unit(label, time.time() - t0)
-        out[label] = payload
+        while True:
+            try:
+                n = guard.begin(k, label)
+            except RetryExhausted:
+                out[label] = guard.fallback(k, label)
+                break
+            if on_start:
+                on_start(k, label)
+            t0 = time.time()
+            try:
+                payload = fn(recipe)
+            except Exception as exc:  # noqa: BLE001 - charged; retried only if the guard calls it technical
+                guard.failed(k, label, time.time() - t0, exc)
+                continue
+            out[label] = guard.succeeded(store, k, label, n, payload, time.time() - t0, theta0)
+            break
     return out
 
 
@@ -257,8 +272,16 @@ def _toy_worker(out_dir: str, n_units: int, sleep_s: float, run_label: str = "ru
         )
 
     units = [({"layer": i % 2, "dose": 0.25 * (i + 1)}, f"u{i}") for i in range(n_units)]
+    from wsp.wm.runguard import EngineeringGuard
+
     run_units(
-        UnitStore(out / "units"), units, fn, theta0=base, panel="toy-panel", on_start=on_start
+        UnitStore(out / "units"),
+        units,
+        fn,
+        theta0=base,
+        panel="toy-panel",
+        on_start=on_start,
+        guard=EngineeringGuard("toy kill/resume worker"),
     )
     (out / "final.json").write_text(json.dumps({"theta_restored": sess.theta_hash() == base}))
 

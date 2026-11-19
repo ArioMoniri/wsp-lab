@@ -3169,3 +3169,115 @@ deterministic, so no attempt could select favourable items. Their hashes and aud
 (`v2e-build-attempt*`).
 
 **Board A v2 change 3: closed.**
+
+
+## II.24 Amendment v2f (19 Nov 2026): root-shard lineage and the enforced runtime contract
+
+**What this amendment is.** It is dated 19 Nov 2026 and is made before any confirmatory outcome exists. It repairs
+the two freeze blockers in Board A's confirmation review
+(`docs/reviews/council/board-a-prereg-wme-v2-confirm-2026-11-19.md`): A, root-shard lineage, and B, the runtime
+contract.
+
+**What it is not.**
+- These are technical repairs only. There is no scientific redesign and no rebuild: the panels of §II.23.3 are
+  unchanged.
+- No sealed content was read.
+
+**How it works.** It is appended. Where this section says it supersedes, it governs.
+
+**Code and records.**
+- Code `0d078dd`.
+- Manifest sha256 `82e844b8dd49929c501bb447e5f984a10645cde2a1a36e1e00d8939b11aaa703`.
+- Lineage report `docs/reviews/wme/wme-v2f-root-lineage-2026-11-19.json`, sha256 `0df383ae561f81afc42cfd24b0fd337edfb44797be656ef1f10dd3810281b2cf`.
+
+### II.24.1 Bank-root shards: group reservation with representative deduplication (supersedes §II.23.3's bank-root wording)
+
+**The rule.** §II.23.3 said the root-shard item groups "go to `wme-c1` construction" and that "a root item is kept as
+its group's representative". The registered rule is now **group reservation with representative deduplication**:
+1. Every item group a sampled bank root used as a contrast or LoRA shard is reserved for `wme-c1` construction, as a
+   whole group.
+2. Under the union-policy grouping and cross-objective ownership of §II.23.3, each reserved final group writes **one**
+   representative. A root item is preferred, then the smallest hash.
+3. The group's other members are not written separately. They are covered by the group's reservation.
+4. No reserved group, and no member of one, may enter dev, bank, sealed_test or sealed_gen of `wme-c1`, or any split
+   of `wme-c2-gen`.
+
+**Lineage.** `scripts/wme_v2f_root_lineage.py`, CPU via agent-tmux, hash-only.
+- It re-runs the builder's own deterministic grouping and split plan (`build_c1_panel_v2e(..., lineage=True)`; nothing
+  is written) from the same pinned source pools, sizes and committed allocation record. The allocation's sha256 is
+  verified.
+- The plan **reproduces the built `wme-c1` manifest's hash and group lists in all 40 (objective, split) units**,
+  compared by hash-list digests. No split file is opened.
+- It then maps every root member to its original group, final union group, owner and written representative.
+
+| Count | Value |
+|---|---|
+| Original root groups (root-sampler group ids) | **1,728**, all mapped |
+| Pool members of those groups | **1,761** |
+| Written representatives in `wme-c1` construction | **1,723** (equals the manifest's `reserved_construction_items`) |
+| Members in a `wme-c1` source pool, folded into another root item's representative group | 25 |
+| Members only in the MMLU-Pro sycophancy-proxy pool (not a `wme-c1` or `wme-c2-gen` source; withheld from `wme-c2-gen` by the allocation's root pre-assignment; covered through their group's in-pool members) | 13 |
+| Final groups that merge more than one original group | 5 (1,728 − 5 = 1,723) |
+| Final groups holding more than one root member | 37 |
+| Final groups owned by a different objective than the member's source | 17 (13 are the proxy-pool members) |
+
+**Reconciliation:** 1,761 = 1,723 representatives + 25 in-pool members + 13 out-of-pool members.
+
+**Checks** (all pass):
+- every member mapped;
+- every representative in construction;
+- **0** root member hashes and **0** root final groups in any `wme-c1` evaluation split;
+- **0** root member hashes in `wme-c2-gen`;
+- the representatives equal the builder's reserved set.
+
+**Mapping digest:** sha256 `c28022f9c152a3443fc09705d9e09a281822d078d1a812269ed5e8fd9a9dfdc5`.
+
+**Registered construction-only exposure exception.** This is the only permitted exposure intersection.
+- **What it covers:** 422 written `wme-c1` construction representatives, among 428 root member hashes, also occur in
+  later exploratory panels (`wme-p3h`, `wme-w`, `wme-w2`).
+- **Where it applies:** only the `wme-c1` construction split, and only for root-shard groups committed before the
+  panels were built.
+- **Disclosure:** it is disclosed in the manifest (`exposures.v2.construction_only_exception`).
+- **Evaluation exclusions stay absolute:** no exposure, root member or root group may enter dev, bank, sealed_test or
+  sealed_gen of `wme-c1`, or any split of `wme-c2-gen`. All of these are 0.
+
+### II.24.2 The runtime contract enforced in the production path (completes §II.22.6 and §II.21.1)
+
+The §II.22.6 rules are now enforced by code, not just documented:
+
+| Rule | Enforcement |
+|---|---|
+| **The guard is mandatory** | `harness.run_units(..., *, guard)` raises without one. Confirmatory phases use `wsp.wm.runguard.ProductionGuard`. Engineering smokes and toy workers must pass an explicit `EngineeringGuard`, whose results are never confirmatory evidence. |
+| **Launch validity** | `ProductionGuard` refuses construction without a `LaunchAttestation`: inert identity and output bitwise, 1-vs-2-GPU parity bitwise, the canary reference sha256, the engine-config sha256 and cited evidence. No unit starts unless the instance's latest canary equals the reference (`CanaryMismatch` halts). |
+| **Persistence across process and instance restarts** | One append-only, fsync'd event log, plus a persistent `RetryPolicy` and `CanaryBook`, replayed on every construction. Attempts, failures, fallbacks, canaries, instance open and close, and relaunches survive restarts. |
+| **Eligibility and resume** | Each successful attempt is stored under its own key (`<unit>.a<n>`) with its event sequence number and instance. `resolve` (`run_units` skip/resume) returns **the first canary-eligible attempt in event order**, whatever its value. Results scored before a failed canary are **retained, ineligible**: kept for transparency, never returned. A result awaiting its closing canary is *pending*: not complete, and the unit cannot be re-attempted until the canary is run. |
+| **Attempts and relaunches** | 3 attempts per unit in total, across processes, instances and relaunches. An attempt later made ineligible by a canary counts. Then the registered fallback is recorded. 1 relaunch per phase. A failure is retried only if classified as one of the 7 technical causes; anything else halts. |
+| **Accounting** | Every attempt's measured seconds are charged, failed ones included. The absolute cap is checked before every attempt against the larger of (i) measured unit GPU time and (ii) authoritative instance time (open-to-close times GPUs, with setup, downloads, idle and canaries included; open instances count up to now). The limits are 90 GPU-h-eq and $1,000 combined (`CapExceeded`: engineering abort), plus the 1.25× phase pause. |
+
+**Tests** (`tests/test_wme_runguard.py`, CPU):
+- `test_orchestration_failure_canary_restart_exhaustion_and_first_valid_selection` covers, in one run:
+  - a missing start canary;
+  - a technical failure retried and charged;
+  - a unit exhausting 3 attempts and taking its fallback;
+  - a failed end canary making earlier results retained-ineligible;
+  - a process restart reloading every counter;
+  - a relaunch, then the second relaunch refused;
+  - a pending attempt blocking re-attempt;
+  - first-eligible selection on resume, without recomputation.
+- `test_instance_time_is_authoritative_for_the_absolute_cap`
+- `test_counters_persist_across_restarts`
+- `test_launch_requires_attestations_and_run_units_requires_a_guard`
+- `test_non_technical_failure_halts_but_is_charged`
+- `test_combined_cap_stops_before_any_unit_that_would_cross_it`
+- `test_phase_pause_at_125x`
+- `test_repairs_must_be_technical_and_outcome_blind`
+
+`tests/test_wm_harness.py` runs the kill/resume worker under the explicit `EngineeringGuard` and checks that
+`guard=None` is refused.
+
+### II.24.3 Status
+
+| Board A confirmation blocker | Status |
+|---|---|
+| A. Root-shard lineage | Repaired. Rule wording amended (§II.24.1). Lineage mapping, digest and reconciliation published. Exception registered. Evaluation exclusions absolute, with 0 intersections. |
+| B. Runtime contract | Repaired. Mandatory guard, launch attestations, persistent counters and canaries, eligibility-gated resume, failed and instance-time accounting. CPU orchestration test. |

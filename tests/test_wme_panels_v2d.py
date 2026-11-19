@@ -331,3 +331,38 @@ def test_c1_field_minimum_counts_fresh_construction_only(tmp_path):
             reserved,
             construction_min={"mmlupro_gold_lp": fresh["mmlupro_gold_lp"] - 7 + 1},
         )
+
+
+def test_c1_lineage_mode_reproduces_the_built_manifest_without_writing(tmp_path):
+    mm = _mmlu(60)
+    reserved = {mm[1]["hash"], mm[-1]["hash"]}  # mm[-1] is the near-duplicate of mm[0]
+    alloc = V.allocate(
+        _pool(mm),
+        set(),
+        (("wme-c1:mmlupro_gold_lp", 10, "raise"), ("wme-c2-gen:mmlupro_gen", 20, "reduce")),
+        preassigned={h: V.C1_ROOT_CONSUMER for h in reserved},
+    )
+    sizes = {
+        "mmlupro_gold_lp": {
+            "sealed_gen": 0,
+            "sealed_test": 4,
+            "dev": 3,
+            "bank": 2,
+            "construction": "rest",
+        }
+    }
+    man, _ = V.build_c1_panel_v2e(
+        {"mmlupro_gold_lp": mm}, sizes, tmp_path / "c1", ALL_EXP, alloc, reserved
+    )
+    lin = V.build_c1_panel_v2e(
+        {"mmlupro_gold_lp": mm}, sizes, tmp_path / "c1", ALL_EXP, alloc, reserved, lineage=True
+    )
+    for s, rec in man["objectives"]["mmlupro_gold_lp"].items():
+        assert sorted(rec["hashes"]) == sorted(lin["splits"][s]["mmlupro_gold_lp"])
+        assert sorted(rec["groups"]) == sorted(lin["groups"][s]["mmlupro_gold_lp"])
+    # both root items map to written construction groups; mm[0] and mm[-1] share one final group
+    con = man["objectives"]["mmlupro_gold_lp"]["construction"]
+    for h in reserved:
+        assert lin["item_group"][h] in con["groups"]
+    assert lin["item_group"][mm[0]["hash"]] == lin["item_group"][mm[-1]["hash"]]
+    assert set(lin["reserved_representatives"]) == reserved
