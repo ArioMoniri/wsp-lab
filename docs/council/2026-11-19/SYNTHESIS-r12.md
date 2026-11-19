@@ -155,3 +155,21 @@ as descriptive.
 | No weight distribution; no harmful-refusal targeting | HAI-DEF §3.1, prohibited-use 2.4 | harmful-compliance guard | 0 | Guard breach: stop the edit |
 | Confirmatory local or Lambda after C1 | C1 priority; Lambda has no capacity | user budget approval at prereg | ~90–110 local or ~29 H100 (~$140) | Achieved power < 0.5: kill |
 | 27B deferred | LoRA memory at 80 GB untested; ~$980 full design | after 4B result | — | — |
+
+## Addendum (19 Nov 2026, chair): access and risk acceptance
+
+The user made two decisions, both before any study M data:
+- They accepted the Hugging Face terms. `google/medgemma-1.5-4b-it` now returns HTTP 200 with the project token.
+- They accepted the HAI-DEF §4.5 indemnity as a residual risk.
+
+Under BLUF item 4, the **study M target becomes `google/medgemma-1.5-4b-it`** (text use only). This happens before any
+panel exists. `google/medgemma-4b-it` stays as the endpoint of the interpolation family, so R2 family 2 is now in
+scope.
+
+The task vector is τ = medgemma-1.5-4b-it − gemma-3-4b-it. Gate 0 must first verify that the two models share the
+same architecture and shapes.
+
+The base check now uses the 1.5 model-card MedQA figure (69.1), with the same kill rule: a miss of more than 5
+points kills.
+
+`google/medgemma-4b-pt` is still 403 and is not needed.
