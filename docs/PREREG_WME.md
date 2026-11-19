@@ -3853,3 +3853,21 @@ results are admitted only through `ProductionGuard.succeeded`; the engine lock i
 **Known descriptive-scope limit (disclosed now, before data):** the D-HT implementation omits the WM-E v0 second
 descriptive arm, the negative-control-root and leave-one-family-out breakdowns and unique-state weighting of Part I
 §6.2.6; D-HT carries no α.
+
+
+## II.30 Amendment v2k (19 Nov 2026): re-pricing rule for the bank work the registered price formula omits
+
+**What this amendment is.** Dated 19 Nov 2026, appended before any `wme-c1` data; flagged to the chair. It applies
+§II.13 item 9 ("re-priced by dated amendment before any data it governs") to two bank components that the
+registered price (`powersim_v2b.price`) does not contain: the kept-factor eigendecompositions of the field (§II.29
+G3b) and the R(E) contractions of the bank states. It changes no claim, test, N, seed, cap or the absolute 90 GPU-h-eq
+/ $1,000 limits; it only sets the bank phase's priced value used for the 1.25× pause.
+
+**Rule (mechanical, fixed now; applied once at launch from outcome-blind timings).**
+P_bank = 4.1268 (§II.29 G1) + [192 × t_eigh(12288) + 576 × t_eigh(4096) + 13,095 × 6 × t_contract] / 3600 GPU-h-eq,
+where the timings are measured by the launch probe (`wsp.wm.c1.launchops` `timing`: synthetic PSD matrices of those
+sizes, fp64 GPU eigendecomposition by the registered `spectral_factor` rule, and one factored contraction of a
+4096 × 12288 displacement) on the confirmatory instance before the first bank unit; 192 / 576 are the field's
+12288- and 4096-dimensional factors (6 objectives × 32 layers × the A and G factors of `down` and `o`); 13,095 is
+the upper bound on per-tensor contributions of the bound bank plan (1,032 states). The value and its inputs are
+recorded in the launch report. The confirmatory, S-BoN and S-TE prices are unchanged.
