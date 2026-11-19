@@ -196,11 +196,19 @@ def main():
         "guard_harmless": [prompt(t, "or80k") for t in or80],
         "guard_harmful": [prompt(t, "llmlat") for t in lat],
     }
+    # every written wme-c1 item (all splits, sealed included: held in memory by this build only) and every wme-c1
+    # source pool except MMLU-Pro (separated by the joint allocation) and the TriviaQA question pool
     reserved_texts = {
-        f"wme-c1:{o}": [C1._text_v1(o, r, X.group_text) for r in rows]
+        f"wme-c1-pool:{o}": [C1._text_v1(o, r, X.group_text) for r in rows]
         for o, rows in pools.items()
-        if o != "triviaqa_gen"
+        if o not in ("triviaqa_gen", "mmlupro_gold_lp")
     }
+    reserved_texts["wme-c1-written"] = [
+        C1._text_v1(o, r, X.group_text)
+        for o, ss in sp1.items()
+        for rows in ss.values()
+        for r in rows
+    ]
     man2 = V.build_c2gen_panel(c2_pools, PANELS / "wme-c2-gen", exp2, alloc, reserved_texts)
     log["c2_s"] = round(time.time() - t0)
 

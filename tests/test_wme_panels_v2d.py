@@ -232,3 +232,66 @@ def test_consumers_are_dealt_only_groups_with_an_item_in_their_own_pool():
     assert a["consumers"][0]["assigned_groups"] == 8
     with pytest.raises(ValueError):
         V.allocate(_pool(items), set(), (("c1", 25, "raise"),), eligible={"c1": c1_pool})
+
+
+def test_c2_groups_mmlu_and_supergpqa_jointly_and_reserves_c1_texts(tmp_path):
+    mm = [dict(r, gtext=X.group_text("mmlupro_gold_lp", r)) for r in _mmlu(30)]
+    alloc = V.allocate(
+        _pool(mm),
+        set(),
+        (("wme-c1:mmlupro_gold_lp", 2, "raise"), ("wme-c2-gen:mmlupro_gen", 25, "reduce")),
+    )
+    share = [r for r in mm if alloc["assignment"].get(r["hash"]) == "wme-c2-gen:mmlupro_gen"]
+    twin_text = (
+        share[0]["gtext"] + "?"
+    )  # a SuperGPQA near-duplicate of an MMLU-Pro item in c2's share
+    sg = _gen(12, "sg") + [{"hash": text_hash(twin_text), "gtext": twin_text, "prompt": twin_text}]
+    reserved_hit = _gen(1, "gh")[0]["gtext"]  # a guard prompt already in a wme-c1 pool
+    pools = {
+        "mmlupro_gen": mm,
+        "supergpqa_gen": sg,
+        "guard_harmless": _gen(20, "gh"),
+        "guard_harmful": _gen(20, "gx"),
+    }
+    sizes = {
+        "mmlupro_gen": {"sealed_test": 40},
+        "supergpqa_gen": {"sealed_test": 40},
+        "guard_harmless": {"calibration": 2, "sealed_test": 40},
+        "guard_harmful": {"calibration": 2, "sealed_test": 40},
+    }
+    m = V.build_c2gen_panel(
+        pools, tmp_path / "c2", ALL_EXP, alloc, {"c1": [reserved_hit]}, sizes=sizes
+    )
+    sg_used = set(m["objectives"]["supergpqa_gen"]["sealed_test"]["hashes"])
+    assert text_hash(twin_text) not in sg_used  # owned by MMLU-Pro (first in the family)
+    gh_used = {h for s in m["objectives"]["guard_harmless"].values() for h in s["hashes"]}
+    assert text_hash(reserved_hit) not in gh_used and len(gh_used) == 19
+    assert (
+        m["shortfall"]["supergpqa_gen"]["shortfall"]
+        and m["shortfall"]["supergpqa_gen"]["restate_power"]
+    )
+
+
+def test_c1_keeps_the_root_item_as_its_groups_representative(tmp_path):
+    mm = _mmlu(40)
+    root_item = mm[-1]["hash"]  # the near-duplicate of item 0; item 0 has the other hash
+    alloc = V.allocate(
+        _pool(mm),
+        set(),
+        (("wme-c1:mmlupro_gold_lp", 10, "raise"), ("wme-c2-gen:mmlupro_gen", 5, "reduce")),
+        preassigned={root_item: V.C1_ROOT_CONSUMER},
+    )
+    sizes = {
+        "mmlupro_gold_lp": {
+            "sealed_gen": 0,
+            "sealed_test": 3,
+            "dev": 2,
+            "bank": 2,
+            "construction": "rest",
+        }
+    }
+    man, _ = V.build_c1_panel_v2e(
+        {"mmlupro_gold_lp": mm}, sizes, tmp_path / "c1", ALL_EXP, alloc, {root_item}
+    )
+    con = man["objectives"]["mmlupro_gold_lp"]["construction"]["hashes"]
+    assert root_item in con and mm[0]["hash"] not in con

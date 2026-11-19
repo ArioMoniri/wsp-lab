@@ -208,44 +208,69 @@ def build_c1_panel_v2d(pools: dict, sizes: dict, out_dir, exposures: dict, alloc
     return man
 
 
+C2GEN_FAMILIES = (("mmlupro_gen", "supergpqa_gen"), ("guard_harmless", "guard_harmful"))
+
+
+def _rank2(salt: str, panel: str, group: str) -> str:
+    return hashlib.sha256(f"{salt}:{panel}:{group}".encode()).hexdigest()
+
+
 def build_c2gen_panel(
-    pools: dict, out_dir, exposures: dict, allocation: dict, reserved: dict, sizes=C2GEN_SIZES
+    pools: dict,
+    out_dir,
+    exposures: dict,
+    allocation: dict,
+    reserved: dict,
+    sizes=C2GEN_SIZES,
+    families=C2GEN_FAMILIES,
 ):
-    """``wme-c2-gen``: ``pools`` {panel: [items with hash, gtext]}; ``reserved`` {tag: [texts]} (every wme-c1 pool,
-    always dropped). One item per word-MinHash group (``p3panel``), group-level exposure exclusion, salted rank
-    order, splits in ``sizes`` order; MMLU-Pro restricted to the allocation's ``wme-c2-gen`` share; shortfall ->
-    ``min(required, available)`` with ``restate_power``. Sealed splits go under ``sealed_test/``; the base-only
-    calibration splits under ``open/``."""
+    """``wme-c2-gen``: ``pools`` {panel: [items with hash, gtext]}; ``reserved`` {tag: [texts]} (every written wme-c1
+    item and every wme-c1 source pool except MMLU-Pro, which the allocation separates; always dropped).
+
+    Per family (MMLU-Pro with SuperGPQA; the two generated guards) the groups are the union of both duplicate
+    policies (:func:`joint_groups`) over the family's pools and the reserved texts; a group is dropped if it touches
+    an exposed hash or a reserved text; a group is owned by the first panel of the family in which it occurs; one
+    item per group (smallest hash); salted rank order sha256(salt:panel:group); splits in ``sizes`` order (base-only
+    calibration first, then sealed_test). MMLU-Pro is restricted to the allocation's ``wme-c2-gen`` share. Shortfall:
+    sealed_test N = min(required, available) with ``restate_power``; a calibration shortfall raises."""
     require_exposures(exposures)
-    pools = dict(pools)
-    pools["mmlupro_gen"] = restrict(pools["mmlupro_gen"], allocation, CONSUMERS[1][0])
-    exposed = X.all_exposed(exposures)
     out = Path(out_dir)
     if out.exists():
         raise FileExistsError(f"{out} exists; panels are frozen once built")
+    pools = dict(pools)
+    pools["mmlupro_gen"] = restrict(pools["mmlupro_gen"], allocation, CONSUMERS[1][0])
+    exposed = X.all_exposed(exposures)
+    rtexts = {f"R\x00{tag}\x00{j:08d}": x for tag, xs in reserved.items() for j, x in enumerate(xs)}
     splits, stats, short = {}, {}, {}
-    for panel, rows in pools.items():
-        fam = {"pools": {panel: rows}, "reserved": reserved}
-        grouped = PP.group_all({panel: fam})
-        need = sizes[panel]
-        avail = _usable(fam, panel, exposed, grouped[panel])
-        fixed = {s: n for s, n in need.items() if s != "sealed_test"}
-        n_test = min(need["sealed_test"], max(0, avail - sum(fixed.values())))
-        if avail < sum(fixed.values()):
-            raise ValueError(f"{panel}: {avail} usable groups for the {fixed} base-only splits")
-        got = dict(fixed, sealed_test=n_test)
-        sel = PP.select(
-            {panel: fam},
-            [panel],
-            {panel: got},
-            C2GEN_SALT,
-            exposed,
-            {panel: tuple(need)},
-            grouped=grouped,
-        )
-        splits[panel] = sel["splits"][panel]
-        stats[panel] = sel["stats"][panel]
-        short[panel] = dict(shortfall(need["sealed_test"], n_test), required=need["sealed_test"])
+    for fam in families:
+        texts, where = dict(rtexts), {}
+        for p in fam:
+            for i, r in enumerate(pools[p]):
+                k = f"P\x00{p}\x00{i:08d}"
+                texts[k], where[k] = r["gtext"], (p, r)
+        rep = joint_groups(texts)
+        bad = {rep[k] for k in where if where[k][1]["hash"] in exposed}
+        bad |= {rep[k] for k in rtexts}
+        owner, best = {}, {p: {} for p in fam}
+        for k in sorted(where, key=lambda k: (fam.index(where[k][0]), where[k][1]["hash"])):
+            p, r = where[k]
+            g = rep[k]
+            if g in bad or owner.setdefault(g, p) != p or g in best[p]:
+                continue
+            best[p][g] = dict(r, group=PC.text_hash(texts[g]))
+        for p in fam:
+            rows = sorted(best[p].values(), key=lambda r: _rank2(C2GEN_SALT, p, r["group"]))
+            need = sizes[p]
+            fixed = {s: n for s, n in need.items() if s != "sealed_test"}
+            if len(rows) < sum(fixed.values()):
+                raise ValueError(f"{p}: {len(rows)} usable groups for the {fixed} base-only splits")
+            n_test = min(need["sealed_test"], len(rows) - sum(fixed.values()))
+            splits[p], i = {}, 0
+            for s, n in list(fixed.items()) + [("sealed_test", n_test)]:
+                splits[p][s] = rows[i : i + n]
+                i += n
+            stats[p] = {"pool": len(pools[p]), "usable_groups": len(rows)}
+            short[p] = dict(shortfall(need["sealed_test"], n_test), required=need["sealed_test"])
     a = PP.audit(splits, exposed)
     if not a["clean"]:
         raise AssertionError("a wme-c2-gen split clashes or hits an exposure")
@@ -267,7 +292,9 @@ def build_c2gen_panel(
         files[name] = hashlib.sha256(data).hexdigest()
     man = {
         "salt": C2GEN_SALT,
-        "version": "wme-c2-gen-v2d",
+        "version": "wme-c2-gen-v2e",
+        "policy": "joint_groups (wm.neardup v1 character policy + exposure word-MinHash policy) per family",
+        "families": [list(f) for f in families],
         "sizes_required": sizes,
         "shortfall": short,
         "stats": stats,
@@ -286,14 +313,6 @@ def build_c2gen_panel(
     man["content_hash"] = hashlib.sha256(_canon(files).encode()).hexdigest()
     (out / "manifest.json").write_text(json.dumps(man, indent=1, sort_keys=True))
     return man
-
-
-def _usable(fam, panel, exposed, grouped) -> int:
-    gmap, gtags = grouped
-    rows = fam["pools"][panel]
-    bad = {g for (p, i), g in gmap.items() if rows[i]["hash"] in exposed}
-    res = set(fam.get("reserved", {}))
-    return len({g for g in gmap.values() if g not in bad and not (gtags.get(g, set()) & res)})
 
 
 # ------------------------------------------------------------------ hash-only audit across panels
@@ -377,7 +396,9 @@ def build_c1_panel_v2e(
             k = f"{obj}\x00{i:07d}"
             texts[k] = PC._text_v1(obj, r, X.group_text)
             where[k] = (obj, r)
-    rep = ND.groups(texts)
+    rep = joint_groups(
+        texts
+    )  # the union of the v1 character policy and the word-MinHash policy (stricter than v1)
     exposed = X.all_exposed(exposures)
     bad = {rep[k] for k in texts if where[k][1]["hash"] in exposed}
     resv = {rep[k] for k in texts if where[k][1]["hash"] in reserved_construction}
@@ -385,7 +406,11 @@ def build_c1_panel_v2e(
     for obj in order:
         ks = sorted(k for k in texts if where[k][0] == obj)
         by_f, by_r = {}, {}
-        for k in sorted(ks, key=lambda k: where[k][1]["hash"]):
+        # a root-shard item is preferred as its group's representative, then the smallest hash
+        for k in sorted(
+            ks,
+            key=lambda k: (where[k][1]["hash"] not in reserved_construction, where[k][1]["hash"]),
+        ):
             g = rep[k]
             if owner.setdefault(g, obj) != obj:
                 continue
@@ -432,7 +457,7 @@ def build_c1_panel_v2e(
         if hashes[a_] & hashes[b_] or groups[a_] & groups[b_]:
             raise AssertionError(f"splits {a_} and {b_} intersect")
     audit = X.intersection_audit({s: hashes[s] for s in PC.SPLITS_V1}, exposures)
-    resv_hashes = {r["hash"] for o in order for r in reserved[o]}
+    resv_hashes = {r["hash"] for o in order for r in reserved[o]} & set(reserved_construction)
     eval_clean = all(
         v == 0
         for e in audit.values()
@@ -463,7 +488,10 @@ def build_c1_panel_v2e(
         "salt": salt,
         "version": "wme-c1-v2e",
         "sizes": sizes,
-        "policy": ND.POLICY,
+        "policy": {
+            "v1": ND.POLICY,
+            "joined_with": f"exposure.near_duplicate_groups(jaccard={X.NEAR_DUP_JACCARD})",
+        },
         "exclusion": exclusion,
         "exposures": sorted(exposures),
         "audit": audit,
