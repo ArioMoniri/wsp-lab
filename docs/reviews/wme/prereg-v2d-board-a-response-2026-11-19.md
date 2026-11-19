@@ -207,8 +207,11 @@ non-integer budget; it previously truncated to an integer, which would have sile
 **A design issue found and fixed: the bank-root shards.**
 - The 72 bank roots were sampled at θ₀ from the v2b-era construction remainder.
 - A naive rebuild would have let some of their shard items reach sealed or dev splits.
-- Their 1,728 groups are now committed to `wme-c1` construction.
-- 422 of their items were later used by exploratory panels. That is disclosed; they never enter an evaluation split.
+- Their **1,728 original groups** (root-sampler group ids; 1,761 pool members) are reserved for `wme-c1`
+  construction. Under union-policy grouping they form **1,723 final groups**, each with one written representative
+  (group reservation with representative deduplication; corrected wording, v2f, PREREG §II.24.1).
+- 422 written representatives (428 root member hashes) were later used by exploratory panels. That is disclosed under
+  the registered construction-only exception; no root member or group enters an evaluation split.
 
 **Discarded builds (nothing read; hashes kept under `data/wme/panels/v2e-build-attempt*`).**
 
@@ -222,8 +225,25 @@ non-integer budget; it previously truncated to an integer, which would have sile
 Each fix was committed and tested before the next build: `9447675`, `d3b703a`, `d3d83ad`. Salted, deterministic
 assignment leaves no room to select favourable items.
 
-**Status of all seven changes.** All are closed:
+**Status of all seven changes (as written at v2e; superseded by "Update v2f" below).** All are closed:
 - 1, 2, 4, 5 and 7 by v2d;
 - 6 by v2d, with the launch checks to re-run on the confirmatory stack;
 - 3 by v2e.
+
+## Update v2f (19 Nov 2026): Board A confirmation blockers A and B
+
+> **Context.** Board A's confirmation (`docs/reviews/council/board-a-prereg-wme-v2-confirm-2026-11-19.md`) closed
+> changes 1, 2, 4, 5 and 7 and left two freeze blockers.
+> - Branch `prereg/wme-v2f`, from main `a4fa022`.
+> - These are technical repairs only: no rebuild, no outcome, no sealed content read.
+> - PREREG §II.24.
+
+| Blocker | Closure evidence |
+|---|---|
+| **A. Root-shard lineage** | **Lineage.** `scripts/wme_v2f_root_lineage.py` re-runs the builder's own plan (`build_c1_panel_v2e(lineage=True)`, nothing written). It reproduces the built `wme-c1` hash and group lists in all 40 units (digests only), then maps every root member. **Counts:** 1,728 original groups and 1,761 members map to 1,723 final union groups and 1,723 written construction representatives. The remainder is 25 in-pool members and 13 members found only in the MMLU-Pro proxy pool (not a panel source). **Checks:** 0 root members or groups in any `wme-c1` evaluation split; 0 in `wme-c2-gen`. **Digest:** mapping sha256 `c28022f9c152a3443fc09705d9e09a281822d078d1a812269ed5e8fd9a9dfdc5` (report `docs/reviews/wme/wme-v2f-root-lineage-2026-11-19.json`). **Wording:** amended to "group reservation with representative deduplication". **Exception:** the construction-only exposure exception is registered (422 written / 428 member hashes); evaluation exclusions stay absolute. **Response bullet:** corrected above. |
+| **B. Runtime contract** | **Guard.** `harness.run_units(*, guard)` is mandatory. `runguard.ProductionGuard` provides launch attestations, a persistent replayed event log, persistent retry and canary state, per-attempt result keys, eligibility-gated resume (first canary-valid in order; retained-ineligible kept; pending incomplete), charged failures, and an absolute cap on max(unit time, authoritative instance time). **Tests.** CPU tests in `tests/test_wme_runguard.py`, including the combined orchestration test (failure, failed end canary, process restart, relaunch, exhaustion/fallback, first-valid selection). Full suite: only the 3 pinned tripwires fail. |
+
+**Status.** Changes 1, 2, 4, 5 and 7 were closed by Board A. Change 3 is closed by v2e and the lineage above. Change 6
+is closed in code by v2f, with the launch checks to run on the confirmatory stack. Both blockers await Board A's
+check.
 

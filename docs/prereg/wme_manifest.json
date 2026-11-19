@@ -20,6 +20,40 @@
   "cross_panel_pairs": 1035,
   "exposure_hits_outside_root_construction": 0,
   "report": "docs/reviews/wme/wme-v2e-panel-audit-2026-11-19.json",
+  "root_lineage": {
+   "checks": {
+    "every_item_mapped": true,
+    "every_representative_in_construction": true,
+    "representatives_equal_plan_reserved": true,
+    "root_final_groups_in_c1_evaluation_splits": 0,
+    "root_item_hashes_in_c1_evaluation_splits": 0,
+    "root_item_hashes_in_wme_c2_gen": 0
+   },
+   "clean": true,
+   "counts": {
+    "c1_manifest_reserved_construction_items": 1723,
+    "final_groups_holding_more_than_one_root_item": 37,
+    "final_groups_merging_original_groups": 5,
+    "final_union_groups": 1723,
+    "items_as_member": 25,
+    "items_as_representative": 1723,
+    "items_in_later_exposures": 428,
+    "items_mapped": 1761,
+    "items_out_of_c1_pools": 13,
+    "original_groups": 1728,
+    "original_groups_mapped": 1728,
+    "original_items": 1761,
+    "out_of_pool_objectives": {
+     "sycophancy_gap": 13
+    },
+    "owner_differs_from_original_objective": 17,
+    "plan_reserved_representatives": 1723,
+    "written_representatives": 1723
+   },
+   "mapping_sha256": "c28022f9c152a3443fc09705d9e09a281822d078d1a812269ed5e8fd9a9dfdc5",
+   "report": "docs/reviews/wme/wme-v2f-root-lineage-2026-11-19.json",
+   "sha256": "0df383ae561f81afc42cfd24b0fd337edfb44797be656ef1f10dd3810281b2cf"
+  },
   "root_shards": {
    "all_such_items_are_root_shards": true,
    "construction_items_also_in_later_exposures": 422,
@@ -128,8 +162,14 @@
    "outer_seed": 3314379134
   },
   "root_shards_in_c1_construction": {
-   "groups": 1728,
-   "items": 1761
+   "final_union_groups": 1723,
+   "in_pool_non_representative_members": 25,
+   "lineage_mapping_sha256": "c28022f9c152a3443fc09705d9e09a281822d078d1a812269ed5e8fd9a9dfdc5",
+   "member_items": 1761,
+   "members_outside_every_panel_source_pool": 13,
+   "original_groups": 1728,
+   "rule": "group reservation with representative deduplication (PREREG \u00a7II.24.1)",
+   "written_representatives": 1723
   },
   "roots_file_sha256": "a4ceb25ebe69aa8df6cf5d85f9e32099e0955c8715832a823cb24019a4447ff3",
   "roots_identity_digest": "a58c0f6eacd5bdf13bc1670cda1d0c68046a9e0b0376c6e31bb5e19f18965a2b"
@@ -818,6 +858,12 @@
    "wme-c1": "wsp.wm.panels_v2d.build_c1_panel_v2d",
    "wme-c2-gen": "wsp.wm.panels_v2d.build_c2gen_panel"
   },
+  "construction_only_exception": {
+   "evaluation_exclusions": "absolute: zero exposure, root-item or root-group intersection with dev, bank, sealed_test or sealed_gen of wme-c1, or any split of wme-c2-gen",
+   "root_member_hashes_in_later_exposures": 428,
+   "scope": "wme-c1 construction split only, for the bank-root shard groups committed before the panels",
+   "written_construction_items_also_in_later_exploratory_exposures": 422
+  },
   "mmlu_allocation": {
    "consumers": [
     [
@@ -1010,7 +1056,7 @@
   20261119,
   20261120
  ],
- "generated_from_commit": "d3d83ad6edbd720a5ac5be61bd7de918dfef2bbc",
+ "generated_from_commit": "62f7f898a9e2ee9fd00ab27e76d0f8a2b622b54d",
  "guards.bounds": "item-group bootstrap-t R = 9,999 on both scales (wm.arms.spec.guard_bounds_from_items)",
  "guards.generated": {
   "alpha": 0.025,
@@ -1057,6 +1103,7 @@
   "tokens": 96
  },
  "harness.runguard": {
+  "accounting": "failed attempts charged; absolute cap on max(measured unit GPU time, authoritative instance time)",
   "canary": {
    "engines": {
     "hf generate (E1 generation)": "batch 128, left padding, greedy, 128 new tokens, non-thinking; sha256 of the token ids",
@@ -1073,7 +1120,11 @@
   },
   "cap_gpu_h_combined": 90.0,
   "cap_usd_9b": 1000.0,
-  "module": "wsp.wm.runguard (passed as harness.run_units(guard=))",
+  "eligibility": "each attempt stored as <unit>.a<n>; resolve() returns the first canary-eligible attempt in event order; retained-ineligible attempts kept; pending attempts not complete",
+  "launch_attestation": "LaunchAttestation: inert identity bitwise, 1-vs-2-GPU parity bitwise, canary reference sha256, engine-config sha256, evidence; checked at construction",
+  "module": "wsp.wm.runguard.ProductionGuard: the mandatory guard of harness.run_units (keyword-only; an explicit EngineeringGuard for non-confirmatory runs)",
+  "orchestration_test": "tests/test_wme_runguard.py::test_orchestration_failure_canary_restart_exhaustion_and_first_valid_selection",
+  "persistence": "one append-only fsync'd event log + persistent RetryPolicy and CanaryBook, replayed on every construction (process and instance restarts)",
   "phase_pause": 1.25,
   "phase_relaunches": 1,
   "technical_causes": [
@@ -2103,6 +2154,7 @@
    "docs/council/2026-11-19/RULING-wme-e2-scope.md": "196547ff5efb438a441cad5f83bf7435c0350230a7c244e3c1409d95ad7bc0c4",
    "docs/reviews/council/board-a-prereg-wme-2026-11-17.md": "2bbfcb0fe9417832d51427e75b43c753cc2b5f85b6e86042a1900bfbde9d759a",
    "docs/reviews/council/board-a-prereg-wme-v2-2026-11-18.md": "4104d87d17dec564f603be30d63421f7b915b6b997efbb812b67be6e1e2d2f19",
+   "docs/reviews/council/board-a-prereg-wme-v2-confirm-2026-11-19.md": "040e6be1e303534519501939a7606b71fd2a69779ab5f6f6b9e8119feeace234",
    "docs/reviews/wme/wme-stagew2-2026-11-18.md": "afbe7de9a652038ef0a3ca30fed45d41bac98c7e955f7e0f3e96d959a6eb81c4"
   },
   "status": "DRAFT v2 (18 Nov 2026); not frozen; registered claim set of RULING-wme-post-stagew Q3",
@@ -2128,6 +2180,9 @@
   },
   "v2e": {
    "status": "Board A v2 change 3 closed: W2 bound; H-T3 not registered; panels built; audits clean"
+  },
+  "v2f": {
+   "status": "Board A confirmation blockers A (root lineage) and B (runtime contract) repaired (technical only)"
   }
  },
  "seeds.bootstrap.e1": 1230116763,
