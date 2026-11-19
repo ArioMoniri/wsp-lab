@@ -1,0 +1,28 @@
+{
+ "label": "mutation sensitivity of the runtime property test (\u00a7II.26)",
+ "n_max": 300,
+ "results": {
+  "m1_clock": {
+   "detected": true,
+   "first_seed": 9000001,
+   "sequences_run": 2,
+   "assertion": ""
+  },
+  "m2_generation": {
+   "detected": true,
+   "first_seed": 9000008,
+   "sequences_run": 9,
+   "assertion": "(['eligible', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'superseded_contract', 'supersede"
+  },
+  "m3_post_loss_canary": {
+   "detected": true,
+   "first_seed": 9000006,
+   "sequences_run": 7,
+   "assertion": "('pending on a closed or lost instance', 'i0')"
+  }
+ },
+ "unmutated": {
+  "detected": false
+ },
+ "seconds": 3.4
+}
