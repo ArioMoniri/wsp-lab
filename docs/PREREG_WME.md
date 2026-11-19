@@ -3809,3 +3809,65 @@ by `scripts/wme_manifest_prereg_freeze.py`; its table is `docs/prereg/wme_manife
 
 The freeze record is `docs/reviews/wme/prereg-wme-freeze-2026-11-19.md`. The annotated tag `prereg-wme-v2-frozen`
 marks the freeze commit.
+
+
+## II.29 Amendment v2j (19 Nov 2026): execution specification of the frozen design (implementation, outcome-blind)
+
+**What this amendment is.** It is dated 19 Nov 2026 and appended before any `wme-c1` or `wme-c2-gen` outcome
+exists: no bank state, dev, test or generation item has been evaluated, and no sealed file has been read. It is
+written by the implementation agent of the 9B confirmatory run (branch `run/wme-c1-9b`) and **flagged to the chair**.
+Every item below fixes something the frozen registration leaves unspecified or internally inconsistent; each is
+decided without reading any outcome, from the frozen manifest, committed code or the pilot conventions the
+registration cites. No registered claim, test, α, margin, N, seed, price rule or cap changes. Code at the commit that
+appends this section; the drivers are `src/wsp/wm/c1/` and `scripts/wme_c1_*.py`. Label (Part I §11.4): **not an
+adaptation** (no confirmatory result exists).
+
+| # | Gap | Decision |
+|---|---|---|
+| G1 | §II.4 states r_f 8, n_blk 6 (48 roots); the frozen manifest's hash-bound `bank.blocks`, `bank.calibration_components`, `bank.component_graph_hash` (`c8d50fe2…`) and `bank.closure_allocation` are the 72-root, 12-block graph (`scripts/wme_manifest_v2b.py` updated `sim` but not the graph). No rule selects 8 of 12 roots. | Build the **bound graph** (72 roots, 12 blocks, 36 components, the 12 bound calibration components); `wsp.wm.c1.bundle.graph` reproduces `c8d50fe2…` exactly and the run refuses any other graph. The bank phase is priced by the registered code for that graph (`powersim_v2b.price`, r_f 12, n_blk 12, oracle_s 0): **4.13 GPU-h-eq** (was 2.99), used only for the 1.25× pause; registered total 68.07 GPU-h-eq. |
+| G2 | The two LLM reader arms are "Claude only"; no model is named. | `claude-opus-5-5` through `claude -p` (`arms.llm.ClaudeCLI`) for the WSR reader and all three Fugu roles; token cap 140,000 per arm-episode as registered. |
+| G3 | (a) The single registered chart column (`chart:schema:CHART_SCHEMA_VERSION=2`) has no 9B value definition. (b) `r_of` on 9B was never executed; planner R0 compute was priced at 0. | (a) The chart column is **0 for every state** (both arms, all uses). (b) R(E) is `wmcp.r_from_contractions` over per-tensor contributions `collect.contract` defines, computed exactly per tensor from the ordered actions that touch it (realised bf16 composition on the live session) and cached; kept factors by the registered `spectral_factor` rule with the fp64 eigendecomposition on the GPU, contracted in factored form (the same value as the dense kept form); norms are Frobenius norms of the realised displacement (writers, embedding rows, total). Its compute is charged (instance time). |
+| G4 | `LaunchAttestation` holds one canary reference; three engine canaries are registered. | The guard's reference is the sha256 of the committed per-engine map {`tf`, `hf_gen`, `vllm`}; **every canary point runs all three engines**; the per-engine references are the first confirmatory instance's start canaries, committed before the guard is constructed. |
+| G5 | Dead-man allowance (chair decision 2) uses the 4.89 × 1.10 ledger price; the provider charges 4.89. | `max_usd` = dead-man spent + remaining combined GPU-h × provider price per GPU, so the dead-man's GPU-hour limit equals the cap's remaining GPU-hours; policies only tighten. One dead-man state for every study instance (one live instance at a time is enforced by the dead-man). |
+| G7 | The planning B_par values add the field seconds to a bank price that already includes them. | As the text registers two measured quantities: H_bank = measured GPU-seconds of the bank phase's non-field units; T_field = measured seconds of the field units (8 groups incl. kept factors, and the vocabulary rows). The planning double count is disclosed. |
+| G8 | §II.12.3 names the rule, not the engine, for the E1 winner's generated safety. | The S-TE vLLM engine, the winner's realised tensors written into the live engine, paired with S-TE's base guard generations on the same instance (descriptive). |
+| G10 | Construction shards (field 24/objective, construction/e2 64 sycophancy groups, the non-sycophancy E2 contrast sources) are not designated in the built panel. | Salted designation over fresh construction items (`wsp.wm.c1.shards`; file `docs/reviews/wme/wme-c1-shards-2026-11-19.json`, sha256 `c9f8ce60…776f`): field = first 24 per trajectory objective within 1,024 tokens; e2 = next 64 sycophancy groups; gsm, wiki, mathcomp, harmless sources = 64 each. mathcomp has no field shard (not in R). |
+| G11 | Tap layers, k and the observation layout of WM-E grounding are not fixed (only `tap.seed`). | Pilot-1 convention: layers 3, 7, …, 31; k 16; seed `tap.seed`. Observation = per-objective mean sketch over that objective's bank items (6 × 8 × 16) followed by the per-item native values on the bank panel (6 × 48); labels y = per-objective mean paired change. |
+| G12 | n_inert 12, but `controls.inert` registers 8 constructions (I1 2-step, I1 4-step, I2 × 3 factors, 3 compensated pairs). | The 8 registered constructions are realised (D-C2 is descriptive); the shortfall is reported. No tensor is invented. |
+| G13 | The negative-control direction rule ("drawn as control_seed") has no generator. | One standard-normal vector from `torch.Generator().manual_seed(control_seed)`, normalised, at every layer of the partner's block (pilot-2 convention). |
+| G14 | "total relative Frobenius norm" (winner tie-break). | √(Σ‖ΔW‖²/Σ‖W₀‖²) over the touched tensors. |
+| G15 | Direct best-of-N two-stage arm: stage-2 slots and candidate order. | Arm-seeded uniform stream (1–4 distinct subsample primitives); stage 1 on the first 4 dev groups per objective at 4/64 bundle; survivors: screened gain > 0 and no screened guard point breach; best 16 survivors (`controls.two_stage_best_of_n` default) on the full panel at 1 bundle, budget reserved; §6.5.5 winner. |
+| G16 | Pool stream seed; `field_ranked` scorer. | Pool arms share the stream seeded by the episode's registered planner seed; `field_ranked` = `V0RArm` over the raw field F = a + q in ranks mode with the shared planner, support penalty and guards. |
+| G17 | Fallbacks other than the E2 arm-episode base winner. | A bank unit exhausting 3 attempts is unlabelled (excluded, reported); any other non-E2 confirmatory or S-TE unit exhausting is missing and its claim is "engineering abort". |
+| G18 | S-TE generated-guard calibration details. | As the pilot-3 code the registration cites: refusal = `genaudit.detect_refusal` on the response (pilot-3 guard rule), within 96 new tokens; per-item refusal frequency π = mean over the 8 samples at T 0.7 (seeds 1–8), greedy recorded beside it; one registered seed `int(sha256("wme-c2:h1:train")[:8], 16)` for both factor initialisation and data order. **Chair: the alternative reading of π (over all 9 generations) is flagged.** |
+| G19 | E2 library construction details. | Pilot-2 recipe: contrast means by pilot-1 `residual_means` over the designated sets (64 each), steer compile with the pilot-2 mixed set (16 harmless, 16 GSM8K, 16 neutral sycophancy; residual norm over its first 24); directions at every layer (the best-of-N steering arm uses all layers); LoRA k data-order seed `int(sha256("wme-e2:lora-order:sycophancy_real:k")[:8], 16)`. LoRA SFT arm: 64 suggested rows, 2 epochs × 8 = 16 steps, checkpoints every step, λ 1. |
+| G20 | E2 conformal and coverage (C1.4) for the E2 planning fits. | Inner folds K_in 4 by component (`bank.folds.inner_seed`, seeded permutation within stratum, round robin) over non-calibration components; q̂ = ⌈(n+1)·0.9⌉-th order statistic of out-of-fold |y−ŷ|/σ̃ at h ≤ 2 pooled over objectives; coverage on calibration components at h 3–4 pooled; < 0.80 for either arm → ranks mode for both. |
+| G21 | Composition h = 1 history. | The first root's +1 ladder state (the same θ-state; Part I §4.3); a composition whose first root's +1 state is unlabelled has no h = 1 history. |
+
+**Engineering (not scientific) choices also recorded:** the controller–worker request protocol with owner-epoch
+fencing; a dead worker process is restarted once within the same attempt (its request survives in the inbox); unit
+results are admitted only through `ProductionGuard.succeeded`; the engine lock is the stage-W2 freeze
+(`scripts/wme_c1_remote_lock.txt`, sha256 `6869dd72…467f`); the CPU deployment drill
+(`docs/reviews/wme/wme-c1-drill-2026-11-19.json`, sha256 `8936312b…c6e`) passes all seven scenarios.
+
+**Known descriptive-scope limit (disclosed now, before data):** the D-HT implementation omits the WM-E v0 second
+descriptive arm, the negative-control-root and leave-one-family-out breakdowns and unique-state weighting of Part I
+§6.2.6; D-HT carries no α.
+
+
+## II.30 Amendment v2k (19 Nov 2026): re-pricing rule for the bank work the registered price formula omits
+
+**What this amendment is.** Dated 19 Nov 2026, appended before any `wme-c1` data; flagged to the chair. It applies
+§II.13 item 9 ("re-priced by dated amendment before any data it governs") to two bank components that the
+registered price (`powersim_v2b.price`) does not contain: the kept-factor eigendecompositions of the field (§II.29
+G3b) and the R(E) contractions of the bank states. It changes no claim, test, N, seed, cap or the absolute 90 GPU-h-eq
+/ $1,000 limits; it only sets the bank phase's priced value used for the 1.25× pause.
+
+**Rule (mechanical, fixed now; applied once at launch from outcome-blind timings).**
+P_bank = 4.1268 (§II.29 G1) + [192 × t_eigh(12288) + 576 × t_eigh(4096) + 13,095 × 6 × t_contract] / 3600 GPU-h-eq,
+where the timings are measured by the launch probe (`wsp.wm.c1.launchops` `timing`: synthetic PSD matrices of those
+sizes, fp64 GPU eigendecomposition by the registered `spectral_factor` rule, and one factored contraction of a
+4096 × 12288 displacement) on the confirmatory instance before the first bank unit; 192 / 576 are the field's
+12288- and 4096-dimensional factors (6 objectives × 32 layers × the A and G factors of `down` and `o`); 13,095 is
+the upper bound on per-tensor contributions of the bound bank plan (1,032 states). The value and its inputs are
+recorded in the launch report. The confirmatory, S-BoN and S-TE prices are unchanged.
