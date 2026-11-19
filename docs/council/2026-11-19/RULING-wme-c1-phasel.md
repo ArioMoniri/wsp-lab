@@ -62,3 +62,29 @@ existing rule applies: the run stops at the cap, with loss dispositions as regis
 4. On pass, start the confirmatory phases.
 
 C1 must not launch Lambda before the chair confirms that steps 1–2 are done and the cap decision is recorded.
+
+## Addendum (19 Nov 2026): C3 decided by the user
+
+The user authorised raising the cap as needed, provided they are told at each raise. This was decided before any
+data.
+
+**The cap is now 110 GPU-h-eq**, recorded in §II.31.
+
+**Any further raise:**
+- is decided by the chair only;
+- is announced to the user at the time it is made;
+- is logged as a dated cap-generation entry in §II.31 and the ledger before the units it funds;
+- never takes combined Lambda spend for the 9B study beyond the $1,000 the user authorised.
+
+A raise never changes a claim, α, N, margin or stopping rule.
+
+**Run-health duties, added at the user's request.** These apply to every instance-hour.
+- The worker heartbeat reports GPU utilisation and memory.
+- The controller treats the following as an incident:
+  - GPU utilisation below 20 % for more than 15 minutes while a unit is in flight;
+  - any traceback or error;
+  - a canary mismatch;
+  - a unit whose kind or stage does not match the registered §II.18 order.
+- On an incident it stops issuing units, diagnoses, and reports to the chair before resuming.
+- The implementation agent checks health at every chunk boundary and does not end its turn while an instance is
+  live.
