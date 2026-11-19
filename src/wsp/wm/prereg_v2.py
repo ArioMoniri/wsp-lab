@@ -88,3 +88,37 @@ def cap_check(parts_gpu_h: dict) -> dict:
         "cap_usd_9b": CAP_USD_9B,
         "within": bool(t <= CAP_TOTAL_GPU_H and usd(t) <= CAP_USD_9B),
     }
+
+
+def wilson_upper(k: int, n: int, level: float = 0.95) -> float:
+    """One-sided Wilson score upper limit (round11-methods: the discordance bound used for S-TE sizing)."""
+    from statistics import NormalDist
+
+    z = NormalDist().inv_cdf(level)
+    p = k / n
+    return (p + z * z / (2 * n) + z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / (
+        1 + z * z / n
+    )
+
+
+def te_n(
+    delta: float, discordant: int, n_probe: int, alpha: float = 0.0125, power: float = 0.8
+) -> int:
+    """Analytic benchmark sizing of S-TE (SYNTHESIS-r11 R1; round11-methods): N = ceil((z_{1-alpha} + z_power)^2
+    (d - delta^2) / delta^2), d the one-sided 95 % Wilson upper discordance of the sizing probe. This is the sizing
+    of one benchmark's paired test at Holm's first level, before the conjunctive guards; it is not the joint S-TE
+    success probability."""
+    from statistics import NormalDist
+
+    z = NormalDist().inv_cdf
+    d = wilson_upper(discordant, n_probe)
+    return math.ceil((z(1 - alpha) + z(power)) ** 2 * (d - delta * delta) / delta / delta)
+
+
+# Exact S-TE sizing inputs: delta = 0.5 x the lambda-1 mean dev gain over the 16 H1 checkpoints (0.04275, 0.0705),
+# rounded to 4 decimals as the methods seat registered them; discordance of the pilot-3 sizing probe (33 and 49 of
+# 256). te_n reproduces the registered 3,463 and 1,784.
+TE_SIZING = {
+    "mmlupro_gen": {"delta": 0.0214, "discordant": 33, "n_probe": 256, "n": 3463},
+    "supergpqa_gen": {"delta": 0.0353, "discordant": 49, "n_probe": 256, "n": 1784},
+}

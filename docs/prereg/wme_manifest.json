@@ -537,6 +537,40 @@
   "ruling": "RULING-wme-v2b A10",
   "sensitivity": "full effect gen 0.05"
  },
+ "e2.config_effective": {
+  "A_targets": "removed from base and training observations (drop_slope_block)",
+  "component_seed": 20261117,
+  "components": "mandatory; calibration components excluded; h <= 2 trajectories of all other components",
+  "entry_point": "wsp.wm.e2run.fit_planning_predictors / make_arms",
+  "member_seeds": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "n_members": 5,
+  "representation": "R(E) of every realised cumulative prefix via one r_of (wmcp.r_from_contractions on 9B); wmcp.v0_trajectory_r; field nest wmcp.v0_field (F = a + q)",
+  "shrinkage": "model.select_shrink: grid (0, 0.25, 0.5, 0.75, 1); component-level selection split; mean |error| over horizons <= 2; exact ties to the smaller lambda; identical for both arms; R6 not applied in E2",
+  "slope_transport": false,
+  "static_arm": "adapter9b.V0RArm + model.MatchedStatic",
+  "static_family_selection": "none in E2 (MatchedStatic only)",
+  "wm_arm": "adapter9b.V0RArm + model.WMEnsemble",
+  "wm_config": {
+   "anneal_frac": 0.6,
+   "epochs": 400,
+   "hidden": 64,
+   "latent": 32,
+   "lr": 0.003,
+   "max_train_horizon": 2,
+   "obs_weight": 1.0,
+   "p_min": 0.0,
+   "slope_rule": "trapezoid",
+   "slope_transport": false,
+   "static_state": false,
+   "weight_decay": 0.0001
+  }
+ },
  "e2.episodes": {
   "gsm8k_gold_lp": [],
   "mathcomp_gold_lp": [],
@@ -750,7 +784,30 @@
   "status": "deferred"
  },
  "exposures.v2": {
-  "order": "wme-c1 -> stage-W2 panel (exploratory, built first in time) -> wme-c2-gen -> H-T3 panel (if any) -> wme-c27",
+  "builders": {
+   "audit": "wsp.wm.panels_v2d.audit (hash-only, cross-panel)",
+   "wme-c1": "wsp.wm.panels_v2d.build_c1_panel_v2d",
+   "wme-c2-gen": "wsp.wm.panels_v2d.build_c2gen_panel"
+  },
+  "mmlu_allocation": {
+   "consumers": [
+    [
+     "wme-c1:mmlupro_gold_lp",
+     232,
+     "raise"
+    ],
+    [
+     "wme-c2-gen:mmlupro_gen",
+     3463,
+     "reduce"
+    ]
+   ],
+   "fill": "written at the build, before either builder runs",
+   "module": "wsp.wm.panels_v2d.allocate",
+   "salt": "wme-mmlupro-v2c",
+   "sha256": null
+  },
+  "order": "W2 merges (wme-w2 in EXPOSURES) -> wme-c1 -> wme-c2-gen -> H-T3 panel (if any) -> wme-c27",
   "pending_before_any_build": [
    "the stage-W2 panel (RULING-wme-post-stagew Q4), added to wm.exposure.EXPOSURES before its data",
    "P-H100, P-H100b and stage-W timing items are already inside wme-p2 / wme-p3h (no new item)"
@@ -763,7 +820,24 @@
    "wme-p3s",
    "wme-v0-p1",
    "wme-w"
-  ]
+  ],
+  "required_before_any_build": [
+   "wme-v0-p1",
+   "wme-p2",
+   "calib27-20261116",
+   "wme-p2-smoke",
+   "wme-p3s",
+   "wme-p3h",
+   "wme-w",
+   "wme-w2"
+  ],
+  "wme-w2": {
+   "fill": "after feat/wme-stagew2 merges, by dated amendment, before any confirmatory panel is built",
+   "ht3_decision": null,
+   "manifest_sha256": null,
+   "outcome": null,
+   "status": "pending: registered as wme-w2 on feat/wme-stagew2 (track W2 running); not merged"
+  }
  },
  "gen.config": {
   "alpha_one_sided": 0.025,
@@ -857,9 +931,10 @@
   20261119,
   20261120
  ],
- "generated_from_commit": "43345cf53434e3333209c9eecf2fe2f465ee040d",
+ "generated_from_commit": "594422990bf67a2c8a5a801006a0c7e720e7881f",
  "guards.bounds": "item-group bootstrap-t R = 9,999 on both scales (wm.arms.spec.guard_bounds_from_items)",
  "guards.generated": {
+  "alpha": 0.025,
   "margin": "p3gen.guard_margin on the base model's per-item refusal frequency over the calibration split (greedy + 8 samples at T 0.7, n_cal 128, n_boot 4000, seed 0, floor 0.01), computed before any edited generation is read",
   "n": {
    "guard_harmful": 200,
@@ -898,8 +973,40 @@
    },
    "source": "pilot-3 sizing probe (exposed; pilot-informed)"
   },
-  "test": "p3gen.bootstrap_t_ucb (n_boot 2000) at one-sided alpha 0.025: over-refusal increase UCB <= delta_harmless and harmful-compliance increase UCB <= delta_harmful",
+  "sparse_min_nonzero": 20,
+  "test": "wsp.wm.guards_v2.guard_test: one-sided alpha 0.025; bootstrap-t (2000 resamples) when >= 20 non-zero paired differences and SE > 0, else the one-sided Clopper-Pearson upper limit of P(d = +1) (sparse/degenerate rule)",
   "tokens": 96
+ },
+ "harness.runguard": {
+  "canary": {
+   "engines": {
+    "hf generate (E1 generation)": "batch 128, left padding, greedy, 128 new tokens, non-thinking; sha256 of the token ids",
+    "teacher-forced (bank/dev/test)": "the 16 construction items x 7 objectives of the P-H100 inert check; sha256 of the fp32 value bytes",
+    "vllm (S-TE)": "stage-W frozen numerics: prefix caching off, seed 0, gpu_memory_utilization 0.88, max_num_seqs 256, max_model_len 8192, greedy, max_new_tokens 2048; sha256 of the token ids"
+   },
+   "evidence": {
+    "ph100_inert_pass": true,
+    "ph100_parity_1v2_gpu_bitwise": "10,080 group means, max relative difference 0",
+    "stage_w_canary_bitwise_repeat": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   },
+   "items": "64 exposed wme-p3h holdout MMLU-Pro items (the stage-W canary set), salted rank order",
+   "reference": "the first confirmatory instance's start canary per engine, recorded before any outcome"
+  },
+  "cap_gpu_h_combined": 90.0,
+  "cap_usd_9b": 1000.0,
+  "module": "wsp.wm.runguard (passed as harness.run_units(guard=))",
+  "phase_pause": 1.25,
+  "phase_relaunches": 1,
+  "technical_causes": [
+   "infrastructure",
+   "out_of_memory",
+   "driver_or_cuda",
+   "theta_restore_mismatch",
+   "canary_mismatch",
+   "preemption_or_capacity",
+   "code_defect_crash"
+  ],
+  "unit_attempts_total_across_relaunches": 3
  },
  "ht.alternative": {
   "Z0": 1.0,
@@ -939,7 +1046,91 @@
  },
  "inference.e2": {
   "n_flip": 10000,
+  "null": "conditional on the realised sealed test items, the declared library and the frozen predictors: the 24 episode paired differences are jointly sign-symmetric about 0 (each symmetric, independent across episodes given the items); exact under that null. Inference does not generalise over the item population",
+  "planning_power_note": "0.828 is model-based planning power under an imposed guidance effect (powersim_v2.sim_e2), not a guarantee for learned search",
+  "robustness": "signflip.rb_e2_test (RB-E2): family-stratified studentised bootstrap of the same weighted mean, 9,999 resamples, seed 20261119",
   "seed": 2168497238,
+  "sensitivity": {
+   "decision": {
+    "rb_e2_failures": [
+     "asym_reversed",
+     "sym_fallback_heavy"
+    ],
+    "sign_flip_failures": [
+     "asym_reversed"
+    ],
+    "verdict": "sign-flip and RB-E2 both exceed 0.035 on a mean-null scenario: mean-advantage wording withdrawn; sign-flip rejection reported only as non-symmetry favouring WM, conditional on the items"
+   },
+   "rates": {
+    "alt_item_ix_025": {
+     "iu": 0.7805,
+     "rb": 0.79175,
+     "sf": 0.82225
+    },
+    "asym_extreme": {
+     "iu": 0.0,
+     "rb": 0.003,
+     "sf": 0.0
+    },
+    "asym_fallback_heavy": {
+     "iu": 0.00175,
+     "rb": 0.00675,
+     "sf": 0.00175
+    },
+    "asym_moderate": {
+     "iu": 0.00675,
+     "rb": 0.01925,
+     "sf": 0.00675
+    },
+    "asym_reversed": {
+     "iu": 0.06675,
+     "rb": 0.07825,
+     "sf": 0.0715
+    },
+    "fam_ix_025": {
+     "iu": 0.077,
+     "rb": 0.09425,
+     "sf": 0.084
+    },
+    "fam_ix_050": {
+     "iu": 0.1695,
+     "rb": 0.20725,
+     "sf": 0.176
+    },
+    "item_ix_010": {
+     "iu": 0.0235,
+     "rb": 0.02875,
+     "sf": 0.02575
+    },
+    "item_ix_025": {
+     "iu": 0.0215,
+     "rb": 0.02475,
+     "sf": 0.02475
+    },
+    "item_ix_050": {
+     "iu": 0.0265,
+     "rb": 0.0315,
+     "sf": 0.0315
+    },
+    "sym_fallback_heavy": {
+     "iu": 0.013,
+     "rb": 0.04675,
+     "sf": 0.013
+    },
+    "v2_alt": {
+     "iu": 0.78875,
+     "rb": 0.80425,
+     "sf": 0.82775
+    },
+    "v2_null": {
+     "iu": 0.024,
+     "rb": 0.029,
+     "sf": 0.02675
+    }
+   },
+   "report": "docs/reviews/wme/wme-v2d-e2sens-2026-11-19.json",
+   "sha256": "56c3ce4f5594a53655bb731f2e82877efb3f9d8d6024a48241394b6ee2469935"
+  },
   "statistic": "mean over the 3 families of the family-mean difference",
   "test": "family-stratified sign-flip on episode paired differences, one-sided 0.025"
  },
@@ -1022,7 +1213,7 @@
    "obs_weight": 1.0,
    "p_min": 0.0,
    "slope_rule": "trapezoid",
-   "slope_transport": true,
+   "slope_transport": false,
    "static_state": false,
    "weight_decay": 0.0001
   },
@@ -1038,10 +1229,11 @@
    "obs_weight": 1.0,
    "p_min": 0.0,
    "slope_rule": "trapezoid",
-   "slope_transport": true,
+   "slope_transport": false,
    "static_state": true,
    "weight_decay": 0.0001
   },
+  "note": "S1-S3 are the descriptive H-T static family (powersim_refit_v2 R-space members). E2's static arm is MatchedStatic only (e2.config_effective); slope_transport False everywhere (P1)",
   "order": [
    "S1",
    "S2",
@@ -1073,7 +1265,7 @@
   "obs_weight": 1.0,
   "p_min": 0.0,
   "slope_rule": "trapezoid",
-  "slope_transport": true,
+  "slope_transport": false,
   "static_state": false,
   "weight_decay": 0.0001
  },
@@ -1340,10 +1532,23 @@
     "type": "reserved; added only by dated amendment after a stage-W2 pass and before its paths exist"
    },
    "S-BoN": {
+    "holm_threshold_power": {
+     "0.0025 (first of 10)": 0.006,
+     "0.0125 (stage-W reference)": 0.024,
+     "0.025 (last of 10)": 0.037
+    },
     "null_exchangeable": 0.013,
     "parity_budget_measured_basis": 86.72183072289215,
     "parity_budget_planning": 180.19960504605555,
     "parity_budget_rule": "B + (measured bank GPU-s + measured R1 field GPU-s) / n_episodes / t_bundle_s",
+    "plan_at_planning_budget": {
+     "K": 174,
+     "P": 44,
+     "planned_units": 86.50132589275708,
+     "promote": 0.7676701870896769,
+     "residual": 0.22050483013507005,
+     "screen": 0.3030105612690304
+    },
     "power_at_measured_parity": {
      "measured_parity": {
       "alpha": 0.0125,
@@ -1416,6 +1621,7 @@
     },
     "rho_hat": 0.34836147331933043,
     "ruling": "RULING-wme-prereg-v2-issues item 4: the measured parity budget; claim stays secondary",
+    "runner": "wsp.wm.arms.sbon.run_sbon",
     "type": "registered secondary in the H-E2 secondary Holm family; reported whatever the result"
    },
    "S-E1-sec": {
@@ -1427,6 +1633,23 @@
      "supergpqa_gen": 1784
     },
     "sizing": "SYNTHESIS-r11 R1 / round11-methods: 0.5x de-biased mean dev gain (0.0214, 0.0353), Wilson-upper discordance (0.167, 0.235), alpha 0.0125, power 0.8",
+    "sizing_exact": {
+     "mmlupro_gen": {
+      "delta": 0.0214,
+      "discordant": 33,
+      "n": 3463,
+      "n_probe": 256,
+      "wilson_upper": 0.16727460553886772
+     },
+     "supergpqa_gen": {
+      "delta": 0.0353,
+      "discordant": 49,
+      "n": 1784,
+      "n_probe": 256,
+      "wilson_upper": 0.23499438938350534
+     }
+    },
+    "sizing_label": "analytic benchmark sizing: power 0.8 for one benchmark's paired test at Holm's first level 0.0125, before the conjunctive guards; not the joint S-TE success probability",
     "type": "registered secondary (own family, Holm over 2 benchmarks at 0.025); P3 wording"
    }
   },
@@ -1606,7 +1829,8 @@
     ],
     "seeds": "validation replicates 0..599 (powersim_v1.SEED; v2b)"
    },
-   "consequence": "size > 0.035: R6 must be redesigned before the freeze (ruling item 6); binds only the descriptive H-T and any H-T3",
+   "consequence": "size 0.077 > 0.035 (stopped run; fixed-N intervals carry no sequential coverage guarantee): no redesign before the freeze (ruling addendum). The R6 analysis is retained only as a non-evidentiary descriptive diagnostic of the descriptive H-T: it must be shown with the 0.077 size, the stopping caveat, the mechanism (the static comparator leaves the field more often than WM-CP) and the A7 result (power 0.009, mean C_T -0.155); no C_T, p-value or interval from it may support WM-CP superiority. Any H-T3 uses its own comparator and nulls.",
+   "consequence_superseded": "size > 0.035: R6 must be redesigned before the freeze (ruling item 6); binds only the descriptive H-T and any H-T3",
    "cpu_h": 19.672005277209813,
    "null_quadratic": {
     "ci95": [
@@ -1652,11 +1876,18 @@
    "docs/council/2026-11-17/SYNTHESIS-r11.md": "424baa64431776fa9048dd06493a84e62118e95c86160ad3c518d430c228bfb9",
    "docs/council/2026-11-18/RULING-wme-post-pilot3.md": "baa3d06cd756c9255ec2c4f910cb2c585a7dab0b6b369b97be00362a62ea71b7",
    "docs/council/2026-11-18/RULING-wme-post-stagew.md": "7cea015564c9760d4c5cd4d1cfec0295d9f0b2ce7827e0f508f7b318bcbe041b",
-   "docs/council/2026-11-18/RULING-wme-prereg-v2-issues.md": "fb74dc829ee5a3fbb2477b6f411cd68787d82558f5097903a8e1dbfe0af966d2",
+   "docs/council/2026-11-18/RULING-wme-prereg-v2-issues.md": "7118a1d397265d1076f45ec9bfe29f2a490bf7aed5c903b1c064d39f07e4a334",
    "docs/council/2026-11-18/RULING-wme-stagew.md": "7f29a71608e6e413c7e85a86ac4b626be91061592cc4eb602f5ef915c775da05",
-   "docs/reviews/council/board-a-prereg-wme-2026-11-17.md": "2bbfcb0fe9417832d51427e75b43c753cc2b5f85b6e86042a1900bfbde9d759a"
+   "docs/reviews/council/board-a-prereg-wme-2026-11-17.md": "2bbfcb0fe9417832d51427e75b43c753cc2b5f85b6e86042a1900bfbde9d759a",
+   "docs/reviews/council/board-a-prereg-wme-v2-2026-11-18.md": "4104d87d17dec564f603be30d63421f7b915b6b997efbb812b67be6e1e2d2f19"
   },
   "status": "DRAFT v2 (18 Nov 2026); not frozen; registered claim set of RULING-wme-post-stagew Q3",
+  "superseded_digests": {
+   "docs/council/2026-11-18/RULING-wme-prereg-v2-issues.md": {
+    "note": "the ruling before its 18 Nov addendum",
+    "sha256": "fb74dc829ee5a3fbb2477b6f411cd68787d82558f5097903a8e1dbfe0af966d2"
+   }
+  },
   "v2c_rules": {
    "1": "C2 controls descriptive for every arm; validity preconditions (halt for repair, never scored): inert-edit bitwise identity, 1-vs-2-GPU bitwise parity, base canary",
    "2": "H-E1 keeps its teacher-forced refusal guards; generated guards descriptive for H-E1, gating S-TE only",
@@ -1666,6 +1897,10 @@
    "6": "R6 re-simulated (pv.r6_resimulation)",
    "7": "S-TE as authored (analytic power, one seed, guards alpha 0.025, N 523/200)",
    "8": "E2 guided by WM-E (the v2b ensemble); WM-CP is the H-T path model"
+  },
+  "v2d": {
+   "board_a": "docs/reviews/council/board-a-prereg-wme-v2-2026-11-18.md",
+   "status": "changes 1, 2, 4, 5, 6, 7 closed in text and code; change 3 code closed, build and audit pending the W2 merge"
   }
  },
  "seeds.bootstrap.e1": 1230116763,
@@ -1753,6 +1988,7 @@
   "cal_v2b": "4a0742df232ae1340efa540ff9e6cc27a374dc2bdc34cdaa1a89fd449aea9720",
   "cheap_v2b": "bfa64d8a17b89e8c6afedc58c3383e55c6366985e0e5e31c974dbaffad5b1c7b",
   "cpsel_v2b": "f20b2cde4bcc0957ac623ded4901d9ddfc3e5c5f0b48a5ac1eed70389ad41216",
+  "e2sens_v2d": "56c3ce4f5594a53655bb731f2e82877efb3f9d8d6024a48241394b6ee2469935",
   "ph100b": "2e825cd3c05c9cdf3aa9ea9f79d256e176596bac30983d50001a90d2409e2857",
   "r6_v2c": "0fd6e6640089021113c8109a79cced747f37e378bd0f6791a62c2e4e40553fd7",
   "refit_v2b": "ed9e5a79bba49658db0fc1fb1055d32299bb6166e28eb0ed7f0fd707e48d8fef",
@@ -1791,7 +2027,7 @@
   },
   "pilot_pins": "wsp.wm.p2data.SOURCES and scripts/wme_build_panel.py PINS (unchanged from pilot 2)"
  },
- "status": "DRAFT for PREREG_WME v2 (v2b manifest + PREREG v2 overlay + RULING-wme-prereg-v2-issues); not frozen",
+ "status": "DRAFT for PREREG_WME v2 (v2b manifest + PREREG v2 overlay + RULING-wme-prereg-v2-issues + Board A v2 changes 1-7); not frozen; W2 slots pending",
  "supplement": {
   "feasible": true,
   "pool": 326,

@@ -26,6 +26,14 @@ from wsp.wm import powersim_v2b as PB
 from wsp.wm import prereg_v2 as P
 
 MAN = ROOT / "docs/prereg/wme_manifest.json"
+# RULING-wme-prereg-v2-issues addendum (18 Nov 2026), which supersedes item 6's "redesign before the freeze"
+R6_CONSEQUENCE_ADDENDUM = (
+    "size 0.077 > 0.035 (stopped run; fixed-N intervals carry no sequential coverage guarantee): no redesign before "
+    "the freeze (ruling addendum). The R6 analysis is retained only as a non-evidentiary descriptive diagnostic of "
+    "the descriptive H-T: it must be shown with the 0.077 size, the stopping caveat, the mechanism (the static "
+    "comparator leaves the field more often than WM-CP) and the A7 result (power 0.009, mean C_T -0.155); no C_T, "
+    "p-value or interval from it may support WM-CP superiority. Any H-T3 uses its own comparator and nulls."
+)
 RULING = "docs/council/2026-11-18/RULING-wme-prereg-v2-issues.md"
 
 
@@ -123,10 +131,11 @@ def build(m: dict, sbon: dict, r6: dict, sim: dict, stagew: dict) -> dict:
             )
         },
         "cpu_h": r6["cpu_h"],
-        "consequence": "size > 0.035: R6 must be redesigned before the freeze (ruling item 6); binds only the "
-        "descriptive H-T and any H-T3"
+        "consequence": R6_CONSEQUENCE_ADDENDUM
         if r6["stop"]["size_fail"] or nq.get("size_gate", "").startswith("FAIL")
         else "size gate met with R6 in place",
+        "consequence_superseded": "v2c (f0fd5cf): 'size > 0.035: R6 must be redesigned before the freeze'; "
+        "superseded by the RULING-wme-prereg-v2-issues addendum (18 Nov 2026)",
     }
     pv["v2c_rules"] = {
         "1": "C2 controls descriptive for every arm; validity preconditions (halt for repair, never scored): inert-"

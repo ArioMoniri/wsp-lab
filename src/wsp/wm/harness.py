@@ -165,18 +165,29 @@ class UnitStore:
         return out
 
 
-def run_units(store: UnitStore, units, fn, theta0: str, panel: str, on_start=None) -> dict:
-    """``units``: [(recipe, label)]; ``fn(recipe) -> payload``. Verified units are skipped."""
+def run_units(
+    store: UnitStore, units, fn, theta0: str, panel: str, on_start=None, guard=None
+) -> dict:
+    """``units``: [(recipe, label)]; ``fn(recipe) -> payload``. Verified units are skipped.
+
+    ``guard`` (``wm.runguard.UnitGuard``, mandatory for every confirmatory phase) is asked before each unit; it
+    raises ``runguard.CapExceeded`` at the absolute combined cap and ``runguard.PhasePause`` at 1.25x the phase
+    price, and records each unit's measured GPU seconds afterwards."""
     out = {}
     for recipe, label in units:
         k = unit_key(recipe, theta0, panel)
         if store.done(k):
             out[label] = store.read(k)
             continue
+        if guard is not None:
+            guard.before_unit(label)
         if on_start:
             on_start(k, label)
+        t0 = time.time()
         payload = fn(recipe)
         store.write(k, payload, theta_after=theta0)
+        if guard is not None:
+            guard.after_unit(label, time.time() - t0)
         out[label] = payload
     return out
 

@@ -487,10 +487,13 @@ def param_count_untrained(static: StaticR, ref: CanonicalPathWM) -> int:
 # ------------------------------------------------------------------ WM-E v0 on R (descriptive arm; RULING-wme-v2 A1)
 
 
-def v0_field(spec: RSpec):
-    """A field artefact for ``wm.model`` whose nest on R-coordinates is exactly F = a + q: g = [I | I | 0], H = 0."""
+def v0_field(spec: RSpec, theta_hash: str | None = None):
+    """A field artefact for ``wm.model`` whose nest on R-coordinates is exactly F = a + q: g = [I | I | 0], H = 0.
+    ``theta_hash`` is the base hash of the weights R was computed at (default: the synthetic base)."""
     from wsp.wm.access import Artefact, Tier
-    from wsp.wm.synthetic import BASE_HASH
+    from wsp.wm.synthetic import BASE_HASH as _SYN
+
+    BASE_HASH = theta_hash or _SYN
 
     K, d = spec.n_obj, spec.dim
     g = np.zeros((K, d))

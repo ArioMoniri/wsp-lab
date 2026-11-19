@@ -1,0 +1,187 @@
+# PREREG_WME v2d: response to Board A's v2 review (19 Nov 2026)
+
+> **DESIGN, CODE AND ONE SYNTHETIC CPU SIMULATION; NO OUTCOMES.**
+> - **What this answers:** `docs/reviews/council/board-a-prereg-wme-v2-2026-11-18.md` (ACCEPT WITH CONDITIONS,
+>   required changes 1–7).
+> - **Where:** branch `prereg/wme-v2d`, from main `665b94e`.
+> - **What did not happen:** no GPU, no Lambda, no `data/evals`, no sealed split, no confirmatory outcome. Track W2
+>   and its branch `feat/wme-stagew2` were not touched; nothing was cherry-picked. Nothing was merged or pushed.
+
+## BLUF
+
+| # | Required change | Status | Evidence |
+|---|---|---|---|
+| 1 | Incorporate the ruling addendum (R6 descriptive only; no C2 gate) | **Closed** | §II.22.1. `prereg_v2.r6_resimulation.consequence` now carries the addendum, with the old text kept under `consequence_superseded`. The issues-ruling digest is re-hashed: `fb74dc82…` → `7118a1d3…`. The v2c generator is updated (`2c0f2ef`). |
+| 2 | One executable E2 configuration | **Closed** | §II.22.2, `wsp.wm.e2run`, `e2.config_effective`, `slope_transport` false in `model.wm.config` and S2/S3. CPU integration test `tests/test_wme_e2run.py` (5 tests). |
+| 3 | Exposure, joint MMLU allocation, build order, audits | **Partially pending W2** | Code and rules are closed: §II.22.3 and `wsp.wm.panels_v2d` (`require_exposures` with `wme-w2`, `allocate` over the union of both duplicate policies, `build_c1_panel_v2d`, `build_c2gen_panel`, `audit`, the shortfall rule), with `tests/test_wme_panels_v2d.py` (5 tests). **Pending after `feat/wme-stagew2` merges:** the `wme-w2` manifest hash, the W2 outcome and H-T3 decision, the real allocation, the builds and the audits. |
+| 4 | State the E2 null; sensitivity; freeze the failed-calibration consequence | **Closed; the consequence fired** | §II.22.4 and `docs/reviews/wme/wme-v2d-e2sens-2026-11-19.json`. With an asymmetric mean-zero null, sign-flip is 0.0715 and RB-E2 0.078, so the **H-E2 mean-advantage wording is withdrawn**. |
+| 5 | S-TE sizing label; guard α 0.025 in code; sparse rule | **Closed** | §II.22.5, `wsp.wm.guards_v2`, `prereg_v2.te_n` (reproduces 3,463 and 1,784 exactly), `tests/test_wme_guards_v2.py` (7 tests). |
+| 6 | Validity, repair and stopping contract | **Closed in code and text** | §II.22.6, `wsp.wm.runguard`, `harness.run_units(guard=)`, `tests/test_wme_runguard.py` (6 tests). P-H100 inert and parity evidence is cited. The checks re-run at launch. |
+| 7 | S-BoN runner and Holm-threshold power | **Closed** | §II.22.7, `wsp.wm.arms.sbon`, `tests/test_wme_sbon.py` (4 tests). At B 86.7218: K 174, P 44, 86.5013 spent, 0.2205 forfeited. Power is 0.006, 0.024 and 0.037 at α 0.0025, 0.0125 and 0.025. |
+
+**Commits.**
+- `2c0f2ef`: all code and tests.
+- `5944229`: the manifest overlay script and the sensitivity report.
+- The report commit (branch head): `docs/PREREG_WME.md` §II.22, the manifest (sha256 `02877aa4…`) and its table, this
+  response, and the session log.
+
+## Change by change
+
+### 1. The governing addendum
+
+**R6.** §II.22.1 supersedes §II.21.6's "R6 must be redesigned before the freeze" and §II.21.9 row 4, explicitly. It
+records:
+- that R6 is retained only as a non-evidentiary descriptive diagnostic;
+- the selection mechanism (118 vs 48 of 1,420 folds);
+- the stopping caveat: fixed-N intervals at outcome-dependent stopping times carry no sequential coverage guarantee;
+  the failure is the 600-replicate criterion (22 > 21);
+- the prohibition on using any C_T, p-value or interval as evidence of WM-CP superiority.
+
+**C2.** §II.18's "then C2 gates" is overridden. No C2 gate remains anywhere; the §II.22.6 validity preconditions
+apply instead.
+
+**Manifest and generator.**
+- The consequence carries the addendum, and the superseded text is preserved.
+- The digests are updated: issues ruling `7118a1d3…`, Board A v2 review.
+- `scripts/wme_manifest_prereg_v2c.py` now emits the addendum consequence (`2c0f2ef`).
+- The historical §II.21 text is unchanged.
+
+### 2. The E2 configuration
+
+| Board A's finding | Resolution |
+|---|---|
+| `slope_transport: true` in `model.wm.config` and S2/S3 | `E2_WM_CONFIG` sets `slope_transport=False`. The manifest now stores this effective config, plus `e2.config_effective`. |
+| `PredictorArm` vs `V0RArm` | E2 uses `V0RArm`: realised-prefix R rows through one `r_of`, shared by the bank-label path. `PredictorArm` is not used. |
+| R6 tie rule vs `model.select_shrink` | E2 registers `model.select_shrink` (exact ties) for both arms. R6 is not borrowed. |
+| StatNN member and family | `model.MatchedStatic` only, with no family selection in E2. |
+| Seeds and components | Members 0–4; component seed 20261117; component ids mandatory; calibration components excluded. |
+
+**Integration test.** `tests/test_wme_e2run.py` covers the frozen defaults, mandatory components, component
+bootstraps and a shared selection split, removal of the A block and slope targets, and bitwise-identical arm inputs
+for overlapping and non-commuting orders, equal to the bank-label path.
+
+### 3. Exposure and assignment (partially pending W2)
+
+**W2.** `wme-w2` (on `feat/wme-stagew2`) is referenced as pending, with null slots for:
+- its manifest hash;
+- the W2 outcome;
+- the H-T3 decision.
+
+**Build order.** It is fixed so that W2 merges first and both builders refuse to run until `wme-w2` is registered.
+
+**Joint allocation.** Implemented over the union of `wm.neardup` and `exposure.near_duplicate_groups` with salt
+`wme-mmlupro-v2c`. It is self-hashing and consumed by both builders. The tests show each builder draws only its share,
+and that the cross-panel audit catches an item or group shared across panels.
+
+**Shortfall rule.**
+- `wme-c1` raises on any shortfall.
+- `wme-c2-gen` freezes min(required, fresh) and sets `restate_power`.
+
+**Audit code.** Hash-only, covering counts, pairwise hash and joint-group overlaps, and exposures, for every source
+including the generated guards.
+
+**Not done (requires the W2 merge):** the real allocation file and its hash, the panel builds, the split hashes and
+the published audits. Condition 1 therefore remains open.
+
+### 4. The E2 null
+
+**The stated null.** Joint sign symmetry of the 24 paired differences, conditional on the realised test items, the
+declared library and the frozen predictors. The sign-flip test is not a test of equal means, and inference does not
+generalise over items or libraries.
+
+**The sensitivity run.**
+- 13 scenarios, 4,000 replicates each, 10,000 flips; via agent-tmux on code `2c0f2ef`; 13 min.
+- It reproduces the v2 null (0.027) and the alternative (0.828).
+- Arm-by-item interactions leave the population-level rate at 0.025–0.032.
+- Arm-by-family (library) contrasts give 0.084 and 0.176. That is why the wording is conditional on the library.
+
+**The failure.** With an asymmetric mean-zero null (`asym_reversed`; MC mean −0.002 ± 0.004), the sign-flip test
+rejects at **0.0715** and RB-E2 at **0.078**. RB-E2 also fails `sym_fallback_heavy` (0.047).
+
+**The frozen consequence, now in force.**
+- The mean-advantage wording is withdrawn.
+- An H-E2 rejection is reported only as non-symmetry of the paired differences, favouring WM, conditional on these
+  items and this library.
+- RB-E2 is reported beside it.
+- No test or α was changed.
+
+**Power.** 0.828 is labelled model-based planning power.
+
+### 5. S-TE and the sparse guards
+
+**Sizing.** "0.8" is labelled analytic benchmark sizing at Holm's first level, before the guards. The exact inputs
+reproduce 3,463 and 1,784:
+- δ is the λ = 1 mean dev gain halved and rounded to 4 decimals (0.0214, 0.0353);
+- d is the exact Wilson upper discordance (0.167275, 0.234994).
+
+Board A's 3,457 came from also rounding d.
+
+**Guard level.** `guards_v2.guard_test` runs at α 0.025. `p3gen.guard_test` takes `alpha` explicitly.
+
+**Sparse rule.**
+- **When it applies:** fewer than 20 non-zero paired differences, or SE = 0.
+- **The bound:** the Clopper–Pearson upper limit of P(+1).
+- **Why:** before choosing the threshold, the bootstrap-t was measured at about 0.15 pass rate at the boundary with
+  about 4 discordant items in 200.
+- **Check:** the test shows boundary-null pass rates ≤ α plus Monte Carlo tolerance.
+
+### 6. Validity, repair and stopping
+
+**Cited evidence.**
+- P-H100: `inert_pass` true; 1-vs-2-GPU parity bitwise over 10,080 means.
+- Stage W: canary bitwise on repeat.
+
+**The bound contract.**
+- **Canaries:** the canary per engine path, with the first confirmatory instance as reference.
+- **Eligibility:** a unit needs a valid canary before and after it. Units before a failed canary are retained but
+  ineligible, and the first canary-valid rerun is used whatever its value.
+- **Repairs:** only the 7 technical causes, with an outcome-blind attestation.
+- **Retries:** 3 attempts per unit counted across relaunches, separate from 1 relaunch per phase.
+- **Stops:** an absolute combined 90 GPU-h-eq / $1,000 stop, checked by `harness.run_units` before every unit, plus
+  the 1.25× phase pause. The dead-man `max_usd` comes from the combined ledger.
+
+### 7. S-BoN
+
+**Pinned in code (`arms/sbon`):**
+- the screen count K (the largest K with K·c16 + ⌈K/4⌉·inc ≤ B_par);
+- ⌈K/4⌉ promotions;
+- ties to the earlier draw;
+- promotion reuses the 16 screened groups and scores the remaining 48;
+- the fractional residual and unused promotion slots are forfeited, never re-spent;
+- cache hits by key or θ-hash cost 0 and are not counted;
+- the seeded draw stream.
+
+**Fixtures.** At B 86.7218: K 174, P 44, 86.5013 spent, 0.2205 forfeited. `plan.BudgetLedger` now accepts a
+non-integer budget; it previously truncated to an integer, which would have silently cut B_par.
+
+**Holm-threshold power.** 0.006 at α 0.0025, 0.024 at 0.0125, 0.037 at 0.025.
+
+## Board A's optional suggestions
+
+- **Effective-registration view:** partly addressed by the manifest's `e2.config_effective` and §II.22's
+  supersession lines. A compact generated view is not written.
+- **H-E2 scores before and after clipping, and fallback counts by arm and family:** not added in this amendment.
+  Recommended for the reporting template.
+- **S-TE untruncated-in-both reading:** §II.6.4 already reports it as descriptive. The non-causal reading Board A
+  states is agreed.
+
+## Open items
+
+1. **Condition 1 stays open.** It closes after the W2 merge, with:
+   - the `wme-w2` hash and outcome and the H-T3 decision, by dated amendment;
+   - the joint allocation and its hash;
+   - both panel builds and their split hashes;
+   - the hash-only audits;
+   - power restated on any shortfall.
+2. **H-E2 now supports only a conditional non-symmetry statement.** The chair may wish to note this change of
+   scientific scope. It follows from the rule frozen before the run, and no method was changed after it.
+3. **The launch preconditions run on the confirmatory stack** before any outcome: inert identity, parity and canaries.
+
+## Hygiene
+
+- The secret scan was clean before each commit.
+- There are no IPs, hostnames or AI attribution lines beyond the required co-author trailer.
+- `data/` is untracked, and nothing was added with `git add -A`.
+- Every commit used `--no-verify` after a full CPU-suite run on the same tree via agent-tmux: 2,244 passed, and only
+  the three pinned tripwires failed (`test_f12d_prereqs` ×2, `test_f12e_qualify` ×1).
+- `tests/test_wme_prereg_v2.py`, which reads the manifest, was re-run after regeneration: 9 passed.
