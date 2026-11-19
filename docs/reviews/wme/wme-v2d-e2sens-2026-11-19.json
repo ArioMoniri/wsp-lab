@@ -1,0 +1,497 @@
+{
+ "label": "EXPLORATORY SYNTHETIC SIMULATION: H-E2 sign-flip sensitivity (Board A v2 required change 4)",
+ "design": {
+  "n_rep": 8,
+  "B": 48,
+  "n_dev": 64,
+  "n_test": 96
+ },
+ "rule": "Outcome-blind sensitivity of the H-E2 sign-flip test (PREREG_WME \u00a7II.22.4; Board A v2 required change 4).\nSynthetic, CPU only; the selected design (24 episodes, 8 per family; B 48; dev 64; test 96) and the v2 inputs.\n\n**What the registered test assumes.** ``signflip.e2_test`` flips the signs of the 24 episode paired differences\nindependently. It is exact for the **conditional null** that, given the realised sealed test items (and the declared\nlibrary and predictors), the vector of paired differences is jointly sign-symmetric (each episode's difference is\nsymmetric about 0 and independent across episodes given the items). It is not by itself a test of equal means.\n\n**Scenarios** (extending ``powersim_v2.sim_e2``):\n* ``v2_null`` / ``v2_alt``: the v2 model (shared item shock identical across winners; it cancels in differences).\n* ``item_ix_*``: arm-by-item interaction, a per-arm item effect u_a[i] ~ N(0, (iota * item_sd)^2) shared by all of an\n  arm's winners (population mean difference 0; conditional on the realised items it is a fixed shift).\n* ``fam_ix_*``: arm-by-family (library-specific) contrast v[a, f] ~ N(0, (tau * sd_cand)^2) (population mean 0).\n* ``asym_*`` / ``sym_fallback_heavy``: arm-specific fallback rates q_a (winner present with probability q_a) and\n  winner gains (m / q_a) * Exp(1), so both arms have the same expected score m exactly (guard breaches off in these\n  scenarios so that the population mean difference is exactly 0); the differences are skewed (asymmetric) and many\n  are ties at 0 (fallback-heavy).\n* ``alt_item_ix_025``: the v2 alternative with the 0.25 interaction.\n\n**Pre-declared calibration rule and consequences (frozen before any run; \u00a7II.22.4):**\n1. The interaction scenarios measure how often the conditional claim is supported when the population mean\n   difference is 0. Whatever they show, H-E2 is worded conditionally on the realised test items and the declared\n   library (no generalisation over the item population). No test changes.\n2. Mean-null calibration: if the sign-flip rejection rate is <= 0.035 in every ``asym_*`` and\n   ``sym_fallback_heavy`` scenario, H-E2 stands as registered.\n3. If any exceeds 0.035, a mean advantage requires both the sign-flip test and RB-E2\n   (``signflip.rb_e2_test``) to reject (intersection-union); if RB-E2 also exceeds 0.035 in any of those\n   scenarios, the mean-advantage wording is withdrawn and a sign-flip rejection is reported only as \"the paired\n   differences are not sign-symmetric about zero, favouring WM, conditional on these items\".\n4. The 0.828 power is model-based planning power under an imposed guidance effect, not a guarantee for learned\n   search; it is restated with the consequence in force (IU power under ``v2_alt``).\n",
+ "results": {
+  "v2_null": {
+   "scenario": "v2_null",
+   "spec": {
+    "delta_sd": 0.0,
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.02675,
+    "ci95": [
+     0.021972874572948574,
+     0.03223411465097255
+    ],
+    "power_lb": 0.022687199318165423
+   },
+   "rb": {
+    "rate": 0.029,
+    "ci95": [
+     0.02402113991723952,
+     0.0346816456321668
+    ],
+    "power_lb": 0.024767990997985895
+   },
+   "iu": {
+    "rate": 0.024,
+    "ci95": [
+     0.019482292159925016,
+     0.029230003930508366
+    ],
+    "power_lb": 0.020154807737472063
+   },
+   "mean_d": 0.0010208698976094093,
+   "mean_d_se": 0.001626488772078712,
+   "mean_zero_differences": 3.23325
+  },
+  "v2_alt": {
+   "scenario": "v2_alt",
+   "spec": {
+    "delta_sd": 0.5
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.82775,
+    "ci95": [
+     0.8156851378199037,
+     0.8393340465468552
+    ],
+    "power_lb": 0.817628171156749
+   },
+   "rb": {
+    "rate": 0.80425,
+    "ci95": [
+     0.7916085979503008,
+     0.8164453593131952
+    ],
+    "power_lb": 0.7936425338841625
+   },
+   "iu": {
+    "rate": 0.78875,
+    "ci95": [
+     0.7757664370904274,
+     0.8013103995974044
+    ],
+    "power_lb": 0.7778542089544401
+   },
+   "mean_d": 0.35130741421220263,
+   "mean_d_se": 0.0017764721979930229,
+   "mean_zero_differences": 1.432
+  },
+  "item_ix_010": {
+   "scenario": "item_ix_010",
+   "spec": {
+    "delta_sd": 0.0,
+    "iota": 0.1,
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.02575,
+    "ci95": [
+     0.021065472937871525,
+     0.031143422321998473
+    ],
+    "power_lb": 0.02176487170172548
+   },
+   "rb": {
+    "rate": 0.02875,
+    "ci95": [
+     0.023793126261059297,
+     0.03441012105862056
+    ],
+    "power_lb": 0.024536431848966655
+   },
+   "iu": {
+    "rate": 0.0235,
+    "ci95": [
+     0.01903114329101568,
+     0.028682141434362308
+    ],
+    "power_lb": 0.019695788051763814
+   },
+   "mean_d": 0.0003407552592384656,
+   "mean_d_se": 0.0016240084786587259,
+   "mean_zero_differences": 3.2085
+  },
+  "item_ix_025": {
+   "scenario": "item_ix_025",
+   "spec": {
+    "delta_sd": 0.0,
+    "iota": 0.25,
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.02475,
+    "ci95": [
+     0.020160025519648538,
+     0.030050802228783167
+    ],
+    "power_lb": 0.0208441859416812
+   },
+   "rb": {
+    "rate": 0.02475,
+    "ci95": [
+     0.020160025519648538,
+     0.030050802228783167
+    ],
+    "power_lb": 0.0208441859416812
+   },
+   "iu": {
+    "rate": 0.0215,
+    "ci95": [
+     0.017232315538518953,
+     0.0264850111572168
+    ],
+    "power_lb": 0.017864555783950364
+   },
+   "mean_d": 0.0018534448220934334,
+   "mean_d_se": 0.001626312359510316,
+   "mean_zero_differences": 3.26425
+  },
+  "item_ix_050": {
+   "scenario": "item_ix_050",
+   "spec": {
+    "delta_sd": 0.0,
+    "iota": 0.5,
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.0315,
+    "ci95": [
+     0.026306719577696886,
+     0.037391512049241966
+    ],
+    "power_lb": 0.027088154882247667
+   },
+   "rb": {
+    "rate": 0.0315,
+    "ci95": [
+     0.026306719577696886,
+     0.037391512049241966
+    ],
+    "power_lb": 0.027088154882247667
+   },
+   "iu": {
+    "rate": 0.0265,
+    "ci95": [
+     0.021745846919316362,
+     0.0319616164685322
+    ],
+    "power_lb": 0.02245646850364895
+   },
+   "mean_d": -0.0004455595447882953,
+   "mean_d_se": 0.001653903743799663,
+   "mean_zero_differences": 3.19525
+  },
+  "fam_ix_025": {
+   "scenario": "fam_ix_025",
+   "spec": {
+    "delta_sd": 0.0,
+    "tau": 0.25,
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.084,
+    "ci95": [
+     0.0755850353506478,
+     0.09302828079159782
+    ],
+    "power_lb": 0.07688751666612374
+   },
+   "rb": {
+    "rate": 0.09425,
+    "ci95": [
+     0.08536935098680662,
+     0.10372828978207878
+    ],
+    "power_lb": 0.08674737034314478
+   },
+   "iu": {
+    "rate": 0.077,
+    "ci95": [
+     0.06892466836111615,
+     0.08569943772550573
+    ],
+    "power_lb": 0.07017209585622797
+   },
+   "mean_d": -0.0039613917094338275,
+   "mean_d_se": 0.002484879210352433,
+   "mean_zero_differences": 3.2385
+  },
+  "fam_ix_050": {
+   "scenario": "fam_ix_050",
+   "spec": {
+    "delta_sd": 0.0,
+    "tau": 0.5,
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.176,
+    "ci95": [
+     0.1643133826011385,
+     0.18816187617983687
+    ],
+    "power_lb": 0.16614808030157505
+   },
+   "rb": {
+    "rate": 0.20725,
+    "ci95": [
+     0.19478109190321222,
+     0.2201479721341274
+    ],
+    "power_lb": 0.19674374054822866
+   },
+   "iu": {
+    "rate": 0.1695,
+    "ci95": [
+     0.15799245519158342,
+     0.18149243764107634
+    ],
+    "power_lb": 0.15979791224072692
+   },
+   "mean_d": 0.005855093940773846,
+   "mean_d_se": 0.004075305736013009,
+   "mean_zero_differences": 3.47075
+  },
+  "asym_moderate": {
+   "scenario": "asym_moderate",
+   "spec": {
+    "asym": [
+     0.3,
+     0.7
+    ],
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.00675,
+    "ci95": [
+     0.004452867008227281,
+     0.009805807463547632
+    ],
+    "power_lb": 0.004768671400613556
+   },
+   "rb": {
+    "rate": 0.01925,
+    "ci95": [
+     0.015220907601455537,
+     0.02400116651352653
+    ],
+    "power_lb": 0.015814733435462976
+   },
+   "iu": {
+    "rate": 0.00675,
+    "ci95": [
+     0.004452867008227281,
+     0.009805807463547632
+    ],
+    "power_lb": 0.004768671400613556
+   },
+   "mean_d": 0.0025238141150517755,
+   "mean_d_se": 0.0037873846294112774,
+   "mean_zero_differences": 5.00875
+  },
+  "asym_fallback_heavy": {
+   "scenario": "asym_fallback_heavy",
+   "spec": {
+    "asym": [
+     0.1,
+     0.5
+    ],
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.00175,
+    "ci95": [
+     0.000703871137584504,
+     0.0036023241133822264
+    ],
+    "power_lb": 0.0008216078224704955
+   },
+   "rb": {
+    "rate": 0.00675,
+    "ci95": [
+     0.004452867008227281,
+     0.009805807463547632
+    ],
+    "power_lb": 0.004768671400613556
+   },
+   "iu": {
+    "rate": 0.00175,
+    "ci95": [
+     0.000703871137584504,
+     0.0036023241133822264
+    ],
+    "power_lb": 0.0008216078224704955
+   },
+   "mean_d": -0.006554471832423017,
+   "mean_d_se": 0.0064174847871922664,
+   "mean_zero_differences": 10.835
+  },
+  "asym_extreme": {
+   "scenario": "asym_extreme",
+   "spec": {
+    "asym": [
+     0.05,
+     0.95
+    ],
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.0,
+    "ci95": [
+     0.0,
+     0.0009217947494830555
+    ],
+    "power_lb": 0.0
+   },
+   "rb": {
+    "rate": 0.003,
+    "ci95": [
+     0.0015510748538565561,
+     0.00523452628594769
+    ],
+    "power_lb": 0.001731936060587165
+   },
+   "iu": {
+    "rate": 0.0,
+    "ci95": [
+     0.0,
+     0.0009217947494830555
+    ],
+    "power_lb": 0.0
+   },
+   "mean_d": -0.0004570927328535621,
+   "mean_d_se": 0.008674103980430824,
+   "mean_zero_differences": 1.1505
+  },
+  "asym_reversed": {
+   "scenario": "asym_reversed",
+   "spec": {
+    "asym": [
+     0.7,
+     0.3
+    ],
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.0715,
+    "ci95": [
+     0.06370548472258353,
+     0.07992715976592049
+    ],
+    "power_lb": 0.0649074155575186
+   },
+   "rb": {
+    "rate": 0.07825,
+    "ci95": [
+     0.07011261792871934,
+     0.08700955549665024
+    ],
+    "power_lb": 0.0713701013655263
+   },
+   "iu": {
+    "rate": 0.06675,
+    "ci95": [
+     0.05920900099297435,
+     0.07493106938511865
+    ],
+    "power_lb": 0.06036987574637194
+   },
+   "mean_d": -0.0019901154816120946,
+   "mean_d_se": 0.003827261316086243,
+   "mean_zero_differences": 5.0335
+  },
+  "sym_fallback_heavy": {
+   "scenario": "sym_fallback_heavy",
+   "spec": {
+    "asym": [
+     0.15,
+     0.15
+    ],
+    "null": true
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.013,
+    "ci95": [
+     0.009723849294906514,
+     0.017013206275022928
+    ],
+    "power_lb": 0.010196594842364527
+   },
+   "rb": {
+    "rate": 0.04675,
+    "ci95": [
+     0.04041621861560615,
+     0.05375590770669045
+    ],
+    "power_lb": 0.04138181003477522
+   },
+   "iu": {
+    "rate": 0.013,
+    "ci95": [
+     0.009723849294906514,
+     0.017013206275022928
+    ],
+    "power_lb": 0.010196594842364527
+   },
+   "mean_d": 0.007543523013029451,
+   "mean_d_se": 0.006801805930780355,
+   "mean_zero_differences": 17.37325
+  },
+  "alt_item_ix_025": {
+   "scenario": "alt_item_ix_025",
+   "spec": {
+    "delta_sd": 0.5,
+    "iota": 0.25
+   },
+   "reps": 4000,
+   "sf": {
+    "rate": 0.82225,
+    "ci95": [
+     0.8100435275675937,
+     0.8339838057237418
+    ],
+    "power_lb": 0.812008908120114
+   },
+   "rb": {
+    "rate": 0.79175,
+    "ci95": [
+     0.7788304574679636,
+     0.8042419539014215
+    ],
+    "power_lb": 0.780908163533844
+   },
+   "iu": {
+    "rate": 0.7805,
+    "ci95": [
+     0.7673456125608138,
+     0.7932433871118061
+    ],
+    "power_lb": 0.7694602250591833
+   },
+   "mean_d": 0.3501746071538258,
+   "mean_d_se": 0.001810464244214262,
+   "mean_zero_differences": 1.461
+  }
+ },
+ "seconds": 796.0808205604553,
+ "decision": {
+  "sign_flip_failures": [
+   "asym_reversed"
+  ],
+  "rb_e2_failures": [
+   "asym_reversed",
+   "sym_fallback_heavy"
+  ],
+  "verdict": "sign-flip and RB-E2 both exceed 0.035 on a mean-null scenario: mean-advantage wording withdrawn; sign-flip rejection reported only as non-symmetry favouring WM, conditional on the items"
+ }
+}
