@@ -327,6 +327,13 @@ def audit_v1_single(base, edit, items, seed=20261117) -> dict:
     }
 
 
+def stop_ids(tok) -> set:
+    """EOS plus the end-of-turn token of the template (``<|im_end|>`` on Qwen, ``<end_of_turn>`` on Gemma 3)."""
+    from wsp.wm import chat as CH
+
+    return CH.stop_ids(tok)
+
+
 def _generate(
     model, tok, user_prompts, max_new_tokens: int, batch: int, device, sample=None
 ) -> list:
@@ -339,10 +346,7 @@ def _generate(
 
     texts = [P.chat_prompt(tok, u) for u in user_prompts]
     pad = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
-    stop = {tok.eos_token_id}
-    im_end = tok.convert_tokens_to_ids("<|im_end|>")
-    if isinstance(im_end, int) and im_end >= 0:
-        stop.add(im_end)
+    stop = stop_ids(tok)
     out = []
     for bi, s in enumerate(range(0, len(texts), batch)):
         enc = [tok.encode(t, add_special_tokens=False) for t in texts[s : s + batch]]
