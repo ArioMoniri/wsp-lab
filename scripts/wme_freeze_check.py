@@ -141,7 +141,7 @@ def main():
         last_verdict = m.group(1) if m else ""
     accept_ok = chain_ok and last_verdict.startswith("ACCEPT")
     conditions_recorded = "## II.28 " in text and all(
-        s in text
+        s in text.lower()
         for s in (
             "serialized, including across threads",
             "immutable-prefix storage is an operating assumption",

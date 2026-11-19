@@ -235,7 +235,9 @@
  },
  "caps": {
   "bank_gpu_h": 35.0,
+  "concurrency": "one active confirmatory GPU instance at a time (chair decision 1, \u00a7II.28.2); supersedes \u00a7II.13's at most 4 concurrent instances",
   "confirmatory_gpu_h": 90.0,
+  "dead_man_allowance": "the single instance's dead-man allowance equals the remaining combined budget (CombinedLedger.remaining_usd(); chair decision 2, \u00a7II.28.2)",
   "lambda_usd_9b": 1000.0,
   "source": "RULING-wme-v2b A9 (replaces RULING-wme-resources \u00a71)",
   "usd_overhead": 0.1,
@@ -1056,7 +1058,7 @@
   20261119,
   20261120
  ],
- "generated_from_commit": "a53fdbc5de127a2646171670251717667c52fe01",
+ "generated_from_commit": "ec829cf28a456006085dbc0fea59c83516266fce",
  "guards.bounds": "item-group bootstrap-t R = 9,999 on both scales (wm.arms.spec.guard_bounds_from_items)",
  "guards.generated": {
   "alpha": 0.025,
@@ -1128,7 +1130,17 @@
   "fallback_identity": "registered fallback payload and sha256 persisted at registration and with every fallback; a different fallback on resume raises FallbackMismatch",
   "instance_lifecycle": "units only on a registered active instance (InstanceNotOpen); duplicate opening idempotent, earliest opening kept; closed ids never reopened; authoritative records (provider / dead-man) override local times via reconcile_instance",
   "launch_attestation": "LaunchAttestation: inert identity bitwise, 1-vs-2-GPU parity bitwise, canary reference sha256, engine-config sha256, evidence; checked at construction",
-  "log_integrity": "a partial last line, invalid record, broken hash chain, log shorter than its head or a changed already-read record raises LogCorrupt on every operation; repair_torn_tail (partial last line only) quarantines the torn bytes, cuts back to the last verified record and appends log_repaired, ending the ownership; any other damage needs audited manual restoration",
+  "launch_preconditions": [
+   "pinned-engine inert identity: inert-edit identity and output checks, bitwise, on the actual pinned confirmatory engines and configuration, retained",
+   "real 1-vs-2-GPU parity, bitwise, on the actual pinned confirmatory engines and configuration, retained",
+   "committed per-engine canary references; start, periodic and closing canaries under the registered eligibility rules",
+   "evidence and fallback binding: real evidence paths and digests, the engine configuration and the registered fallbacks bound in the LaunchAttestation and study log before the first confirmatory unit",
+   "unique physical-instance identities: a bound mapping of physical instances, phases, attempts, contract generations and canary references to controller records; remote outputs admitted only through the current owner, with stale completion refused; a controller takeover stops or accounts for old outstanding work",
+   "deployed persistence and repair: one authoritative study log on the controller host's local storage; deployed restart and replacement persistence, partial-write handling and retention of every charged attempt demonstrated; verified fresh replay on every restart and recovery; outcome-blind technical repair records; fail closed on loss of controller, state integrity, ownership or accounting connectivity, retaining termination and accounting evidence; deployment restart, takeover and worker loss demonstrated with CPU fixtures before any confirmatory outcome",
+   "authoritative time and dead-man reconciliation: provider or dead-man instance times reconciled into the controller ledger; all previously spent bank and study time and every active instance in the combined charge (setup, downloads, idle, canaries, failures, retries and replacements included); worker sub-ledgers are evidence, never cap authorities; the single instance's dead-man allowance equals the remaining combined budget",
+   "ProductionGuard only: every confirmatory unit runs through harness.run_units with runguard.ProductionGuard; EngineeringGuard results never enter confirmatory evidence"
+  ],
+  "log_integrity": "a cached refresh verifies the last cached record, the appended tail and the head; it raises LogCorrupt on a partial last line, an invalid appended record, a broken sequence or hash chain in the tail, a log shorter than already read or than its head, or a changed last cached record. Earlier cached records are verified only by a fresh replay (a new guard or read_study), which verifies the whole chain. Scope (\u00a7II.28.1): immutable-prefix storage is an operating assumption; a verified fresh replay is required on every restart and recovery; the hash chain and head are not protection against a coordinated rollback of the log and its head. repair_torn_tail (partial last line only) quarantines the torn bytes, cuts back to the last verified record and appends log_repaired, ending the ownership; any other damage needs audited manual restoration",
   "lost_instances": "declare_lost: persisted technical, outcome-blind disposition; authoritative close at termination (charged); unbracketed attempts retained-ineligible; no fabricated canary; attempt counts kept",
   "module": "wsp.wm.runguard.ProductionGuard: the mandatory guard of harness.run_units (keyword-only; an explicit EngineeringGuard for non-confirmatory runs)",
   "owner_epoch": "constructing a ProductionGuard appends owner_epoch (next epoch); every operation of an object with an older epoch or contract generation raises StaleGuard before reading out or writing anything; succeeded/failed must match the owner's own in-flight attempt_start",
@@ -1176,7 +1188,13 @@
    "tests/test_wme_runguard.py::test_torn_or_truncated_log_fails_closed_until_reconciled"
   ],
   "result_identity": "attempt_ok records the payload sha256; resolve verifies the stored payload against it (ResultMismatch); begin refuses a unit with an eligible result or fallback (UnitResolved)",
-  "serialisation": "every public operation takes an exclusive fcntl.flock on study.jsonl.lock, re-reads and verifies the tail since its cached sequence, re-validates (owner epoch, contract generation, clock, lifecycle, cap, retries, in-flight attempt) and appends under the same lock",
+  "serialisation": "every public operation takes an exclusive fcntl.flock on study.jsonl.lock, re-reads and verifies the tail since its cached sequence, re-validates and appends under the same lock. Scope (\u00a7II.28.1): separate objects and separate processes are serialized by the OS lock; calls sharing one StudyLog object (one guard and its ledger and retry views) must themselves be serialized, including across threads (the object-wide re-entrancy depth is not a thread-aware lock); no shared-object concurrent entry",
+  "supported_execution": {
+   "board_a": "docs/reviews/council/board-a-prereg-wme-v2-freeze3-2026-11-19.md",
+   "chair_decision_1": "The 9B confirmatory run uses ONLY the supported serialized execution path: one controller host owning the single authoritative local study log, one serialized guard call stream (no shared-object threads), one active confirmatory GPU instance at a time; the \"up to 4 concurrent instances\" plan is withdrawn for this freeze. Any parallel adapter would require a dated amendment with atomic aggregate reservations and Board A check before use.",
+   "chair_decision_2": "Dead-man allowance for the single instance equals the remaining combined budget; no other confirmatory instance may run.",
+   "parallel_adapter": "not registered; requires a dated amendment with atomic aggregate reservations and a Board A check before use"
+  },
   "technical_causes": [
    "infrastructure",
    "out_of_memory",
@@ -1964,6 +1982,70 @@
    "basis": "0 passing cells in the v1 grid (wme-pipeline-2026-11-17 \u00a75) and in v2 (rows reused); within the caps but not powered, so not run (PREREG v1 \u00a78.5)",
    "status": "unresolved \u2014 not powered"
   },
+  "freeze": {
+   "board_a_chain": [
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-2026-11-17.md",
+     "sha256": "2bbfcb0fe9417832d51427e75b43c753cc2b5f85b6e86042a1900bfbde9d759a",
+     "stage": "v1",
+     "verdict": "ACCEPT WITH CONDITIONS (14 changes)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-2026-11-18.md",
+     "sha256": "4104d87d17dec564f603be30d63421f7b915b6b997efbb812b67be6e1e2d2f19",
+     "stage": "v2",
+     "verdict": "ACCEPT WITH CONDITIONS (changes 1-7)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-confirm-2026-11-19.md",
+     "sha256": "040e6be1e303534519501939a7606b71fd2a69779ab5f6f6b9e8119feeace234",
+     "stage": "confirmation",
+     "verdict": "ACCEPT WITH CONDITIONS (blockers A, B)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-final-2026-11-19.md",
+     "sha256": "9d42e363e818486959d0dea7c9ec178dfade6ff42500e6c0fc6cb85c21d501ff",
+     "stage": "final re-check",
+     "verdict": "ACCEPT WITH CONDITIONS; freeze blocked by B (A closed)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-freeze-2026-11-19.md",
+     "sha256": "153049ca42dd8baf2a3a7f16528b59ed5c299945063b82a839e6e3bfdc32f5cf",
+     "stage": "freeze re-check",
+     "verdict": "REJECT (B open)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-freeze2-2026-11-19.md",
+     "sha256": "7cfcc549b089d619a1274eacb5c3cf4963f0e77be6bdc77852dcfdec5bf3520f",
+     "stage": "freeze re-check 2",
+     "verdict": "REJECT (B open)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-freeze3-2026-11-19.md",
+     "sha256": "c035754641342f152a01f5c0760f21a3fcbd897449128fe4be01c593adbade16",
+     "stage": "freeze re-check 3",
+     "verdict": "ACCEPT WITH CONDITIONS (B closed for the serialized production path)"
+    }
+   ],
+   "chair_decisions": [
+    "The 9B confirmatory run uses ONLY the supported serialized execution path: one controller host owning the single authoritative local study log, one serialized guard call stream (no shared-object threads), one active confirmatory GPU instance at a time; the \"up to 4 concurrent instances\" plan is withdrawn for this freeze. Any parallel adapter would require a dated amendment with atomic aggregate reservations and Board A check before use.",
+    "Dead-man allowance for the single instance equals the remaining combined budget; no other confirmatory instance may run."
+   ],
+   "date": "2026-11-19",
+   "launch_preconditions_mandatory_before_first_confirmatory_unit": [
+    "pinned-engine inert identity: inert-edit identity and output checks, bitwise, on the actual pinned confirmatory engines and configuration, retained",
+    "real 1-vs-2-GPU parity, bitwise, on the actual pinned confirmatory engines and configuration, retained",
+    "committed per-engine canary references; start, periodic and closing canaries under the registered eligibility rules",
+    "evidence and fallback binding: real evidence paths and digests, the engine configuration and the registered fallbacks bound in the LaunchAttestation and study log before the first confirmatory unit",
+    "unique physical-instance identities: a bound mapping of physical instances, phases, attempts, contract generations and canary references to controller records; remote outputs admitted only through the current owner, with stale completion refused; a controller takeover stops or accounts for old outstanding work",
+    "deployed persistence and repair: one authoritative study log on the controller host's local storage; deployed restart and replacement persistence, partial-write handling and retention of every charged attempt demonstrated; verified fresh replay on every restart and recovery; outcome-blind technical repair records; fail closed on loss of controller, state integrity, ownership or accounting connectivity, retaining termination and accounting evidence; deployment restart, takeover and worker loss demonstrated with CPU fixtures before any confirmatory outcome",
+    "authoritative time and dead-man reconciliation: provider or dead-man instance times reconciled into the controller ledger; all previously spent bank and study time and every active instance in the combined charge (setup, downloads, idle, canaries, failures, retries and replacements included); worker sub-ledgers are evidence, never cap authorities; the single instance's dead-man allowance equals the remaining combined budget",
+    "ProductionGuard only: every confirmatory unit runs through harness.run_units with runguard.ProductionGuard; EngineeringGuard results never enter confirmatory evidence"
+   ],
+   "registered_total_gpu_h": 66.93108964323689,
+   "registered_total_usd_9b": 360.0223311909712,
+   "section": "PREREG_WME \u00a7II.28"
+  },
   "negative_result_a": "On Qwen3.5-9B, edit-specific trajectory prediction did not beat path-type averages: stage W2's nested world model (pooled same-path-type curve + edit-informed residual, shrunk toward 0) did not improve on the pooled curve (zero-shot mean d 0.003, Holm-adjusted lower bound -0.053; few-shot k = 2 d 0.000; nulls <= 0.011), and stage W's un-nested world model lost to the pooled curve in every setting. Reported as a negative result for (a) on this model under these designs; not evidence that no trajectory model could work; no further 9B spending on (a).",
   "pricing": {
    "convention": "GPU-h-eq on 1x H100 SXM5; $ = GPU-h x 4.89 x 1.10 (v2b)",
@@ -2208,9 +2290,10 @@
    "docs/reviews/council/board-a-prereg-wme-v2-final-2026-11-19.md": "9d42e363e818486959d0dea7c9ec178dfade6ff42500e6c0fc6cb85c21d501ff",
    "docs/reviews/council/board-a-prereg-wme-v2-freeze-2026-11-19.md": "153049ca42dd8baf2a3a7f16528b59ed5c299945063b82a839e6e3bfdc32f5cf",
    "docs/reviews/council/board-a-prereg-wme-v2-freeze2-2026-11-19.md": "7cfcc549b089d619a1274eacb5c3cf4963f0e77be6bdc77852dcfdec5bf3520f",
+   "docs/reviews/council/board-a-prereg-wme-v2-freeze3-2026-11-19.md": "c035754641342f152a01f5c0760f21a3fcbd897449128fe4be01c593adbade16",
    "docs/reviews/wme/wme-stagew2-2026-11-18.md": "afbe7de9a652038ef0a3ca30fed45d41bac98c7e955f7e0f3e96d959a6eb81c4"
   },
-  "status": "DRAFT v2 (18 Nov 2026); not frozen; registered claim set of RULING-wme-post-stagew Q3",
+  "status": "FROZEN 19 Nov 2026: PREREG_WME v2 (Part II through \u00a7II.28); registered claim set of RULING-wme-post-stagew Q3",
   "superseded_digests": {
    "docs/council/2026-11-18/RULING-wme-prereg-v2-issues.md": {
     "note": "the ruling before its 18 Nov addendum",
@@ -2371,7 +2454,7 @@
   },
   "pilot_pins": "wsp.wm.p2data.SOURCES and scripts/wme_build_panel.py PINS (unchanged from pilot 2)"
  },
- "status": "DRAFT for PREREG_WME v2 (v2b manifest + PREREG v2 overlays through v2e); panels built and audited; not frozen",
+ "status": "FROZEN 19 Nov 2026: PREREG_WME v2 manifest (v2b manifest + PREREG v2 overlays through \u00a7II.28); panels built and audited; Board A freeze re-check 3 ACCEPT WITH CONDITIONS, recorded in \u00a7II.28",
  "supplement": {
   "feasible": true,
   "pool": 326,

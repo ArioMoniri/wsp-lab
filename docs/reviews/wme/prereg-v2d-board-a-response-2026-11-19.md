@@ -340,3 +340,25 @@ log bytes, which answers Board A's oracle remarks on I2–I6.
 **Status.** Blocker A and fallback identity were closed by Board A. Blocker B's stale-object root cause is repaired in
 code and awaits Board A's check. The confirmatory-stack checks remain launch preconditions, now including the
 deployed ownership and fencing path and a host-local lock for the shared state.
+
+## Update freeze (19 Nov 2026): Board A freeze re-check 3 accepted with conditions; FROZEN
+
+> **Context.** Board A's freeze re-check 3 (`docs/reviews/council/board-a-prereg-wme-v2-freeze3-2026-11-19.md`) is
+> ACCEPT WITH CONDITIONS: B is closed for the serialized production path.
+> - Branch `prereg/wme-freeze`, from main `967d61d`.
+> - PREREG §II.28 records the conditions and freezes the registration.
+
+| Board A condition | Where recorded |
+|---|---|
+| 1. Calls sharing a `StudyLog` object must be serialized, including across threads | §II.28.1 item 1; manifest `harness.runguard.serialisation` |
+| 2. A cached refresh verifies the last cached record and the appended tail. Immutable-prefix storage is an operating assumption. A verified fresh replay is required on every restart and recovery. The hash chain is not protection against a coordinated rollback of log and head. | §II.28.1 item 2; manifest `harness.runguard.log_integrity` |
+| The launch restriction: serialized path only, no autonomous parallel launch | Chair decisions (1) and (2), verbatim, in §II.28.2; manifest `harness.runguard.supported_execution`, `caps.concurrency` and `caps.dead_man_allowance` |
+| Launch preconditions | §II.28.3 (8 items, mandatory before the first confirmatory unit); manifest `harness.runguard.launch_preconditions` |
+
+**Freeze.**
+- Freeze conditions (i)–(iv) are all met (`scripts/wme_freeze_check.py`; report sha256 `b9d9804f37800d5de5d67331c5cab44cb7cfa633c8408dfab5bcf86d1cb79fae`).
+- Freeze manifest sha256 `02514cb89f7229458e631232cf42930db36530cf26becf544485517d37ede41e`.
+- Freeze record: `docs/reviews/wme/prereg-wme-freeze-2026-11-19.md`.
+- Tag `prereg-wme-v2-frozen`, not pushed.
+
+**Status.** Frozen. No confirmatory outcome exists. Launch waits on the §II.28.3 preconditions.
