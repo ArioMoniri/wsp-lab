@@ -223,5 +223,9 @@ def test_real_stagew2_manifest_is_disjoint_from_every_earlier_exposure():
     root = Path(__file__).resolve().parents[1]
     w2 = X.load_exposures(root, {"wme-w2": X.EXPOSURES["wme-w2"]})
     assert len(w2["wme-w2"]["dev"]) == 1000
-    earlier = {k: v for k, v in X.EXPOSURES.items() if k != "wme-w2"}
+    # the confirmatory panels are built after W2 and exclude it by construction; W2 is checked against the
+    # exploratory exposures that existed before it
+    earlier = {
+        k: v for k, v in X.EXPOSURES.items() if k != "wme-w2" and k not in X.CONFIRMATORY_PANELS
+    }
     assert not X.all_exposed(w2) & X.all_exposed(X.load_exposures(root, earlier))

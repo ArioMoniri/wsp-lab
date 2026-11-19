@@ -97,18 +97,30 @@ def _canon(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"))
 
 
-def allocate(pool: dict, exposed: set, consumers=CONSUMERS, salt: str = ALLOC_SALT) -> dict:
-    """``pool`` {item hash: text}. Returns the allocation record (assignment {hash: consumer | "reserve"})."""
+def allocate(
+    pool: dict, exposed: set, consumers=CONSUMERS, salt: str = ALLOC_SALT, preassigned=None
+) -> dict:
+    """``pool`` {item hash: text}. Returns the allocation record (assignment {hash: consumer | "reserve"}).
+
+    ``preassigned`` {item hash: consumer}: groups already committed before the allocation (the bank roots'
+    construction shards, PREREG §II.23.3) go whole to that consumer, whatever their exposure, and are not dealt."""
     rep = joint_groups(pool)
     members: dict = {}
     for h, r in rep.items():
         members.setdefault(r, []).append(h)
-    bad = {r for r, hs in members.items() if set(hs) & exposed}
+    pre = {}
+    for h, c in sorted((preassigned or {}).items()):
+        if h in rep:
+            pre.setdefault(rep[h], c)
+    bad = {r for r, hs in members.items() if set(hs) & exposed and r not in pre}
     ok = sorted(
-        (r for r in members if r not in bad),
+        (r for r in members if r not in bad and r not in pre),
         key=lambda r: hashlib.sha256(f"{salt}:{min(members[r])}".encode()).hexdigest(),
     )
     assignment, out, i = {}, [], 0
+    for r, c in pre.items():
+        for h in members[r]:
+            assignment[h] = c
     for name, need, rule in consumers:
         n = min(need, len(ok) - i)
         if n < need and rule == "raise":
@@ -130,6 +142,9 @@ def allocate(pool: dict, exposed: set, consumers=CONSUMERS, salt: str = ALLOC_SA
         "pool_items": len(pool),
         "groups": len(members),
         "excluded_groups": len(bad),
+        "preassigned_groups": len(pre),
+        "preassigned_exposed_groups": sum(1 for r in pre if set(members[r]) & exposed),
+        "preassigned_items_missing_from_pool": sum(1 for h in (preassigned or {}) if h not in rep),
         "fresh_groups": len(ok),
         "reserve_groups": len(ok) - i,
         "consumers": out,
@@ -295,3 +310,165 @@ def audit(panels: dict, texts: dict, exposures: dict) -> dict:
     }
     rec["sha256"] = hashlib.sha256(_canon(rec).encode()).hexdigest()
     return rec
+
+
+# ------------------------------------------------------------------ wme-c1 with the bank roots' construction shards
+
+
+C1_ROOT_CONSUMER = "wme-c1:mmlupro_gold_lp:construction-roots"
+
+
+def build_c1_panel_v2e(
+    pools: dict,
+    sizes: dict,
+    out_dir,
+    exposures: dict,
+    allocation: dict,
+    reserved_construction: set,
+    salt: str = PC.SALT,
+    construction_min: dict | None = None,
+):
+    """``wme-c1`` under the v1 policy (``panel_c1.build_c1_panel_v1``'s grouping, exclusion, ownership, salted order
+    and split order) with two v2e rules (PREREG §II.23.3):
+
+    * the MMLU-Pro pool is restricted to the joint allocation's c1 shares (fresh + root construction);
+    * every group containing a hash in ``reserved_construction`` (the item groups the sampled bank roots already
+      used as contrast or LoRA shards) goes to ``construction`` whatever its rank, and is never dealt to an
+      evaluation split. Such a group is kept even if a later panel exposed it (counted, disclosed); evaluation splits
+      must have zero exposure intersection.
+
+    ``sizes[obj]`` gives fixed counts for sealed_gen, sealed_test, dev and bank; construction is ``"rest"`` (every
+    remaining fresh group) plus the reserved groups; ``construction_min[obj]`` (field + e2 shards) is checked."""
+    require_exposures(exposures)
+    out = Path(out_dir)
+    if out.exists():
+        raise FileExistsError(f"{out} exists; panels are frozen once built")
+    pools = dict(pools)
+    if "mmlupro_gold_lp" in pools:
+        verify_allocation(allocation)
+        a = allocation["assignment"]
+        pools["mmlupro_gold_lp"] = [
+            r
+            for r in pools["mmlupro_gold_lp"]
+            if a.get(r["hash"]) in (CONSUMERS[0][0], C1_ROOT_CONSUMER)
+        ]
+    order = [o for o in PC.P2.OBJECTIVES if o in pools] + sorted(
+        o for o in pools if o not in PC.P2.OBJECTIVES
+    )
+    texts, where = {}, {}
+    for obj in order:
+        for i, r in enumerate(pools[obj]):
+            k = f"{obj}\x00{i:07d}"
+            texts[k] = PC._text_v1(obj, r, X.group_text)
+            where[k] = (obj, r)
+    rep = ND.groups(texts)
+    exposed = X.all_exposed(exposures)
+    bad = {rep[k] for k in texts if where[k][1]["hash"] in exposed}
+    resv = {rep[k] for k in texts if where[k][1]["hash"] in reserved_construction}
+    owner, fresh, reserved, exclusion = {}, {}, {}, {}
+    for obj in order:
+        ks = sorted(k for k in texts if where[k][0] == obj)
+        by_f, by_r = {}, {}
+        for k in sorted(ks, key=lambda k: where[k][1]["hash"]):
+            g = rep[k]
+            if owner.setdefault(g, obj) != obj:
+                continue
+            row = dict(where[k][1], group=PC.text_hash(texts[g]))
+            if g in resv:
+                by_r.setdefault(g, row)
+            elif g not in bad:
+                by_f.setdefault(g, row)
+        exclusion[obj] = {
+            "pool_items": len(ks),
+            "excluded_groups": len({rep[k] for k in ks} & bad - resv),
+            "available_fresh_groups": len(by_f),
+            "reserved_construction_groups": len(by_r),
+            "reserved_groups_exposed_later": len(set(by_r) & bad),
+        }
+        fresh[obj] = sorted(by_f.values(), key=lambda r: PC._rank(r["group"], salt))
+        reserved[obj] = sorted(by_r.values(), key=lambda r: r["hash"])
+    splits = {s: {} for s in PC.SPLITS_V1}
+    for obj in order:
+        rows = fresh[obj]
+        fixed = sum(int(v) for s, v in sizes[obj].items() if v != "rest")
+        if len(rows) < fixed:
+            raise ValueError(
+                f"{obj}: {len(rows)} fresh groups for {fixed} requested (never relaxed)"
+            )
+        i = 0
+        for s in PC.SPLITS_V1:
+            n = len(rows) - i if sizes[obj][s] == "rest" else int(sizes[obj][s])
+            splits[s][obj] = rows[i : i + n]
+            i += n
+        splits["construction"][obj] = sorted(
+            splits["construction"][obj] + reserved[obj], key=lambda r: r["hash"]
+        )
+        for s in PC.SPLITS_V1:
+            splits[s][obj] = sorted(splits[s][obj], key=lambda r: r["hash"])
+        need = (construction_min or {}).get(obj, 0)
+        if len(splits["construction"][obj]) < need:
+            raise ValueError(
+                f"{obj}: construction {len(splits['construction'][obj])} < {need} required"
+            )
+    hashes = {s: {r["hash"] for o in order for r in splits[s][o]} for s in PC.SPLITS_V1}
+    groups = {s: {r["group"] for o in order for r in splits[s][o]} for s in PC.SPLITS_V1}
+    for a_, b_ in itertools.combinations(PC.SPLITS_V1, 2):
+        if hashes[a_] & hashes[b_] or groups[a_] & groups[b_]:
+            raise AssertionError(f"splits {a_} and {b_} intersect")
+    audit = X.intersection_audit({s: hashes[s] for s in PC.SPLITS_V1}, exposures)
+    resv_hashes = {r["hash"] for o in order for r in reserved[o]}
+    eval_clean = all(
+        v == 0
+        for e in audit.values()
+        for es in e.values()
+        for s, v in es.items()
+        if s != "construction"
+    )
+    constr_hits = {h for e in exposures.values() for hs in e.values() for h in hs} & hashes[
+        "construction"
+    ]
+    if not eval_clean or not constr_hits <= resv_hashes:
+        raise AssertionError(
+            "an evaluation split, or an unreserved construction item, hits an exposure"
+        )
+    for d in ("open", "sealed_test", "sealed_gen"):
+        (out / d).mkdir(parents=True, exist_ok=False) if d != "open" else (out / d).mkdir(
+            parents=True
+        )
+    files = {}
+    for s in PC.SPLITS_V1:
+        lines = [
+            json.dumps(dict(r, objective=o), sort_keys=True) for o in order for r in splits[s][o]
+        ]
+        data = ("\n".join(lines) + ("\n" if lines else "")).encode()
+        (out / PC._FILES_V1[s]).write_bytes(data)
+        files[PC._FILES_V1[s]] = hashlib.sha256(data).hexdigest()
+    manifest = {
+        "salt": salt,
+        "version": "wme-c1-v2e",
+        "sizes": sizes,
+        "policy": ND.POLICY,
+        "exclusion": exclusion,
+        "exposures": sorted(exposures),
+        "audit": audit,
+        "audit_clean_evaluation_splits": True,
+        "construction_exposure_hits_reserved_roots": len(constr_hits),
+        "mmlu_allocation_sha256": allocation["sha256"],
+        "reserved_construction_items": len(resv_hashes),
+        "split_hashes": files,
+        "objectives": {
+            o: {
+                s: {
+                    "n": len(splits[s][o]),
+                    "hashes": [r["hash"] for r in splits[s][o]],
+                    "groups": [r["group"] for r in splits[s][o]],
+                }
+                for s in PC.SPLITS_V1
+            }
+            for o in order
+        },
+        "sealed_hashes": sorted(hashes["sealed_test"] | hashes["sealed_gen"]),
+    }
+    manifest["content_hash"] = hashlib.sha256(_canon(files).encode()).hexdigest()
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=1, sort_keys=True))
+    return manifest, {o: {s: splits[s][o] for s in PC.SPLITS_V1} for o in order}

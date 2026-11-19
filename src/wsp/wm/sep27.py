@@ -69,6 +69,7 @@ REQUIRED_EXPOSURES = (
     "wme-p3h",
     "wme-w",  # RULING-wme-post-stagew Q4: the stage-W dev panel
     "wme-w2",  # RULING-wme-stagew2 §2: the stage-W2 dev panel
+    "wme-c2-gen",  # PREREG_WME §II.23.3: the S-TE panel (MMLU-Pro, SuperGPQA, generated guards)
 )
 CALIB_REPORT = "docs/reviews/wme/wme-27b-calib-2026-11-16.json"
 CALIB_TIMING_EDITS = (

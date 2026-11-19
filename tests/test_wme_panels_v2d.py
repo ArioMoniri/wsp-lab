@@ -155,3 +155,66 @@ def test_both_builders_consume_the_one_allocation(tmp_path):
     # a duplicated item across panels is caught by hash and by joint group
     panels["wme-c2-gen/mmlupro_gen"]["sealed_test"] = list(used2) + [next(iter(used1))]
     assert not V.audit(panels, texts, ALL_EXP)["clean"]
+
+
+def test_preassigned_groups_go_whole_to_their_consumer_even_if_exposed():
+    items = _mmlu(30)
+    pre = {items[0]["hash"]: "roots", items[3]["hash"]: "roots"}
+    exposed = {items[3]["hash"], items[7]["hash"]}
+    a = V.allocate(
+        _pool(items), exposed, (("c1", 4, "raise"), ("c2", 5, "reduce")), preassigned=pre
+    )
+    assert a["assignment"][items[0]["hash"]] == a["assignment"][items[-1]["hash"]] == "roots"
+    assert a["assignment"][items[3]["hash"]] == "roots"  # exposed later, still committed
+    assert items[7]["hash"] not in a["assignment"]
+    assert a["preassigned_groups"] == 2 and a["preassigned_exposed_groups"] == 1
+
+
+def test_c1_v2e_forces_root_shards_into_construction(tmp_path):
+    mm = _mmlu(60)
+    reserved = {mm[1]["hash"], mm[2]["hash"]}
+    exp = dict(
+        ALL_EXP, later={"dev": {mm[2]["hash"]}}
+    )  # one root-shard item exposed by a later panel
+    alloc = V.allocate(
+        _pool(mm),
+        X.all_exposed(exp),
+        (("wme-c1:mmlupro_gold_lp", 10, "raise"), ("wme-c2-gen:mmlupro_gen", 20, "reduce")),
+        preassigned={h: V.C1_ROOT_CONSUMER for h in reserved},
+    )
+    sizes = {
+        "mmlupro_gold_lp": {
+            "sealed_gen": 0,
+            "sealed_test": 4,
+            "dev": 3,
+            "bank": 2,
+            "construction": "rest",
+        }
+    }
+    man, _splits = V.build_c1_panel_v2e(
+        {"mmlupro_gold_lp": mm},
+        sizes,
+        tmp_path / "c1",
+        exp,
+        alloc,
+        reserved,
+        construction_min={"mmlupro_gold_lp": 1},
+    )
+    o = man["objectives"]["mmlupro_gold_lp"]
+    assert set(reserved) <= set(o["construction"]["hashes"])
+    for s in ("sealed_test", "dev", "bank"):
+        assert not set(reserved) & set(o[s]["hashes"])
+    assert o["sealed_test"]["n"] == 4 and o["dev"]["n"] == 3 and o["bank"]["n"] == 2
+    assert man["construction_exposure_hits_reserved_roots"] == 1
+    assert man["exclusion"]["mmlupro_gold_lp"]["reserved_groups_exposed_later"] == 1
+    # only the allocation's c1 shares are used
+    a = alloc["assignment"]
+    used = {h for s in o.values() for h in s["hashes"]}
+    assert all(a[h] in ("wme-c1:mmlupro_gold_lp", V.C1_ROOT_CONSUMER) for h in used)
+
+
+def test_registry_before_orders_the_confirmatory_panels():
+    reg = X.registry_before("wme-c1")
+    assert "wme-w2" in reg and "wme-c1" not in reg and "wme-c2-gen" not in reg
+    reg2 = X.registry_before("wme-c2-gen")
+    assert "wme-c1" in reg2 and "wme-c2-gen" not in reg2
