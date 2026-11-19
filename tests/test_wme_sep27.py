@@ -56,6 +56,11 @@ def _fake_root(tmp_path, with_c1=True):
         _write_manifest(
             tmp_path / "data/wme/panels/wme-c1/manifest.json", {"dev": ["c1d"]}, sealed=["c1t"]
         )
+        _write_manifest(
+            tmp_path / "data/wme/panels/wme-c2-gen/manifest.json",
+            {"calibration": ["c2c"]},
+            sealed=["c2t"],
+        )
     return tmp_path
 
 
@@ -93,6 +98,7 @@ def test_build_c27_panel_uses_fresh_salt_and_excludes_by_manifest_identity(tmp_p
         "wme-p3h": {"dev": set()},
         "wme-w": {"dev": set()},
         "wme-w2": {"dev": set()},
+        "wme-c2-gen": {"sealed_test": set()},
     }
     sizes = {"gsm8k_gold_lp": {"construction": 4, "validation": 4, "dev": 4, "test": 4}}
     man = S27.build_c27_panel(pool, sizes, tmp_path / "c27", exposures)

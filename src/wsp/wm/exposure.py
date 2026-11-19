@@ -115,7 +115,27 @@ EXPOSURES = {
         "splits": "all",
         "note": "stage W2 (EXPLORATORY): 500 MMLU-Pro and 500 SuperGPQA dev items scored for every W2 member",
     },
+    # PREREG_WME §II.23.3: the confirmatory panels, built in this order; each is an exposure of every later panel
+    "wme-c1": {
+        "manifest": "data/wme/panels/wme-c1/manifest.json",
+        "splits": "all",
+        "note": "9B confirmatory panel (sealed_gen, sealed_test, dev, bank, construction incl. bank-root shards)",
+    },
+    "wme-c2-gen": {
+        "manifest": "data/wme/panels/wme-c2-gen/manifest.json",
+        "splits": "all",
+        "note": "S-TE panel (MMLU-Pro, SuperGPQA sealed tests; generated-guard calibration and sealed tests)",
+    },
 }
+CONFIRMATORY_PANELS = ("wme-c1", "wme-c2-gen")
+
+
+def registry_before(panel: str, registry=None) -> dict:
+    """The registry a confirmatory panel's build excludes: every entry except itself and later confirmatory panels."""
+    reg = EXPOSURES if registry is None else registry
+    later = CONFIRMATORY_PANELS[CONFIRMATORY_PANELS.index(panel) :]
+    return {k: v for k, v in reg.items() if k not in later}
+
 
 # Proposed sizes (groups) for PREREG v1; the power simulation (wm.powersim) may change them before the freeze.
 DEFAULT_SIZES = {

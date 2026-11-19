@@ -122,3 +122,13 @@ TE_SIZING = {
     "mmlupro_gen": {"delta": 0.0214, "discordant": 33, "n_probe": 256, "n": 3463},
     "supergpqa_gen": {"delta": 0.0353, "discordant": 49, "n_probe": 256, "n": 1784},
 }
+
+
+def te_power(n: int, delta: float, discordant: int, n_probe: int, alpha: float = 0.0125) -> float:
+    """Analytic power of one S-TE benchmark's paired test at N (the inverse of :func:`te_n`, same inputs): used to
+    restate power when a pool shortfall freezes a smaller N (RULING-wme-prereg-v2-issues item 5)."""
+    from statistics import NormalDist
+
+    nd = NormalDist()
+    d = wilson_upper(discordant, n_probe)
+    return nd.cdf(math.sqrt(n * delta * delta / (d - delta * delta)) - nd.inv_cdf(1 - alpha))

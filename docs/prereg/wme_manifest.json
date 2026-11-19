@@ -14,6 +14,21 @@
   "supplement": "8de4ac52e65496be25b0733bfdee92bab089bf41ab80706e1ed9c6dc418d9284",
   "v1_policy": "79d171b77e5213aa4fe8b957b90d9874b3812d4acf6e7820be53a2f8470790ad"
  },
+ "audit.panels_v2e": {
+  "clean": true,
+  "cross_panel_overlaps": 0,
+  "cross_panel_pairs": 1035,
+  "exposure_hits_outside_root_construction": 0,
+  "report": "docs/reviews/wme/wme-v2e-panel-audit-2026-11-19.json",
+  "root_shards": {
+   "all_such_items_are_root_shards": true,
+   "construction_items_also_in_later_exposures": 422,
+   "groups": 1728,
+   "items": 1761,
+   "roots_file_sha256": "a4ceb25ebe69aa8df6cf5d85f9e32099e0955c8715832a823cb24019a4447ff3"
+  },
+  "sha256": "a251d79880d964a94c390d5e6604f53631d44938ef2b8f20426f30aab50f5311"
+ },
  "bank.blocks": {
   "blocks": [
    [
@@ -105,6 +120,20 @@
   "single:scale:013",
   "single:steer:095"
  ],
+ "bank.closure_allocation": {
+  "calibration_components_digest": "df28bed6633a49ad8c4a1cf944dad0d0cfaea26fbaafe65e7bc75fae827c39df",
+  "component_graph_hash": "c8d50fe23b6f9b2dd929edfcc939d9bb744dc0d4d5866c10c2cfa1938ad972b9",
+  "folds": {
+   "inner_seed": 1051842779,
+   "outer_seed": 3314379134
+  },
+  "root_shards_in_c1_construction": {
+   "groups": 1728,
+   "items": 1761
+  },
+  "roots_file_sha256": "a4ceb25ebe69aa8df6cf5d85f9e32099e0955c8715832a823cb24019a4447ff3",
+  "roots_identity_digest": "a58c0f6eacd5bdf13bc1670cda1d0c68046a9e0b0376c6e31bb5e19f18965a2b"
+ },
  "bank.component_graph_hash": "c8d50fe23b6f9b2dd929edfcc939d9bb744dc0d4d5866c10c2cfa1938ad972b9",
  "bank.contrast_catalogue": {
   "excluded_sources": [
@@ -802,24 +831,55 @@
      "reduce"
     ]
    ],
+   "file_sha256": "c323eb13aeeff16ce6da136a0cb382a14190bf9b285339eced4a543a22a581d9",
    "fill": "written at the build, before either builder runs",
    "module": "wsp.wm.panels_v2d.allocate",
    "salt": "wme-mmlupro-v2c",
-   "sha256": null
+   "sha256": "0051481c433f8a32baaefdaa160d179183311b063c513c4f791bac7a5868b9a9",
+   "summary": {
+    "consumers": [
+     {
+      "assigned_groups": 235,
+      "consumer": "wme-c1:mmlupro_gold_lp",
+      "frozen_n": 235,
+      "required": 235,
+      "restate_power": false,
+      "shortfall": false
+     },
+     {
+      "assigned_groups": 3463,
+      "consumer": "wme-c2-gen:mmlupro_gen",
+      "frozen_n": 3463,
+      "required": 3463,
+      "restate_power": false,
+      "shortfall": false
+     }
+    ],
+    "excluded_groups": 4272,
+    "fresh_groups": 6702,
+    "groups": 11804,
+    "pool_items": 12102,
+    "preassigned_exposed_groups": 293,
+    "preassigned_groups": 830,
+    "reserve_groups": 3004
+   }
   },
-  "order": "W2 merges (wme-w2 in EXPOSURES) -> wme-c1 -> wme-c2-gen -> H-T3 panel (if any) -> wme-c27",
+  "order": "wme-w2 (merged) -> wme-c1 (built) -> wme-c2-gen (built) -> wme-c27 (later registration)",
   "pending_before_any_build": [
    "the stage-W2 panel (RULING-wme-post-stagew Q4), added to wm.exposure.EXPOSURES before its data",
    "P-H100, P-H100b and stage-W timing items are already inside wme-p2 / wme-p3h (no new item)"
   ],
   "registered": [
    "calib27-20261116",
+   "wme-c1",
+   "wme-c2-gen",
    "wme-p2",
    "wme-p2-smoke",
    "wme-p3h",
    "wme-p3s",
    "wme-v0-p1",
-   "wme-w"
+   "wme-w",
+   "wme-w2"
   ],
   "required_before_any_build": [
    "wme-v0-p1",
@@ -832,11 +892,30 @@
    "wme-w2"
   ],
   "wme-w2": {
-   "fill": "after feat/wme-stagew2 merges, by dated amendment, before any confirmatory panel is built",
-   "ht3_decision": null,
-   "manifest_sha256": null,
-   "outcome": null,
-   "status": "pending: registered as wme-w2 on feat/wme-stagew2 (track W2 running); not merged"
+   "content_hash": "6d533f941a4480f0bd202bb92fe187426abeb2a9931a1aa0d962e412f5485cce",
+   "ht3_decision": "not registered (W2 fail; RULING-wme-post-stagew Q4)",
+   "manifest_sha256": "b983bc200a675eec75dfb7d6c35158fcec5e8ee1491f752e505795171624e586",
+   "outcome": {
+    "complete_paths": 45,
+    "few_shot_k2": {
+     "d_mean": 0.0,
+     "holm_lb": 0.0,
+     "p": 1.0
+    },
+    "null_sizes": {
+     "n1": 0.007,
+     "n2": 0.01,
+     "n3": 0.011
+    },
+    "report_json_sha256": "8443bd8a1df6c332b7b71b0b120d91d025e8fc7f296f36aabb167a6abcbaf302",
+    "verdict": "FAIL",
+    "zero_shot": {
+     "d_mean": 0.003276070843811764,
+     "holm_lb": -0.053315067383782624,
+     "p": 0.450164794921875
+    }
+   },
+   "status": "merged (main 718c48f); registered in wm.exposure.EXPOSURES"
   }
  },
  "gen.config": {
@@ -931,7 +1010,7 @@
   20261119,
   20261120
  ],
- "generated_from_commit": "594422990bf67a2c8a5a801006a0c7e720e7881f",
+ "generated_from_commit": "d3d83ad6edbd720a5ac5be61bd7de918dfef2bbc",
  "guards.bounds": "item-group bootstrap-t R = 9,999 on both scales (wm.arms.spec.guard_bounds_from_items)",
  "guards.generated": {
   "alpha": 0.025,
@@ -1386,13 +1465,95 @@
   }
  },
  "panel.wme_c1.split_hashes": {
-  "binds_at": "freeze build with build_c1_panel_v1 at the sizes below",
-  "status": "deferred"
+  "builder": "wsp.wm.panels_v2d.build_c1_panel_v2e (scripts/wme_v2e_build_panels.py)",
+  "built_n": {
+   "gsm8k_gold_lp": {
+    "bank": 48,
+    "construction": 5937,
+    "dev": 64,
+    "sealed_gen": 0,
+    "sealed_test": 96
+   },
+   "mathcomp_gold_lp": {
+    "bank": 0,
+    "construction": 3798,
+    "dev": 64,
+    "sealed_gen": 0,
+    "sealed_test": 96
+   },
+   "mmlupro_gold_lp": {
+    "bank": 48,
+    "construction": 850,
+    "dev": 64,
+    "sealed_gen": 0,
+    "sealed_test": 96
+   },
+   "refusal_margin_harmful": {
+    "bank": 48,
+    "construction": 115,
+    "dev": 64,
+    "sealed_gen": 0,
+    "sealed_test": 96
+   },
+   "refusal_margin_harmless": {
+    "bank": 48,
+    "construction": 5328,
+    "dev": 64,
+    "sealed_gen": 0,
+    "sealed_test": 96
+   },
+   "sycophancy_real": {
+    "bank": 48,
+    "construction": 258,
+    "dev": 64,
+    "sealed_gen": 0,
+    "sealed_test": 96
+   },
+   "triviaqa_gen": {
+    "bank": 0,
+    "construction": 0,
+    "dev": 0,
+    "sealed_gen": 1000,
+    "sealed_test": 0
+   },
+   "wikitext_nll": {
+    "bank": 48,
+    "construction": 95,
+    "dev": 64,
+    "sealed_gen": 0,
+    "sealed_test": 96
+   }
+  },
+  "content_hash": "89739c7818e29d618ac3bcb52d7e51cd29a9361e7774a71b412646775c630c1d",
+  "files": {
+   "open/bank.jsonl": "91f299be1eaa2dd0e618c77a84a0953614c9aace4d04ad8bf4229fb73fc0abe2",
+   "open/construction.jsonl": "736c2582142567ad3217e7bdfabd6e8872eeb1820128a8faf36abf499e209c2b",
+   "open/dev.jsonl": "02d425252925cb8d8730084d7365bc5835dd7fe710c9b6761ebc9508a5dccf63",
+   "sealed_gen/gen.jsonl": "d795fc65672c92cd183089fb6df198abfedda3a24071109244e84f410e9f42f2",
+   "sealed_test/test.jsonl": "c90852dcbd2611514221623f3910a041623e217098ea5bb52dac5a5f41ffa3fe"
+  },
+  "manifest_sha256": "9dd5c9b6bbc9fade22a9adabdeb3d2626ffeea0a35f21dd62ffb986585d9c208"
  },
  "panel.wme_c2_gen": {
   "availability_rule": "audited at the build after every registered exposure (incl. wme-c1 and the stage-W2 panel); a shortfall follows SYNTHESIS-r11 R1 (N drops to the largest fresh pool, power reported as is), declared by dated amendment before any wme-c2-gen read",
   "build_order": "after wme-c1 (wme-c1 manifest, sealed hash lists included, is an exposure of wme-c2-gen)",
-  "builder": "wsp.wm.p3panel.select / audit (one item per near-duplicate group; word-5-gram MinHash, Jaccard >= 0.7); sealed split written only under sealed_test/",
+  "builder": "wsp.wm.panels_v2d.build_c2gen_panel (families joint, union policy)",
+  "built_n": {
+   "guard_harmful": {
+    "calibration": 128,
+    "sealed_test": 200
+   },
+   "guard_harmless": {
+    "calibration": 128,
+    "sealed_test": 523
+   },
+   "mmlupro_gen": {
+    "sealed_test": 3398
+   },
+   "supergpqa_gen": {
+    "sealed_test": 1784
+   }
+  },
   "fresh_groups_left_after_wme_w": {
    "mmlupro_gen": 7794,
    "supergpqa_gen": 23556
@@ -1402,6 +1563,32 @@
    "sha256": "b1afb00cb7159a0cc2621a97a7402468ca23b8d43d5b5e56004c149c4ee03ed5"
   },
   "salt": "wme-c2-gen-panel-v2",
+  "shortfall": {
+   "guard_harmful": {
+    "frozen_n": 200,
+    "required": 200,
+    "restate_power": false,
+    "shortfall": false
+   },
+   "guard_harmless": {
+    "frozen_n": 523,
+    "required": 523,
+    "restate_power": false,
+    "shortfall": false
+   },
+   "mmlupro_gen": {
+    "frozen_n": 3398,
+    "required": 3463,
+    "restate_power": true,
+    "shortfall": true
+   },
+   "supergpqa_gen": {
+    "frozen_n": 1784,
+    "required": 1784,
+    "restate_power": false,
+    "shortfall": false
+   }
+  },
   "sizes": {
    "guard_harmful": {
     "calibration": 128,
@@ -1456,6 +1643,14 @@
     "rows": 26529,
     "sha256": "28b998e70205ee95e540317b5adc06a06552a3961fb50b153df126b833f7a910"
    }
+  },
+  "split_hashes": {
+   "content_hash": "a24d5f0ef7de185136cb31464336d6c0537c631fa21b25b184619fb04497c43b",
+   "files": {
+    "open/calibration.jsonl": "700e452c137302e824a6668ae73bdd41317894eea16b57f52287e9d613f46749",
+    "sealed_test/sealed_test.jsonl": "3fa38044f8c1bf342ec850c4bb679217da804aa2d9df8c5e57db40f44f574005"
+   },
+   "manifest_sha256": "4cdb7728c237acb9d9b44bd68f94ec47940383be3348adb231205fd65bab790e"
   }
  },
  "planner.algorithm": "cem",
@@ -1481,7 +1676,7 @@
     "type": "descriptive (old H-T, WM-CP vs the static family, on the bank)"
    },
    "D-HT2": {
-    "type": "descriptive (stage W, stage W2)"
+    "type": "descriptive (stage W, stage W2); (a) reported as a negative result"
    },
    "D-S": {
     "type": "descriptive (stage-S slope result, P1)"
@@ -1524,12 +1719,14 @@
      "scenario": "alt",
      "seconds": 1.2004778385162354
     },
+    "scope_ruling": "docs/council/2026-11-19/RULING-wme-e2-scope.md",
+    "supported_wording": "the WM-guided minus StatNN-guided paired differences are not sign-symmetric about zero, in the direction favouring WM, conditional on these test items and this edit library",
     "type": "registered primary (own family, family-stratified sign-flip, one-sided 0.025)"
    },
    "H-T3": {
-    "planning_gpu_h": 9.495642630014153,
-    "planning_usd": 51.07706170684613,
-    "type": "reserved; added only by dated amendment after a stage-W2 pass and before its paths exist"
+    "planning_gpu_h": null,
+    "planning_usd": null,
+    "type": "not registered (stage W2 failed its pre-declared rule; RULING-wme-post-stagew Q4)"
    },
    "S-BoN": {
     "holm_threshold_power": {
@@ -1629,8 +1826,17 @@
    },
    "S-TE": {
     "n": {
-     "mmlupro_gen": 3463,
+     "mmlupro_gen": 3398,
      "supergpqa_gen": 1784
+    },
+    "power_restated": {
+     "mmlupro_gen": {
+      "analytic_power_holm_first_0.0125": 0.7918495773626746,
+      "analytic_power_holm_second_0.025": 0.8630870503241989,
+      "frozen_n": 3398,
+      "registered_n": 3463,
+      "rule": "RULING-wme-prereg-v2-issues item 5 / SYNTHESIS-r11 R1: N drops to the largest fresh count; power restated before any outcome (prereg_v2.te_power)"
+     }
     },
     "sizing": "SYNTHESIS-r11 R1 / round11-methods: 0.5x de-biased mean dev gain (0.0214, 0.0353), Wilson-upper discordance (0.167, 0.235), alpha 0.0125, power 0.8",
     "sizing_exact": {
@@ -1657,6 +1863,7 @@
    "basis": "0 passing cells in the v1 grid (wme-pipeline-2026-11-17 \u00a75) and in v2 (rows reused); within the caps but not powered, so not run (PREREG v1 \u00a78.5)",
    "status": "unresolved \u2014 not powered"
   },
+  "negative_result_a": "On Qwen3.5-9B, edit-specific trajectory prediction did not beat path-type averages: stage W2's nested world model (pooled same-path-type curve + edit-informed residual, shrunk toward 0) did not improve on the pooled curve (zero-shot mean d 0.003, Holm-adjusted lower bound -0.053; few-shot k = 2 d 0.000; nulls <= 0.011), and stage W's un-nested world model lost to the pooled curve in every setting. Reported as a negative result for (a) on this model under these designs; not evidence that no trajectory model could work; no further 9B spending on (a).",
   "pricing": {
    "convention": "GPU-h-eq on 1x H100 SXM5; $ = GPU-h x 4.89 x 1.10 (v2b)",
    "p1_consistent_with_ht3": {
@@ -1669,6 +1876,7 @@
      "S-TE": 1.844836772316389,
      "v2b_design without per-state oracle gradients (P1)": 56.65700763363413
     },
+    "status": "withdrawn: H-T3 not registered (W2 fail)",
     "total_gpu_h": 76.42673227325103,
     "usd_9b": 411.0993928978173,
     "within": true
@@ -1755,10 +1963,22 @@
       "S-TE": 1.844836772316389,
       "design H-E1 + H-E2 (bank without P1-removed oracle gradients + confirmatory)": 56.65700763363413
      },
+     "status": "withdrawn: H-T3 not registered (W2 fail)",
      "total_gpu_h": 76.42673227325103,
      "usd_9b": 411.0993928978173,
      "within": true
     }
+   },
+   "v2e": {
+    "ht3": "not registered; removed from every total",
+    "parts_gpu_h": {
+     "S-BoN arm at the P1 parity budget": 8.429245237286363,
+     "S-TE": 1.844836772316389,
+     "design H-E1 + H-E2 (bank without P1-removed oracle gradients + confirmatory)": 56.65700763363413
+    },
+    "registered_total_gpu_h": 66.93108964323689,
+    "registered_total_usd_9b": 360.0223311909712,
+    "remaining_under_cap_gpu_h": 23.068910356763112
    },
    "with_ht3_at_v2b_price": {
     "cap_total_gpu_h": 90.0,
@@ -1769,6 +1989,7 @@
      "S-TE": 1.844836772316389,
      "v2b_design (H-E1 + H-E2, bank + confirmatory)": 65.7429214968162
     },
+    "status": "withdrawn: H-T3 not registered (W2 fail)",
     "total_gpu_h": 94.59855999961516,
     "usd_9b": 508.84565423793,
     "within": false
@@ -1878,8 +2099,11 @@
    "docs/council/2026-11-18/RULING-wme-post-stagew.md": "7cea015564c9760d4c5cd4d1cfec0295d9f0b2ce7827e0f508f7b318bcbe041b",
    "docs/council/2026-11-18/RULING-wme-prereg-v2-issues.md": "7118a1d397265d1076f45ec9bfe29f2a490bf7aed5c903b1c064d39f07e4a334",
    "docs/council/2026-11-18/RULING-wme-stagew.md": "7f29a71608e6e413c7e85a86ac4b626be91061592cc4eb602f5ef915c775da05",
+   "docs/council/2026-11-18/RULING-wme-stagew2.md": "a420739e7ba978146aa890cde1de9d51d8854f5a1823e33311c31b92049bd05b",
+   "docs/council/2026-11-19/RULING-wme-e2-scope.md": "196547ff5efb438a441cad5f83bf7435c0350230a7c244e3c1409d95ad7bc0c4",
    "docs/reviews/council/board-a-prereg-wme-2026-11-17.md": "2bbfcb0fe9417832d51427e75b43c753cc2b5f85b6e86042a1900bfbde9d759a",
-   "docs/reviews/council/board-a-prereg-wme-v2-2026-11-18.md": "4104d87d17dec564f603be30d63421f7b915b6b997efbb812b67be6e1e2d2f19"
+   "docs/reviews/council/board-a-prereg-wme-v2-2026-11-18.md": "4104d87d17dec564f603be30d63421f7b915b6b997efbb812b67be6e1e2d2f19",
+   "docs/reviews/wme/wme-stagew2-2026-11-18.md": "afbe7de9a652038ef0a3ca30fed45d41bac98c7e955f7e0f3e96d959a6eb81c4"
   },
   "status": "DRAFT v2 (18 Nov 2026); not frozen; registered claim set of RULING-wme-post-stagew Q3",
   "superseded_digests": {
@@ -1901,6 +2125,9 @@
   "v2d": {
    "board_a": "docs/reviews/council/board-a-prereg-wme-v2-2026-11-18.md",
    "status": "changes 1, 2, 4, 5, 6, 7 closed in text and code; change 3 code closed, build and audit pending the W2 merge"
+  },
+  "v2e": {
+   "status": "Board A v2 change 3 closed: W2 bound; H-T3 not registered; panels built; audits clean"
   }
  },
  "seeds.bootstrap.e1": 1230116763,
@@ -2027,7 +2254,7 @@
   },
   "pilot_pins": "wsp.wm.p2data.SOURCES and scripts/wme_build_panel.py PINS (unchanged from pilot 2)"
  },
- "status": "DRAFT for PREREG_WME v2 (v2b manifest + PREREG v2 overlay + RULING-wme-prereg-v2-issues + Board A v2 changes 1-7); not frozen; W2 slots pending",
+ "status": "DRAFT for PREREG_WME v2 (v2b manifest + PREREG v2 overlays through v2e); panels built and audited; not frozen",
  "supplement": {
   "feasible": true,
   "pool": 326,

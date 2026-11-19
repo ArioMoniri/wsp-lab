@@ -13,7 +13,7 @@
 |---|---|---|---|
 | 1 | Incorporate the ruling addendum (R6 descriptive only; no C2 gate) | **Closed** | §II.22.1. `prereg_v2.r6_resimulation.consequence` now carries the addendum, with the old text kept under `consequence_superseded`. The issues-ruling digest is re-hashed: `fb74dc82…` → `7118a1d3…`. The v2c generator is updated (`2c0f2ef`). |
 | 2 | One executable E2 configuration | **Closed** | §II.22.2, `wsp.wm.e2run`, `e2.config_effective`, `slope_transport` false in `model.wm.config` and S2/S3. CPU integration test `tests/test_wme_e2run.py` (5 tests). |
-| 3 | Exposure, joint MMLU allocation, build order, audits | **Partially pending W2** | Code and rules are closed: §II.22.3 and `wsp.wm.panels_v2d` (`require_exposures` with `wme-w2`, `allocate` over the union of both duplicate policies, `build_c1_panel_v2d`, `build_c2gen_panel`, `audit`, the shortfall rule), with `tests/test_wme_panels_v2d.py` (5 tests). **Pending after `feat/wme-stagew2` merges:** the `wme-w2` manifest hash, the W2 outcome and H-T3 decision, the real allocation, the builds and the audits. |
+| 3 | Exposure, joint MMLU allocation, build order, audits | **Closed (v2e, 19 Nov)** | W2 merged and bound (`wme-w2` sha256 `b983bc20…`; FAIL, so H-T3 is not registered). The real joint allocation was run (sha256 `0051481c…`), `wme-c1` and `wme-c2-gen` were built, and the hash-only audits are clean (`docs/reviews/wme/wme-v2e-panel-audit-2026-11-19.json`). The S-TE MMLU-Pro shortfall was frozen at 3,398 and its power restated (0.792). Split hashes and the closure allocation are in the manifest. PREREG §II.23; see the "Update v2e" section below. |
 | 4 | State the E2 null; sensitivity; freeze the failed-calibration consequence | **Closed; the consequence fired** | §II.22.4 and `docs/reviews/wme/wme-v2d-e2sens-2026-11-19.json`. With an asymmetric mean-zero null, sign-flip is 0.0715 and RB-E2 0.078, so the **H-E2 mean-advantage wording is withdrawn**. |
 | 5 | S-TE sizing label; guard α 0.025 in code; sparse rule | **Closed** | §II.22.5, `wsp.wm.guards_v2`, `prereg_v2.te_n` (reproduces 3,463 and 1,784 exactly), `tests/test_wme_guards_v2.py` (7 tests). |
 | 6 | Validity, repair and stopping contract | **Closed in code and text** | §II.22.6, `wsp.wm.runguard`, `harness.run_units(guard=)`, `tests/test_wme_runguard.py` (6 tests). P-H100 inert and parity evidence is cited. The checks re-run at launch. |
@@ -167,7 +167,7 @@ non-integer budget; it previously truncated to an integer, which would have sile
 
 ## Open items
 
-1. **Condition 1 stays open.** It closes after the W2 merge, with:
+1. **Closed by v2e (19 Nov 2026; see below).** Originally: condition 1 stays open until the W2 merge, with:
    - the `wme-w2` hash and outcome and the H-T3 decision, by dated amendment;
    - the joint allocation and its hash;
    - both panel builds and their split hashes;
@@ -185,3 +185,45 @@ non-integer budget; it previously truncated to an integer, which would have sile
 - Every commit used `--no-verify` after a full CPU-suite run on the same tree via agent-tmux: 2,244 passed, and only
   the three pinned tripwires failed (`test_f12d_prereqs` ×2, `test_f12e_qualify` ×1).
 - `tests/test_wme_prereg_v2.py`, which reads the manifest, was re-run after regeneration: 9 passed.
+
+## Update v2e (19 Nov 2026): change 3 closed
+
+> **What changed.** Stage W2 merged at `718c48f` and failed its pre-declared rule.
+> - Branch `prereg/wme-v2e`, from main `718c48f`.
+> - CPU builds via agent-tmux. No outcome was generated; no `data/evals` file was opened; no sealed file was read
+>   back.
+> - PREREG §II.23 records everything below.
+
+| Board A item under change 3 | Evidence |
+|---|---|
+| W2 identity, exposure and chronology | `wme-w2` is in `wm.exposure.EXPOSURES` (manifest sha256 `b983bc20…`, content hash `6d533f94…`). It is excluded from both confirmatory builds, which run after it (`exposure.registry_before`). |
+| W2 outcome and H-T3 decision | **FAIL**: zero-shot d 0.003, Holm lower bound −0.053; k = 2 d 0.000; nulls ≤ 0.011. **H-T3 is not registered** and is removed from every total. Registered total **66.93 GPU-h-eq, about $360**. The (a) negative-result rule is §II.23.1. |
+| Salted joint MMLU allocation over the union of both policies, consumed by every builder | `panels_v2d.allocate` (salt `wme-mmlupro-v2c`), record sha256 `0051481c…`, file sha256 `c323eb13…`. Bank-root shard groups (830) are pre-assigned to c1 construction. c1 was dealt 235 groups so that 232 stay usable; c2-gen was dealt 3,463. Both builders restrict MMLU-Pro to their shares. Tests: `tests/test_wme_panels_v2d.py` (12). |
+| Build-order contradiction | Resolved: W2 merges, then `wme-c1`, then `wme-c2-gen`. Builders refuse to run without `wme-w2`. |
+| Hash-only exclusion, intersection and count audits for every source and split, incl. generated guards and cross-panel duplicates | `docs/reviews/wme/wme-v2e-panel-audit-2026-11-19.json`: **clean**. 1,035 (panel, split) pairs have no hash or union-policy group overlap. There is no exposure hit outside the 1,761 disclosed bank-root construction items. Per-source counts and item-hash digests are in §II.23.3. |
+| Shortfall rule and power restatement before outcomes | c2-gen MMLU-Pro is frozen at **3,398 of 3,463**. Analytic power is restated: **0.792** at α 0.0125 and 0.863 at 0.025 (`prereg_v2.te_power`). Every other panel was built at its registered N. |
+| Final split hashes and closure allocation bound | `panel.wme_c1.split_hashes`, `panel.wme_c2_gen.split_hashes`, `audit.panels_v2e`, `bank.closure_allocation` in the manifest (sha256 in §II.23). |
+
+**A design issue found and fixed: the bank-root shards.**
+- The 72 bank roots were sampled at θ₀ from the v2b-era construction remainder.
+- A naive rebuild would have let some of their shard items reach sealed or dev splits.
+- Their 1,728 groups are now committed to `wme-c1` construction.
+- 422 of their items were later used by exploratory panels. That is disclosed; they never enter an evaluation split.
+
+**Discarded builds (nothing read; hashes kept under `data/wme/panels/v2e-build-attempt*`).**
+
+| Build | What happened |
+|---|---|
+| 1 | c1 MMLU eligibility defect; stopped before writing |
+| 2 | OR-Bench-80k missing from the offline cache; stopped at c2-gen |
+| 3 | Audit not clean (single-policy grouping, per-panel c2 families, a non-root representative) |
+| 4 | Audit clean, but the MMLU-Pro fresh field shard was 21 < 24 |
+
+Each fix was committed and tested before the next build: `9447675`, `d3b703a`, `d3d83ad`. Salted, deterministic
+assignment leaves no room to select favourable items.
+
+**Status of all seven changes.** All are closed:
+- 1, 2, 4, 5 and 7 by v2d;
+- 6 by v2d, with the launch checks to re-run on the confirmatory stack;
+- 3 by v2e.
+

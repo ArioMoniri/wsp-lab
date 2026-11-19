@@ -225,8 +225,9 @@ if "prereg_v2" in M:
     ]
     for k in ("registered_total", "with_ht3_at_v2b_price", "p1_consistent_with_ht3"):
         c = pr[k]
+        tag = f" ({c['status']})" if c.get("status") else ""
         lines.append(
-            f"| {k} | {c['total_gpu_h']:.2f} | {c['usd_9b']:.1f} | {'yes' if c['within'] else 'no'} |"
+            f"| {k}{tag} | {c['total_gpu_h']:.2f} | {c['usd_9b']:.1f} | {'yes' if c['within'] else 'no'} |"
         )
     lines += [
         "",
@@ -257,7 +258,10 @@ if "prereg_v2" in M:
                 f"${v['registered_total']['usd_9b']:.1f}**; remaining for H-T3 "
                 f"{v['registered_total']['remaining_for_ht3_gpu_h']:.2f} |"
             ),
-            f"| With H-T3 | {v['with_ht3']['total_gpu_h']:.2f} GPU-h-eq, ${v['with_ht3']['usd_9b']:.1f} |",
+            (
+                f"| With H-T3{' (' + v['with_ht3']['status'] + ')' if v['with_ht3'].get('status') else ''} | "
+                f"{v['with_ht3']['total_gpu_h']:.2f} GPU-h-eq, ${v['with_ht3']['usd_9b']:.1f} |"
+            ),
         ]
         sb = pv["claims"]["S-BoN"]["power_at_measured_parity"]
         for k, r in sb.items():
@@ -269,5 +273,26 @@ if "prereg_v2" in M:
         for sc in ("null_quadratic", "alt"):
             if sc in r6:
                 lines.append(f"| R6 {sc} | `{short(r6[sc], 220)}` |")
+if "prereg_v2" in M and "v2e" in M["prereg_v2"]:
+    pv = M["prereg_v2"]
+    w2 = M["exposures.v2"]["wme-w2"]
+    lines += [
+        "",
+        "## v2e: stage W2, H-T3, registered price and the built panels",
+        "",
+        "| Item | Value |",
+        "|---|---|",
+        f"| wme-w2 | `{short(w2, 240)}` |",
+        f"| H-T3 | {pv['claims']['H-T3']['type']} |",
+        (
+            f"| Registered total | {pv['pricing']['v2e']['registered_total_gpu_h']:.2f} GPU-h-eq, "
+            f"${pv['pricing']['v2e']['registered_total_usd_9b']:.1f} (H-T3 removed) |"
+        ),
+        f"| wme-c1 split hashes | `{short(M['panel.wme_c1.split_hashes'], 240)}` |",
+        f"| wme-c2-gen | `{short(M['panel.wme_c2_gen'].get('split_hashes'), 240)}` |",
+        f"| S-TE power restated | `{short(pv['claims']['S-TE'].get('power_restated'), 240)}` |",
+        f"| Panel audit | `{short(M['audit.panels_v2e'], 240)}` |",
+        f"| Closure allocation | `{short(M['bank.closure_allocation'], 240)}` |",
+    ]
 (ROOT / "docs/prereg/wme_manifest_table.md").write_text("\n".join(lines) + "\n")
 print(len(lines))

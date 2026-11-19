@@ -56,3 +56,10 @@ def test_te_sizing_reproduces_the_registered_n():
     for v in P.TE_SIZING.values():
         assert P.te_n(v["delta"], v["discordant"], v["n_probe"]) == v["n"]
     assert P.wilson_upper(33, 256) == pytest.approx(0.167275, abs=1e-6)
+
+
+def test_te_power_is_the_inverse_of_the_sizing():
+    for v in P.TE_SIZING.values():
+        p = P.te_power(v["n"], v["delta"], v["discordant"], v["n_probe"])
+        assert 0.8 <= p < 0.8005
+        assert P.te_power(v["n"] - 100, v["delta"], v["discordant"], v["n_probe"]) < 0.8

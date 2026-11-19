@@ -1,0 +1,686 @@
+{
+ "allocation": {
+  "consumers": [
+   {
+    "assigned_groups": 235,
+    "consumer": "wme-c1:mmlupro_gold_lp",
+    "frozen_n": 235,
+    "required": 235,
+    "restate_power": false,
+    "shortfall": false
+   },
+   {
+    "assigned_groups": 3463,
+    "consumer": "wme-c2-gen:mmlupro_gen",
+    "frozen_n": 3463,
+    "required": 3463,
+    "restate_power": false,
+    "shortfall": false
+   }
+  ],
+  "excluded_groups": 4272,
+  "file": "data/wme/panels/wme-mmlu-allocation-v2e.json",
+  "file_sha256": "c323eb13aeeff16ce6da136a0cb382a14190bf9b285339eced4a543a22a581d9",
+  "fresh_groups": 6702,
+  "groups": 11804,
+  "policies": [
+   "wme-c1-group-v1",
+   "exposure.near_duplicate_groups(jaccard=0.7)"
+  ],
+  "pool_items": 12102,
+  "preassigned_exposed_groups": 293,
+  "preassigned_groups": 830,
+  "preassigned_items_missing_from_pool": 0,
+  "reserve_groups": 3004,
+  "salt": "wme-mmlupro-v2c",
+  "sha256": "0051481c433f8a32baaefdaa160d179183311b063c513c4f791bac7a5868b9a9"
+ },
+ "built": {
+  "allocation_s": 372,
+  "c1_mmlu_allocation_n": {
+   "dealt": 235,
+   "registered": 232,
+   "usable": 232
+  },
+  "c1_s": 513,
+  "c2_s": 1241,
+  "mmlu_pools": {
+   "union": 12102,
+   "wme-c1:mmlupro_gold_lp": 6051,
+   "wme-c2-gen:mmlupro_gen": 12102
+  },
+  "t0": "2026-11-19T03:54:05Z"
+ },
+ "clean": true,
+ "cross_panel": {
+  "audit_sha256": "27174fcc9ec30184ef902f218fa3c0968408ef94df6606a3b3e9fde46c887666",
+  "n_pairs": 1035,
+  "pairs_with_overlap": []
+ },
+ "exposure_hits_outside_root_construction": 0,
+ "exposures": {
+  "calib27-20261116": {
+   "construction": 384,
+   "dev": 384,
+   "validation": 384
+  },
+  "wme-c1": {
+   "bank": 288,
+   "construction": 16381,
+   "dev": 448,
+   "sealed_gen": 1000,
+   "sealed_test": 672,
+   "test": 1672
+  },
+  "wme-p2": {
+   "construction": 3392,
+   "dev": 704,
+   "test": 624,
+   "validation": 512
+  },
+  "wme-p2-smoke": {
+   "construction": 3392
+  },
+  "wme-p3h": {
+   "construction": 3024,
+   "dev": 4680,
+   "holdout": 1024,
+   "test": 0
+  },
+  "wme-p3s": {
+   "construction": 576,
+   "test": 0,
+   "validation": 576
+  },
+  "wme-v0-p1": {
+   "construction": 384,
+   "dev": 384,
+   "test": 288,
+   "validation": 384
+  },
+  "wme-w": {
+   "dev": 1000,
+   "test": 0
+  },
+  "wme-w2": {
+   "dev": 1000,
+   "test": 0
+  }
+ },
+ "label": "HASH-ONLY AUDIT of the confirmatory panels wme-c1 and wme-c2-gen (PREREG_WME \u00a7II.23.3)",
+ "root_shards": {
+  "all_such_items_are_root_shards": true,
+  "construction_items_also_in_later_exposures": 422,
+  "groups": 1728,
+  "items": 1761,
+  "roots_file_sha256": "a4ceb25ebe69aa8df6cf5d85f9e32099e0955c8715832a823cb24019a4447ff3"
+ },
+ "rows": [
+  {
+   "available_fresh_groups": 5841,
+   "built": 96,
+   "hashes_digest": "32877d9fe1875eb1c7ee07bb2d22a7c24d0ead0dc9db577fb093f9064e76a749",
+   "panel": "wme-c1",
+   "requested": 96,
+   "source": "gsm8k_gold_lp",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 5841,
+   "built": 64,
+   "hashes_digest": "ad001e0195ca66cda5d6e1c0257d9eab2df426d85d40eca1a9662eda2c86a21b",
+   "panel": "wme-c1",
+   "requested": 64,
+   "source": "gsm8k_gold_lp",
+   "split": "dev"
+  },
+  {
+   "available_fresh_groups": 5841,
+   "built": 48,
+   "hashes_digest": "c91ade34771c8c31dd9069504ecfb44fd87737f00b398270dbbf9f02606e9029",
+   "panel": "wme-c1",
+   "requested": 48,
+   "source": "gsm8k_gold_lp",
+   "split": "bank"
+  },
+  {
+   "available_fresh_groups": 5841,
+   "built": 5937,
+   "hashes_digest": "6faa4e3710a087af09187db33b6195e73b433b80382c33c0be472671c26079ab",
+   "panel": "wme-c1",
+   "requested": ">= 24 (rest + root shards)",
+   "source": "gsm8k_gold_lp",
+   "split": "construction"
+  },
+  {
+   "available_fresh_groups": 3365,
+   "built": 96,
+   "hashes_digest": "5c4298ce13594b4aad24ddf8223761400a3e253841ce61ce8a591553872916c6",
+   "panel": "wme-c1",
+   "requested": 96,
+   "source": "mathcomp_gold_lp",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 3365,
+   "built": 64,
+   "hashes_digest": "491892ea645ea4a0e8efff3abc52b64e9b2ca662c8d4ee868db7e7c4e5aa55c3",
+   "panel": "wme-c1",
+   "requested": 64,
+   "source": "mathcomp_gold_lp",
+   "split": "dev"
+  },
+  {
+   "available_fresh_groups": 3365,
+   "built": 3798,
+   "hashes_digest": "2c5d8bfc4484e7a9e67464de77956eff45e70dbb732ec97fcea8ff39b2b27a0b",
+   "panel": "wme-c1",
+   "requested": ">= 24 (rest + root shards)",
+   "source": "mathcomp_gold_lp",
+   "split": "construction"
+  },
+  {
+   "available_fresh_groups": 232,
+   "built": 96,
+   "hashes_digest": "13f64c7263f3138c739eab2c5233b68019f3a93e8b1ca6a5f6749e09d3d0cc35",
+   "panel": "wme-c1",
+   "requested": 96,
+   "source": "mmlupro_gold_lp",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 232,
+   "built": 64,
+   "hashes_digest": "8f4ef258bc28733f56d2dc804e9aba73c7a29231432b34d4906c29188d316024",
+   "panel": "wme-c1",
+   "requested": 64,
+   "source": "mmlupro_gold_lp",
+   "split": "dev"
+  },
+  {
+   "available_fresh_groups": 232,
+   "built": 48,
+   "hashes_digest": "b858ed9fc86820fc1bcd8754e505be2d31f34e3e69a93378239d8fa87719935b",
+   "panel": "wme-c1",
+   "requested": 48,
+   "source": "mmlupro_gold_lp",
+   "split": "bank"
+  },
+  {
+   "available_fresh_groups": 232,
+   "built": 850,
+   "hashes_digest": "45da950f4a9d1845e451a0c1d70274637c3809f3b9ae25df62d9646f2eeec395",
+   "panel": "wme-c1",
+   "requested": ">= 24 (rest + root shards)",
+   "source": "mmlupro_gold_lp",
+   "split": "construction"
+  },
+  {
+   "available_fresh_groups": 323,
+   "built": 96,
+   "hashes_digest": "85a763ba0768e792167000eddabb856567848b7ca214629f052f558a3533827d",
+   "panel": "wme-c1",
+   "requested": 96,
+   "source": "refusal_margin_harmful",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 323,
+   "built": 64,
+   "hashes_digest": "eeb61beac05af277269dda5486e1ddb2778dbd3c9e02d1e46af2913648d5c4c4",
+   "panel": "wme-c1",
+   "requested": 64,
+   "source": "refusal_margin_harmful",
+   "split": "dev"
+  },
+  {
+   "available_fresh_groups": 323,
+   "built": 48,
+   "hashes_digest": "ec71a30f673d69259038649bd0480e1a093d98b1d5885bfab17ca1c61e8f2ccc",
+   "panel": "wme-c1",
+   "requested": 48,
+   "source": "refusal_margin_harmful",
+   "split": "bank"
+  },
+  {
+   "available_fresh_groups": 323,
+   "built": 115,
+   "hashes_digest": "833f60c3d753a1621b4d0e49f44fb6f2ff22959446ef1711cad539d73f2b4cef",
+   "panel": "wme-c1",
+   "requested": ">= 24 (rest + root shards)",
+   "source": "refusal_margin_harmful",
+   "split": "construction"
+  },
+  {
+   "available_fresh_groups": 5536,
+   "built": 96,
+   "hashes_digest": "b62c0755327fd6d88b2842e771783d77fd6bdefc74efbe661114111e986903c8",
+   "panel": "wme-c1",
+   "requested": 96,
+   "source": "refusal_margin_harmless",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 5536,
+   "built": 64,
+   "hashes_digest": "f03283b745175c77140105e7dc46401b6c44089b6dd3fab768202212d27767ef",
+   "panel": "wme-c1",
+   "requested": 64,
+   "source": "refusal_margin_harmless",
+   "split": "dev"
+  },
+  {
+   "available_fresh_groups": 5536,
+   "built": 48,
+   "hashes_digest": "17f1e3c0f0cea7405e85eee39e6ba9ebf35ec78cb815b66c2ed76923d6faa8e2",
+   "panel": "wme-c1",
+   "requested": 48,
+   "source": "refusal_margin_harmless",
+   "split": "bank"
+  },
+  {
+   "available_fresh_groups": 5536,
+   "built": 5328,
+   "hashes_digest": "3d0a96393217a839f40220f24ec07ecfcf4f5df10436e31b76f4dd5ad3caa86f",
+   "panel": "wme-c1",
+   "requested": ">= 24 (rest + root shards)",
+   "source": "refusal_margin_harmless",
+   "split": "construction"
+  },
+  {
+   "available_fresh_groups": 466,
+   "built": 96,
+   "hashes_digest": "0bd2b234dce7920ca7e0cde28959b8c33c86fbe97e040b0c32fb2e25095a6b5e",
+   "panel": "wme-c1",
+   "requested": 96,
+   "source": "sycophancy_real",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 466,
+   "built": 64,
+   "hashes_digest": "924462b59a02b6936e04cc9e3299d860de2a04bd6806da9fb8cf24c326002697",
+   "panel": "wme-c1",
+   "requested": 64,
+   "source": "sycophancy_real",
+   "split": "dev"
+  },
+  {
+   "available_fresh_groups": 466,
+   "built": 48,
+   "hashes_digest": "465612bb5f039c4fcfe627bf952a436e85ad3cd9a51cf652da63629463896e5c",
+   "panel": "wme-c1",
+   "requested": 48,
+   "source": "sycophancy_real",
+   "split": "bank"
+  },
+  {
+   "available_fresh_groups": 466,
+   "built": 258,
+   "hashes_digest": "da5431bf55c29d49f74fbb83c99dcedb46d390295f625b4327b2416833795dd1",
+   "panel": "wme-c1",
+   "requested": ">= 88 (rest + root shards)",
+   "source": "sycophancy_real",
+   "split": "construction"
+  },
+  {
+   "available_fresh_groups": 84160,
+   "built": 1000,
+   "hashes_digest": "4f03dd2f4ba0a4a50b156c8917bc95551d4f126fc00491a5d12a2546e4522009",
+   "panel": "wme-c1",
+   "requested": 1000,
+   "source": "triviaqa_gen",
+   "split": "sealed_gen"
+  },
+  {
+   "available_fresh_groups": 303,
+   "built": 96,
+   "hashes_digest": "7b92e0aa41e701341400f1cf9431b0c974243c370afb617c32e1fd42b422c88e",
+   "panel": "wme-c1",
+   "requested": 96,
+   "source": "wikitext_nll",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 303,
+   "built": 64,
+   "hashes_digest": "d2f36d5aafd856abe3e276eb9862644b58eb4251a66350d8496e3544b295b74a",
+   "panel": "wme-c1",
+   "requested": 64,
+   "source": "wikitext_nll",
+   "split": "dev"
+  },
+  {
+   "available_fresh_groups": 303,
+   "built": 48,
+   "hashes_digest": "0ae7c91daf5a16ae59e7727e0ca27d5ae489a0bb43a4be908f6784312cbd70f6",
+   "panel": "wme-c1",
+   "requested": 48,
+   "source": "wikitext_nll",
+   "split": "bank"
+  },
+  {
+   "available_fresh_groups": 303,
+   "built": 95,
+   "hashes_digest": "376767e89dde04b924d67c2a91610504864e75fdc4fd770b2c9849f2d7394b87",
+   "panel": "wme-c1",
+   "requested": ">= 24 (rest + root shards)",
+   "source": "wikitext_nll",
+   "split": "construction"
+  },
+  {
+   "available_fresh_groups": 3398,
+   "built": 3398,
+   "hashes_digest": "693afcb1c6a072edf18528ddbcc6646765f57760761314e2e388142ebabed8f4",
+   "panel": "wme-c2-gen",
+   "requested": 3463,
+   "source": "mmlupro_gen",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 22871,
+   "built": 1784,
+   "hashes_digest": "a8ade84a2d06db3e792c2c20699f557f7f5baca8b31c88b27551b4d0472f161d",
+   "panel": "wme-c2-gen",
+   "requested": 1784,
+   "source": "supergpqa_gen",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 78712,
+   "built": 128,
+   "hashes_digest": "1599ac5a511013339e4f3af9f6929e7104252b4abcc4e94c8849954f4f3c6b6a",
+   "panel": "wme-c2-gen",
+   "requested": 128,
+   "source": "guard_harmless",
+   "split": "calibration"
+  },
+  {
+   "available_fresh_groups": 78712,
+   "built": 523,
+   "hashes_digest": "988bb0105303c0aa5286cbaf2a9efeedeab236cf94fd51c28e131d0298761f9b",
+   "panel": "wme-c2-gen",
+   "requested": 523,
+   "source": "guard_harmless",
+   "split": "sealed_test"
+  },
+  {
+   "available_fresh_groups": 4321,
+   "built": 128,
+   "hashes_digest": "aa88b03e0af6c12b5ddc3bc32dc18620217bbe93b01090047974ef826a175cab",
+   "panel": "wme-c2-gen",
+   "requested": 128,
+   "source": "guard_harmful",
+   "split": "calibration"
+  },
+  {
+   "available_fresh_groups": 4321,
+   "built": 200,
+   "hashes_digest": "b6d6ee6506c7f83ea2603071a6a90d04a8b6922f60b185c08babf4d1dd657c95",
+   "panel": "wme-c2-gen",
+   "requested": 200,
+   "source": "guard_harmful",
+   "split": "sealed_test"
+  }
+ ],
+ "seconds": 1293,
+ "sources": {
+  "c1": {
+   "math": {
+    "dropped_math500_overlap": 262,
+    "n_items": 6269,
+    "unique": 6531
+   },
+   "p1_sources": {
+    "gsm8k": {
+     "config": "main",
+     "repo": "openai/gsm8k",
+     "revision": "740312add88f781978c0658806c59bc2815b9866",
+     "splits": {
+      "test": 1319,
+      "train": 7473
+     }
+    },
+    "harmful": {
+     "config": null,
+     "repo": "mlabonne/harmful_behaviors",
+     "revision": "01cead01398926d81f7c52bdb790ee8cf77ebba7",
+     "splits": {
+      "test": 104,
+      "train": 416
+     }
+    },
+    "harmless": {
+     "config": null,
+     "repo": "mlabonne/harmless_alpaca",
+     "revision": "02c6a92cfcf11bb0c387334f8146d149d65b587f",
+     "splits": {
+      "test": 6265,
+      "train": 25058
+     }
+    },
+    "mmlu_pro": {
+     "config": null,
+     "repo": "TIGER-Lab/MMLU-Pro",
+     "revision": "b189ec765aa7ed75c8acfea42df31fdae71f97be",
+     "splits": {
+      "test": 12032,
+      "validation": 70
+     }
+    },
+    "wikitext": {
+     "config": "wikitext-2-raw-v1",
+     "repo": "Salesforce/wikitext",
+     "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+     "splits": {
+      "test": 4358,
+      "train": 36718,
+      "validation": 3760
+     }
+    }
+   },
+   "sycophancy": {
+    "files": {
+     "answer.jsonl": "3da2c2bbf685cf2c6cbfc6bf67449caad6fe1d56b67924087b3792ffba47bcc1"
+    },
+    "license": "MIT",
+    "n_items": 1813,
+    "repo": "meg-tong/sycophancy-eval",
+    "revision": "18f18160e9998e524bbf027c4475bfa7fdeb6949",
+    "verified_sha256": {
+     "answer.jsonl": "3da2c2bbf685cf2c6cbfc6bf67449caad6fe1d56b67924087b3792ffba47bcc1"
+    }
+   }
+  },
+  "guards": {
+   "guard_harmful": {
+    "column": "prompt",
+    "file": "data/train-00000-of-00001.parquet",
+    "repo": "LLM-LAT/harmful-dataset",
+    "revision": "8bfba31bc6d93a5b71808fee5275ef4b6330ed91",
+    "role": "harmful compliance; the items wme-p3s used as its harmful stand-in are excluded through the wme-p3s exposure, and every near-duplicate of a wme-c1 harmful pool text (mlabonne, AdvBench, HarmBench) is reserved, i.e. dropped",
+    "rows": 4948,
+    "sha256": "51a41eaebf21eabec33ea90366d01d5bee7edb933d439c7017ad6e0107a645b1",
+    "verified": "pinned in scripts/wme_p3_build_panels.py PINS; sha256 and row count computed locally on 2026-11-18"
+   },
+   "guard_harmless": {
+    "file": "or-bench-80k.csv",
+    "repo": "bench-llm/or-bench",
+    "revision": "e36d8b80e81837c8a8f264bbb2a49f1b32c7e272",
+    "role": "over-refusal (seemingly harmful but benign prompts); OR-Bench-hard-1k is a subset of this file and every hard-1k item is excluded through the wme-p3h exposure (near-duplicate group level)",
+    "rows": 80359,
+    "sha256": "22e956020cdfdd43c328f02441f003c933ee4e7083d02d9d24e414e4b42ae2e6",
+    "verified": "file fetched at the pinned revision on 2026-11-18; sha256 and row count computed locally (not committed)"
+   }
+  },
+  "mmlu_pro": {
+   "config": null,
+   "repo": "TIGER-Lab/MMLU-Pro",
+   "revision": "b189ec765aa7ed75c8acfea42df31fdae71f97be",
+   "splits": {
+    "test": 12032,
+    "validation": 70
+   }
+  },
+  "supergpqa": {
+   "pin": [
+    "m-a-p/SuperGPQA",
+    "SuperGPQA-all.jsonl",
+    "4430d4458112c7d4497fdcf94d7cc223313d6acf"
+   ],
+   "sha256": "28b998e70205ee95e540317b5adc06a06552a3961fb50b153df126b833f7a910"
+  },
+  "supplement": [
+   "advbench",
+   "harmbench_text"
+  ],
+  "triviaqa": {
+   "config": "rc.nocontext",
+   "files": {
+    "train": {
+     "local": "rc.nocontext-train.parquet",
+     "path": "rc.nocontext/train-00000-of-00001.parquet",
+     "rows": 138384,
+     "sha256": "455223e4a3ba6977611914d96b1b812fe19a6cd4ea3aef4df381f093b297670c"
+    },
+    "validation": {
+     "local": "rc.nocontext-validation.parquet",
+     "path": "rc.nocontext/validation-00000-of-00001.parquet",
+     "rows": 17944,
+     "sha256": "48a5005c0eb4f8a4ae5b9868644297fd5bf1e694aeb3dc9c8ab958cac0d5b201"
+    }
+   },
+   "repo": "mandarjoshi/trivia_qa",
+   "revision": "0f7faf33a3908546c6fd5b73a660e0f8ff173c2f"
+  }
+ },
+ "wme_c1": {
+  "content_hash": "89739c7818e29d618ac3bcb52d7e51cd29a9361e7774a71b412646775c630c1d",
+  "exclusion": {
+   "gsm8k_gold_lp": {
+    "available_fresh_groups": 5841,
+    "excluded_groups": 2645,
+    "fresh_construction_groups": 5633,
+    "pool_items": 8792,
+    "reserved_construction_groups": 304,
+    "reserved_groups_exposed_later": 39
+   },
+   "mathcomp_gold_lp": {
+    "available_fresh_groups": 3365,
+    "excluded_groups": 2166,
+    "fresh_construction_groups": 3205,
+    "pool_items": 6269,
+    "reserved_construction_groups": 593,
+    "reserved_groups_exposed_later": 105
+   },
+   "mmlupro_gold_lp": {
+    "available_fresh_groups": 232,
+    "excluded_groups": 0,
+    "fresh_construction_groups": 24,
+    "pool_items": 1092,
+    "reserved_construction_groups": 826,
+    "reserved_groups_exposed_later": 286
+   },
+   "refusal_margin_harmful": {
+    "available_fresh_groups": 323,
+    "excluded_groups": 378,
+    "fresh_construction_groups": 115,
+    "pool_items": 1240,
+    "reserved_construction_groups": 0,
+    "reserved_groups_exposed_later": 0
+   },
+   "refusal_margin_harmless": {
+    "available_fresh_groups": 5536,
+    "excluded_groups": 729,
+    "fresh_construction_groups": 5328,
+    "pool_items": 6265,
+    "reserved_construction_groups": 0,
+    "reserved_groups_exposed_later": 0
+   },
+   "sycophancy_real": {
+    "available_fresh_groups": 466,
+    "excluded_groups": 1340,
+    "fresh_construction_groups": 258,
+    "pool_items": 1813,
+    "reserved_construction_groups": 0,
+    "reserved_groups_exposed_later": 0
+   },
+   "triviaqa_gen": {
+    "available_fresh_groups": 84160,
+    "excluded_groups": 741,
+    "fresh_construction_groups": 0,
+    "pool_items": 156328,
+    "reserved_construction_groups": 0,
+    "reserved_groups_exposed_later": 0
+   },
+   "wikitext_nll": {
+    "available_fresh_groups": 303,
+    "excluded_groups": 411,
+    "fresh_construction_groups": 95,
+    "pool_items": 714,
+    "reserved_construction_groups": 0,
+    "reserved_groups_exposed_later": 0
+   }
+  },
+  "manifest_sha256": "9dd5c9b6bbc9fade22a9adabdeb3d2626ffeea0a35f21dd62ffb986585d9c208",
+  "split_hashes": {
+   "open/bank.jsonl": "91f299be1eaa2dd0e618c77a84a0953614c9aace4d04ad8bf4229fb73fc0abe2",
+   "open/construction.jsonl": "736c2582142567ad3217e7bdfabd6e8872eeb1820128a8faf36abf499e209c2b",
+   "open/dev.jsonl": "02d425252925cb8d8730084d7365bc5835dd7fe710c9b6761ebc9508a5dccf63",
+   "sealed_gen/gen.jsonl": "d795fc65672c92cd183089fb6df198abfedda3a24071109244e84f410e9f42f2",
+   "sealed_test/test.jsonl": "c90852dcbd2611514221623f3910a041623e217098ea5bb52dac5a5f41ffa3fe"
+  }
+ },
+ "wme_c2_gen": {
+  "content_hash": "a24d5f0ef7de185136cb31464336d6c0537c631fa21b25b184619fb04497c43b",
+  "manifest_sha256": "4cdb7728c237acb9d9b44bd68f94ec47940383be3348adb231205fd65bab790e",
+  "shortfall": {
+   "guard_harmful": {
+    "frozen_n": 200,
+    "required": 200,
+    "restate_power": false,
+    "shortfall": false
+   },
+   "guard_harmless": {
+    "frozen_n": 523,
+    "required": 523,
+    "restate_power": false,
+    "shortfall": false
+   },
+   "mmlupro_gen": {
+    "frozen_n": 3398,
+    "required": 3463,
+    "restate_power": true,
+    "shortfall": true
+   },
+   "supergpqa_gen": {
+    "frozen_n": 1784,
+    "required": 1784,
+    "restate_power": false,
+    "shortfall": false
+   }
+  },
+  "split_hashes": {
+   "open/calibration.jsonl": "700e452c137302e824a6668ae73bdd41317894eea16b57f52287e9d613f46749",
+   "sealed_test/sealed_test.jsonl": "3fa38044f8c1bf342ec850c4bb679217da804aa2d9df8c5e57db40f44f574005"
+  },
+  "stats": {
+   "guard_harmful": {
+    "pool": 4948,
+    "usable_groups": 4321
+   },
+   "guard_harmless": {
+    "pool": 80359,
+    "usable_groups": 78712
+   },
+   "mmlupro_gen": {
+    "pool": 3531,
+    "usable_groups": 3398
+   },
+   "supergpqa_gen": {
+    "pool": 26529,
+    "usable_groups": 22871
+   }
+  }
+ }
+}
