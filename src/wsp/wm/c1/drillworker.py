@@ -14,6 +14,11 @@ ENGINES = {"tf": "1" * 64, "hf_gen": "2" * 64, "vllm": "3" * 64}
 
 def square(req, ctx):
     a = req["args"]
+    if a.get("fail_once"):  # scenario H: one injected worker error (marker in the worker root)
+        mark = ctx.worker.root / f"failed_{a['x']}"
+        if not mark.exists():
+            mark.write_text("1")
+            raise RuntimeError("drill: injected worker error")
     for _ in range(int(a.get("steps", 1))):
         time.sleep(float(a.get("sleep", 0.0)))
         ctx.check()

@@ -278,15 +278,20 @@ def parse_decoding(d: str, seeds) -> int | None:
     raise ValueError(f"unknown decoding {d!r}")
 
 
-def generate(m, prompts, cfg, seed):
-    from wsp.wm import genaudit as GA
+def generate(m, prompts, cfg, seed, mode=None):
+    """HF generation through the recorded engine (``wm.c1.genengine``; §II.31 C1(a))."""
+    from wsp.wm.c1 import genengine as GE
 
-    if seed is None:
-        return GA.generate_greedy(
-            m.model, m.tok, prompts, cfg["max_new_tokens"], batch=cfg["batch"], device=m.device
-        )
-    return GA.generate_sampled(
-        m.model, m.tok, prompts, cfg["max_new_tokens"], seed, batch=cfg["batch"], device=m.device
+    sample = None if seed is None else dict(cfg["sampled"], seed=int(seed))
+    return GE.hf_generate(
+        m.model,
+        m.tok,
+        prompts,
+        cfg["max_new_tokens"],
+        cfg["batch"],
+        m.device,
+        sample=sample,
+        mode=mode,
     )
 
 
@@ -338,12 +343,28 @@ def h_e1_gen(rt, req, ctx):
     bundles = deserialise_bundles(win["bundles"])
     if not bundles or not all(bundles):
         raise ValueError("the winner has no actions")
-    m = rt.hf()
-    m.at_base()
+    from wsp.wm.c1 import genengine as GE
+
+    t_all = time.time()
+    if GE.GEN_ENGINE == "vllm":  # §II.31 C1(b), inactive unless selected at the Phase L re-run
+        rows, blocks, tensors, theta0 = _e1_vllm(
+            rt, ctx, a, cfg, decodings, seeds, prompts, ids, win, bundles
+        )
+    else:
+        rows, blocks, tensors, theta0 = _e1_hf(
+            rt, ctx, a, cfg, decodings, seeds, prompts, ids, win, bundles
+        )
+    return _e1_payload(
+        rt, ctx, a, cfg, items, decodings, win, rows, blocks, tensors, theta0, t_all
+    )
+
+
+def _e1_hf(rt, ctx, a, cfg, decodings, seeds, prompts, ids, win, bundles):
     from wsp.wm.c1 import modelops as MO
 
+    m = rt.hf()
+    m.at_base()
     rows, blocks, tensors = [], [], None
-    t_all = time.time()
     for dec, seed in zip(decodings, seeds, strict=True):
         for model in MODELS:
             ctx.check()
@@ -395,6 +416,84 @@ def h_e1_gen(rt, req, ctx):
                 if model == "winner":
                     m.restore()
     m.at_base()
+    return rows, blocks, tensors, m.base_hash
+
+
+def _e1_vllm(rt, ctx, a, cfg, decodings, seeds, prompts, ids, win, bundles):
+    """§II.31 C1(b): the winner is realised on the resident HF model (theta-hash asserted), its exact bf16 tensors
+    saved, the model released; one vLLM child job then generates every (decoding, model, prompt) block at the
+    registered settings (``genengine.vllm_block``), the winner as the ``tensors`` state."""
+    from wsp.wm import hf
+    from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import vllmops as VO
+
+    m = rt.hf()
+    m.at_base()
+    try:
+        for b in bundles:
+            m.sess.apply_bundle(b)
+        th = m.theta_hash()
+        if th != win["theta_hash"]:
+            raise RuntimeError(f"winner theta-hash {th[:12]} != designated {win['theta_hash'][:12]}")
+        saved = _save_tensors(rt, m, th)
+    finally:
+        m.restore()
+    m.at_base()
+    theta0, tok = m.base_hash, m.tok
+    rt.release()
+    job = {"repo": rt.cfg.repo, "smoke": rt.cfg.smoke, "blocks": []}
+    if rt.cfg.smoke:
+        job["revision"] = hf.TARGETS[rt.cfg.repo]
+    keys = []
+    for dec, seed in zip(decodings, seeds, strict=True):
+        sample = None if seed is None else dict(cfg["sampled"], seed=int(seed))
+        for model in MODELS:
+            state = (
+                {"kind": "base"} if model == "base" else {"kind": "tensors", "path": saved["path"]}
+            )
+            for p in PROMPTS:
+                job["blocks"].append(
+                    GE.vllm_block(
+                        f"{dec}|{model}|{p}", tok, prompts[p], cfg["max_new_tokens"], sample, state
+                    )
+                )
+                keys.append((dec, model, p, th if model == "winner" else theta0))
+    ctx.check()
+    out = VO.spawn(job, Path(ctx.scratch) / "vllm_e1")
+    rows, blocks = [], []
+    for (dec, model, p, th_), blk in zip(keys, out["blocks"], strict=True):
+        res = blk["outputs"]
+        if len(res) != len(ids):
+            raise RuntimeError(f"{len(res)} generations for {len(ids)} prompts")
+        for i, o in zip(ids, res, strict=True):
+            rows.append(
+                {
+                    "model": model,
+                    "prompt": p,
+                    "decoding": dec,
+                    "id": i,
+                    "ids": [int(x) for x in o["ids"]],
+                    "text": o["text"],
+                    "hit_max": bool(o["hit_max"]),
+                }
+            )
+        blocks.append(
+            {
+                "model": model,
+                "prompt": p,
+                "decoding": dec,
+                "theta_hash": th_,
+                "n": len(res),
+                "seconds": blk["seconds"],
+                "ids_sha256": blk["ids_sha256"],
+            }
+        )
+    return rows, blocks, (saved if a.get("save_tensors") else None), theta0
+
+
+def _e1_payload(rt, ctx, a, cfg, items, decodings, win, rows, blocks, tensors, theta0, t_all):
+    from wsp.wm.c1 import genengine as GE
+
     out_p = Path(ctx.scratch) / OUTPUTS
     items_p = Path(ctx.scratch) / ITEMS
     payload = {
@@ -407,11 +506,12 @@ def h_e1_gen(rt, req, ctx):
             "theta_hash": win["theta_hash"],
             "bundles_digest": bundles_digest(win["bundles"]),
         },
-        "theta0": m.base_hash,
+        "theta0": theta0,
         "blocks": blocks,
         "seconds": time.time() - t_all,
+        "gen_engine": GE.config(),
         "config": {
-            "engine": "hf generate (genaudit)",
+            "engine": GE.config()["engine"],
             "batch": cfg["batch"],
             "padding": "left",
             "max_new_tokens": cfg["max_new_tokens"],

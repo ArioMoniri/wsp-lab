@@ -44,8 +44,17 @@ def att():
     )
 
 
-def study(d):
-    s = SD.Study(d / "study", d / "runs", att(), THETA0, PANEL)
+def study(d, sub="", health=False):
+    # A-G exercise the registered guard mechanics (automatic technical retries); H runs the §II.31 health layer
+    s = SD.Study(
+        d / f"study{sub}",
+        d / f"runs{sub}",
+        att(),
+        THETA0,
+        PANEL,
+        health=health,
+        health_order=(("drill", ("square",)),),
+    )
     s.priced = {"bank": 100.0, "confirmatory": 100.0, "sbon": 100.0, "ste": 100.0}
     return s
 
@@ -58,10 +67,14 @@ def start_worker(d):
     )
 
 
-def units(lo, hi, sleep=0.0, steps=1):
+def units(lo, hi, sleep=0.0, steps=1, **extra):
     return [
         (
-            {"kind": "square", "args": {"x": i, "sleep": sleep, "steps": steps}, "label": f"u{i}"},
+            {
+                "kind": "square",
+                "args": {"x": i, "sleep": sleep, "steps": steps, **extra},
+                "label": f"u{i}",
+            },
             f"u{i}",
         )
         for i in range(lo, hi)
@@ -277,6 +290,43 @@ def main():
         caught = True
     log.write_bytes(backup)
     rep["scenarios"]["G_fresh_replay_detects_change"] = {"pass": caught}
+    # H: §II.31 run health: a worker error halts issuing (persisted incident, no attempt burned by the halt), the
+    #    guard refuses every unit until the incident is resolved (diagnosis + chair report), then the run resumes
+    sh = study(d, "_h", health=True)
+    gh = sh.guard("bank", "lambda:drill-h")
+    tr.set_fence(gh.epoch, "lambda:drill-h")
+    gh.open_instance(1)
+    uh = units(20, 21, fail_once=True) + units(21, 22)
+    halted = refused = False
+    try:
+        sh.run(gh, rem, tr, uh, chunk=1)
+    except Exception as exc:  # noqa: BLE001
+        halted = type(exc).__name__ == "HealthIncident"
+    try:
+        sh.run(gh, rem, tr, uh, chunk=1)
+    except RG.HealthHalt:
+        refused = True
+    hrecs = [json.loads(x) for x in (d / "study_h" / RG.LOG_NAME).read_text().splitlines()]
+    k20 = sh.key(uh[0][0])
+    n_start_halt = sum(r["type"] == "attempt_start" and r["unit"] == k20 for r in hrecs)
+    gh.resolve_incidents("drill: injected error, diagnosed", "drill report (fixture)")
+    gh = sh.guard("bank", "lambda:drill-h")
+    tr.set_fence(gh.epoch, "lambda:drill-h")
+    outh = sh.run(gh, rem, tr, uh, chunk=1)
+    hrecs = [json.loads(x) for x in (d / "study_h" / RG.LOG_NAME).read_text().splitlines()]
+    summ = (d / "runs_h" / "health" / "summary.jsonl").read_text().splitlines()
+    rep["scenarios"]["H_run_health_halt"] = {
+        "pass": halted
+        and refused
+        and n_start_halt == 1
+        and [outh["u20"]["sq"], outh["u21"]["sq"]] == [400, 441]
+        and sum(r["type"] == "incident" for r in hrecs) == 1
+        and sum(r["type"] == "incidents_resolved" for r in hrecs) == 1
+        and len(summ) >= 2,
+        "incidents": [r["kind"] for r in hrecs if r["type"] == "incident"],
+        "summaries": len(summ),
+        "attempts_u20": sum(r["type"] == "attempt_start" and r["unit"] == k20 for r in hrecs),
+    }
     rep["log"] = {"records": len(records(d)), "types": sorted({r["type"] for r in records(d)})}
     rep["all_pass"] = all(v["pass"] for v in rep["scenarios"].values())
     (d / "w" / "STOP").write_text("stop")

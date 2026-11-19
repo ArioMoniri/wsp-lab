@@ -310,6 +310,9 @@ class Controller:
     def stage_gen(self, prep: dict, winners: dict, gen_file: Path, sampled_seeds) -> dict:
         e1 = winners["e1"]
         if e1.get("status") != "designated":
+            from wsp.wm.c1 import health as HL
+
+            HL.HealthMonitor(self.study.runs).skip_stage("e1_gen", f"E1 {e1.get('status')}")
             self.save("gen", {"skipped": e1.get("status")})
             return {"skipped": e1.get("status")}
         inputs, uploads = self.e2_inputs(prep, with_fit=False)

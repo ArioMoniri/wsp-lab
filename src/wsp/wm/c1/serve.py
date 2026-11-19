@@ -218,8 +218,12 @@ class Runtime:
 
 
 def h_hello(rt: Runtime, req, ctx):
+    from wsp.wm.c1 import genengine as GE
+
     m = rt.hf()
     return {
+        "gen_engine": GE.config(),
+        "cublas_workspace_config": os.environ.get(GE.CUBLAS_ENV),
         "theta0": m.base_hash,
         "repo": rt.cfg.repo,
         "load_s": m.load_s,
@@ -230,26 +234,41 @@ def h_hello(rt: Runtime, req, ctx):
 
 
 def h_canary(rt: Runtime, req, ctx):
+    """Per-engine canaries (``genengine.canary_engines``): ``tf``; ``hf_gen`` (C1(a)) or, under the C1(b) engine,
+    ``vllm_gen`` (a second vLLM block: the 64 items at the E1 generation settings); ``vllm`` (stage-W, 2,048)."""
+    from wsp.wm.c1 import genengine as GE
     from wsp.wm.c1 import vllmops as VO
 
     m = rt.hf()
     t0 = time.time()
-    eng = {
-        "tf": m.canary_tf(MO.tf_canary_items(MO.PANEL_P2)),
-        "hf_gen": m.canary_hf(MO.gen_canary_items()),
-    }
+    eng = {"tf": m.canary_tf(MO.tf_canary_items(MO.PANEL_P2))}
+    vllm_gen = GE.GEN_ENGINE == "vllm"
+    if not vllm_gen:
+        eng["hf_gen"] = m.canary_hf(MO.gen_canary_items())
+    elif not rt.cfg.vllm:
+        raise RuntimeError("generation engine 'vllm' needs the vLLM engine (worker started with --no-vllm)")
+    tok = m.tok
     ctx.check()
     t1 = time.time()
-    detail = {"tf_hf_seconds": t1 - t0}
+    detail = {"tf_hf_seconds": t1 - t0, "gen_engine": GE.GEN_ENGINE}
     if rt.cfg.vllm:
         rt.release()
         prompts = _gen_canary_prompts(rt)
-        out = VO.spawn(
-            VO.canary_job(rt.cfg.repo, prompts, smoke=rt.cfg.smoke), ctx.scratch / "vllm"
-        )
+        job = VO.canary_job(rt.cfg.repo, prompts, smoke=rt.cfg.smoke)
+        if vllm_gen:
+            job["blocks"].append(GE.vllm_block("vllm_gen", tok, _gen_canary_user_prompts()))
+        out = VO.spawn(job, ctx.scratch / "vllm")
         eng["vllm"] = out["blocks"][0]["ids_sha256"]
+        if vllm_gen:
+            eng["vllm_gen"] = out["blocks"][1]["ids_sha256"]
         detail["vllm_seconds"] = out["seconds"]
     return {"engines": eng, "detail": detail}, {}
+
+
+def _gen_canary_user_prompts():
+    from wsp.wm import p3gen as G
+
+    return [G.user_prompt("mmlupro_gen", it) for it in MO.gen_canary_items()]
 
 
 def _gen_canary_prompts(rt: Runtime):
@@ -405,6 +424,9 @@ def main(argv=None):
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--no-vllm", action="store_true")
     a = ap.parse_args(argv)
+    from wsp.wm.c1 import genengine as GE
+
+    GE.prepare_process()  # §II.31: CUBLAS_WORKSPACE_CONFIG before the first CUDA call
     cfg = Config.make(a.root, smoke=a.smoke, vllm=not a.no_vllm)
     rt = Runtime(cfg)
     import importlib
@@ -415,7 +437,9 @@ def main(argv=None):
     registry = dict(HANDLERS)
     registry.update(importlib.import_module("wsp.wm.c1.serve").HANDLERS)
     handlers = {k: (lambda req, ctx, fn=fn: fn(rt, req, ctx)) for k, fn in registry.items()}
-    W.Worker(cfg.root, handlers).serve()
+    from wsp.wm.c1 import health as HL
+
+    W.Worker(cfg.root, handlers, sampler=HL.Sampler(cfg.root)).serve()
 
 
 if __name__ == "__main__":

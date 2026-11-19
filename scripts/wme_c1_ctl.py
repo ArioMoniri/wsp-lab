@@ -111,11 +111,23 @@ def cmd_bundle(a):
 # ------------------------------------------------------------------ instance up
 
 
-def remaining_gpu_h() -> float:
+def cap_state() -> tuple[float, float, int]:
+    """(cap in force, remaining GPU-h-eq, cap-generation index) from the study log (PREREG_WME §II.31). Before the
+    first guard writes the log, the §II.31 cap (``study.CAP``) is the cap and nothing is charged yet."""
+    dm_state = LO.STATE / "state.json"
     if not (STUDY / RG.LOG_NAME).exists():
-        return RG.CAP_GPU_H
+        # earlier study instances (Phase L checks) enter the ledger at phasel-main; until then they are charged here
+        spent = LO.deadman_gpu_h(json.loads(dm_state.read_text())) if dm_state.exists() else 0.0
+        return SD.CAP.cap_gpu_h, max(0.0, SD.CAP.cap_gpu_h - spent), 0
     led = RG.CombinedLedger(STUDY / RG.LOG_NAME, {"bank": 1})
-    return max(0.0, RG.CAP_GPU_H - led.gpu_h())
+    caps = led.cap_generations()
+    if not caps or caps[-1]["cap_gpu_h"] < SD.CAP.cap_gpu_h:
+        return SD.CAP.cap_gpu_h, max(0.0, SD.CAP.cap_gpu_h - led.gpu_h()), 0
+    return led.cap_gpu_h(), led.remaining_gpu_h(), int(caps[-1]["index"])
+
+
+def remaining_gpu_h() -> float:
+    return cap_state()[1]
 
 
 def ensure_watcher():
@@ -134,7 +146,7 @@ def ensure_watcher():
             "--idle-limit-s",
             "1800",
             "--t-max-hours",
-            "100",
+            str(cap_state()[0]),  # base: the cap in force; per-launch overrides tighten it
             "--max-usd",
             "1000",
             "--max-price",
@@ -150,12 +162,13 @@ def cmd_up(a):
     ensure_watcher()
     dm = LO.deadman()
     spent = dm.cost_usd(dm.state())
-    rem = remaining_gpu_h()
+    cap, rem, cap_gen = cap_state()
     itype = TYPES[a.kind]
     max_usd = LO.allowance(rem, spent, itype)
-    t_max = dm.instance_hours(dm.state()) + min(rem / LO.GPUS[itype], a.t_max_hours)
-    pol = LO.tighten(LO.STATE, max_usd, t_max)
-    log(f"policy tightened (remaining {rem:.2f} GPU-h-eq): {pol}")
+    lim = rem / LO.GPUS[itype] if a.t_max_hours is None else min(rem / LO.GPUS[itype], a.t_max_hours)
+    t_max = dm.instance_hours(dm.state()) + lim
+    pol = LO.tighten(LO.STATE, max_usd, t_max, cap_generation=cap_gen)
+    log(f"policy set (cap {cap} GPU-h-eq, generation {cap_gen}, remaining {rem:.2f}): {pol}")
     if dm.live(dm.state()):
         raise SystemExit("a wsp-wme-c1 instance is already live; one instance at a time")
     name = f"{LO.NAME_PREFIX}{a.kind}-{DATE.replace('-', '')}{a.tag}"
@@ -320,6 +333,7 @@ def cmd_phasel_parity(a):
 
 
 def engine_config() -> dict:
+    from wsp.wm.c1 import genengine as GE
     from wsp.wm.c1 import modelops as MO
     from wsp.wm.c1 import vllmops as VO
 
@@ -340,6 +354,7 @@ def engine_config() -> dict:
             "non_thinking": True,
             "max_new_tokens": {"sycophancy": 128},
             "canary": MO.CANARY_HF,
+            "engine": GE.config(),  # PREREG_WME §II.31: the recorded generation-engine flag and its settings
         },
         "vllm": VO.engine_config(),
         "canary": {
@@ -692,7 +707,7 @@ def main():
     u.add_argument("--kind", choices=("parity", "main"), required=True)
     u.add_argument("--tag", default="")
     u.add_argument("--bundle", required=True)
-    u.add_argument("--t-max-hours", type=float, default=90.0)
+    u.add_argument("--t-max-hours", type=float, default=None)  # default: the remaining cap (§II.31)
     u.add_argument("--poll-max-min", type=float, default=1440)
     p = sub.add_parser("phasel-parity")
     p.add_argument("--iid", required=True)

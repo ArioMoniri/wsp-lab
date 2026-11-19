@@ -69,17 +69,20 @@ class Engine:
     def stop_ids(self):
         return {self.tok.eos_token_id, self.tok.convert_tokens_to_ids("<|im_end|>")}
 
-    def gen(self, prompts, max_tokens, sample=None):
+    def gen(self, prompts, max_tokens, sample=None, stop_token_ids=None):
         from vllm import SamplingParams
 
+        kw = {"max_tokens": int(max_tokens)}
+        if stop_token_ids is not None:  # §II.31 C1(b) blocks: the registered HF stop rule
+            kw["stop_token_ids"] = [int(t) for t in stop_token_ids]
         if sample is None:
-            sp = SamplingParams(temperature=0.0, top_p=1.0, max_tokens=int(max_tokens))
+            sp = SamplingParams(temperature=0.0, top_p=1.0, **kw)
         else:
             sp = SamplingParams(
                 temperature=float(sample["temperature"]),
                 top_p=float(sample["top_p"]),
-                max_tokens=int(max_tokens),
                 seed=int(sample["seed"]),
+                **kw,
             )
         outs = self.llm.generate(prompts, sp, use_tqdm=False)
         stop = self.stop_ids()
@@ -159,7 +162,7 @@ def run_job(job: dict) -> dict:
         eng.apply_state(b.get("state") or {"kind": "base"})
         try:
             prompts = b["prompts"]
-            res = eng.gen(prompts, b["max_tokens"], b.get("sample"))
+            res = eng.gen(prompts, b["max_tokens"], b.get("sample"), b.get("stop_token_ids"))
         finally:
             eng.restore()
         rec = {
@@ -207,6 +210,14 @@ def canary_job(repo: str, prompts: list, smoke: bool = False) -> dict:
     }
 
 
+def child_env(base=None) -> dict:
+    """The vLLM child's environment: the stage-W numerics, so without the HF deterministic engine's process-wide
+    ``CUBLAS_WORKSPACE_CONFIG`` (§II.31)."""
+    env = dict(os.environ if base is None else base, VLLM_ENABLE_V1_MULTIPROCESSING="0")
+    env.pop("CUBLAS_WORKSPACE_CONFIG", None)
+    return env
+
+
 def spawn(job: dict, workdir, python=sys.executable, timeout_s: float = 6 * 3600) -> dict:
     """Run a job in a child process (parent must have released its GPU model)."""
     import subprocess
@@ -215,7 +226,7 @@ def spawn(job: dict, workdir, python=sys.executable, timeout_s: float = 6 * 3600
     workdir.mkdir(parents=True, exist_ok=True)
     jp, op = workdir / "vllm_job.json", workdir / "vllm_out.json"
     jp.write_text(json.dumps(job))
-    env = dict(os.environ, VLLM_ENABLE_V1_MULTIPROCESSING="0")
+    env = child_env()
     p = subprocess.run(
         [python, "-m", "wsp.wm.c1.vllmops", str(jp), str(op)],
         capture_output=True,

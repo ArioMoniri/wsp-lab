@@ -52,6 +52,14 @@ The registered rules enforced on that state (unchanged in substance from §II.22
 * **Absolute cap.** Charged total = max(measured unit GPU time, instance time); before every attempt, charged +
   the priced unit estimate must stay <= :data:`CAP_GPU_H` and <= :data:`CAP_USD` (:class:`CapExceeded`); a phase above
   1.25x its price raises :class:`PhasePause`.
+* **Cap generations (PREREG_WME §II.31).** The cap in force is the last persisted ``cap_generation`` record (else the
+  registered :data:`CAP_GPU_H`). A cap generation only raises the cap, is dated, names its decider and source (a raise
+  after §II.31 is the chair's and must have been announced to the user), never lets the cap exceed :data:`CAP_USD` at
+  :data:`USD_PER_GPU_H`, binds the contract generation it was recorded under, and is recorded before the units it
+  funds. It is not a contract transition: no result or canary is superseded.
+* **Run-health incidents (§II.31 run-health duties).** An ``incident`` record halts issuing: :meth:`ProductionGuard.begin`
+  raises :class:`HealthHalt` (before any attempt is recorded) until an ``incidents_resolved`` record names the
+  diagnosis and the chair report.
 """
 
 from __future__ import annotations
@@ -89,6 +97,10 @@ LOG_NAME = "study.jsonl"
 
 class CapExceeded(RuntimeError):
     pass
+
+
+class HealthHalt(RuntimeError):
+    """An open run-health incident: no unit is issued until it is diagnosed and reported (incidents_resolved)."""
 
 
 class PhasePause(RuntimeError):
@@ -186,6 +198,8 @@ class StudyState:
         self.ok: dict = {}  # unit -> [attempt_ok records] in log order
         self.disposed: set = set()  # attempt_ok seqs disposed irreversibly
         self.fallback_units: dict = {}  # unit -> its first fallback record
+        self.caps: list = []  # cap_generation records, in log order
+        self.incidents: list = []  # open run-health incidents
 
     @property
     def generation(self):
@@ -249,6 +263,16 @@ class StudyState:
             self.relaunches[r["phase"]] = self.relaunches.get(r["phase"], 0) + 1
         elif t == "repair":
             self.repairs.append(r)
+        elif t == "cap_generation":
+            self.caps.append(r)
+        elif t == "incident":
+            self.incidents.append(r)
+        elif t == "incidents_resolved":
+            self.incidents = []
+
+    @property
+    def cap_gpu_h(self) -> float:
+        return float(self.caps[-1]["cap_gpu_h"]) if self.caps else CAP_GPU_H
 
     # -------------------------------------------------- queries
     def instance_state(self, instance: str) -> str:
@@ -706,16 +730,49 @@ class CombinedLedger(_View):
     def usd(self) -> float:
         return self.gpu_h() * USD_PER_GPU_H
 
+    def cap_gpu_h(self) -> float:
+        """The cap in force: the last persisted cap generation, else the registered :data:`CAP_GPU_H`."""
+        with self._read() as s:
+            return s.cap_gpu_h
+
+    def cap_generations(self) -> list:
+        with self._read() as s:
+            return [dict(r) for r in s.caps]
+
+    def remaining_gpu_h(self) -> float:
+        """GPU-h-eq the cap in force still allows (the dead-man allowance's GPU-hours)."""
+        return max(0.0, min(self.cap_gpu_h() - self.gpu_h(), CAP_USD / USD_PER_GPU_H - self.gpu_h()))
+
     def remaining_usd(self) -> float:
         """For the per-instance dead-man ``max_usd``: never more than what the combined cap leaves."""
-        return max(0.0, min(CAP_USD - self.usd(), (CAP_GPU_H - self.gpu_h()) * USD_PER_GPU_H))
+        return max(0.0, min(CAP_USD - self.usd(), (self.cap_gpu_h() - self.gpu_h()) * USD_PER_GPU_H))
+
+    def record_cap(self, cap: CapGeneration, contract=None, generation=None) -> dict | None:
+        """Persist ``cap`` as a new cap generation if it is above the cap in force (idempotent if equal; a lower cap
+        raises). Returns the record, or None if nothing was written."""
+        cap.check()
+        with self._op() as s:
+            cur = s.cap_gpu_h
+            if cap.cap_gpu_h < cur:
+                raise ValueError(f"a cap generation never lowers the cap ({cap.cap_gpu_h} < {cur})")
+            if cap.cap_gpu_h == cur and (s.caps or cap.cap_gpu_h == CAP_GPU_H):
+                return None
+            return self._append(
+                "cap_generation",
+                index=len(s.caps),
+                previous_cap_gpu_h=cur,
+                contract=contract,
+                contract_generation=generation,
+                **cap.fields(),
+            )
 
     def check_before(self, phase: str, est_gpu_h: float):
         with self._op():
             tot = self.gpu_h() + est_gpu_h
-            if tot > CAP_GPU_H or tot * USD_PER_GPU_H > CAP_USD:
+            cap = self.cap_gpu_h()
+            if tot > cap or tot * USD_PER_GPU_H > CAP_USD:
                 raise CapExceeded(
-                    f"combined cap: {tot - est_gpu_h:.3f} + {est_gpu_h:.3f} GPU-h-eq > {CAP_GPU_H} or $ > {CAP_USD}"
+                    f"combined cap: {tot - est_gpu_h:.3f} + {est_gpu_h:.3f} GPU-h-eq > {cap} or $ > {CAP_USD}"
                 )
             if self.unit_gpu_h(phase) + est_gpu_h > PHASE_PAUSE * self.priced[phase]:
                 raise PhasePause(
@@ -814,6 +871,42 @@ class EngineeringGuard:
 
 
 @dataclass
+class CapGeneration:
+    """One dated cap decision (PREREG_WME §II.31): ``decided_by`` "user" (the §II.31 decision) or "chair" (a later
+    raise, which must have been announced to the user)."""
+
+    cap_gpu_h: float
+    date: str
+    decided_by: str
+    source: str
+    announced_to_user: bool
+
+    def check(self):
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", self.date or ""):
+            raise ValueError("a cap generation needs an ISO date")
+        if self.decided_by not in ("user", "chair"):
+            raise ValueError("a cap generation is decided by the user or the chair")
+        if not self.source:
+            raise ValueError("a cap generation names its source (amendment / ruling)")
+        if self.decided_by == "chair" and self.announced_to_user is not True:
+            raise ValueError("a chair raise must be announced to the user before it is logged")
+        if not (CAP_GPU_H <= float(self.cap_gpu_h)) or float(self.cap_gpu_h) * USD_PER_GPU_H > CAP_USD:
+            raise ValueError(
+                f"cap {self.cap_gpu_h} GPU-h-eq: below the registered {CAP_GPU_H} or beyond ${CAP_USD} "
+                f"at {USD_PER_GPU_H:.3f}/GPU-h"
+            )
+
+    def fields(self) -> dict:
+        return {
+            "cap_gpu_h": float(self.cap_gpu_h),
+            "date": self.date,
+            "decided_by": self.decided_by,
+            "source": self.source,
+            "announced_to_user": bool(self.announced_to_user),
+        }
+
+
+@dataclass
 class LaunchAttestation:
     """Launch validity preconditions (§II.21.1, §II.22.6), each evidenced before the first confirmatory unit."""
 
@@ -886,8 +979,11 @@ class ProductionGuard:
         fallback_value=None,
         clock=time.time,
         transition: ContractTransition | None = None,
+        cap: CapGeneration | None = None,
     ):
         attestation.check()
+        if cap is not None:
+            cap.check()
         self.state = Path(state_dir)
         self.state.mkdir(parents=True, exist_ok=True)
         legacy = [
@@ -950,6 +1046,8 @@ class ProductionGuard:
                     "fallback_registered", payload=fallback_value, payload_sha256=fb_digest
                 )
             self.contract, self.generation = s.contract, s.generation
+            if cap is not None:
+                self.ledger.record_cap(cap, contract=s.contract, generation=s.generation)
             self.fallback_payload = s.fallbacks[phase]["payload"]
             self.fallback_sha256 = fb_digest
 
@@ -1088,6 +1186,32 @@ class ProductionGuard:
             )
             return sha == s.contracts[self.generation]["canary_reference"]
 
+    # -------------------------------------------------- run health (§II.31)
+    def incident(self, kind: str, detail: dict) -> dict:
+        """Persist a run-health incident; issuing halts until :meth:`resolve_incidents`."""
+        if not kind:
+            raise ValueError("name the incident kind")
+        with self._op():
+            return self._append("incident", kind=kind, detail=detail, instance=self.instance)
+
+    def open_incidents(self) -> list:
+        with self.log.locked() as s:
+            return [dict(r) for r in s.incidents]
+
+    def resolve_incidents(self, diagnosis: str, report: str) -> dict:
+        """Close every open incident after diagnosis and the report to the chair (both named)."""
+        if not diagnosis or not report:
+            raise ValueError("name the diagnosis and the chair report")
+        with self._op() as s:
+            if not s.incidents:
+                raise ValueError("no open incident")
+            return self._append(
+                "incidents_resolved",
+                diagnosis=diagnosis,
+                report=report,
+                incidents=[r["seq"] for r in s.incidents],
+            )
+
     def relaunch(self, cause: str, new_instance: str):
         with self._op():
             self.ledger.tick()
@@ -1141,6 +1265,9 @@ class ProductionGuard:
 
     def begin(self, key, label) -> int:
         with self._op() as s:
+            if s.incidents:
+                k = [i["kind"] for i in s.incidents]
+                raise HealthHalt(f"{label}: open run-health incidents {k}; diagnose and report first")
             self._require_active(s)
             cans = s.canaries.get((self.instance, self.generation, self.contract), [])
             if not cans or cans[-1][1] != s.contracts[self.generation]["canary_reference"]:

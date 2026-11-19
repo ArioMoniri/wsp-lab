@@ -13,6 +13,7 @@ the hashed winners manifest -> confirmatory (the single sealed test read; E1 gen
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import time
 from pathlib import Path
@@ -23,6 +24,16 @@ from wsp.wm import prereg_v2 as PV2
 from wsp.wm import runguard as RG
 from wsp.wm.c1 import ctl as C
 from wsp.wm.c1.schema import ARMS_PRIMARY, ARMS_SECONDARY
+
+# PREREG_WME §II.31 (v2l), RULING-wme-c1-phasel addendum: the user's cap decision, recorded before any data. Later
+# raises are chair-only, announced to the user, and appended as new cap generations before the units they fund.
+CAP = RG.CapGeneration(
+    cap_gpu_h=110.0,
+    date="2026-11-19",
+    decided_by="user",
+    source="PREREG_WME §II.31 (v2l); docs/council/2026-11-19/RULING-wme-c1-phasel.md addendum",
+    announced_to_user=True,
+)
 
 PRICE = {
     "bank": 4.1268,  # the bound 72-root / 12-block graph (amendment G1; powersim_v2b.price, oracle_s 0)
@@ -75,7 +86,12 @@ class Study:
         theta0: str,
         panel: str,
         log=print,
+        health: bool = True,
+        health_order=None,
     ):
+        self.health = health  # §II.31 run-health rules on every issued unit (engineering drills may opt out)
+        self.health_order = health_order  # None: the registered §II.18 order (a fixture order only in the drill)
+        self.monitor = None
         self.state = Path(state_dir)
         self.runs = Path(runs_dir)
         self.att = attestation
@@ -102,6 +118,7 @@ class Study:
             technical=C.technical,
             fallback_value=FALLBACK[phase],
             transition=transition,
+            cap=CAP,
         )
 
     def store(self, phase: str) -> H.UnitStore:
@@ -142,17 +159,36 @@ class Study:
             return payload
 
         canary = lambda: C.run_canary(guard, remote, canary_args)
-        return C.run_bracketed(
-            guard,
-            store,
-            units,
-            fn or default_fn,
-            self.theta0,
-            self.panel,
-            canary,
-            chunk=chunk,
-            max_chunk_s=max_chunk_s,
-        )
+        fn = fn or default_fn
+        on_chunk = None
+        if self.health:
+            from wsp.wm.c1 import health as HL
+
+            if self.monitor is None or self.monitor.t is not transport:
+                self.monitor = HL.HealthMonitor(
+                    self.runs, transport, log=self.log, order=self.health_order
+                )
+            mon = self.monitor
+            fn = mon.wrap_fn(guard, fn)
+            canary = mon.wrap_canary(guard, canary)
+            on_chunk = lambda rec, n: mon.chunk_summary(guard, rec, n)  # noqa: E731
+            remote.watch = lambda: mon.poll(guard)
+        try:
+            return C.run_bracketed(
+                guard,
+                store,
+                units,
+                fn,
+                self.theta0,
+                self.panel,
+                canary,
+                chunk=chunk,
+                max_chunk_s=max_chunk_s,
+                on_chunk=on_chunk,
+            )
+        finally:
+            if self.health:
+                remote.watch = None
 
     def result_files(self, remote, payload_key) -> Path | None:
         return None

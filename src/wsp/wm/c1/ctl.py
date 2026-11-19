@@ -55,7 +55,9 @@ class Remote:
         sleep=time.sleep,
         log=None,
         revive=None,
+        watch=None,
     ):
+        self.watch = watch  # called on every poll while a request is in flight (run-health rules, §II.31)
         self.revive = (
             revive  # restarts a dead worker process (same instance); the inbox request survives
         )
@@ -104,6 +106,13 @@ class Remote:
                 break
             if self.lost():
                 raise InstanceLost(f"{label}: instance lost while waiting")
+            if self.watch is not None:
+                try:
+                    self.watch()
+                except Exception:
+                    self._with_retry(lambda: self.t.cancel(req["id"]), "cancel")
+                    self._journal({"event": "health_abort", "id": req["id"]})
+                    raise
             age = self._with_retry(self.t.alive_age, "alive")
             if age is not None and age > self.dead_after_s:
                 if self.revive is not None and not revived:
@@ -168,6 +177,7 @@ def run_bracketed(
     chunk: int = 8,
     max_chunk_s: float = 3600.0,
     clock=time.time,
+    on_chunk=None,
 ) -> dict:
     """Start canary, then chunks of at most ``chunk`` units (or ``max_chunk_s`` of wall time), each closed by a
     canary. A failed canary halts (``CanaryMismatch``) after it is recorded: results since the previous canary are
@@ -186,6 +196,8 @@ def run_bracketed(
             if clock() - t0 > max_chunk_s:
                 break
         rec = canary()
+        if on_chunk is not None:  # the chunk-boundary health summary (§II.31), before any halt
+            on_chunk(rec, j - i)
         if not rec["pass"]:
             raise RG.CanaryMismatch(f"closing canary {rec['composite'][:12]} != reference")
         i = j

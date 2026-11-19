@@ -46,8 +46,31 @@ def allowance(ledger_remaining_gpu_h: float, dm_spent_usd: float, itype: str = T
     return float(dm_spent_usd + max(0.0, ledger_remaining_gpu_h) * per_gpu_h)
 
 
-def tighten(state: Path, max_usd: float, t_max_hours: float, idle_limit_s: float = 1800.0):
-    """Write the policy override (the dead-man reloads it every tick and only accepts tightening)."""
+def deadman_gpu_h(state: dict, now: float | None = None) -> float:
+    """GPU-hours of every dead-man-registered instance (launch to confirmed termination, or to ``now`` if live)."""
+    now = time.time() if now is None else float(now)
+    tot = 0.0
+    for rec in (state.get("instances") or {}).values():
+        la = rec.get("launched_at")
+        if la is None:
+            continue
+        te = rec.get("confirmed_terminated_at") or now
+        tot += max(0.0, float(te) - float(la)) * GPUS.get(rec.get("type"), 1) / 3600.0
+    return tot
+
+
+def tighten(
+    state: Path,
+    max_usd: float,
+    t_max_hours: float,
+    idle_limit_s: float = 1800.0,
+    cap_generation: int | None = None,
+):
+    """Write the policy override (the dead-man reloads it every tick; its CLI base policy bounds every override).
+
+    ``max_usd`` and the idle limit only tighten, except that ``max_usd`` is re-based once per newly logged cap
+    generation (PREREG_WME §II.31: a cap raise is recorded in the study log before the units it funds, and the
+    dead-man allowance is the remaining cap). ``t_max_hours`` (cumulative instance-hours) is set per launch."""
     p = Path(state) / "policy.json"
     cur = json.loads(p.read_text()) if p.exists() else {}
     new = {
@@ -55,14 +78,16 @@ def tighten(state: Path, max_usd: float, t_max_hours: float, idle_limit_s: float
         "t_max_hours": float(t_max_hours),
         "idle_limit_s": float(idle_limit_s),
     }
-    for (
-        k,
-        v,
-    ) in (
-        new.items()
-    ):  # max_usd and idle only tighten; t_max (cumulative instance-hours) is set per launch
-        if k in cur and v > cur[k] and k != "t_max_hours":
+    rebase = cap_generation is not None and int(cap_generation) > int(cur.get("cap_generation", -1))
+    for k, v in list(new.items()):
+        if k == "t_max_hours" or (k == "max_usd" and rebase):
+            continue
+        if k in cur and v > cur[k]:
             new[k] = cur[k]
+    if cap_generation is not None:
+        new["cap_generation"] = max(int(cap_generation), int(cur.get("cap_generation", -1)))
+    elif "cap_generation" in cur:
+        new["cap_generation"] = cur["cap_generation"]
     p.write_text(json.dumps(new, indent=1))
     return new
 

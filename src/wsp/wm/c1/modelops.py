@@ -162,22 +162,34 @@ class ModelCtx:
         res, _ = self.evaluate(items)
         return sha_values(flatten_values(res, CANARY_TF_OBJECTIVES))
 
-    def canary_hf(self, items=None) -> str:
-        from wsp.wm import genaudit as GA
+    def canary_hf(self, items=None, mode=None) -> str:
+        """The ``hf_gen`` canary through the recorded generation engine (``wm.c1.genengine``, §II.31)."""
+        return self.canary_hf_timed(items, mode)[0]
+
+    def canary_hf_timed(self, items=None, mode=None) -> tuple:
+        import torch
+
         from wsp.wm import p3gen as G
+        from wsp.wm.c1 import genengine as GE
 
         self.at_base()
         items = items or gen_canary_items()
         prompts = [G.user_prompt("mmlupro_gen", it) for it in items]
-        out = GA.generate_greedy(
+        if self.device == "cuda":
+            torch.cuda.synchronize()
+        t0 = time.time()
+        out = GE.hf_generate(
             self.model,
             self.tok,
             prompts,
             CANARY_HF["max_new_tokens"],
-            batch=CANARY_HF["batch"],
-            device=self.device,
+            CANARY_HF["batch"],
+            self.device,
+            mode=mode,
         )
-        return sha_ids([r["ids"] for r in out])
+        if self.device == "cuda":
+            torch.cuda.synchronize()
+        return sha_ids([r["ids"] for r in out]), time.time() - t0
 
     def release(self):
         """Free the GPU (before a vLLM engine starts in this process)."""
