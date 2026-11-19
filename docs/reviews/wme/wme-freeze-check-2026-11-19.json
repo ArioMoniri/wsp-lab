@@ -1,0 +1,679 @@
+{
+ "label": "PREREG_WME freeze conditions (hash-only; no panel, split or data file opened)",
+ "manifest": "docs/prereg/wme_manifest.json",
+ "manifest_sha256": "02514cb89f7229458e631232cf42930db36530cf26becf544485517d37ede41e",
+ "manifest_generated_from_commit": "ec829cf28a456006085dbc0fea59c83516266fce",
+ "conditions": {
+  "I(i)/II(i) Board A acceptance chain": {
+   "met": true,
+   "chain": [
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-2026-11-17.md",
+     "sha256": "2bbfcb0fe9417832d51427e75b43c753cc2b5f85b6e86042a1900bfbde9d759a",
+     "stage": "v1",
+     "verdict": "ACCEPT WITH CONDITIONS (14 changes)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-2026-11-18.md",
+     "sha256": "4104d87d17dec564f603be30d63421f7b915b6b997efbb812b67be6e1e2d2f19",
+     "stage": "v2",
+     "verdict": "ACCEPT WITH CONDITIONS (changes 1-7)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-confirm-2026-11-19.md",
+     "sha256": "040e6be1e303534519501939a7606b71fd2a69779ab5f6f6b9e8119feeace234",
+     "stage": "confirmation",
+     "verdict": "ACCEPT WITH CONDITIONS (blockers A, B)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-final-2026-11-19.md",
+     "sha256": "9d42e363e818486959d0dea7c9ec178dfade6ff42500e6c0fc6cb85c21d501ff",
+     "stage": "final re-check",
+     "verdict": "ACCEPT WITH CONDITIONS; freeze blocked by B (A closed)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-freeze-2026-11-19.md",
+     "sha256": "153049ca42dd8baf2a3a7f16528b59ed5c299945063b82a839e6e3bfdc32f5cf",
+     "stage": "freeze re-check",
+     "verdict": "REJECT (B open)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-freeze2-2026-11-19.md",
+     "sha256": "7cfcc549b089d619a1274eacb5c3cf4963f0e77be6bdc77852dcfdec5bf3520f",
+     "stage": "freeze re-check 2",
+     "verdict": "REJECT (B open)"
+    },
+    {
+     "review": "docs/reviews/council/board-a-prereg-wme-v2-freeze3-2026-11-19.md",
+     "sha256": "c035754641342f152a01f5c0760f21a3fcbd897449128fe4be01c593adbade16",
+     "stage": "freeze re-check 3",
+     "verdict": "ACCEPT WITH CONDITIONS (B closed for the serialized production path)"
+    }
+   ],
+   "last_verdict": "ACCEPT WITH CONDITIONS",
+   "freeze3_conditions_recorded_in_II.28": true
+  },
+  "I(ii) every SIM placeholder filled": {
+   "met": true,
+   "part_I_sim_placeholders": 18
+  },
+  "I(iii) every MANIFEST placeholder filled": {
+   "met": true,
+   "part_I_manifest_placeholders": 44,
+   "appendix_c_fields_missing_from_manifest": []
+  },
+  "no open placeholder in Part II outside Appendix C": {
+   "met": true,
+   "found": []
+  },
+  "II(ii) freeze-build prerequisites (panels built and re-audited after every exposure)": {
+   "met": true,
+   "audit.panels_v2e.clean": true,
+   "panels": {
+    "wme-c1": {
+     "manifest_sha256": "9dd5c9b6bbc9fade22a9adabdeb3d2626ffeea0a35f21dd62ffb986585d9c208",
+     "content_hash": "89739c7818e29d618ac3bcb52d7e51cd29a9361e7774a71b412646775c630c1d"
+    },
+    "wme-c2-gen": {
+     "manifest_sha256": "4cdb7728c237acb9d9b44bd68f94ec47940383be3348adb231205fd65bab790e",
+     "content_hash": "a24d5f0ef7de185136cb31464336d6c0537c631fa21b25b184619fb04497c43b"
+    }
+   },
+   "audit_reports_sha256": {
+    "docs/reviews/wme/wme-v2e-panel-audit-2026-11-19.json": "a251d79880d964a94c390d5e6604f53631d44938ef2b8f20426f30aab50f5311",
+    "docs/reviews/wme/wme-v2f-root-lineage-2026-11-19.json": "0df383ae561f81afc42cfd24b0fd337edfb44797be656ef1f10dd3810281b2cf"
+   }
+  },
+  "II(iii) stage-W2 outcome known": {
+   "met": true,
+   "H-T3": "not registered (stage W2 failed its pre-declared rule; RULING-wme-post-stagew Q4)"
+  },
+  "I(iv)/II(iv) hashes recorded in the freeze commit": {
+   "met": true,
+   "manifest_sha256": "02514cb89f7229458e631232cf42930db36530cf26becf544485517d37ede41e",
+   "simulation_reports": {
+    "cal_v2b": {
+     "sha256": "4a0742df232ae1340efa540ff9e6cc27a374dc2bdc34cdaa1a89fd449aea9720",
+     "files": [
+      "docs/reviews/wme/wme-v2b-calibration-2026-11-17.json"
+     ]
+    },
+    "cheap_v2b": {
+     "sha256": "bfa64d8a17b89e8c6afedc58c3383e55c6366985e0e5e31c974dbaffad5b1c7b",
+     "files": [
+      "docs/reviews/wme/wme-powersim-v2b-2026-11-17.json"
+     ]
+    },
+    "cpsel_v2b": {
+     "sha256": "f20b2cde4bcc0957ac623ded4901d9ddfc3e5c5f0b48a5ac1eed70389ad41216",
+     "files": [
+      "docs/reviews/wme/wme-v2b-cpsel-2026-11-17.json"
+     ]
+    },
+    "e2sens_v2d": {
+     "sha256": "56c3ce4f5594a53655bb731f2e82877efb3f9d8d6024a48241394b6ee2469935",
+     "files": [
+      "docs/reviews/wme/wme-v2d-e2sens-2026-11-19.json"
+     ]
+    },
+    "ph100b": {
+     "sha256": "2e825cd3c05c9cdf3aa9ea9f79d256e176596bac30983d50001a90d2409e2857",
+     "files": [
+      "docs/reviews/wme/wme-ph100b-2026-11-17.json"
+     ]
+    },
+    "r6_v2c": {
+     "sha256": "0fd6e6640089021113c8109a79cced747f37e378bd0f6791a62c2e4e40553fd7",
+     "files": [
+      "docs/reviews/wme/wme-v2c-r6-2026-11-18.json"
+     ]
+    },
+    "refit_v2b": {
+     "sha256": "ed9e5a79bba49658db0fc1fb1055d32299bb6166e28eb0ed7f0fd707e48d8fef",
+     "files": [
+      "docs/reviews/wme/wme-powersim-refit-v2b-2026-11-17.json"
+     ]
+    },
+    "sbon_v2c": {
+     "sha256": "716a49e11bd60a02ea82b823e5468238778aba2731f9a66725a0701d9cb5eefb",
+     "files": [
+      "docs/reviews/wme/wme-v2c-sbon-2026-11-18.json"
+     ]
+    },
+    "full_refit": {
+     "sha256": "424076b96ccf9f1c729900419b2b76fe74f5bf8a8739336f12c87ed95288b5ac",
+     "files": [
+      "docs/reviews/wme/wme-powersim-refit-2026-11-17.json"
+     ]
+    }
+   },
+   "stage_reports_sha256": {
+    "docs/reviews/wme/wme-stagew-2026-11-18.json": "4b19a3945b96be1fe1cd9a9163b4a5506d996126c1c0a5b37e62a061a46d6c09",
+    "docs/reviews/wme/wme-stagew2-2026-11-18.json": "8443bd8a1df6c332b7b71b0b120d91d025e8fc7f296f36aabb167a6abcbaf302"
+   }
+  }
+ },
+ "all_met": true,
+ "placeholders": [
+  {
+   "line": 16,
+   "kind": "SIM",
+   "placeholder": "…",
+   "status": "convention text"
+  },
+  {
+   "line": 17,
+   "kind": "MANIFEST",
+   "placeholder": "…",
+   "status": "convention text"
+  },
+  {
+   "line": 37,
+   "kind": "MANIFEST",
+   "placeholder": "<field>",
+   "status": "convention text"
+  },
+  {
+   "line": 39,
+   "kind": "SIM",
+   "placeholder": "<name>",
+   "status": "convention text"
+  },
+  {
+   "line": 171,
+   "kind": "MANIFEST",
+   "placeholder": "target.theta0_hash",
+   "appendix_c_row": "target.theta0_hash",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 269,
+   "kind": "MANIFEST",
+   "placeholder": "sources",
+   "appendix_c_row": "sources",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 303,
+   "kind": "MANIFEST",
+   "placeholder": "panel.wme_c1.minhash_seed",
+   "appendix_c_row": "panel.wme_c1.minhash_seed",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 306,
+   "kind": "MANIFEST",
+   "placeholder": "panel.wme_c1.group_policy",
+   "appendix_c_row": "panel.wme_c1.group_policy",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 325,
+   "kind": "MANIFEST",
+   "placeholder": "audit.exclusion_report_hash",
+   "appendix_c_row": "audit.exclusion_report_hash",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 327,
+   "kind": "MANIFEST",
+   "placeholder": "audit.available_groups.<objective>",
+   "appendix_c_row": "audit.available_groups",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 344,
+   "kind": "SIM",
+   "placeholder": "n_<split>,<objective>",
+   "appendix_c_row": "n_bank",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 346,
+   "kind": "MANIFEST",
+   "placeholder": "panel.wme_c1.split_hashes",
+   "appendix_c_row": "panel.wme_c1.split_hashes",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 353,
+   "kind": "MANIFEST",
+   "placeholder": "tap.seed",
+   "appendix_c_row": "tap.seed",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 414,
+   "kind": "SIM",
+   "placeholder": "r_f",
+   "appendix_c_row": "r_f",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 422,
+   "kind": "MANIFEST",
+   "placeholder": "bank.noise_rho",
+   "appendix_c_row": "bank.noise_rho",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 427,
+   "kind": "MANIFEST",
+   "placeholder": "bank.roots[r",
+   "appendix_c_row": "bank.roots",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 484,
+   "kind": "MANIFEST",
+   "placeholder": "bank.roots",
+   "appendix_c_row": "bank.roots",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 514,
+   "kind": "MANIFEST",
+   "placeholder": "bank.root_sampler_seed",
+   "appendix_c_row": "bank.root_sampler_seed",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 515,
+   "kind": "MANIFEST",
+   "placeholder": "bank.contrast_catalogue",
+   "appendix_c_row": "bank.contrast_catalogue",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 519,
+   "kind": "SIM",
+   "placeholder": "r_f",
+   "appendix_c_row": "r_f",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 528,
+   "kind": "SIM",
+   "placeholder": "n_blk",
+   "appendix_c_row": "n_blk",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 529,
+   "kind": "MANIFEST",
+   "placeholder": "bank.blocks",
+   "appendix_c_row": "bank.blocks",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 541,
+   "kind": "MANIFEST",
+   "placeholder": "bank.component_graph_hash",
+   "appendix_c_row": "bank.component_graph_hash",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 552,
+   "kind": "SIM",
+   "placeholder": "n_cal",
+   "appendix_c_row": "n_cal",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 552,
+   "kind": "MANIFEST",
+   "placeholder": "bank.calibration_components",
+   "appendix_c_row": "bank.calibration_components",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 558,
+   "kind": "MANIFEST",
+   "placeholder": "bank.folds.outer_seed",
+   "appendix_c_row": "bank.folds.outer_seed",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 559,
+   "kind": "SIM",
+   "placeholder": "m_min_HT",
+   "appendix_c_row": "m_min_HT",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 563,
+   "kind": "MANIFEST",
+   "placeholder": "bank.folds.inner_seed",
+   "appendix_c_row": "bank.folds.inner_seed",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 595,
+   "kind": "MANIFEST",
+   "placeholder": "seeds.bootstrap.guard",
+   "appendix_c_row": "seeds.bootstrap.guard",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 691,
+   "kind": "MANIFEST",
+   "placeholder": "model.dictionary",
+   "appendix_c_row": "model.dictionary",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 700,
+   "kind": "MANIFEST",
+   "placeholder": "model.wm.config",
+   "appendix_c_row": "model.wm.config",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 710,
+   "kind": "MANIFEST",
+   "placeholder": "model.chart_schema_version",
+   "appendix_c_row": "model.chart_schema_version",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 725,
+   "kind": "MANIFEST",
+   "placeholder": "model.static.configs",
+   "appendix_c_row": "model.static.configs",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 764,
+   "kind": "MANIFEST",
+   "placeholder": "model.training_protocol",
+   "appendix_c_row": "model.training_protocol",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 771,
+   "kind": "MANIFEST",
+   "placeholder": "model.ensemble_seeds",
+   "appendix_c_row": "model.ensemble_seeds",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 830,
+   "kind": "MANIFEST",
+   "placeholder": "seeds.bootstrap.ht",
+   "appendix_c_row": "seeds.bootstrap.ht",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 840,
+   "kind": "SIM",
+   "placeholder": "m_min_HT",
+   "appendix_c_row": "m_min_HT",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 917,
+   "kind": "MANIFEST",
+   "placeholder": "controls.inert",
+   "appendix_c_row": "controls.inert",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 928,
+   "kind": "SIM",
+   "placeholder": "n_inert",
+   "appendix_c_row": "n_inert",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 944,
+   "kind": "SIM",
+   "placeholder": "n_inert",
+   "appendix_c_row": "n_inert",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1025,
+   "kind": "SIM",
+   "placeholder": "n_rep",
+   "appendix_c_row": "n_rep",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1026,
+   "kind": "MANIFEST",
+   "placeholder": "e2.episodes[e",
+   "appendix_c_row": "e2.episodes",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1030,
+   "kind": "MANIFEST",
+   "placeholder": "e2.library",
+   "appendix_c_row": "e2.library",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1039,
+   "kind": "MANIFEST",
+   "placeholder": "e2.library.lora_seeds",
+   "appendix_c_row": "e2.library.lora_seeds",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1057,
+   "kind": "MANIFEST",
+   "placeholder": "planner.algorithm",
+   "appendix_c_row": "planner.algorithm",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1057,
+   "kind": "MANIFEST",
+   "placeholder": "planner.config",
+   "appendix_c_row": "planner.config",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1080,
+   "kind": "SIM",
+   "placeholder": "pool_size",
+   "appendix_c_row": "pool_size",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1089,
+   "kind": "SIM",
+   "placeholder": "B",
+   "appendix_c_row": "B",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1137,
+   "kind": "MANIFEST",
+   "placeholder": "e2.winners_manifest_hash",
+   "appendix_c_row": "e2.winners_manifest_hash",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1150,
+   "kind": "MANIFEST",
+   "placeholder": "seeds.bootstrap.e1",
+   "appendix_c_row": "seeds.bootstrap.e1",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1163,
+   "kind": "SIM",
+   "placeholder": "n_rep_sec",
+   "appendix_c_row": "n_rep_sec",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1179,
+   "kind": "MANIFEST",
+   "placeholder": "gen.config",
+   "appendix_c_row": "gen.config",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1191,
+   "kind": "MANIFEST",
+   "placeholder": "gen.sampled_seeds",
+   "appendix_c_row": "gen.sampled_seeds",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1196,
+   "kind": "SIM",
+   "placeholder": "n_gen,syc",
+   "appendix_c_row": "n_gen,syc",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1199,
+   "kind": "SIM",
+   "placeholder": "n_gen,gsm",
+   "appendix_c_row": "n_gen,gsm",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1200,
+   "kind": "SIM",
+   "placeholder": "n_gen,math",
+   "appendix_c_row": "n_gen,math",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1212,
+   "kind": "MANIFEST",
+   "placeholder": "gen.parsers",
+   "appendix_c_row": "gen.parsers",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1285,
+   "kind": "MANIFEST",
+   "placeholder": "seeds.bootstrap.e2",
+   "appendix_c_row": "seeds.bootstrap.e2",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1305,
+   "kind": "SIM",
+   "placeholder": "reader_token_cap",
+   "appendix_c_row": "reader_token_cap",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1314,
+   "kind": "SIM",
+   "placeholder": "n_ep_sec",
+   "appendix_c_row": "n_ep_sec",
+   "filled": true,
+   "manifest_field_present": null
+  },
+  {
+   "line": 1385,
+   "kind": "MANIFEST",
+   "placeholder": "bank.component_graph_hash",
+   "appendix_c_row": "bank.component_graph_hash",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1404,
+   "kind": "MANIFEST",
+   "placeholder": "simulation.commit",
+   "appendix_c_row": "simulation.commit",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1405,
+   "kind": "MANIFEST",
+   "placeholder": "simulation.seeds",
+   "appendix_c_row": "simulation.seeds",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1406,
+   "kind": "MANIFEST",
+   "placeholder": "simulation.report_hash",
+   "appendix_c_row": "simulation.report_hash",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1495,
+   "kind": "MANIFEST",
+   "placeholder": "audit.available_groups.*",
+   "appendix_c_row": "audit.available_groups",
+   "filled": true,
+   "manifest_field_present": true
+  },
+  {
+   "line": 1535,
+   "kind": "MANIFEST",
+   "placeholder": "cost.unit_times",
+   "appendix_c_row": "cost.unit_times",
+   "filled": true,
+   "manifest_field_present": true
+  }
+ ]
+}

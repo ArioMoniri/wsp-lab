@@ -2,7 +2,12 @@
 
 > **DRAFT v2 (18 Nov 2026) is appended below as Part II.** Part I (DRAFT v1) is kept verbatim. Part II governs wherever it states that it supersedes a Part I section, and it fills every `[MANIFEST]` and `[SIM]` placeholder (Appendix C). The binding claim set is RULING-wme-post-stagew Q3 (Part II §II.2).
 
-**Status: DRAFT v1, not frozen.** Dated 17 Nov 2026. This revises DRAFT v0 (chair, `ad1ea6d`, reviewed at `1547c35`) in
+**Status: FROZEN 19 Nov 2026.** The binding registration is Part I as superseded by Part II through §II.28, with execution restricted to the serialized path (§II.28.2). Freeze conditions: §II.28.4. Freeze record: `docs/reviews/wme/prereg-wme-freeze-2026-11-19.md`. Tag: `prereg-wme-v2-frozen`.
+- **Freeze manifest:** `docs/prereg/wme_manifest.json`, sha256 `02514cb89f7229458e631232cf42930db36530cf26becf544485517d37ede41e`.
+- **Simulation reports (sha256):** cal_v2b `4a0742df232ae1340efa540ff9e6cc27a374dc2bdc34cdaa1a89fd449aea9720`; cheap_v2b `bfa64d8a17b89e8c6afedc58c3383e55c6366985e0e5e31c974dbaffad5b1c7b`; cpsel_v2b `f20b2cde4bcc0957ac623ded4901d9ddfc3e5c5f0b48a5ac1eed70389ad41216`; e2sens_v2d `56c3ce4f5594a53655bb731f2e82877efb3f9d8d6024a48241394b6ee2469935`; ph100b `2e825cd3c05c9cdf3aa9ea9f79d256e176596bac30983d50001a90d2409e2857`; r6_v2c `0fd6e6640089021113c8109a79cced747f37e378bd0f6791a62c2e4e40553fd7`; refit_v2b `ed9e5a79bba49658db0fc1fb1055d32299bb6166e28eb0ed7f0fd707e48d8fef`; sbon_v2c `716a49e11bd60a02ea82b823e5468238778aba2731f9a66725a0701d9cb5eefb`; full_refit `424076b96ccf9f1c729900419b2b76fe74f5bf8a8739336f12c87ed95288b5ac`.
+- **Stage reports (sha256):** stage W `4b19a3945b96be1fe1cd9a9163b4a5506d996126c1c0a5b37e62a061a46d6c09`; stage W2 `8443bd8a1df6c332b7b71b0b120d91d025e8fc7f296f36aabb167a6abcbaf302`.
+
+**Part I history: DRAFT v1**, dated 17 Nov 2026. It revises DRAFT v0 (chair, `ad1ea6d`, reviewed at `1547c35`) in
 response to Board A's review `docs/reviews/council/board-a-prereg-wme-2026-11-17.md` (ACCEPT WITH CONDITIONS, 14
 required changes).
 
@@ -1737,7 +1742,7 @@ registered claim and its result are kept unchanged.
 
 # PART II. DRAFT v2 (18 Nov 2026): the post-pilot-3, post-stage-W registration
 
-**Status: DRAFT v2, not frozen.** Written 18 Nov 2026 by the PREREG v2 author, on branch `prereg/wme-v2` from main
+**Status: FROZEN 19 Nov 2026** (§II.28.5; hashes in the file header). DRAFT v2 was written 18 Nov 2026 by the PREREG v2 author, on branch `prereg/wme-v2` from main
 `31837fb`. Part I (DRAFT v1, above) is kept verbatim. Part II governs wherever it says that it supersedes a Part I
 section; every Part I section it does not supersede stays in force as written. No confirmatory outcome exists. Since
 v1, the only data generated are exploratory pilots (pilot 3, stage W) and outcome-blind simulations. None of them is
@@ -3595,3 +3600,212 @@ Two further limits:
   deployed disk.
 - The flock serialises processes on one host's file system. Sharing the state directory across hosts would need a
   lock with the same semantics, which is a deployment precondition.
+
+
+## II.28 Amendment and FREEZE (19 Nov 2026): Board A freeze re-check 3 conditions, chair decisions, launch preconditions
+
+**What this section is.** It is dated 19 Nov 2026 and is made before any confirmatory outcome exists. Board A's freeze
+re-check 3 (`docs/reviews/council/board-a-prereg-wme-v2-freeze3-2026-11-19.md`, sha256
+`c035754641342f152a01f5c0760f21a3fcbd897449128fe4be01c593adbade16`) is **ACCEPT WITH CONDITIONS**: blocker B is closed for the serialized production path, and A and
+changes 1–5/7 stay closed. Acceptance requires three things, which this section records:
+- the two wording boundaries (§II.28.1);
+- the launch restriction, as the chair's binding decisions (§II.28.2);
+- the mandatory launch preconditions (§II.28.3).
+
+It then checks the freeze conditions (§II.28.4) and freezes the registration (§II.28.5).
+
+**What it is not.** There is no code change and no scientific change. The registered claims, analyses, sizes, rules
+and caps stay as Part II states them. Where this section narrows §II.27, it narrows a description of the runtime, not
+a registered analysis.
+
+### II.28.1 Runtime claims narrowed to the implementation (Board A conditions 1 and 2; supersedes the §II.27.1 rows "Serialised operations" and "Torn or truncated logs fail closed")
+
+**1. Calls that share an object must be serialized, including across threads.**
+- **What the lock covers.** The OS lock (`fcntl.flock`, taken by each `StudyLog` object) serializes operations
+  between separate objects and between separate processes.
+- **What it does not cover.** Within one object, `StudyLog.locked` keeps an object-wide re-entrancy depth, not a
+  thread-aware mutex. A second thread entering while a call holds the lock skips both lock acquisition and refresh.
+- **Board A's probe.** Four threads each called `add` twenty times on one bare ledger. The result was `LogCorrupt`, or
+  `FileNotFoundError` on the shared head temporary file.
+- **The rule.** Every call that shares a `StudyLog` object (one `ProductionGuard` and its `ledger` and `retry` views)
+  must be serialized, including across threads. One owner is not one thread.
+- **Supported scope.** No shared-object concurrent entry is supported. Using shared-object threads would first need a
+  thread-aware lock and its own regression.
+- **The corrected claim.** §II.27's "Every public operation takes an exclusive OS lock … Validation and mutation
+  therefore use one snapshot" holds for this serialized call stream.
+
+**2. A cached refresh verifies the last cached record and the appended tail, not the whole cached prefix.**
+- **What an existing object checks on each operation:**
+  - the bytes of its last cached record;
+  - every record appended since (JSON, sequence, previous hash and record hash);
+  - the head (the log is not shorter than already read or than its head, and the head hash matches).
+- **What it does not check.** It does not re-read earlier cached records. Board A changed one byte of an early owner
+  record without changing its length or the last line. The existing guard still returned its cached eligible result;
+  a fresh `read_study` raised `LogCorrupt`.
+- **The corrected claim.** §II.27's "a changed already-read record" is narrowed to "a changed last cached record".
+  Changes to earlier records are detected by a **verified fresh replay**: `read_study`, or constructing a new
+  `ProductionGuard`, which replays and verifies the whole chain.
+- **Registered operating rules:**
+  - **Immutable-prefix storage is an operating assumption.** The complete records of the study log are never modified
+    in place.
+  - **A verified fresh replay is performed on every restart and recovery.** Every process start, controller restart,
+    takeover, repair and recovery constructs a new `ProductionGuard` (a full verified replay) before any further
+    confirmatory operation.
+  - **The hash chain and head are not protection against a coordinated rollback of the log and its head.** A
+    consistent older copy of both verifies. Hash chaining detects torn tails, truncation below the head, and in-place
+    changes on fresh replay. It is not described as more than that.
+- **Optional hardening, not claimed here:** full-prefix checking on every call, thread-aware locking, independently
+  anchored log heads, and directory-fsync or power-loss testing. Each becomes a requirement if a deployment claims the
+  corresponding stronger guarantee.
+
+The general wording of the `wsp.wm.runguard` module docstring is read with these limits. Field `harness.runguard`
+(`serialisation`, `log_integrity`, `supported_execution`, `launch_preconditions`) of the freeze manifest records
+them.
+
+### II.28.2 Chair decisions (binding; recorded verbatim)
+
+> (1) The 9B confirmatory run uses ONLY the supported serialized execution path: one controller host owning the single authoritative local study log, one serialized guard call stream (no shared-object threads), one active confirmatory GPU instance at a time; the "up to 4 concurrent instances" plan is withdrawn for this freeze. Any parallel adapter would require a dated amendment with atomic aggregate reservations and Board A check before use.
+>
+> (2) Dead-man allowance for the single instance equals the remaining combined budget; no other confirmatory instance may run.
+
+**What they supersede.**
+- **§II.13 item 1** ("At most 4 concurrent Lambda `gpu_1x_h100_sxm5` instances"): now **one active confirmatory GPU
+  instance at a time**. The "Caps" row of the §II.1 table ("≤ 4 concurrent 1× H100 SXM5") is read the same way.
+- **§II.13 item 2** (`max_usd` "set from the priced phase × 1.25") and **§II.22.6's dead-man sentence**: the single
+  instance's dead-man `max_usd` is the remaining combined budget, `CombinedLedger.remaining_usd()`. The remaining
+  §II.13 item 2 rules (`t_max_hours`, termination and verification) stand.
+
+**What stays unchanged.**
+- The phase pause at 1.25× (`PhasePause`).
+- The absolute 90 GPU-h-eq / $1,000 combined limits (`CapExceeded`).
+
+**Operating rules that follow.**
+- **One owner.** One controller host owns the single authoritative study log on its local storage. Workers never
+  construct a `ProductionGuard` or claim ownership. A guard is never reconstructed to work around an owner epoch
+  while older work remains active.
+- **The guard does not enforce one instance by itself.** It charges every active instance in the combined cap, but
+  it does not refuse to open a second instance. Running only one is a controller and dead-man configuration rule,
+  demonstrated under launch precondition 6.
+- **No outcome effect.** These rules are outcome-blind and change no eligibility, retry, fallback or cap rule.
+
+**No parallel adapter is registered.** Using one requires all three of:
+- a dated amendment, before use;
+- atomic aggregate reservations, or a conservatively partitioned budget, covering all outstanding work and
+  active-instance exposure, with coordinated dead-man allowances;
+- a Board A check.
+
+### II.28.3 Launch preconditions (mandatory before the first confirmatory unit)
+
+None of these is performed by this registration. Each must be completed, with evidence retained, **before the first
+confirmatory unit**. An unmet precondition blocks launch and may not be relabelled optional hardening.
+
+1. **Pinned-engine inert identity.** Inert-edit identity and output checks, bitwise, on the actual pinned confirmatory
+   engines and configuration; retained.
+2. **Real 1-vs-2-GPU parity.** Bitwise, on the actual pinned confirmatory engines and configuration; retained.
+3. **Committed per-engine canary references.** Start, periodic and closing canaries run under the registered
+   eligibility rules.
+4. **Evidence and fallback binding.** Real evidence paths and digests, the engine configuration and the registered
+   fallbacks are bound in the `LaunchAttestation` and the study log.
+5. **Unique physical-instance identities.**
+   - A bound mapping of physical instances, phases, attempts, contract generations and canary references to
+     controller records.
+   - Remote outputs are admitted only through the current owner, and stale completion is refused.
+   - A controller takeover stops, or accounts for, old outstanding work.
+6. **Deployed persistence and repair.**
+   - One authoritative study log on the controller host's local storage, with one serialized guard call stream
+     (§II.28.2).
+   - Deployed restart and replacement persistence, partial-write handling and retention of every charged attempt are
+     demonstrated.
+   - A verified fresh replay on every restart and recovery (§II.28.1).
+   - Outcome-blind technical repair records.
+   - Fail closed on loss of controller, state integrity, ownership or accounting connectivity, retaining termination
+     and accounting evidence.
+   - Deployment restart, takeover and worker loss are demonstrated with CPU fixtures before any confirmatory outcome.
+7. **Authoritative time and dead-man reconciliation.**
+   - Provider or dead-man instance times are reconciled into the controller ledger.
+   - The combined charge includes all previously spent bank and study time and every active instance: setup,
+     downloads, idle, canaries, failures, retries and replacements.
+   - Worker sub-ledgers are evidence, never cap authorities.
+   - The single instance's dead-man allowance equals the remaining combined budget (chair decision 2).
+8. **`ProductionGuard` only.** Every confirmatory unit runs through `harness.run_units` with
+   `runguard.ProductionGuard`. `EngineeringGuard` results never enter confirmatory evidence.
+
+### II.28.4 Freeze conditions
+
+**How the conditions were checked.** `scripts/wme_freeze_check.py` checks them. It is hash-only: it reads only
+`docs/` and the manifest, and it opens no panel, split or data file. Its report is
+`docs/reviews/wme/wme-freeze-check-2026-11-19.json`, sha256 `b9d9804f37800d5de5d67331c5cab44cb7cfa633c8408dfab5bcf86d1cb79fae`, with `all_met: true`.
+
+| Condition (Part I preamble; Part II replacement) | Evidence | Met |
+|---|---|---|
+| **(i)** Board A accepts (Part I); Board A re-reviews v2 and accepts that conditions 1–14 are resolved (Part II) | The Board A chain, below and in `prereg_v2.freeze.board_a_chain`, with each review's sha256 verified: v1, v2, confirmation, final re-check, freeze re-check, freeze re-check 2, and **freeze re-check 3: ACCEPT WITH CONDITIONS**. Its conditions are recorded in §II.28.1–§II.28.3. | yes |
+| **(ii)** Every SIM placeholder replaced (Part I) | All 18 SIM placeholder occurrences of Part I resolve to an Appendix C.2 row. None is open in Part II outside Appendix C. The 2 SIM and 2 MANIFEST mentions in the placeholder-convention sentences are not placeholders. | yes |
+| **(iii)** Every MANIFEST placeholder replaced (Part I) | All 44 MANIFEST placeholder occurrences of Part I resolve to an Appendix C.1 row, and every C.1 field is present in the freeze manifest. Two fields bind at a later event by registered rule (Appendix C): `panel.wme_c1.split_hashes` was bound at the v2e build (§II.23, below); `e2.winners_manifest_hash` binds after all episodes, before the single sealed read. | yes |
+| **(ii)** Freeze-build prerequisites (Part II) | Panels built and re-audited after every registered exposure, including the stage-W2 panel (§II.23; `audit.panels_v2e.clean`). Panel audit `a251d798…f5311`; root lineage `0df383ae…1b2cf`. | yes |
+| **(iii)** Stage-W2 outcome known (Part II) | W2 failed, so H-T3 is not registered (§II.23). | yes |
+| **(iv)** A dated freeze commit records the manifest, simulation-report and panel hashes (both parts) | §II.28.5 and the freeze record; every simulation-report hash resolves to exactly one committed file. | yes |
+
+**The Board A chain.**
+
+| Review | Stage | Verdict |
+|---|---|---|
+| `board-a-prereg-wme-2026-11-17.md` | v1 | ACCEPT WITH CONDITIONS (14 changes) |
+| `board-a-prereg-wme-v2-2026-11-18.md` | v2 | ACCEPT WITH CONDITIONS (changes 1–7) |
+| `board-a-prereg-wme-v2-confirm-2026-11-19.md` | confirmation | ACCEPT WITH CONDITIONS (blockers A, B) |
+| `board-a-prereg-wme-v2-final-2026-11-19.md` | final re-check | ACCEPT WITH CONDITIONS; freeze blocked by B (A closed) |
+| `board-a-prereg-wme-v2-freeze-2026-11-19.md` | freeze re-check | REJECT (B open) |
+| `board-a-prereg-wme-v2-freeze2-2026-11-19.md` | freeze re-check 2 | REJECT (B open) |
+| `board-a-prereg-wme-v2-freeze3-2026-11-19.md` | freeze re-check 3 | **ACCEPT WITH CONDITIONS** (B closed for the serialized production path) |
+
+### II.28.5 FREEZE
+
+**FROZEN 19 Nov 2026.** PREREG_WME v2 (Part I as superseded by Part II through §II.28) is the binding registration.
+From this commit on, the file is append-only. Amendments are dated, are made before the data they govern, and are
+labelled as Part I §11.4 requires. No confirmatory outcome exists at the freeze.
+
+**Freeze manifest.** `docs/prereg/wme_manifest.json`, sha256 **`02514cb89f7229458e631232cf42930db36530cf26becf544485517d37ede41e`**. It was generated at `ec829cf`
+by `scripts/wme_manifest_prereg_freeze.py`; its table is `docs/prereg/wme_manifest_table.md`.
+
+**Simulation reports** (`simulation.report_hash`, plus `simulation.full_refit_hash`):
+
+| Report | File | sha256 |
+|---|---|---|
+| `cal_v2b` | `docs/reviews/wme/wme-v2b-calibration-2026-11-17.json` | `4a0742df232ae1340efa540ff9e6cc27a374dc2bdc34cdaa1a89fd449aea9720` |
+| `cheap_v2b` | `docs/reviews/wme/wme-powersim-v2b-2026-11-17.json` | `bfa64d8a17b89e8c6afedc58c3383e55c6366985e0e5e31c974dbaffad5b1c7b` |
+| `cpsel_v2b` | `docs/reviews/wme/wme-v2b-cpsel-2026-11-17.json` | `f20b2cde4bcc0957ac623ded4901d9ddfc3e5c5f0b48a5ac1eed70389ad41216` |
+| `e2sens_v2d` | `docs/reviews/wme/wme-v2d-e2sens-2026-11-19.json` | `56c3ce4f5594a53655bb731f2e82877efb3f9d8d6024a48241394b6ee2469935` |
+| `ph100b` | `docs/reviews/wme/wme-ph100b-2026-11-17.json` | `2e825cd3c05c9cdf3aa9ea9f79d256e176596bac30983d50001a90d2409e2857` |
+| `r6_v2c` | `docs/reviews/wme/wme-v2c-r6-2026-11-18.json` | `0fd6e6640089021113c8109a79cced747f37e378bd0f6791a62c2e4e40553fd7` |
+| `refit_v2b` | `docs/reviews/wme/wme-powersim-refit-v2b-2026-11-17.json` | `ed9e5a79bba49658db0fc1fb1055d32299bb6166e28eb0ed7f0fd707e48d8fef` |
+| `sbon_v2c` | `docs/reviews/wme/wme-v2c-sbon-2026-11-18.json` | `716a49e11bd60a02ea82b823e5468238778aba2731f9a66725a0701d9cb5eefb` |
+| `full_refit` | `docs/reviews/wme/wme-powersim-refit-2026-11-17.json` | `424076b96ccf9f1c729900419b2b76fe74f5bf8a8739336f12c87ed95288b5ac` |
+
+**Stage reports** (§II.8, §II.23):
+- stage W, `docs/reviews/wme/wme-stagew-2026-11-18.json`: `4b19a3945b96be1fe1cd9a9163b4a5506d996126c1c0a5b37e62a061a46d6c09`;
+- stage W2, `docs/reviews/wme/wme-stagew2-2026-11-18.json`: `8443bd8a1df6c332b7b71b0b120d91d025e8fc7f296f36aabb167a6abcbaf302`.
+
+**Panels** (built at v2e; hash only):
+
+| Panel | Manifest sha256 | Content hash |
+|---|---|---|
+| `wme-c1` | `9dd5c9b6bbc9fade22a9adabdeb3d2626ffeea0a35f21dd62ffb986585d9c208` | `89739c7818e29d618ac3bcb52d7e51cd29a9361e7774a71b412646775c630c1d` |
+| `wme-c2-gen` | `4cdb7728c237acb9d9b44bd68f94ec47940383be3348adb231205fd65bab790e` | `a24d5f0ef7de185136cb31464336d6c0537c631fa21b25b184619fb04497c43b` |
+
+**Audit reports:**
+- panel audit `docs/reviews/wme/wme-v2e-panel-audit-2026-11-19.json`: `a251d79880d964a94c390d5e6604f53631d44938ef2b8f20426f30aab50f5311`;
+- root lineage `docs/reviews/wme/wme-v2f-root-lineage-2026-11-19.json`: `0df383ae561f81afc42cfd24b0fd337edfb44797be656ef1f10dd3810281b2cf`.
+
+**What is registered.**
+- **Primaries:** H-E1 and H-E2, each its own family, one-sided 0.025.
+- **Secondaries:**
+  - S-BoN, in the H-E2 secondary Holm family;
+  - S-TE, its own Holm family over 2 benchmarks.
+- **Descriptive:** D-HT, D-HT2, D-S and D-C2.
+- **Negative result:** (a), reported as the §II.23 negative result.
+- **Not registered:** H-T3 (W2 failed).
+- **Unresolved, not powered, not run:** S-E1-sec.
+- **Budget:** 66.93 GPU-h-eq, about $360, under the absolute 90 GPU-h-eq / $1,000 combined limits.
+- **Execution:** the serialized path only (§II.28.2).
+
+The freeze record is `docs/reviews/wme/prereg-wme-freeze-2026-11-19.md`. The annotated tag `prereg-wme-v2-frozen`
+marks the freeze commit.
