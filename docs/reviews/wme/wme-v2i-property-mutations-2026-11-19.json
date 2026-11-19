@@ -1,0 +1,86 @@
+{
+ "label": "mutation sensitivity of the runtime property test (\u00a7II.27)",
+ "n_max": 300,
+ "seed0": 9000000,
+ "results": {
+  "control_unmutated": {
+   "full": {
+    "detected": false,
+    "sequences_run": 300
+   },
+   "semantic": {
+    "detected": false,
+    "sequences_run": 300
+   },
+   "semantic_without_I0": {
+    "detected": false,
+    "sequences_run": 300
+   },
+   "concurrent_processes": {
+    "detected": false,
+    "expected_records": 1200,
+    "result": "1200 records verified, 1200.0 s charged; exit codes [0, 0, 0, 0]"
+   }
+  },
+  "m4_no_lock_no_reread": {
+   "full": {
+    "detected": true,
+    "first_seed": 9000000,
+    "sequences_run": 1,
+    "assertion": "('a stale object acted', 'lost')"
+   },
+   "semantic": {
+    "detected": true,
+    "first_seed": 9000000,
+    "sequences_run": 1,
+    "assertion": "('I0 duplicate or missing sequence number', 49, 30)"
+   },
+   "semantic_without_I0": {
+    "detected": true,
+    "first_seed": 9000000,
+    "sequences_run": 1,
+    "assertion": "LogCorrupt: record 49: sequence or hash chain broken"
+   }
+  },
+  "m5_no_epoch_fence": {
+   "full": {
+    "detected": true,
+    "first_seed": 9000000,
+    "sequences_run": 1,
+    "assertion": "('a stale object acted', 'lost')"
+   },
+   "semantic": {
+    "detected": true,
+    "first_seed": 9000025,
+    "sequences_run": 26,
+    "assertion": "I2 a unit ran under a stale owner"
+   },
+   "semantic_without_I0": {
+    "detected": true,
+    "first_seed": 9000025,
+    "sequences_run": 26,
+    "assertion": "I2 a unit ran under a stale owner"
+   }
+  },
+  "m6_no_lock": {
+   "full": {
+    "detected": false,
+    "sequences_run": 300
+   },
+   "semantic": {
+    "detected": false,
+    "sequences_run": 300
+   },
+   "semantic_without_I0": {
+    "detected": false,
+    "sequences_run": 300
+   },
+   "concurrent_processes": {
+    "detected": true,
+    "expected_records": 1200,
+    "result": "LogCorrupt: record 3: sequence or hash chain broken; exit codes [1, 1, 1, 1]"
+   }
+  }
+ },
+ "seconds": 1003.3
+}

@@ -1056,7 +1056,7 @@
   20261119,
   20261120
  ],
- "generated_from_commit": "960de9ca9ee976c9a4a5aed66b16a2b78c239d4a",
+ "generated_from_commit": "a53fdbc5de127a2646171670251717667c52fe01",
  "guards.bounds": "item-group bootstrap-t R = 9,999 on both scales (wm.arms.spec.guard_bounds_from_items)",
  "guards.generated": {
   "alpha": 0.025,
@@ -1128,24 +1128,33 @@
   "fallback_identity": "registered fallback payload and sha256 persisted at registration and with every fallback; a different fallback on resume raises FallbackMismatch",
   "instance_lifecycle": "units only on a registered active instance (InstanceNotOpen); duplicate opening idempotent, earliest opening kept; closed ids never reopened; authoritative records (provider / dead-man) override local times via reconcile_instance",
   "launch_attestation": "LaunchAttestation: inert identity bitwise, 1-vs-2-GPU parity bitwise, canary reference sha256, engine-config sha256, evidence; checked at construction",
+  "log_integrity": "a partial last line, invalid record, broken hash chain, log shorter than its head or a changed already-read record raises LogCorrupt on every operation; repair_torn_tail (partial last line only) quarantines the torn bytes, cuts back to the last verified record and appends log_repaired, ending the ownership; any other damage needs audited manual restoration",
   "lost_instances": "declare_lost: persisted technical, outcome-blind disposition; authoritative close at termination (charged); unbracketed attempts retained-ineligible; no fabricated canary; attempt counts kept",
   "module": "wsp.wm.runguard.ProductionGuard: the mandatory guard of harness.run_units (keyword-only; an explicit EngineeringGuard for non-confirmatory runs)",
-  "persistence": "one append-only fsync'd event log + persistent RetryPolicy and CanaryBook, replayed on every construction (process and instance restarts)",
+  "owner_epoch": "constructing a ProductionGuard appends owner_epoch (next epoch); every operation of an object with an older epoch or contract generation raises StaleGuard before reading out or writing anything; succeeded/failed must match the owner's own in-flight attempt_start",
+  "persistence": "one append-only, fsync'd, hash-chained study log per state directory (study.jsonl; global gap-free sequence; each record carries the previous record's sha256; study.jsonl.head holds the last sequence and hash); ledger, clock, retry and relaunch counters, canaries, contract generations, lifecycle, loss dispositions, fallbacks and the owner epoch are all derived by replaying it (StudyState); no other state files (the pre-\u00a7II.27 events/ledger/retry layout is refused; CanaryBook removed)",
   "phase_pause": 1.25,
   "phase_relaunches": 1,
   "property_test": {
    "invariants": [
+    "I0 gap-free unique sequence, hash chain, head",
     "I1 charged time",
-    "I2 no unit without instance or above cap",
+    "I2 no unit under a stale owner, without instance, halted, above cap, beyond 3 attempts, or after resolution",
     "I3 eligibility irreversibility",
-    "I4 canary brackets",
-    "I5 resolved-result stability and fallback digest",
-    "I6 log replay"
+    "I4 canary brackets and payload digest",
+    "I5 returned results equal the model; stability; fallback digest",
+    "I6 replay and model agreement",
+    "stale objects refused without writing"
    ],
-   "report": "docs/reviews/wme/wme-v2h-runguard-property-2026-11-19.json",
-   "report_sha256": "9fd6ecf649a249403e0be484367930fef80eec0b4147bc834040f89035e81ece",
+   "mutations_report": "docs/reviews/wme/wme-v2i-property-mutations-2026-11-19.json",
+   "mutations_report_sha256": "08ae3734df491eecc3f2c63f1664aec073764c3656c2e9545dcccc4cde9b62e1",
+   "oracle": "independent replay of the raw log bytes (Model), sharing no runguard code",
+   "report": "docs/reviews/wme/wme-v2i-runguard-property-2026-11-19.json",
+   "report_sha256": "713f0ecdf5e679837f8cc0df92bd71e7266f47ff12d9e48e270c2302fea4cb9b",
+   "retained_objects": "every constructed guard kept in a pool and reused at random",
    "sequences": 5000,
    "steps_per_sequence": 40,
+   "temporary_storage": "disk-backed",
    "test": "tests/test_wme_runguard_property.py (seeded generator; hypothesis not installed)"
   },
   "regression_tests": [
@@ -1157,8 +1166,17 @@
    "tests/test_wme_runguard.py::test_orchestration_failure_canary_restart_preemption_exhaustion_and_first_valid_selection",
    "tests/test_wme_runguard.py::test_probe_freeze_clock_rollback_cannot_credit_another_instance",
    "tests/test_wme_runguard.py::test_probe_freeze_contract_rollback_does_not_revive_old_results",
-   "tests/test_wme_runguard.py::test_probe_freeze_canary_after_loss_cannot_revive_an_attempt"
+   "tests/test_wme_runguard.py::test_probe_freeze_canary_after_loss_cannot_revive_an_attempt",
+   "tests/test_wme_runguard.py::test_probe_freeze2_stale_guard_cannot_return_a_superseded_result",
+   "tests/test_wme_runguard.py::test_probe_freeze2_stale_same_id_guard_cannot_accept_a_post_loss_canary",
+   "tests/test_wme_runguard.py::test_probe_freeze2_stale_guard_cannot_run_a_fourth_attempt_after_exhaustion",
+   "tests/test_wme_runguard.py::test_probe_freeze2_overlapping_objects_never_duplicate_sequence_numbers",
+   "tests/test_wme_runguard.py::test_unfenced_views_always_act_on_the_current_log",
+   "tests/test_wme_runguard.py::test_lock_serialises_concurrent_processes",
+   "tests/test_wme_runguard.py::test_torn_or_truncated_log_fails_closed_until_reconciled"
   ],
+  "result_identity": "attempt_ok records the payload sha256; resolve verifies the stored payload against it (ResultMismatch); begin refuses a unit with an eligible result or fallback (UnitResolved)",
+  "serialisation": "every public operation takes an exclusive fcntl.flock on study.jsonl.lock, re-reads and verifies the tail since its cached sequence, re-validates (owner epoch, contract generation, clock, lifecycle, cap, retries, in-flight attempt) and appends under the same lock",
   "technical_causes": [
    "infrastructure",
    "out_of_memory",
@@ -2189,6 +2207,7 @@
    "docs/reviews/council/board-a-prereg-wme-v2-confirm-2026-11-19.md": "040e6be1e303534519501939a7606b71fd2a69779ab5f6f6b9e8119feeace234",
    "docs/reviews/council/board-a-prereg-wme-v2-final-2026-11-19.md": "9d42e363e818486959d0dea7c9ec178dfade6ff42500e6c0fc6cb85c21d501ff",
    "docs/reviews/council/board-a-prereg-wme-v2-freeze-2026-11-19.md": "153049ca42dd8baf2a3a7f16528b59ed5c299945063b82a839e6e3bfdc32f5cf",
+   "docs/reviews/council/board-a-prereg-wme-v2-freeze2-2026-11-19.md": "7cfcc549b089d619a1274eacb5c3cf4963f0e77be6bdc77852dcfdec5bf3520f",
    "docs/reviews/wme/wme-stagew2-2026-11-18.md": "afbe7de9a652038ef0a3ca30fed45d41bac98c7e955f7e0f3e96d959a6eb81c4"
   },
   "status": "DRAFT v2 (18 Nov 2026); not frozen; registered claim set of RULING-wme-post-stagew Q3",
@@ -2223,6 +2242,9 @@
   },
   "v2h": {
    "status": "Board A freeze re-check gaps (clock, contract generations, post-loss canary) repaired; adversarial property test added"
+  },
+  "v2i": {
+   "status": "Board A freeze re-check 2 root cause (stale objects not fenced against shared persisted state) repaired structurally: single hash-chained log, OS lock with re-read and re-validation, owner epoch, torn/truncated logs fail closed; property test with retained objects"
   }
  },
  "seeds.bootstrap.e1": 1230116763,

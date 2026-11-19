@@ -3447,3 +3447,151 @@ here:
 - the deployed restart path;
 - dead-man reconciliation;
 - bound evidence and the registered fallbacks.
+
+
+## II.27 Amendment v2i (19 Nov 2026): stale guard objects fenced against one authoritative study log
+
+**What this amendment is.** It is dated 19 Nov 2026 and is made before any confirmatory outcome exists. It repairs the
+root cause in Board A's freeze re-check 2 (`docs/reviews/council/board-a-prereg-wme-v2-freeze2-2026-11-19.md`, sha256
+`7cfcc549b089d619a1274eacb5c3cf4963f0e77be6bdc77852dcfdec5bf3520f`): previously constructed guard objects were not fenced against shared persisted state.
+
+**Board A's reproductions.** Each one used public API calls only, issued sequentially through a retained older
+object:
+- B2: a stale guard returned a superseded result;
+- B3: a stale same-id guard accepted a post-loss canary;
+- a stale guard ran a fourth attempt after persisted exhaustion;
+- overlapping objects appended duplicate sequence numbers.
+
+**What it is not.** These are technical repairs to the persistence and serialisation layer of `src/wsp/wm/runguard.py`
+(and a comment in `src/wsp/wm/harness.py`). There is no scientific change. The registered rules of §II.22.6 and
+§II.24.2–§II.26 are unchanged; they are now evaluated on the current shared state by every object. No sealed content
+was read; CPU only.
+
+**Code and records.**
+- Code `a53fdbc`.
+- Manifest sha256 `4b125a307cfada3d6dd6436c177b07df353820fa9ad776b348ae340ccd692fef` (field `harness.runguard`).
+- Property-test report `docs/reviews/wme/wme-v2i-runguard-property-2026-11-19.json`, sha256 `713f0ecdf5e679837f8cc0df92bd71e7266f47ff12d9e48e270c2302fea4cb9b`.
+- Mutation report `docs/reviews/wme/wme-v2i-property-mutations-2026-11-19.json`, sha256 `08ae3734df491eecc3f2c63f1664aec073764c3656c2e9545dcccc4cde9b62e1`.
+
+**What it supersedes.** It supersedes the persistence wording of §II.24.2 ("one append-only, fsync'd event log, plus a
+persistent `RetryPolicy` and `CanaryBook`") and every statement in §II.24–§II.26 that state is "replayed on
+construction": state is now re-read and re-validated on every operation.
+
+### II.27.1 Design (structural, not per probe)
+
+| Element | Rule |
+|---|---|
+| **One authoritative log** | A study state directory holds exactly one append-only, fsync'd log, `study.jsonl`. Every record carries a global, gap-free sequence number `seq`, the sha256 of the previous record (`prev`; a hash chain from a fixed genesis value) and its own sha256 (`hash`, over its canonical JSON). `study.jsonl.head` holds the sequence and hash of the last appended record. All state is a pure replay of this log (`StudyState`, one record at a time): the combined ledger and clock, attempt and relaunch counters, repairs, canaries, contract generations, instance lifecycle, loss dispositions, fallbacks and the owner epoch. The separate `events`, `ledger` and `retry` logs are merged into it; `CombinedLedger` and `RetryPolicy` are views of it. `CanaryBook`, which no production path used, is removed. A state directory in the pre-§II.27 multi-file layout is refused. |
+| **Serialised operations** | Every public operation takes an exclusive OS lock (`fcntl.flock` on `study.jsonl.lock`). It then re-reads and verifies the log tail since its cached sequence and re-validates against that current state: owner epoch, contract generation, clock, lifecycle, cap, retries, and the in-flight attempt. Only then does it append, all under the same lock. The operations covered are validate, begin (attempt allocation), succeeded, failed, fallback, resolve, canary, open, close, reconcile, declare_lost, relaunch, report, and every ledger and retry write. Validation and mutation therefore use one snapshot, and sequence numbers are globally unique. An unfenced view (a bare `CombinedLedger` or `RetryPolicy`) still always acts on the current log. |
+| **Owner epoch** | Constructing a `ProductionGuard` makes it the production owner. After validating the contract and the fallback, it appends `owner_epoch` with the next epoch. Any operation by an object holding an older epoch, or an older contract generation, raises `StaleGuard` before anything is returned or written. A contract transition always constructs a new owner. `succeeded` and `failed` must match the owner's own in-flight `attempt_start`, so a unit whose owner is replaced while it runs records no result. One production owner acts on a study state at a time. |
+| **Result identity** | `attempt_ok` records the payload sha256, and `resolve` verifies the stored payload against it (`ResultMismatch`). `begin` refuses a unit that already has an eligible result or a fallback (`UnitResolved`). `fallback` returns the persisted fallback without a second record. A canary bracket counts only if the start canary precedes `attempt_start` and the closing canary follows `attempt_ok`. |
+| **Torn or truncated logs fail closed** | Every operation raises `LogCorrupt` on any of: a partial last line, an invalid record, a broken sequence or hash chain, a log shorter than its head record, or a changed already-read record. The only automatic reconciliation is `repair_torn_tail(state_dir, source, description)`, for a partial last line (a crash mid-append). It quarantines the torn bytes to `study.jsonl.torn-<seq>`, cuts the log back to its last complete record (which must verify in full and reach the head), and appends an audited `log_repaired` record that ends the current ownership. Any other damage needs an audited manual restoration. |
+
+### II.27.2 Board A's reproductions as named regressions (`tests/test_wme_runguard.py`, CPU)
+
+| Board A reproduction | Result now | Test |
+|---|---|---|
+| B2: generation-0 `g0`, then A → B → A transitions (generation 2, with a new bracketed result); `run_units` through the retained `g0` returned `{"generation": 0}` | `g0` and `g1` raise `StaleGuard` on `run_units`, `resolve` and `canary`, and write nothing. The current owner returns `{"generation": 2}` without recomputation. | `test_probe_freeze2_stale_guard_cannot_return_a_superseded_result` |
+| B3: `live` leaves `.a1` pending; `other` declares `i1` lost; `live.canary` succeeded and `run_units(live)` returned `.a1` | `live.canary` and `run_units(live)` raise `StaleGuard` and write nothing. `.a1` stays retained-ineligible. The current owner and a fresh guard refuse a canary for the lost id (`InstanceNotOpen`). | `test_probe_freeze2_stale_same_id_guard_cannot_accept_a_post_loss_canary` |
+| Retry: three classified failures through `g`, then `run_units(stale)` executed a fourth time | `run_units(stale)` raises `StaleGuard`, and the callback never runs a fourth time. The owner and a fresh guard return the one persisted fallback; `begin` raises `UnitResolved`; the log holds 3 attempts and 1 fallback. | `test_probe_freeze2_stale_guard_cannot_run_a_fourth_attempt_after_exhaustion` |
+| Duplicate sequence numbers from overlapping objects | Overlapping owners and unfenced views interleave writes. The log stays gap-free and duplicate-free, with a valid hash chain, and a fresh replay equals the live state. | `test_probe_freeze2_overlapping_objects_never_duplicate_sequence_numbers` |
+
+Further tests:
+- `test_unfenced_views_always_act_on_the_current_log`: a second ledger view sees the cap reached by the first, and a second retry view sees exhaustion.
+- `test_lock_serialises_concurrent_processes`: 4 interpreter processes append 160 records concurrently, giving a verified, gap-free chain.
+- `test_torn_or_truncated_log_fails_closed_until_reconciled`: covers a torn tail (refused, then repaired and quarantined, with ownership ended), complete-record truncation (refused against the head and not auto-repairable), an altered middle record (refused) and the legacy layout (refused).
+
+All tests written for §II.25 and §II.26 still pass unchanged in substance. Two assertions were renamed for the merged
+record types: ledger `unit` rows are now `unit_time` records, and the `CanaryBook` check is replaced by a shared-log
+check.
+
+### II.27.3 Adversarial property test with retained objects
+
+`tests/test_wme_runguard_property.py` was rewritten (seeded generator; `hypothesis` is not installed).
+
+**What a sequence does.** Each sequence drives `ProductionGuard` and `harness.run_units` through 40 random
+operations. Beyond the §II.26.2 operations:
+- **every guard object ever constructed stays in a pool**, and operations are issued at random through older objects;
+- a new owner takes over **while a unit runs**, half the time also declaring the instance lost;
+- the clock moves backward **during a unit**;
+- direct `resolve` and `begin` calls;
+- **torn appends** followed by the audited repair.
+
+A call through an older object must raise `StaleGuard` and leave the log byte-identical. While a log is torn, every
+operation on any object must raise `LogCorrupt`.
+
+**Invariants.** They are computed from an **independent replay of the raw log bytes** (`Model` in the test). It does
+its own JSON parsing, sequence, hash-chain and head checks, and applies its own lifecycle, contract, retry,
+eligibility and charge rules, sharing no code with `runguard`. After every step:
+
+| Invariant | Assertion |
+|---|---|
+| I0 | Sequence gap-free and duplicate-free; hash chain and head verify. |
+| I1 | Charged instance time non-negative, monotone, and at least each instance's true elapsed time. The model's charges equal the implementation's. |
+| I2 | Inside the unit function: no unit runs under a stale owner, without an active non-lost instance, while halted, above the cap, beyond 3 attempts, or after the unit has an eligible result or fallback. |
+| I3 | Eligibility, once false, never becomes true; pending never returns; nothing changes after closure except a later supersession. |
+| I4 | An eligible attempt is in the current generation, with start and closing canaries from the same instance, generation and contract, both equal to the reference, ordered start canary < start < result < closing canary, before closure. Its stored payload matches the logged digest. |
+| I5 | Every result returned, by `resolve` or by `run_units`, equals the model's first eligible attempt or fallback; it is stable within a generation; fallback digests verify. |
+| I6 | A fresh verified replay equals the implementation's state. The implementation's statuses, attempt counts, lifecycle and lost sets equal the model's. |
+
+**Run.** `scripts/wme_v2i_runguard_property.py`, CPU via agent-tmux, disk-backed temporary storage:
+**5,000 sequences × 40 steps** (seeds from 7,000,000), **passed, 0 failures**, 655.7 s. Coverage:
+
+| Counter | Count |
+|---|---|
+| Units run | 18,508 |
+| Results returned and checked against the model | 206,224 |
+| Eligible attempts | 6,967 |
+| Retained-ineligible attempts | 1,349 |
+| Superseded attempts | 4,438 |
+| Irreversible disposals | 261 |
+| Fallbacks | 2,507 |
+| Owner epochs (guard constructions) | 22,186 |
+| Calls through older objects, refused with the log unchanged | 16,048 |
+| Takeovers by a new owner during a unit | 1,300 |
+| Backward clock moves during a unit | 917 |
+| Contract transitions | 5,523 |
+| Transitions back to an earlier digest | 1,255 |
+| Instances declared lost | 3,177 |
+| Clock halts | 6,147 |
+| Clock recoveries | 5,944 |
+| Operations refused on a torn log | 2,512 |
+| Audited torn-tail repairs | 1,797 |
+| Sequences reaching the cap | 26 |
+
+**Mutation check.** `scripts/wme_v2i_property_mutations.py` ran seeds from 9,000,000, up to 300 sequences per mode. It
+used three modes: full; semantic (the stale-refusal assertion off); and semantic without I0 (also without the
+sequence and hash-chain checks).
+
+| Mutation | Full | Semantic | Semantic without I0 | Concurrent processes |
+|---|---|---|---|---|
+| Control, unmutated | not detected in 300 | not detected in 300 | not detected in 300 | 1,200 of 1,200 records verified |
+| m4: no OS lock and no re-read (each object loads once and acts on its cached snapshot: the v2h behaviour) | sequence 1 (a stale object acted) | sequence 1 (I0: duplicate sequence number) | sequence 1 (the implementation's own replay in I6 refuses the broken chain: `LogCorrupt`) | not run |
+| m5: lock and re-read kept, owner-epoch fence removed | sequence 1 (a stale object acted) | sequence 26 (I2: a unit ran under a stale owner) | sequence 26 (I2) | not run |
+| m6: re-read kept, OS lock removed | not detected in 300 | not detected in 300 | not detected in 300 | **detected**: all 4 writers failed, and the result fails verification (`LogCorrupt`: chain broken at record 3) |
+
+**Additional defects found.** The property test found **no runtime defect** in the repaired guard: 0 failures in the registered run, the development runs and the default-suite runs. One test bug was found and fixed during development: the torn-log step consulted the model before calling a guard. m6 is not detectable by a single-process sequence, which cannot interleave inside an operation; the lock is covered by the concurrent-process check and by `test_lock_serialises_concurrent_processes`. With the I0 checks off, m4 is caught by the implementation's own fail-closed chain verification, not by a result-level invariant. With the lock and re-read in place, the epoch fence's removal is caught by I2's one-owner rule. These detections are reported as observed.
+
+### II.27.4 Status
+
+| Board A freeze re-check 2 | Status |
+|---|---|
+| B. Stale objects not fenced against shared persisted state | Repaired structurally: one hash-chained log, OS lock with re-read and re-validation on every operation, owner epoch, fail-closed log integrity. Named regressions for all three reproductions plus duplicate sequence; property test with retained objects. |
+| Clock, contract generations, lost instances, fallback identity (§II.26) | Unchanged in substance; now evaluated on the current shared state. |
+| A. Root-shard lineage | Closed by Board A; unchanged. |
+
+**Suite.** 2,297 passed; only the 3 pinned tripwires fail.
+
+**Not claimed.** Board A's launch preconditions remain launch preconditions and are not performed here:
+- pinned-engine inert, parity and canary checks;
+- committed canary references;
+- bound evidence, unique physical-instance identities and the shared study state;
+- deployed restart and replacement persistence, including the ownership and fencing path on deployment;
+- authoritative instance-time reconciliation and the dead-man budget;
+- the registered fallbacks.
+
+Two further limits:
+- The property test's fsync exercises ordinary temporary storage. It is not crash-durability evidence for the
+  deployed disk.
+- The flock serialises processes on one host's file system. Sharing the state directory across hosts would need a
+  lock with the same semantics, which is a deployment precondition.
