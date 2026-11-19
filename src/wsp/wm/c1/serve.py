@@ -407,9 +407,14 @@ def main(argv=None):
     a = ap.parse_args(argv)
     cfg = Config.make(a.root, smoke=a.smoke, vllm=not a.no_vllm)
     rt = Runtime(cfg)
-    from wsp.wm.c1 import serve_more  # noqa: F401  (E2, sealed, generation and S-TE handlers)
+    import importlib
 
-    handlers = {k: (lambda req, ctx, fn=fn: fn(rt, req, ctx)) for k, fn in HANDLERS.items()}
+    from wsp.wm.c1 import serve_more  # noqa: F401  (E2, sealed, generation, S-TE and launch handlers)
+
+    # under ``python -m`` this file runs as __main__; the handler modules register into the importable module
+    registry = dict(HANDLERS)
+    registry.update(importlib.import_module("wsp.wm.c1.serve").HANDLERS)
+    handlers = {k: (lambda req, ctx, fn=fn: fn(rt, req, ctx)) for k, fn in registry.items()}
     W.Worker(cfg.root, handlers).serve()
 
 

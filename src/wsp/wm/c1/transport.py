@@ -62,6 +62,18 @@ class LocalTransport:
     def progress_age(self):
         return self._age("progress.jsonl")
 
+    def push(self, local) -> str:
+        """Content-addressed upload: ``uploads/<sha256><suffix>`` on the worker; returns the worker path."""
+        local = Path(local)
+        sha = P.file_sha256(local)
+        dst = self.root / "uploads" / f"{sha}{local.suffix}"
+        if not dst.exists():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            tmp = dst.with_name(dst.name + ".tmp")
+            shutil.copyfile(local, tmp)
+            os.replace(tmp, dst)
+        return str(dst)
+
     def cancel(self, rid: str) -> bool:
         p = self.root / "inbox" / f"{rid}.json"
         try:
@@ -154,6 +166,31 @@ class SSHTransport:
 
     def progress_age(self):
         return self._age("progress.jsonl")
+
+    def push(self, local) -> str:
+        local = Path(local)
+        sha = P.file_sha256(local)
+        rel = f"uploads/{sha}{local.suffix}"
+        dst = f"{self.rroot}/{rel}"
+        have = self.sh(f"test -f {shlex.quote(dst)} && echo yes || echo no").strip() == "yes"
+        if not have:
+            self.sh(f"mkdir -p {shlex.quote(self.rroot + '/uploads')}")
+            self.run(
+                [
+                    "rsync",
+                    "-a",
+                    "-e",
+                    f"ssh -F {self.cfg} -o BatchMode=yes -o ConnectTimeout=15",
+                    str(local),
+                    f"{self.alias}:{dst}.tmp",
+                ],
+                timeout=max(self.timeout, 3600),
+            )
+            got = self.sh(f"sha256sum {shlex.quote(dst + '.tmp')} | cut -d' ' -f1").strip()
+            if got != sha:
+                raise P.TransportError(f"upload of {local.name}: sha256 mismatch on the worker")
+            self.sh(f"mv {shlex.quote(dst + '.tmp')} {shlex.quote(dst)}")
+        return dst
 
     def cancel(self, rid: str) -> bool:
         out = self.sh(f"rm -f {shlex.quote(f'{self.rroot}/inbox/{rid}.json')} && echo ok")

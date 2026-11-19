@@ -147,6 +147,11 @@ def run_job(job: dict) -> dict:
     from wsp.wm.c1 import modelops as MO
 
     t0 = time.time()
+    # optional: the pinned snapshot of a repo not in hf.TARGETS (the 0.8B smoke model)
+    if job.get("revision"):
+        from wsp.wm import hf
+
+        hf.TARGETS.setdefault(job["repo"], job["revision"])
     eng = Engine(job["repo"], smoke=bool(job.get("smoke")))
     out = {"engine": eng.kw, "load_s": time.time() - t0, "blocks": []}
     for b in job["blocks"]:
@@ -164,8 +169,27 @@ def run_job(job: dict) -> dict:
             "ids_sha256": MO.sha_ids([r["ids"] for r in res]),
         }
         out["blocks"].append(rec)
+        _progress(job.get("progress"), b["name"], rec["seconds"])
     out["seconds"] = time.time() - t0
     return out
+
+
+def _progress(spec, name, seconds):
+    """Optional job field ``progress`` = {"path", "tag": {...}}: one fsync'd line per completed block, appended to the
+    worker's progress file (§II.13 item 3 liveness during a long child job). Absent: nothing is written."""
+    if not spec:
+        return
+    rec = {
+        "t": time.time(),
+        **spec.get("tag", {}),
+        "event": "vllm_block",
+        "block": name,
+        "seconds": seconds,
+    }
+    with open(spec["path"], "a") as f:
+        f.write(json.dumps(rec) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
 
 
 def canary_job(repo: str, prompts: list, smoke: bool = False) -> dict:
