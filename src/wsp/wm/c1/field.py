@@ -144,7 +144,7 @@ def compute_kept(field_dir: Path, device="cuda", log=None) -> dict:
 class Field:
     """All collected groups (gradients by parameter, kept eigenpairs by module) plus the vocabulary-row field."""
 
-    def __init__(self, root, device="cuda", cache_gb: float = 40.0):
+    def __init__(self, root, device="cuda", cache_gb: float = 24.0):
         from wsp.wm import collect as C
 
         self.root = Path(root)
