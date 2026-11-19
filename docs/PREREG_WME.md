@@ -2979,3 +2979,193 @@ S-BoN is unpowered at every threshold. It is reported whatever the result.
 | 5 | S-TE label, guard α in code, sparse rule | §II.22.5; `wsp.wm.guards_v2`, `prereg_v2.te_n`; `tests/test_wme_guards_v2.py` | Closed |
 | 6 | Validity, repair, stopping | §II.22.6; `wsp.wm.runguard`, `harness.run_units(guard=)`; `tests/test_wme_runguard.py` | Closed in code and text; the launch checks re-run at launch |
 | 7 | S-BoN runner | §II.22.7; `wsp.wm.arms.sbon`; `tests/test_wme_sbon.py` | Closed |
+
+
+## II.23 Amendment v2e (19 Nov 2026): stage W2, H-T3, the E2 scope ruling, and the built confirmatory panels
+
+**What this amendment is.** It is dated 19 Nov 2026 and is made before any confirmatory outcome exists. It closes
+Board A's v2 required change 3 and incorporates:
+- the stage-W2 result (`docs/reviews/wme/wme-stagew2-2026-11-18.md`, merged at `718c48f`);
+- `RULING-wme-post-stagew` Q4;
+- `docs/council/2026-11-19/RULING-wme-e2-scope.md`.
+
+**How it works.** It is appended. The earlier text stays as written. Where this section says it supersedes, it
+governs.
+
+**Code and data.**
+- Code `77a4219`, `9447675`, `d3b703a` and `d3d83ad`, each committed before the build it governs.
+- Manifest sha256 `5cdf2ac3534e7e0d044891aee8234562f425332f7efc817081932e786d9e9e44`.
+- Audit `docs/reviews/wme/wme-v2e-panel-audit-2026-11-19.json`, sha256 `a251d79880d964a94c390d5e6604f53631d44938ef2b8f20426f30aab50f5311`.
+
+### II.23.1 Stage W2 and H-T3 (fills the §II.22.3 slots; supersedes §II.16's trigger outcome and every H-T3 cost line)
+
+**`wme-w2`.** It is registered in `wm.exposure.EXPOSURES`. Manifest sha256 `b983bc20…`, content hash `6d533f94…`.
+It has 500 MMLU-Pro and 500 SuperGPQA dev items.
+
+**The W2 outcome: FAIL under its pre-declared rule.**
+
+| | Zero-shot | Few-shot k = 2 |
+|---|---|---|
+| Nested WM vs pooled curve, mean d | 0.003 | 0.000 |
+| Holm-adjusted lower bound | −0.053 | 0.000 |
+| p | 0.45 | 1.0 |
+
+- Nulls N1–N3 have size ≤ 0.011.
+- 45 complete paths.
+
+**H-T3 is not registered** (Q4). §II.16 stays empty, and no H-T3 amendment will be written for 9B. Every H-T3 price
+line is withdrawn:
+- §II.14's "+9.50" and "with H-T3" rows;
+- §II.21.3's 76.43 / $411.1;
+- the cap-fit rule's H-T3 clause.
+
+**Registered total: 66.93 GPU-h-eq, about $360.0.** That is 56.66 design + 8.43 S-BoN + 1.84 S-TE, leaving 23.07
+under the 90 cap. 27B's scope is H-E1 only (§II.15).
+
+**(a) negative-result reporting rule (binding; replaces the "(a) overall" rows of §II.17).** The paper reports:
+
+> "On Qwen3.5-9B, edit-specific trajectory prediction did not beat path-type averages: stage W2's nested world model
+> (pooled same-path-type curve plus an edit-informed residual, shrunk toward 0) did not improve on the pooled curve
+> (zero-shot mean d 0.003, Holm-adjusted lower bound −0.053; few-shot d 0.000), and stage W's un-nested world model
+> lost to the pooled curve in every setting."
+
+**Required framing.**
+- It is a negative result for (a) on this model under these designs.
+- It is not evidence that no trajectory model could work.
+- D-HT, D-HT2 and the R6 diagnostic cannot qualify it.
+- No further 9B spending on (a).
+
+### II.23.2 H-E2 scope (incorporates RULING-wme-e2-scope; supersedes the "Supported" row of the H-E2 table in Part I §11.1 and II.17)
+
+H-E2 keeps its registered test, α and model-based power (0.828). If the test rejects, the paper may report
+**only**:
+
+> "the WM-guided minus StatNN-guided paired differences are not sign-symmetric about zero, in the direction favouring
+> WM, conditional on these test items and this edit library".
+
+- No mean-advantage claim is made.
+- The episode mean difference and its interval are reported descriptively.
+- No other test is substituted.
+
+### II.23.3 The confirmatory panels: allocation, builds and audits (closes Board A v2 change 3; supersedes the "pending" parts of §II.22.3)
+
+**Build.** `scripts/wme_v2e_build_panels.py`, CPU only, via agent-tmux.
+- Final build: build 5, at `d3d83ad`.
+- Exposures: every entry of `wm.exposure.registry_before`. That covers pilots 1–2 with sealed hash lists, the 27B
+  calibration, smokes, `wme-p3s`, `wme-p3h`, `wme-w` and `wme-w2`, read from manifest hash lists only.
+- No sealed file was read back, and no `data/evals` file was opened. The builder writes the sealed files and computes
+  the hash-only audit from the texts it holds in memory.
+
+**Bank-root construction shards (a rule added here).**
+- The 72 sampled bank roots (`roots-9b-20261117`, sha256 `a4ceb25e…`) already used 1,728 item groups (1,761 items) as
+  contrast or LoRA shards. Their positions came from the v2b-era rank order.
+- Those groups are **committed construction items**:
+  - they go to `wme-c1` construction whatever their rank, and never to an evaluation split;
+  - in the MMLU-Pro allocation they are pre-assigned to c1 construction (830 groups);
+  - a root item is kept as its group's representative.
+- **Disclosure:** 422 of these items were later used by exploratory panels (`wme-p3h`, `wme-w`, `wme-w2`). They stay in
+  c1 construction, as root shards.
+- No evaluation split has any exposure intersection.
+
+**Joint MMLU-Pro allocation** (`panels_v2d.allocate`, salt `wme-mmlupro-v2c`).
+- **Pool:** 12,102 items in 11,804 union-policy groups; 4,272 groups excluded as exposed; 830 pre-assigned;
+  6,702 fresh.
+- **Dealing:** each consumer is dealt only groups with an item in its own pool.
+- **c1:** 235 groups dealt so that **232 stay usable** after c1's cross-objective ownership. The count is raised by
+  the deficit, deterministically, from counts only.
+- **c2-gen:** 3,463 dealt. The reserve is 3,004.
+- **Record:** sha256 `0051481c…`; file `data/wme/panels/wme-mmlu-allocation-v2e.json`, sha256 `c323eb13…`.
+
+**Grouping (supersedes the per-builder policies of §II.11.2).** Both builders group by the **union** of the v1
+character policy and the word-MinHash policy. This only adds joins, so it is stricter than v1.
+- `wme-c1` groups across all its sources. Each group is owned by its first objective.
+- `wme-c2-gen` groups MMLU-Pro with SuperGPQA, and the two generated guards together, against reserved texts:
+  - every written `wme-c1` item;
+  - every `wme-c1` source pool except MMLU-Pro (separated by the allocation) and the TriviaQA question pool.
+
+**Field and e2 shards.** The 24-item base-field shard and the 64-group sycophancy e2 shard are drawn from **fresh**
+construction, disjoint from root shards. The builder checks this.
+
+**Built panels.**
+- `wme-c1`: manifest sha256 `9dd5c9b6…`, content hash `89739c78…`. Split files:
+  - `sealed_test/test.jsonl` `c90852dc…`
+  - `sealed_gen/gen.jsonl` `d795fc65…`
+  - `open/dev.jsonl` `02d42525…`
+  - `open/bank.jsonl` `91f299be…`
+  - `open/construction.jsonl` `736c2582…`
+- `wme-c2-gen`: manifest sha256 `4cdb7728…`, content hash `a24d5f0e…`. Split files:
+  - `sealed_test/sealed_test.jsonl` `3fa38044…`
+  - `open/calibration.jsonl` `700e452c…`, base-only
+
+Both are registered in `wm.exposure.EXPOSURES`. `wm.sep27` requires both for any 27B panel.
+
+| Panel | Source | Split | Requested N | Available fresh groups | Built N | Item-hash list digest (sha256, first 16) |
+|---|---|---|---|---|---|---|
+| wme-c1 | gsm8k_gold_lp | sealed_test | 96 | 5,841 | 96 | `32877d9fe1875eb1` |
+| wme-c1 | gsm8k_gold_lp | dev | 64 | 5,841 | 64 | `ad001e0195ca66cd` |
+| wme-c1 | gsm8k_gold_lp | bank | 48 | 5,841 | 48 | `c91ade34771c8c31` |
+| wme-c1 | gsm8k_gold_lp | construction | ≥ 24 fresh (rest + root shards) | 5,841 | 5,937 | `6faa4e3710a087af` |
+| wme-c1 | mathcomp_gold_lp | sealed_test | 96 | 3,365 | 96 | `5c4298ce13594b4a` |
+| wme-c1 | mathcomp_gold_lp | dev | 64 | 3,365 | 64 | `491892ea645ea4a0` |
+| wme-c1 | mathcomp_gold_lp | construction | ≥ 24 fresh (rest + root shards) | 3,365 | 3,798 | `2c5d8bfc4484e7a9` |
+| wme-c1 | mmlupro_gold_lp | sealed_test | 96 | 232 | 96 | `13f64c7263f3138c` |
+| wme-c1 | mmlupro_gold_lp | dev | 64 | 232 | 64 | `8f4ef258bc28733f` |
+| wme-c1 | mmlupro_gold_lp | bank | 48 | 232 | 48 | `b858ed9fc86820fc` |
+| wme-c1 | mmlupro_gold_lp | construction | ≥ 24 fresh (rest + root shards) | 232 | 850 | `45da950f4a9d1845` |
+| wme-c1 | refusal_margin_harmful | sealed_test | 96 | 323 | 96 | `85a763ba0768e792` |
+| wme-c1 | refusal_margin_harmful | dev | 64 | 323 | 64 | `eeb61beac05af277` |
+| wme-c1 | refusal_margin_harmful | bank | 48 | 323 | 48 | `ec71a30f673d6925` |
+| wme-c1 | refusal_margin_harmful | construction | ≥ 24 fresh (rest + root shards) | 323 | 115 | `833f60c3d753a162` |
+| wme-c1 | refusal_margin_harmless | sealed_test | 96 | 5,536 | 96 | `b62c0755327fd6d8` |
+| wme-c1 | refusal_margin_harmless | dev | 64 | 5,536 | 64 | `f03283b745175c77` |
+| wme-c1 | refusal_margin_harmless | bank | 48 | 5,536 | 48 | `17f1e3c0f0cea740` |
+| wme-c1 | refusal_margin_harmless | construction | ≥ 24 fresh (rest + root shards) | 5,536 | 5,328 | `3d0a96393217a839` |
+| wme-c1 | sycophancy_real | sealed_test | 96 | 466 | 96 | `0bd2b234dce7920c` |
+| wme-c1 | sycophancy_real | dev | 64 | 466 | 64 | `924462b59a02b693` |
+| wme-c1 | sycophancy_real | bank | 48 | 466 | 48 | `465612bb5f039c4f` |
+| wme-c1 | sycophancy_real | construction | ≥ 88 fresh (rest + root shards) | 466 | 258 | `da5431bf55c29d49` |
+| wme-c1 | triviaqa_gen | sealed_gen | 1000 | 84,160 | 1,000 | `4f03dd2f4ba0a4a5` |
+| wme-c1 | wikitext_nll | sealed_test | 96 | 303 | 96 | `7b92e0aa41e70134` |
+| wme-c1 | wikitext_nll | dev | 64 | 303 | 64 | `d2f36d5aafd856ab` |
+| wme-c1 | wikitext_nll | bank | 48 | 303 | 48 | `0ae7c91daf5a16ae` |
+| wme-c1 | wikitext_nll | construction | ≥ 24 fresh (rest + root shards) | 303 | 95 | `376767e89dde04b9` |
+| wme-c2-gen | mmlupro_gen | sealed_test | 3463 | 3,398 | 3,398 | `693afcb1c6a072ed` |
+| wme-c2-gen | supergpqa_gen | sealed_test | 1784 | 22,871 | 1,784 | `a8ade84a2d06db3e` |
+| wme-c2-gen | guard_harmless | calibration | 128 | 78,712 | 128 | `1599ac5a51101333` |
+| wme-c2-gen | guard_harmless | sealed_test | 523 | 78,712 | 523 | `988bb0105303c0aa` |
+| wme-c2-gen | guard_harmful | calibration | 128 | 4,321 | 128 | `aa88b03e0af6c12b` |
+| wme-c2-gen | guard_harmful | sealed_test | 200 | 4,321 | 200 | `b6d6ee6506c7f83e` |
+
+**Audit.**
+- **Clean:** 1,035 (panel, split) pairs with **no** hash or union-policy group overlap, across panels or within.
+- **No exposure intersection** outside the disclosed root-shard construction items.
+- **Construction minimums:** fresh construction meets the field (24) and e2 (64, sycophancy) minimums for every
+  objective; for MMLU-Pro it is exactly 24.
+
+**Shortfall and restated power (before any outcome).**
+- `wme-c2-gen` MMLU-Pro has 3,398 usable groups of the 3,463 registered. The union-policy family grouping with
+  SuperGPQA and the reserved c1 texts removed 65.
+- Under the registered rule (§II.21.5, §II.22.3; SYNTHESIS-r11 R1), **N is frozen at 3,398**.
+- The restated analytic benchmark sizing power (`prereg_v2.te_power`, the same inputs as §II.22.5) is **0.792** at
+  Holm's first level 0.0125 and 0.863 at 0.025, against 0.800 at 3,463.
+- Every other panel was built at its registered N. **S-TE** keeps its status as a registered secondary, with this
+  restated power.
+
+**Closure allocation (bound).** `bank.closure_allocation` in the manifest records:
+- the component graph hash `c8d50fe2…`;
+- the calibration-component digest;
+- the outer and inner fold seeds;
+- the roots identity digest and roots file hash;
+- the root-shard counts placed in c1 construction.
+
+**Discarded attempts (disclosed; nothing was read).**
+- **Build 1:** stopped before writing (c1 eligibility defect).
+- **Build 2:** stopped at c2-gen; the OR-Bench-80k file was not in the offline cache. The partial c1 was deleted.
+- **Build 3:** the audit was not clean (policy and representative defects).
+- **Build 4:** the audit was clean, but the MMLU-Pro fresh field shard was 21 < 24.
+
+Each defect was fixed in code, tested, and committed before the next build. The panels are salted and
+deterministic, so no attempt could select favourable items. Their hashes and audits are kept under `data/wme/panels/`
+(`v2e-build-attempt*`).
+
+**Board A v2 change 3: closed.**

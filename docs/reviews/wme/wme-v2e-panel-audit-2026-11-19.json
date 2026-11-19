@@ -2,10 +2,10 @@
  "allocation": {
   "consumers": [
    {
-    "assigned_groups": 232,
+    "assigned_groups": 235,
     "consumer": "wme-c1:mmlupro_gold_lp",
-    "frozen_n": 232,
-    "required": 232,
+    "frozen_n": 235,
+    "required": 235,
     "restate_power": false,
     "shortfall": false
    },
@@ -20,7 +20,7 @@
   ],
   "excluded_groups": 4272,
   "file": "data/wme/panels/wme-mmlu-allocation-v2e.json",
-  "file_sha256": "970fbcb0d29ec17d6dfe799fc9f06eadcab01f4ba81f50b6f7e6c9ae0a2d25e4",
+  "file_sha256": "c323eb13aeeff16ce6da136a0cb382a14190bf9b285339eced4a543a22a581d9",
   "fresh_groups": 6702,
   "groups": 11804,
   "policies": [
@@ -31,24 +31,29 @@
   "preassigned_exposed_groups": 293,
   "preassigned_groups": 830,
   "preassigned_items_missing_from_pool": 0,
-  "reserve_groups": 3007,
+  "reserve_groups": 3004,
   "salt": "wme-mmlupro-v2c",
-  "sha256": "2f734437668337f02ffd8d8259b49db1afbfa5c77d5faa067d8c41a986a5f386"
+  "sha256": "0051481c433f8a32baaefdaa160d179183311b063c513c4f791bac7a5868b9a9"
  },
  "built": {
-  "allocation_s": 58,
-  "c1_s": 200,
-  "c2_s": 932,
+  "allocation_s": 372,
+  "c1_mmlu_allocation_n": {
+   "dealt": 235,
+   "registered": 232,
+   "usable": 232
+  },
+  "c1_s": 513,
+  "c2_s": 1241,
   "mmlu_pools": {
    "union": 12102,
    "wme-c1:mmlupro_gold_lp": 6051,
    "wme-c2-gen:mmlupro_gen": 12102
   },
-  "t0": "2026-11-19T03:14:46Z"
+  "t0": "2026-11-19T03:54:05Z"
  },
  "clean": true,
  "cross_panel": {
-  "audit_sha256": "90ab85236df47dc2a398b0e1a640ffa59a32c3884ece5e25a8d3a3acf48824d4",
+  "audit_sha256": "27174fcc9ec30184ef902f218fa3c0968408ef94df6606a3b3e9fde46c887666",
   "n_pairs": 1035,
   "pairs_with_overlap": []
  },
@@ -61,7 +66,7 @@
   },
   "wme-c1": {
    "bank": 288,
-   "construction": 16378,
+   "construction": 16381,
    "dev": 448,
    "sealed_gen": 1000,
    "sealed_test": 672,
@@ -175,36 +180,36 @@
    "split": "construction"
   },
   {
-   "available_fresh_groups": 229,
+   "available_fresh_groups": 232,
    "built": 96,
-   "hashes_digest": "f5125e60e210729c139599e932fabb57b91d33d71b6ae1067f0c331ba48c5f9d",
+   "hashes_digest": "13f64c7263f3138c739eab2c5233b68019f3a93e8b1ca6a5f6749e09d3d0cc35",
    "panel": "wme-c1",
    "requested": 96,
    "source": "mmlupro_gold_lp",
    "split": "sealed_test"
   },
   {
-   "available_fresh_groups": 229,
+   "available_fresh_groups": 232,
    "built": 64,
-   "hashes_digest": "787f4041229a47c5b9cc13a6301cf38ec9298dce8b351154e82e5d5ff65e81b9",
+   "hashes_digest": "8f4ef258bc28733f56d2dc804e9aba73c7a29231432b34d4906c29188d316024",
    "panel": "wme-c1",
    "requested": 64,
    "source": "mmlupro_gold_lp",
    "split": "dev"
   },
   {
-   "available_fresh_groups": 229,
+   "available_fresh_groups": 232,
    "built": 48,
-   "hashes_digest": "b682c70b68ae17d30880163e71d1cf0128e9d633c9a8c5aa6acf0716e9923133",
+   "hashes_digest": "b858ed9fc86820fc1bcd8754e505be2d31f34e3e69a93378239d8fa87719935b",
    "panel": "wme-c1",
    "requested": 48,
    "source": "mmlupro_gold_lp",
    "split": "bank"
   },
   {
-   "available_fresh_groups": 229,
-   "built": 847,
-   "hashes_digest": "7b5f4721afebbdf0605d46f4b4cdaeb6366068f16990a45a886f11b17ea167de",
+   "available_fresh_groups": 232,
+   "built": 850,
+   "hashes_digest": "45da950f4a9d1845e451a0c1d70274637c3809f3b9ae25df62d9646f2eeec395",
    "panel": "wme-c1",
    "requested": ">= 24 (rest + root shards)",
    "source": "mmlupro_gold_lp",
@@ -366,7 +371,7 @@
   {
    "available_fresh_groups": 3398,
    "built": 3398,
-   "hashes_digest": "68bd6842bde054b43464ee5c6def0b6b980b4168837d63e7f09415ecf90b7bb0",
+   "hashes_digest": "693afcb1c6a072edf18528ddbcc6646765f57760761314e2e388142ebabed8f4",
    "panel": "wme-c2-gen",
    "requested": 3463,
    "source": "mmlupro_gen",
@@ -418,7 +423,7 @@
    "split": "sealed_test"
   }
  ],
- "seconds": 985,
+ "seconds": 1293,
  "sources": {
   "c1": {
    "math": {
@@ -550,11 +555,12 @@
   }
  },
  "wme_c1": {
-  "content_hash": "a785912a57acefeede9ec22db30b526fefc1119b649a0822c590122e0a441075",
+  "content_hash": "89739c7818e29d618ac3bcb52d7e51cd29a9361e7774a71b412646775c630c1d",
   "exclusion": {
    "gsm8k_gold_lp": {
     "available_fresh_groups": 5841,
     "excluded_groups": 2645,
+    "fresh_construction_groups": 5633,
     "pool_items": 8792,
     "reserved_construction_groups": 304,
     "reserved_groups_exposed_later": 39
@@ -562,20 +568,23 @@
    "mathcomp_gold_lp": {
     "available_fresh_groups": 3365,
     "excluded_groups": 2166,
+    "fresh_construction_groups": 3205,
     "pool_items": 6269,
     "reserved_construction_groups": 593,
     "reserved_groups_exposed_later": 105
    },
    "mmlupro_gold_lp": {
-    "available_fresh_groups": 229,
+    "available_fresh_groups": 232,
     "excluded_groups": 0,
-    "pool_items": 1089,
+    "fresh_construction_groups": 24,
+    "pool_items": 1092,
     "reserved_construction_groups": 826,
     "reserved_groups_exposed_later": 286
    },
    "refusal_margin_harmful": {
     "available_fresh_groups": 323,
     "excluded_groups": 378,
+    "fresh_construction_groups": 115,
     "pool_items": 1240,
     "reserved_construction_groups": 0,
     "reserved_groups_exposed_later": 0
@@ -583,6 +592,7 @@
    "refusal_margin_harmless": {
     "available_fresh_groups": 5536,
     "excluded_groups": 729,
+    "fresh_construction_groups": 5328,
     "pool_items": 6265,
     "reserved_construction_groups": 0,
     "reserved_groups_exposed_later": 0
@@ -590,6 +600,7 @@
    "sycophancy_real": {
     "available_fresh_groups": 466,
     "excluded_groups": 1340,
+    "fresh_construction_groups": 258,
     "pool_items": 1813,
     "reserved_construction_groups": 0,
     "reserved_groups_exposed_later": 0
@@ -597,6 +608,7 @@
    "triviaqa_gen": {
     "available_fresh_groups": 84160,
     "excluded_groups": 741,
+    "fresh_construction_groups": 0,
     "pool_items": 156328,
     "reserved_construction_groups": 0,
     "reserved_groups_exposed_later": 0
@@ -604,23 +616,24 @@
    "wikitext_nll": {
     "available_fresh_groups": 303,
     "excluded_groups": 411,
+    "fresh_construction_groups": 95,
     "pool_items": 714,
     "reserved_construction_groups": 0,
     "reserved_groups_exposed_later": 0
    }
   },
-  "manifest_sha256": "51622fb0de80c5dc86f30c8c933cfce77a437d799a1911dc88651b5c805502a6",
+  "manifest_sha256": "9dd5c9b6bbc9fade22a9adabdeb3d2626ffeea0a35f21dd62ffb986585d9c208",
   "split_hashes": {
-   "open/bank.jsonl": "49c5428933aac66aaa48eb4b34f800a9f0beeea17f8534b64652e001f2f6611b",
-   "open/construction.jsonl": "e6cd561b0d795c75aa6cdd6c84fb718865a93e90376ab380b4571678a650599a",
-   "open/dev.jsonl": "a569c74f3833e5476858ca5d26a24665baa4e9a784f9400aa8bf96dca84bbbd5",
+   "open/bank.jsonl": "91f299be1eaa2dd0e618c77a84a0953614c9aace4d04ad8bf4229fb73fc0abe2",
+   "open/construction.jsonl": "736c2582142567ad3217e7bdfabd6e8872eeb1820128a8faf36abf499e209c2b",
+   "open/dev.jsonl": "02d425252925cb8d8730084d7365bc5835dd7fe710c9b6761ebc9508a5dccf63",
    "sealed_gen/gen.jsonl": "d795fc65672c92cd183089fb6df198abfedda3a24071109244e84f410e9f42f2",
-   "sealed_test/test.jsonl": "ff5cc64c53c2b0b491564d78beecf2163112a1fd8d210155ffff44e5a5d202fb"
+   "sealed_test/test.jsonl": "c90852dcbd2611514221623f3910a041623e217098ea5bb52dac5a5f41ffa3fe"
   }
  },
  "wme_c2_gen": {
-  "content_hash": "5c20224adf5b4d640024c80f2b33f54b17af9a468469ea7aeb0fa2441ae21986",
-  "manifest_sha256": "4fcd823357d949f915d28e42a321b24442850997ee0d2f5241881603b87f3d90",
+  "content_hash": "a24d5f0ef7de185136cb31464336d6c0537c631fa21b25b184619fb04497c43b",
+  "manifest_sha256": "4cdb7728c237acb9d9b44bd68f94ec47940383be3348adb231205fd65bab790e",
   "shortfall": {
    "guard_harmful": {
     "frozen_n": 200,
@@ -649,7 +662,7 @@
   },
   "split_hashes": {
    "open/calibration.jsonl": "700e452c137302e824a6668ae73bdd41317894eea16b57f52287e9d613f46749",
-   "sealed_test/sealed_test.jsonl": "39ee1b9985659f686d368f17419325b76ce6520cf4559d225c9b26cb50f9d478"
+   "sealed_test/sealed_test.jsonl": "3fa38044f8c1bf342ec850c4bb679217da804aa2d9df8c5e57db40f44f574005"
   },
   "stats": {
    "guard_harmful": {
