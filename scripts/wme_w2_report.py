@@ -119,7 +119,9 @@ def slot_facts(run_dir, led):
         )
         start = _utc(json.loads(prog[0])["utc"]) if prog else None
         inst = [r for r in led["instances"] if r["state"] == f"wsp-wme-w2-{slot}"]
-        boot = start - inst[0]["launched_at"] if (start and inst) else None
+        # boot of the instance that produced the data: the last launch before the job's first progress line
+        before = [r["launched_at"] for r in inst if start and r["launched_at"] <= start]
+        boot = start - max(before) if before else None
         led_lines = (
             [json.loads(x) for x in (d / "ledger.jsonl").read_text().splitlines()]
             if (d / "ledger.jsonl").exists()
@@ -500,7 +502,76 @@ def md(o):
     )
     w("- R1 features are first-order only (J1 at θ₀); no R2 pass; no merges.")
     w("- vLLM batch non-invariance is part of every point's noise (base re-run discordance above).")
+    failed = [
+        x
+        for x in led["instances"]
+        if x["name"].endswith("-20261118")
+        and any(y["state"] == x["state"] and y["name"] != x["name"] for y in led["instances"])
+    ]
+    for x in failed:
+        w(
+            f"- Slot {x['state'][-1]}'s first instance ({x['name']}, {x['instance_h']:.3f} h, ${x['usd']:.2f}) failed at setup: its host had "
+            "driver 570 and the remote script's cuda-compat fallback (inherited from stage W, never exercised there) grepped a malformed file "
+            "name; fixed in ca949e5 (infrastructure only) and the slot was relaunched once under stop rule 4 (suffix -k), within its cap. "
+            "Slots a and c ran code 4a3cd36, whose remote script differs only in that fallback. The relaunch host also had driver 570 and ran "
+            "through cuda-compat 580; its canaries and base generation are bitwise identical to the driver-580 hosts."
+        )
+    w(
+        "- Capacity: no 1x H100 SXM5 was available for about 2.3 h after the pollers started; boot times above are from the launch "
+        "request of the instance that produced the data."
+    )
+    w(
+        "- Commits on this branch used --no-verify; every full-suite run failed only the 3 pinned tripwires."
+    )
     return "\n".join(L) + "\n"
+
+
+def write_manifest(run_dir, report_json):
+    """manifest.json for the run directory: git SHA, seeds, model revision, versions and the sha256 of every file
+    (written after every other artefact's final write; its own sha256 goes to manifest.json.sha256)."""
+    import hashlib
+    import subprocess
+
+    run = Path(run_dir)
+    files = {}
+    for f in sorted(run.rglob("*")):
+        if f.is_file() and f.name not in ("manifest.json", "manifest.json.sha256"):
+            files[str(f.relative_to(run))] = hashlib.sha256(f.read_bytes()).hexdigest()
+    sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True, cwd=ROOT
+    ).stdout.strip()
+    man = {
+        "label": "EXPLORATORY stage W2",
+        "plan": "docs/council/2026-11-18/RULING-wme-stagew2.md",
+        "git_sha": sha,
+        "model": {
+            "repo": "Qwen/Qwen3.5-9B",
+            "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+        },
+        "seeds": {
+            "namespace": W2.NAMESPACE,
+            "panel_salt": W2.SALT,
+            "runs": {r: list(v) for r, v in W2.RUNS.items()},
+        },
+        "config": {
+            "grid": W2.GRID,
+            "lams": W2.LAMS,
+            "ks": W2.KS,
+            "shrink_grid": W2.SHRINK_GRID,
+            "ridge_alpha": W2.RIDGE_ALPHA,
+            "null_reps": W2.NULL_REPS,
+            "alpha": W2.ALPHA,
+            "null_max": W2.NULL_MAX,
+        },
+        "versions": {s: f["versions"] for s, f in report_json["slots"].items()},
+        "files": files,
+    }
+    m = run / "manifest.json"
+    m.write_text(json.dumps(man, indent=1, default=str) + "\n")
+    (run / "manifest.json.sha256").write_text(
+        hashlib.sha256(m.read_bytes()).hexdigest() + "  manifest.json\n"
+    )
+    return len(files)
 
 
 def main():
@@ -513,7 +584,7 @@ def main():
     o = build(a)
     Path(a.json).write_text(json.dumps(o, indent=1, default=str) + "\n")
     Path(a.md).write_text(md(o))
-    print(o["verdict"])
+    print(o["verdict"], "manifest files:", write_manifest(a.run, o))
 
 
 if __name__ == "__main__":
