@@ -3327,3 +3327,123 @@ not performed here and are not a freeze blocker:
 - the deployed restart path;
 - dead-man reconciliation;
 - bound evidence and the registered fallbacks.
+
+## II.26 Amendment v2h (19 Nov 2026): the three runtime gaps of Board A's freeze re-check, and an adversarial property test
+
+**What this amendment is.** It is dated 19 Nov 2026 and is made before any confirmatory outcome exists. It repairs
+the three remaining blocker-B failures found by Board A's freeze re-check
+(`docs/reviews/council/board-a-prereg-wme-v2-freeze-2026-11-19.md`, sha256
+`153049ca42dd8baf2a3a7f16528b59ed5c299945063b82a839e6e3bfdc32f5cf`): negative clock credit, contract-cycle
+resurrection and post-loss canary resurrection. Board A found gap 4 (fallback identity) closed and blocker A remains
+closed.
+
+**What it is not.** These are technical repairs in `src/wsp/wm/runguard.py` and `src/wsp/wm/harness.py`. There is no
+scientific change; the registered rules of §II.22.6, §II.24.2 and §II.25 are unchanged, and are now enforced in the
+cases Board A's continuations reached. No sealed content was read; CPU only.
+
+**Code and records.**
+- Code `960de9c`.
+- Manifest sha256 `79844dc616df5599d226ad8c1b3623fe1a7ad4199773f21ed4615bf9538c8295` (field `harness.runguard`).
+- Property-test report `docs/reviews/wme/wme-v2h-runguard-property-2026-11-19.json`, sha256
+  `9fd6ecf649a249403e0be484367930fef80eec0b4147bc834040f89035e81ece`.
+- Mutation-sensitivity report `docs/reviews/wme/wme-v2h-property-mutations-2026-11-19.json`, sha256
+  `7235d5000658b62a8981149f6dc5ad695b660465755419e9981c7f27ae67dcc4`.
+
+**What it supersedes.** It supersedes §II.25's gap 1 wording that authoritative records "override local times" (they
+can now only add time), and §II.25's gap 2 and gap 3 wording where the table below adds a condition.
+
+### II.26.1 Gaps, repairs and tests
+
+| Gap (Board A probe) | Repair | CPU regression test (`tests/test_wme_runguard.py`) |
+|---|---|---|
+| **1. Clock.** Probe: a backward wall clock produced a negative local duration that, summed across instances, offset the time of a replacement instance. | **Fail closed.** Every clock reading goes through `CombinedLedger.tick`; each new maximum is persisted. A reading earlier than the recorded maximum (any close, open, canary or unit start earlier than an earlier event, on any instance) persists a `clock_halt` row listing the active instances and raises `ClockInconsistent`. While halted, every operation that reads the clock raises and `resolve` raises. The halt is cleared only by `clear_clock_halt(source, description)`, which requires an authoritative record (provider API or dead-man ledger, `reconcile_instance` with launch ≤ termination, both required) after the halt for **every** instance active at the halt, and a clock at or above the recorded maximum. Local durations are differences of ticks, so they are never negative; a negative local duration raises. An instance is charged max(local, authoritative); an authoritative record can only add time. Each instance is charged separately, so no instance's time offsets another's. **No clamping.** | `test_probe_freeze_clock_rollback_cannot_credit_another_instance` |
+| **2. Contract transitions.** Probe: transitioning to a new digest and back to the original revived the original contract's results and canaries. | Each contract has a monotone **generation**: the attestation is generation 0 and every persisted `ContractTransition` increments it, including a transition back to an earlier digest. Every event carries its (digest, generation). An attempt is eligible only under the current (digest, generation), and only with canaries of the same (digest, generation); supersession is therefore irreversible. A return to an earlier digest is a new generation that needs its own canaries and never reactivates earlier attempts or canaries. | `test_probe_freeze_contract_rollback_does_not_revive_old_results` |
+| **3. Lost instances.** Probe: after `declare_lost`, a canary recorded under the stale lost instance id closed the lost instance's pending attempt and made it eligible. | `canary()` and `begin` (the start of every unit attempt) require the guard's instance to be registered, active and not lost (`InstanceNotOpen`); a canary for a closed or lost instance is refused. Closing, loss or authoritative termination writes an `attempt_disposed` event for each attempt still lacking its closing canary: an **irreversible** retained-ineligible disposition. Only canaries recorded before the instance's closure count, so no later event can close an attempt. Attempts genuinely bracketed by passing start and end canaries before the loss keep their eligibility, as §II.25 registered. `run_units` validates lifecycle, clock and contract (`guard.validate()`) before any `resolve`; `begin` checks lifecycle and contract before the pending and resolve checks. | `test_probe_freeze_canary_after_loss_cannot_revive_an_attempt` |
+
+Two earlier tests were updated for the stricter rules: the gap1 test now expects `InstanceNotOpen` for a canary
+without an instance, and the gap3 test now expects 2.0 h (max of local 2.0 h and authoritative 1.5 h, instead of the
+authoritative value alone).
+
+### II.26.2 Adversarial property test
+
+`tests/test_wme_runguard_property.py`. `hypothesis` is not installed in the project environment, so the test uses a
+seeded random sequence generator. Each sequence drives `ProductionGuard` and `harness.run_units` through 40 random
+public operations, among them:
+- open, close, declare_lost, relaunch, contract transition (including back to an earlier digest);
+- canary pass and fail, including a canary under a stale instance id;
+- unit success, failure and fallback;
+- reconstruction from the log in a fresh guard;
+- arbitrary clock moves, forward and backward, and halt recovery through authoritative reconciliation.
+
+A simulated true clock runs separately from the guard's clock. After every step the test asserts:
+
+| Invariant | Assertion |
+|---|---|
+| I1 | Total charged instance time is non-negative, monotone non-decreasing, and at least each instance's own true elapsed time. |
+| I2 | No unit runs when the cap would be exceeded or when no instance is active. |
+| I3 | An attempt's eligibility, once false (superseded, ineligible, lost), never becomes true. |
+| I4 | An eligible result always has a start and a closing canary from the same instance, generation and contract, recorded before the instance's closure, computed independently from the raw events. |
+| I5 | The resolved result for a unit never changes once returned; a fallback payload equals its registered digest. |
+| I6 | Reconstruction from the log reproduces identical state. |
+
+Also asserted:
+- no attempt is pending on a closed or lost instance;
+- an attempt's status is final at its instance's closure (except a later supersession by contract);
+- an eligible attempt is in the current generation and contract.
+
+**Run.** `scripts/wme_v2h_runguard_property.py`, CPU via agent-tmux: **5,000 sequences × 40 steps** (seeds from
+7,000,000), **passed, 0 failures**, 259.4 s. Coverage over the run:
+
+| Counter | Count |
+|---|---|
+| Units run | 22,840 |
+| Eligible attempts | 9,264 |
+| Retained-ineligible attempts | 1,798 |
+| Superseded attempts | 6,606 |
+| Irreversible disposals | 378 |
+| Fallbacks | 4,096 |
+| Contract transitions | 6,568 |
+| Transitions back to an earlier digest | 1,702 |
+| Instances declared lost | 3,066 |
+| Clock halts | 6,333 |
+| Clock recoveries | 6,105 |
+| Cap reached | 47 |
+
+The default suite runs 80 sequences (`test_runtime_contract_properties_fast`) and requires every coverage counter
+except the cap to be positive; `-m slow` runs the 5,000 sequences in one process.
+
+**Mutation sensitivity.** `scripts/wme_v2h_property_mutations.py` re-injects each of the three defects into the
+repaired guard and runs the property test from seed 9,000,000:
+
+| Mutation | Detected at |
+|---|---|
+| m1, v2g clock (no halt; signed durations summed) | sequence 2 |
+| m2, digest-only contract identity (no generation) | sequence 9 (a superseded attempt became eligible) |
+| m3, post-loss canaries accepted, no disposal | sequence 7 (pending on a lost instance) |
+
+**Findings.** The property test found **no additional runtime defect** in the repaired guard. It did expose weaknesses
+in the test itself, which were fixed before the registered run:
+- initial coverage was too low (no eligible attempts); a canary–unit–canary cycle and auto-recovery were added;
+- the first invariants relied on guard helpers and missed m2 and m3; I3 and I4 now compute closure and canary
+  brackets independently, and the three further assertions were added;
+- the first m2 mutation was unfaithful and was rewritten as digest-only.
+
+### II.26.3 Status
+
+| Board A freeze re-check | Status |
+|---|---|
+| B1. Clock | Repaired; fails closed, no clamping. |
+| B2. Contract transitions | Repaired; monotone generations, irreversible supersession. |
+| B3. Lost instances | Repaired; post-loss canaries refused, irreversible disposal, validation before resolve. |
+| B4. Fallback identity | Closed by Board A. |
+| A. Root-shard lineage | Closed by Board A. |
+
+**Suite.** 2,290 passed; only the 3 pinned tripwires fail.
+
+**Not claimed.** The confirmatory-stack launch preconditions remain preconditions for launch and are not performed
+here:
+- inert, parity and canary checks on the pinned engines;
+- committed canary references;
+- the deployed restart path;
+- dead-man reconciliation;
+- bound evidence and the registered fallbacks.

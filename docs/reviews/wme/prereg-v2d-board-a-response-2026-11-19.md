@@ -267,5 +267,31 @@ includes a preempted-instance path.
 **Suite.** 2,286 passed; only the 3 pinned tripwires fail.
 
 **Status.** Blocker A was closed by Board A. Blocker B's four gaps are repaired in code and await Board A's check.
-The confirmatory-stack checks remain launch preconditions.
+The confirmatory-stack checks remain launch preconditions. *(Superseded by Update v2h: Board A's freeze re-check closed
+gap 4 and found three remaining failures.)*
 
+
+## Update v2h (19 Nov 2026): Board A freeze re-check, three remaining runtime gaps
+
+> **Context.** Board A's freeze re-check (`docs/reviews/council/board-a-prereg-wme-v2-freeze-2026-11-19.md`)
+> rejected on three remaining blocker-B failures; gap 4 is closed.
+> - Branch `prereg/wme-v2h`, from main `c62ca31`.
+> - Technical repairs in `src/wsp/wm/runguard.py` and `src/wsp/wm/harness.py` (code `960de9c`); PREREG §II.26.
+
+| Gap | Repair | Regression test (`tests/test_wme_runguard.py`) |
+|---|---|---|
+| 1. A backward clock created negative credit that offset a replacement instance | Fail closed: a backward reading persists `clock_halt` and raises `ClockInconsistent`; everything halts until every instance active at the halt is authoritatively terminated and the clock is back at or above its maximum. Local durations are never negative; each instance is charged max(local, authoritative) separately. No clamping. | `test_probe_freeze_clock_rollback_cannot_credit_another_instance` |
+| 2. Transitioning away and back revived the old contract's results | Monotone generation per contract; attempts and canaries bind to (digest, generation); a return to an earlier digest is a new generation and never reactivates anything. | `test_probe_freeze_contract_rollback_does_not_revive_old_results` |
+| 3. A canary under a stale lost instance id revived its pending attempt | `canary()` and every unit start (`begin`) need an active, non-lost instance; closure or loss irreversibly disposes of unbracketed attempts; post-closure canaries never count; `run_units` validates before any resolve. Genuinely bracketed pre-loss results keep their eligibility. | `test_probe_freeze_canary_after_loss_cannot_revive_an_attempt` |
+
+**Property test.** `tests/test_wme_runguard_property.py` (seeded generator; `hypothesis` is not installed) runs
+invariants I1–I6 after every step. The registered run was 5,000 sequences × 40 steps and passed with 0 failures. The
+coverage counts are in §II.26.2.
+- **Mutation check:** re-injecting each of the three defects is detected (at sequences 2, 9 and 7).
+- **Additional runtime defects found:** none. Test weaknesses (coverage, invariants that trusted guard helpers) were
+  found by the mutation check and fixed before the registered run.
+
+**Suite.** 2,290 passed; only the 3 pinned tripwires fail.
+
+**Status.** Blocker A and gap 4 were closed by Board A. Blocker B's three remaining gaps are repaired in code and await
+Board A's check. The confirmatory-stack checks remain launch preconditions.

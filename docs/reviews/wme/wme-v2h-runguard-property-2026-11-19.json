@@ -1,0 +1,42 @@
+{
+ "label": "adversarial property test of the runtime contract (PREREG_WME \u00a7II.26)",
+ "test_module": "tests/test_wme_runguard_property.py",
+ "sequences": 5000,
+ "steps": 40,
+ "seed0": 7000000,
+ "cap_gpu_h_in_test": 12.0,
+ "ops": {
+  "back": 6602,
+  "canary": 21576,
+  "canary_bad": 4211,
+  "close": 4268,
+  "cycle": 42808,
+  "fix": 4334,
+  "fwd": 30276,
+  "lost": 4296,
+  "open": 17481,
+  "reconstruct": 8554,
+  "recover": 8212,
+  "relaunch": 4338,
+  "stale": 4291,
+  "transition": 6568,
+  "unit": 32185
+ },
+ "coverage": {
+  "cap_reached": 47,
+  "clock_halts": 6333,
+  "clock_recoveries": 6105,
+  "disposed": 378,
+  "eligible_attempts": 9264,
+  "fallbacks": 4096,
+  "ineligible_attempts": 1798,
+  "lost": 3066,
+  "rollbacks_to_earlier_digest": 1702,
+  "superseded_attempts": 6606,
+  "transitions": 6568,
+  "units_run": 22840
+ },
+ "failures": [],
+ "passed": true,
+ "seconds": 259.4
+}

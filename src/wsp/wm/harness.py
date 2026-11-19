@@ -181,6 +181,7 @@ def run_units(
         raise ValueError(
             "run_units needs a guard (runguard.ProductionGuard, or an explicit EngineeringGuard)"
         )
+    guard.validate()  # lifecycle, clock and contract validation before any result is resolved (§II.26)
     out = {}
     for recipe, label in units:
         k = unit_key(recipe, theta0, panel)
