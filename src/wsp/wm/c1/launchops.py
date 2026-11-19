@@ -260,3 +260,38 @@ def _gpu1_main(cfg):
 
 if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[1] == "gpu1":
     _gpu1_main(json.loads(sys.argv[2]))
+
+
+@register("timing")
+def h_timing(rt, req, ctx):
+    """Outcome-blind unit timings for the unpriced bank work (amendment re-pricing, §II.13 item 9): one fp64 GPU
+    eigendecomposition of a random 12288 x 12288 PSD matrix (the down_proj A factor size) and of a 4096 one, and one
+    factored contraction. Synthetic matrices only."""
+    import torch
+
+    from wsp.wm.c1 import field as F
+
+    out = {}
+    for n in (4096, 12288):
+        g = torch.Generator(device="cpu").manual_seed(n)
+        x = torch.randn(n, 2048, generator=g).cuda()
+        f = (x @ x.T / 2048).float().cpu()
+        torch.cuda.synchronize()
+        t0 = time.time()
+        UA, lA, aud = F.spectral_factor_gpu(f, "cuda")
+        torch.cuda.synchronize()
+        out[f"eigh_{n}_s"] = time.time() - t0
+        out[f"rank_{n}"] = aud["rank"]
+        ctx.check()
+    UG, lG, _ = F.spectral_factor_gpu(torch.eye(4096) + 0.01, "cuda")
+    D = torch.randn(4096, 12288, device="cuda")
+    UA, lA = UA.cuda(), lA.cuda()
+    UG, lG = UG.cuda(), lG.cuda()
+    torch.cuda.synchronize()
+    t0 = time.time()
+    for _ in range(10):
+        M = UG.T @ D @ UA
+        _ = float(((lG[:, None] * lA[None, :]) * M.square()).sum())
+    torch.cuda.synchronize()
+    out["contraction_s"] = (time.time() - t0) / 10
+    return out, {}

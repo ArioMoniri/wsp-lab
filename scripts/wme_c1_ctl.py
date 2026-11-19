@@ -363,6 +363,25 @@ def cmd_phasel_main(a):
     eng = can["engines"]
     if set(eng) != {"tf", "hf_gen", "vllm"}:
         raise SystemExit(f"PRECONDITION FAILED: canary engines {sorted(eng)}")
+    tim, _ = rem.call("timing", 0, inst, "t" * 64, "timing", {}, timeout_s=7200)
+    p_bank = (
+        SD.PRICE["bank"]
+        + (192 * tim["eigh_12288_s"] + 576 * tim["eigh_4096_s"] + 13095 * 6 * tim["contraction_s"])
+        / 3600
+    )
+    tim_path, tim_sha = write_evidence(
+        f"wme-c1-launch-timing-{DATE}.json",
+        {
+            "label": "PREREG_WME §II.30 re-pricing inputs (synthetic matrices; outcome-blind)",
+            "timing": tim,
+            "rule": "P_bank = 4.1268 + (192 t_eigh(12288) + 576 t_eigh(4096) + 13095 x 6 t_contract) / 3600",
+            "P_bank_gpu_h": p_bank,
+        },
+    )
+    (RUNS / "bank_price.json").write_text(
+        json.dumps({"P_bank": p_bank, "evidence": tim_path, "sha256": tim_sha})
+    )
+    log(f"bank phase re-priced (§II.30): {p_bank:.3f} GPU-h-eq")
     par = json.loads((EVID / f"wme-c1-launch-parity-{DATE}.json").read_text())
     if not (par["parity"]["parity_bitwise"] and par["inert_identity"]["pass"]):
         raise SystemExit("PRECONDITION FAILED: 1-vs-2-GPU parity evidence")
@@ -390,9 +409,12 @@ def cmd_phasel_main(a):
             f"{inert_path} sha256:{inert_sha}",
             f"{can_path} sha256:{can_sha}",
             f"{ec_path} sha256:{ec_sha}",
+            f"{tim_path} sha256:{tim_sha}",
         ]
     )
-    subprocess.run(["git", "add", par_path, inert_path, can_path, ec_path], cwd=ROOT, check=True)
+    subprocess.run(
+        ["git", "add", par_path, inert_path, can_path, ec_path, tim_path], cwd=ROOT, check=True
+    )
     subprocess.run(
         [
             "git",

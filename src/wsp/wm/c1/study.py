@@ -82,6 +82,11 @@ class Study:
         self.theta0, self.panel = theta0, panel
         self.log = log
         self.priced = {k: v for k, v in PRICE.items() if v is not None}
+        bp = Path(runs_dir) / "bank_price.json"
+        if (
+            bp.exists()
+        ):  # §II.30: the bank price computed at launch from the outcome-blind timing probe
+            self.priced["bank"] = float(json.loads(bp.read_text())["P_bank"])
 
     def set_sbon_price(self, b_par: float):
         self.priced["sbon"] = sbon_price(b_par)
@@ -350,7 +355,7 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
             "r0_candidate_description", study.theta0, Tier.R0, meta
         ),
     }
-    ledger = PL.BudgetLedger(B, [arm])
+    ledger = PL.BudgetLedger(int(a["B"]), [arm])
     stores = AS.StoreRegistry()
     ctx = AS.ArmContext(
         AS.ARM_SPECS[arm],
@@ -373,7 +378,7 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
         out = PO.run_pool_episode(
             ranker,
             ctx,
-            B,
+            int(a["B"]),
             POOL_SIZE,
             int(ep["seeds"]["planner"]),
             features=lambda c: feats[tuple(c)],

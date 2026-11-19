@@ -286,6 +286,7 @@ def record(changes, groups, pool=None) -> dict:
         "objective": OBJECTIVE,
         "gain": gain["mean"],
         "gain_se": gain["se"],
+        "se": gain["se"],  # the reader history rendering reads "se" (arms.readers.render_history)
         "lcb": gain["lcb"],
         "gain_items": [E2.ORIENT[OBJECTIVE] * x for x in changes[OBJECTIVE]["native"]],
         "item_groups": list(groups[OBJECTIVE]),

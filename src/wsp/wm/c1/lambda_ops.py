@@ -55,7 +55,12 @@ def tighten(state: Path, max_usd: float, t_max_hours: float, idle_limit_s: float
         "t_max_hours": float(t_max_hours),
         "idle_limit_s": float(idle_limit_s),
     }
-    for k, v in new.items():  # max_usd and idle only tighten; t_max (cumulative instance-hours) is set per launch
+    for (
+        k,
+        v,
+    ) in (
+        new.items()
+    ):  # max_usd and idle only tighten; t_max (cumulative instance-hours) is set per launch
         if k in cur and v > cur[k] and k != "t_max_hours":
             new[k] = cur[k]
     p.write_text(json.dumps(new, indent=1))

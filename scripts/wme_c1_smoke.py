@@ -43,6 +43,8 @@ def main():
     d = Path(a.dir)
     d.mkdir(parents=True, exist_ok=True)
     wroot = d / "worker"
+    (wroot / "STOP").unlink(missing_ok=True)
+    (wroot / "fence.json").unlink(missing_ok=True)  # smoke resume only: pre-guard calls use epoch 0
     env = dict(os.environ, WME_C1_SMOKE_EPOCHS="10")
     log = open(d / "worker.log", "a")
     wp = subprocess.Popen(
@@ -111,6 +113,7 @@ def main():
         }
         bpar = co.b_par()
         bpar["B_par"] = 4.0  # smoke only: a small screen budget
+        st.set_sbon_price = lambda b: None  # smoke only: keep the scratch price
         sb = co.stage_sbon(prep, bpar, episodes=range(a.episodes))
         out["sbon"] = {k: (v or {}).get("screened") for k, v in sb.items()}
         win = co.designate(e2, sb, d / "winners")
