@@ -156,17 +156,20 @@ class Study:
 # ------------------------------------------------------------------ unit lists
 
 
-def bank_units(manifest: dict, roots_rec: dict, field_groups=range(8)) -> list:
+def bank_units(manifest: dict, roots_rec: dict, field_groups=range(8), vocab: bool = True) -> list:
 
     units = [
         ({"kind": "field_group", "args": {"group": g}, "label": f"field:g{g}"}, f"field:g{g}")
         for g in field_groups
     ]
-    units.append(({"kind": "field_vocab", "args": {}, "label": "field:vocab"}, "field:vocab"))
+    if vocab:
+        units.append(({"kind": "field_vocab", "args": {}, "label": "field:vocab"}, "field:vocab"))
     return units
 
 
-def bank_state_units(manifest: dict, roots_rec: dict, base_payload: dict) -> list:
+def bank_state_units(
+    manifest: dict, roots_rec: dict, base_payload: dict, blocks=None, inert=True
+) -> list:
     from wsp.wm import bankrun as BR
     from wsp.wm.c1 import bankops as BO
 
@@ -191,7 +194,7 @@ def bank_state_units(manifest: dict, roots_rec: dict, base_payload: dict) -> lis
                     lab,
                 )
             )
-    for i, b in enumerate(manifest["bank.blocks"]["blocks"]):
+    for i, b in enumerate(manifest["bank.blocks"]["blocks"] if blocks is None else blocks):
         for tag, order in (("fwd", list(b)), ("rev", list(reversed(b)))):
             lab = f"comp:{i:02d}:{tag}"
             out.append(
@@ -205,7 +208,7 @@ def bank_state_units(manifest: dict, roots_rec: dict, base_payload: dict) -> lis
                 )
             )
     base_values = {o: base_payload["values"][o] for o in base_payload["values"]}
-    for j, spec in enumerate(BO.inert_specs(manifest)):
+    for j, spec in enumerate(BO.inert_specs(manifest) if inert else []):
         lab = f"inert:{j:02d}:{spec['kind']}"
         out.append(
             (
@@ -229,13 +232,13 @@ def e2_inputs(lib_file, dev_base_file, fit_file=None) -> dict:
     return a, up
 
 
-def e2_units(inputs, uploads, episodes=range(N_EP), arms=None) -> list:
+def e2_units(inputs, uploads, episodes=range(N_EP), arms=None, b: int = B) -> list:
     arms = arms or [a for a in ARMS_PRIMARY + ARMS_SECONDARY]
     out = []
     for e in episodes:
         for arm in arms:
             lab = f"e2:{arm}:{e:02d}"
-            args = dict(inputs, arm=arm, episode=int(e), B=B, pool_size=POOL_SIZE)
+            args = dict(inputs, arm=arm, episode=int(e), B=int(b), pool_size=POOL_SIZE)
             out.append(
                 ({"kind": "e2_arm", "args": args, "uploads": dict(uploads), "label": lab}, lab)
             )

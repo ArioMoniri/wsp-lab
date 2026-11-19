@@ -344,7 +344,7 @@ def h_field_vocab(rt: Runtime, req, ctx):
         rt.declared_rows(m),
         "cuda",
         d,
-        embed=m.embed,
+        embed=m.embed.rsplit(".", 1)[0],
         theta_hash=m.base_hash,
     )
     rt._field = None

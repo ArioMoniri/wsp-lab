@@ -165,12 +165,19 @@ def build_library(
 
 
 class Library:
-    def __init__(self, path, rm):
+    def __init__(self, path, rm, smoke: bool = False):
         self.lib = torch.load(path, map_location="cpu", weights_only=False)
         self.rm = rm
         self.index = E2.library_index(OBJECTIVE)
+        self.smoke = (
+            smoke  # engineering smoke on the 24-layer 0.8B model only: layers map into range
+        )
+
+    def _L(self, L):
+        return L % 8 if self.smoke else L  # smoke: the two collected field groups
 
     def steer(self, L, contrast, shift):
+        L = self._L(L)
         d = self.lib["dirs"][contrast][L]
         mm = self.lib["mlp_mean"][L]
         return A.rank_one(
@@ -203,7 +210,7 @@ class Library:
                 L = self.rm.layer_of(n)
                 if L is None:
                     raise KeyError(f"{n}: no layer")
-                if lo <= L <= hi:
+                if lo <= L <= hi and not (self.smoke and L >= 8):
                     sub[n] = v
             return LR.lowrank_actions(sub, p["dose"])
         raise KeyError(pid)

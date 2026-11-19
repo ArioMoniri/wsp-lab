@@ -54,7 +54,11 @@ class Remote:
         lost=None,
         sleep=time.sleep,
         log=None,
+        revive=None,
     ):
+        self.revive = (
+            revive  # restarts a dead worker process (same instance); the inbox request survives
+        )
         self.t = transport
         self.local = Path(local_root)
         self.local.mkdir(parents=True, exist_ok=True)
@@ -94,6 +98,7 @@ class Remote:
         )
         self._with_retry(lambda: self.t.put(req), "put")
         t0 = time.time()
+        revived = False
         while True:
             if self._with_retry(lambda: self.t.ready(req["id"]), "poll"):
                 break
@@ -101,6 +106,20 @@ class Remote:
                 raise InstanceLost(f"{label}: instance lost while waiting")
             age = self._with_retry(self.t.alive_age, "alive")
             if age is not None and age > self.dead_after_s:
+                if self.revive is not None and not revived:
+                    revived = True
+                    self._journal({"event": "revive", "id": req["id"], "alive_age": age})
+                    self.log(
+                        f"{label}: worker silent for {age:.0f} s; restarting the worker process"
+                    )
+                    self.revive()
+                    t_rev = time.time()
+                    while time.time() - t_rev < self.dead_after_s:
+                        a2 = self._with_retry(self.t.alive_age, "alive")
+                        if a2 is not None and a2 < self.dead_after_s:
+                            break
+                        self.sleep(self.poll_s)
+                    continue
                 raise WorkerDead(f"{label}: worker silent for {age:.0f} s")
             if timeout_s is not None and time.time() - t0 > timeout_s:
                 self._with_retry(lambda: self.t.cancel(req["id"]), "cancel")

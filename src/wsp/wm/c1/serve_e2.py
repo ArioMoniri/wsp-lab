@@ -81,7 +81,9 @@ def env_for(rt, args, ctx, need_fit=True):
         if st.world is not None:
             st.world.close()
         m = rt.hf()
-        lib = EO.Library(_verified(args["library_file"], args["library_sha256"]), m.rm)
+        lib = EO.Library(
+            _verified(args["library_file"], args["library_sha256"]), m.rm, smoke=rt.cfg.smoke
+        )
         base = json.loads(_verified(args["dev_base_file"], args["dev_base_sha256"]).read_text())[
             "records"
         ]
@@ -262,6 +264,16 @@ def edit_bundles(env, edit: dict, files_dir=None):
         )
         return [LR.lowrank_actions(fac, 1.0)]
     raise KeyError(k)
+
+
+@register("edit_bundles")
+def h_edit_bundles(rt, req, ctx):
+    """The serialised action bundles of an edit spec (``genops.serialise_bundles``), built from the uploaded library."""
+    from wsp.wm.c1 import genops as GO
+
+    a = req["args"]
+    env = env_for(rt, a, ctx, need_fit=False)
+    return {"bundles": GO.serialise_bundles(edit_bundles(env, a["edit"]))}, {}
 
 
 @register("sealed_eval")
