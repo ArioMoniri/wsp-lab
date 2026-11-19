@@ -295,3 +295,39 @@ def test_c1_keeps_the_root_item_as_its_groups_representative(tmp_path):
     )
     con = man["objectives"]["mmlupro_gold_lp"]["construction"]["hashes"]
     assert root_item in con and mm[0]["hash"] not in con
+
+
+def test_c1_field_minimum_counts_fresh_construction_only(tmp_path):
+    mm = _mmlu(40)
+    reserved = {r["hash"] for r in mm[20:30]}
+    alloc = V.allocate(
+        _pool(mm),
+        set(),
+        (("wme-c1:mmlupro_gold_lp", 9, "raise"), ("wme-c2-gen:mmlupro_gen", 5, "reduce")),
+        preassigned={h: V.C1_ROOT_CONSUMER for h in reserved},
+    )
+    sizes = {
+        "mmlupro_gold_lp": {
+            "sealed_gen": 0,
+            "sealed_test": 3,
+            "dev": 2,
+            "bank": 2,
+            "construction": "rest",
+        }
+    }
+    fresh = V.build_c1_panel_v2e(
+        {"mmlupro_gold_lp": mm}, sizes, tmp_path / "x", ALL_EXP, alloc, reserved, dry_run=True
+    )
+    assert fresh["mmlupro_gold_lp"] >= 7 and not (tmp_path / "x").exists()
+    with pytest.raises(
+        ValueError
+    ):  # 10 root-shard groups do not count toward a fresh field minimum
+        V.build_c1_panel_v2e(
+            {"mmlupro_gold_lp": mm},
+            sizes,
+            tmp_path / "y",
+            ALL_EXP,
+            alloc,
+            reserved,
+            construction_min={"mmlupro_gold_lp": fresh["mmlupro_gold_lp"] - 7 + 1},
+        )

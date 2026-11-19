@@ -150,9 +150,28 @@ def main():
         V.CONSUMERS[0][0]: {r["hash"] for r in pools["mmlupro_gold_lp"]},
         V.CONSUMERS[1][0]: {r["hash"] for r in mc["mmlupro_gen"]},
     }
-    alloc = V.allocate(
-        mm_pool, X.all_exposed(exp1), V.CONSUMERS, preassigned=pre, eligible=eligible
+    # c1 must end with 232 usable fresh MMLU-Pro groups (sealed_test 96 + dev 64 + bank 48 + fresh field 24) after
+    # its own cross-objective grouping; the allocation's c1 count is raised by the deficit until it does
+    # (deterministic, counts only).
+    need_c1 = (
+        sum(sizes["mmlupro_gold_lp"][s] for s in ("sealed_test", "dev", "bank"))
+        + cmin["mmlupro_gold_lp"]
     )
+    n_c1 = V.CONSUMERS[0][1]
+    for _ in range(20):
+        consumers = ((V.CONSUMERS[0][0], n_c1, "raise"), V.CONSUMERS[1])
+        alloc = V.allocate(
+            mm_pool, X.all_exposed(exp1), consumers, preassigned=pre, eligible=eligible
+        )
+        got = V.build_c1_panel_v2e(
+            pools, sizes, PANELS / "wme-c1", exp1, alloc, reserved_items, dry_run=True
+        )["mmlupro_gold_lp"]
+        if got >= need_c1:
+            break
+        n_c1 += need_c1 - got
+    else:
+        raise SystemExit("could not reach the c1 MMLU-Pro requirement")
+    log["c1_mmlu_allocation_n"] = {"registered": V.CONSUMERS[0][1], "dealt": n_c1, "usable": got}
     log["mmlu_pools"] = {k: len(v) for k, v in eligible.items()} | {"union": len(mm_pool)}
     ALLOC.parent.mkdir(parents=True, exist_ok=True)
     ALLOC.write_text(json.dumps(alloc, sort_keys=True))

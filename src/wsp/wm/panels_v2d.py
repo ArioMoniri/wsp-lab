@@ -362,6 +362,7 @@ def build_c1_panel_v2e(
     reserved_construction: set,
     salt: str = PC.SALT,
     construction_min: dict | None = None,
+    dry_run: bool = False,
 ):
     """``wme-c1`` under the v1 policy (``panel_c1.build_c1_panel_v1``'s grouping, exclusion, ownership, salted order
     and split order) with two v2e rules (PREREG §II.23.3):
@@ -376,7 +377,7 @@ def build_c1_panel_v2e(
     remaining fresh group) plus the reserved groups; ``construction_min[obj]`` (field + e2 shards) is checked."""
     require_exposures(exposures)
     out = Path(out_dir)
-    if out.exists():
+    if out.exists() and not dry_run:
         raise FileExistsError(f"{out} exists; panels are frozen once built")
     pools = dict(pools)
     if "mmlupro_gold_lp" in pools:
@@ -428,10 +429,14 @@ def build_c1_panel_v2e(
         }
         fresh[obj] = sorted(by_f.values(), key=lambda r: PC._rank(r["group"], salt))
         reserved[obj] = sorted(by_r.values(), key=lambda r: r["hash"])
+    if dry_run:
+        return {o: len(fresh[o]) for o in order}
     splits = {s: {} for s in PC.SPLITS_V1}
     for obj in order:
         rows = fresh[obj]
-        fixed = sum(int(v) for s, v in sizes[obj].items() if v != "rest")
+        fixed = sum(int(v) for s, v in sizes[obj].items() if v != "rest") + (
+            construction_min or {}
+        ).get(obj, 0)
         if len(rows) < fixed:
             raise ValueError(
                 f"{obj}: {len(rows)} fresh groups for {fixed} requested (never relaxed)"
@@ -446,11 +451,13 @@ def build_c1_panel_v2e(
         )
         for s in PC.SPLITS_V1:
             splits[s][obj] = sorted(splits[s][obj], key=lambda r: r["hash"])
+        n_fresh_constr = len(splits["construction"][obj]) - len(reserved[obj])
         need = (construction_min or {}).get(obj, 0)
-        if len(splits["construction"][obj]) < need:
-            raise ValueError(
-                f"{obj}: construction {len(splits['construction'][obj])} < {need} required"
-            )
+        if (
+            n_fresh_constr < need
+        ):  # the field and e2 shards must be fresh, disjoint from root shards
+            raise ValueError(f"{obj}: fresh construction {n_fresh_constr} < {need} required")
+        exclusion[obj]["fresh_construction_groups"] = n_fresh_constr
     hashes = {s: {r["hash"] for o in order for r in splits[s][o]} for s in PC.SPLITS_V1}
     groups = {s: {r["group"] for o in order for r in splits[s][o]} for s in PC.SPLITS_V1}
     for a_, b_ in itertools.combinations(PC.SPLITS_V1, 2):
