@@ -88,3 +88,21 @@ A raise never changes a claim, α, N, margin or stopping rule.
 - On an incident it stops issuing units, diagnoses, and reports to the chair before resuming.
 - The implementation agent checks health at every chunk boundary and does not end its turn while an instance is
   live.
+
+## Addendum 2 (19 Nov 2026): chair answers to the v2l implementation questions
+
+These answers come before any data. They are binding on §II.31 and are included in the Board A check.
+
+1. **"The E1 generation prompts" under C1(b).** This means the E1 generation settings (template, greedy, 128 new
+   tokens, non-thinking, stop rule) applied to the **64 exposed canary items**, never to sealed items. The
+   implementer's reading is confirmed.
+2. **vLLM batching under C1(b).** vLLM's scheduler picks its own batch sizes. "Batch 128" binds only the HF engine.
+   Base and winner pairing, and the item order of the results, are unchanged.
+3. **The GPU-idle rule.**
+   - The < 20 % for > 15 min rule applies only to units whose registered kind uses the GPU.
+   - CPU-kind units (the E2 planner search, the fits and the analysis) are checked by a progress heartbeat instead.
+     More than 15 minutes with no progress counts as an incident.
+   - The instance is still billed and counted against the cap in both cases.
+4. **Halt on every error.** This stays, as the user asked. After an error the run waits for review, and the
+   registered retry budget is unchanged. The implementation agent must be in its turn while any instance is live, so
+   that a halt is diagnosed promptly.
