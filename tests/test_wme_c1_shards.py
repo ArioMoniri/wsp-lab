@@ -6,13 +6,27 @@ from wsp.wm.c1 import shards as S
 
 
 def rows(obj, n, prefix):
-    return [{"objective": obj, "hash": f"{prefix}{i:04d}", "group": f"g{prefix}{i:04d}", "id": f"{prefix}{i}"} for i in range(n)]
+    return [
+        {
+            "objective": obj,
+            "hash": f"{prefix}{i:04d}",
+            "group": f"g{prefix}{i:04d}",
+            "id": f"{prefix}{i}",
+        }
+        for i in range(n)
+    ]
 
 
 def pool():
     out = []
-    pre = {"wikitext_nll": "wik", "gsm8k_gold_lp": "gsm", "mmlupro_gold_lp": "mml",
-           "refusal_margin_harmful": "hfl", "refusal_margin_harmless": "hls", "sycophancy_real": "syc"}
+    pre = {
+        "wikitext_nll": "wik",
+        "gsm8k_gold_lp": "gsm",
+        "mmlupro_gold_lp": "mml",
+        "refusal_margin_harmful": "hfl",
+        "refusal_margin_harmless": "hls",
+        "sycophancy_real": "syc",
+    }
     for o in S.FIELD_OBJECTIVES:
         out += rows(o, 120, pre[o])
     out += rows("mathcomp_gold_lp", 100, "mat")
@@ -43,6 +57,8 @@ def test_field_token_cap_and_shortfall_raise():
     assert all(int(r["hash"][-1]) % 2 == 0 for v in a["field"].values() for r in v)
     with pytest.raises(ValueError):
         S.designate(p, set(), set(), lambda o, r: 5000)
-    small = [r for r in p if r["objective"] != "sycophancy_real"] + rows("sycophancy_real", 80, "syc")
+    small = [r for r in p if r["objective"] != "sycophancy_real"] + rows(
+        "sycophancy_real", 80, "syc"
+    )
     with pytest.raises(ValueError, match="construction/e2"):
         S.designate(small, set(), set(), lambda o, r: 10)

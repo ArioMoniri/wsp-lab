@@ -167,8 +167,12 @@ def test_bracketed_production_run_returns_only_eligible_results(rig, tmp_path):
     g.open_instance(1)
     rig["tr"].set_fence(g.epoch, g.instance)
     store = H.UnitStore(tmp_path / "units")
-    fn = lambda r: rig["rem"].call("square", g.epoch, g.instance, H.unit_key(r, "t0", "p"), "u", {"x": r["x"]})[0]
-    out = C.run_bracketed(g, store, _units(5), fn, "t0", "p", lambda: C.run_canary(g, rig["rem"]), chunk=2)
+    fn = lambda r: rig["rem"].call(
+        "square", g.epoch, g.instance, H.unit_key(r, "t0", "p"), "u", {"x": r["x"]}
+    )[0]
+    out = C.run_bracketed(
+        g, store, _units(5), fn, "t0", "p", lambda: C.run_canary(g, rig["rem"]), chunk=2
+    )
     assert [out[f"u{i}"]["sq"] for i in range(5)] == [1, 4, 9, 16, 25]
     rep = g.report()
     assert all(st == "eligible" for u in rep["units"].values() for _, st in u["attempts"])
@@ -191,7 +195,9 @@ def test_failed_closing_canary_halts_and_leaves_results_ineligible(rig, tmp_path
         eng = dict(ENG) if calls["n"] == 1 else dict(ENG, tf="9" * 64)
         return {"composite": C.composite_canary(eng), "pass": g.canary(C.composite_canary(eng))}
 
-    fn = lambda r: rig["rem"].call("square", g.epoch, g.instance, H.unit_key(r, "t0", "p"), "u", {"x": r["x"]})[0]
+    fn = lambda r: rig["rem"].call(
+        "square", g.epoch, g.instance, H.unit_key(r, "t0", "p"), "u", {"x": r["x"]}
+    )[0]
     with pytest.raises(RG.CanaryMismatch):
         C.run_bracketed(g, store, _units(2), fn, "t0", "p", canary, chunk=8)
     for recipe, _ in _units(2):
@@ -203,7 +209,9 @@ def test_takeover_makes_the_old_controller_stale_and_resumes_without_recompute(r
     g1 = guard(state)
     g1.open_instance(1)
     store = H.UnitStore(tmp_path / "units")
-    fn1 = lambda r: rig["rem"].call("square", g1.epoch, g1.instance, H.unit_key(r, "t0", "p"), "u", {"x": r["x"]})[0]
+    fn1 = lambda r: rig["rem"].call(
+        "square", g1.epoch, g1.instance, H.unit_key(r, "t0", "p"), "u", {"x": r["x"]}
+    )[0]
     C.run_bracketed(g1, store, _units(2), fn1, "t0", "p", lambda: C.run_canary(g1, rig["rem"]))
     g2 = guard(state)  # a controller restart: verified fresh replay, new owner epoch
     rig["tr"].set_fence(g2.epoch, g2.instance)
@@ -213,9 +221,13 @@ def test_takeover_makes_the_old_controller_stale_and_resumes_without_recompute(r
 
     def fn2(r):
         computed.append(r["unit"])
-        return rig["rem"].call("square", g2.epoch, g2.instance, H.unit_key(r, "t0", "p"), "u", {"x": r["x"]})[0]
+        return rig["rem"].call(
+            "square", g2.epoch, g2.instance, H.unit_key(r, "t0", "p"), "u", {"x": r["x"]}
+        )[0]
 
-    out = C.run_bracketed(g2, store, _units(3), fn2, "t0", "p", lambda: C.run_canary(g2, rig["rem"]))
+    out = C.run_bracketed(
+        g2, store, _units(3), fn2, "t0", "p", lambda: C.run_canary(g2, rig["rem"])
+    )
     assert computed == [2] and out["u0"]["sq"] == 1 and out["u2"]["sq"] == 9
     # a request issued under the old epoch is refused by the worker
     old = P.make_request("square", g1.epoch, "lambda:i1", "z" * 64, "late", {"x": 1})

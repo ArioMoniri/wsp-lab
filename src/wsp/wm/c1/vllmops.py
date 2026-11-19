@@ -107,13 +107,19 @@ class Engine:
                 wk = V.writer_key(name)
                 if wk is None or wk not in self.vmap:
                     raise KeyError(f"LoRA tensor {name} has no vLLM writer")
-                deltas.append((self.vmap[wk], lambda e=entry: V.lora_delta(e, st.get("lam", 1.0), "cuda")))
+                deltas.append(
+                    (self.vmap[wk], lambda e=entry: V.lora_delta(e, st.get("lam", 1.0), "cuda"))
+                )
             self.ed.apply(deltas)
             return
         if k == "tensors":
             data = torch.load(st["path"], map_location="cpu", weights_only=False)
             for key, w in data.items():
-                name = self.embed if key == "embed" else self.vmap[tuple(key) if isinstance(key, list) else key]
+                name = (
+                    self.embed
+                    if key == "embed"
+                    else self.vmap[tuple(key) if isinstance(key, list) else key]
+                )
                 live = self.params[name]
                 if key == "embed":
                     rows = w["rows"]
@@ -151,7 +157,12 @@ def run_job(job: dict) -> dict:
             res = eng.gen(prompts, b["max_tokens"], b.get("sample"))
         finally:
             eng.restore()
-        rec = {"name": b["name"], "seconds": time.time() - t, "outputs": res, "ids_sha256": MO.sha_ids([r["ids"] for r in res])}
+        rec = {
+            "name": b["name"],
+            "seconds": time.time() - t,
+            "outputs": res,
+            "ids_sha256": MO.sha_ids([r["ids"] for r in res]),
+        }
         out["blocks"].append(rec)
     out["seconds"] = time.time() - t0
     return out
@@ -161,7 +172,14 @@ def canary_job(repo: str, prompts: list, smoke: bool = False) -> dict:
     return {
         "repo": repo,
         "smoke": smoke,
-        "blocks": [{"name": "canary", "prompts": prompts, "max_tokens": CANARY_TOKENS, "state": {"kind": "base"}}],
+        "blocks": [
+            {
+                "name": "canary",
+                "prompts": prompts,
+                "max_tokens": CANARY_TOKENS,
+                "state": {"kind": "base"},
+            }
+        ],
     }
 
 
@@ -182,7 +200,9 @@ def spawn(job: dict, workdir, python=sys.executable, timeout_s: float = 6 * 3600
         env=env,
         check=False,
     )
-    (workdir / "vllm_child.log").write_text((p.stdout or "")[-20000:] + "\n---\n" + (p.stderr or "")[-20000:])
+    (workdir / "vllm_child.log").write_text(
+        (p.stdout or "")[-20000:] + "\n---\n" + (p.stderr or "")[-20000:]
+    )
     if p.returncode != 0:
         tail = (p.stderr or "")[-1500:]
         if "out of memory" in tail.lower():

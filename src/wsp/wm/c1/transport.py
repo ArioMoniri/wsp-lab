@@ -74,7 +74,9 @@ class LocalTransport:
 class SSHTransport:
     """``alias`` is a Host block in ``ssh_config`` (written by ``lambda_deadman.py ssh-config``, outside the repo)."""
 
-    def __init__(self, alias: str, ssh_config, remote_root: str, timeout_s: float = 60.0, runner=None):
+    def __init__(
+        self, alias: str, ssh_config, remote_root: str, timeout_s: float = 60.0, runner=None
+    ):
         self.alias, self.cfg, self.rroot = alias, str(ssh_config), remote_root.rstrip("/")
         self.timeout = timeout_s
         self.run = runner or self._run
@@ -90,7 +92,9 @@ class SSHTransport:
         except subprocess.TimeoutExpired as exc:
             raise P.TransportError(f"timeout: {argv[0]}") from exc
         if p.returncode != 0:
-            raise P.TransportError(f"{argv[0]} exit {p.returncode}: {p.stderr.decode(errors='replace')[-300:]}")
+            raise P.TransportError(
+                f"{argv[0]} exit {p.returncode}: {p.stderr.decode(errors='replace')[-300:]}"
+            )
         return p.stdout.decode(errors="replace")
 
     def sh(self, cmd: str, stdin: bytes | None = None, timeout=None) -> str:
@@ -106,7 +110,9 @@ class SSHTransport:
         )
 
     def ready(self, rid: str) -> bool:
-        out = self.sh(f"test -f {shlex.quote(f'{self.rroot}/outbox/{rid}/{P.RESULT}')} && echo yes || echo no")
+        out = self.sh(
+            f"test -f {shlex.quote(f'{self.rroot}/outbox/{rid}/{P.RESULT}')} && echo yes || echo no"
+        )
         return out.strip() == "yes"
 
     def fetch(self, rid: str, dest) -> Path:
@@ -130,11 +136,16 @@ class SSHTransport:
     def set_fence(self, epoch: int, instance: str):
         body = json.dumps({"epoch": int(epoch), "instance": instance, "t": time.time()})
         r = shlex.quote(self.rroot)
-        self.sh(f"mkdir -p {r} && cat > {r}/.fence.tmp && mv {r}/.fence.tmp {r}/{P.FENCE}", stdin=body.encode())
+        self.sh(
+            f"mkdir -p {r} && cat > {r}/.fence.tmp && mv {r}/.fence.tmp {r}/{P.FENCE}",
+            stdin=body.encode(),
+        )
 
     def _age(self, name):
         p = shlex.quote(f"{self.rroot}/{name}")
-        out = self.sh(f"if [ -e {p} ]; then echo $(( $(date +%s) - $(stat -c %Y {p}) )); else echo none; fi")
+        out = self.sh(
+            f"if [ -e {p} ]; then echo $(( $(date +%s) - $(stat -c %Y {p}) )); else echo none; fi"
+        )
         out = out.strip()
         return None if out == "none" else float(out)
 

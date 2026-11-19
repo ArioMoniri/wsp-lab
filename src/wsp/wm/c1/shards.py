@@ -79,7 +79,9 @@ def designate(construction_rows, reps, root_groups, n_tokens) -> dict:
             if len(sel) == FIELD_N:
                 break
         if len(sel) < FIELD_N:
-            raise ValueError(f"{o}: {len(sel)} fresh field items within {FIELD_MAX_TOKENS} tokens < {FIELD_N}")
+            raise ValueError(
+                f"{o}: {len(sel)} fresh field items within {FIELD_MAX_TOKENS} tokens < {FIELD_N}"
+            )
         field[o] = sel
         used |= {r["hash"] for r in sel}
     e2 = [r for r in fresh.get("sycophancy_real", []) if r["hash"] not in used][:E2_N]
@@ -101,15 +103,19 @@ def designate(construction_rows, reps, root_groups, n_tokens) -> dict:
         "e2_sources": {k: slim(v) for k, v in sources.items()},
         "fresh_counts": {o: len(v) for o, v in fresh.items()},
     }
-    rec["digest"] = hashlib.sha256(json.dumps({k: rec[k] for k in ("field", "e2", "e2_sources")}, sort_keys=True).encode()).hexdigest()
+    rec["digest"] = hashlib.sha256(
+        json.dumps({k: rec[k] for k in ("field", "e2", "e2_sources")}, sort_keys=True).encode()
+    ).hexdigest()
     return rec
 
 
 def check_disjoint(rec: dict):
     seen = {}
-    for tag, rows in [("e2", rec["e2"])] + [(f"field:{o}", v) for o, v in rec["field"].items()] + [
-        (f"src:{k}", v) for k, v in rec["e2_sources"].items()
-    ]:
+    for tag, rows in (
+        [("e2", rec["e2"])]
+        + [(f"field:{o}", v) for o, v in rec["field"].items()]
+        + [(f"src:{k}", v) for k, v in rec["e2_sources"].items()]
+    ):
         for r in rows:
             if r["hash"] in seen:
                 raise ValueError(f"{r['hash'][:12]} in {seen[r['hash']]} and {tag}")

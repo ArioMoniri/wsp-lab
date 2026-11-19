@@ -85,9 +85,13 @@ class Remote:
                 self.sleep(delay)
                 delay = min(delay * 2, 60.0)
 
-    def call(self, kind, epoch, instance, unit_key, label, args, timeout_s=None) -> tuple[dict, Path]:
+    def call(
+        self, kind, epoch, instance, unit_key, label, args, timeout_s=None
+    ) -> tuple[dict, Path]:
         req = P.make_request(kind, epoch, instance, unit_key, label, args)
-        self._journal({"event": "put", "id": req["id"], "kind": kind, "label": label, "epoch": epoch})
+        self._journal(
+            {"event": "put", "id": req["id"], "kind": kind, "label": label, "epoch": epoch}
+        )
         self._with_retry(lambda: self.t.put(req), "put")
         t0 = time.time()
         while True:

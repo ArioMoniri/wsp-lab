@@ -36,7 +36,12 @@ def classify(exc: BaseException) -> str | None:
         return "out_of_memory"
     if name in ("ThetaDrift",) or "theta drift" in msg.lower() or "theta-hash after restore" in msg:
         return "theta_restore_mismatch"
-    if name in ("CudaError", "AcceleratorError") or "CUDA error" in msg or "NCCL" in msg or "cuDNN" in msg:
+    if (
+        name in ("CudaError", "AcceleratorError")
+        or "CUDA error" in msg
+        or "NCCL" in msg
+        or "cuDNN" in msg
+    ):
         return "driver_or_cuda"
     if isinstance(exc, (OSError, TimeoutError)) and not isinstance(exc, FileNotFoundError):
         return "infrastructure"

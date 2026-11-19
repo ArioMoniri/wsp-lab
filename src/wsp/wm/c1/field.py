@@ -90,7 +90,9 @@ def spectral_factor_gpu(factor: torch.Tensor, device="cuda"):
     values = values.flip(0) + damping
     vectors = vectors.flip(1)
     total = values.sum()
-    rank = int(torch.searchsorted(values.cumsum(0), rf.ENERGY * total).item()) + 1 if total > 0 else 0
+    rank = (
+        int(torch.searchsorted(values.cumsum(0), rf.ENERGY * total).item()) + 1 if total > 0 else 0
+    )
     audit = {
         "raw_trace": raw_trace,
         "damping": damping,
@@ -100,7 +102,11 @@ def spectral_factor_gpu(factor: torch.Tensor, device="cuda"):
         "n_clamped": n_clamped,
         "omitted_energy": (values[rank:].sum() / total).item() if total > 0 else 0.0,
     }
-    return vectors[:, :rank].float().cpu().contiguous(), values[:rank].float().cpu().contiguous(), audit
+    return (
+        vectors[:, :rank].float().cpu().contiguous(),
+        values[:rank].float().cpu().contiguous(),
+        audit,
+    )
 
 
 def compute_kept(field_dir: Path, device="cuda", log=None) -> dict:
@@ -122,9 +128,13 @@ def compute_kept(field_dir: Path, device="cuda", log=None) -> dict:
             hashes[fn] = hashlib.sha256((out / fn).read_bytes()).hexdigest()
             audits[f"{obj}|{m}"] = {"A": aA, "G": aG}
             if log:
-                log(f"kept {obj} {m}: rank A {aA['rank']}/{aA['dimension']} G {aG['rank']}/{aG['dimension']}")
+                log(
+                    f"kept {obj} {m}: rank A {aA['rank']}/{aA['dimension']} G {aG['rank']}/{aG['dimension']}"
+                )
         fld.drop_cache()
-    (out / "audit.json").write_text(json.dumps({"audits": audits, "sha256": hashes}, sort_keys=True))
+    (out / "audit.json").write_text(
+        json.dumps({"audits": audits, "sha256": hashes}, sort_keys=True)
+    )
     return {"audits": audits, "sha256": hashes}
 
 
@@ -160,7 +170,11 @@ class Field:
         self._order = []
 
     def _evict(self):
-        size = lambda v: sum(t.numel() * t.element_size() for t in v) if isinstance(v, tuple) else v.numel() * v.element_size()
+        size = lambda v: (
+            sum(t.numel() * t.element_size() for t in v)
+            if isinstance(v, tuple)
+            else v.numel() * v.element_size()
+        )
         tot = sum(size(v) for v in list(self._kept.values()) + list(self._grad.values()))
         while tot > self.cache_bytes and self._order:
             k = self._order.pop(0)
@@ -180,8 +194,16 @@ class Field:
     def kept(self, obj, module):
         k = ("k", obj, module)
         if k not in self._kept:
-            g = next(gg for gg, fld in self.groups.items() if any(r.get("module") == module for r in fld.coverage[obj].values()))
-            d = torch.load(self.root / f"g{g}" / "kept" / f"{obj}.{module}.pt", map_location="cpu", weights_only=True)
+            g = next(
+                gg
+                for gg, fld in self.groups.items()
+                if any(r.get("module") == module for r in fld.coverage[obj].values())
+            )
+            d = torch.load(
+                self.root / f"g{g}" / "kept" / f"{obj}.{module}.pt",
+                map_location="cpu",
+                weights_only=True,
+            )
             self._kept[k] = tuple(d[x].to(self.device) for x in ("UA", "lA", "UG", "lG"))
             self._order.append(k)
             self._evict()
@@ -256,6 +278,26 @@ class RCache:
         self.seconds += time.time() - t0
         return rec
 
+    def warm(self, bundles_list):
+        """Fill the cache tensor-major for many states (each tensor's factors are loaded once)."""
+        need: dict = {}
+        for bundles in bundles_list:
+            by_tensor: dict = {}
+            for step in bundles:
+                for a in step:
+                    by_tensor.setdefault(a.tensor, []).append(a)
+            for name, acts in by_tensor.items():
+                key = (name, tuple(a.key() for a in acts))
+                if key not in self.cache:
+                    need.setdefault(name, {})[key] = acts
+        for name in sorted(need):
+            for _key, acts in sorted(need[name].items()):
+                self._tensor_contrib(name, acts)
+
+    def r_of_many(self, bundles_list) -> list:
+        self.warm(bundles_list)
+        return [self.r_of(b) for b in bundles_list]
+
     def r_of(self, bundles) -> tuple[np.ndarray, list]:
         """R(E) through the registered builder ``wmcp.r_from_contractions`` (per-tensor contributions in sorted
         tensor order; unsupported q enters as 0 and is flagged by the builder)."""
@@ -287,13 +329,22 @@ class RCache:
         )
 
     def stats(self) -> dict:
-        return {"hits": self.hits, "misses": self.misses, "seconds": self.seconds, "entries": len(self.cache)}
+        return {
+            "hits": self.hits,
+            "misses": self.misses,
+            "seconds": self.seconds,
+            "entries": len(self.cache),
+        }
 
 
 def field_digest(root) -> dict:
     """Digest of every collected group manifest and kept-factor audit (the field unit payload)."""
     root = Path(root)
     out = {}
-    for p in sorted(root.glob("g*/manifest.json")) + sorted(root.glob("g*/kept/audit.json")) + sorted(root.glob("vocab/manifest.json")):
+    for p in (
+        sorted(root.glob("g*/manifest.json"))
+        + sorted(root.glob("g*/kept/audit.json"))
+        + sorted(root.glob("vocab/manifest.json"))
+    ):
         out[str(p.relative_to(root))] = hashlib.sha256(p.read_bytes()).hexdigest()
     return out

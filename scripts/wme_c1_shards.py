@@ -45,15 +45,28 @@ def main():
     from wsp.wm import panel2 as P2
 
     tok = AutoTokenizer.from_pretrained(
-        str(hf.snapshot_dir("Qwen/Qwen3.5-9B", hf.TARGETS["Qwen/Qwen3.5-9B"])), local_files_only=True
+        str(hf.snapshot_dir("Qwen/Qwen3.5-9B", hf.TARGETS["Qwen/Qwen3.5-9B"])),
+        local_files_only=True,
     )
     cfg = P.PanelConfig()
     n_tokens = lambda o, r: sum(len(x.ids) for x in P2.rows_for(o, r, tok, cfg))
     rec = S.designate(rows, reps, groups, n_tokens)
     S.check_disjoint(rec)
-    rec["inputs"] = {"construction_sha256": CONSTRUCTION_SHA, "lineage_sha256": LINEAGE_SHA, "tokenizer": "Qwen/Qwen3.5-9B@" + hf.TARGETS["Qwen/Qwen3.5-9B"]}
+    rec["inputs"] = {
+        "construction_sha256": CONSTRUCTION_SHA,
+        "lineage_sha256": LINEAGE_SHA,
+        "tokenizer": "Qwen/Qwen3.5-9B@" + hf.TARGETS["Qwen/Qwen3.5-9B"],
+    }
     Path(a.out).write_text(json.dumps(rec, indent=1, sort_keys=True) + "\n")
-    print(json.dumps({"digest": rec["digest"], "fresh_counts": rec["fresh_counts"], "sha256": hashlib.sha256(Path(a.out).read_bytes()).hexdigest()}))
+    print(
+        json.dumps(
+            {
+                "digest": rec["digest"],
+                "fresh_counts": rec["fresh_counts"],
+                "sha256": hashlib.sha256(Path(a.out).read_bytes()).hexdigest(),
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

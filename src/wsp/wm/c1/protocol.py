@@ -63,7 +63,9 @@ def new_id(epoch: int, unit_key: str, kind: str) -> str:
     return f"e{int(epoch):05d}-{tag}-{unit_key[:16]}-{secrets.token_hex(6)}"
 
 
-def make_request(kind: str, epoch: int, instance: str, unit_key: str, label: str, args: dict) -> dict:
+def make_request(
+    kind: str, epoch: int, instance: str, unit_key: str, label: str, args: dict
+) -> dict:
     if not isinstance(args, dict):
         raise ProtocolError("args must be a JSON object")
     return {
@@ -81,7 +83,17 @@ def make_request(kind: str, epoch: int, instance: str, unit_key: str, label: str
 
 
 def check_request(req: dict) -> dict:
-    for k in ("schema", "id", "kind", "epoch", "instance", "unit_key", "label", "args", "args_sha256"):
+    for k in (
+        "schema",
+        "id",
+        "kind",
+        "epoch",
+        "instance",
+        "unit_key",
+        "label",
+        "args",
+        "args_sha256",
+    ):
         if k not in req:
             raise ProtocolError(f"request lacks {k}")
     if req["schema"] != SCHEMA:
@@ -110,7 +122,9 @@ def verify_result(res_dir, req: dict) -> dict:
         req["unit_key"],
         req["args_sha256"],
     ):
-        raise ProtocolError(f"result {res['id']} does not answer request {req['id']} (stale or foreign)")
+        raise ProtocolError(
+            f"result {res['id']} does not answer request {req['id']} (stale or foreign)"
+        )
     for name, sha in res["files"].items():
         p = res_dir / name
         if not p.is_file() or file_sha256(p) != sha:

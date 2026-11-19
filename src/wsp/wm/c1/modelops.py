@@ -64,7 +64,9 @@ def tf_canary_items(panel=PANEL_P2) -> dict:
     from wsp.wm import panel2 as P2
 
     cons = P2.read_open(panel, "construction")
-    return {o: sorted(cons[o], key=lambda r: r["id"])[:CANARY_TF_ITEMS] for o in CANARY_TF_OBJECTIVES}
+    return {
+        o: sorted(cons[o], key=lambda r: r["id"])[:CANARY_TF_ITEMS] for o in CANARY_TF_OBJECTIVES
+    }
 
 
 def gen_canary_items(panel=PANEL_P3H, n=CANARY_GEN_ITEMS) -> list:
@@ -100,7 +102,9 @@ class ModelCtx:
         self.prefix = prefix
         self.rm = A.RoleMap.from_config(self.cfg, prefix=prefix)
         self.embed = next(n for n in names if n.endswith("embed_tokens.weight"))
-        self.sess = A.EditSession(dict(self.model.named_parameters()), base_hash=self.base_hash, rolemap=self.rm)
+        self.sess = A.EditSession(
+            dict(self.model.named_parameters()), base_hash=self.base_hash, rolemap=self.rm
+        )
         self.adapter = P.LMAdapter(self.model)
         self.pcfg = P.PanelConfig()
         if check_theta0 and repo == REPO:
@@ -138,7 +142,12 @@ class ModelCtx:
         tap = None
         if tap_seed is not None:
             lay = self.layers()
-            tap = T.ResidualTap({i: lay[i] for i in TAP_LAYERS}, hidden=self.rm.hidden, k=TAP_K, seed=tap_seed)
+            use = [
+                i for i in TAP_LAYERS if i < len(lay)
+            ]  # all eight on 9B; fewer only on the 0.8B smoke model
+            tap = T.ResidualTap(
+                {i: lay[i] for i in use}, hidden=self.rm.hidden, k=TAP_K, seed=tap_seed
+            )
         with torch.no_grad():
             res = P2.evaluate(self.adapter, self.tok, items, self.pcfg, tap=tap)
         return res, tap
@@ -161,7 +170,12 @@ class ModelCtx:
         items = items or gen_canary_items()
         prompts = [G.user_prompt("mmlupro_gen", it) for it in items]
         out = GA.generate_greedy(
-            self.model, self.tok, prompts, CANARY_HF["max_new_tokens"], batch=CANARY_HF["batch"], device=self.device
+            self.model,
+            self.tok,
+            prompts,
+            CANARY_HF["max_new_tokens"],
+            batch=CANARY_HF["batch"],
+            device=self.device,
         )
         return sha_ids([r["ids"] for r in out])
 
@@ -203,12 +217,16 @@ def physical_identity() -> dict:
 
     out = {}
     try:
-        q = subprocess.run(
-            ["nvidia-smi", "--query-gpu=uuid,name,driver_version", "--format=csv,noheader"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip().splitlines()
+        q = (
+            subprocess.run(
+                ["nvidia-smi", "--query-gpu=uuid,name,driver_version", "--format=csv,noheader"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            .stdout.strip()
+            .splitlines()
+        )
         rows = [[x.strip() for x in line.split(",")] for line in q]
         out["gpu_uuid_sha256"] = [hashlib.sha256(r[0].encode()).hexdigest() for r in rows]
         out["gpu_names"] = [r[1] for r in rows]
@@ -216,7 +234,9 @@ def physical_identity() -> dict:
     except Exception as exc:  # noqa: BLE001
         out["gpu_error"] = str(exc)[:200]
     try:
-        out["machine_id_sha256"] = hashlib.sha256(Path("/etc/machine-id").read_bytes().strip()).hexdigest()
+        out["machine_id_sha256"] = hashlib.sha256(
+            Path("/etc/machine-id").read_bytes().strip()
+        ).hexdigest()
     except OSError:
         out["machine_id_sha256"] = None
     return out
