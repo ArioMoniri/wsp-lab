@@ -413,6 +413,9 @@ def cmd_phasel_main(a):
     )
     (RUNS / "attestation.json").write_text(json.dumps(RG._att_fields(att), indent=1))
     st = SD.Study(STUDY, RUNS, att, hello["theta0"], PANEL_ID, log=log)
+    # bind every phase's registered fallback in the study log before the first unit (precondition 4)
+    for ph in ("ste", "sbon", "confirmatory"):
+        st.guard(ph, inst)
     g = st.guard("bank", inst)
     tr.set_fence(g.epoch, inst)
     if a.parity_iid:

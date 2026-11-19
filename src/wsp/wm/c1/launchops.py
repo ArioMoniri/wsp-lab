@@ -182,7 +182,9 @@ def h_parity(rt, req, ctx):
     n = len(_chunks())
     k1 = score_chunks(m, range(n))
     t0 = time.time()
-    env = dict(os.environ, CUDA_VISIBLE_DEVICES="1")
+    env = dict(
+        os.environ, CUDA_VISIBLE_DEVICES=os.environ.get("WME_C1_PARITY_DEVICE", "1")
+    )  # override only for the local engineering smoke
     p = subprocess.run(
         [
             sys.executable,

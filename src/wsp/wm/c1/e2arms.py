@@ -265,7 +265,7 @@ def run_greedy(env: Env, ep: dict, B: int) -> dict:
         "bank": None,
     }
     ctx, ledger = _ctx(env, arm, ep, B, res, to_pids)
-    out = DI.run_greedy_episode(ctx, B, mode=env.mode, cfg=AD.PLANNER_CONFIG)
+    out = _pids_winner(DI.run_greedy_episode(ctx, B, mode=env.mode, cfg=AD.PLANNER_CONFIG), sub)
     return _ctx_payload(
         arm,
         ep,
@@ -321,19 +321,48 @@ def pool_resources(env: Env, ep: dict):
 
     sub = list(ep["subsample"])
     meta = primitive_meta(env, sub)
-    desc = Artefact("r0_candidate_description", env.m.base_hash, Tier.R0, meta)
-    return {"episode_library": sub, "episode_pool": True, "r0_candidate_description": desc}
+    # the registered pool code draws integer primitive indices into the subsample (arms.pool.draw_pool)
+    desc = Artefact(
+        "r0_candidate_description",
+        env.m.base_hash,
+        Tier.R0,
+        {i: meta[p] for i, p in enumerate(sub)},
+    )
+    return {
+        "episode_library": list(range(len(sub))),
+        "episode_pool": True,
+        "r0_candidate_description": desc,
+    }
 
 
 def run_pool(env: Env, arm: str, ep: dict, B: int, pool_size: int, ranker=None) -> dict:
     res = pool_resources(env, ep)
-    ctx, ledger = _ctx(env, arm, ep, B, res, lambda c: list(c))
+    sub_ = list(ep["subsample"])
+    to_pids = lambda c: [sub_[int(i)] for i in c]
+    ctx, ledger = _ctx(env, arm, ep, B, res, to_pids)
+    feats = field_features(env)
     if ranker is None:
         ranker = PO.RandomRanker() if arm == "random" else RD.ScriptedReader(RD.ReaderTask())
     out = PO.run_pool_episode(
-        ranker, ctx, B, pool_size, int(ep["seeds"]["planner"]), features=field_features(env)
+        ranker, ctx, B, pool_size, int(ep["seeds"]["planner"]), features=lambda c: feats(to_pids(c))
     )
-    return _ctx_payload(arm, ep, out, ctx, ledger, rounds=out["rounds"], failures=out["failures"])
+    return _ctx_payload(
+        arm,
+        ep,
+        _pids_winner(out, sub_),
+        ctx,
+        ledger,
+        rounds=out["rounds"],
+        failures=out["failures"],
+        index_to_pid=sub_,
+    )
+
+
+def _pids_winner(out, sub):
+    w = out.get("winner")
+    if w is not None:
+        w = dict(w, candidate=[sub[int(i)] for i in w["candidate"]])
+    return dict(out, winner=w)
 
 
 def run_bon_steering(env: Env, ep: dict, B: int) -> dict:

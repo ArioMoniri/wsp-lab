@@ -325,21 +325,26 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
         )
         return p
 
-    meta = call("describe", {"subsample": list(ep["subsample"])})["meta"]
+    sub_ = list(ep["subsample"])
+    to_pids = lambda c: [sub_[int(i)] for i in c]
+    meta_p = call("describe", {"subsample": sub_})["meta"]
+    meta = {
+        i: meta_p[p] for i, p in enumerate(sub_)
+    }  # the registered pool code draws integer indices
     feats: dict = {}
     orig = PO.draw_pool
 
     def draw_hook(*args, **kw):
         pool = orig(*args, **kw)
-        need = [list(c) for c in pool if tuple(c) not in feats]
+        need = [to_pids(c) for c in pool if tuple(c) not in feats]
         if need:
             got = call("describe", {"candidates": need})["features"]
-            for c, f in zip(need, got, strict=True):
+            for c, f in zip([c for c in pool if tuple(c) not in feats], got, strict=True):
                 feats[tuple(c)] = f
         return pool
 
     res = {
-        "episode_library": list(ep["subsample"]),
+        "episode_library": list(range(len(sub_))),
         "episode_pool": True,
         "r0_candidate_description": Artefact(
             "r0_candidate_description", study.theta0, Tier.R0, meta
@@ -351,8 +356,8 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
         AS.ARM_SPECS[arm],
         ledger,
         ep["index"],
-        lambda c: call("dev_eval", {"pids": list(c)}),
-        lambda c: call("theta_of", {"pids": list(c)})["theta_hash"],
+        lambda c: call("dev_eval", {"pids": to_pids(c)}),
+        lambda c: call("theta_of", {"pids": to_pids(c)})["theta_hash"],
         res,
         stores,
         R0Guard(study.theta0),
@@ -377,6 +382,8 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
         PO.draw_pool = orig
     hist = ctx.history()
     w = out["winner"]
+    if w is not None:
+        w = dict(w, candidate=to_pids(w["candidate"]))
     return {
         "arm": arm,
         "episode": ep["index"],
@@ -385,6 +392,7 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
         "ledger": ledger.report(),
         "rounds": out["rounds"],
         "failures": out["failures"],
+        "index_to_pid": sub_,
         "tokens": {
             "spent": tl.spent,
             "cap": tl.cap,

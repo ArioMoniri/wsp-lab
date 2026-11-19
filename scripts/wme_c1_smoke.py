@@ -67,13 +67,23 @@ def main():
         )
         co = CO.Controller(st, rem, t, "smoke:local", 1, client_factory=mock, chunk=64)
         roots = json.loads((ROOT / "data/wme/bank_roots/smoke/roots.json").read_text())
-        keep = ("scale:007", "steer:014", "noise:013")  # field groups 0-1 only
-        roots = dict(roots, roots=[r for r in roots["roots"] if r["id"] in keep], controls=[])
+        keep = (
+            "scale:007",
+            "steer:014",
+            "noise:013",
+            "steer:005",
+            "proj_remove:009",
+        )  # field groups 0-3
+        roots = dict(
+            roots,
+            roots=[r for r in roots["roots"] if r["id"] in keep],
+            controls=[c for c in roots["controls"] if c["partner"] in keep],
+        )
         ids = [r["id"] for r in roots["roots"]]
         blocks = [["noise:013", "scale:007"]]
         t0 = time.time()
         bank = co.stage_bank(
-            man, roots, blocks=blocks, field_groups=range(2), inert=False, vocab=False
+            man, roots, blocks=blocks, field_groups=range(4), inert=False, vocab=False
         )
         out["bank_s"] = time.time() - t0
         cal = ["single:steer:014"]
