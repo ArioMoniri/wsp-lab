@@ -255,9 +255,14 @@ def vllm_block(name, tok, user_prompts, max_new_tokens=GEN_TOKENS, sample=None, 
     (``panel.chat_prompt``, non-thinking), the registered stop ids, greedy unless ``sample``."""
     from wsp.wm import panel as P
 
+    texts = [P.chat_prompt(tok, u) for u in user_prompts]
     b = {
         "name": name,
-        "prompts": [P.chat_prompt(tok, u) for u in user_prompts],
+        "prompts": texts,  # for the record; vLLM receives the token ids below
+        # §II.31.8 R5: the HF path's exact prompt token ids (genaudit: tok.encode(chat_prompt, add_special_tokens=False))
+        "prompt_token_ids": [tok.encode(t, add_special_tokens=False) for t in texts],
+        # §II.31.8 R5: parser input text = tok.decode(ids, skip_special_tokens=True) with the HF tokenizer
+        "hf_text": True,
         "max_tokens": int(max_new_tokens),
         "stop_token_ids": stop_ids(tok),
         "state": dict(state or {"kind": "base"}),

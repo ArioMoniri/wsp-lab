@@ -125,6 +125,16 @@ class Study:
             cap=CAP,
         )
 
+    def skip_stage(self, stage: str, reason: str):
+        """Declare a registered §II.18 stage skipped by the registered data flow (R6: through the shared, locked
+        monitor state, so the run's own monitor sees it)."""
+        from wsp.wm.c1 import health as HL
+
+        mon = self.monitor or HL.HealthMonitor(
+            self.runs, log=self.log, order=self.health_order, classes=self.health_kinds
+        )
+        mon.skip_stage(stage, reason)
+
     def store(self, phase: str) -> H.UnitStore:
         return H.UnitStore(self.runs / phase / "units")
 
@@ -164,7 +174,7 @@ class Study:
 
         canary = lambda: C.run_canary(guard, remote, canary_args)
         fn = fn or default_fn
-        on_chunk = None
+        on_chunk = before_begin = None
         if self.health:
             from wsp.wm.c1 import health as HL
 
@@ -181,6 +191,10 @@ class Study:
             fn = mon.wrap_fn(guard, fn)
             canary = mon.wrap_canary(guard, canary)
             on_chunk = lambda rec, n: mon.chunk_summary(guard, rec, n)  # noqa: E731
+            before_begin = mon.before_begin(guard)
+
+            # while a worker request is in flight the worker heartbeat rules apply (GPU idle / CPU progress); the
+            # controller-side stall rule is checked only before LLM-reader calls (ProgressClient), R7
             remote.watch = lambda: mon.poll(guard)
         try:
             return C.run_bracketed(
@@ -194,6 +208,7 @@ class Study:
                 chunk=chunk,
                 max_chunk_s=max_chunk_s,
                 on_chunk=on_chunk,
+                before_begin=before_begin,
             )
         finally:
             if self.health:
@@ -363,6 +378,12 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
     ukey = study.key(recipe)
     n = {"i": 0}
 
+    mon = getattr(study, "monitor", None)  # §II.31.8 R7: controller-side progress of the LLM-reader waits
+
+    def progress(event, **kw):
+        if mon is not None:
+            mon.note_progress(event, arm=arm, episode=ep["index"], **kw)
+
     def call(kind, extra):
         n["i"] += 1
         p, _ = remote.call(
@@ -373,7 +394,11 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
             f"{arm}:{ep['index']}:{kind}",
             dict(a, **extra),
         )
+        progress("worker_subrequest", kind=kind)
         return p
+
+    def client(role):
+        return ProgressClient(client_factory(role), role, progress, mon, guard)
 
     sub_ = list(ep["subsample"])
     to_pids = lambda c: [sub_[int(i)] for i in c]
@@ -415,9 +440,9 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
     tl = L.TokenLedger(READER_TOKEN_CAP)
     task = RD.ReaderTask()
     if arm == "wsr_reader":
-        ranker = RD.WSRReader(client_factory("reader"), tl, task)
+        ranker = RD.WSRReader(client("reader"), tl, task)
     else:
-        ranker = RD.FuguTeam({r: client_factory(r) for r in RD.FuguTeam.ROLES}, tl, task)
+        ranker = RD.FuguTeam({r: client(r) for r in RD.FuguTeam.ROLES}, tl, task)
     PO.draw_pool = draw_hook
     try:
         out = PO.run_pool_episode(
@@ -455,6 +480,25 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
             ],
         },
     }
+
+
+class ProgressClient:
+    """An LLM-reader client whose every completion is controller-side progress (R7); before each call the
+    controller-side stall rule is checked. The CLI clients' own per-call timeout (300 s) bounds a single wait."""
+
+    def __init__(self, inner, role, progress, monitor=None, guard=None):
+        self.inner, self.role, self._progress = inner, role, progress
+        self.monitor, self.guard = monitor, guard
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    def complete(self, system, user, max_output_tokens):
+        if self.monitor is not None and self.guard is not None:
+            self.monitor.check_controller_stall(self.guard)
+        out = self.inner.complete(system, user, max_output_tokens)
+        self._progress("llm_completion", role=self.role)
+        return out
 
 
 def ceil_units(x: float) -> int:

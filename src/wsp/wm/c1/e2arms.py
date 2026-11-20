@@ -117,9 +117,12 @@ class Env:
         self.fitted, self.support, self.q_hats, self.mode = fitted, support, q_hats or {}, mode
         self.c1_manifest, self.e2_items = c1_manifest, e2_items
         self.lib_index = lib.index
+        self.tick = lambda event, **kw: None  # the worker's Ctx.tick (§II.31.8 R7), set per request
 
     def r_of_pids(self, pids):
-        return self.rc.r_of(self.lib.bundles(pids))[0]
+        out = self.rc.r_of(self.lib.bundles(pids))[0]
+        self.tick("e2_r_of")  # planner / pool proposal progress (CPU-heavy between dev evaluations)
+        return out
 
 
 # ------------------------------------------------------------------ planner arms (wm_e, statnn, field_ranked)
@@ -308,6 +311,7 @@ def field_features(env: Env):
 
     def feats(c):
         r, flags = env.rc.r_of(env.lib.bundles(list(c)))
+        env.tick("e2_field_features")
         return {
             o: {"a": float(r[k]), "q": None if o in flags else float(r[K + k])}
             for k, o in enumerate(objs)

@@ -48,6 +48,13 @@ def classify(exc: BaseException) -> str | None:
     return None
 
 
+def _move(src: Path, dst: Path):
+    try:
+        os.replace(src, dst)
+    except FileNotFoundError:
+        pass  # withdrawn by the controller (§II.31.8 R6)
+
+
 def _fsync_dir(d: Path):
     fd = os.open(d, os.O_RDONLY)
     try:
@@ -67,6 +74,16 @@ class Ctx:
             raise Fenced(f"fence epoch {f['epoch']} > request epoch {self.req['epoch']}")
         self.worker.touch()
         if self.worker.sampler is not None:
+            self.worker.sampler.note_progress()
+
+    def tick(self, event: str, every_s: float = 30.0, **kw):
+        """Throttled sub-unit progress for CPU-heavy loops (§II.31.8 R7): the heartbeat's ``last_progress`` moves on
+        every call; a ``progress.jsonl`` line is written at most every ``every_s``."""
+        now = time.time()
+        if now - getattr(self, "_last_tick", float("-inf")) >= every_s:
+            self._last_tick = now
+            self.progress(event, **kw)
+        elif self.worker.sampler is not None:
             self.worker.sampler.note_progress()
 
     def progress(self, event: str, **kw):
@@ -133,13 +150,15 @@ class Worker:
     def handle(self, path: Path) -> str:
         try:
             req = P.check_request(json.loads(path.read_text()))
+        except FileNotFoundError:
+            return "withdrawn"  # cancelled by the controller between listing and reading (R6)
         except (json.JSONDecodeError, P.ProtocolError) as exc:
             self.log(f"malformed request {path.name}: {exc}")
-            os.replace(path, self.root / "rejected" / path.name)
+            _move(path, self.root / "rejected" / path.name)
             return "malformed"
         f = self.fence()
         if f is not None and int(f.get("epoch", -1)) > int(req["epoch"]):
-            os.replace(path, self.root / "rejected" / path.name)
+            _move(path, self.root / "rejected" / path.name)
             self.progress({"id": req["id"], "kind": req["kind"], "event": "rejected_stale"})
             return "stale"
         scratch = self.root / "scratch" / req["id"]
@@ -194,7 +213,10 @@ class Worker:
             shutil.rmtree(scratch, ignore_errors=True)
             if self.sampler is not None:
                 self.sampler.set_inflight(None)
-        os.replace(path, self.root / "done" / path.name)
+        try:
+            os.replace(path, self.root / "done" / path.name)
+        except FileNotFoundError:
+            pass  # withdrawn while running (R6): the loop keeps serving
         self.progress(
             {"id": req["id"], "kind": req["kind"], "event": status, "seconds": time.time() - ctx.t0}
         )

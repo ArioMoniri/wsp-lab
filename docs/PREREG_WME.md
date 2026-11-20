@@ -4109,3 +4109,143 @@ Appended before any data. These answers bind §II.31 and are part of the Board A
 4. **Halt on every error.** This stays, as the user asked. After an error the run waits for review, and the registered
    retry budget is unchanged (a halt consumes no attempt). The implementation agent stays in its turn while any
    instance is live, so that a halt is diagnosed promptly.
+
+### II.31.8 Amendment v2n (20 Nov 2026): Board A conditions on §II.31 (D1–D4; R1–R10 as implemented)
+
+**Status.** Dated 20 Nov 2026. Board A returned ACCEPT WITH CONDITIONS on §II.31
+(`docs/reviews/council/board-a-prereg-wme-v2l-2026-11-19.md`, main `861e821`). The chair accepted every condition as
+written, including R8. This addendum is appended before any data: there is no study log, no confirmatory unit has run,
+and no sealed file has been read. It is outcome-blind. It changes no claim, test, α, N, margin, seed, prompt, parser,
+item order or stopping rule. The only exception is the cap rule in D1, which removes discretion.
+
+**D1. The cap wording superseded; the mechanical raise (R8).** §II.31.4 supersedes three pieces of frozen wording:
+- in §II.22.6 "Absolute stop": "90 GPU-h-eq combined" and "no chair decision can override it";
+- in §II.28.2: "the absolute 90 GPU-h-eq / $1,000 combined limits".
+
+They are replaced by the cap in force and the R8 rule below.
+- **The cap in force.** Cap generation 0 is 110 GPU-h-eq (the user's decision, §II.31.4). Each later generation is an
+  R8 raise.
+- **What stays unchanged.**
+  - `CapExceeded` remains an engineering abort at the cap in force.
+  - The $1,000 combined limit (ledger convention 4.89 × 1.10 USD/GPU-h) is unchanged.
+  - The 1.25× `PhasePause` is unchanged.
+- **The R8 rule.** When `CapExceeded` would fire and (charged GPU-h + priced remainder) × 5.379 ≤ $1,000, the cap is
+  raised. The new cap is the lower of:
+  - the cap in force + 1.25 × the priced remainder;
+  - the $1,000 ceiling (185.9 GPU-h-eq).
+
+  The priced remainder is the sum, over the priced phases, of max(0, price − measured unit GPU-h).
+- **How a raise is decided and logged.** It is decided and logged from ledger seconds only, before the unit it funds,
+  as a cap generation that carries three things:
+  - rule `R8`;
+  - its basis (charged, priced remainder, previous cap), which must reproduce the new cap;
+  - an outcome-blind attestation.
+- **No discretion.** Announcing a raise to the user is a notification, not a gate. No discretionary raise or refusal
+  exists. If the condition fails, the run stops at the cap. This replaces the discretion in §II.31.4's "later raises"
+  paragraph.
+- **Implementation.** `runguard.r8_cap` and `CombinedLedger.check_before` apply the rule under the §II.31 cap regime
+  (`ProductionGuard(cap=...)`). The plain registered ledger keeps its registered semantics.
+
+**D2. Ruling addendum 2, verbatim (binding on §II.31):**
+
+> 1. **"The E1 generation prompts" under C1(b).** This means the E1 generation settings (template, greedy, 128 new
+>    tokens, non-thinking, stop rule) applied to the **64 exposed canary items**, never to sealed items. The
+>    implementer's reading is confirmed.
+> 2. **vLLM batching under C1(b).** vLLM's scheduler picks its own batch sizes. "Batch 128" binds only the HF engine.
+>    Base and winner pairing, and the item order of the results, are unchanged.
+> 3. **The GPU-idle rule.**
+>    - The < 20 % for > 15 min rule applies only to units whose registered kind uses the GPU.
+>    - CPU-kind units (the E2 planner search, the fits and the analysis) are checked by a progress heartbeat instead.
+>      More than 15 minutes with no progress counts as an incident.
+>    - The instance is still billed and counted against the cap in both cases.
+> 4. **Halt on every error.** This stays, as the user asked. After an error the run waits for review, and the
+>    registered retry budget is unchanged. The implementation agent must be in its turn while any instance is live, so
+>    that a halt is diagnosed promptly.
+
+§II.31.5's "no exemption is introduced here" is **withdrawn**.
+
+The registered kind table is `wm.c1.health.KIND_CLASS`; a test enforces that it covers every worker handler kind.
+- **GPU kinds:**
+  - `field_group`, `field_vocab`, `bank_base`, `bank_side`, `bank_comp`, `bank_inert`;
+  - `library`, `dev_base`, `dev_eval`, `sbon_arm`, `sealed_eval`, `e1_gen`;
+  - `ste_calibrate`, `ste_train`, `ste_generate`;
+  - `canary`, and the Phase L checks.
+- **CPU kinds:**
+  - `fit`;
+  - `e2_arm`;
+  - the helper requests `theta_of`, `describe`, `edit_bundles`, `rstats` and `hello`.
+- **The mixed kind `e2_arm` is classified CPU.** Its progress is emitted:
+  - at every R(E) evaluation of a proposal and every field-feature row, through a throttled `ctx.progress`;
+  - at every dev evaluation.
+
+  A GPU idle during its planner search is therefore not an incident; a stall of more than 15 min is.
+- **The LLM-reader arms run on the controller.** Each LLM completion and each worker sub-request is controller-side
+  progress, and the controller-side rule (> 15 min without progress) is checked before every LLM call. The reader's
+  CLI clients also time out each call at 300 s.
+- **Analysis** runs on the controller; there is no worker unit.
+
+**D3. Two clarifications.**
+- **The Δ branch of §II.31.2 is inert at C = 110.** With P + S_L ≈ 90–91, it needs Δ > 19 GPU-h, i.e. r > 35 at
+  G_E1 = 0.545.
+- **Under C1(b), the inert identity of the vLLM engine is checked at the stage-W settings** (2,048 tokens, no stop ids;
+  engine-level identity). The second vLLM canary (`vllm_gen`, the E1 settings) is checked GPU 0 = GPU 1 and enters the
+  committed canary references.
+
+**D4. Erratum on the parser hash, and the launch report's date.**
+- **The parser hash.** The `gen.parsers` hash `43ec3beb…` (the manifest and §II.4 delta 4) is `genaudit.py` at
+  `2737136`. Since `63ca07f` (17 Nov 2026, before the freeze), the file is
+  `52ad2bbddd407d1962f690f37ba3f458e89b53a16d1e30167b7aa0d434c55016`, which adds `_generate` and `generate_sampled`.
+  §II.31.1's sentence "`43ec3beb…` still holds" is wrong for the file and correct for the five parser functions. Their
+  source digests (sha256 of each function's source segment) are identical in every version, and are registered here:
+  - `squad_norm` `b71d71c4…`
+  - `classify_v1` `5e6e441e…`
+  - `detect_loop_v1` `00fa1f50…`
+  - `audit_v1` `da4bcb88…`
+  - `audit_v1_single` `3a504e36…`
+
+  Full digests are in `wm.c1.phasel.PARSER_DIGESTS`.
+- **A further post-freeze change, found by the R9 check.** Commit `46967f8` (the study M Gemma 3 port, another track)
+  changed the file to `cc13cd377ad1a7e4551a3b6c08562fb99db6aff953fd79cac7837d6927301e0a`:
+  - `_generate`'s stop ids now come from `wm.chat.stop_ids`;
+  - `panel.chat_prompt` and `p3gen.chat` now come from `wm.chat.chat_prompt`.
+
+  The parser functions are unchanged. For the pinned Qwen3.5-9B tokenizer, the chat prompts of the 64 canary items and
+  the stop ids ({248046}) are identical to the frozen code; a test checks this. The other edits in that commit
+  (`actions`, `controls`, `hf`) only extend behaviour for Gemma 3; the 9B config sets `tie_word_embeddings`
+  explicitly. Flagged to the chair.
+- **The launch check (R9).** It recomputes the five function digests and the file hash, and records both in the
+  attestation evidence. It passes only if:
+  - the function digests equal the registered ones; and
+  - the file hash is one of the three documented versions.
+- **The launch report's date.** `docs/reviews/wme/wme-c1-launch-2026-11-20.md` is dated 20 Nov by its file name, but
+  it was committed on 19 Nov 2026 at 15:22 UTC (`233b2d9`).
+
+**R1–R10 as implemented.** Board A re-checks the diff.
+- **R1.** `wm.c1.phasel.run_checks` and `evaluate` (driven by `phasel-parity`):
+  - `gen_repeat` n = 3;
+  - the GPU-0 and GPU-1 `hf_gen` hashes;
+  - the deterministic HF inert rows as pass-rule item 3;
+  - `select_engine` with S_L from the dead-man ledger and C from the cap in force.
+
+  Everything is written to evidence. The run proceeds only if the selected engine equals `GEN_ENGINE` and every other
+  precondition holds.
+- **R2.** The canary set comes from `genengine.canary_engines()`. Evidence is run-tagged and never overwritten. Parity
+  and inert evidence are bound to the engine-config sha256, and a mismatch is refused.
+- **R3.** A worker error keeps its registered cause in `attempt_fail`. A unit whose last failure has no registered
+  technical cause is retried only after a `repair` record.
+- **R4.** The order rule runs before `guard.begin`. An attempt aborted by a non-failure incident (GPU idle, telemetry,
+  progress, a traceback in a payload or the log) is recorded `attempt_aborted`: charged, never counted toward the
+  3-attempt limit, never a cause. §II.31.5 item 3's "a halt never consumes an attempt" holds in this precise sense.
+- **R5.** Under C1(b), vLLM receives the HF prompt token ids, and the parser input text is the HF tokenizer's
+  `decode(ids, skip_special_tokens=True)`.
+- **R6.** Withdrawal fences the request (worker fence epoch above the request's, so its next `ctx.check` raises
+  `Fenced`). If the worker does not drop the request within the grace period, the worker process is killed and
+  restarted. The worker tolerates a withdrawn inbox file. The monitor state (stage, skips) is reloaded and saved under a
+  file lock, and `Study.skip_stage` declares skips.
+- **R7.** The kind table and progress emission as in D2.
+- **R8.** As in D1.
+- **R9.** As in D4.
+- **R10.** The CPU drill is re-run with scenario H covering R3, R4 and R6, committed with its sha256. The drill
+  repeats found a heartbeat race in the v2l worker. The sampler thread and the worker thread shared one temporary
+  file; a collision raised in `set_inflight` and stopped the worker loop. The fix writes one heartbeat at a time,
+  with per-thread temporary files, and a failed heartbeat write never stops the loop. A regression test covers it.

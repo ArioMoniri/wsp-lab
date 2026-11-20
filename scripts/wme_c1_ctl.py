@@ -274,6 +274,16 @@ def remote_for(kind: str, iid: str):
             f"cd {REMOTE} && (pgrep -f 'wsp.wm.c1.serve --root w' >/dev/null || (nohup bash scripts/wme_c1_remote_worker.sh > /dev/null 2>&1 < /dev/null &)); echo ok",
         )
 
+    def restart():
+        # §II.31.8 R6: a withdrawn request that does not stop -> kill the worker and its children, start it again
+        # (bracketed patterns so pgrep never matches this command line itself)
+        LO.ssh(
+            alias,
+            f"cd {REMOTE} && (for p in 'wsp.wm.c1.ser[v]e --root w' 'wsp.wm.c1.vllmop[s]' 'wsp.wm.c1.launchop[s] gpu1'; "
+            "do pgrep -f \"$p\" | xargs -r kill -9; done; sleep 3; "
+            "nohup bash scripts/wme_c1_remote_worker.sh > /dev/null 2>&1 < /dev/null &); echo ok",
+        )
+
     return tr, C.Remote(
         tr,
         RUNS / "ctl",
@@ -283,53 +293,85 @@ def remote_for(kind: str, iid: str):
         lost=lost,
         log=log,
         revive=revive,
+        restart=restart,
     )
 
 
 # ------------------------------------------------------------------ Phase L
 
 
+def utc_date() -> str:
+    return time.strftime("%Y-%m-%d", time.gmtime())
+
+
 def write_evidence(name, obj) -> tuple[str, str]:
+    """Run-tagged Phase L evidence (§II.31.8 R2): never overwrites a file (``phasel.write_new``)."""
+    from wsp.wm.c1 import phasel as PL
+
     p = EVID / name
-    p.write_text(json.dumps(obj, indent=1, sort_keys=True, default=str) + "\n")
-    return str(p.relative_to(ROOT)), sha(p)
+    h = PL.write_new(p, obj)
+    try:
+        return str(p.relative_to(ROOT)), h
+    except ValueError:  # an evidence directory outside the repository (tests)
+        return str(p), h
+
+
+def ec_sha() -> str:
+    return hashlib.sha256(json.dumps(engine_config(), sort_keys=True).encode()).hexdigest()
 
 
 def cmd_phasel_parity(a):
+    """2-GPU check instance: hello, parity, inert identity and (C1(a)) gen_repeat; the §II.31.1 pass rule and the
+    §II.31.2 selection evaluated by ``phasel.evaluate`` and recorded (§II.31.8 R1); the instance is terminated in all
+    cases; a run that does not proceed exits non-zero after termination."""
+    from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import phasel as PL
+
     tr, rem = remote_for("parity", a.iid)
-    hello, _ = rem.call("hello", 0, LO.guard_instance(a.iid), "p" * 64, "hello", {})
-    log("hello", json.dumps({k: hello[k] for k in ("theta0", "versions", "physical")}))
-    par, _ = rem.call("parity", 0, LO.guard_instance(a.iid), "q" * 64, "parity", {}, timeout_s=7200)
-    log("parity", json.dumps({k: par[k] for k in par if k not in ("chunks_k1", "chunks_k2")}))
-    inert, _ = rem.call(
-        "inert_identity", 0, LO.guard_instance(a.iid), "r" * 64, "inert", {}, timeout_s=7200
-    )
-    log("inert", inert["pass"])
-    path, h = write_evidence(
-        f"wme-c1-launch-parity-{DATE}.json",
-        {
-            "label": "wme-c1 launch precondition 2 (and 1, redundant) on a 2-GPU check instance; exposed engineering items only",
-            "instance": LO.guard_instance(a.iid),
-            "hello": hello,
-            "parity": par,
-            "inert_identity": inert,
-        },
-    )
-    log("evidence", path, h)
-    dm = LO.deadman()
-    t = LO.terminate_and_confirm(dm, a.iid, "wme-c1 parity check finished")
-    log("termination confirmed", t)
-    (ROOT / "data/wme/runs/wme-c1/instances").mkdir(parents=True, exist_ok=True)
-    print(
-        json.dumps(
+    inst = LO.guard_instance(a.iid)
+    ec, ecs = engine_config(), ec_sha()
+    n = {"i": 0}
+
+    def call(kind, args):
+        n["i"] += 1
+        uk = hashlib.sha256(f"phasel-parity:{kind}:{n['i']}".encode()).hexdigest()
+        p, _ = rem.call(kind, 0, inst, uk, kind, args, timeout_s=7200)
+        log(kind, json.dumps({k: p[k] for k in p if k not in ("chunks_k1", "chunks_k2", "rows")})[:2000])
+        return p
+
+    try:
+        hello = call("hello", {})
+        if hello.get("gen_engine") != GE.config():
+            raise SystemExit("PRECONDITION FAILED: the worker's generation engine is not the recorded one")
+        checks = PL.run_checks(call, GE.GEN_ENGINE)
+        dm = LO.deadman()
+        s_l = LO.deadman_gpu_h(dm.state())  # all Phase L check instances so far, this one to now
+        cap = cap_state()[0]
+        g_e1 = GE.e1_gen_gpu_h(json.loads((ROOT / "docs/prereg/wme_manifest.json").read_text()))
+        ev = PL.evaluate(checks, GE.GEN_ENGINE, s_l, cap, g_e1)
+        path, h = write_evidence(
+            f"wme-c1-launch-parity-{utc_date()}-{a.tag}.json",
             {
-                "evidence": path,
-                "sha256": h,
-                "parity_bitwise": par["parity_bitwise"],
-                "inert_pass": inert["pass"],
-            }
+                "label": "wme-c1 Phase L re-run: preconditions 1-2 and the §II.31 pass rule / selection on a 2-GPU "
+                "check instance; exposed engineering items only",
+                "instance": inst,
+                "engine_config_sha256": ecs,
+                "engine_config": ec,
+                "hello": hello,
+                **checks,
+                "evaluation": ev,
+            },
         )
-    )
+        log("evidence", path, h, "proceed", ev["proceed"], "selected", ev["selected_engine"])
+    finally:
+        t = LO.terminate_and_confirm(LO.deadman(), a.iid, "wme-c1 parity check finished")
+        log("termination confirmed", t)
+    print(json.dumps({"evidence": path, "sha256": h, "evaluation": ev}, default=str))
+    if not ev["proceed"]:
+        raise SystemExit(
+            f"PHASE L STOP: selected engine {ev['selected_engine']} (recorded {GE.GEN_ENGINE}); pass rule "
+            f"{ev['pass_rule']}; other {ev['other_preconditions']}. Report to the chair before anything else."
+        )
 
 
 def engine_config() -> dict:
@@ -366,9 +408,24 @@ def engine_config() -> dict:
 
 
 def cmd_phasel_main(a):
+    from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import phasel as PL
+
+    ecs = ec_sha()
+    par_path = str(Path(a.parity_evidence))
+    par = json.loads((ROOT / par_path).read_text())
+    PL.check_binding(par, ecs, "parity evidence")  # R2: produced under the current engine config
+    ev = par["evaluation"]
+    if not ev["proceed"] or ev["selected_engine"] != GE.GEN_ENGINE:
+        raise SystemExit(f"PRECONDITION FAILED: parity evaluation {ev['selected_engine']} / {ev['proceed']}")
+    parsers = PL.parser_check()  # R9
+    if not parsers["pass"]:
+        raise SystemExit(f"PRECONDITION FAILED: gen.parsers check {parsers}")
     tr, rem = remote_for("main", a.iid)
     inst = LO.guard_instance(a.iid)
     hello, _ = rem.call("hello", 0, inst, "m" * 64, "hello", {})
+    if hello.get("gen_engine") != GE.config():
+        raise SystemExit("PRECONDITION FAILED: the worker's generation engine is not the recorded one")
     log("hello", json.dumps({k: hello[k] for k in ("theta0", "versions", "physical")}))
     inert, _ = rem.call("inert_identity", 0, inst, "n" * 64, "inert", {}, timeout_s=7200)
     log("inert identity pass:", inert["pass"])
@@ -376,7 +433,7 @@ def cmd_phasel_main(a):
         raise SystemExit("PRECONDITION FAILED: pinned-engine inert identity")
     can, _ = rem.call("canary", 0, inst, "o" * 64, "canary-reference", {}, timeout_s=7200)
     eng = can["engines"]
-    if set(eng) != {"tf", "hf_gen", "vllm"}:
+    if set(eng) != GE.canary_engines():  # R2: the canary set of the recorded engine
         raise SystemExit(f"PRECONDITION FAILED: canary engines {sorted(eng)}")
     tim, _ = rem.call("timing", 0, inst, "t" * 64, "timing", {}, timeout_s=7200)
     p_bank = (
@@ -385,8 +442,9 @@ def cmd_phasel_main(a):
         / 3600
     )
     tim_path, tim_sha = write_evidence(
-        f"wme-c1-launch-timing-{DATE}.json",
+        f"wme-c1-launch-timing-{utc_date()}-{a.tag}.json",
         {
+            "engine_config_sha256": ecs,
             "label": "PREREG_WME §II.30 re-pricing inputs (synthetic matrices; outcome-blind)",
             "timing": tim,
             "rule": "P_bank = 4.1268 + (192 t_eigh(12288) + 576 t_eigh(4096) + 13095 x 6 t_contract) / 3600",
@@ -397,15 +455,19 @@ def cmd_phasel_main(a):
         json.dumps({"P_bank": p_bank, "evidence": tim_path, "sha256": tim_sha})
     )
     log(f"bank phase re-priced (§II.30): {p_bank:.3f} GPU-h-eq")
-    par = json.loads((EVID / f"wme-c1-launch-parity-{DATE}.json").read_text())
-    if not (par["parity"]["parity_bitwise"] and par["inert_identity"]["pass"]):
-        raise SystemExit("PRECONDITION FAILED: 1-vs-2-GPU parity evidence")
     ref = C.composite_canary(eng)
     ec = engine_config()
-    ec_path, ec_sha = write_evidence(f"wme-c1-engine-config-{DATE}.json", ec)
+    if hashlib.sha256(json.dumps(ec, sort_keys=True).encode()).hexdigest() != ecs:
+        raise SystemExit("engine config changed during phasel-main")
+    ec_path, ec_file_sha = write_evidence(f"wme-c1-engine-config-{utc_date()}-{a.tag}.json", ec)
+    pz_path, pz_sha = write_evidence(
+        f"wme-c1-launch-parsers-{utc_date()}-{a.tag}.json",
+        {"engine_config_sha256": ecs, "gen_parsers_check": parsers},
+    )
     can_path, can_sha = write_evidence(
-        f"wme-c1-canary-refs-{DATE}.json",
+        f"wme-c1-canary-refs-{utc_date()}-{a.tag}.json",
         {
+            "engine_config_sha256": ecs,
             "label": "per-engine canary references: the first confirmatory instance's start canaries (before any outcome)",
             "instance": inst,
             "engines": eng,
@@ -414,21 +476,23 @@ def cmd_phasel_main(a):
         },
     )
     inert_path, inert_sha = write_evidence(
-        f"wme-c1-launch-inert-{DATE}.json",
-        {"instance": inst, "hello": hello, "inert_identity": inert},
+        f"wme-c1-launch-inert-{utc_date()}-{a.tag}.json",
+        {"engine_config_sha256": ecs, "instance": inst, "hello": hello, "inert_identity": inert},
     )
-    par_path = f"docs/reviews/wme/wme-c1-launch-parity-{DATE}.json"
     evidence = sorted(
         [
             f"{par_path} sha256:{sha(ROOT / par_path)}",
             f"{inert_path} sha256:{inert_sha}",
             f"{can_path} sha256:{can_sha}",
-            f"{ec_path} sha256:{ec_sha}",
+            f"{ec_path} sha256:{ec_file_sha}",
             f"{tim_path} sha256:{tim_sha}",
+            f"{pz_path} sha256:{pz_sha}",
         ]
     )
     subprocess.run(
-        ["git", "add", par_path, inert_path, can_path, ec_path, tim_path], cwd=ROOT, check=True
+        ["git", "add", par_path, inert_path, can_path, ec_path, tim_path, pz_path],
+        cwd=ROOT,
+        check=True,
     )
     subprocess.run(
         [
@@ -711,8 +775,11 @@ def main():
     u.add_argument("--poll-max-min", type=float, default=1440)
     p = sub.add_parser("phasel-parity")
     p.add_argument("--iid", required=True)
+    p.add_argument("--tag", required=True)  # run tag of the evidence files (R2; never overwritten)
     m = sub.add_parser("phasel-main")
     m.add_argument("--iid", required=True)
+    m.add_argument("--tag", required=True)
+    m.add_argument("--parity-evidence", required=True)  # repo-relative path of the bound parity evidence
     m.add_argument("--parity-iid", default=None)
     r = sub.add_parser("run")
     r.add_argument("--iid", required=True)

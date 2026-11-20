@@ -123,7 +123,12 @@ def main():
     def revive():
         procs["p"] = start_worker(d)
 
-    rem = C.Remote(tr, d / "ctl", poll_s=0.05, dead_after_s=5, revive=revive)
+    def restart():  # §II.31.8 R6: kill the worker process and start it again
+        procs["p"].kill()
+        procs["p"].wait(timeout=10)
+        procs["p"] = start_worker(d)
+
+    rem = C.Remote(tr, d / "ctl", poll_s=0.05, dead_after_s=5, revive=revive, restart=restart)
     inst1 = "lambda:drill-1"
     # A: bracketed units
     g = s.guard("bank", inst1)
@@ -290,42 +295,63 @@ def main():
         caught = True
     log.write_bytes(backup)
     rep["scenarios"]["G_fresh_replay_detects_change"] = {"pass": caught}
-    # H: §II.31 run health: a worker error halts issuing (persisted incident, no attempt burned by the halt), the
-    #    guard refuses every unit until the incident is resolved (diagnosis + chair report), then the run resumes
+    # H (§II.31.5, §II.31.8 R3 R4 R6): run health on the real worker loop.
+    # H1 R3: a technical failure keeps its registered cause, halts (no further attempt), resumes after resolution;
+    #    a non-technical failure halts and is retried only after a repair record.
     sh = study(d, "_h", health=True)
-    gh = sh.guard("bank", "lambda:drill-h")
-    tr.set_fence(gh.epoch, "lambda:drill-h")
-    gh.open_instance(1)
-    uh = units(20, 21, fail_once=True) + units(21, 22)
-    halted = refused = False
-    try:
-        sh.run(gh, rem, tr, uh, chunk=1)
-    except Exception as exc:  # noqa: BLE001
-        halted = type(exc).__name__ == "HealthIncident"
-    try:
-        sh.run(gh, rem, tr, uh, chunk=1)
-    except RG.HealthHalt:
-        refused = True
-    hrecs = [json.loads(x) for x in (d / "study_h" / RG.LOG_NAME).read_text().splitlines()]
-    k20 = sh.key(uh[0][0])
-    n_start_halt = sum(r["type"] == "attempt_start" and r["unit"] == k20 for r in hrecs)
-    gh.resolve_incidents("drill: injected error, diagnosed", "drill report (fixture)")
-    gh = sh.guard("bank", "lambda:drill-h")
-    tr.set_fence(gh.epoch, "lambda:drill-h")
-    outh = sh.run(gh, rem, tr, uh, chunk=1)
-    hrecs = [json.loads(x) for x in (d / "study_h" / RG.LOG_NAME).read_text().splitlines()]
+
+    def guard_h():
+        g_ = sh.guard("bank", "lambda:drill-h")
+        tr.set_fence(g_.epoch, "lambda:drill-h")
+        g_.open_instance(1)
+        return g_
+
+    def run_h(g_, us):
+        try:
+            return sh.run(g_, rem, tr, us, chunk=1), None
+        except Exception as exc:  # noqa: BLE001
+            return None, type(exc).__name__
+
+    def hrecs():
+        return [json.loads(x) for x in (d / "study_h" / RG.LOG_NAME).read_text().splitlines()]
+
+    gh = guard_h()
+    ut = units(20, 21, fail_once="technical")
+    _, e_t = run_h(gh, ut)
+    k20 = sh.key(ut[0][0])
+    fail20 = [r["cause"] for r in hrecs() if r["type"] == "attempt_fail" and r["unit"] == k20]
+    starts20_halt = sum(r["type"] == "attempt_start" and r["unit"] == k20 for r in hrecs())
+    gh.resolve_incidents("drill: injected infrastructure error, diagnosed", "drill report (fixture)")
+    gh = guard_h()
+    out_t, e_t2 = run_h(gh, ut)
+    un = units(21, 22, fail_once="defect")
+    _, e_n = run_h(gh, un)
+    k21 = sh.key(un[0][0])
+    gh.resolve_incidents("drill: injected defect, diagnosed", "drill report (fixture)")
+    gh = guard_h()
+    _, e_n2 = run_h(gh, un)  # refused: no repair yet
+    gh.retry.repair("code_defect_crash", "drill: defect fixed", "drill00", outcome_blind=True)
+    out_n, e_n3 = run_h(gh, un)
+    hr = hrecs()
     summ = (d / "runs_h" / "health" / "summary.jsonl").read_text().splitlines()
     rep["scenarios"]["H_run_health_halt"] = {
-        "pass": halted
-        and refused
-        and n_start_halt == 1
-        and [outh["u20"]["sq"], outh["u21"]["sq"]] == [400, 441]
-        and sum(r["type"] == "incident" for r in hrecs) == 1
-        and sum(r["type"] == "incidents_resolved" for r in hrecs) == 1
+        "pass": e_t == "HealthHalt"
+        and fail20 == ["infrastructure"]
+        and starts20_halt == 1
+        and e_t2 is None
+        and out_t["u20"]["sq"] == 400
+        and e_n == "WorkerError"
+        and [r["cause"] for r in hr if r["type"] == "attempt_fail" and r["unit"] == k21] == [None]
+        and e_n2 == "RepairRequired"
+        and e_n3 is None
+        and out_n["u21"]["sq"] == 441
+        and sum(r["type"] == "incident" for r in hr) == 2
+        and sum(r["type"] == "incidents_resolved" for r in hr) == 2
         and len(summ) >= 2,
-        "incidents": [r["kind"] for r in hrecs if r["type"] == "incident"],
-        "summaries": len(summ),
-        "attempts_u20": sum(r["type"] == "attempt_start" and r["unit"] == k20 for r in hrecs),
+        "technical_cause_recorded": fail20,
+        "errors": [e_t, e_t2, e_n, e_n2, e_n3],
+        "attempts_u20": sum(r["type"] == "attempt_start" and r["unit"] == k20 for r in hr),
+        "attempts_u21": sum(r["type"] == "attempt_start" and r["unit"] == k21 for r in hr),
     }
     # H (addendum 2, answer 3): the GPU-idle rule binds GPU kinds only; CPU kinds are checked by progress. Fixture
     #    classes {square: gpu, plan: cpu}, scripted utilisation, limits shortened to 1.5 s (registered: 15 min).
@@ -376,13 +402,30 @@ def main():
     # (a) a CPU kind progressing on an idle GPU for 3 s (> the 1.5 s limit): no incident
     out_a, err_a = attempt(g2, plan_units(30, steps=20, sleep=0.15))
     inc_a = incidents2()
-    # (b) a GPU kind progressing on an idle GPU for 3 s: gpu_idle incident; resolved, GPU busy, it completes
-    out_b, err_b = attempt(g2, units(31, 32, sleep=0.15, steps=20))
+    # (b) R4 + R6: a GPU kind progressing on an idle GPU trips gpu_idle three times (each withdrawn by fencing,
+    #     resolved); the aborts never count, then with the GPU busy it completes
+    trips_b = []
+    for i in range(3):
+        _o, e = attempt(g2, units(31, 32, sleep=0.15, steps=20))
+        trips_b.append(e)
+        idle_ok = worker_idle()
+        g2.resolve_incidents(f"drill: GPU idle trip {i} (scripted)", "drill report (fixture)")
+        g2 = guard2()
+    err_b, idle_b = trips_b[0], idle_ok
     util.write_text("90")
-    idle_b = worker_idle()
-    g2.resolve_incidents("drill: GPU idle (scripted), diagnosed", "drill report (fixture)")
-    g2 = guard2()
     out_b2, err_b2 = attempt(g2, units(31, 32, sleep=0.15, steps=20))
+    k31 = s2.key(units(31, 32, sleep=0.15, steps=20)[0][0])
+    # (d) R6: a hung GPU op (never reaches ctx.check) on an idle GPU: fencing cannot stop it -> killed, restarted
+    util.write_text("5")
+    rem.withdraw_grace_s = 0.5
+    _o, err_d = attempt(g2, units(33, 34, hang_once=4.0))
+    rem.withdraw_grace_s = 120.0
+    util.write_text("90")
+    restarted = '"how": "restarted"' in (d / "ctl" / "dispatch.jsonl").read_text()
+    idle_d = worker_idle()
+    g2.resolve_incidents("drill: hung op, worker restarted", "drill report (fixture)")
+    g2 = guard2()
+    out_d, err_d2 = attempt(g2, units(33, 34, hang_once=4.0))
     # (c) a CPU kind without progress for 3 s: no_progress incident; resolved, it completes
     out_c, err_c = attempt(g2, plan_units(32, stall_once=3.0, steps=2, sleep=0.05))
     idle_c = worker_idle()
@@ -390,6 +433,26 @@ def main():
     g2 = guard2()
     out_c2, err_c2 = attempt(g2, plan_units(32, stall_once=3.0, steps=2, sleep=0.05))
     inc = incidents2()
+    h2 = [json.loads(x) for x in (d / "study_h2" / RG.LOG_NAME).read_text().splitlines()]
+    aborted31 = sum(r["type"] == "attempt_aborted" and r["unit"] == k31 for r in h2)
+    fails_h2 = [r for r in h2 if r["type"] == "attempt_fail"]
+    rep["scenarios"]["H_withdrawal_and_no_attempt_burn"] = {
+        "pass": trips_b == ["HealthIncident"] * 3
+        and aborted31 == 3
+        and not fails_h2
+        and not [r for r in h2 if r["type"] == "fallback"]
+        and err_b2 is None
+        and err_d == "HealthIncident"
+        and restarted
+        and idle_d
+        and err_d2 is None
+        and out_d["u33"]["sq"] == 1089
+        and '"how": "fenced"' in (d / "ctl" / "dispatch.jsonl").read_text(),
+        "aborted_attempts_u31": aborted31,
+        "failures": len(fails_h2),
+        "restarted": restarted,
+        "trips": trips_b,
+    }
     rep["scenarios"]["H_gpu_and_cpu_kinds"] = {
         "pass": err_a is None
         and out_a["p30"]["plan"] == 1030
@@ -402,7 +465,7 @@ def main():
         and idle_c
         and err_c2 is None
         and out_c2["p32"]["plan"] == 1032
-        and inc == ["square:gpu_idle", "plan:no_progress"],
+        and inc == ["square:gpu_idle"] * 4 + ["plan:no_progress"],
         "incidents": inc,
         "cpu_kind_on_idle_gpu_incidents": inc_a,
     }

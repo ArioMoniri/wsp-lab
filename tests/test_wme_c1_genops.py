@@ -815,6 +815,13 @@ class GTok(Tok):
     def convert_tokens_to_ids(self, t):
         return 2 if t == "<|im_end|>" else -1
 
+    def encode(self, t, add_special_tokens=True):
+        assert add_special_tokens is False
+        return [ord(c) for c in t]
+
+    def decode(self, ids, skip_special_tokens=False):
+        return "".join(chr(i) for i in ids if not (skip_special_tokens and i in (1, 2)))
+
 
 def vllm_e1_spawn(jobs):
     def spawn(job, workdir, **kw):
@@ -867,6 +874,8 @@ def test_e1_gen_under_the_vllm_engine_uses_registered_settings(tmp_path, monkeyp
         assert b["max_tokens"] == 128 and b["stop_token_ids"] == [1, 2]
         user = neutral if k % 2 == 0 else [GO.prompts_for(it)["suggested"] for it in items]
         assert b["prompts"] == [f"<u>{u}</u><a>" for u in user]  # the HF path's chat_prompt text
+        assert b["prompt_token_ids"] == [[ord(c) for c in f"<u>{u}</u><a>"] for u in user]  # R5
+        assert b["hf_text"] is True
         winner = (k // 2) % 2 == 1
         assert b["state"]["kind"] == ("tensors" if winner else "base")
         if k < 4:

@@ -309,6 +309,7 @@ class DevWorld:
         self, m, items: dict, base: dict, lib: Library, check=lambda: None, procs: int = 14
     ):
         self.m, self.items, self.base, self.lib, self.check = m, items, base, lib, check
+        self.tick = lambda event, **kw: None  # the worker's Ctx.tick (§II.31.8 R7)
         self.groups = {o: [it["group"] for it in items[o]] for o in items}
         self.pool = ProcessPoolExecutor(max_workers=procs) if procs > 1 else None
         self.n_eval = 0
@@ -342,6 +343,7 @@ class DevWorld:
         finally:
             m.restore()
         self.check()
+        self.tick("e2_dev_eval")
         return res, th, (math.sqrt(num / den) if den > 0 else 0.0), time.time() - t0
 
     def evaluate_bundles(self, bundles, candidate=None) -> dict:

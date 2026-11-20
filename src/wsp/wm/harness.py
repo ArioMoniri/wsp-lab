@@ -168,7 +168,7 @@ class UnitStore:
 
 
 def run_units(
-    store: UnitStore, units, fn, theta0: str, panel: str, *, guard, on_start=None
+    store: UnitStore, units, fn, theta0: str, panel: str, *, guard, on_start=None, before_begin=None
 ) -> dict:
     """``units``: [(recipe, label)]; ``fn(recipe) -> payload``. The ``guard`` is mandatory: a confirmatory phase
     passes ``runguard.ProductionGuard`` (attested launch, persistent attempts/canaries/ledger, eligibility-gated
@@ -192,6 +192,8 @@ def run_units(
             out[label] = res
             continue
         while True:
+            if before_begin:  # checks that must never record an attempt (wme-c1 §II.31.8 R4: the order rule)
+                before_begin(recipe, label)
             try:
                 n = guard.begin(k, label)
             except RetryExhausted:
