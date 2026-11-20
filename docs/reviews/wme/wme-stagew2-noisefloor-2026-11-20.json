@@ -1,0 +1,379 @@
+{
+  "label": "DESCRIPTIVE addendum to W2 (wme-stagew2-2026-11-18); SYNTHESIS-r13 R2",
+  "definition": {
+    "E": "mean |pred - y| / SE(y) over the points after k and the 4 endpoints (wsp.wm.stagew2.score)",
+    "SE": "sqrt(max(y(1-y), 1/N)/N), N = items per benchmark (wsp.wm.stagew.se_of)",
+    "floor": "sqrt(2/pi) * sqrt(var(d)/(2N)) * mean(1/SE(y1), 1/SE(y2)), d = item-level replicate difference; mean over the 4 endpoints",
+    "e_replicate": "mean over directions of |y1 - y2| / SE(target): E of predicting a measurement by its replicate",
+    "floor_plugin": "e_replicate / sqrt(2)",
+    "rule": "floor >= pooled E - 0.05 -> (a) closed on 9B for good; else headroom = pooled E - floor"
+  },
+  "endpoints": [
+    "acc:mmlupro_gen",
+    "acc:supergpqa_gen",
+    "trunc:mmlupro_gen",
+    "trunc:supergpqa_gen"
+  ],
+  "n_replicate_pairs": 1,
+  "pairs": [
+    "w2:a"
+  ],
+  "n_items_per_benchmark": 500,
+  "primary": {
+    "w2:a": {
+      "n_items": 500,
+      "endpoints": {
+        "acc:mmlupro_gen": {
+          "y1": 0.686,
+          "y2": 0.676,
+          "se1": 0.020755914819636352,
+          "se2": 0.020929596269398033,
+          "discordance": 0.058,
+          "sigma": 0.007609204951898707,
+          "sigma_over_se": 0.3650830635013474,
+          "floor": 0.2912941397783372,
+          "e_replicate": 0.47979133931758455,
+          "floor_plugin": 0.3392637095860398
+        },
+        "acc:supergpqa_gen": {
+          "y1": 0.362,
+          "y2": 0.348,
+          "se1": 0.021492138097453217,
+          "se2": 0.02130239423163509,
+          "discordance": 0.082,
+          "sigma": 0.009044556373863798,
+          "sigma_over_se": 0.4227051303523898,
+          "floor": 0.3372698972803345,
+          "e_replicate": 0.654302055326277,
+          "floor_plugin": 0.46266142026550605
+        },
+        "trunc:mmlupro_gen": {
+          "y1": 0.168,
+          "y2": 0.168,
+          "se1": 0.016719808611344807,
+          "se2": 0.016719808611344807,
+          "discordance": 0.08,
+          "sigma": 0.00894427190999916,
+          "sigma_over_se": 0.5349506156386412,
+          "floor": 0.4268288370100597,
+          "e_replicate": 0.0,
+          "floor_plugin": 0.0
+        },
+        "trunc:supergpqa_gen": {
+          "y1": 0.33,
+          "y2": 0.344,
+          "se1": 0.02102855201862458,
+          "se2": 0.02124448163641561,
+          "discordance": 0.098,
+          "sigma": 0.00988959048697168,
+          "sigma_over_se": 0.4679034207858961,
+          "floor": 0.37333291539191304,
+          "e_replicate": 0.662378073149965,
+          "floor_plugin": 0.46837202723361926
+        }
+      },
+      "floor": 0.3571814473651611,
+      "floor_plugin": 0.3175742892712913,
+      "e_replicate": 0.4491178669484567,
+      "sigma_over_se": 0.44766055756956863
+    }
+  },
+  "floor": 0.3571814473651611,
+  "floor_plugin": 0.3175742892712913,
+  "bootstrap": {
+    "floor": {
+      "lo": 0.32257710978613063,
+      "hi": 0.38906137193147106
+    },
+    "floor_plugin": {
+      "lo": 0.1617284648761755,
+      "hi": 0.9061494365942168
+    },
+    "sigma_over_se": {
+      "lo": 0.40429045206933173,
+      "hi": 0.4876161177250765
+    },
+    "endpoints": {
+      "acc:mmlupro_gen": {
+        "lo": 0.23707772056768908,
+        "hi": 0.34033909612331187
+      },
+      "acc:supergpqa_gen": {
+        "lo": 0.28609365170545253,
+        "hi": 0.385616447459402
+      },
+      "trunc:mmlupro_gen": {
+        "lo": 0.36260093663122756,
+        "hi": 0.4886579444206626
+      },
+      "trunc:supergpqa_gen": {
+        "lo": 0.321074510986255,
+        "hi": 0.42071101023403057
+      }
+    },
+    "n_boot": 10000,
+    "seed": 20261120,
+    "conf": 0.95
+  },
+  "same_order_bases_bitwise": {
+    "w2:a~w2:b": true,
+    "w2:a~w2:c": true
+  },
+  "same_order_bases_floor": {
+    "w2:a~w2:b": 0.0,
+    "w2:a~w2:c": 0.0
+  },
+  "secondary_stagew": {
+    "stagew": {
+      "n_items": 500,
+      "endpoints": {
+        "acc:mmlupro_gen": {
+          "y1": 0.714,
+          "y2": 0.712,
+          "se1": 0.020209106858047932,
+          "se2": 0.020251222185339826,
+          "discordance": 0.046,
+          "sigma": 0.006782035092802179,
+          "sigma_over_se": 0.33524405764212223,
+          "floor": 0.2674860576935552,
+          "e_replicate": 0.09886237775381593,
+          "floor_plugin": 0.06990625771394932
+        },
+        "acc:supergpqa_gen": {
+          "y1": 0.376,
+          "y2": 0.372,
+          "se1": 0.021662132858977667,
+          "se2": 0.021615549958305478,
+          "discordance": 0.092,
+          "sigma": 0.009590828952702671,
+          "sigma_over_se": 0.44322336317891686,
+          "floor": 0.353641078467579,
+          "e_replicate": 0.18485299461169852,
+          "floor_plugin": 0.13071080601257234
+        },
+        "trunc:mmlupro_gen": {
+          "y1": 0.156,
+          "y2": 0.166,
+          "se1": 0.01622738426241272,
+          "se2": 0.016639951923007473,
+          "discordance": 0.058,
+          "sigma": 0.007609204951898707,
+          "sigma_over_se": 0.46309832027122755,
+          "floor": 0.3694989998781531,
+          "e_replicate": 0.6086027688814876,
+          "floor_plugin": 0.430347144925009
+        },
+        "trunc:supergpqa_gen": {
+          "y1": 0.352,
+          "y2": 0.344,
+          "se1": 0.02135865164283551,
+          "se2": 0.02124448163641561,
+          "discordance": 0.092,
+          "sigma": 0.009588326235584584,
+          "sigma_over_se": 0.4501262868491465,
+          "floor": 0.3591488146884559,
+          "e_replicate": 0.37556192877845146,
+          "floor_plugin": 0.2655623865947422
+        }
+      },
+      "floor": 0.33744373768193575,
+      "floor_plugin": 0.2241316488115682,
+      "e_replicate": 0.3169700175063634,
+      "sigma_over_se": 0.4229230069853533
+    },
+    "stagew_ci": {
+      "floor": {
+        "lo": 0.3012161049484484,
+        "hi": 0.37065469760363834
+      },
+      "floor_plugin": {
+        "lo": 0.1386283373014915,
+        "hi": 0.7697180018052492
+      },
+      "sigma_over_se": {
+        "lo": 0.3775184027189998,
+        "hi": 0.46454677256904164
+      },
+      "endpoints": {
+        "acc:mmlupro_gen": {
+          "lo": 0.21071999124829516,
+          "hi": 0.31812262957343695
+        },
+        "acc:supergpqa_gen": {
+          "lo": 0.304120499379292,
+          "hi": 0.40036488014518906
+        },
+        "trunc:mmlupro_gen": {
+          "lo": 0.3032153195361474,
+          "hi": 0.43304221871112564
+        },
+        "trunc:supergpqa_gen": {
+          "lo": 0.30729282522131923,
+          "hi": 0.4073306990065632
+        }
+      },
+      "n_boot": 10000,
+      "seed": 20261120,
+      "conf": 0.95
+    },
+    "combined_floor": 0.3473125925235484,
+    "combined_ci": {
+      "floor": {
+        "lo": 0.322382206949984,
+        "hi": 0.3699600596919274
+      },
+      "floor_plugin": {
+        "lo": 0.21525997910041583,
+        "hi": 0.7100439837661857
+      },
+      "sigma_over_se": {
+        "lo": 0.40404617758938616,
+        "hi": 0.46367617305397896
+      },
+      "endpoints": {
+        "acc:mmlupro_gen": {
+          "lo": 0.2401543329784871,
+          "hi": 0.314185121616292
+        },
+        "acc:supergpqa_gen": {
+          "lo": 0.3092260418843234,
+          "hi": 0.3785242182508562
+        },
+        "trunc:mmlupro_gen": {
+          "lo": 0.3510985932995469,
+          "hi": 0.44158487926338147
+        },
+        "trunc:supergpqa_gen": {
+          "lo": 0.33049403872426103,
+          "hi": 0.39961109357737107
+        }
+      },
+      "n_boot": 10000,
+      "seed": 20261120,
+      "conf": 0.95
+    },
+    "n_pairs": 2
+  },
+  "pooled": {
+    "0": {
+      "E": 0.7707795029467436,
+      "by_endpoint": {
+        "acc:mmlupro_gen": 0.514396388996505,
+        "acc:supergpqa_gen": 0.5643824586518746,
+        "trunc:mmlupro_gen": 0.9379158037410064,
+        "trunc:supergpqa_gen": 1.066423360397588
+      },
+      "by_type": {
+        "S": 0.9083091367400684,
+        "L": 0.7922842882076969,
+        "M": 0.611745083892465
+      }
+    },
+    "2": {
+      "E": 0.8805117377160463,
+      "by_endpoint": {
+        "acc:mmlupro_gen": 0.6389779988376945,
+        "acc:supergpqa_gen": 0.6773171582498007,
+        "trunc:mmlupro_gen": 1.1569607425779544,
+        "trunc:supergpqa_gen": 1.0487910511987362
+      },
+      "by_type": {
+        "S": 1.0555230626588072,
+        "L": 0.7840529106261865,
+        "M": 0.8019592398631458
+      }
+    }
+  },
+  "pooled_reported": {
+    "0": 0.771,
+    "2": 0.881
+  },
+  "gauss_theory": 0.7978845608028654,
+  "k2_offset_factor": 1.224744871391589,
+  "verdict": {
+    "0": {
+      "primary": {
+        "floor": 0.3571814473651611,
+        "pooled": 0.7707795029467436,
+        "threshold": 0.7207795029467435,
+        "closed": false,
+        "headroom": 0.41359805558158247
+      },
+      "ci_lo": {
+        "floor": 0.32257710978613063,
+        "pooled": 0.7707795029467436,
+        "threshold": 0.7207795029467435,
+        "closed": false,
+        "headroom": 0.44820239316061294
+      },
+      "ci_hi": {
+        "floor": 0.38906137193147106,
+        "pooled": 0.7707795029467436,
+        "threshold": 0.7207795029467435,
+        "closed": false,
+        "headroom": 0.3817181310152725
+      },
+      "plugin": {
+        "floor": 0.3175742892712913,
+        "pooled": 0.7707795029467436,
+        "threshold": 0.7207795029467435,
+        "closed": false,
+        "headroom": 0.4532052136754523
+      },
+      "combined_with_stagew": {
+        "floor": 0.3473125925235484,
+        "pooled": 0.7707795029467436,
+        "threshold": 0.7207795029467435,
+        "closed": false,
+        "headroom": 0.4234669104231952
+      }
+    },
+    "2": {
+      "primary": {
+        "floor": 0.3571814473651611,
+        "pooled": 0.8805117377160463,
+        "threshold": 0.8305117377160462,
+        "closed": false,
+        "headroom": 0.5233302903508852
+      },
+      "ci_lo": {
+        "floor": 0.32257710978613063,
+        "pooled": 0.8805117377160463,
+        "threshold": 0.8305117377160462,
+        "closed": false,
+        "headroom": 0.5579346279299157
+      },
+      "ci_hi": {
+        "floor": 0.38906137193147106,
+        "pooled": 0.8805117377160463,
+        "threshold": 0.8305117377160462,
+        "closed": false,
+        "headroom": 0.49145036578457524
+      },
+      "plugin": {
+        "floor": 0.3175742892712913,
+        "pooled": 0.8805117377160463,
+        "threshold": 0.8305117377160462,
+        "closed": false,
+        "headroom": 0.562937448444755
+      },
+      "k2_offset_protocol": {
+        "floor": 0.43745614581670583,
+        "pooled": 0.8805117377160463,
+        "threshold": 0.8305117377160462,
+        "closed": false,
+        "headroom": 0.44305559189934046
+      },
+      "combined_with_stagew": {
+        "floor": 0.3473125925235484,
+        "pooled": 0.8805117377160463,
+        "threshold": 0.8305117377160462,
+        "closed": false,
+        "headroom": 0.5331991451924979
+      }
+    }
+  },
+  "n_paths": 45,
+  "cpu_seconds": 6.5,
+  "command": "scripts/wme_w2_noise_floor.py --w2 data/wme/stagew2/run-20261118 --stagew data/wme/stagew/run-20261118/remote/w --json docs/reviews/wme/wme-stagew2-noisefloor-2026-11-20.json"
+}
