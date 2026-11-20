@@ -151,3 +151,27 @@ rule decidable early.
 - no Lambda, nothing touching C1;
 - no edits to `wm/genaudit.py`, `wm/panel.py`, `wm/p3gen.py`, `wm/c1/`, `wsp/gen/` or any manifest-pinned file;
 - edited weights exist in GPU memory only, and LoRA factors stay under `data/wmm/`.
+
+## 6. Amendment 1 (20 Nov 2026, 21:10): batch ordering for throughput
+
+This amendment was written after the first base set (`base__mq`, 200 items) was generated, and before any edit data
+existed.
+
+**What I saw.** The run was stopped after `base__mq`. I examined only output lengths, and therefore its truncation
+count (7 of 200 at 4,096). I did not examine accuracy.
+
+**Why.** Measured throughput was 186 tokens/s on an otherwise idle GPU. HF `generate` decodes each batch of 32 in
+lockstep until the longest member stops, and decoding is weight-bandwidth bound. Batch efficiency (useful / issued
+tokens) was 0.35 in the as-run prompt-length order, against 0.80 if batches hold items of similar output length. At
+the original order the plan needs about 20 GPU-h, over the 12 GPU-h cap.
+
+**Change.** It touches only the decoding schedule. Prompts, harness, budget, items, grid and rules are unchanged.
+- **Base pass 1** keeps the prompt-length batches for `mq`, `mm`, `harm`, `benign` and `general`.
+- **Paired sets** (`mq`, `mm`, `mq_syc`, `mq_perm`, `mm_perm`) are generated, for the base (`base_s`) and for every
+  edit, in batches ordered by the base pass-1 output length of the same original item. Every state therefore shares
+  one batch composition.
+- **Pairing.** All primary, permuted, sycophancy and Brier comparisons use `base_s` as the base. The guard sets and
+  ARC use pass 1 as the base, with the edits in the same prompt-length order.
+- **Null discordance.** Base pass 1 vs `base_s` on `mq`/`mm` measures the effect of batch composition on greedy
+  output. It is reported, and it informs sizing (round12-methods K5).
+- **B\*** is computed from both base passes. The verdict uses `base_s`, the paired base.

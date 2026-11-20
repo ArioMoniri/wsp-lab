@@ -243,10 +243,73 @@ def letter_conf(ctx, its, gens):
     return out
 
 
-def run_set(ctx, tag, name, S):
+# Amendment 1 (plan §6): paired sets are generated in batches ordered by the base's own pass-1 output length on the
+# same (original) item, so batches hold similar lengths and every state shares one batch composition.
+ORDERED = {"mq": "mq", "mq_syc": "mq", "mq_perm": "mq", "mm": "mm", "mm_perm": "mm"}
+
+
+@torch.no_grad()
+def generate_ordered(ctx, users, max_new, order):
+    enc = [G0.enc_prompt(ctx, u) for u in users]
+    out = [None] * len(enc)
+    eot = set(ctx.stop)
+    for b0 in range(0, len(order), G0.GEN_BATCH):
+        idx = order[b0 : b0 + G0.GEN_BATCH]
+        L = max(len(enc[i]) for i in idx)
+        ids = torch.tensor([[ctx.pad] * (L - len(enc[i])) + enc[i] for i in idx], device="cuda")
+        att = torch.tensor(
+            [[0] * (L - len(enc[i])) + [1] * len(enc[i]) for i in idx], device="cuda"
+        )
+        rows = G0._gen_rows(ctx, ids, att, max_new)
+        for i, row in zip(idx, rows, strict=True):
+            cut = next((k for k, t in enumerate(row) if t in eot), None)
+            new = row if cut is None else row[:cut]
+            out[i] = {
+                "ids": new,
+                "text": ctx.tok.decode(new, skip_special_tokens=True),
+                "hit_max": cut is None,
+                "prompt_ids": enc[i],
+            }
+        del ids, att
+    return out
+
+
+def gen_cached_ordered(ctx, name, users, max_new, order):
+    p = ctx.out / "gen" / f"{name}.jsonl"
+    if p.exists():
+        rows = [json.loads(x) for x in p.read_text().splitlines() if x]
+        if len(rows) == len(users):
+            return rows
+    t0 = time.time()
+    rows = generate_ordered(ctx, users, max_new, order)
+    p.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    toks = sum(len(r["ids"]) for r in rows)
+    dt = time.time() - t0
+    ctx.log(
+        "generated",
+        name=name,
+        n=len(rows),
+        tokens=toks,
+        seconds=dt,
+        tok_per_s=toks / dt,
+        ordered=True,
+    )
+    ctx.charge()
+    return rows
+
+
+def length_order(base_rec, key):
+    L = base_rec["sets"][key]["length"]
+    return sorted(range(len(L)), key=lambda i: (L[i], i))
+
+
+def run_set(ctx, tag, name, S, orders=None):
     its, prompts, budget = S[name]
     t0 = time.time()
-    gens = G0.gen_cached(ctx, f"{tag}__{name}", prompts, budget)
+    if orders is not None and name in ORDERED:
+        gens = gen_cached_ordered(ctx, f"{tag}__{name}", prompts, budget, orders[ORDERED[name]])
+    else:
+        gens = G0.gen_cached(ctx, f"{tag}__{name}", prompts, budget)
     sec = time.time() - t0
     rec = {"seconds": sec, "tokens": int(sum(len(g["ids"]) for g in gens)), "n": len(gens)}
     if name in ("harm", "benign"):
@@ -270,7 +333,7 @@ def run_set(ctx, tag, name, S):
     return rec
 
 
-def state(ctx, tag, names, S, apply=None):
+def state(ctx, tag, names, S, apply=None, orders=None):
     """Measure ``names`` at one state (base or an applied edit); cached per (tag, name) in OUT/state_<tag>.json."""
     rec = ctx.read(f"state_{tag}") or {"tag": tag, "sets": {}, "timing": {}}
     todo = [n for n in names if n not in rec["sets"]]
@@ -284,7 +347,7 @@ def state(ctx, tag, names, S, apply=None):
         rec["timing"]["apply_seconds"] = rec["timing"].get("apply_seconds", 0.0) + time.time() - t0
         rec["edit"] = edit
     for n in todo:
-        rec["sets"][n] = run_set(ctx, tag, n, S)
+        rec["sets"][n] = run_set(ctx, tag, n, S, orders)
         rec["timing"][f"{n}_seconds"] = rec["sets"][n]["seconds"]
         ctx.write(f"state_{tag}", rec)
     if undo is not None:
@@ -428,7 +491,7 @@ def edit_stats(base, rec, names):
     }
 
 
-def guard_stats(base, rec):
+def guard_stats(base, base_s, rec):
     out = {}
     hb, he = base["sets"]["harm"]["refused"], rec["sets"]["harm"]["refused"]
     out["harm"] = G1.guard_verdict("harm", G1.paired([1 - x for x in he], [1 - x for x in hb]))
@@ -438,7 +501,7 @@ def guard_stats(base, rec):
     )
     sq_b, sq_e = [], []
     for n in ("mq", "mm"):
-        sb, se = base["sets"][n], rec["sets"][n]
+        sb, se = base_s["sets"][n], rec["sets"][n]
         for cb, ce, yb, ye in zip(
             sb["conf"], se["conf"], sb["correct"], se["correct"], strict=True
         ):
@@ -523,10 +586,11 @@ def main():
         c0.pop("pairs")
         ctx.write("canary_start", c0)
         ctx.write("state_hash_start", {"hash": G0.full_hash(ctx)})
-    # base: everything
-    base = state(
-        ctx, "base", ["mq", "mm", "mq_syc", "harm", "benign", "mq_perm", "mm_perm", "general"], S
-    )
+    # base pass 1 (prompt-length batches): primaries and the unpaired-order sets (guards, general)
+    base = state(ctx, "base", ["mq", "mm", "harm", "benign", "general"], S)
+    orders = {k: length_order(base, k) for k in ("mq", "mm")}
+    # paired base (Amendment 1): length-ordered batches; edits share this composition
+    base_s = state(ctx, "base_s", ["mq", "mm", "mq_syc", "mq_perm", "mm_perm"], S, orders=orders)
     audit_items(ctx, items, base)
     factors = loras(ctx, items)
     # screening: the 5 central doses first, then qualifiers/guards, then the other 6 doses, then qualifiers again
@@ -543,8 +607,9 @@ def main():
                 names,
                 S,
                 apply=lambda fam=fam, dose=dose: G0.apply_state(ctx, fam, dose, factors),
+                orders=orders,
             )
-            screen[tag] = edit_stats(base, rec, ["mq", "mm"])
+            screen[tag] = edit_stats(base_s, rec, ["mq", "mm"])
             ctx.write("screen", screen)
 
     def apply_tag(tag):
@@ -559,9 +624,9 @@ def main():
         for tag in qual:
             if tag in done["perm"]:
                 continue
-            rec = state(ctx, tag, ["mq_perm", "mm_perm"], S, apply=apply_tag(tag))
+            rec = state(ctx, tag, ["mq_perm", "mm_perm"], S, apply=apply_tag(tag), orders=orders)
             done["perm"][tag] = edit_stats(
-                {"sets": {"mq": base["sets"]["mq_perm"], "mm": base["sets"]["mm_perm"]}},
+                {"sets": {"mq": base_s["sets"]["mq_perm"], "mm": base_s["sets"]["mm_perm"]}},
                 {"sets": {"mq": rec["sets"]["mq_perm"], "mm": rec["sets"]["mm_perm"]}},
                 ["mq", "mm"],
             )
@@ -571,7 +636,7 @@ def main():
         drop = None
         if syc and "mq_syc" in syc["sets"]:
             drop = float(
-                np.mean(base["sets"]["mq_syc"]["adopted"])
+                np.mean(base_s["sets"]["mq_syc"]["adopted"])
                 - np.mean(syc["sets"]["mq_syc"]["adopted"])
             )
         tags = list(both) + (["syc_lora@1"] if drop is not None and drop >= G1.SYC_MIN_DROP else [])
@@ -579,7 +644,7 @@ def main():
             if tag in done["guards"]:
                 continue
             rec = state(ctx, tag, ["harm", "benign", "general"], S, apply=apply_tag(tag))
-            done["guards"][tag] = guard_stats(base, rec)
+            done["guards"][tag] = guard_stats(base, base_s, rec)
             ctx.write("guards", done["guards"])
         return qual, both, drop
 
