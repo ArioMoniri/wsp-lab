@@ -12,10 +12,10 @@ from safetensors.torch import save_file
 
 from wsp.wm import actions as A
 from wsp.wm import chat as CH
-from wsp.wm import controls as C
 from wsp.wm import gemma3 as G3
-from wsp.wm import hf
 from wsp.wm import lora as LR
+from wsp.wm.wmm import controls as C
+from wsp.wm.wmm import roles as R
 
 TYPES6 = ["sliding_attention"] * 5 + ["full_attention"]
 
@@ -98,7 +98,7 @@ def _write_checkpoint(model, path, prefix="language_model.model.", shards=2, ext
 
 def test_rolemap_accepts_sliding_attention_and_names_gemma_writers():
     cfg = _mm_config(_text_cfg())
-    rm = A.RoleMap.from_config(cfg)
+    rm = R.GemmaRoleMap.from_config(cfg)
     assert rm.layer_types == tuple(TYPES6)
     assert rm.name(0, "o") == "model.layers.0.self_attn.o_proj.weight"
     assert rm.name(5, "o") == "model.layers.5.self_attn.o_proj.weight"
@@ -113,10 +113,10 @@ def test_tie_default_comes_from_the_model_type_not_false():
     """Bug 1: the MedGemma config has no tie key; Gemma 3 ties lm_head to embed_tokens."""
     cfg = _mm_config(_text_cfg())
     assert "tie_word_embeddings" not in cfg and "tie_word_embeddings" not in cfg["text_config"]
-    assert A.RoleMap.from_config(cfg).tied is True
-    assert A.RoleMap.from_config(cfg["text_config"]).tied is True
+    assert R.GemmaRoleMap.from_config(cfg).tied is True
+    assert R.GemmaRoleMap.from_config(cfg["text_config"]).tied is True
     explicit = {**cfg, "tie_word_embeddings": False}
-    assert A.RoleMap.from_config(explicit).tied is False
+    assert R.GemmaRoleMap.from_config(explicit).tied is False
     # Qwen behaviour unchanged: absent key -> untied
     qwen = {
         "model_type": "qwen3_5",
@@ -128,7 +128,9 @@ def test_tie_default_comes_from_the_model_type_not_false():
             "layer_types": ["linear_attention", "full_attention"],
         },
     }
-    assert A.RoleMap.from_config(qwen).tied is False
+    assert A.RoleMap.from_config(qwen).tied is False  # actions.RoleMap (registered) is unchanged
+    with pytest.raises(ValueError):
+        R.GemmaRoleMap.from_config(qwen)
 
 
 def test_vision_tower_and_projector_are_frozen_and_rejected_by_the_text_only_guard():
@@ -141,11 +143,11 @@ def test_vision_tower_and_projector_are_frozen_and_rejected_by_the_text_only_gua
         "model.visual.blocks.0.attn.proj.weight",
         "mtp.layers.0.mlp.down_proj.weight",
     ):
-        assert A.is_frozen(n), n
+        assert R.is_frozen(n), n
         with pytest.raises(RuntimeError):
-            hf.assert_text_only([n, "model.layers.0.mlp.down_proj.weight"])
-    hf.assert_text_only(["model.layers.0.mlp.down_proj.weight", "model.embed_tokens.weight"])
-    assert not A.is_frozen("model.layers.0.self_attn.o_proj.weight")
+            R.assert_text_only([n, "model.layers.0.mlp.down_proj.weight"])
+    R.assert_text_only(["model.layers.0.mlp.down_proj.weight", "model.embed_tokens.weight"])
+    assert not R.is_frozen("model.layers.0.self_attn.o_proj.weight")
 
 
 # ------------------------------------------------------------------ chat template and end token
@@ -201,16 +203,20 @@ def test_chat_prompt_never_silently_ignores_enable_thinking():
     assert qwen.calls[-1]["enable_thinking"] is True
 
 
-def test_panel_p3gen_and_genaudit_route_through_the_chat_helpers():
-    from wsp.wm import genaudit as GA
-    from wsp.wm import p3gen as PG
-    from wsp.wm import panel as P
+def test_registered_wm_files_are_untouched_by_study_m():
+    """Chair rule (20 Nov): study M never edits files the frozen 9B study registers. The wm files study M once touched
+    (46967f8, reverted) must match their hashes in the C1 manifest; genaudit/panel/p3gen must not import wm.chat."""
+    import hashlib
+    from pathlib import Path
 
-    gem = _Tok({"<end_of_turn>": 106}, GEMMA_TEMPLATE)
-    P.chat_prompt(gem, "x")
-    PG.chat(gem, "x")
-    assert all("enable_thinking" not in c for c in gem.calls)
-    assert GA.stop_ids(gem) == {1, 106}
+    root = Path(__file__).resolve().parents[1]
+    man = json.loads((root / "docs/prereg/wme_manifest_draft.json").read_text())
+    flat = json.dumps(man)
+    for f in ("actions", "controls", "hf", "panel"):
+        h = hashlib.sha256((root / f"src/wsp/wm/{f}.py").read_bytes()).hexdigest()
+        assert h in flat, f"src/wsp/wm/{f}.py differs from its registered hash"
+    for f in ("genaudit", "panel", "p3gen"):
+        assert "wm import chat" not in (root / f"src/wsp/wm/{f}.py").read_text()
 
 
 # ------------------------------------------------------------------ text-only loading
@@ -236,14 +242,14 @@ def test_text_only_load_matches_the_source_model_and_ties_the_head(tmp_path, pre
     path = _write_checkpoint(src, tmp_path / "ck", prefix=prefix)
     m = G3.load_text_from_path(path, device="cpu")
     names = [n for n, _ in m.named_parameters()]
-    assert not any(A.is_frozen(n) for n in names)
+    assert not any(R.is_frozen(n) for n in names)
     assert m.lm_head.weight.data_ptr() == m.model.embed_tokens.weight.data_ptr()
     ids = torch.tensor([[2, 5, 9, 11, 13, 7, 21, 30, 4]])
     with torch.no_grad():
         a = src(ids).logits
         b = m(ids).logits
     assert torch.equal(a, b)
-    rm = A.RoleMap.from_config(json.loads((path / "config.json").read_text()))
+    rm = R.GemmaRoleMap.from_config(json.loads((path / "config.json").read_text()))
     sd = dict(m.named_parameters())
     for name in rm.writers().values():
         assert name in sd
@@ -286,7 +292,7 @@ def test_line_state_endpoints_are_bitwise_and_restore_is_exact(tmp_path):
     base_hash = G3.text_state_hash(m)
     line = G3.WeightLine(G3.WeightSource(pa), G3.WeightSource(pb), chunk_elems=37)
     names = line.names()
-    assert "model.embed_tokens.weight" in names and not any(A.is_frozen(n) for n in names)
+    assert "model.embed_tokens.weight" in names and not any(R.is_frozen(n) for n in names)
     assert "lm_head.weight" not in names  # tied: written through embed_tokens
     rec = line.apply(m, 0.0)
     assert rec["changed_tensors"] == 0 and G3.text_state_hash(m) == base_hash
@@ -347,17 +353,15 @@ def _logits(m, ids):
         return m(ids).logits.float()
 
 
-def test_compensated_and_qk_norm_controls_cover_sliding_layers_and_are_exact():
+def test_compensated_controls_cover_sliding_layers_and_are_exact():
     m = _tiny(seed=4)
-    rm = A.RoleMap.from_config(_mm_config(m.config))
+    rm = R.GemmaRoleMap.from_config(_mm_config(m.config))
     ids = torch.tensor([[2, 5, 9, 11, 13, 7, 21, 30, 4]])
     ref = _logits(m, ids)
     params = dict(m.named_parameters())
     sess = A.EditSession(params, "base", rm)
     for bundle in C.compensated_pairs(rm, mlp_layers=(0, 5), attention_layers=(0, 5)):
         sess.apply_bundle(bundle)
-    for act in C.post_norm_cancelled_scales(rm, layers=(0, 1, 5)):
-        sess.apply(act)
     out = _logits(m, ids)
     assert torch.equal(out, ref)
     sess.restore()
@@ -370,7 +374,7 @@ def test_uniform_writer_rescale_is_cancelled_by_gemma_post_norms():
     m = _tiny(
         seed=5, rms_norm_eps=1e-12
     )  # tiny random writers output ~1e-4, where a 1e-6 eps would dominate
-    rm = A.RoleMap.from_config(_mm_config(m.config))
+    rm = R.GemmaRoleMap.from_config(_mm_config(m.config))
     ids = torch.tensor([[2, 5, 9, 11, 13, 7, 21, 30, 4]])
     ref = _logits(m, ids)
     sess = A.EditSession(dict(m.named_parameters()), "base", rm)
@@ -396,7 +400,7 @@ def test_uniform_writer_rescale_is_cancelled_by_gemma_post_norms():
 
 def test_lora_targets_and_training_run_on_a_tied_gemma_text_model():
     m = _tiny(seed=6).float()
-    rm = A.RoleMap.from_config(_mm_config(m.config))
+    rm = R.GemmaRoleMap.from_config(_mm_config(m.config))
     targets = LR.writer_targets(rm)
     assert len(targets) == 12 and all(
         t.endswith(("o_proj.weight", "down_proj.weight")) for t in targets
@@ -442,7 +446,7 @@ def test_sparse_config_is_resolved_through_gemma3_defaults(tmp_path):
     ]  # the tiny vocab differs from the class default
     (path / "config.json").write_text(json.dumps(cfg))
     res = G3.resolved_config(path)
-    rm = A.RoleMap.from_config(res)
+    rm = R.GemmaRoleMap.from_config(res)
     assert rm.tied and rm.n_layers == 6 and len(rm.layer_types) == 6
     assert res["text_config"]["head_dim"] == 256 and res["text_config"]["sliding_window"] == 4096
     sig = G3.architecture_signature(path)

@@ -356,12 +356,11 @@ def dead_vocab_rows(
 
 
 def post_norm_cancelled_scales(rolemap: A.RoleMap, layers, factor=2.0) -> list:
-    """k_proj x ``factor`` on every softmax-attention layer in ``layers`` (full; Gemma 3 sliding too), cancelled by
-    k_norm; bf16-exact for 2."""
+    """k_proj x ``factor`` on every full-attention layer in ``layers`` (cancelled by k_norm; bf16-exact for 2)."""
     out = [
         A.scale(rolemap.name(L, "k"), factor=factor, dose=1.0)
         for L in layers
-        if rolemap.layer_types[L] in A.ATTENTION_TYPES
+        if rolemap.layer_types[L] == "full_attention"
     ]
     if not out:
         raise NotInertError("no full-attention layer (k_proj + k_norm) among the requested layers")
@@ -379,7 +378,7 @@ def compensated_pairs(rolemap: A.RoleMap, mlp_layers=(), attention_layers=()) ->
         for L in mlp_layers
     ]
     for L in attention_layers:
-        if rolemap.layer_types[L] not in A.ATTENTION_TYPES:
+        if rolemap.layer_types[L] != "full_attention":
             raise NotInertError(
                 f"layer {L}: linear attention gates and normalises its output; not compensable"
             )

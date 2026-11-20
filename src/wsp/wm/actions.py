@@ -13,8 +13,7 @@ Conventions.
   the first time it is touched and ``restore`` copies them back.
 * **Theta-hash.** ``sha256(base_hash, sorted (name, tensor_hash) of every touched tensor whose bytes differ from the
   saved original)``. It equals the base hash exactly when the state is the base, and does not depend on tensor order.
-* **Frozen tensors.** Vision-tower (``model.visual.*``; Gemma 3 ``vision_tower.*`` and ``multi_modal_projector.*``)
-  and MTP (``mtp.*``) tensors are never edited.
+* **Frozen tensors.** Vision-tower (``model.visual.*``) and MTP (``mtp.*``) tensors are never edited.
 * **Role map.** Layer count, widths, layer types and writer names come from the pinned config, never constants.
 """
 
@@ -29,21 +28,8 @@ from collections.abc import Iterable, MutableMapping, Sequence
 
 import torch
 
-FROZEN_PATTERNS = (
-    re.compile(r"(^|\.)visual\."),
-    re.compile(r"(^|\.)mtp\."),
-    re.compile(r"(^|\.)vision_tower\."),  # Gemma 3 / MedGemma SigLIP tower
-    re.compile(r"(^|\.)multi_modal_projector\."),
-)
-MIXER_OUT = {
-    "full_attention": "self_attn.o_proj",
-    "linear_attention": "linear_attn.out_proj",
-    "sliding_attention": "self_attn.o_proj",  # Gemma 3 local layers (softmax attention, 1,024-token window)
-}
-ATTENTION_TYPES = ("full_attention", "sliding_attention")  # softmax attention with q/k/v/o projections
-# Default of ``tie_word_embeddings`` when the config omits it (the MedGemma config does): Gemma 3 ties lm_head to
-# embed_tokens. Any other model type keeps the old default (untied), so Qwen behaviour is unchanged.
-TIED_BY_DEFAULT = ("gemma3", "gemma3_text")
+FROZEN_PATTERNS = (re.compile(r"(^|\.)visual\."), re.compile(r"(^|\.)mtp\."))
+MIXER_OUT = {"full_attention": "self_attn.o_proj", "linear_attention": "linear_attn.out_proj"}
 
 
 class FrozenTensorError(PermissionError):
@@ -109,8 +95,7 @@ class RoleMap:
         unknown = set(types) - set(MIXER_OUT)
         if unknown:
             raise ValueError(f"unknown layer types {sorted(unknown)}")
-        default = (config.get("model_type") or text.get("model_type")) in TIED_BY_DEFAULT
-        tied = bool(config.get("tie_word_embeddings", text.get("tie_word_embeddings", default)))
+        tied = bool(config.get("tie_word_embeddings", text.get("tie_word_embeddings", False)))
         return cls(
             n,
             int(text["hidden_size"]),
@@ -128,7 +113,7 @@ class RoleMap:
             path = MIXER_OUT[self.layer_types[layer]]
         elif role in ("down", "up", "gate"):
             path = f"mlp.{role}_proj"
-        elif role in ("q", "k", "v") and self.layer_types[layer] in ATTENTION_TYPES:
+        elif role in ("q", "k", "v") and self.layer_types[layer] == "full_attention":
             path = f"self_attn.{role}_proj"
         elif role in ("lin_qkv", "lin_z") and self.layer_types[layer] == "linear_attention":
             path = "linear_attn.in_proj_" + role[4:]

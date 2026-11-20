@@ -24,6 +24,7 @@ from pathlib import Path
 import torch
 
 from wsp.wm import actions as A
+from wsp.wm.wmm import roles as R
 
 TARGETS = {
     "google/medgemma-1.5-4b-it": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b",  # study M target
@@ -48,7 +49,7 @@ NON_TEXT = (
 
 def text_key(ckpt_key: str) -> str | None:
     """Checkpoint key -> ``Gemma3ForCausalLM`` parameter name; None for vision/projector tensors."""
-    if ckpt_key.startswith(NON_TEXT) or A.is_frozen(ckpt_key):
+    if ckpt_key.startswith(NON_TEXT) or R.is_frozen(ckpt_key):
         return None
     for src, dst in TEXT_PREFIXES:
         if ckpt_key.startswith(src):
@@ -116,7 +117,7 @@ def text_config(path):
     t = dict(cfg.get("text_config", cfg))
     t.pop("model_type", None)
     tc = Gemma3TextConfig(**t)
-    tc.tie_word_embeddings = A.RoleMap.from_config(
+    tc.tie_word_embeddings = R.GemmaRoleMap.from_config(
         {
             **cfg,
             "text_config": {
@@ -173,7 +174,7 @@ def architecture_signature(path) -> dict:
     return {
         "architectures": cfg.get("architectures"),
         "text_config": {k: t.get(k) for k in ARCH_KEYS},
-        "tied": A.RoleMap.from_config(cfg).tied,
+        "tied": R.GemmaRoleMap.from_config(cfg).tied,
         "n_text_tensors": len(shapes),
         "n_text_params": int(sum(int(torch.tensor(s).prod()) for s in shapes.values())),
         "shapes_sha256": hashlib.sha256(json.dumps(shapes, sort_keys=True).encode()).hexdigest(),
@@ -258,9 +259,7 @@ def load_text_from_path(path, device="cpu"):
     model.eval()
     for p in model.parameters():
         p.requires_grad_(False)
-    from wsp.wm import hf
-
-    hf.assert_text_only(n for n, _ in model.named_parameters())
+    R.assert_text_only(n for n, _ in model.named_parameters())
     return model
 
 

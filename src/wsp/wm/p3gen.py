@@ -69,9 +69,12 @@ def user_prompt(panel: str, item) -> str:
 
 
 def chat(tok, user: str, thinking: bool = False) -> str:
-    from wsp.wm import chat as CH
-
-    return CH.chat_prompt(tok, user, thinking=thinking)
+    return tok.apply_chat_template(
+        [{"role": "user", "content": user}],
+        tokenize=False,
+        add_generation_prompt=True,
+        enable_thinking=thinking,
+    )
 
 
 # ------------------------------------------------------------------ answer extraction
