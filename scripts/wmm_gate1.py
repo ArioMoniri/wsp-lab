@@ -500,7 +500,7 @@ def guard_stats(base, base_s, rec):
         "benign", G1.paired([int(x) for x in be], [int(x) for x in bb])
     )
     sq_b, sq_e = [], []
-    for n in ("mq", "mm"):
+    for n in [m for m in ("mq", "mm") if m in rec["sets"]]:
         sb, se = base_s["sets"][n], rec["sets"][n]
         for cb, ce, yb, ye in zip(
             sb["conf"], se["conf"], sb["correct"], se["correct"], strict=True
@@ -597,10 +597,10 @@ def main():
     screen = ctx.read("screen") or {}
     done = {"perm": ctx.read("permuted") or {}, "guards": ctx.read("guards") or {}}
 
-    def screen_doses(pairs):
+    def screen_doses(pairs, prim):
         for fam, dose in pairs:
             tag = f"{fam}@{dose:g}"
-            names = ["mq", "mm"] + (["mq_syc"] if fam == "syc_lora" else [])
+            names = list(prim) + (["mq_syc"] if fam == "syc_lora" else [])
             rec = state(
                 ctx,
                 tag,
@@ -609,7 +609,8 @@ def main():
                 apply=lambda fam=fam, dose=dose: G0.apply_state(ctx, fam, dose, factors),
                 orders=orders,
             )
-            screen[tag] = edit_stats(base_s, rec, ["mq", "mm"])
+            screen[tag] = edit_stats(base_s, rec, list(prim))
+            screen[tag]["primaries"] = list(prim)
             ctx.write("screen", screen)
 
     def apply_tag(tag):
@@ -624,11 +625,14 @@ def main():
         for tag in qual:
             if tag in done["perm"]:
                 continue
-            rec = state(ctx, tag, ["mq_perm", "mm_perm"], S, apply=apply_tag(tag), orders=orders)
+            prim = screen[tag].get("primaries", ["mq", "mm"])
+            rec = state(
+                ctx, tag, [f"{n}_perm" for n in prim], S, apply=apply_tag(tag), orders=orders
+            )
             done["perm"][tag] = edit_stats(
-                {"sets": {"mq": base_s["sets"]["mq_perm"], "mm": base_s["sets"]["mm_perm"]}},
-                {"sets": {"mq": rec["sets"]["mq_perm"], "mm": rec["sets"]["mm_perm"]}},
-                ["mq", "mm"],
+                {"sets": {n: base_s["sets"][f"{n}_perm"] for n in prim}},
+                {"sets": {n: rec["sets"][f"{n}_perm"] for n in prim}},
+                prim,
             )
             ctx.write("permuted", done["perm"])
         both = [t for t in qual if G1.positive(done["perm"][t]["untruncated_in_both"])]
@@ -648,12 +652,11 @@ def main():
             ctx.write("guards", done["guards"])
         return qual, both, drop
 
-    central = G1.ORDER[:5]
     stopped = None
     try:
-        screen_doses(central)
+        screen_doses(G1.ORDER[: G1.CENTRAL], ["mq", "mm"])
         qualify_and_guard()
-        screen_doses(G1.ORDER[5:])
+        screen_doses(G1.ORDER[G1.CENTRAL :], ["mq"])  # Amendment 2: MedQA only
         qual, both, syc_drop = qualify_and_guard()
     except SystemExit as e:
         stopped = str(e)

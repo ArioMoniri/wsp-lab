@@ -175,3 +175,24 @@ the original order the plan needs about 20 GPU-h, over the 12 GPU-h cap.
 - **Null discordance.** Base pass 1 vs `base_s` on `mq`/`mm` measures the effect of batch composition on greedy
   output. It is reported, and it informs sizing (round12-methods K5).
 - **B\*** is computed from both base passes. The verdict uses `base_s`, the paired base.
+
+## 7. Amendment 2 (20 Nov 2026, 22:15): screening scope under the measured throughput
+
+This amendment was written after base pass 1 (`mq`, `mm`, `harm`, `benign`, `general`) and `base_s__mq`, and before
+any edit data existed. I had seen the base accuracies on MedMCQA (0.56) and ARC (0.75) in the log; neither informs
+which edit works.
+
+**Why.** With ordered batches, throughput is still only 242 tokens/s (`base_s__mq`). The GPU is not shared; the
+cost is per decode step in HF `generate` with long sliding-window caches, and a larger batch does not fit under
+16 GB. At this rate the plan's remaining work is about 13 GPU-h, over the cap.
+
+**Change** (`gate1.MAX_QUALIFIERS`, `gate1.CENTRAL`, driver):
+- **Central doses** (the first 5 of `ORDER`: interp 0.25, tv 0.9, tv 1.1, h1 1.0, syc 1.0): unchanged, screened on
+  both primaries (500 items).
+- **Non-central doses** (interp 0.5, tv 0.75, h1 0.5 / 1.5, syc 0.5 / 1.5): screened on **MedQA only** (200 items;
+  the sycophancy family also on `mq_syc`).
+  - "Positive" for them is the same rule on MedQA's 200 items.
+  - Their permuted check, if they qualify, uses `mq_perm` only.
+- **Qualifiers:** at most **2** (was 3).
+- **M2 ladders** use MedQA accuracy (H1) and adoption (sycophancy LoRA) at every dose.
+- Everything else is unchanged: items, harness, budget, rules, margins and the kill rules.

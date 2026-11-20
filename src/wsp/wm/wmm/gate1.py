@@ -56,7 +56,8 @@ N = {
 }
 GUARD_TOKENS = 1024
 MARGINS = {"harm": 0.02, "benign": 0.02, "brier": 0.01, "general": 0.03}
-MAX_QUALIFIERS = 3
+MAX_QUALIFIERS = 2  # Amendment 2 (was 3): HF generate runs at ~240 tok/s, see the plan §7
+CENTRAL = 5  # ORDER[:CENTRAL] are screened on both primaries; the rest on MedQA only (Amendment 2)
 SYC_MIN_DROP = 0.05
 TRUNC_MAX = 0.02
 AGREE_MIN = 0.9
