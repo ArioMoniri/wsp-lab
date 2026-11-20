@@ -1,0 +1,63 @@
+{
+ "study": "M",
+ "gate": "0b",
+ "ruling": "docs/council/2026-11-20/RULING-wmm-gate0.md M1",
+ "run_dir": "data/wmm/gate0b-2026-11-20",
+ "manifest": {
+  "study": "M",
+  "gate": "0b",
+  "ruling": "docs/council/2026-11-20/RULING-wmm-gate0.md M1",
+  "target": "google/medgemma-1.5-4b-it",
+  "revision": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b",
+  "git_sha": "d3fd076a656a0b90802358a2346d829c047e8934",
+  "instruction": "Think step by step, then end your response with the final answer in the form \"Final Answer: (X)\", where X is the letter of the correct option.",
+  "budget": 4096,
+  "cards": {
+   "medqa": 69.1,
+   "medmcqa": 59.8
+  },
+  "vram_cap_gb": 16.0,
+  "gen_batch": 32
+ },
+ "medqa": {
+  "n": 400,
+  "accuracy": 71.0,
+  "se": 2.2688102609076854,
+  "card": 69.1,
+  "threshold": 64.1,
+  "difference": 1.9000000000000057,
+  "truncation_rate": 0.015,
+  "accuracy_ok": true,
+  "truncation_ok": true,
+  "pass": true,
+  "source": "medqa",
+  "split": "dev",
+  "budget": 4096,
+  "extractor_rules": {
+   "boxed": 383,
+   "final_answer": 11,
+   "None": 6
+  },
+  "unparsed_untruncated": 0.0,
+  "length_p50": 1087,
+  "length_p95": 2194,
+  "thinking_block_rate": 0.2425
+ },
+ "verdict": {
+  "medqa_pass": true,
+  "fallback_run": false,
+  "medmcqa_pass": null,
+  "gate0b_pass": true,
+  "primary": "medqa"
+ },
+ "designation": {
+  "salt": "wmm-g0b",
+  "n": 400,
+  "pool": "MedQA dev (1,272)",
+  "excluded": "784 Gate 0 exposed items (by text hash and (source, id)); 0 overlap asserted",
+  "exposure_file": "data/wmm/gate0b-2026-11-20/medqa_g0b_exposure.json"
+ },
+ "medmcqa_fallback": "not run (MedQA passed)",
+ "gpu_hours": 0.59,
+ "gpu_hours_note": "wall time with the model resident; one run, no smoke"
+}
