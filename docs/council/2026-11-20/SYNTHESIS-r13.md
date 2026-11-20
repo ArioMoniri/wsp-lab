@@ -130,3 +130,45 @@ The direction-only P1-style target is **not** powerable on the 9B bank, because 
 | Mamba/SSM rejected now | Short paths; LC-PFN lost; C2-D | re-entry conditions R4 (i)–(iv) | 0 | Revisit only if all four hold |
 | Beyond-dose (a) in study M | Direction-varied bank at matched norm | PREREG_WMM, ≥ 30 units, nulls | local, $0 (priced from Gate 1 timing) | No ridge signal on dev: close (a) |
 | WSR-style reader, descriptive, study M | Tests P1's Muse failure on Gemma post-norms | after Gates 0b/1 | LLM tokens, priced first | — |
+
+## Addendum (20 Nov 2026): R2 noise-floor result and its consequences
+
+**Result.** `docs/reviews/wme/wme-stagew2-noisefloor-2026-11-20.md` is a descriptive report: CPU only, $0, 1 replicate
+pair at the base state, plus the stage-W pair as a secondary check.
+
+| | Value |
+|---|---|
+| Floor E | **0.357** [0.323, 0.389] |
+| Pooled E, zero-shot | 0.771 |
+| Pooled E, k = 2 | 0.881 |
+| Headroom, zero-shot | 0.414 |
+| Headroom, k = 2 | 0.523 |
+| Floor / pooled E: accuracy endpoints | 0.29–0.34 / 0.51–0.56 |
+| Floor / pooled E: truncation endpoints | 0.37–0.43 / 0.94–1.07 |
+
+The world-model seat's "√(2/π) noise floor" conjecture is **refuted**. Shared item sampling on a fixed panel is not
+noise.
+
+**Consequences (chair).**
+1. **(a) is not closed on 9B by noise.** The W2 tie is a *model and feature* failure on real within-type structure,
+   mostly in truncation. W2 remains a FAIL and (a) remains a registered negative for the frozen study. Nothing
+   confirmatory changes.
+2. **The diagnosis sharpens.** The within-type spread is real; the methods seat measured 0.93 SE². The post-hoc
+   pooled + dose model reaches 0.678, still far above the 0.357 floor. So **substantial predictable structure is left
+   unexplained**. The user's intuition that a better model could capture more is therefore *not* ruled out.
+3. **An exploratory model search on the exposed 9B W2 data is authorised**, CPU only, $0, labelled post hoc.
+   - Its purpose is to **freeze one specification** for later fresh-data confirmation.
+   - Candidates, compared under leave-one-run-out:
+     - ridge/GP on per-layer J1 features;
+     - per-endpoint dose-plus-direction models;
+     - **a small sequence or memory model over the trajectory points and the R1 feature sequence**, an SSM or GRU
+       treated as one candidate among these, not a presumption;
+     - pooled + dose as the baseline to beat.
+   - The R4 re-entry conditions still bind any *claim* about an SSM.
+4. **Confirmation needs fresh data.** Two routes:
+   - study M (local, $0, after Gates 0b/1, under R5);
+   - fresh 9B runs (about 17 GPU-h, about $84 or more), which would reverse ruling Q4 and is the user's decision.
+   The chair recommends study M first.
+5. **Test-isolation bug flagged to C1.** The `torch.use_deterministic_algorithms` setting leaks across the
+   `test_wme_c1_v2l` tests, which causes 3 extra full-suite failures. It must be scoped and restored in tests **and**
+   in production code.
