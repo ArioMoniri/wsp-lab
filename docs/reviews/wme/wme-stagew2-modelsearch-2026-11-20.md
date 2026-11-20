@@ -50,11 +50,17 @@ seen beforehand were the published ones: W2 itself, the round-13 methods specifi
 | C3b | C2 + GP on per-layer J1 and dose | per (type, endpoint) GP posterior mean of the C2 residual, RBF kernel on standardised [J1G, D] (25 inputs), squared distance / 25 | (ℓ, ρ = signal/noise variance): (·, 0) = C2, then ℓ ∈ {2, 1, 0.5} x ρ ∈ {0.1, 0.3, 1, 3} | 144 + GP |
 | C4 | per-endpoint heads | each endpoint independently picks its base model and k-offset weight by inner CV (separate accuracy and truncation heads) | base ∈ {C2, pooled, logit-dose (C2 on the logit scale), C2 + ridge α 1000, 100, 10}; ω ∈ {1, 0.5, 0} at k = 2 (ω = 1 only at k = 0); first entry (C2, ω 1) | ≤ 144 + 288 |
 | C5a | C2 + tiny GRU | GRU over the 6 ordered points, inputs per point (13): type one-hot (3), point x/8, D, R1 summaries (3), the C2 residual in SE units at given points (4; 0 after k), a given-point flag. A zero-initialised linear readout gives a correction in SE units on top of C2 (with its ω = 1 offset at k = 2) | off (= C2), then (hidden h, L2 λ) ∈ {4, 8} x {0.1, 0.01, 0.001} | h 4: 248; h 8: 588 |
-| C5b | C2 + selective diagonal SSM (Mamba-style) | same inputs and readout; h_t = a_t ⊙ h_{t−1} + Δ_t ⊙ (B u_t), a_t = exp(−Δ_t e^{A}), Δ_t = softplus(W_Δ u_t + b); y_t = C h_t + D_u u_t | off (= C2), then {4, 8} x {0.1, 0.01, 0.001} | h 4: 184; h 8: 312 |
+| C5b | C2 + selective diagonal SSM (Mamba-style) | same inputs and readout; h_t = a_t ⊙ h_{t−1} + Δ_t ⊙ (B u_t), a_t = exp(−Δ_t e^{A}), Δ_t = softplus(W_Δ u_t + b); y_t = C (h_t ⊙ silu(Z u_t + z)) + D_u u_t (amended, see below) | off (= C2), then {4, 8} x {0.1, 0.01, 0.001} | h 4: 240; h 8: 424 |
 
 C5 training: full batch, Adam (learning rate 0.02), 300 steps, Huber loss (δ 1) in SE units on the points after k, an
 L2 penalty λ Σθ², and an ensemble mean over 3 seeds. k = 0 and k = 2 are trained separately. Parameter counts are
 matched in order of magnitude to C3a's 288 ridge coefficients. The ~45-path sample is the reason for the small sizes.
+
+**Amendment A1 (20 Nov 2026, before any fit on W2 data).** As first declared, C5b had no output gate (y_t = C h_t +
+D_u u_t). With that readout its state can only decay after the given points, so it failed the synthetic unit test
+of extrapolating a path effect that grows along the path, which the GRU passes. The amendment adds the Mamba output
+gate silu(Z u_t + z), raising the parameter counts from 184 / 312 to 240 / 424. Nothing else changed. The amendment
+is committed together with the code, before the W2 run.
 
 ### 0.4 Tests and the selection rule
 
