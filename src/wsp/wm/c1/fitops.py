@@ -190,6 +190,8 @@ def fit_all(
             log(f"inner fold {f} done")
     q = {arm: conformal_q(scores[arm]) for arm in scores}
     final = fit_fn([to_traj(h, spec) for h in train], [h["component"] for h in train])
+    if log:
+        log("final fit done")
     cov = {}
     if covset:
         tt = [to_traj(h, spec) for h in covset]

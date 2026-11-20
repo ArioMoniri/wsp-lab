@@ -24,6 +24,19 @@ ATTEST = RG.LaunchAttestation(True, True, REF, "c" * 64, ["fixture"])
 H1 = 3600.0
 
 
+@pytest.fixture(autouse=True)
+def _c1_clean_global_state():
+    """R11 (SYNTHESIS-r13 addendum item 5): every test here starts from torch's process defaults (no deterministic mode, default SDPA
+    backends, no CUBLAS workspace variable), whatever an earlier test in any module left behind (e.g.
+    ``wsp.predictor.models.seed_all``), and the caller's state is restored afterwards."""
+    from wsp.wm.c1 import genengine as _GE
+
+    saved = _GE.global_state()
+    _GE.restore_state(_GE.BASELINE_STATE)
+    yield
+    _GE.restore_state(saved)
+
+
 class Clock:
     def __init__(self):
         self.t = 0.0
@@ -221,12 +234,21 @@ class Tok:
     def convert_tokens_to_ids(self, t):
         return 7 if t == "<|im_end|>" else -1
 
+    def encode(self, t, add_special_tokens=True):
+        assert add_special_tokens is False
+        return [ord(c) for c in t]
+
+    def decode(self, ids, skip_special_tokens=False):
+        return "".join(chr(i) for i in ids if not (skip_special_tokens and i in (5, 7)))
+
 
 def test_vllm_block_is_the_registered_generation():
     b = GE.vllm_block("x", Tok(), ["a", "b"])
     assert b == {
         "name": "x",
         "prompts": ["<a>", "<b>"],
+        "prompt_token_ids": [[60, 97, 62], [60, 98, 62]],
+        "hf_text": True,
         "max_tokens": 128,
         "stop_token_ids": [5, 7],
         "state": {"kind": "base"},
@@ -265,23 +287,29 @@ def test_guard_records_the_v2l_cap_and_the_ledger_enforces_it(tmp_path):
 def test_cap_generation_rules(tmp_path):
     clk = Clock()
     g = guard(tmp_path / "s", clk)
+    basis = {"charged_gpu_h": 108.0, "priced_remainder_gpu_h": 8.0, "previous_cap_gpu_h": 110.0}
+    r8 = dict(rule="R8", basis=basis, outcome_blind=True)
     with pytest.raises(ValueError):  # never lowers
-        g.ledger.record_cap(RG.CapGeneration(100.0, "2026-11-20", "chair", "s", True))
-    with pytest.raises(ValueError):  # a chair raise must have been announced to the user
-        RG.CapGeneration(120.0, "2026-11-20", "chair", "§II.31 cap generation 1", False).check()
-    with pytest.raises(ValueError):  # never beyond $1,000 at the 4.89 x 1.10 convention
-        RG.CapGeneration(190.0, "2026-11-20", "chair", "s", True).check()
+        g.ledger.record_cap(RG.CapGeneration(100.0, "2026-11-20", "user", "s", True))
+    with pytest.raises(ValueError):  # §II.31.8 R8: a later raise is only the mechanical value
+        RG.CapGeneration(120.0, "2026-11-20", "chair", "§II.31", True).check()
     with pytest.raises(ValueError):
-        RG.CapGeneration(120.0, "20 Nov", "chair", "s", True).check()
+        RG.CapGeneration(125.0, "2026-11-20", "chair", "s", True, **r8).check()  # R8 says 120
+    with pytest.raises(ValueError):  # never beyond $1,000 at the 4.89 x 1.10 convention
+        RG.CapGeneration(190.0, "2026-11-20", "user", "s", True).check()
+    with pytest.raises(ValueError):
+        RG.CapGeneration(120.0, "20 Nov", "chair", "s", True, **r8).check()
+    with pytest.raises(ValueError):  # outcome-blind attestation required
+        RG.CapGeneration(120.0, "2026-11-20", "chair", "s", True, "R8", basis, False).check()
+    # announcing is a notification, not a gate: an R8 raise not yet announced is valid
+    RG.CapGeneration(120.0, "2026-11-20", "chair", "s", False, **r8).check()
     # a chair raise is a new cap generation, not a contract transition: eligible results stay eligible
     g.open_instance(1)
     store = H.UnitStore(tmp_path / "u")
     g.canary(REF)
     H.run_units(store, [({"u": 1}, "u1")], lambda r: {"v": 1}, "t" * 64, "p", guard=g)
     g.canary(REF)
-    raise1 = RG.CapGeneration(
-        120.0, "2026-11-20", "chair", "PREREG_WME §II.31 cap generation 1", True
-    )
+    raise1 = RG.CapGeneration(120.0, "2026-11-20", "chair", "PREREG_WME §II.31.8 R8", False, **r8)
     g2 = guard(tmp_path / "s", clk, cap=raise1)
     caps = g2.ledger.cap_generations()
     assert [c["cap_gpu_h"] for c in caps] == [110.0, 120.0] and caps[1]["index"] == 1
@@ -464,8 +492,11 @@ def test_monitor_error_canary_and_idle_rules(tmp_path):
     def boom(r):
         raise RuntimeError("CUDA error: an illegal memory access")
 
-    with pytest.raises(HL.HealthIncident):
+    with pytest.raises(
+        RuntimeError
+    ) as ei:  # R3: re-raised unwrapped (its registered cause survives)
         mon.wrap_fn(g, boom)({"kind": "field_group"})
+    assert not isinstance(ei.value, HL.HealthIncident)
     assert g.open_incidents()[-1]["kind"] == "worker_error"
     g.resolve_incidents("f", "f")
     with pytest.raises(HL.HealthIncident):
@@ -524,6 +555,7 @@ def test_chunk_summary_is_written_at_every_chunk_boundary(tmp_path):
         mon.wrap_canary(g, canary),
         chunk=2,
         on_chunk=lambda rec, n: mon.chunk_summary(g, rec, n),
+        before_begin=mon.before_begin(g),
     )
     lines = [
         json.loads(x) for x in (tmp_path / "runs/health/summary.jsonl").read_text().splitlines()

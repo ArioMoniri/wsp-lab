@@ -99,6 +99,8 @@ def env_for(rt, args, ctx, need_fit=True):
         )
         st.world, st.key = world, key
     st.world.check = ctx.check
+    st.world.tick = ctx.tick  # §II.31.8 R7: CPU-kind progress heartbeat
+    st.env.tick = ctx.tick
     return st.env
 
 

@@ -158,6 +158,19 @@ def _hf_at_state(m, gen_items) -> str:
     return MO.sha_ids([r["ids"] for r in o])
 
 
+def _vllm_canary_job(repo, tok, smoke) -> dict:
+    """The stage-W vLLM canary block, plus under C1(b) the second (``vllm_gen``) block (§II.31.2)."""
+    from wsp.wm import p3gen as G
+    from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import vllmops as VO
+
+    users = [G.user_prompt("mmlupro_gen", it) for it in MO.gen_canary_items()]
+    job = VO.canary_job(repo, [G.chat(tok, u) for u in users], smoke=smoke)
+    if GE.GEN_ENGINE == "vllm":
+        job["blocks"].append(GE.vllm_block("vllm_gen", tok, users))
+    return job
+
+
 def MO_tokenizer(rt):
     from transformers import AutoTokenizer
 
@@ -232,16 +245,17 @@ def h_parity(rt, req, ctx):
         from wsp.wm.c1 import vllmops as VO
 
         rt.release()
-        prompts = [
-            G.chat(MO_tokenizer(rt), G.user_prompt("mmlupro_gen", it))
-            for it in MO.gen_canary_items()
-        ]
-        v0 = VO.spawn(VO.canary_job(rt.cfg.repo, prompts, smoke=rt.cfg.smoke), ctx.scratch / "v0")[
+        blocks = VO.spawn(_vllm_canary_job(rt.cfg.repo, MO_tokenizer(rt), rt.cfg.smoke), ctx.scratch / "v0")[
             "blocks"
-        ][0]["ids_sha256"]
+        ]
+        v0 = blocks[0]["ids_sha256"]
         res["vllm_gpu0"] = v0
         res["vllm_gpu1"] = g1.get("vllm")
         res["vllm_gpu0_eq_gpu1"] = v0 == g1.get("vllm")
+        if len(blocks) > 1:  # C1(b) active: the second vLLM canary (§II.31.2) on both GPUs
+            res["vllm_gen_gpu0"] = blocks[1]["ids_sha256"]
+            res["vllm_gen_gpu1"] = g1.get("vllm_gen")
+            res["vllm_gen_gpu0_eq_gpu1"] = res["vllm_gen_gpu0"] == g1.get("vllm_gen")
     return res, {}
 
 
@@ -264,13 +278,12 @@ def _gpu1_main(cfg):
         from wsp.wm.c1 import vllmops as VO
 
         rt.release()
-        prompts = [
-            G.chat(MO_tokenizer(rt), G.user_prompt("mmlupro_gen", it))
-            for it in MO.gen_canary_items()
-        ]
-        out["vllm"] = VO.spawn(
-            VO.canary_job(cfg["repo"], prompts, smoke=cfg["smoke"]), "/tmp/wme-c1-gpu1/v"
-        )["blocks"][0]["ids_sha256"]
+        blocks = VO.spawn(
+            _vllm_canary_job(cfg["repo"], MO_tokenizer(rt), cfg["smoke"]), "/tmp/wme-c1-gpu1/v"
+        )["blocks"]
+        out["vllm"] = blocks[0]["ids_sha256"]
+        if len(blocks) > 1:
+            out["vllm_gen"] = blocks[1]["ids_sha256"]
     print(json.dumps(out))
 
 

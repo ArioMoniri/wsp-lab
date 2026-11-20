@@ -69,7 +69,10 @@ class Engine:
     def stop_ids(self):
         return {self.tok.eos_token_id, self.tok.convert_tokens_to_ids("<|im_end|>")}
 
-    def gen(self, prompts, max_tokens, sample=None, stop_token_ids=None):
+    def gen(self, prompts, max_tokens, sample=None, stop_token_ids=None, prompt_ids=None, hf_text=False):
+        """``prompt_ids`` (§II.31.8 R5): generate from these token ids (the HF encoding), not by re-tokenising the
+        text; ``hf_text``: each output's text is ``tok.decode(ids, skip_special_tokens=True)`` with the HF tokenizer,
+        not vLLM's incremental detokenisation."""
         from vllm import SamplingParams
 
         kw = {"max_tokens": int(max_tokens)}
@@ -84,7 +87,13 @@ class Engine:
                 seed=int(sample["seed"]),
                 **kw,
             )
-        outs = self.llm.generate(prompts, sp, use_tqdm=False)
+        if prompt_ids is not None:
+            if len(prompt_ids) != len(prompts):
+                raise ValueError("prompt_token_ids and prompts differ in length")
+            inputs = [{"prompt_token_ids": [int(t) for t in ids]} for ids in prompt_ids]
+        else:
+            inputs = prompts
+        outs = self.llm.generate(inputs, sp, use_tqdm=False)
         stop = self.stop_ids()
         res = []
         for o in outs:
@@ -92,7 +101,8 @@ class Engine:
             ids = list(c.token_ids)
             while ids and ids[-1] in stop:
                 ids.pop()
-            res.append({"text": c.text, "ids": ids, "hit_max": c.finish_reason == "length"})
+            text = self.tok.decode(ids, skip_special_tokens=True) if hf_text else c.text
+            res.append({"text": text, "ids": ids, "hit_max": c.finish_reason == "length"})
         return res
 
     def apply_state(self, st: dict):
@@ -162,7 +172,14 @@ def run_job(job: dict) -> dict:
         eng.apply_state(b.get("state") or {"kind": "base"})
         try:
             prompts = b["prompts"]
-            res = eng.gen(prompts, b["max_tokens"], b.get("sample"), b.get("stop_token_ids"))
+            res = eng.gen(
+                prompts,
+                b["max_tokens"],
+                b.get("sample"),
+                b.get("stop_token_ids"),
+                b.get("prompt_token_ids"),
+                bool(b.get("hf_text")),
+            )
         finally:
             eng.restore()
         rec = {

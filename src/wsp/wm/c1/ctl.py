@@ -56,7 +56,11 @@ class Remote:
         log=None,
         revive=None,
         watch=None,
+        restart=None,
+        withdraw_grace_s: float = 120.0,
     ):
+        self.restart = restart  # kills and restarts the worker process (a withdrawn request that does not stop)
+        self.withdraw_grace_s = withdraw_grace_s
         self.watch = watch  # called on every poll while a request is in flight (run-health rules, §II.31)
         self.revive = (
             revive  # restarts a dead worker process (same instance); the inbox request survives
@@ -91,6 +95,30 @@ class Remote:
                 self.sleep(delay)
                 delay = min(delay * 2, 60.0)
 
+    def withdraw(self, req: dict) -> str:
+        """Really stop an in-flight request (PREREG_WME §II.31.8 R6): withdraw it from the inbox, fence it (worker
+        fence epoch above the request's, so the handler's next ``ctx.check`` raises ``Fenced``), wait up to
+        ``withdraw_grace_s`` for the worker to drop it, else kill and restart the worker process. The controller
+        resumes only under a new owner epoch (a new guard). Returns "fenced", "restarted" or "unconfirmed"."""
+        self._with_retry(lambda: self.t.cancel(req["id"]), "cancel")
+        self._with_retry(lambda: self.t.set_fence(int(req["epoch"]) + 1, req["instance"]), "fence")
+        self._journal({"event": "health_abort", "id": req["id"], "fence_epoch": int(req["epoch"]) + 1})
+        hb_of = getattr(self.t, "heartbeat", None)
+        out = "unconfirmed"
+        if hb_of is not None:
+            t0 = time.time()
+            while time.time() - t0 <= self.withdraw_grace_s:
+                hb = self._with_retry(hb_of, "heartbeat") or {}
+                if (hb.get("inflight") or {}).get("id") != req["id"]:
+                    out = "fenced"
+                    break
+                self.sleep(self.poll_s)
+        if out != "fenced" and self.restart is not None:
+            self.restart()
+            out = "restarted"
+        self._journal({"event": "withdrawn", "id": req["id"], "how": out})
+        return out
+
     def call(
         self, kind, epoch, instance, unit_key, label, args, timeout_s=None
     ) -> tuple[dict, Path]:
@@ -110,8 +138,7 @@ class Remote:
                 try:
                     self.watch()
                 except Exception:
-                    self._with_retry(lambda: self.t.cancel(req["id"]), "cancel")
-                    self._journal({"event": "health_abort", "id": req["id"]})
+                    self.withdraw(req)
                     raise
             age = self._with_retry(self.t.alive_age, "alive")
             if age is not None and age > self.dead_after_s:
@@ -178,6 +205,7 @@ def run_bracketed(
     max_chunk_s: float = 3600.0,
     clock=time.time,
     on_chunk=None,
+    before_begin=None,
 ) -> dict:
     """Start canary, then chunks of at most ``chunk`` units (or ``max_chunk_s`` of wall time), each closed by a
     canary. A failed canary halts (``CanaryMismatch``) after it is recorded: results since the previous canary are
@@ -191,7 +219,9 @@ def run_bracketed(
         t0 = clock()
         j = i
         while j < len(units) and j - i < chunk:
-            H.run_units(store, [units[j]], fn, theta0, panel, guard=guard)
+            H.run_units(
+                store, [units[j]], fn, theta0, panel, guard=guard, before_begin=before_begin
+            )
             j += 1
             if clock() - t0 > max_chunk_s:
                 break

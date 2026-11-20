@@ -99,6 +99,19 @@ class CapExceeded(RuntimeError):
     pass
 
 
+class IncidentAbort(RuntimeError):
+    """A run-health incident that aborts an in-flight attempt without the unit having failed (order, GPU idle,
+    telemetry, progress; PREREG_WME §II.31.8 R4). The attempt is recorded ``attempt_aborted``: charged, never counted
+    toward the attempt limit, never a failure cause."""
+
+    incident_kind = "incident"
+
+
+class RepairRequired(RuntimeError):
+    """The unit's last failure had no registered technical cause: it is retried only after a ``repair`` record
+    (registered cause, commit, outcome-blind attestation; §II.31.8 R3)."""
+
+
 class HealthHalt(RuntimeError):
     """An open run-health incident: no unit is issued until it is diagnosed and reported (incidents_resolved)."""
 
@@ -199,6 +212,8 @@ class StudyState:
         self.disposed: set = set()  # attempt_ok seqs disposed irreversibly
         self.fallback_units: dict = {}  # unit -> its first fallback record
         self.caps: list = []  # cap_generation records, in log order
+        self.aborted: dict = {}  # unit -> attempts aborted by a run-health incident (not counted, R4)
+        self.last_fail_seq: dict = {}  # unit -> seq of its last attempt_fail
         self.incidents: list = []  # open run-health incidents
 
     @property
@@ -252,6 +267,10 @@ class StudyState:
         elif t == "attempt_fail":
             self.inflight.pop(r["unit"], None)
             self.last_cause[r["unit"]] = r["cause"]
+            self.last_fail_seq[r["unit"]] = r["seq"]
+        elif t == "attempt_aborted":
+            self.inflight.pop(r["unit"], None)
+            self.aborted[r["unit"]] = self.aborted.get(r["unit"], 0) + 1
         elif t == "attempt_ok":
             self.inflight.pop(r["unit"], None)
             self.ok.setdefault(r["unit"], []).append(r)
@@ -582,6 +601,7 @@ class CombinedLedger(_View):
         super().__init__(log, fence, ctx)
         self.priced = dict(priced_gpu_h)
         self.clock = clock
+        self.r8 = False  # §II.31.8 R8 applies under a §II.31 cap regime (ProductionGuard(cap=...)); else registered
 
     @property
     def rows(self) -> list:
@@ -766,10 +786,39 @@ class CombinedLedger(_View):
                 **cap.fields(),
             )
 
-    def check_before(self, phase: str, est_gpu_h: float):
+    def priced_remainder(self) -> float:
+        """GPU-h-eq of the registered design not yet measured: sum over priced phases of max(0, price - measured)."""
+        return sum(max(0.0, float(v) - self.unit_gpu_h(p)) for p, v in self.priced.items())
+
+    def check_before(self, phase: str, est_gpu_h: float, contract=None, generation=None):
         with self._op():
             tot = self.gpu_h() + est_gpu_h
             cap = self.cap_gpu_h()
+            if self.r8 and tot > cap and tot * USD_PER_GPU_H <= CAP_USD:
+                # §II.31.8 R8: the mechanical raise, from ledger seconds only (never a discretionary decision)
+                basis = {
+                    "charged_gpu_h": self.gpu_h(),
+                    "priced_remainder_gpu_h": self.priced_remainder(),
+                    "previous_cap_gpu_h": cap,
+                }
+                new = r8_cap(basis)
+                if new is not None and new > cap:
+                    now = self._trusted_now()
+                    self.record_cap(
+                        CapGeneration(
+                            cap_gpu_h=new,
+                            date=time.strftime("%Y-%m-%d", time.gmtime(now)),
+                            decided_by="chair",
+                            source="PREREG_WME §II.31.8 R8 (mechanical cap raise)",
+                            announced_to_user=False,  # a notification owed to the user, not a gate
+                            rule="R8",
+                            basis=basis,
+                            outcome_blind=True,
+                        ),
+                        contract=contract,
+                        generation=generation,
+                    )
+                    cap = self.cap_gpu_h()
             if tot > cap or tot * USD_PER_GPU_H > CAP_USD:
                 raise CapExceeded(
                     f"combined cap: {tot - est_gpu_h:.3f} + {est_gpu_h:.3f} GPU-h-eq > {cap} or $ > {CAP_USD}"
@@ -802,8 +851,9 @@ class RetryPolicy(_View):
         if cause is not None and cause not in TECHNICAL_CAUSES:
             raise ValueError(f"retry cause {cause!r} is not a registered technical cause")
         with self._op() as s:
-            n = s.attempts.get(unit, 0) + 1
-            if n > UNIT_ATTEMPTS:
+            n = s.attempts.get(unit, 0) + 1  # attempt numbers stay unique (attempt keys)
+            counted = s.attempts.get(unit, 0) - s.aborted.get(unit, 0)  # incident aborts never count (R4)
+            if counted + 1 > UNIT_ATTEMPTS:
                 raise RetryExhausted(
                     f"{unit}: {UNIT_ATTEMPTS} attempts used; take its registered fallback"
                 )
@@ -872,14 +922,19 @@ class EngineeringGuard:
 
 @dataclass
 class CapGeneration:
-    """One dated cap decision (PREREG_WME §II.31): ``decided_by`` "user" (the §II.31 decision) or "chair" (a later
-    raise, which must have been announced to the user)."""
+    """One dated cap decision (PREREG_WME §II.31, §II.31.8 R8): ``decided_by`` "user" (the §II.31 decision, rule
+    "user") or "chair" (a later raise, only by the mechanical rule "R8": its ledger-only ``basis`` must reproduce the
+    cap, and ``outcome_blind`` attests that no outcome was read). Announcing a raise to the user is a notification,
+    not a gate."""
 
     cap_gpu_h: float
     date: str
     decided_by: str
     source: str
     announced_to_user: bool
+    rule: str = "user"
+    basis: dict | None = None
+    outcome_blind: bool = True
 
     def check(self):
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", self.date or ""):
@@ -888,8 +943,16 @@ class CapGeneration:
             raise ValueError("a cap generation is decided by the user or the chair")
         if not self.source:
             raise ValueError("a cap generation names its source (amendment / ruling)")
-        if self.decided_by == "chair" and self.announced_to_user is not True:
-            raise ValueError("a chair raise must be announced to the user before it is logged")
+        if self.outcome_blind is not True:
+            raise ValueError("a cap generation is decided without reading any outcome")
+        if self.decided_by == "user" and self.rule != "user":
+            raise ValueError("the user's cap decision carries rule 'user'")
+        if self.decided_by == "chair":
+            if self.rule != "R8" or not isinstance(self.basis, dict):
+                raise ValueError("a later raise is only the mechanical R8 raise, with its ledger basis")
+            want = r8_cap(self.basis)
+            if want is None or abs(float(self.cap_gpu_h) - want) > 1e-9:
+                raise ValueError(f"cap {self.cap_gpu_h} is not the R8 value {want} for basis {self.basis}")
         if not (CAP_GPU_H <= float(self.cap_gpu_h)) or float(self.cap_gpu_h) * USD_PER_GPU_H > CAP_USD:
             raise ValueError(
                 f"cap {self.cap_gpu_h} GPU-h-eq: below the registered {CAP_GPU_H} or beyond ${CAP_USD} "
@@ -903,7 +966,22 @@ class CapGeneration:
             "decided_by": self.decided_by,
             "source": self.source,
             "announced_to_user": bool(self.announced_to_user),
+            "rule": self.rule,
+            "basis": None if self.basis is None else dict(self.basis),
+            "outcome_blind": bool(self.outcome_blind),
         }
+
+
+def r8_cap(basis: dict) -> float | None:
+    """§II.31.8 R8 (Board A, accepted by the chair): when the cap would stop the run and combined spend plus the
+    priced remainder of the registered design is within $1,000 (ledger convention), the cap is raised by 1.25 x the
+    priced remainder, or to the $1,000 ceiling, whichever is lower. None: no raise (the run stops at the cap)."""
+    charged = float(basis["charged_gpu_h"])
+    rem = float(basis["priced_remainder_gpu_h"])
+    prev = float(basis["previous_cap_gpu_h"])
+    if (charged + rem) * USD_PER_GPU_H > CAP_USD:
+        return None
+    return min(prev + PHASE_PAUSE * rem, CAP_USD / USD_PER_GPU_H)
 
 
 @dataclass
@@ -984,6 +1062,7 @@ class ProductionGuard:
         attestation.check()
         if cap is not None:
             cap.check()
+        self._cap_regime = cap is not None
         self.state = Path(state_dir)
         self.state.mkdir(parents=True, exist_ok=True)
         legacy = [
@@ -1002,6 +1081,7 @@ class ProductionGuard:
             self.log, priced_gpu_h, clock=clock, fence=self._fence, ctx=ctx
         )
         self.retry = RetryPolicy(self.log, fence=self._fence, ctx=ctx)
+        self.ledger.r8 = self._cap_regime
         try:
             fb_digest = _digest(fallback_value)
         except TypeError as exc:
@@ -1280,7 +1360,18 @@ class ProductionGuard:
                 raise CanaryMismatch(
                     f"{label}: an attempt is pending its closing canary; close it (or declare its instance lost)"
                 )
-            self.ledger.check_before(self.phase, self.est)
+            fs = s.last_fail_seq.get(key)
+            if (
+                fs is not None
+                and s.last_cause.get(key) not in TECHNICAL_CAUSES
+                and not any(rp["seq"] > fs for rp in s.repairs)
+            ):
+                raise RepairRequired(
+                    f"{label}: its last failure had no registered technical cause; retry only after a repair record"
+                )
+            self.ledger.check_before(
+                self.phase, self.est, contract=self.contract, generation=self.generation
+            )
             return self.retry.attempt(
                 key,
                 s.last_cause.get(key),
@@ -1297,6 +1388,20 @@ class ProductionGuard:
         return st
 
     def failed(self, key, label, seconds, exc):
+        if isinstance(exc, IncidentAbort):  # R4: charged, not a failure, never counted toward the limit
+            with self._op() as s:
+                st = self._inflight(s, key)
+                self.ledger.add(self.phase, seconds, note=f"{label} aborted", status="aborted")
+                self._append(
+                    "attempt_aborted",
+                    unit=key,
+                    label=label,
+                    n=st["n"],
+                    start_seq=st["seq"],
+                    seconds=seconds,
+                    incident=getattr(exc, "incident_kind", "incident"),
+                )
+            raise exc
         with self._op() as s:
             st = self._inflight(s, key)
             self.ledger.add(self.phase, seconds, note=f"{label} failed", status="failed")
