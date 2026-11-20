@@ -327,6 +327,85 @@ def main():
         "summaries": len(summ),
         "attempts_u20": sum(r["type"] == "attempt_start" and r["unit"] == k20 for r in hrecs),
     }
+    # H (addendum 2, answer 3): the GPU-idle rule binds GPU kinds only; CPU kinds are checked by progress. Fixture
+    #    classes {square: gpu, plan: cpu}, scripted utilisation, limits shortened to 1.5 s (registered: 15 min).
+    s2 = SD.Study(
+        d / "study_h2",
+        d / "runs_h2",
+        att(),
+        THETA0,
+        PANEL,
+        health=True,
+        health_order=(("drill", ("square", "plan")),),
+        health_kinds={"square": "gpu", "plan": "cpu", "canary": "gpu"},
+        health_limits={"idle_s": 1.5, "progress_s": 1.5, "poll_s": 0.0},
+    )
+    s2.priced = dict(s.priced)
+    util = d / "w" / "gpu_util"
+
+    def plan_units(x, **kw):
+        return [({"kind": "plan", "args": {"x": x, **kw}, "label": f"p{x}"}, f"p{x}")]
+
+    def worker_idle(timeout=30.0):
+        t_end = time.time() + timeout
+        while time.time() < t_end:
+            hb_ = tr.heartbeat() or {}
+            if hb_.get("inflight") is None:
+                return True
+            time.sleep(0.1)
+        return False
+
+    def guard2():
+        g_ = s2.guard("bank", "lambda:drill-h2")
+        tr.set_fence(g_.epoch, "lambda:drill-h2")
+        g_.open_instance(1)
+        return g_
+
+    def attempt(g_, us):
+        try:
+            return s2.run(g_, rem, tr, us, chunk=1), None
+        except Exception as exc:  # noqa: BLE001
+            return None, type(exc).__name__
+
+    def incidents2():
+        recs = [json.loads(x) for x in (d / "study_h2" / RG.LOG_NAME).read_text().splitlines()]
+        return [r["detail"]["inflight"]["kind"] + ":" + r["kind"] for r in recs if r["type"] == "incident"]
+
+    util.write_text("5")  # the GPU idles throughout (a)-(b)
+    g2 = guard2()
+    # (a) a CPU kind progressing on an idle GPU for 3 s (> the 1.5 s limit): no incident
+    out_a, err_a = attempt(g2, plan_units(30, steps=20, sleep=0.15))
+    inc_a = incidents2()
+    # (b) a GPU kind progressing on an idle GPU for 3 s: gpu_idle incident; resolved, GPU busy, it completes
+    out_b, err_b = attempt(g2, units(31, 32, sleep=0.15, steps=20))
+    util.write_text("90")
+    idle_b = worker_idle()
+    g2.resolve_incidents("drill: GPU idle (scripted), diagnosed", "drill report (fixture)")
+    g2 = guard2()
+    out_b2, err_b2 = attempt(g2, units(31, 32, sleep=0.15, steps=20))
+    # (c) a CPU kind without progress for 3 s: no_progress incident; resolved, it completes
+    out_c, err_c = attempt(g2, plan_units(32, stall_once=3.0, steps=2, sleep=0.05))
+    idle_c = worker_idle()
+    g2.resolve_incidents("drill: planner stalled (scripted), diagnosed", "drill report (fixture)")
+    g2 = guard2()
+    out_c2, err_c2 = attempt(g2, plan_units(32, stall_once=3.0, steps=2, sleep=0.05))
+    inc = incidents2()
+    rep["scenarios"]["H_gpu_and_cpu_kinds"] = {
+        "pass": err_a is None
+        and out_a["p30"]["plan"] == 1030
+        and inc_a == []
+        and err_b == "HealthIncident"
+        and idle_b
+        and err_b2 is None
+        and out_b2["u31"]["sq"] == 961
+        and err_c == "HealthIncident"
+        and idle_c
+        and err_c2 is None
+        and out_c2["p32"]["plan"] == 1032
+        and inc == ["square:gpu_idle", "plan:no_progress"],
+        "incidents": inc,
+        "cpu_kind_on_idle_gpu_incidents": inc_a,
+    }
     rep["log"] = {"records": len(records(d)), "types": sorted({r["type"] for r in records(d)})}
     rep["all_pass"] = all(v["pass"] for v in rep["scenarios"].values())
     (d / "w" / "STOP").write_text("stop")
