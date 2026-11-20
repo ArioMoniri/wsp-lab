@@ -156,7 +156,7 @@ class Field:
             if (d / "manifest.json").exists():
                 fld = C.GroupedField.load(d, verify=False)
                 self.groups[g] = fld
-                for obj, cov in fld.coverage.items():
+                for cov in fld.coverage.values():
                     for p, row in cov.items():
                         self.param_group[p] = (g, row)
         self.vocab = None

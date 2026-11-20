@@ -61,8 +61,8 @@ def fresh_pool(construction_rows, reps: set, root_groups: set) -> dict:
         if r["hash"] in reps or r["group"] in root_groups:
             continue
         out.setdefault(r["objective"], []).append(r)
-    for o in out:
-        out[o].sort(key=lambda r: (rank(r["group"]), r["hash"]))
+    for rows in out.values():
+        rows.sort(key=lambda r: (rank(r["group"]), r["hash"]))
     return out
 
 

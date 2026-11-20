@@ -6,11 +6,10 @@ import hashlib
 import importlib.util
 import json
 import types
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
-
 import torch
 from torch import nn
 
@@ -878,7 +877,7 @@ def test_e1_gen_under_the_vllm_engine_uses_registered_settings(tmp_path, monkeyp
     rt = RT(tmp_path / "state", m)
     req = e1_req(tmp_path, m, items, ["greedy", "sampled:20261118"])
     win_theta = req["args"]["winner"]["theta_hash"]
-    payload, files = GO.h_e1_gen(rt, req, Ctx(tmp_path / "scratch"))
+    payload, _files = GO.h_e1_gen(rt, req, Ctx(tmp_path / "scratch"))
     assert rt.released == 1 and len(jobs) == 1  # HF released before the one vLLM child job
     blocks = jobs[0]["blocks"]
     assert len(blocks) == 8

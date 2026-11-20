@@ -95,10 +95,18 @@ TRACE_RE = re.compile(
 from wsp.wm import runguard as RG
 
 
+class PostCompletionError(RuntimeError):
+    """A traceback found after the unit's ``fn`` returned a payload (in the payload or the worker log). Not an
+    abort: the completed payload is discarded as a counted ``attempt_fail`` with no registered cause (halt, a repair
+    record, a counted retry), so a nondeterministic unit (the LLM-reader arms) never gets an uncounted redraw
+    (PREREG_WME §II.31.9, Board A N1)."""
+
+
 class HealthIncident(RG.IncidentAbort):
-    """A non-failure incident (order, GPU idle, telemetry, progress, a traceback in a payload or the log). Raised
-    before ``guard.begin`` (order) or as an attempt abort: recorded ``attempt_aborted``, never counted toward the
-    attempt limit (PREREG_WME §II.31.8 R4). Worker errors are not wrapped: they keep their registered cause (R3)."""
+    """A non-failure incident (order, GPU idle, telemetry, progress). Raised before ``guard.begin`` (order) or as an
+    attempt abort while the unit is in flight: recorded ``attempt_aborted``, never counted toward the attempt limit
+    (§II.31.8 R4). Worker errors are not wrapped: they keep their registered cause (R3). Tracebacks found after
+    completion are :class:`PostCompletionError` (counted; §II.31.9 N1)."""
 
     def __init__(self, message: str, kind: str = "incident"):
         super().__init__(message)
@@ -168,7 +176,7 @@ def gpu_sample() -> list | None:
             r = fn()
             if r:
                 return r
-        except Exception:  # noqa: BLE001 - the next source, else None (reported as missing telemetry)
+        except Exception:  # noqa: BLE001, S112 - the next source, else None (reported as missing telemetry)
             continue
     return None
 
@@ -198,7 +206,7 @@ class Sampler:
             )
         try:
             self.beat()
-        except Exception:  # noqa: BLE001 - a heartbeat write never stops the worker loop; the sampler re-beats
+        except Exception:  # noqa: BLE001, S110 - a heartbeat write never stops the worker loop; the sampler re-beats
             pass
 
     def note_progress(self):
@@ -230,7 +238,7 @@ class Sampler:
         while not self._stop.is_set():
             try:
                 self.beat()
-            except Exception:  # noqa: BLE001 - a missed beat shows as a stale heartbeat on the controller
+            except Exception:  # noqa: BLE001, S110 - a missed beat shows as a stale heartbeat on the controller
                 pass
             self._stop.wait(self.period_s)
 
@@ -424,7 +432,9 @@ class HealthMonitor:
                 "worker_error",
                 {"kind": recipe.get("kind"), "reason": "traceback in payload"},
             )
-            raise HealthIncident("traceback in a worker result payload", "worker_error")
+            raise PostCompletionError(
+                "traceback in a worker result payload (completed payload discarded)"
+            )
 
     def check_log(self, guard):
         if self.t is None or not hasattr(self.t, "read_log"):
@@ -435,9 +445,7 @@ class HealthMonitor:
         errs = log_errors(text)
         if errs:
             self._incident(guard, "worker_error", {"reason": "worker log", "lines": errs[:20]})
-            raise HealthIncident(
-                f"traceback or error in the worker log: {errs[:3]}", "worker_error"
-            )
+            raise PostCompletionError(f"traceback or error in the worker log: {errs[:3]}")
 
     # -------------------------------------------------- heartbeat (polled while a unit is in flight)
     def poll(self, guard):
@@ -490,8 +498,10 @@ class HealthMonitor:
     def wrap_fn(self, guard, fn):
         """Around one attempt (after ``guard.begin``). A worker error is recorded as an incident and re-raised
         UNWRAPPED, so ``attempt_fail`` carries its registered technical cause or None exactly as without the monitor
-        (R3); the next ``begin`` then refuses (HealthHalt) until the incident is resolved. Non-failure incidents
-        (payload / log tracebacks, idle, progress) raise :class:`HealthIncident` (attempt aborted, not counted)."""
+        (R3); the next ``begin`` then refuses (HealthHalt) until the incident is resolved. Incidents while the
+        unit is in flight (idle, telemetry, progress) raise :class:`HealthIncident` (attempt aborted, not counted);
+        a traceback found after completion (payload or log) raises :class:`PostCompletionError`: a counted
+        ``attempt_fail`` with no registered cause (§II.31.9, N1)."""
 
         def run(recipe):
             now = float(self.clock())

@@ -6,6 +6,7 @@ takeover stops old work) and 8 (ProductionGuard only)."""
 import json
 import threading
 import time
+import typing
 
 import pytest
 
@@ -44,7 +45,7 @@ def guard(state, phase="bank", instance="lambda:i1", fallback=None):
 
 
 class Box:
-    engines = dict(ENG)
+    engines: typing.ClassVar[dict] = dict(ENG)
 
 
 def handlers(box=Box):
@@ -140,7 +141,7 @@ def test_worker_errors_are_classified(rig):
 
 
 def test_stale_request_is_rejected_and_takeover_aborts_running_work(rig, tmp_path):
-    tr, wk = rig["tr"], rig["wk"]
+    tr = rig["tr"]
     tr.set_fence(5, "lambda:i1")
     old = P.make_request("square", 4, "lambda:i1", "s" * 64, "old", {"x": 1})
     tr.put(old)
@@ -200,7 +201,7 @@ def test_failed_closing_canary_halts_and_leaves_results_ineligible(rig, tmp_path
     calls = {"n": 0}
 
     class FlipBox:
-        engines = dict(ENG)
+        engines: typing.ClassVar[dict] = dict(ENG)
 
     def canary():
         calls["n"] += 1

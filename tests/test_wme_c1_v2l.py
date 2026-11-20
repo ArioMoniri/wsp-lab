@@ -138,9 +138,11 @@ def test_deterministic_context_refuses_unsafe_configurations(monkeypatch):
     with pytest.raises(RuntimeError, match="CUBLAS"), GE.deterministic(model(), TORCH_PATH):
         pass
     monkeypatch.setenv(GE.CUBLAS_ENV, GE.CUBLAS_WORKSPACE)
-    with pytest.raises(RuntimeError, match="attention"):
-        with GE.deterministic(model("flash_attention_2"), TORCH_PATH):
-            pass
+    with (
+        pytest.raises(RuntimeError, match="attention"),
+        GE.deterministic(model("flash_attention_2"), TORCH_PATH),
+    ):
+        pass
     fla = dict(TORCH_PATH, torch_chunk_gated_delta_rule="fla.ops.gated_delta_rule.chunk")
     with pytest.raises(RuntimeError, match="linear-attention"), GE.deterministic(model(), fla):
         pass
@@ -288,7 +290,7 @@ def test_cap_generation_rules(tmp_path):
     clk = Clock()
     g = guard(tmp_path / "s", clk)
     basis = {"charged_gpu_h": 108.0, "priced_remainder_gpu_h": 8.0, "previous_cap_gpu_h": 110.0}
-    r8 = dict(rule="R8", basis=basis, outcome_blind=True)
+    r8 = {"rule": "R8", "basis": basis, "outcome_blind": True}
     with pytest.raises(ValueError):  # never lowers
         g.ledger.record_cap(RG.CapGeneration(100.0, "2026-11-20", "user", "s", True))
     with pytest.raises(ValueError):  # §II.31.8 R8: a later raise is only the mechanical value
@@ -499,13 +501,13 @@ def test_monitor_error_canary_and_idle_rules(tmp_path):
     assert not isinstance(ei.value, HL.HealthIncident)
     assert g.open_incidents()[-1]["kind"] == "worker_error"
     g.resolve_incidents("f", "f")
-    with pytest.raises(HL.HealthIncident):
+    with pytest.raises(HL.PostCompletionError):  # §II.31.9 N1: counted, not an abort
         mon.wrap_fn(g, lambda r: {"trace": "Traceback (most recent call last): x"})(
             {"kind": "field_group"}
         )
     g.resolve_incidents("f", "f")
     mon.t.log += "Traceback (most recent call last):\nOSError: disk\n"
-    with pytest.raises(HL.HealthIncident):
+    with pytest.raises(HL.PostCompletionError):
         fn({"kind": "field_group"})
     g.resolve_incidents("f", "f")
     rec = mon.wrap_canary(g, lambda: {"pass": False, "composite": "d" * 64, "engines": {}})()

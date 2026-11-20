@@ -4249,3 +4249,86 @@ The registered kind table is `wm.c1.health.KIND_CLASS`; a test enforces that it 
   repeats found a heartbeat race in the v2l worker. The sampler thread and the worker thread shared one temporary
   file; a collision raised in `set_inflight` and stopped the worker loop. The fix writes one heartbeat at a time,
   with per-thread temporary files, and a failed heartbeat write never stops the loop. A regression test covers it.
+
+### II.31.9 Amendment v2o (20 Nov 2026): Board A re-check of v2n (P1; N1–N6 as implemented)
+
+**Status.** Dated 20 Nov 2026. Board A re-checked v2n (`docs/reviews/council/board-a-prereg-wme-v2n-2026-11-20.md`,
+main `afffca2`) and gave two verdicts:
+- Phase L re-run: ACCEPT WITH CONDITIONS P1–P2;
+- first confirmatory unit: ACCEPT WITH CONDITIONS N1–N6.
+
+The chair accepted every condition. This amendment is appended before any data: there is no study log, no
+confirmatory unit has run and no sealed file has been read. It is outcome-blind, and it changes no claim, test, α, N,
+margin, seed, prompt, parser, item order or stopping rule.
+
+**P1. What it records.**
+- **R11** (SYNTHESIS-r13 addendum item 5; commit `95a474e`).
+  - `genengine.global_state` / `restore_state` cover deterministic algorithms and warn-only, cuDNN deterministic and
+    benchmark, the four SDPA backend flags, and `CUBLAS_WORKSPACE_CONFIG`.
+  - `genengine.deterministic` is a context manager that restores the exact snapshot on exit, including on an
+    exception.
+  - `hf_generate` compares the state before and after every call, in both HF modes. On any change it restores the
+    state and raises: it fails closed.
+- **The restore** (cf48211, merged at `d3a2d01`). `genaudit.py`, `panel.py`, `p3gen.py`, `actions.py`, `controls.py`
+  and `hf.py` are back to their bytes at the freeze tag (`af4face`). `genaudit.py` is
+  `52ad2bbddd407d1962f690f37ba3f458e89b53a16d1e30167b7aa0d434c55016` again.
+  - §II.31.8 D4's description of `cc13cd37…` (study M's `46967f8` bytes) is **historical**.
+  - Study M never edits files registered to C1; the chair has ruled so.
+- **The `harness.run_units(..., before_begin=)` hook**, used for the §II.18 order rule. It is keyword-only and
+  defaults to `None`, under which `run_units` behaves exactly as registered. It is called before `guard.begin` for each
+  unresolved unit, and its contract is:
+  - it may only read and advance the run-health monitor's stage state, append registered `incident` records, and
+    raise;
+  - it never calls `guard.begin`, `succeeded`, `failed`, `fallback` or `resolve`;
+  - any exception it raises propagates before an attempt exists, so no `attempt_start` is recorded.
+
+  The only production hook is `HealthMonitor.check_order`. A test checks that a raise leaves no attempt (N4 (a)).
+
+**N1. A traceback after completion is a counted failure.** This supersedes §II.31.8 R4 for tracebacks. An attempt
+whose `fn` returned a payload, and in whose payload or worker log a traceback is then found, is recorded as
+`attempt_fail` with **no registered cause** (`PostCompletionError`). The completed payload is discarded, and the run
+halts. The unit is retried only after a `repair` record (§II.31.8 R3), and that retry counts toward the registered
+3-attempt budget, as addendum 2 answer 4 says. So no uncounted redraw exists for any unit, including the
+nondeterministic LLM-reader arms. Incidents raised while a unit is still in flight (GPU idle, telemetry, progress)
+remain uncounted `attempt_aborted` records (R4), because no payload exists to select on.
+
+**N2. The R9 launch set is narrowed.** The launch check passes only for the exact registered file
+`52ad2bbd…` together with the five registered parser function digests. `cc13cd37…` stays in the documented history but
+is not accepted. The C1 test command checks that the six restored files equal their bytes at the freeze tag.
+
+**N3. Cross-instance canary identity.** In `phasel-main`, the main instance's per-engine canary hashes (`tf`, then
+`hf_gen` or `vllm_gen`, and `vllm`) must equal the GPU-0 hashes of the bound parity evidence. A mismatch is refused
+before the composite reference is formed.
+
+**N4 (b). Code identity.** Each Phase L evidence object records:
+- the controller commit, and that its tracked tree is clean;
+- the commit the worker bundle was built from (`CODE_SHA`, reported by `hello`), which must equal the controller commit;
+- the bundle's sha256;
+- the worker's process globals at start (`hello`'s `global_state`). These must equal torch's defaults, plus
+  `CUBLAS_WORKSPACE_CONFIG=:4096:8` under C1(a).
+
+`phasel-main` accepts parity evidence only if it was produced by its own commit (P2).
+
+**N5. Drill currency.** The CPU drill is re-run on the final pre-launch commit. Its JSON records that commit and the
+tracked-tree state, and it is committed with a sha256 sidecar.
+
+**N6. The test gate.**
+- The ruff errors that `precommit.sh` stopped on are fixed (all of them were in wme-c1 files), so the hook now reaches
+  pytest.
+- Independently of the repo-wide ruff state, `up` runs the registered wme-c1 test command before any spend:
+  `CUDA_VISIBLE_DEVICES= python -m pytest -q tests/test_wme_c1_*.py tests/test_wme_runguard.py
+  tests/test_wme_runguard_property.py tests/test_wm_harness.py`.
+- Its counts and exit code go into the instance record and the launch evidence. A launch proceeds only on exit 0.
+
+**Found by the v2o full suite (engineering).** `harness.UnitStore.write` used one shared temporary file per unit.
+After a killed worker's claim expired, two resumed data-parallel workers could write the same unit, and one rename
+failed (`test_wm_dp::test_kill_and_resume`, about 1 run in 8 under load). Each writer now uses its own temporary
+file. The stored record is unchanged. Regression test: `test_unitstore_concurrent_writers_of_one_unit_never_fail`.
+
+**P2.** This is procedural and is recorded in the Phase L report:
+- the bundle is built from a clean tree at a named main commit that contains this amendment;
+- `up` refuses a dirty tree, and a bundle whose `CODE_SHA` is not HEAD;
+- `phasel-main` runs from the same commit.
+
+**Observation O1 (no change).** R8 gives no raise once every remaining phase has overrun its price (the priced
+remainder is 0). That is mechanical and outcome-blind, a liveness cost only. No floor is registered.

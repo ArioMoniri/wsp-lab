@@ -111,8 +111,13 @@ def main():
 
         shutil.rmtree(d)
     d.mkdir(parents=True)
+    from wsp.wm.c1 import phasel as PL
+
     rep = {
         "label": "wme-c1 CPU deployment drill (fixtures; engineering only; not confirmatory)",
+        # §II.31.9 N5: the code the drill ran on
+        "commit": PL.git("rev-parse", "HEAD"),
+        "tracked_tree_clean": PL.git("status", "--porcelain", "--untracked-files=no") == "",
         "scenarios": {},
     }
     wp = start_worker(d)

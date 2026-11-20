@@ -21,6 +21,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -127,7 +128,9 @@ class UnitStore:
             "payload_sha256": hashlib.sha256(_canon(payload).encode()).hexdigest(),
             "theta_after_restore": theta_after,
         }
-        tmp = p.with_suffix(".tmp")
+        # each writer its own temporary file: two workers that both computed a unit after a claim expired (dp
+        # resume) never share one, so neither os.replace fails (the record is the same verified content)
+        tmp = p.with_name(f"{p.stem}.{os.getpid()}.{threading.get_ident()}.tmp")
         with open(tmp, "w") as f:
             f.write(json.dumps(body, sort_keys=True))
             f.flush()
@@ -192,7 +195,8 @@ def run_units(
             out[label] = res
             continue
         while True:
-            if before_begin:  # checks that must never record an attempt (wme-c1 §II.31.8 R4: the order rule)
+            # checks that must never record an attempt (wme-c1 §II.31.9: the order rule; contract registered there)
+            if before_begin:
                 before_begin(recipe, label)
             try:
                 n = guard.begin(k, label)

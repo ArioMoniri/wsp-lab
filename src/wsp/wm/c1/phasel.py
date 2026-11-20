@@ -44,6 +44,10 @@ GENAUDIT_FILES = {
 }
 
 
+# the generation file a launch must run (63ca07f; restored on main by d3a2d01 after the 46967f8 deviation)
+GENAUDIT_LAUNCH_SHA256 = "52ad2bbddd407d1962f690f37ba3f458e89b53a16d1e30167b7aa0d434c55016"
+
+
 def sha_obj(obj) -> str:
     return hashlib.sha256(json.dumps(obj, sort_keys=True, default=str).encode()).hexdigest()
 
@@ -71,7 +75,9 @@ def parser_check(path=GENAUDIT) -> dict:
         "functions_unchanged": funcs_ok,
         "file_sha256": file_sha,
         "file_history": GENAUDIT_FILES.get(file_sha),
-        "pass": funcs_ok and file_sha in GENAUDIT_FILES,
+        "launch_file_sha256": GENAUDIT_LAUNCH_SHA256,
+        # §II.31.8 note (main d3a2d01 restored the registered bytes): a launch needs exactly the registered file
+        "pass": funcs_ok and file_sha == GENAUDIT_LAUNCH_SHA256,
     }
 
 
@@ -178,3 +184,121 @@ def evaluate(checks: dict, gen_engine: str | None, s_l: float, cap: float, g_e1:
         "other_preconditions": other,
         "proceed": bool(selected == gen_engine and passed["pass"] and all(other.values())),
     }
+
+
+# ------------------------------------------------------------------ N3: cross-instance canary identity
+
+CANARY_SOURCES = {  # engine -> where the parity evidence holds its GPU-0 hash
+    "tf": ("parity", "canary_gpu0", "tf"),
+    "hf_gen": ("parity", "canary_gpu0", "hf_gen"),
+    "vllm": ("parity", "vllm_gpu0"),
+    "vllm_gen": ("parity", "vllm_gen_gpu0"),
+}
+
+
+def _dig(obj, path):
+    for k in path:
+        obj = (obj or {}).get(k)
+    return obj
+
+
+def cross_instance_canaries(engines: dict, parity_evidence: dict) -> dict:
+    """§II.31.9 N3: the main instance's per-engine canaries must equal the GPU-0 canaries of the bound parity evidence
+    (an engine reproducible within one instance but not across instances is refused before it becomes the
+    committed reference)."""
+    pairs = {}
+    for eng, h in sorted(engines.items()):
+        src = CANARY_SOURCES.get(eng)
+        ref = None if src is None else _dig(parity_evidence, src)
+        pairs[eng] = {"main": h, "parity_gpu0": ref, "equal": bool(ref) and ref == h}
+    return {"pairs": pairs, "pass": bool(pairs) and all(p["equal"] for p in pairs.values())}
+
+
+# ------------------------------------------------------------------ N4 (b): code identity
+
+
+def git(*args, cwd=ROOT) -> str:
+    import subprocess
+
+    return subprocess.run(
+        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+def code_identity(worker_code_sha: str | None, bundle_sha256: str | None, cwd=ROOT) -> dict:
+    """§II.31.9 N4 (b): the controller commit (clean tracked tree), the commit the worker bundle was built from
+    (its CODE_SHA, reported by ``hello``) and the bundle's sha256. ``pass`` only if the tree is clean, the worker runs
+    the controller's commit and the bundle hash is known."""
+    commit = git("rev-parse", "HEAD", cwd=cwd)
+    dirty = git("status", "--porcelain", "--untracked-files=no", cwd=cwd)
+    out = {
+        "controller_commit": commit,
+        "controller_tree_clean": dirty == "",
+        "worker_code_sha": worker_code_sha,
+        "bundle_sha256": bundle_sha256,
+    }
+    out["pass"] = (
+        out["controller_tree_clean"]
+        and worker_code_sha == commit
+        and bool(bundle_sha256)
+        and len(str(bundle_sha256)) == 64
+    )
+    return out
+
+
+# ------------------------------------------------------------------ N6: the registered test gate
+
+GATE_COMMAND = "tests/test_wme_c1_*.py tests/test_wme_runguard.py tests/test_wme_runguard_property.py tests/test_wm_harness.py"
+
+
+def parse_pytest_summary(text: str) -> dict:
+    import re
+
+    last = [ln for ln in text.strip().splitlines() if re.search(r"\b(passed|failed|error)", ln)]
+    counts = {}
+    if last:
+        for n, k in re.findall(
+            r"(\d+) (passed|failed|skipped|deselected|errors?|xfailed|xpassed)", last[-1]
+        ):
+            counts[k.rstrip("s") if k.startswith("error") else k] = int(n)
+    return counts
+
+
+def run_gate(runner=None, cwd=ROOT) -> dict:
+    """§II.31.9 N6: the registered wme-c1 test command, independent of the repo-wide ruff state (CPU only). Recorded
+    with its counts and exit code in the launch evidence; a launch proceeds only on exit 0."""
+    import glob
+    import os
+    import subprocess
+    import sys
+
+    files = sorted(f for pat in GATE_COMMAND.split() for f in glob.glob(str(Path(cwd) / pat)))
+    argv = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *files]
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES="")
+    if runner is None:
+        p = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, env=env, check=False)
+        code, text = p.returncode, (p.stdout or "") + (p.stderr or "")
+    else:
+        code, text = runner(argv, env)
+    counts = parse_pytest_summary(text)
+    return {
+        "command": f"CUDA_VISIBLE_DEVICES= python -m pytest -q {GATE_COMMAND}",
+        "files": [str(Path(f).relative_to(cwd)) for f in files],
+        "exit_code": int(code),
+        "counts": counts,
+        "pass": int(code) == 0 and counts.get("failed", 0) == 0 and counts.get("passed", 0) > 0,
+    }
+
+
+def expected_worker_state(gen_engine: str | None = None) -> dict:
+    """The worker's process globals at ``hello`` (R11, N4 (b)): torch defaults, and under C1(a) the CUBLAS workspace
+    variable set by ``prepare_process``."""
+    gen_engine = GE.check_mode(gen_engine)
+    want = json.loads(json.dumps(GE.BASELINE_STATE))
+    want[GE.CUBLAS_ENV] = GE.CUBLAS_WORKSPACE if gen_engine == "hf_deterministic" else None
+    return want
+
+
+def worker_state_check(state, gen_engine: str | None = None) -> dict:
+    want = expected_worker_state(gen_engine)
+    return {"expected": want, "got": state, "pass": state == want}
