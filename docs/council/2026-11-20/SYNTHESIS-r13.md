@@ -172,3 +172,27 @@ noise.
 5. **Test-isolation bug flagged to C1.** The `torch.use_deterministic_algorithms` setting leaks across the
    `test_wme_c1_v2l` tests, which causes 3 extra full-suite failures. It must be scoped and restored in tests **and**
    in production code.
+
+## Addendum 2 (20 Nov 2026): result of the exploratory model search
+
+The search is reported in `docs/reviews/wme/wme-stagew2-modelsearch-2026-11-20.md`. It is POST HOC, CPU only and
+cost $0. The candidate list was committed before fitting, tuning used nested leave-one-run-out, and Holm correction
+covered 10 tests.
+
+**No candidate beats pooled + dose (E 0.678 / 0.766).** The candidates were:
+- per-layer J1 ridge;
+- a GP;
+- per-endpoint heads;
+- a GRU;
+- a selective SSM with a Mamba-style gate.
+
+Inner CV switched the GRU and the SSM off in 30/30 and 29/30 folds, so model capacity was not the limit. The gap to
+the noise floor (0.357) is unexplained, and SuperGPQA truncation accounts for most of it.
+
+**Chair:**
+- R4 stands. No SSM claim is made, and none of the re-entry conditions is met.
+- The frozen confirm spec would be pooled + dose vs pooled. It confirms only a recipe-dose effect. Power is 0.96 at
+  20 fresh runs if the observed effect is real, and above 60 runs are needed for half of it.
+- The chair still recommends **not** spending on fresh 9B runs.
+- Edit-specific (a) moves to study M's direction-varied bank (R5). That bank needs features that carry truncation
+  and length information, e.g. R1 length or EOS-logit features. Gate 1 timing will price them.
