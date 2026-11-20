@@ -77,10 +77,26 @@ def base_hash_from_snapshot(path: Path, repo: str, revision: str) -> str:
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
+def assert_text_only(names) -> None:
+    """Raise if any vision-tower, projector or MTP tensor is present (Qwen ``visual``/``mtp``; Gemma 3
+    ``vision_tower``/``multi_modal_projector``, which the old ``.visual.`` check let through)."""
+    from wsp.wm.actions import is_frozen
+
+    bad = [n for n in names if is_frozen(n)]
+    if bad:
+        raise RuntimeError(
+            f"vision/MTP tensors were loaded (e.g. {bad[0]}); the target must be text-only"
+        )
+
+
 def load_target(repo: str, device="cuda"):
     """Text-only CausalLM in bf16, loaded shard-by-shard directly to ``device``; vision and MTP are not loaded."""
     import transformers
 
+    from wsp.wm import gemma3
+
+    if repo in gemma3.TARGETS:
+        return gemma3.load_text(repo, device=device)
     revision = TARGETS[repo]
     path = snapshot_dir(repo, revision)
     model = transformers.AutoModelForCausalLM.from_pretrained(
@@ -90,8 +106,6 @@ def load_target(repo: str, device="cuda"):
     for p in model.parameters():
         p.requires_grad_(False)
     tok = transformers.AutoTokenizer.from_pretrained(str(path), local_files_only=True)
-    names = [n for n, _ in model.named_parameters()]
-    if any(".visual." in n or n.startswith("mtp.") for n in names):
-        raise RuntimeError("vision/MTP tensors were loaded; the target must be text-only")
+    assert_text_only(n for n, _ in model.named_parameters())
     cfg = json.loads((path / "config.json").read_text())
     return model, tok, cfg, base_hash_from_snapshot(path, repo, revision), path
