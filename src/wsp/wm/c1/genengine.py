@@ -187,31 +187,81 @@ def check_model(model, bindings=None) -> dict:
     return {"attn_implementation": impl, "linear_attention": b}
 
 
+_SDP = ("flash", "mem_efficient", "math", "cudnn")
+# torch's process defaults (no CUBLAS workspace setting): the clean baseline of the c1 tests (R11)
+BASELINE_STATE = {
+    "deterministic_algorithms": False,
+    "warn_only": False,
+    "cudnn_deterministic": False,
+    "cudnn_benchmark": False,
+    "sdp": dict.fromkeys(_SDP, True),
+    CUBLAS_ENV: None,
+}
+
+
+def global_state() -> dict:
+    """Every process-global setting the deterministic engine touches or depends on (R11, SYNTHESIS-r13 addendum item 5)."""
+    import torch
+
+    cu = torch.backends.cuda
+    return {
+        "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
+        "warn_only": torch.is_deterministic_algorithms_warn_only_enabled(),
+        "cudnn_deterministic": bool(torch.backends.cudnn.deterministic),
+        "cudnn_benchmark": bool(torch.backends.cudnn.benchmark),
+        "sdp": {
+            "flash": cu.flash_sdp_enabled(),
+            "mem_efficient": cu.mem_efficient_sdp_enabled(),
+            "math": cu.math_sdp_enabled(),
+            "cudnn": cu.cudnn_sdp_enabled(),
+        },
+        CUBLAS_ENV: os.environ.get(CUBLAS_ENV),
+    }
+
+
+def restore_state(state: dict, env: bool = True) -> None:
+    """Set every global of :func:`global_state` back to ``state`` (``env``: the CUBLAS variable too)."""
+    import torch
+
+    cu = torch.backends.cuda
+    torch.use_deterministic_algorithms(
+        bool(state["deterministic_algorithms"]), warn_only=bool(state["warn_only"])
+    )
+    torch.backends.cudnn.deterministic = bool(state["cudnn_deterministic"])
+    torch.backends.cudnn.benchmark = bool(state["cudnn_benchmark"])
+    sdp = state["sdp"]
+    cu.enable_flash_sdp(sdp["flash"])
+    cu.enable_mem_efficient_sdp(sdp["mem_efficient"])
+    cu.enable_math_sdp(sdp["math"])
+    cu.enable_cudnn_sdp(sdp["cudnn"])
+    if env:
+        if state[CUBLAS_ENV] is None:
+            os.environ.pop(CUBLAS_ENV, None)
+        else:
+            os.environ[CUBLAS_ENV] = state[CUBLAS_ENV]
+
+
 @contextlib.contextmanager
 def deterministic(model, bindings=None):
-    """C1(a): the deterministic configuration around one HF generate call; restores the previous state."""
+    """C1(a): the deterministic configuration around one HF generate call. A context manager that snapshots every
+    global it touches (:func:`global_state`) and restores exactly that snapshot on exit, also on an exception: the
+    teacher-forced path and any other code see the global state they had before (R11, SYNTHESIS-r13 addendum item 5). The CUBLAS
+    workspace variable is process-wide and is not changed here (``prepare_process``)."""
     import torch
     from torch.nn.attention import SDPBackend, sdpa_kernel
 
     if os.environ.get(CUBLAS_ENV) != CUBLAS_WORKSPACE:
         raise RuntimeError(f"{CUBLAS_ENV} must be {CUBLAS_WORKSPACE} (prepare_process at start-up)")
     check_model(model, bindings)
-    prev = (
-        torch.are_deterministic_algorithms_enabled(),
-        torch.is_deterministic_algorithms_warn_only_enabled(),
-        torch.backends.cudnn.deterministic,
-        torch.backends.cudnn.benchmark,
-    )
-    torch.use_deterministic_algorithms(True, warn_only=False)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    prev = global_state()
     try:
+        torch.use_deterministic_algorithms(True, warn_only=False)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
         with sdpa_kernel([SDPBackend.MATH]):
             yield
     finally:
-        torch.use_deterministic_algorithms(prev[0], warn_only=prev[1])
-        torch.backends.cudnn.deterministic = prev[2]
-        torch.backends.cudnn.benchmark = prev[3]
+        restore_state(prev, env=False)
 
 
 def hf_generate(model, tok, prompts, max_new_tokens, batch, device, sample=None, mode=None) -> list:
@@ -233,10 +283,17 @@ def hf_generate(model, tok, prompts, max_new_tokens, batch, device, sample=None,
             model, tok, prompts, max_new_tokens, int(sample["seed"]), batch=batch, device=device
         )
 
-    if mode == "hf_registered":
-        return run()
-    with deterministic(model):
-        return run()
+    before = global_state()
+    try:
+        if mode == "hf_registered":
+            return run()
+        with deterministic(model):
+            return run()
+    finally:
+        after = global_state()
+        if after != before:  # R11: never leak a global setting out of a generate call
+            restore_state(before)
+            raise RuntimeError(f"global state changed by an HF generate call: {before} -> {after}")
 
 
 # ------------------------------------------------------------------ C1(b): the vLLM blocks

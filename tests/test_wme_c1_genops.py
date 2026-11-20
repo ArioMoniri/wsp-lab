@@ -31,6 +31,19 @@ ROOT = Path(__file__).resolve().parents[1]
 MAN = MO.manifest()
 
 
+@pytest.fixture(autouse=True)
+def _c1_clean_global_state():
+    """R11 (SYNTHESIS-r13 addendum item 5): every test here starts from torch's process defaults (no deterministic mode, default SDPA
+    backends, no CUBLAS workspace variable), whatever an earlier test in any module left behind (e.g.
+    ``wsp.predictor.models.seed_all``), and the caller's state is restored afterwards."""
+    from wsp.wm.c1 import genengine as _GE
+
+    saved = _GE.global_state()
+    _GE.restore_state(_GE.BASELINE_STATE)
+    yield
+    _GE.restore_state(saved)
+
+
 # ------------------------------------------------------------------ fixtures
 
 
@@ -915,6 +928,8 @@ def test_canary_under_the_vllm_engine_adds_a_second_vllm_canary(tmp_path, monkey
     payload, _ = S.h_canary(rt, {"args": {}}, Ctx(tmp_path / "s"))
     assert set(payload["engines"]) == GE.canary_engines("vllm") == {"tf", "vllm_gen", "vllm"}
     b0, b1 = jobs[0]["blocks"]
-    assert b0["max_tokens"] == VO.CANARY_TOKENS and "stop_token_ids" not in b0  # stage-W block unchanged
+    assert (
+        b0["max_tokens"] == VO.CANARY_TOKENS and "stop_token_ids" not in b0
+    )  # stage-W block unchanged
     assert b1["name"] == "vllm_gen" and b1["max_tokens"] == 128 and b1["stop_token_ids"] == [1, 2]
     assert len(b1["prompts"]) == 3

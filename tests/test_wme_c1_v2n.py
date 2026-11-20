@@ -33,6 +33,19 @@ ATTEST = RG.LaunchAttestation(True, True, REF, "c" * 64, ["fixture"])
 A, B_ = "1" * 64, "2" * 64
 
 
+@pytest.fixture(autouse=True)
+def _c1_clean_global_state():
+    """R11 (SYNTHESIS-r13 addendum item 5): every test here starts from torch's process defaults (no deterministic mode, default SDPA
+    backends, no CUBLAS workspace variable), whatever an earlier test in any module left behind (e.g.
+    ``wsp.predictor.models.seed_all``), and the caller's state is restored afterwards."""
+    from wsp.wm.c1 import genengine as _GE
+
+    saved = _GE.global_state()
+    _GE.restore_state(_GE.BASELINE_STATE)
+    yield
+    _GE.restore_state(saved)
+
+
 class Clock:
     def __init__(self):
         self.t = 0.0
@@ -796,3 +809,72 @@ def test_r10_concurrent_heartbeats_never_fail(tmp_path):
     assert errors == []
     json.loads((tmp_path / HL.HEARTBEAT).read_text())
     assert not list(tmp_path.glob(".heartbeat.json*.tmp"))
+
+
+# ------------------------------------------------------------------ R11 (SYNTHESIS-r13 addendum item 5): global state
+
+
+def _set_global(det: bool):
+    import torch
+
+    torch.use_deterministic_algorithms(det, warn_only=False)
+    torch.backends.cudnn.deterministic = det
+    torch.backends.cudnn.benchmark = not det
+
+
+@pytest.mark.parametrize("prior", [False, True])
+@pytest.mark.parametrize("mode", ["hf_deterministic", "hf_registered"])
+def test_r11_every_hf_generate_call_restores_the_previous_global_state(monkeypatch, prior, mode):
+    """Another module (e.g. wsp.predictor.models.seed_all) may have switched deterministic mode on globally; an HF
+    generate call must leave every global setting exactly as it found it, also when generation raises."""
+    import torch
+
+    from wsp.wm import genaudit as GA
+
+    monkeypatch.setenv(GE.CUBLAS_ENV, GE.CUBLAS_WORKSPACE)
+    monkeypatch.setattr(
+        GE, "kernel_bindings", lambda: dict.fromkeys(GE.LINEAR_ATTN_FUNCS, GE.QWEN35_MODULE)
+    )
+    model = types.SimpleNamespace(config=types.SimpleNamespace(_attn_implementation="sdpa"))
+    _set_global(prior)
+    torch.backends.cuda.enable_flash_sdp(not prior)  # a non-default SDPA flag set by someone else
+    before = GE.global_state()
+    inside = {}
+
+    def gen(m, tok, prompts, n, *a, batch=8, device="cuda"):
+        inside["det"] = torch.are_deterministic_algorithms_enabled()
+        inside["flash"] = torch.backends.cuda.flash_sdp_enabled()
+        return [{"ids": [1], "text": "", "hit_max": False}]
+
+    monkeypatch.setattr(GA, "generate_greedy", gen)
+    GE.hf_generate(model, None, ["p"], 8, 128, "cpu", mode=mode)
+    assert GE.global_state() == before
+    if mode == "hf_deterministic":
+        assert inside == {"det": True, "flash": False}
+    else:
+        assert inside == {"det": prior, "flash": not prior}  # the registered path changes nothing
+
+    def boom(*a, **k):
+        raise RuntimeError("generation failed")
+
+    monkeypatch.setattr(GA, "generate_greedy", boom)
+    with pytest.raises(RuntimeError, match="generation failed"):
+        GE.hf_generate(model, None, ["p"], 8, 128, "cpu", mode=mode)
+    assert GE.global_state() == before
+
+
+def test_r11_restore_state_round_trip(monkeypatch):
+    monkeypatch.delenv(GE.CUBLAS_ENV, raising=False)
+    s0 = GE.global_state()
+    _set_global(True)
+    import os as _os
+
+    _os.environ[GE.CUBLAS_ENV] = ":16:8"
+    assert GE.global_state() != s0
+    GE.restore_state(s0)
+    assert GE.global_state() == s0 and GE.CUBLAS_ENV not in _os.environ
+
+
+def test_r11_tests_start_from_a_clean_baseline():
+    """The autouse fixture: whatever an earlier test (in any module) left behind, a c1 test starts at the baseline."""
+    assert GE.global_state() == GE.BASELINE_STATE

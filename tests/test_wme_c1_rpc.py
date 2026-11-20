@@ -101,7 +101,13 @@ def test_request_roundtrip_files_verified(rig):
     payload, d = rig["rem"].call("square", 1, "lambda:i1", "k" * 64, "u0", {"x": 7})
     assert payload == {"sq": 49}
     assert json.loads((d / "sq.json").read_text())["sq"] == 49
-    lines = [json.loads(x) for x in (rig["root"] / "progress.jsonl").read_text().splitlines()]
+    # the worker appends its progress line just after publishing the result: wait for it (bounded), as the
+    # dead-man heartbeat reader does; under full-suite load the controller can see the result first
+    p = rig["root"] / "progress.jsonl"
+    t_end = time.time() + 10.0
+    while time.time() < t_end and not (p.exists() and '"ok"' in p.read_text()):
+        time.sleep(0.01)
+    lines = [json.loads(x) for x in p.read_text().splitlines()]
     assert lines[-1]["event"] == "ok"
 
 
@@ -153,7 +159,13 @@ def test_stale_request_is_rejected_and_takeover_aborts_running_work(rig, tmp_pat
         assert time.time() < deadline
         time.sleep(0.01)
     assert not tr.ready(run["id"])
-    ev = [json.loads(x) for x in (rig["root"] / "progress.jsonl").read_text().splitlines()]
+    prog = rig["root"] / "progress.jsonl"
+    while (
+        '"fenced"' not in prog.read_text()
+    ):  # appended just after the move to done/ (bounded wait)
+        assert time.time() < deadline + 5
+        time.sleep(0.01)
+    ev = [json.loads(x) for x in prog.read_text().splitlines()]
     assert {"rejected_stale", "fenced"} <= {e["event"] for e in ev}
 
 

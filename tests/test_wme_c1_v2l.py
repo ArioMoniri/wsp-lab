@@ -24,6 +24,19 @@ ATTEST = RG.LaunchAttestation(True, True, REF, "c" * 64, ["fixture"])
 H1 = 3600.0
 
 
+@pytest.fixture(autouse=True)
+def _c1_clean_global_state():
+    """R11 (SYNTHESIS-r13 addendum item 5): every test here starts from torch's process defaults (no deterministic mode, default SDPA
+    backends, no CUBLAS workspace variable), whatever an earlier test in any module left behind (e.g.
+    ``wsp.predictor.models.seed_all``), and the caller's state is restored afterwards."""
+    from wsp.wm.c1 import genengine as _GE
+
+    saved = _GE.global_state()
+    _GE.restore_state(_GE.BASELINE_STATE)
+    yield
+    _GE.restore_state(saved)
+
+
 class Clock:
     def __init__(self):
         self.t = 0.0
@@ -296,9 +309,7 @@ def test_cap_generation_rules(tmp_path):
     g.canary(REF)
     H.run_units(store, [({"u": 1}, "u1")], lambda r: {"v": 1}, "t" * 64, "p", guard=g)
     g.canary(REF)
-    raise1 = RG.CapGeneration(
-        120.0, "2026-11-20", "chair", "PREREG_WME §II.31.8 R8", False, **r8
-    )
+    raise1 = RG.CapGeneration(120.0, "2026-11-20", "chair", "PREREG_WME §II.31.8 R8", False, **r8)
     g2 = guard(tmp_path / "s", clk, cap=raise1)
     caps = g2.ledger.cap_generations()
     assert [c["cap_gpu_h"] for c in caps] == [110.0, 120.0] and caps[1]["index"] == 1
@@ -481,7 +492,9 @@ def test_monitor_error_canary_and_idle_rules(tmp_path):
     def boom(r):
         raise RuntimeError("CUDA error: an illegal memory access")
 
-    with pytest.raises(RuntimeError) as ei:  # R3: re-raised unwrapped (its registered cause survives)
+    with pytest.raises(
+        RuntimeError
+    ) as ei:  # R3: re-raised unwrapped (its registered cause survives)
         mon.wrap_fn(g, boom)({"kind": "field_group"})
     assert not isinstance(ei.value, HL.HealthIncident)
     assert g.open_incidents()[-1]["kind"] == "worker_error"
