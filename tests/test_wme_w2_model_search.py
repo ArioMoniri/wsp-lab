@@ -18,7 +18,9 @@ spec.loader.exec_module(MS)
 J = 6
 
 
-def synth(n_runs=8, seed=0, dose_slope=0.05, j1_slope=0.0, carry=0.0, noise=0.01, N=500, grow=False):
+def synth(
+    n_runs=8, seed=0, dose_slope=0.05, j1_slope=0.0, carry=0.0, noise=0.01, N=500, grow=False
+):
     """3 types x n_runs paths. y = type curve + dose_slope * D + j1_slope * J1G[..., 0] (+ a path effect that is
     visible at every point when ``carry``) + noise."""
     rng = np.random.default_rng(seed)
@@ -29,7 +31,10 @@ def synth(n_runs=8, seed=0, dose_slope=0.05, j1_slope=0.0, carry=0.0, noise=0.01
     D = lr[:, None] + np.linspace(-1, 0, J)[None, :] + 0.05 * rng.normal(size=(P_, J))
     J1G = rng.normal(size=(P_, J, 24))
     R1S = rng.normal(size=(P_, J, 3))
-    curve = {t: 0.3 + 0.1 * i + 0.02 * np.arange(J)[:, None] * np.ones((1, 4)) for i, t in enumerate("SLM")}
+    curve = {
+        t: 0.3 + 0.1 * i + 0.02 * np.arange(J)[:, None] * np.ones((1, 4))
+        for i, t in enumerate("SLM")
+    }
     eff = carry * rng.normal(size=(P_, 1, 4))
     if grow:
         eff = eff * np.arange(1, J + 1)[None, :, None] / 2
@@ -114,7 +119,9 @@ def test_crossfit_never_uses_the_path_own_run():
         ix = A["runs"] == q
         other = np.isin(A["runs"], [r for r in tr if r != q])
         for t in "SLM":
-            assert np.allclose(cf[ix & (A["types"] == t)], A["Y"][other & (A["types"] == t)].mean(0))
+            assert np.allclose(
+                cf[ix & (A["types"] == t)], A["Y"][other & (A["types"] == t)].mean(0)
+            )
     assert np.all(np.isnan(cf[~np.isin(A["runs"], tr)]))
 
 
@@ -184,12 +191,23 @@ def test_sequence_model_extrapolates_a_growing_path_effect_at_k2(arch):
 
 def test_holm_family_and_selection_rule():
     rows = {
-        "ridge": {0: {"p": 0.001, "d_mean": 0.1, "lb": 0.05}, 2: {"p": 0.5, "d_mean": 0.0, "lb": -0.1}},
-        "gp": {0: {"p": 0.004, "d_mean": 0.2, "lb": 0.02}, 2: {"p": 0.003, "d_mean": 0.2, "lb": 0.01}},
-        "gru": {0: {"p": 0.9, "d_mean": -0.1, "lb": -0.3}, 2: {"p": 0.9, "d_mean": -0.1, "lb": -0.3}},
+        "ridge": {
+            0: {"p": 0.001, "d_mean": 0.1, "lb": 0.05},
+            2: {"p": 0.5, "d_mean": 0.0, "lb": -0.1},
+        },
+        "gp": {
+            0: {"p": 0.004, "d_mean": 0.2, "lb": 0.02},
+            2: {"p": 0.003, "d_mean": 0.2, "lb": 0.01},
+        },
+        "gru": {
+            0: {"p": 0.9, "d_mean": -0.1, "lb": -0.3},
+            2: {"p": 0.9, "d_mean": -0.1, "lb": -0.3},
+        },
     }
     dec = MS.holm_family({(c, k): r[k]["p"] for c, r in rows.items() for k in r})
-    assert dec[("ridge", 0)]["reject"] and dec[("gp", 0)]["reject"] and not dec[("gru", 0)]["reject"]
+    assert (
+        dec[("ridge", 0)]["reject"] and dec[("gp", 0)]["reject"] and not dec[("gru", 0)]["reject"]
+    )
     assert np.isclose(dec[("ridge", 0)]["alpha"], 0.025 / 6)
     beats = {c: True for c in ("ridge", "gp")}
     assert MS.select_frozen(rows, beats) == "gp"
@@ -224,6 +242,10 @@ def test_null_n2_deranges_outcomes_within_type():
 
 def test_contrast_reports_d_p_and_lb():
     A = synth(n_runs=6)
-    out = MS.contrast(MS.run_candidate(A, "dose", ks=(0,), workers=1), MS.run_candidate(A, "pooled", ks=(0,), workers=1), A)
+    out = MS.contrast(
+        MS.run_candidate(A, "dose", ks=(0,), workers=1),
+        MS.run_candidate(A, "pooled", ks=(0,), workers=1),
+        A,
+    )
     assert set(out[0]) >= {"d_mean", "p", "lb", "mean_E", "mean_E_ref"}
     assert out[0]["d_mean"] > 0

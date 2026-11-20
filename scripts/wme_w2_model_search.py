@@ -80,7 +80,13 @@ def _seq_grid(k):
     return ["off"] + [(h, l2) for h in SEQ_H for l2 in SEQ_L2]
 
 
-GRIDS = {"ridge": _ridge_grid, "gp": _gp_grid, "per_endpoint": _pe_grid, "gru": _seq_grid, "ssm": _seq_grid}
+GRIDS = {
+    "ridge": _ridge_grid,
+    "gp": _gp_grid,
+    "per_endpoint": _pe_grid,
+    "gru": _seq_grid,
+    "ssm": _seq_grid,
+}
 
 
 # ------------------------------------------------------------------ features and loading
@@ -193,7 +199,9 @@ def _ridge_all(Xtr, R, Xte, alphas) -> dict:
     XtR = V.T @ (Xtr.T @ R)
     out = {}
     for a in alphas:
-        out[a] = np.zeros((len(Xte), R.shape[1])) if a == INF else Xte @ (V @ (XtR / (s + a)[:, None]))
+        out[a] = (
+            np.zeros((len(Xte), R.shape[1])) if a == INF else Xte @ (V @ (XtR / (s + a)[:, None]))
+        )
     return out
 
 
@@ -227,7 +235,7 @@ def residual_grid(A, train_runs, learner, grid) -> dict:
         Z = std_within(A["J1G"], A["types"], trm)
     else:
         Z = std_within(np.concatenate([A["J1G"], A["D"][..., None]], -1), A["types"], trm)
-    P_, J_, F = Z.shape
+    _, J_, F = Z.shape
     out = {h: np.zeros_like(A["Y"]) for h in grid}
     for t in "SLM":
         it = A["types"] == t
@@ -524,7 +532,11 @@ def pass_rule(res, ref, A) -> dict:
     for k in c:
         lb = W2.cluster_test(np.asarray(c[k]["d"]), A["runs"], alpha=dec[k]["alpha"])["lb"]
         ok[k] = bool(dec[k]["reject"] and lb > 0)
-    return {"reject": {k: dec[k]["reject"] for k in c}, "pass": any(ok.values()), "d_mean": {k: c[k]["d_mean"] for k in c}}
+    return {
+        "reject": {k: dec[k]["reject"] for k in c},
+        "pass": any(ok.values()),
+        "d_mean": {k: c[k]["d_mean"] for k in c},
+    }
 
 
 def _null_rep(s, A, kind, cand, ref, world, cal, kw):
@@ -552,7 +564,8 @@ def null_sizes(A, world, cand, ref, kinds, reps, workers=1, **kw) -> dict:
 
 def power_table(d, runs, reps, R_grid=R_GRID) -> dict:
     return {
-        f"{shift:g}x": {R: W2.ht3_power(d, runs, R, reps=reps, shift=shift) for R in R_grid} for shift in (1.0, 0.5)
+        f"{shift:g}x": {R: W2.ht3_power(d, runs, R, reps=reps, shift=shift) for R in R_grid}
+        for shift in (1.0, 0.5)
     }
 
 
@@ -585,7 +598,7 @@ def main(argv=None):
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     t0 = time.time()
     A, world, _ = load(a.w2)
-    log = lambda *m: print(f"[{time.time() - t0:7.1f}s]", *m, flush=True)  # noqa: E731
+    log = lambda *m: print(f"[{time.time() - t0:7.1f}s]", *m, flush=True)
     log("paths", len(A["ids"]), "runs", len(A["run_ids"]))
     cands = [c for c in a.cands.split(",") if c]
     seqkw = {"steps": a.seq_steps, "seeds": a.seq_seeds}
@@ -603,10 +616,17 @@ def main(argv=None):
         for k in KS:
             dd = dec[(c, k)]
             lb = W2.cluster_test(np.asarray(rows[c][k]["d"]), A["runs"], alpha=dd["alpha"])["lb"]
-            rows[c][k].update(holm_alpha=dd["alpha"], reject=dd["reject"], lb_holm=float(lb), beats=bool(dd["reject"] and lb > 0))
+            rows[c][k].update(
+                holm_alpha=dd["alpha"],
+                reject=dd["reject"],
+                lb_holm=float(lb),
+                beats=bool(dd["reject"] and lb > 0),
+            )
         beats[c] = any(rows[c][k]["beats"] for k in KS)
     frozen = select_frozen({c: rows[c] for c in tested}, beats)
-    best_point = max(tested, key=lambda c: np.mean([rows[c][k]["d_mean"] for k in KS])) if tested else None
+    best_point = (
+        max(tested, key=lambda c: np.mean([rows[c][k]["d_mean"] for k in KS])) if tested else None
+    )
     # the frozen contrast: candidate vs C2, or C2 vs C1 when nothing beats C2
     fz_cand, fz_ref = (frozen, "dose") if frozen else ("dose", "pooled")
     fz = contrast(res[fz_cand], res[fz_ref], A)
@@ -614,14 +634,23 @@ def main(argv=None):
     seq = fz_cand in ("gru", "ssm")
     nkinds = ("n1", "n2", "n3") if fz_cand != "dose" else ("n1_dose", "n2", "n3")
     nulls = null_sizes(
-        A, world, fz_cand, fz_ref, nkinds, a.null_reps_seq if seq else a.null_reps, workers=a.workers,
+        A,
+        world,
+        fz_cand,
+        fz_ref,
+        nkinds,
+        a.null_reps_seq if seq else a.null_reps,
+        workers=a.workers,
         **(seqkw if seq else {}),
     )
     log("nulls", {k: v["size"] for k, v in nulls.items()})
     power = {k: power_table(np.asarray(fz[k]["d"]), A["runs"], a.power_reps) for k in KS}
     power_best = None
     if best_point and best_point != fz_cand:
-        power_best = {k: power_table(np.asarray(rows[best_point][k]["d"]), A["runs"], a.power_reps) for k in KS}
+        power_best = {
+            k: power_table(np.asarray(rows[best_point][k]["d"]), A["runs"], a.power_reps)
+            for k in KS
+        }
     log("power done")
     out = {
         "label": "POST HOC / EXPLORATORY",
@@ -635,7 +664,9 @@ def main(argv=None):
                 "label": LABEL[c],
                 "mean_E": {k: float(res[c]["E"][k].mean()) for k in KS},
                 "E_by_endpoint": {k: res[c]["S"][k].mean(0).tolist() for k in KS},
-                "E_by_type": {k: {t: float(res[c]["E"][k][A["types"] == t].mean()) for t in "SLM"} for k in KS},
+                "E_by_type": {
+                    k: {t: float(res[c]["E"][k][A["types"] == t].mean()) for t in "SLM"} for k in KS
+                },
                 "chosen": {k: {r: repr(h) for r, h in res[c]["chosen"][k].items()} for k in KS},
                 "seconds": secs[c],
                 "E_paths": {k: res[c]["E"][k].tolist() for k in KS},
@@ -652,7 +683,9 @@ def main(argv=None):
         "nulls": nulls,
         "null_max": NULL_MAX,
         "power": {"alpha": POWER_ALPHA, "contrast": f"{fz_cand} vs {fz_ref}", "table": power},
-        "power_best_point": {"contrast": f"{best_point} vs dose", "table": power_best} if power_best else None,
+        "power_best_point": {"contrast": f"{best_point} vs dose", "table": power_best}
+        if power_best
+        else None,
         "params": {f"{arch}_h{h}": n_params(arch, h) for arch in ("gru", "ssm") for h in SEQ_H},
         "paths": A["ids"],
         "runs": A["runs"].tolist(),
