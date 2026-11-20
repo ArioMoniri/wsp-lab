@@ -23,7 +23,6 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import tempfile
 import time
 from pathlib import Path
 
@@ -90,22 +89,11 @@ def git_sha() -> str:
 
 
 def cmd_bundle(a):
-    out = Path(a.out)
-    stage = Path(tempfile.mkdtemp()) / "wmec1"
-    shutil.copytree(ROOT / "src", stage / "src", ignore=shutil.ignore_patterns("__pycache__"))
-    for rel in BUNDLE_FILES:
-        if "sealed" in rel:
-            raise SystemExit(f"refusing a sealed path: {rel}")
-        dst = stage / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(ROOT / rel, dst)
-    (stage / "CODE_SHA").write_text(git_sha())
-    bad = [str(p) for p in stage.rglob("*") if "sealed" in p.name or "/sealed_" in str(p)]
-    if bad:
-        raise SystemExit(f"sealed path in bundle: {bad[:3]}")
-    with tarfile.open(out, "w:gz") as tf:
-        tf.add(stage, arcname="wmec1")
-    print(json.dumps({"bundle": str(out), "sha256": sha(out), "code": git_sha()}))
+    """The instance bundle from the committed tree (``git archive HEAD``; §II.31.9 P2, Board A N7)."""
+    from wsp.wm.c1 import bundling as BD
+
+    rec = BD.build(a.out, root=ROOT, files=BUNDLE_FILES)
+    print(json.dumps({k: rec[k] for k in ("bundle", "sha256", "code_sha")}))
 
 
 # ------------------------------------------------------------------ instance up
