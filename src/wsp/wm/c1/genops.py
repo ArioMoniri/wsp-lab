@@ -354,9 +354,7 @@ def h_e1_gen(rt, req, ctx):
         rows, blocks, tensors, theta0 = _e1_hf(
             rt, ctx, a, cfg, decodings, seeds, prompts, ids, win, bundles
         )
-    return _e1_payload(
-        rt, ctx, a, cfg, items, decodings, win, rows, blocks, tensors, theta0, t_all
-    )
+    return _e1_payload(rt, ctx, a, cfg, items, decodings, win, rows, blocks, tensors, theta0, t_all)
 
 
 def _e1_hf(rt, ctx, a, cfg, decodings, seeds, prompts, ids, win, bundles):
@@ -434,7 +432,9 @@ def _e1_vllm(rt, ctx, a, cfg, decodings, seeds, prompts, ids, win, bundles):
             m.sess.apply_bundle(b)
         th = m.theta_hash()
         if th != win["theta_hash"]:
-            raise RuntimeError(f"winner theta-hash {th[:12]} != designated {win['theta_hash'][:12]}")
+            raise RuntimeError(
+                f"winner theta-hash {th[:12]} != designated {win['theta_hash'][:12]}"
+            )
         saved = _save_tensors(rt, m, th)
     finally:
         m.restore()

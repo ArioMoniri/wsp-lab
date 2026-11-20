@@ -75,7 +75,7 @@ def fast_fit(spec, base_obs):
 
 
 def test_histories_respect_the_training_restriction_and_calibration():
-    bank, comps, strata, spec = synth_bank()
+    bank, _comps, strata, spec = synth_bank()
     H = FO.histories(bank)
     assert {h["h"] for h in H} == {1, 2, 3, 4}
     assert all(h["R"].shape == (h["h"] + 1, spec.dim) for h in H)

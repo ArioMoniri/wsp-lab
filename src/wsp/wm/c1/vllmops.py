@@ -69,7 +69,9 @@ class Engine:
     def stop_ids(self):
         return {self.tok.eos_token_id, self.tok.convert_tokens_to_ids("<|im_end|>")}
 
-    def gen(self, prompts, max_tokens, sample=None, stop_token_ids=None, prompt_ids=None, hf_text=False):
+    def gen(
+        self, prompts, max_tokens, sample=None, stop_token_ids=None, prompt_ids=None, hf_text=False
+    ):
         """``prompt_ids`` (§II.31.8 R5): generate from these token ids (the HF encoding), not by re-tokenising the
         text; ``hf_text``: each output's text is ``tok.decode(ids, skip_special_tokens=True)`` with the HF tokenizer,
         not vLLM's incremental detokenisation."""

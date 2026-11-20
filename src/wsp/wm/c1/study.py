@@ -91,10 +91,18 @@ class Study:
         health_kinds=None,
         health_limits=None,
     ):
-        self.health = health  # §II.31 run-health rules on every issued unit (engineering drills may opt out)
-        self.health_order = health_order  # None: the registered §II.18 order (a fixture order only in the drill)
-        self.health_kinds = health_kinds  # None: health.KIND_CLASS (fixture classes only in the drill)
-        self.health_limits = health_limits  # None: the registered 15-min limits (shortened only in the drill)
+        self.health = (
+            health  # §II.31 run-health rules on every issued unit (engineering drills may opt out)
+        )
+        self.health_order = (
+            health_order  # None: the registered §II.18 order (a fixture order only in the drill)
+        )
+        self.health_kinds = (
+            health_kinds  # None: health.KIND_CLASS (fixture classes only in the drill)
+        )
+        self.health_limits = (
+            health_limits  # None: the registered 15-min limits (shortened only in the drill)
+        )
         self.monitor = None
         self.state = Path(state_dir)
         self.runs = Path(runs_dir)
@@ -190,7 +198,7 @@ class Study:
             mon = self.monitor
             fn = mon.wrap_fn(guard, fn)
             canary = mon.wrap_canary(guard, canary)
-            on_chunk = lambda rec, n: mon.chunk_summary(guard, rec, n)  # noqa: E731
+            on_chunk = lambda rec, n: mon.chunk_summary(guard, rec, n)
             before_begin = mon.before_begin(guard)
 
             # while a worker request is in flight the worker heartbeat rules apply (GPU idle / CPU progress); the
@@ -378,7 +386,9 @@ def reader_unit_fn(study, guard, remote, transport, recipe, client_factory, log=
     ukey = study.key(recipe)
     n = {"i": 0}
 
-    mon = getattr(study, "monitor", None)  # §II.31.8 R7: controller-side progress of the LLM-reader waits
+    mon = getattr(
+        study, "monitor", None
+    )  # §II.31.8 R7: controller-side progress of the LLM-reader waits
 
     def progress(event, **kw):
         if mon is not None:
@@ -502,7 +512,7 @@ class ProgressClient:
 
 
 def ceil_units(x: float) -> int:
-    return int(math.ceil(x))
+    return math.ceil(x)
 
 
 def now() -> float:

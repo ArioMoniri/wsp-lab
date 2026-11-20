@@ -241,13 +241,12 @@ def h_parity(rt, req, ctx):
         "gpu1_seconds": time.time() - t0,
     }
     if rt.cfg.vllm:
-        from wsp.wm import p3gen as G
         from wsp.wm.c1 import vllmops as VO
 
         rt.release()
-        blocks = VO.spawn(_vllm_canary_job(rt.cfg.repo, MO_tokenizer(rt), rt.cfg.smoke), ctx.scratch / "v0")[
-            "blocks"
-        ]
+        blocks = VO.spawn(
+            _vllm_canary_job(rt.cfg.repo, MO_tokenizer(rt), rt.cfg.smoke), ctx.scratch / "v0"
+        )["blocks"]
         v0 = blocks[0]["ids_sha256"]
         res["vllm_gpu0"] = v0
         res["vllm_gpu1"] = g1.get("vllm")
@@ -274,7 +273,6 @@ def _gpu1_main(cfg):
     if GE.GEN_ENGINE != "vllm":
         out["canary"]["hf_gen"] = m.canary_hf()
     if cfg["vllm"]:
-        from wsp.wm import p3gen as G
         from wsp.wm.c1 import vllmops as VO
 
         rt.release()

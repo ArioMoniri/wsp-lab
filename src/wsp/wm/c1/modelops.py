@@ -217,7 +217,7 @@ def versions() -> dict:
         out["cuda"] = torch.version.cuda
         if torch.cuda.is_available():
             out["gpu"] = [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110 - versions are best-effort (no GPU names without CUDA)
         pass
     return out
 

@@ -26,7 +26,6 @@ from pathlib import Path
 
 from wsp.wm.c1 import protocol as P
 
-
 LOG_REL = "../logs/worker.log"  # scripts/wme_c1_remote_worker.sh: the worker root is <remote>/w
 LOG_CHUNK = 1 << 20
 

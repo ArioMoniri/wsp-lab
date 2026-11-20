@@ -31,11 +31,11 @@ os.environ.setdefault("HF_HUB_OFFLINE", "1")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from wsp.wm import runguard as RG  # noqa: E402
-from wsp.wm.c1 import ctl as C  # noqa: E402
-from wsp.wm.c1 import lambda_ops as LO  # noqa: E402
-from wsp.wm.c1 import study as SD  # noqa: E402
-from wsp.wm.c1 import transport as T  # noqa: E402
+from wsp.wm import runguard as RG
+from wsp.wm.c1 import ctl as C
+from wsp.wm.c1 import lambda_ops as LO
+from wsp.wm.c1 import study as SD
+from wsp.wm.c1 import transport as T
 
 DATE = "2026-11-19"
 RUNS = ROOT / "data/wme/runs/wme-c1"
@@ -158,6 +158,20 @@ def ensure_watcher():
 
 
 def cmd_up(a):
+    from wsp.wm.c1 import phasel as PL
+
+    # §II.31.9 P2 / N4 / N6, before any spend: a clean tree, a bundle built from this commit, the registered gate
+    commit = PL.git("rev-parse", "HEAD")
+    if PL.git("status", "--porcelain", "--untracked-files=no"):
+        raise SystemExit("REFUSED: the controller tree has uncommitted changes (P2)")
+    with tarfile.open(a.bundle) as tf_:
+        bundle_code = tf_.extractfile("wmec1/CODE_SHA").read().decode().strip()
+    if bundle_code != commit:
+        raise SystemExit(f"REFUSED: the bundle was built from {bundle_code[:12]}, not HEAD {commit[:12]} (P2)")
+    gate = PL.run_gate()
+    log("registered test gate", json.dumps({k: gate[k] for k in ("exit_code", "counts", "pass")}))
+    if not gate["pass"]:
+        raise SystemExit(f"REFUSED: the registered test gate failed {gate['counts']} (N6)")
     LO.STATE.mkdir(parents=True, exist_ok=True)
     ensure_watcher()
     dm = LO.deadman()
@@ -253,6 +267,8 @@ def cmd_up(a):
         "kind": a.kind,
         "alias": alias,
         "bundle_sha256": sha(bundle),
+        "controller_commit": commit,
+        "gate": gate,
     }
     (RUNS / "instances").mkdir(parents=True, exist_ok=True)
     (RUNS / "instances" / f"{iid}.json").write_text(json.dumps(rec, indent=1))
@@ -316,6 +332,34 @@ def write_evidence(name, obj) -> tuple[str, str]:
         return str(p), h
 
 
+def instance_record(iid: str) -> dict:
+    p = RUNS / "instances" / f"{iid}.json"
+    return json.loads(p.read_text()) if p.exists() else {}
+
+
+def code_and_state(hello: dict, iid: str) -> dict:
+    """§II.31.9 N4 (b): controller commit (clean tree) = the worker bundle's CODE_SHA, the bundle sha256, the worker's
+    process globals at start (R11) and the N6 gate result recorded at ``up``."""
+    from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import phasel as PL
+
+    rec = instance_record(iid)
+    return {
+        "code_identity": PL.code_identity(hello.get("code_sha"), rec.get("bundle_sha256")),
+        "worker_global_state": PL.worker_state_check(hello.get("global_state"), GE.GEN_ENGINE),
+        "gate": rec.get("gate"),
+    }
+
+
+def require_code_and_state(cs: dict):
+    if not cs["code_identity"]["pass"]:
+        raise SystemExit(f"PRECONDITION FAILED: code identity {cs['code_identity']}")
+    if not cs["worker_global_state"]["pass"]:
+        raise SystemExit(f"PRECONDITION FAILED: worker globals {cs['worker_global_state']}")
+    if not (cs["gate"] or {}).get("pass"):
+        raise SystemExit(f"PRECONDITION FAILED: registered test gate {cs['gate']}")
+
+
 def ec_sha() -> str:
     return hashlib.sha256(json.dumps(engine_config(), sort_keys=True).encode()).hexdigest()
 
@@ -343,6 +387,8 @@ def cmd_phasel_parity(a):
         hello = call("hello", {})
         if hello.get("gen_engine") != GE.config():
             raise SystemExit("PRECONDITION FAILED: the worker's generation engine is not the recorded one")
+        cs = code_and_state(hello, a.iid)
+        require_code_and_state(cs)
         checks = PL.run_checks(call, GE.GEN_ENGINE)
         dm = LO.deadman()
         s_l = LO.deadman_gpu_h(dm.state())  # all Phase L check instances so far, this one to now
@@ -358,6 +404,7 @@ def cmd_phasel_parity(a):
                 "engine_config_sha256": ecs,
                 "engine_config": ec,
                 "hello": hello,
+                **cs,
                 **checks,
                 "evaluation": ev,
             },
@@ -415,6 +462,9 @@ def cmd_phasel_main(a):
     par_path = str(Path(a.parity_evidence))
     par = json.loads((ROOT / par_path).read_text())
     PL.check_binding(par, ecs, "parity evidence")  # R2: produced under the current engine config
+    head = PL.git("rev-parse", "HEAD")
+    if (par.get("code_identity") or {}).get("controller_commit") != head:  # P2: the same commit's evidence only
+        raise SystemExit("PRECONDITION FAILED: the parity evidence was not produced by this commit")
     ev = par["evaluation"]
     if not ev["proceed"] or ev["selected_engine"] != GE.GEN_ENGINE:
         raise SystemExit(f"PRECONDITION FAILED: parity evaluation {ev['selected_engine']} / {ev['proceed']}")
@@ -426,6 +476,8 @@ def cmd_phasel_main(a):
     hello, _ = rem.call("hello", 0, inst, "m" * 64, "hello", {})
     if hello.get("gen_engine") != GE.config():
         raise SystemExit("PRECONDITION FAILED: the worker's generation engine is not the recorded one")
+    cs = code_and_state(hello, a.iid)
+    require_code_and_state(cs)
     log("hello", json.dumps({k: hello[k] for k in ("theta0", "versions", "physical")}))
     inert, _ = rem.call("inert_identity", 0, inst, "n" * 64, "inert", {}, timeout_s=7200)
     log("inert identity pass:", inert["pass"])
@@ -435,6 +487,10 @@ def cmd_phasel_main(a):
     eng = can["engines"]
     if set(eng) != GE.canary_engines():  # R2: the canary set of the recorded engine
         raise SystemExit(f"PRECONDITION FAILED: canary engines {sorted(eng)}")
+    cross = PL.cross_instance_canaries(eng, par)  # N3: the main instance reproduces the parity instance
+    log("cross-instance canaries", json.dumps(cross))
+    if not cross["pass"]:
+        raise SystemExit(f"PRECONDITION FAILED: main vs parity canaries {cross['pairs']}")
     tim, _ = rem.call("timing", 0, inst, "t" * 64, "timing", {}, timeout_s=7200)
     p_bank = (
         SD.PRICE["bank"]
@@ -460,6 +516,10 @@ def cmd_phasel_main(a):
     if hashlib.sha256(json.dumps(ec, sort_keys=True).encode()).hexdigest() != ecs:
         raise SystemExit("engine config changed during phasel-main")
     ec_path, ec_file_sha = write_evidence(f"wme-c1-engine-config-{utc_date()}-{a.tag}.json", ec)
+    cs_path, cs_sha = write_evidence(
+        f"wme-c1-launch-code-{utc_date()}-{a.tag}.json",
+        {"engine_config_sha256": ecs, "instance": inst, **cs, "cross_instance_canaries": cross},
+    )
     pz_path, pz_sha = write_evidence(
         f"wme-c1-launch-parsers-{utc_date()}-{a.tag}.json",
         {"engine_config_sha256": ecs, "gen_parsers_check": parsers},
@@ -487,10 +547,11 @@ def cmd_phasel_main(a):
             f"{ec_path} sha256:{ec_file_sha}",
             f"{tim_path} sha256:{tim_sha}",
             f"{pz_path} sha256:{pz_sha}",
+            f"{cs_path} sha256:{cs_sha}",
         ]
     )
     subprocess.run(
-        ["git", "add", par_path, inert_path, can_path, ec_path, tim_path, pz_path],
+        ["git", "add", par_path, inert_path, can_path, ec_path, tim_path, pz_path, cs_path],
         cwd=ROOT,
         check=True,
     )

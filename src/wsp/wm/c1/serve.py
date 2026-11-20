@@ -221,16 +221,23 @@ def h_hello(rt: Runtime, req, ctx):
     from wsp.wm.c1 import genengine as GE
 
     m = rt.hf()
-    return {
-        "gen_engine": GE.config(),
-        "cublas_workspace_config": os.environ.get(GE.CUBLAS_ENV),
-        "theta0": m.base_hash,
-        "repo": rt.cfg.repo,
-        "load_s": m.load_s,
-        "versions": MO.versions(),
-        "physical": MO.physical_identity(),
-        "smoke": rt.cfg.smoke,
-    }, {}
+    return (
+        {
+            "gen_engine": GE.config(),
+            "cublas_workspace_config": os.environ.get(GE.CUBLAS_ENV),
+            "global_state": GE.global_state(),  # §II.31.9 N4 (b): the worker's process globals at start (R11)
+            "code_sha": (MO.ROOT / "CODE_SHA").read_text().strip()
+            if (MO.ROOT / "CODE_SHA").exists()
+            else None,
+            "theta0": m.base_hash,
+            "repo": rt.cfg.repo,
+            "load_s": m.load_s,
+            "versions": MO.versions(),
+            "physical": MO.physical_identity(),
+            "smoke": rt.cfg.smoke,
+        },
+        {},
+    )
 
 
 def h_canary(rt: Runtime, req, ctx):
@@ -246,7 +253,9 @@ def h_canary(rt: Runtime, req, ctx):
     if not vllm_gen:
         eng["hf_gen"] = m.canary_hf(MO.gen_canary_items())
     elif not rt.cfg.vllm:
-        raise RuntimeError("generation engine 'vllm' needs the vLLM engine (worker started with --no-vllm)")
+        raise RuntimeError(
+            "generation engine 'vllm' needs the vLLM engine (worker started with --no-vllm)"
+        )
     tok = m.tok
     ctx.check()
     t1 = time.time()

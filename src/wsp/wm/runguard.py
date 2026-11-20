@@ -761,11 +761,15 @@ class CombinedLedger(_View):
 
     def remaining_gpu_h(self) -> float:
         """GPU-h-eq the cap in force still allows (the dead-man allowance's GPU-hours)."""
-        return max(0.0, min(self.cap_gpu_h() - self.gpu_h(), CAP_USD / USD_PER_GPU_H - self.gpu_h()))
+        return max(
+            0.0, min(self.cap_gpu_h() - self.gpu_h(), CAP_USD / USD_PER_GPU_H - self.gpu_h())
+        )
 
     def remaining_usd(self) -> float:
         """For the per-instance dead-man ``max_usd``: never more than what the combined cap leaves."""
-        return max(0.0, min(CAP_USD - self.usd(), (self.cap_gpu_h() - self.gpu_h()) * USD_PER_GPU_H))
+        return max(
+            0.0, min(CAP_USD - self.usd(), (self.cap_gpu_h() - self.gpu_h()) * USD_PER_GPU_H)
+        )
 
     def record_cap(self, cap: CapGeneration, contract=None, generation=None) -> dict | None:
         """Persist ``cap`` as a new cap generation if it is above the cap in force (idempotent if equal; a lower cap
@@ -852,7 +856,9 @@ class RetryPolicy(_View):
             raise ValueError(f"retry cause {cause!r} is not a registered technical cause")
         with self._op() as s:
             n = s.attempts.get(unit, 0) + 1  # attempt numbers stay unique (attempt keys)
-            counted = s.attempts.get(unit, 0) - s.aborted.get(unit, 0)  # incident aborts never count (R4)
+            counted = s.attempts.get(unit, 0) - s.aborted.get(
+                unit, 0
+            )  # incident aborts never count (R4)
             if counted + 1 > UNIT_ATTEMPTS:
                 raise RetryExhausted(
                     f"{unit}: {UNIT_ATTEMPTS} attempts used; take its registered fallback"
@@ -949,11 +955,18 @@ class CapGeneration:
             raise ValueError("the user's cap decision carries rule 'user'")
         if self.decided_by == "chair":
             if self.rule != "R8" or not isinstance(self.basis, dict):
-                raise ValueError("a later raise is only the mechanical R8 raise, with its ledger basis")
+                raise ValueError(
+                    "a later raise is only the mechanical R8 raise, with its ledger basis"
+                )
             want = r8_cap(self.basis)
             if want is None or abs(float(self.cap_gpu_h) - want) > 1e-9:
-                raise ValueError(f"cap {self.cap_gpu_h} is not the R8 value {want} for basis {self.basis}")
-        if not (CAP_GPU_H <= float(self.cap_gpu_h)) or float(self.cap_gpu_h) * USD_PER_GPU_H > CAP_USD:
+                raise ValueError(
+                    f"cap {self.cap_gpu_h} is not the R8 value {want} for basis {self.basis}"
+                )
+        if (
+            not (CAP_GPU_H <= float(self.cap_gpu_h))
+            or float(self.cap_gpu_h) * USD_PER_GPU_H > CAP_USD
+        ):
             raise ValueError(
                 f"cap {self.cap_gpu_h} GPU-h-eq: below the registered {CAP_GPU_H} or beyond ${CAP_USD} "
                 f"at {USD_PER_GPU_H:.3f}/GPU-h"
@@ -1347,7 +1360,9 @@ class ProductionGuard:
         with self._op() as s:
             if s.incidents:
                 k = [i["kind"] for i in s.incidents]
-                raise HealthHalt(f"{label}: open run-health incidents {k}; diagnose and report first")
+                raise HealthHalt(
+                    f"{label}: open run-health incidents {k}; diagnose and report first"
+                )
             self._require_active(s)
             cans = s.canaries.get((self.instance, self.generation, self.contract), [])
             if not cans or cans[-1][1] != s.contracts[self.generation]["canary_reference"]:
@@ -1388,7 +1403,9 @@ class ProductionGuard:
         return st
 
     def failed(self, key, label, seconds, exc):
-        if isinstance(exc, IncidentAbort):  # R4: charged, not a failure, never counted toward the limit
+        if isinstance(
+            exc, IncidentAbort
+        ):  # R4: charged, not a failure, never counted toward the limit
             with self._op() as s:
                 st = self._inflight(s, key)
                 self.ledger.add(self.phase, seconds, note=f"{label} aborted", status="aborted")

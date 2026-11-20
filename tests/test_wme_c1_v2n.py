@@ -175,8 +175,16 @@ class FakeRemote:
         return (p(args) if callable(p) else p), None
 
 
+PASSING_CS = {
+    "code_identity": {"pass": True, "controller_commit": "fixture"},
+    "worker_global_state": {"pass": True},
+    "gate": {"pass": True},
+}
+
+
 def drive_parity(tmp_path, monkeypatch, c):
     mod = load_ctl()
+    monkeypatch.setattr(mod, "code_and_state", lambda hello, iid: PASSING_CS)  # v2o tests cover it
     rem = FakeRemote(
         {
             "hello": {"gen_engine": GE.config(), "theta0": "t", "versions": {}, "physical": {}},
@@ -256,11 +264,16 @@ def test_r2_phasel_main_refuses_unbound_evidence_and_uses_the_engine_canary_set(
         mod.cmd_phasel_main(a)
     # bound evidence, C1(b) active: the canary set {tf, vllm_gen, vllm} is accepted (stops at the next request)
     monkeypatch.setattr(GE, "GEN_ENGINE", "vllm")
+    from wsp.wm.c1 import phasel as PL
+
     ev = {
         "engine_config_sha256": mod.ec_sha(),
         "evaluation": {"proceed": True, "selected_engine": "vllm"},
+        "code_identity": {"controller_commit": PL.git("rev-parse", "HEAD")},
+        "parity": {"canary_gpu0": {"tf": A}, "vllm_gpu0": A, "vllm_gen_gpu0": A},
     }
     (tmp_path / "par.json").write_text(json.dumps(ev))
+    monkeypatch.setattr(mod, "code_and_state", lambda hello, iid: PASSING_CS)
 
     class Stop(Exception):
         pass
@@ -730,7 +743,8 @@ def test_r9_registered_file_hash_history():
 
 
 def test_r9_post_freeze_chat_change_is_qwen_equivalent():
-    """46967f8 (study M) moved the stop ids and the chat prompt into wsp.wm.chat: identical for the pinned Qwen."""
+    """46967f8 (study M) had moved the stop ids and the chat prompt into wsp.wm.chat (since reverted on main by
+    d3a2d01); wsp.wm.chat itself remains Qwen-equivalent to the registered code for the pinned tokenizer."""
     from wsp.wm import chat as CH
     from wsp.wm import hf
     from wsp.wm import p3gen as G
@@ -878,3 +892,37 @@ def test_r11_restore_state_round_trip(monkeypatch):
 def test_r11_tests_start_from_a_clean_baseline():
     """The autouse fixture: whatever an earlier test (in any module) left behind, a c1 test starts at the baseline."""
     assert GE.global_state() == GE.BASELINE_STATE
+
+
+def test_r9_launch_requires_the_registered_generation_file_restored_on_main():
+    """main d3a2d01 restored genaudit.py (and panel, p3gen, actions, controls, hf) to the pre-46967f8 bytes: the launch
+    check now accepts exactly the registered file 52ad2bbd… (63ca07f); the reverted 46967f8 version no longer passes."""
+    import subprocess
+
+    ok = PL.parser_check()
+    assert ok["pass"] and ok["file_sha256"] == PL.GENAUDIT_LAUNCH_SHA256
+    assert PL.GENAUDIT_LAUNCH_SHA256.startswith("52ad2bbd")
+    old = subprocess.run(
+        ["git", "show", "46967f8:src/wsp/wm/genaudit.py"], capture_output=True, cwd=ROOT, check=True
+    ).stdout
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "genaudit.py"
+        p.write_bytes(old)
+        r = PL.parser_check(p)
+    assert r["functions_unchanged"] is True and r["file_history"] and r["pass"] is False
+
+
+def test_registered_wm_files_are_at_the_frozen_bytes():
+    """N2 (Board A v2n re-check): the C1-registered wm files equal their bytes at the freeze tag
+    prereg-wme-v2-frozen (af4face), so the C1 test command covers what study M's test covers."""
+    import subprocess
+
+    for f in ("genaudit", "panel", "p3gen", "actions", "controls", "hf"):
+        frozen = subprocess.run(
+            ["git", "show", f"af4face:src/wsp/wm/{f}.py"], capture_output=True, cwd=ROOT, check=True
+        ).stdout
+        assert (ROOT / "src/wsp/wm" / f"{f}.py").read_bytes() == frozen, (
+            f"{f}.py differs from af4face"
+        )

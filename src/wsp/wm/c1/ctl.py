@@ -61,7 +61,9 @@ class Remote:
     ):
         self.restart = restart  # kills and restarts the worker process (a withdrawn request that does not stop)
         self.withdraw_grace_s = withdraw_grace_s
-        self.watch = watch  # called on every poll while a request is in flight (run-health rules, §II.31)
+        self.watch = (
+            watch  # called on every poll while a request is in flight (run-health rules, §II.31)
+        )
         self.revive = (
             revive  # restarts a dead worker process (same instance); the inbox request survives
         )
@@ -102,7 +104,9 @@ class Remote:
         resumes only under a new owner epoch (a new guard). Returns "fenced", "restarted" or "unconfirmed"."""
         self._with_retry(lambda: self.t.cancel(req["id"]), "cancel")
         self._with_retry(lambda: self.t.set_fence(int(req["epoch"]) + 1, req["instance"]), "fence")
-        self._journal({"event": "health_abort", "id": req["id"], "fence_epoch": int(req["epoch"]) + 1})
+        self._journal(
+            {"event": "health_abort", "id": req["id"], "fence_epoch": int(req["epoch"]) + 1}
+        )
         hb_of = getattr(self.t, "heartbeat", None)
         out = "unconfirmed"
         if hb_of is not None:

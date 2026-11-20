@@ -158,7 +158,7 @@ def wait_active_ssh(dm: D.Deadman, iid: str, alias: str, timeout_s=2700, poll_s=
             try:
                 ssh(alias, "true", timeout=30)
                 return True
-            except Exception:  # noqa: BLE001 - sshd not up yet
+            except Exception:  # noqa: BLE001, S110 - sshd not up yet
                 pass
         if str(info.get("status", "")).startswith("terminat"):
             raise RuntimeError(f"{iid} terminated by the provider during boot")

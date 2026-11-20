@@ -20,7 +20,9 @@ def square(req, ctx):
         mark = ctx.worker.root / f"failed_{a['x']}"
         if not mark.exists():
             mark.write_text("1")
-            if a["fail_once"] == "technical":  # classified "infrastructure" (a registered technical cause)
+            if (
+                a["fail_once"] == "technical"
+            ):  # classified "infrastructure" (a registered technical cause)
                 raise OSError("drill: injected infrastructure error")
             raise RuntimeError("drill: injected worker error")  # no registered cause
     if a.get("hang_once"):  # scenario H (R6): a hung op that never reaches ctx.check
