@@ -70,26 +70,33 @@ def tighten(
 
     ``max_usd`` and the idle limit only tighten, except that ``max_usd`` is re-based once per newly logged cap
     generation (PREREG_WME §II.31: a cap raise is recorded in the study log before the units it funds, and the
-    dead-man allowance is the remaining cap). ``t_max_hours`` (cumulative instance-hours) is set per launch."""
+    dead-man allowance is the remaining cap). ``t_max_hours`` (cumulative instance-hours) is set per launch.
+
+    ``policy.json`` holds dead-man policy keys only (the dead-man refuses any other key, Phase L part 1 incident,
+    20 Nov 2026); the cap-generation marker of the last re-base lives in ``policy_cap.json``. A legacy marker in
+    ``policy.json`` is moved there."""
     p = Path(state) / "policy.json"
+    pc = Path(state) / "policy_cap.json"
     cur = json.loads(p.read_text()) if p.exists() else {}
+    legacy = cur.pop("cap_generation", None)
+    seen = json.loads(pc.read_text()).get("cap_generation") if pc.exists() else legacy
+    seen = -1 if seen is None else int(seen)
     new = {
         "max_usd": float(max_usd),
         "t_max_hours": float(t_max_hours),
         "idle_limit_s": float(idle_limit_s),
     }
-    rebase = cap_generation is not None and int(cap_generation) > int(cur.get("cap_generation", -1))
+    rebase = cap_generation is not None and int(cap_generation) > seen
     for k, v in list(new.items()):
         if k == "t_max_hours" or (k == "max_usd" and rebase):
             continue
         if k in cur and v > cur[k]:
             new[k] = cur[k]
-    if cap_generation is not None:
-        new["cap_generation"] = max(int(cap_generation), int(cur.get("cap_generation", -1)))
-    elif "cap_generation" in cur:
-        new["cap_generation"] = cur["cap_generation"]
+    gen = max(int(cap_generation), seen) if cap_generation is not None else seen
+    if gen >= 0:
+        pc.write_text(json.dumps({"cap_generation": gen}))
     p.write_text(json.dumps(new, indent=1))
-    return new
+    return dict(new, cap_generation=gen if gen >= 0 else None)
 
 
 def authoritative(state: Path, iid: str):
