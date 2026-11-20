@@ -37,6 +37,7 @@ from wsp.wm import lora as LR
 from wsp.wm import wmm_gate0 as W
 from wsp.wm import wmm_gate0b as B
 from wsp.wm.wmm import gate1 as G1
+from wsp.wm.wmm import lora_micro as LM
 
 _spec = importlib.util.spec_from_file_location("wmm_gate0_driver", ROOT / "scripts/wmm_gate0.py")
 G0 = importlib.util.module_from_spec(_spec)
@@ -419,7 +420,8 @@ def loras(ctx, items):
             alpha=G1.LORA["alpha"],
             seed=seed_for(f"lora:{fam}"),
         )
-        log = LR.train(
+        torch.cuda.empty_cache()
+        log = LM.train(  # micro-batched, same recipe (incident 20 Nov: 8-row batches OOM at 16 GB)
             ctx.model,
             ad,
             rows,
@@ -434,6 +436,7 @@ def loras(ctx, items):
             checkpointing=True,
             ce_chunk=1024,
             log=lambda e, fam=fam, **kw: ctx.log(e, family=fam, **kw),
+            micro_rows=1,
         )
         factors[fam] = ad.factors()
         torch.save(factors[fam], f)
@@ -450,6 +453,7 @@ def loras(ctx, items):
                 "rank",
                 "alpha",
                 "seed",
+                "micro_rows",
             )
         }
         meta.update(
