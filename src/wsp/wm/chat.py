@@ -6,6 +6,8 @@
 * **Thinking switch.** Qwen's template reads ``enable_thinking``; Gemma's has no such switch and silently ignores
   the kwarg. :func:`chat_prompt` passes it only when the template reads it, and refuses ``thinking=True`` otherwise.
   For Qwen the rendered prompt is exactly as before (``enable_thinking=False`` by default).
+* **Scope.** Study M calls these helpers directly. The registered WM-E call sites (``panel.chat_prompt``,
+  ``p3gen.chat``, ``genaudit._generate``) are frozen and do not route through this module (chair rule, 20 Nov 2026).
 """
 
 from __future__ import annotations

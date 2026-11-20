@@ -34,10 +34,11 @@ import torch
 
 from wsp.wm import actions as A
 from wsp.wm import chat as CH
-from wsp.wm import controls as C
 from wsp.wm import gemma3 as G3
 from wsp.wm import lora as LR
 from wsp.wm import wmm_gate0 as W
+from wsp.wm.wmm import controls as C
+from wsp.wm.wmm import roles as R
 
 VRAM_CAP_GB = 16.0
 GPU_H_CAP = 2.85  # stop new phases beyond this (hard rule: <= 3 GPU-h)
@@ -139,7 +140,7 @@ def load(ctx):
         eos_token_id=ctx.stop, pad_token_id=ctx.pad, bos_token_id=tok.bos_token_id, do_sample=False
     )
     ctx.model, ctx.tok, ctx.cfg, ctx.base_hash, ctx.snap = model, tok, cfg, bhash, path
-    ctx.rm = A.RoleMap.from_config(cfg)
+    ctx.rm = R.GemmaRoleMap.from_config(cfg)
     ctx.params = dict(model.named_parameters())
     ctx.log(
         "loaded",
@@ -415,7 +416,7 @@ def phase_inert(ctx):
         "compensated_attention": [
             a for b in C.compensated_pairs(ctx.rm, attention_layers=(0, 5, 20)) for a in b
         ],
-        "k_norm_cancelled": C.post_norm_cancelled_scales(ctx.rm, layers=(0, 5, 11)),
+        "k_norm_cancelled": C.k_norm_scales(ctx.rm, layers=(0, 5, 11)),
     }
     groups["all"] = [a for g in list(groups.values()) for a in g]
     rep["controls"] = {}

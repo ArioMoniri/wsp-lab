@@ -74,10 +74,12 @@ def _rank(salt: str, h: str) -> str:
 
 
 def chat_prompt(tok, user: str) -> str:
-    """Non-thinking chat prompt (Qwen: ``enable_thinking=False``; Gemma 3: no switch, see :mod:`wsp.wm.chat`)."""
-    from wsp.wm import chat as CH
-
-    return CH.chat_prompt(tok, user, thinking=False)
+    return tok.apply_chat_template(
+        [{"role": "user", "content": user}],
+        tokenize=False,
+        add_generation_prompt=True,
+        enable_thinking=False,
+    )
 
 
 def gsm8k_user(row) -> str:
