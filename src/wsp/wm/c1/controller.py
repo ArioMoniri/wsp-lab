@@ -60,7 +60,7 @@ class Controller:
     # ------------------------------------------------------------------ guard and files
     def guard(self, phase: str) -> RG.ProductionGuard:
         g = self.study.guard(phase, self.instance)
-        self.t.set_fence(g.epoch, self.instance)
+        C.take_over(self.t, self.remote, g)
         g.open_instance(self.gpus)
         return g
 
@@ -152,7 +152,6 @@ class Controller:
         for recipe, label in units:
             got, _d = self.remote.call(
                 "field_repair", g.epoch, g.instance, self.study.key(recipe), label, dict(recipe["args"]),
-                timeout_s=7200,
             )  # fmt: skip
             recollected[label] = {k: got.get(k) for k in ("file_sha256", "kept_sha256")}
             if label in pl["indirect"]:
@@ -174,7 +173,7 @@ class Controller:
             for vrecipe, vlabel, vpayload in verifiers:
                 got, _d = self.remote.call(
                     "bank_verify", g.epoch, g.instance, self.study.key(vrecipe), f"verify:{vlabel}",
-                    {"kind": vrecipe["kind"], "args": vrecipe["args"]}, timeout_s=7200,
+                    {"kind": vrecipe["kind"], "args": vrecipe["args"]},
                 )  # fmt: skip
                 want_h, got_h = FR.timing_free_sha(vpayload), FR.timing_free_sha(got)
                 r_equal = FR.r_vectors(vpayload) == FR.r_vectors(got)
@@ -240,7 +239,6 @@ class Controller:
             "q" * 64,
             f"field_quarantine: {why}",
             {},
-            timeout_s=1800,
         )
         if q.get("moved"):
             self.log("field quarantined", why, q.get("dest"), sorted(q["moved"]))
@@ -327,7 +325,7 @@ class Controller:
                 instance=g.instance,
             )
         status, _d = self.remote.call(
-            "field_status", g.epoch, g.instance, "s" * 64, "field_status", {}, timeout_s=1800
+            "field_status", g.epoch, g.instance, "s" * 64, "field_status", {}
         )
         disk = status["field"]
         diffs = []
@@ -680,7 +678,7 @@ class Controller:
     # ------------------------------------------------------------------ close
     def close(self, phase: str = "confirmatory"):
         g = self.study.guard(phase, self.instance)
-        self.t.set_fence(g.epoch, self.instance)
+        C.take_over(self.t, self.remote, g)
         rec = C.run_canary(g, self.remote, self.canary_args)
         g.close_instance()
         return rec

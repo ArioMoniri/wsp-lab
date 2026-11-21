@@ -28,3 +28,14 @@ In `scripts/wme_c1_ctl.py` `cmd_phasel_resume`, the four requests after `tr.set_
 ## Note: driver
 
 The main instance reported NVIDIA driver 570.148.08. Every earlier study instance had 580.105.08, including the parity instance of this run. The resume precondition compares the main instance's canaries (tf, hf_gen, vllm) with the committed references. A numeric effect of the driver would show there as a `canary_mismatch` incident before any unit runs.
+
+## Follow-up FF (chair, same day): this class of hang fails fast
+
+- **Rejected requests.** Whenever the worker refuses or aborts a request without a result, it writes `rejected/<id>.reason.json` before moving the request file. The reasons are `stale_epoch`, `fenced_while_running` and `malformed`. The controller checks for this file on every poll, in the same single round trip as the result check. Within one poll interval it raises a `request_rejected` run-health incident that names the reason.
+- **Deadlines.** Every request has a response deadline per kind (`wsp.wm.c1.deadlines`).
+  - Units: 8 × the guard's registered per-unit estimate, i.e. bank 2.8 h, confirmatory and S-BoN 6 h, S-TE 10 h.
+  - Checks: hello 10 min; canary and timing 30 min; inert identity and parity 1 h.
+  - When a deadline passes, the controller records a `request_deadline` incident, withdraws the request (R6) and halts.
+- **Attempts.** Both are `IncidentAbort`: an in-flight unit attempt is recorded `attempt_aborted` (charged, never counted). The incident is written through the guard that `ctl.take_over` binds at every owner takeover. Before any guard exists (parity, first-launch checks), the failure is journalled and raised just the same.
+- **Driver.** `code_and_state` records the instance's NVIDIA driver next to the parity instance's driver, in the parity, launch and resume evidence. A difference is informational; the canary comparison remains the binding test.
+- **This halt under FF.** The run4 resume would have stopped within one poll (10 s) with `request_rejected` / `stale_epoch`, instead of waiting indefinitely.

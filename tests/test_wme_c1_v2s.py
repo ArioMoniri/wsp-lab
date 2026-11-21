@@ -194,7 +194,9 @@ def resume_setup(tmp_path, monkeypatch, engines):
     monkeypatch.setattr(PL, "committed_references", lambda att, root=None: {"engines": ENGINES})
     monkeypatch.setattr(PL, "parser_check", lambda: {"pass": True})
     monkeypatch.setattr(mod, "MO_theta0", lambda: "t" * 64)
-    monkeypatch.setattr(mod, "code_and_state", lambda hello, iid: {"code_identity": {"pass": True}})
+    monkeypatch.setattr(
+        mod, "code_and_state", lambda hello, iid, parity=None: {"code_identity": {"pass": True}}
+    )
     monkeypatch.setattr(mod, "require_code_and_state", lambda cs: None)
     commits = []
     monkeypatch.setattr(mod, "commit_evidence", lambda paths, msg: commits.append(paths))

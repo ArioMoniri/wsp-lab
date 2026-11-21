@@ -202,7 +202,7 @@ def main_setup(tmp_path, monkeypatch, engines, commit=None):
         }
     )
     monkeypatch.setattr(mod, "remote_for", lambda *a: (None, rem))
-    monkeypatch.setattr(mod, "code_and_state", lambda hello, iid: PASSING_CS)
+    monkeypatch.setattr(mod, "code_and_state", lambda hello, iid, parity=None: PASSING_CS)
     monkeypatch.setattr(
         C, "composite_canary", lambda e: pytest.fail("composite before the N3 check")
     )

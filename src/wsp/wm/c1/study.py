@@ -173,6 +173,11 @@ class Study:
         """``units`` [(recipe, label)] with recipe {"kind", "args", "uploads": {name: local path}}. Uploads are
         content-addressed on the worker (``uploads/<sha256>``) and their worker paths replace the names in args."""
         store = self.store(guard.phase)
+        bind = getattr(
+            remote, "bind", None
+        )  # chair item FF: request incidents are recorded with this owner
+        if bind is not None:
+            bind(guard)
 
         def default_fn(recipe):
             args = dict(recipe["args"])
