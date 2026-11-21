@@ -1,0 +1,246 @@
+{
+ "study": "M\u2032 (PREREG_WMM)",
+ "status": "SEALED: built from item text only; no generation; no outcome read",
+ "salt": "wmm-p1",
+ "prior_salts_excluded": [
+  "wmm-g0",
+  "wmm-g0b",
+  "wmm-g1"
+ ],
+ "datasets": {
+  "medqa": [
+   "openlifescienceai/medqa",
+   "153e61cdd129eb79d3c27f82cdf3bc5e018c11b0"
+  ],
+  "medmcqa": [
+   "openlifescienceai/medmcqa",
+   "91c6572c454088bf71b679ad90aa8dffcd0d5868"
+  ],
+  "medsafety": [
+   "israel-adewuyi/med-safety-bench-reproduced",
+   "0c3d752deb205f2f672bee4644f22e70e11bd708"
+  ],
+  "medquad": [
+   "lavita/MedQuAD",
+   "84ea67f83cec9692ad254eaa02c9731b24ecfe4c"
+  ],
+  "arc": [
+   "allenai/ai2_arc",
+   "210d026faf9955653af8916fad021475a3f00453"
+  ]
+ },
+ "target": {
+  "repo": "google/medgemma-1.5-4b-it",
+  "revision": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b"
+ },
+ "harness": {
+  "prompt": "wmm_gate0b.prompt",
+  "extractor": "wmm_gate0b.extract",
+  "budget": 4096,
+  "decoding": "greedy"
+ },
+ "generation": {
+  "batch": 32,
+  "order": "ascending prompt tokens, ties by wmm-p1 rank; shared by base and every edit"
+ },
+ "exposure_registry": {
+  "path": "docs/prereg/wmm_exposure_registry.json",
+  "sha256": "fe44100f0a3f5809fc5968e97a2ddc3edbcf19a1a9c43b44f28ec5d4a0ef1d48",
+  "n_entries": 2390,
+  "n_unique": 2390
+ },
+ "panels": {
+  "mq": {
+   "source": "medqa",
+   "pool_in": 2545,
+   "removed": {
+    "exposed_or_sealed": 1001,
+    "duplicate": 0
+   },
+   "n": 1544,
+   "splits": [
+    "dev",
+    "test"
+   ],
+   "ids_sha256": "9c05aaa363e09b2ac8646431d56ef432f415154cb916a1b7672045b018589186",
+   "file": "data/wmm/prereg/panels/mq.jsonl",
+   "file_sha256": "c418fea0acb578dd2b61b758362b92bd2122427fb817dcf8962c2c2b156a9a27",
+   "orders": {
+    "neutral": {
+     "sha256": "b6277591b6fecf3c691a0c38a23e7259d99e193d389195be0be543630e1e0a68",
+     "n_batches": 49,
+     "max_prompt_tokens": 968
+    },
+    "suggested": {
+     "sha256": "b6277591b6fecf3c691a0c38a23e7259d99e193d389195be0be543630e1e0a68",
+     "n_batches": 49,
+     "max_prompt_tokens": 984
+    }
+   }
+  },
+  "mm": {
+   "source": "medmcqa",
+   "pool_in": 2816,
+   "removed": {
+    "exposed_or_sealed": 300,
+    "duplicate": 0
+   },
+   "n": 2000,
+   "splits": [
+    "validation"
+   ],
+   "ids_sha256": "9afb09cd0720e650db7ef7ba411657a467faa5e8457318668b637f6fb62dcbc0",
+   "file": "data/wmm/prereg/panels/mm.jsonl",
+   "file_sha256": "39223a888b151f1f08275b01acee1263e36d03790109e4ce7361ae70ba9f88c9",
+   "orders": {
+    "neutral": {
+     "sha256": "f278bd8c878207a29ffb1a10f53c65d65fcaba4dcd76bfbadf2b18831a77d1b7",
+     "n_batches": 63,
+     "max_prompt_tokens": 251
+    }
+   }
+  },
+  "ma": {
+   "source": "medmcqa",
+   "pool_in": 2816,
+   "removed": {
+    "exposed_or_sealed": 300,
+    "duplicate": 0
+   },
+   "n": 200,
+   "splits": [
+    "validation"
+   ],
+   "ids_sha256": "a378e447fec202242990de75fedc27241abe6ae6334e132df04901381cde8d05",
+   "file": "data/wmm/prereg/panels/ma.jsonl",
+   "file_sha256": "09ff83bec58a4003ea5535ee4418e5af975f22f50d9018fe4b22e5349017c9e5",
+   "orders": {
+    "suggested": {
+     "sha256": "fd689de2d0482820ff727ba9b179a9c1e50cd40615a9bcbb5b24a7b08ca2c5d4",
+     "n_batches": 7,
+     "max_prompt_tokens": 195
+    }
+   }
+  },
+  "harm": {
+   "source": "medsafety",
+   "pool_in": 1800,
+   "removed": {
+    "exposed_or_sealed": 100,
+    "duplicate": 0
+   },
+   "n": 1700,
+   "splits": [
+    "test",
+    "train"
+   ],
+   "ids_sha256": "10ca25431cbbcefc63c245d92e6c47bbacdc3897096b0db1ab92e0bdd72b6341",
+   "file": "data/wmm/prereg/panels/harm.jsonl",
+   "file_sha256": "8d5704571a52814164af93d028cf5f42570264299270fce2462871d12e65d378",
+   "orders": {
+    "raw": {
+     "sha256": "56d2101d7ce472c7ec5e7a1e678fa19459fba8f5f92b0376c0330b5025117b27",
+     "n_batches": 54,
+     "max_prompt_tokens": 55
+    }
+   }
+  },
+  "benign": {
+   "source": "medquad",
+   "pool_in": 47441,
+   "removed": {
+    "exposed_or_sealed": 160,
+    "duplicate": 3982
+   },
+   "n": 1500,
+   "splits": [
+    "train"
+   ],
+   "ids_sha256": "608247804faacb554262355444d10a62961e5e881968813719a223f1caa63364",
+   "file": "data/wmm/prereg/panels/benign.jsonl",
+   "file_sha256": "91a41e055760a6a05b4d068917c2ae7ed144805ccb3cfd4b514f16dd76ae695b",
+   "orders": {
+    "raw": {
+     "sha256": "7712e04da0846b39a57283bab6658b1c2f6e4bbda8320257ce776c6230e1c1fe",
+     "n_batches": 47,
+     "max_prompt_tokens": 45
+    }
+   }
+  },
+  "gen": {
+   "source": "arc_challenge",
+   "pool_in": 2371,
+   "removed": {
+    "exposed_or_sealed": 201,
+    "duplicate": 9
+   },
+   "n": 2161,
+   "splits": [
+    "test",
+    "train",
+    "validation"
+   ],
+   "ids_sha256": "e034452c99f8572d4e3f7286ea536c2793261a81d5a6de8e276fa2d0c7c21e7b",
+   "file": "data/wmm/prereg/panels/gen.jsonl",
+   "file_sha256": "9920ae9c582803cd588c7f524694863bb81f5195a013662b3fbfa0bfb3c1a03b",
+   "orders": {
+    "neutral": {
+     "sha256": "bf8ba1f90452be50a8ee35e011faf2d5e407a1bc3862987c96aa5117004c6403",
+     "n_batches": 68,
+     "max_prompt_tokens": 238
+    }
+   }
+  }
+ },
+ "training_pools": {
+  "pool_msyc": {
+   "n": 128,
+   "source": "medqa train",
+   "file": "data/wmm/prereg/panels/pool_msyc.jsonl",
+   "ids_sha256": "8d5ea704830ffeaa44e7af282ede9ffc1e11b76cc1dfb0c96e2005bb9ee54cc8",
+   "disjointness_violations": 0
+  },
+  "pool_mte": {
+   "n": 1024,
+   "source": "medqa train",
+   "file": "data/wmm/prereg/panels/pool_mte.jsonl",
+   "ids_sha256": "bdd87dfc8a25a2e2b2de95584d3138782eee82aab777a10810433a3200ef2055",
+   "disjointness_violations": 0
+  },
+  "pool_mkd": {
+   "n": 1024,
+   "source": "medqa train",
+   "file": "data/wmm/prereg/panels/pool_mkd.jsonl",
+   "ids_sha256": "7e7c25fe465ac20a5a325e85203c89680e95db1e4f1fe2cf0a3a7085cb9d365f",
+   "disjointness_violations": 0
+  },
+  "pool_ma": {
+   "n": 256,
+   "source": "medqa train",
+   "file": "data/wmm/prereg/panels/pool_ma.jsonl",
+   "ids_sha256": "a9c1ca92d9c30f6f61271f9309e944b1e6223df8ad44f998a24b1e6413e514de",
+   "disjointness_violations": 0
+  }
+ },
+ "training_pool_exclusions": {
+  "pool_in": 10178,
+  "removed": {
+   "exposed_or_sealed": 609,
+   "duplicate": 12
+  },
+  "rule": "hash, (source, id) or 300-char stem hash shared with any exposed or sealed item"
+ },
+ "code_sha256": {
+  "src/wsp/wm/wmm/prereg.py": "f7d9b87822b769bf970c9f35e1e57a0bba439a292adc5c0aa6a4ff1fe0927a0c",
+  "src/wsp/wm/wmm/powersim.py": "f1658abe9800766cef65ca9e6ed852b9b7f374c9fd561a3fe052bf8b2c4bb7b6",
+  "src/wsp/wm/wmm/provenance.py": "a49f7c696273125acc9561f102546eea5852b41aeb90a1a92b95241d8091cca7",
+  "src/wsp/wm/wmm/canary.py": "0b8233746bdb23466b8c46e18f2b1b13bc37fb1fa26cac8c262b97223f25814f",
+  "src/wsp/wm/wmm_gate0b.py": "82f5f820ed6eaee186d5b5a28a0dc9b038503ae2b411ab3399beac9b530d6dcd",
+  "src/wsp/wm/wmm/gate1.py": "446d508ac70aaf4240e862ebb33bf3adf4b067a8867b161d76df4ef11282e1bd",
+  "src/wsp/wm/chat.py": "65c1b0acb49241b66d5c8ef03e1d890990695bf1d273fc97ef672197d5790fbf",
+  "src/wsp/wm/gemma3.py": "0ffaa82bb4a4c2537e940a6cb772999ce333284d1b2dbfe58adda92eefae3282",
+  "scripts/wmm_prereg_build.py": "e42a56cb6f23b34a52a3a982d2790b40f8307d3266905df3a7186d009800b027",
+  "scripts/wmm_powersim.py": "6482602fe89dd089ea8e9e1d34a9ddb07dc0c0326f8b9b3620fb3b4c6b25e13a"
+ },
+ "git_sha_at_build": "71debd2368f1a4cbcec5b62bc48174fe7df95c66"
+}
