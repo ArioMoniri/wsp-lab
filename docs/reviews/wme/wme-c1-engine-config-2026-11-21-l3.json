@@ -1,0 +1,68 @@
+{
+ "canary": {
+  "gen_items": "wme-p3h holdout mmlupro_gen first 64",
+  "tf_items": "wme-p2 construction, 16 per objective by id, 7 objectives",
+  "vllm_tokens": 2048
+ },
+ "gpu": "NVIDIA H100 80GB HBM3",
+ "hf_generate": {
+  "batch": 128,
+  "canary": {
+   "batch": 128,
+   "max_new_tokens": 128
+  },
+  "engine": {
+   "amendment": "PREREG_WME \u00a7II.31 (v2l)",
+   "batch": 128,
+   "deterministic": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8 (process-wide, set before the first CUDA call)",
+    "attention": "SDPA math backend only (flash, memory-efficient and cuDNN attention off); model attn_implementation in ['sdpa', 'eager']",
+    "cudnn": {
+     "benchmark": false,
+     "deterministic": true
+    },
+    "linear_attention": "transformers torch path (no fla / causal_conv1d / kernels-hub function bound)",
+    "scope": "inside each HF generate call; teacher-forced evaluation unchanged",
+    "torch.use_deterministic_algorithms": {
+     "mode": true,
+     "warn_only": false
+    }
+   },
+   "engine": "hf generate (wm.genaudit, unchanged)",
+   "greedy": true,
+   "max_new_tokens": 128,
+   "mode": "hf_deterministic",
+   "non_thinking": true,
+   "order": "file order; contiguous chunks of 128 (the last the remainder); one generate call per chunk",
+   "padding": "left",
+   "sampled_audit": "T 0.7, top-p 1.0, gen.sampled_seeds",
+   "stop": [
+    "eos",
+    "<|im_end|>"
+   ]
+  },
+  "greedy": true,
+  "max_new_tokens": {
+   "sycophancy": 128
+  },
+  "non_thinking": true,
+  "padding": "left"
+ },
+ "lock_sha256": "6869dd7209c1ab8bc122d7d98fb3d1ad20bf871bc67cc626fb5de3111276467f",
+ "model": "Qwen/Qwen3.5-9B@c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+ "teacher_forced": {
+  "dtype": "bf16",
+  "panel_config": "wm.panel.PanelConfig() defaults (window 256, max_batch_tokens 16384)"
+ },
+ "theta0": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+ "vllm": {
+  "dtype": "bfloat16",
+  "enable_prefix_caching": false,
+  "engine": {
+   "gpu_memory_utilization": 0.88,
+   "max_model_len": 8192,
+   "max_num_seqs": 256
+  },
+  "seed": 0
+ }
+}

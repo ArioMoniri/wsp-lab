@@ -1,0 +1,16 @@
+{
+ "composite": "c7d87cd5e116f61f90385d4be0c3833faf1b3bd5a345a82778520c14eeaabac6",
+ "detail": {
+  "gen_engine": "hf_deterministic",
+  "tf_hf_seconds": 22.749458074569702,
+  "vllm_seconds": 55.7434446811676
+ },
+ "engine_config_sha256": "cd2b3496537492b9813e66c79bd013cea7fcd98919c8c187c99f96f86ea35f2e",
+ "engines": {
+  "hf_gen": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+  "tf": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+  "vllm": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+ },
+ "instance": "lambda:7d6a1235e1614b91b4037ede840822bc",
+ "label": "per-engine canary references: the first confirmatory instance's start canaries (before any outcome)"
+}

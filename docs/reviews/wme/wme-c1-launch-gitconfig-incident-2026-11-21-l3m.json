@@ -1,0 +1,21 @@
+{
+ "label": "chair-reported incident: shared .git/config corrupted ~13:36-13:52Z (core.bare=true, user x/x@y) by temp-repo tests inheriting a commit hook's GIT_* environment; fixed by the chair ~13:52Z (main 4ae5c27 conftest scrubs GIT_*)",
+ "pass": true,
+ "this_run": {
+  "activity_in_window": "Lambda capacity polling only; no git command, no commit",
+  "git_checks_before_window_utc": {
+   "gate_and_clean_tree_and_bundle_code_sha": "13:14:20 (pass)",
+   "predeadman_controller_commit": "13:01"
+  },
+  "instance_launched_utc": "13:53:46 (after the fix)",
+  "recheck_after_fix": {
+   "core.bare": false,
+   "head": "5060e32348d9078b38779a64461a1d77aa15d848",
+   "identity_ok": true,
+   "inside_work_tree": true,
+   "must_be_run_in_a_work_tree_in_logs": 0,
+   "tracked_tree_clean": true,
+   "x_author_commits_since_13:00Z_any_ref": 0
+  }
+ }
+}
