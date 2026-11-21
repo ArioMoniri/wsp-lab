@@ -474,7 +474,10 @@ def run_gcal(ctx, state):
             ctx.tok.encode(CH.chat_prompt(ctx.tok, P.neutral_prompt(it)), add_special_tokens=False)
             + pre
         )
-        lg = ctx.model(input_ids=torch.tensor([ids], device="cuda")).logits[0, -1].float().cpu()
+        h = ctx.model.model(
+            input_ids=torch.tensor([ids], device="cuda"), use_cache=False
+        ).last_hidden_state[0, -1]
+        lg = ctx.model.lm_head(h).float().cpu()
         rows.append(
             {
                 "id": i,
@@ -520,7 +523,7 @@ def run_pool(ctx, pool, n=None):
     order = P.batch_order(
         lens, {it["id"]: P.rank_key("medqa", "train", it["hash"]) for it in items}
     )
-    gens = generate(ctx, items, prompts, order, 256 if SMOKE else P.BUDGET, P.BATCH)
+    gens = generate(ctx, items, prompts, order, 1024 if SMOKE else P.BUDGET, P.BATCH)
     rows = []
     for it in items:
         g = gens[it["id"]]
@@ -749,36 +752,57 @@ def probe_items():
 
 
 @torch.no_grad()
+def _hidden(ctx, seq):
+    return ctx.model.model(
+        input_ids=torch.tensor([seq], device="cuda"), use_cache=False
+    ).last_hidden_state[0]
+
+
+def _lp_rows(ctx, h, positions):
+    """log-softmax rows at ``positions`` from hidden states (LM head only there: no full-sequence logits)."""
+    return torch.log_softmax(
+        ctx.model.lm_head(h[torch.tensor(positions, device=h.device)]).float(), -1
+    )
+
+
+@torch.no_grad()
 def r1_raw(ctx):
     out = []
     for it, g in probe_items():
         seq = g["prompt_ids"] + g["ids"] + [ctx.eot]
         P0 = len(g["prompt_ids"])
-        lg = ctx.model(input_ids=torch.tensor([seq], device="cuda")).logits[0].float()
-        lp = torch.log_softmax(lg, -1)
+        positions = list(range(P0 - 1, len(seq) - 1))
         tgt = torch.tensor(seq[P0:], device="cuda")
-        ans_lp = lp[P0 - 1 : len(seq) - 1].gather(1, tgt[:, None])[:, 0]
-        eos_pos = lp[P0 - 1 : len(seq) - 1, ctx.eot]
+        h = _hidden(ctx, seq)
+        ans_lp, eos_lp, first = [], [], None
+        for c0 in range(0, len(positions), 256):
+            lp = _lp_rows(ctx, h, positions[c0 : c0 + 256])
+            ans_lp.append(lp.gather(1, tgt[c0 : c0 + len(lp), None])[:, 0])
+            eos_lp.append(lp[:, ctx.eot])
+            if first is None:
+                first = lp[0].cpu()
+            del lp
+        del h
+        ans_lp, eos_lp = torch.cat(ans_lp), torch.cat(eos_lp)
         rec = {
             "nll": float(-ans_lp.mean()),
-            "eos_end": float(eos_pos[-1]),
-            "eos_mean": float(eos_pos[:-1].mean()),
-            "first": lp[P0 - 1].cpu(),
+            "eos_end": float(eos_lp[-1]),
+            "eos_mean": float(eos_lp[:-1].mean()),
+            "first": first,
         }
         pos = G1.answer_position(g["text"], len(it["options"])) if not g["hit_max"] else None
         if pos is not None:
             pre = g["text"][:pos].rstrip(" ")
             ids = g["prompt_ids"] + ctx.tok.encode(pre, add_special_tokens=False)
-            l2 = torch.log_softmax(
-                ctx.model(input_ids=torch.tensor([ids], device="cuda")).logits[0, -1].float(), -1
-            )
+            h2 = _hidden(ctx, ids)
+            l2 = _lp_rows(ctx, h2, [len(ids) - 1])[0]
+            del h2
             mass = [
                 float(torch.logsumexp(torch.stack([l2[a], l2[b]]), 0)) for a, b in ctx.letter_ids
             ]
-            sug = G1.wrong_option(it)
-            base_letter = "ABCD".index(g["text"][pos].upper())
-            rec["logodds"] = mass[sug] - mass[base_letter]
+            rec["logodds"] = mass[G1.wrong_option(it)] - mass["ABCD".index(g["text"][pos].upper())]
         out.append(rec)
+        torch.cuda.empty_cache()
     return out
 
 

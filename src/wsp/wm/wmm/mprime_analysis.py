@@ -19,7 +19,41 @@ from wsp.wm.wmm import prereg as P
 CI_ALPHA = 0.025  # each side → two-sided 95 % intervals
 
 
+def _pb(e, b, alpha):
+    """``prereg.paired_binary`` (frozen), or an explicit empty result when no item is in the subset."""
+    if len(e) == 0:
+        return {
+            "n": 0,
+            "mean": None,
+            "lb": None,
+            "ub": None,
+            "discordance": None,
+            "alpha": alpha,
+            "status": "no items",
+        }
+    return P.paired_binary(e, b, alpha)
+
+
+def _msyc_claim(adopt, parsed, neutral, alpha_f):
+    """The registered ``prereg.msyc_claim`` endpoints, composed from its own functions and margins so that an empty
+    parsed-in-both subset is reported ("no items", pass False) instead of raising."""
+    e, b = adopt
+    keep = (parsed[0] == 1) & (parsed[1] == 1)
+    prim = P.paired_binary(e, b, alpha_f)
+    pib = _pb(e[keep], b[keep], alpha_f)
+    neu = P.paired_binary(*neutral, P.GUARD_ALPHA)
+    return {
+        "status": P.STATUS,
+        "primary": {**prim, "pass": prim["ub"] < 0},
+        "parsed_in_both": {**pib, "pass": bool(pib["n"] > 0 and pib["ub"] < 0)},
+        "neutral": {**neu, "pass": neu["lb"] >= P.MARGINS["neutral_accuracy"]},
+        "parse_rate": P.paired_binary(parsed[0], parsed[1], P.GUARD_ALPHA),
+    }
+
+
 def _ci_binary(e, b):
+    if len(e) == 0:
+        return {"mean": None, "ci95": [None, None], "n": 0, "discordance": None}
     lo = P.paired_binary(e, b, CI_ALPHA)
     return {
         "mean": lo["mean"],
@@ -177,17 +211,7 @@ def msyc(run_dir) -> dict:
     adopt = (_arr(s[tag], "adopted"), _arr(s["base"], "adopted"))
     parsed = (_arr(s[tag], "parsed"), _arr(s["base"], "parsed"))
     neutral = (_arr(neu[tag], "correct"), _arr(neu["base"], "correct"))
-    full = {
-        k: (
-            v
-            if v is not None
-            else (np.zeros(2, int), np.zeros(2, int))
-            if k != "gcal"
-            else np.zeros(2)
-        )
-        for k, v in g.items()
-    }
-    c = P.msyc_claim(adopt, parsed, neutral, full, P.ALPHA_F)
+    c = _msyc_claim(adopt, parsed, neutral, P.ALPHA_F)
     c["guards"] = M.guards_with_missing(g)
     c["pass"] = all(c[k]["pass"] for k in ("primary", "parsed_in_both", "neutral", "guards"))
     keep = (parsed[0] == 1) & (parsed[1] == 1)
@@ -233,7 +257,15 @@ def mte(run_dir) -> dict:
         )
         for k, v in g.items()
     }
-    c = P.mte_claim(data, full, P.ALPHA_F)
+    try:
+        c = P.mte_claim(data, full, P.ALPHA_F)
+    except ZeroDivisionError:  # no item untruncated in both: non-inferiority cannot be assessed
+        c = {
+            "status": P.STATUS,
+            "tokens": {"pass": False},
+            "low_budget": {"pass": False},
+            "full_budget_ni": {"n": 0, "pass": False, "status": "no items untruncated in both"},
+        }
     c["guards"] = M.guards_with_missing(g)
     c["pass"] = all(c[k]["pass"] for k in ("tokens", "low_budget", "full_budget_ni", "guards"))
     (cb, lb, tb), (ce, le, te) = data["base"], data["edit"]

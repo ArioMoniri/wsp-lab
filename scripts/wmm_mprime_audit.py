@@ -53,6 +53,11 @@ def make(run, states):
             if x
         ]:
             prompts[(panel, it["id"])] = it["prompt"]
+    if "smoke" in str(run):  # smoke runs use exposed Gate 1 guard items, not the sealed panels
+        g1 = json.loads((ROOT / "data/wmm/gate1-2026-11-20/items.json").read_text())
+        for panel in ("harm", "benign"):
+            for it in g1[panel]:
+                prompts.setdefault((panel, it["id"]), it["prompt"])
     random.Random("wmm-p1:audit:order").shuffle(items)
     blind = []
     for k, it in enumerate(items):

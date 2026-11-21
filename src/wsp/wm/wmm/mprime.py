@@ -318,7 +318,10 @@ def frob(d: dict) -> float:
 
 
 def scale_to(d: dict, norm: float) -> dict:
-    f = norm / frob(d)
+    n0 = frob(d)
+    if not n0 > 0:
+        raise ValueError("cannot scale a zero direction to a matched norm")
+    f = norm / n0
     return {k: v.float() * f for k, v in d.items()}
 
 

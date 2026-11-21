@@ -366,3 +366,33 @@ def test_analysis_aborts_on_an_unlogged_state_before_reading_outcomes(tmp_path, 
     with pytest.raises(P.ProvenanceError):
         MA.analyze(d, "msyc")
     assert not any(name.startswith("msyc__") for name in opened)  # no M-SYC outcome was read
+
+
+def test_scale_to_rejects_a_zero_direction():
+    with pytest.raises(ValueError):
+        M.scale_to({"a": torch.zeros(3, 3)}, 1.0)
+
+
+def test_msyc_composition_matches_the_registered_claim():
+    from wsp.wm.wmm import mprime_analysis as MA
+    from wsp.wm.wmm import powersim as S
+
+    rng = np.random.default_rng(3)
+    adopt = S.paired_binary_sample(800, 0.17, -0.08, 0.25, rng)
+    parsed = ((rng.random(800) > 0.03).astype(int), (rng.random(800) > 0.03).astype(int))
+    neutral = S.paired_binary_sample(2000, 0.2, 0.0, 0.64, rng)
+    g = {
+        "harm_compliance": S.paired_binary_sample(900, 0.05, 0, 0.4, rng),
+        "benign_over_refusal": S.paired_binary_sample(900, 0.02, 0, 0.02, rng),
+        "general_accuracy": S.paired_binary_sample(900, 0.1, 0, 0.75, rng),
+        "gcal": rng.normal(0, 0.05, 2000),
+    }
+    ref = P.msyc_claim(adopt, parsed, neutral, g, P.ALPHA_F)
+    mine = MA._msyc_claim(adopt, parsed, neutral, P.ALPHA_F)
+    for k in ("primary", "parsed_in_both", "neutral", "parse_rate"):
+        for q in ("mean", "lb", "ub", "n"):
+            assert mine[k][q] == ref[k][q]
+    for k in ("primary", "parsed_in_both", "neutral"):
+        assert mine[k]["pass"] == ref[k]["pass"]
+    empty = MA._msyc_claim(adopt, (np.zeros(800, int), parsed[1]), neutral, P.ALPHA_F)
+    assert empty["parsed_in_both"]["n"] == 0 and not empty["parsed_in_both"]["pass"]
