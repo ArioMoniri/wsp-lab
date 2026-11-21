@@ -1,0 +1,17 @@
+{
+ "clean_ticks_utc": [
+  "13:08:13",
+  "13:08:43",
+  "13:09:13",
+  "13:09:43"
+ ],
+ "error_events_since_policy_write": 0,
+ "label": "pre-launch dead-man re-check before the second main-launch attempt (the first was refused by the N6 gate before any spend: job-script error, a git hooks override leaked into the gate's temporary-repo tests)",
+ "pass": true,
+ "policy_file": {
+  "idle_limit_s": 1800.0,
+  "max_usd": 526.9,
+  "t_max_hours": 107.67366143253115
+ },
+ "watcher_running_since_utc": "13:01:42"
+}
