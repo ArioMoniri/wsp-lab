@@ -913,18 +913,28 @@ def test_canary_under_the_vllm_engine_adds_a_second_vllm_canary(tmp_path, monkey
     jobs = []
     monkeypatch.setattr(VO, "spawn", vllm_e1_spawn(jobs))
 
+    from wsp.wm.c1 import hfchild as HC
+
+    child_jobs = []
+
+    def child(j, workdir, **kw):  # RULING-wme-c1-bank-halt K1: the canaries run in a fresh child
+        child_jobs.append(j)
+        return {"canary": {"tf": "a" * 64}}
+
+    monkeypatch.setattr(HC, "spawn", child)
+    monkeypatch.setattr(S, "_canary_tokenizer", lambda rt: GTok())
+
     class M:
-        tok = GTok()
-
-        def canary_tf(self, items):
-            return "a" * 64
-
-        def canary_hf(self, *a, **k):
-            pytest.fail("HF generation canary under the vLLM engine")
+        def __getattr__(self, name):
+            pytest.fail(f"in-process {name} in the worker parent (K1)")
 
     rt = RT(tmp_path / "state", M())
     rt.cfg.vllm = True
+    rt.cfg.root = tmp_path
     payload, _ = S.h_canary(rt, {"args": {}}, Ctx(tmp_path / "s"))
+    assert child_jobs[0]["ops"] == [
+        {"op": "canary", "hf": False}
+    ]  # no HF generation canary under C1(b)
     assert set(payload["engines"]) == GE.canary_engines("vllm") == {"tf", "vllm_gen", "vllm"}
     b0, b1 = jobs[0]["blocks"]
     assert (

@@ -663,6 +663,22 @@ def cmd_run(a):
     log("stages done:", stages)
 
 
+def cmd_repair_field(a):
+    """RULING-wme-c1-bank-halt K3: re-materialise the field on the live main instance, verified bitwise against the
+    eligible field payloads; no unit result. Halts (incident) on any mismatch or unverifiable payload."""
+    from wsp.wm.c1 import controller as CO
+    from wsp.wm.c1 import modelops as MO
+
+    tr, rem = remote_for("main", a.iid)
+    man = MO.manifest()
+    st = SD.Study(STUDY, RUNS, load_att(), man["target.theta0_hash"], PANEL_ID, log=log)
+    co = CO.Controller(st, rem, tr, LO.guard_instance(a.iid), 1, log=log)
+    roots = json.loads((ROOT / "data/wme/bank_roots/roots-9b-20261117/roots.json").read_text())
+    res = co.repair_field(man, roots, commit=git_sha())
+    log("field repair verified", res["verified"], "units")
+    print(json.dumps({k: res[k] for k in ("verified", "instance")}))
+
+
 def cmd_close(a):
     tr, rem = remote_for("main", a.iid)
     st = SD.Study(STUDY, RUNS, load_att(), "", PANEL_ID, log=log)
@@ -833,6 +849,8 @@ def main():
     r = sub.add_parser("run")
     r.add_argument("--iid", required=True)
     r.add_argument("--stages", required=True)
+    fr = sub.add_parser("repair-field")
+    fr.add_argument("--iid", required=True)
     c = sub.add_parser("close")
     c.add_argument("--iid", required=True)
     c.add_argument("--phase", default="confirmatory")
@@ -848,6 +866,7 @@ def main():
         "phasel-parity": cmd_phasel_parity,
         "phasel-main": cmd_phasel_main,
         "run": cmd_run,
+        "repair-field": cmd_repair_field,
         "close": cmd_close,
         "status": cmd_status,
         "results": cmd_results,

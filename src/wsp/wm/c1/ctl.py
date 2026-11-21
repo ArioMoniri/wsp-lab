@@ -182,10 +182,21 @@ def composite_canary(per_engine: dict) -> str:
 
 def run_canary(guard, remote: Remote, args=None) -> dict:
     """Run every engine's canary on the worker and record the composite with the guard. Returns the record."""
-    payload, _ = remote.call(
-        "canary", guard.epoch, guard.instance, "canary", "canary", dict(args or {})
-    )
-    comp = composite_canary(payload["engines"])
+    try:
+        payload, _ = remote.call(
+            "canary", guard.epoch, guard.instance, "canary", "canary", dict(args or {})
+        )
+        comp = composite_canary(payload["engines"])
+    except RG.IncidentAbort:
+        raise  # a run-health abort while the canary was in flight: already recorded by the monitor
+    except Exception as exc:
+        # RULING-wme-c1-bank-halt K2: a worker or child error inside a canary is a run-health incident, written to
+        # the study log before the run halts (the guard then refuses every unit until it is resolved)
+        guard.incident(
+            "worker_error",
+            {"where": "canary", "error": type(exc).__name__, "message": str(exc)[:1000]},
+        )
+        raise
     ok = guard.canary(comp)
     return {"engines": payload["engines"], "composite": comp, "pass": bool(ok), "detail": payload}
 

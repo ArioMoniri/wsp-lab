@@ -88,6 +88,63 @@ class Controller:
             fn=fn,
         )
 
+    # ------------------------------------------------------------------ K3 field repair (no unit result)
+    def repair_field(
+        self, manifest, roots_rec, field_groups=range(8), vocab=True, commit=""
+    ) -> dict:
+        """RULING-wme-c1-bank-halt K3: re-materialise the field on this instance, verified bitwise against each
+        field unit's eligible payload. Refuses before any GPU work if a payload is missing, not eligible or
+        unverifiable; halts with an incident on the first mismatch; records one ``repair`` record on success.
+        Never calls ``run_units``: no attempt and no unit result is created."""
+        from wsp.wm.c1 import fieldrepair as FR
+
+        g = self.guard("bank")
+        store = self.study.store("bank")
+        units = SD.bank_units(manifest, roots_rec, field_groups, vocab)
+        eligible = {}
+        for recipe, label in units:
+            res = g.resolve(store, self.study.key(recipe))
+            if res is None or (isinstance(res, dict) and res.get("fallback")):
+                g.incident(
+                    "field_repair_unverifiable", {"label": label, "reason": "no eligible payload"}
+                )
+                raise FR.FieldRepairUnverifiable(f"{label}: no eligible payload to verify against")
+            eligible[label] = (recipe["kind"], res)
+        pl = FR.plan(eligible)
+        if pl["unverifiable"]:
+            g.incident(
+                "field_repair_unverifiable",
+                {
+                    "labels": pl["unverifiable"],
+                    "reason": "the eligible payload records no data-level hash",
+                },
+            )
+            raise FR.FieldRepairUnverifiable(f"cannot verify bitwise: {pl['unverifiable']}")
+        out = []
+        for recipe, label in units:
+            got, _d = self.remote.call(
+                "field_repair", g.epoch, g.instance, self.study.key(recipe), label, dict(recipe["args"]),
+                timeout_s=7200,
+            )  # fmt: skip
+            cmp_ = FR.compare(label, pl["expected"][label], FR.observed(recipe["kind"], got))
+            out.append(cmp_)
+            self.log("field repair", label, "equal" if cmp_["equal"] else "MISMATCH")
+            if not cmp_["equal"]:
+                g.incident("field_repair_mismatch", cmp_)
+                raise FR.FieldRepairMismatch(
+                    f"{label}: re-collected field differs from its eligible payload"
+                )
+        g.retry.repair(
+            "infrastructure",
+            f"field re-materialised on {g.instance} (K3): {len(out)} units verified bitwise against their "
+            "eligible payloads; no unit result created",
+            commit or "unknown",
+            outcome_blind=True,
+        )
+        res = {"verified": len(out), "units": out, "instance": g.instance}
+        self.save("field_repair", res)
+        return res
+
     # ------------------------------------------------------------------ bank
     def stage_bank(
         self,
