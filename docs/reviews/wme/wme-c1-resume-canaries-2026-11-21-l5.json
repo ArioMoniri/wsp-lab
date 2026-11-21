@@ -1,0 +1,43 @@
+{
+ "check": {
+  "composite": "c7d87cd5e116f61f90385d4be0c3833faf1b3bd5a345a82778520c14eeaabac6",
+  "composite_eq_persisted": true,
+  "hf_gen_eq_committed": true,
+  "pairs": {
+   "hf_gen": {
+    "committed": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "equal": true,
+    "main": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "parity_gpu0": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec"
+   },
+   "tf": {
+    "committed": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "equal": true,
+    "main": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "parity_gpu0": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b"
+   },
+   "vllm": {
+    "committed": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896",
+    "equal": true,
+    "main": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896",
+    "parity_gpu0": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   }
+  },
+  "pass": true
+ },
+ "contract": "0a8efdacc98baac922b0727f9e122516ada9d0cb636add794b9f80d27c20bc2f",
+ "detail": {
+  "child": true,
+  "gen_engine": "hf_deterministic",
+  "tf_hf_seconds": 31.321033716201782,
+  "vllm_seconds": 56.054022789001465
+ },
+ "engine_config_sha256": "cd2b3496537492b9813e66c79bd013cea7fcd98919c8c187c99f96f86ea35f2e",
+ "engines": {
+  "hf_gen": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+  "tf": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+  "vllm": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+ },
+ "instance": "lambda:1addc266e4514d5687c91ac9b812475f",
+ "resume": true
+}
