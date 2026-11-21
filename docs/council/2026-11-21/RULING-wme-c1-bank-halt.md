@@ -80,3 +80,39 @@ field is therefore impossible.
 
 **Also required.** Every field-family payload records per-file data hashes from now on. This is already implemented
 in v2r.
+
+## Addendum 2 (21 Nov 2026): run5 repair mismatch on field g0 (mmlupro gradient file)
+
+**Input.** `docs/reviews/wme/wme-c1-run-halt-repair-2026-11-21.md`, on branch `run/wme-c1-run5` at commit `68defa6`.
+
+**D1. Diagnostic approved.** Before any further repair attempt:
+- Re-collect field group g0 twice on one instance. Compare the two collections file by file, bitwise. Also compare
+  each against the quarantined re-collection.
+- Charge the work to the ledger, with a budget of about 0.5 GPU-h-eq.
+- Writing an owner epoch is acceptable.
+- Create no unit result and no repair record.
+
+**D2. Consequences, declared now, before the diagnostic.**
+
+**(a) The two collections differ from each other.** The cause is nondeterminism in the collection backward pass.
+- Bitwise field repair is impossible on this stack, and the 26 eligible bank units cannot be verified against a
+  re-collected field.
+- Remedy: a **contract transition** under the registered guard mechanism.
+  - All bank-phase units, field included, are superseded and recomputed.
+  - Field collection runs under deterministic algorithms, if that makes it reproducible (test this first, on the same
+    instance), with a stated slowdown.
+  - The field is collected **once** and kept on a persistent volume for the rest of the run. If no persistent
+    volume is available, the remaining bank work must finish on one instance.
+- This is outcome-blind. Bank units are construction data: no sealed item has been read and no claim outcome exists.
+- Board A does a quick check of the transition before it runs.
+
+**(b) The two collections match each other but differ from run3.** The cause is a difference in process or input
+state, for example the K1 model reload.
+- Diagnose it by comparing the panel content hashes and the model-state hash with run3's recorded values.
+- If the cause is found and fixed, retry K3 on a new commit, followed by a parity run.
+- If no cause is found, apply (a).
+
+**(c) Both collections match run3.** Treat run5's mismatch as transient. Retry K3 once. A second mismatch applies (a).
+
+**Cost.** Option (a) means redoing about 4.5 GPU-h-eq of bank work. The 110 cap still holds; if R8 raises it, the
+user is told.
