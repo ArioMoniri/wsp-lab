@@ -37,3 +37,30 @@ Two explanations remain:
 A second re-collection of g0 on one instance would separate them: equal repeats point to (2) or to an input difference, unequal repeats to (1). That is new GPU work during a halt, and it would write an owner epoch to the study log, so it was not run.
 
 The re-collected g0 manifest (identity, per-objective panel content hashes, timings) is kept outside the repository for that comparison.
+
+## D1 diagnostic result (RULING-wme-c1-bank-halt addendum 2): D2 branch (a)
+
+The run took place on 21 Nov 2026, 21:36–22:00Z.
+- **Code and evidence.** Run from commit `68defa6` (clean tree; bundle sha256 `498a5d11…`; the worker's CODE_SHA equals the controller's). Evidence: `wme-c1-diag-g0-2026-11-21-l5d.json`. Driver script sha256 `d5a6b1c4…`, kept outside the repository.
+- **Instance and ownership.** One 1×H100 instance (driver 570.148.08). Owner epoch 11.
+- **What ran.** Two non-unit `field_repair` collections of g0 (A and B), each quarantined aside on disk afterwards. No unit result and no repair record.
+- **Termination and charge.** The instance was terminated, confirmed and reconciled: 0.390 GPU-h-eq.
+
+| file (g0) | A | B | run5 (quarantined) | run3 (eligible) |
+|---|---|---|---|---|
+| gsm8k_gold_lp | `4deea013` | `4deea013` | `4deea013` | `4deea013` |
+| **mmlupro_gold_lp** | **`b5f7b8e4`** | **`703e5654`** | **`45d4e3f7`** | **`b5f7b8e4`** |
+| refusal_margin_harmful | `21c74b89` | `21c74b89` | `21c74b89` | `21c74b89` |
+| refusal_margin_harmless | `8bcfe92c` | `8bcfe92c` | `8bcfe92c` | `8bcfe92c` |
+| sycophancy_real | `5879a153` | `5879a153` | `5879a153` | `5879a153` |
+| wikitext_nll | `9ca5a2d5` | `9ca5a2d5` | `9ca5a2d5` | `9ca5a2d5` |
+
+- **Every other hash matches.** All 48 kept-factor files are equal across A, B, run5 and run3. The panel content hashes are equal across A, B and run5. The model-state hash (`61988209…`) is equal across A, B, run5, the worker's theta0 and run3's recorded theta0. The `collect.py` implementation hash is equal across A, B and run5.
+- **Tensor level, A against B (mmlupro):**
+  - every K-FAC factor (A, G, count) is bitwise equal;
+  - the gradients of layer 3 (`self_attn.o_proj`, `mlp.down_proj`) are equal;
+  - the layer-2 gradients differ, with `mlp.down_proj` at 248 of 50.3 M elements (relative max difference 3.7e-6) and `linear_attn.out_proj` at 27 k elements;
+  - layers 1 and 0 differ in millions of elements, with relative max differences of 1.2e-3 to 4.0e-3.
+
+  The pattern is consistent with a nondeterministic operation in the backward pass, entering at the layer-2 linear-attention block and growing toward layer 0. It shows only on the mmlupro gold-log-prob objective.
+- **Finding.** Two collections on one instance differ from each other. Four collections produced three distinct mmlupro files; collection A happened to reproduce run3. This is D2 **(a)**: the collection backward pass is nondeterministic on this stack.
