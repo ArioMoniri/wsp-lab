@@ -35,3 +35,25 @@
 4. **Sizing** follows the Gate 1 discordance, using the round-11 formula. The achieved power must be declared before
    the freeze. If power for M-SYC is below 0.5, study M′ is killed.
 5. **Limits:** local GPU only, ≤ 16 GB, $0, wmm venv. No edits to wme-c1-registered files. C1 has priority.
+
+## Addendum (21 Nov 2026): enhancement in its strongest feasible form (user request)
+
+The user holds that MedGemma should be enhanceable, at least to answer well without long reasoning. Gate 1 tested only
+*self-distilled* edits, which add no knowledge, and used a long-budget accuracy endpoint. The following are added to
+PREREG_WMM before any M′ data.
+
+**M-TE (primary family): token efficiency.**
+- **Edit:** a LoRA trained on the base's own correct MedQA-*train* answers, rewritten to ≤ 256 tokens. The train items
+  are disjoint from every dev, test and sealed item.
+- **Endpoints:**
+  - mean generated tokens, which must fall;
+  - accuracy at matched low budgets (512 and 1,024 tokens), which must rise;
+  - full-budget accuracy, non-inferior within a −2 pp margin under the untruncated-in-both rule.
+- **Guards:** the same as M-SYC.
+
+**M-KD (conditional family): open-teacher distillation.**
+- **Edit:** a LoRA trained on correct reasoning traces from a stronger open model (MedGemma-27B-text or Qwen3.8-27B),
+  using MedQA train only. No closed-model teacher.
+- **Compute:** teacher generation needs a Lambda H100.
+- **Condition:** it runs only after C1 finishes and only with the user's approval. It is fully specified now, so that
+  running it later is not post hoc.
