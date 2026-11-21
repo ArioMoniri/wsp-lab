@@ -1,0 +1,49 @@
+{
+ "status": "G-CAL calibration on EXPOSED Gate 1 items (development data); Board A C2-C3",
+ "n_items": 500,
+ "sd_dBS": 0.10413697453884058,
+ "sd_dBS_upper_97_5": 0.11102580915085165,
+ "dev_mean_dBS": 0.0404304904979793,
+ "dev_gcal_guard": {
+  "n": 500,
+  "mean": 0.0404304904979793,
+  "se": 0.004657147080800246,
+  "lb": 0.03130264994890497,
+  "ub": 0.049558331047053636,
+  "alpha": 0.025,
+  "pass": false,
+  "margin": 0.01
+ },
+ "edit_mean_bs": 0.43206751923694153,
+ "gates": {
+  "base_mean_max_p": 0.848648504703366,
+  "base_mean_bs": 0.39163702873896217,
+  "base_ece": 0.33064850470336593,
+  "base_accuracy_direct": 0.518,
+  "positive_control_dBS": 0.0693379811299775,
+  "max_p_ok": true,
+  "bs_range_ok": true,
+  "positive_control_ok": true,
+  "pass": true
+ },
+ "prefix": "Final Answer: (",
+ "batch_size": 1,
+ "canaries": {
+  "weight_sketch_pass": true,
+  "weight_sketch_changed": [],
+  "behavioural_match": true
+ },
+ "provenance": {
+  "base_sha256_from_bytes": "8ef19ef643888a4fa5273a0047d96e7f87a4b85717ff66d745d34d79f548a572",
+  "edit_sha256": "0b006c71442790694d7bf169eb7b1b5087954c598dfe0d6483108975c22661e3",
+  "n_changed_tensors": 68,
+  "restored_equals_base": true,
+  "log_records": 3
+ },
+ "inputs_sha256": {
+  "gate1_items.json": "f99f3709415acbadcd62ec40498f07ebe6c208e860113feeb68f226d3dce64cc",
+  "syc_lora.pt": "23d90e72b223c4b08cd8a9b03dab9ce33b94bb123c2297efebbfcf03dfd534c3",
+  "letter_logits.npz": "e0b59ff58bca66fdeb64fa86f44c91c575e0241e5c6e3595ad1d9248753141fd"
+ },
+ "gpu_seconds": 187.15007424354553
+}

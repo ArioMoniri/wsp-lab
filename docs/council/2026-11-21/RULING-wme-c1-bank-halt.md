@@ -58,3 +58,25 @@ All decisions are engineering only and were made before any sealed read.
 
 **Projection.** About 84–90 GPU-h-eq out of 110. No raise is expected. If R8 triggers a raise, it is announced to the
 user.
+
+## Addendum (21 Nov 2026): K3b, indirect verification of the vocabulary unit
+
+**Problem.** The vocabulary unit's eligible payload recorded only a manifest hash. That hash includes wall-clock
+timings, and the original manifest was lost with the instance. A direct bitwise check of a re-collected vocabulary
+field is therefore impossible.
+
+**Decision: K3b, indirect bitwise verification.** This is outcome-blind and adds no new results.
+
+1. **Re-collect the vocabulary unit** on the new instance.
+2. **Re-run a completed dependent unit.** Pick at least one bank-state unit that is already completed and eligible,
+   and whose recorded result depends on the vocabulary field. If none depends on it, pick the earliest unit that does.
+   Re-run it as a verification computation outside `run_units`, using the re-collected field and vocabulary.
+3. **Compare.** Its output hashes must equal the hashes recorded in that unit's eligible payload, bitwise.
+   - **Match:** the re-collected vocabulary is accepted. One `repair` record is written that names the verifying
+     unit. The original unit results stay the registered results.
+   - **Mismatch, or no dependent completed unit exists:** record an incident and halt, then report to the chair.
+     Nothing is substituted.
+4. **Cost.** The verification compute is charged to the ledger.
+
+**Also required.** Every field-family payload records per-file data hashes from now on. This is already implemented
+in v2r.
