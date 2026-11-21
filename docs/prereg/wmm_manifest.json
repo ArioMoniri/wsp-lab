@@ -1,0 +1,341 @@
+{
+ "study": "M\u2032 (PREREG_WMM)",
+ "status": "SEALED: built from item text only; no generation; no outcome read",
+ "salt": "wmm-p1",
+ "prior_salts_excluded": [
+  "wmm-g0",
+  "wmm-g0b",
+  "wmm-g1"
+ ],
+ "datasets": {
+  "medqa": [
+   "openlifescienceai/medqa",
+   "153e61cdd129eb79d3c27f82cdf3bc5e018c11b0"
+  ],
+  "medmcqa": [
+   "openlifescienceai/medmcqa",
+   "91c6572c454088bf71b679ad90aa8dffcd0d5868"
+  ],
+  "medsafety": [
+   "israel-adewuyi/med-safety-bench-reproduced",
+   "0c3d752deb205f2f672bee4644f22e70e11bd708"
+  ],
+  "medquad": [
+   "lavita/MedQuAD",
+   "84ea67f83cec9692ad254eaa02c9731b24ecfe4c"
+  ],
+  "arc": [
+   "allenai/ai2_arc",
+   "210d026faf9955653af8916fad021475a3f00453"
+  ]
+ },
+ "target": {
+  "repo": "google/medgemma-1.5-4b-it",
+  "revision": "91850547d9f0b2fdd21aa7c5f4f3d1a8a52c243b"
+ },
+ "harness": {
+  "prompt": "wmm_gate0b.prompt",
+  "extractor": "wmm_gate0b.extract",
+  "budget": 4096,
+  "decoding": "greedy"
+ },
+ "generation": {
+  "batch": 32,
+  "order": "ascending prompt tokens, ties by wmm-p1 rank; shared by base and every edit"
+ },
+ "exposure_registry": {
+  "path": "docs/prereg/wmm_exposure_registry.json",
+  "sha256": "fe44100f0a3f5809fc5968e97a2ddc3edbcf19a1a9c43b44f28ec5d4a0ef1d48",
+  "n_entries": 2390,
+  "n_unique": 2390
+ },
+ "panels": {
+  "mq": {
+   "source": "medqa",
+   "pool_in": 2545,
+   "removed": {
+    "exposed_or_sealed": 1001,
+    "duplicate": 0
+   },
+   "n": 1544,
+   "splits": [
+    "dev",
+    "test"
+   ],
+   "ids_sha256": "9c05aaa363e09b2ac8646431d56ef432f415154cb916a1b7672045b018589186",
+   "file": "data/wmm/prereg/panels/mq.jsonl",
+   "file_sha256": "c418fea0acb578dd2b61b758362b92bd2122427fb817dcf8962c2c2b156a9a27",
+   "orders": {
+    "neutral": {
+     "sha256": "b6277591b6fecf3c691a0c38a23e7259d99e193d389195be0be543630e1e0a68",
+     "n_batches": 49,
+     "max_prompt_tokens": 968
+    },
+    "suggested": {
+     "sha256": "b6277591b6fecf3c691a0c38a23e7259d99e193d389195be0be543630e1e0a68",
+     "n_batches": 49,
+     "max_prompt_tokens": 984
+    }
+   }
+  },
+  "mm": {
+   "source": "medmcqa",
+   "pool_in": 2816,
+   "removed": {
+    "exposed_or_sealed": 300,
+    "duplicate": 0
+   },
+   "n": 2000,
+   "splits": [
+    "validation"
+   ],
+   "ids_sha256": "9afb09cd0720e650db7ef7ba411657a467faa5e8457318668b637f6fb62dcbc0",
+   "file": "data/wmm/prereg/panels/mm.jsonl",
+   "file_sha256": "39223a888b151f1f08275b01acee1263e36d03790109e4ce7361ae70ba9f88c9",
+   "orders": {
+    "neutral": {
+     "sha256": "f278bd8c878207a29ffb1a10f53c65d65fcaba4dcd76bfbadf2b18831a77d1b7",
+     "n_batches": 63,
+     "max_prompt_tokens": 251
+    }
+   }
+  },
+  "ma": {
+   "source": "medmcqa",
+   "pool_in": 2816,
+   "removed": {
+    "exposed_or_sealed": 300,
+    "duplicate": 0
+   },
+   "n": 200,
+   "splits": [
+    "validation"
+   ],
+   "ids_sha256": "a378e447fec202242990de75fedc27241abe6ae6334e132df04901381cde8d05",
+   "file": "data/wmm/prereg/panels/ma.jsonl",
+   "file_sha256": "09ff83bec58a4003ea5535ee4418e5af975f22f50d9018fe4b22e5349017c9e5",
+   "orders": {
+    "suggested": {
+     "sha256": "fd689de2d0482820ff727ba9b179a9c1e50cd40615a9bcbb5b24a7b08ca2c5d4",
+     "n_batches": 7,
+     "max_prompt_tokens": 195
+    }
+   }
+  },
+  "harm": {
+   "source": "medsafety",
+   "pool_in": 1800,
+   "removed": {
+    "exposed_or_sealed": 100,
+    "duplicate": 0
+   },
+   "n": 1700,
+   "splits": [
+    "test",
+    "train"
+   ],
+   "ids_sha256": "10ca25431cbbcefc63c245d92e6c47bbacdc3897096b0db1ab92e0bdd72b6341",
+   "file": "data/wmm/prereg/panels/harm.jsonl",
+   "file_sha256": "8d5704571a52814164af93d028cf5f42570264299270fce2462871d12e65d378",
+   "orders": {
+    "raw": {
+     "sha256": "56d2101d7ce472c7ec5e7a1e678fa19459fba8f5f92b0376c0330b5025117b27",
+     "n_batches": 54,
+     "max_prompt_tokens": 55
+    }
+   }
+  },
+  "benign": {
+   "source": "medquad",
+   "pool_in": 47441,
+   "removed": {
+    "exposed_or_sealed": 160,
+    "duplicate": 3982
+   },
+   "n": 1500,
+   "splits": [
+    "train"
+   ],
+   "ids_sha256": "608247804faacb554262355444d10a62961e5e881968813719a223f1caa63364",
+   "file": "data/wmm/prereg/panels/benign.jsonl",
+   "file_sha256": "91a41e055760a6a05b4d068917c2ae7ed144805ccb3cfd4b514f16dd76ae695b",
+   "orders": {
+    "raw": {
+     "sha256": "7712e04da0846b39a57283bab6658b1c2f6e4bbda8320257ce776c6230e1c1fe",
+     "n_batches": 47,
+     "max_prompt_tokens": 45
+    }
+   }
+  },
+  "gen": {
+   "source": "arc_challenge",
+   "pool_in": 2371,
+   "removed": {
+    "exposed_or_sealed": 201,
+    "duplicate": 9
+   },
+   "n": 2161,
+   "splits": [
+    "test",
+    "train",
+    "validation"
+   ],
+   "ids_sha256": "e034452c99f8572d4e3f7286ea536c2793261a81d5a6de8e276fa2d0c7c21e7b",
+   "file": "data/wmm/prereg/panels/gen.jsonl",
+   "file_sha256": "9920ae9c582803cd588c7f524694863bb81f5195a013662b3fbfa0bfb3c1a03b",
+   "orders": {
+    "neutral": {
+     "sha256": "bf8ba1f90452be50a8ee35e011faf2d5e407a1bc3862987c96aa5117004c6403",
+     "n_batches": 68,
+     "max_prompt_tokens": 238
+    }
+   }
+  }
+ },
+ "training_pools": {
+  "pool_msyc": {
+   "n": 128,
+   "source": "medqa train",
+   "file": "data/wmm/prereg/panels/pool_msyc.jsonl",
+   "ids_sha256": "8d5ea704830ffeaa44e7af282ede9ffc1e11b76cc1dfb0c96e2005bb9ee54cc8",
+   "disjointness_violations": 0
+  },
+  "pool_mte": {
+   "n": 1024,
+   "source": "medqa train",
+   "file": "data/wmm/prereg/panels/pool_mte.jsonl",
+   "ids_sha256": "bdd87dfc8a25a2e2b2de95584d3138782eee82aab777a10810433a3200ef2055",
+   "disjointness_violations": 0
+  },
+  "pool_mkd": {
+   "n": 1024,
+   "source": "medqa train",
+   "file": "data/wmm/prereg/panels/pool_mkd.jsonl",
+   "ids_sha256": "7e7c25fe465ac20a5a325e85203c89680e95db1e4f1fe2cf0a3a7085cb9d365f",
+   "disjointness_violations": 0
+  },
+  "pool_ma": {
+   "n": 256,
+   "source": "medqa train",
+   "file": "data/wmm/prereg/panels/pool_ma.jsonl",
+   "ids_sha256": "a9c1ca92d9c30f6f61271f9309e944b1e6223df8ad44f998a24b1e6413e514de",
+   "disjointness_violations": 0
+  }
+ },
+ "gate0_medmcqa_train_stem_check": {
+  "n_items": 32,
+  "stem_hits_in_panels_or_pools": 0
+ },
+ "training_pool_exclusions": {
+  "pool_in": 10178,
+  "removed": {
+   "exposed_or_sealed": 609,
+   "duplicate": 12
+  },
+  "rule": "hash, (source, id) or 300-char stem hash shared with any exposed or sealed item"
+ },
+ "exploratory_status": "EXPLORATORY",
+ "alpha_f": 0.008333333333333333,
+ "compute": {
+  "local_cap_gpu_h": 42.0,
+  "estimate_gpu_h": {
+   "base_all_panels": 12.0,
+   "msyc_edit_all_sets": 12.0,
+   "msyc_pool_and_training": 0.3,
+   "mte_pool512_rewrite_training": 1.2,
+   "mte_edit_neutral_and_guards": 4.5,
+   "gcal_three_states": 0.15,
+   "canaries_provenance_loads": 0.3,
+   "ma_full_bank_32_units": 10.7
+  },
+  "dropped_under_cap": {
+   "TE-I": 6.8,
+   "panel_enlargement_arc_6000": 12.8,
+   "panel_enlargement_benign_4000": 2.4
+  },
+  "cut_order": [
+   "M-A bank down to its declared minimum",
+   "M-TE ARC guard (M-TE claim then not made)"
+  ],
+  "schedule": [
+   "base",
+   "M-SYC",
+   "M-TE without its ARC guard",
+   "M-A minimum bank",
+   "M-TE ARC guard",
+   "M-A remaining units",
+   "TE-I (descriptive, only if time remains)"
+  ],
+  "hard_stop": "new sets stop at 42.0 local GPU-h; the schedule order realises the cut order; an unfinished guard is reported 'not measured' and its claim is not made"
+ },
+ "m_a": {
+  "status": "EXPECTED NULL (power <= 0.27); descriptive; a non-pass reads 'beyond-dose prediction not established on study M', never 'no beyond-dose structure'",
+  "n_items_per_unit": 200,
+  "run": true,
+  "minimum_units": 20,
+  "minimum_rule": "tv_slice on layer groups 0-3, 8-11, 16-19, 24-27 (attn + mlp); lora seeds 0-3; random 0-3; all 4 shams",
+  "bank_units": 32,
+  "minimum_unit_ids": [
+   "tv_slice:L0-3:attn",
+   "tv_slice:L0-3:mlp",
+   "tv_slice:L8-11:attn",
+   "tv_slice:L8-11:mlp",
+   "tv_slice:L16-19:attn",
+   "tv_slice:L16-19:mlp",
+   "tv_slice:L24-27:attn",
+   "tv_slice:L24-27:mlp",
+   "lora_seed:0",
+   "lora_seed:1",
+   "lora_seed:2",
+   "lora_seed:3",
+   "random:0",
+   "random:1",
+   "random:2",
+   "random:3",
+   "sham:uniform_o_scale:L8-11",
+   "sham:uniform_o_scale:L24-27",
+   "sham:compensated_mlp_pair:L8-11",
+   "sham:compensated_mlp_pair:L24-27"
+  ]
+ },
+ "msyc_expected_failures": {
+  "gcal": {
+   "dev_dBS": 0.0404,
+   "dev_ub": 0.0496,
+   "margin": 0.01,
+   "expected": "fail"
+  },
+  "neutral_accuracy": {
+   "dev_delta": -0.018,
+   "pass_probability_at_dev_effect": 0.279,
+   "margin": -0.03,
+   "expected": "fail"
+  }
+ },
+ "gcal": {
+  "margin": 0.01,
+  "gates": {
+   "max_p_max": 0.95,
+   "bs_min": 0.05,
+   "bs_max": 0.6,
+   "pc_min_dBS": 0.02,
+   "pc_factor": 2.0
+  },
+  "calibration": "docs/prereg/wmm_gcal_calibration.json",
+  "c6_note": "docs/council/2026-11-21/RULING-wmm-prereg.md addendum"
+ },
+ "code_sha256": {
+  "src/wsp/wm/wmm/prereg.py": "e31e40a6691f7281904372119f3e69487a223284da95ef642a674bd3bc718592",
+  "src/wsp/wm/wmm/powersim.py": "969137846d56f7edbe2c11314ead992187726a9021400c9efd5377e8f6567df8",
+  "src/wsp/wm/wmm/provenance.py": "a49f7c696273125acc9561f102546eea5852b41aeb90a1a92b95241d8091cca7",
+  "src/wsp/wm/wmm/canary.py": "0b8233746bdb23466b8c46e18f2b1b13bc37fb1fa26cac8c262b97223f25814f",
+  "src/wsp/wm/wmm_gate0b.py": "82f5f820ed6eaee186d5b5a28a0dc9b038503ae2b411ab3399beac9b530d6dcd",
+  "src/wsp/wm/wmm/gate1.py": "446d508ac70aaf4240e862ebb33bf3adf4b067a8867b161d76df4ef11282e1bd",
+  "src/wsp/wm/chat.py": "65c1b0acb49241b66d5c8ef03e1d890990695bf1d273fc97ef672197d5790fbf",
+  "src/wsp/wm/gemma3.py": "0ffaa82bb4a4c2537e940a6cb772999ce333284d1b2dbfe58adda92eefae3282",
+  "scripts/wmm_prereg_build.py": "29e12daa63940dc40844ddd70f9ff56c88a66d283a093d0122a323afcd475dec",
+  "scripts/wmm_powersim.py": "9c7d0f7103da07c147a88a0422993fa61e2980ccbf4175b7f7114932b4f8e7e5",
+  "scripts/wmm_gcal_calibration.py": "9670b26aa69a37a0620e8ff79a24d90a0f2c3e48d4b3ce7a877edfaaf80e63bb"
+ },
+ "git_sha_at_build": "9bc0760c162e70e55d505a017a921aba93b7de83"
+}
