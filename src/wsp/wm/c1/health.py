@@ -86,6 +86,8 @@ GPU_KINDS = (
 )
 # non-unit requests on the GPU: the K3 field repair (RULING-wme-c1-bank-halt)
 GPU_KINDS = (*GPU_KINDS, "field_repair", "bank_verify")
+# RULING-wme-c1-bank-halt addendum 4, T4 item 3: the registered-vs-deterministic field timing (non-unit)
+GPU_KINDS = (*GPU_KINDS, "field_timing")
 # non-unit requests reading or moving files (Board A v2r C4, C5)
 CPU_KINDS_EXTRA = ("field_status", "field_quarantine")
 CPU_KINDS = ("fit", "e2_arm", "theta_of", "describe", "edit_bundles", "rstats", "hello")

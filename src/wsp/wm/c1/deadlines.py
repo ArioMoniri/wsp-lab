@@ -63,6 +63,7 @@ CHECK_S = {
     "parity": 3600.0,
     "field_status": 600.0,
     "field_quarantine": 600.0,
+    "field_timing": 3600.0,  # addendum 4 T4.3: three g0 collections (registered ~2.5 min each; T2: no slowdown)
     "theta_of": 1800.0,
     "describe": 1800.0,
     "edit_bundles": 1800.0,

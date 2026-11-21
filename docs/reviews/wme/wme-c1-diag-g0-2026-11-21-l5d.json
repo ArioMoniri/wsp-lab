@@ -1,0 +1,870 @@
+{
+ "charged": {
+  "gpu_h_eq": 0.3896934280792872,
+  "launched_at": 1795296981.8490171,
+  "terminated_at": 1795298384.7453582
+ },
+ "code_sha_eq_commit": true,
+ "collections": {
+  "A": {
+   "file_sha256": {
+    "gsm8k_gold_lp.g0.pt": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7",
+    "mmlupro_gold_lp.g0.pt": "b5f7b8e4beca6124916118d2da174a5c2badfbf71178cf83a077ff89992d3294",
+    "refusal_margin_harmful.g0.pt": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a",
+    "refusal_margin_harmless.g0.pt": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2",
+    "sycophancy_real.g0.pt": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305",
+    "wikitext_nll.g0.pt": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6"
+   },
+   "implementation_sha256": "635dd060bcfe7089cb910fe484fe4462b462d834fa7e24d07b15da3e72e2156a",
+   "kept_sha256": {
+    "gsm8k_gold_lp.model.layers.0.linear_attn.out_proj.pt": "812813e056ab652f7f5bdb3b18a1fd9aeb72ee8f81018244e9539fee1a1a1170",
+    "gsm8k_gold_lp.model.layers.0.mlp.down_proj.pt": "36cd2edaf3430de978d829f092bdb53e3b20b5a270f59e06ffe47af7e45ccb36",
+    "gsm8k_gold_lp.model.layers.1.linear_attn.out_proj.pt": "41575357ea78ab8b110842490a222d8a22f4cfe4046b6db43475f570b63dd7df",
+    "gsm8k_gold_lp.model.layers.1.mlp.down_proj.pt": "ae5ed58bd3839b7835d83204bc269f66cfc0acca91eae7c86a97000b8144079f",
+    "gsm8k_gold_lp.model.layers.2.linear_attn.out_proj.pt": "7b6ea287f247d18be1a8b8736bfe0826083e97e3becd8719557b18e347d180f6",
+    "gsm8k_gold_lp.model.layers.2.mlp.down_proj.pt": "29016a8c9a5c990d00cf8524978fccd486a340dd48398effa91b660d56634f99",
+    "gsm8k_gold_lp.model.layers.3.mlp.down_proj.pt": "f7822a7d20e676464381521fe1d1c8d4cc93285a68299ec4f404965431a775ab",
+    "gsm8k_gold_lp.model.layers.3.self_attn.o_proj.pt": "945d0037d06b4a6f30152a7675f12375458c15041755316c903dac1477e9656e",
+    "mmlupro_gold_lp.model.layers.0.linear_attn.out_proj.pt": "639ede323146c30f3e6d736a5f684d8d4c03c36c93c9c6d5f847e3c5fc1c0e00",
+    "mmlupro_gold_lp.model.layers.0.mlp.down_proj.pt": "4fca461677f70bffe847ea30d45d3e2a3e1f81e33dc175f06be1b2f09b67ca69",
+    "mmlupro_gold_lp.model.layers.1.linear_attn.out_proj.pt": "0ef53319a0a04599494f88ba789fed617ec45d453ffc2b2d5d0539e0494da180",
+    "mmlupro_gold_lp.model.layers.1.mlp.down_proj.pt": "3626a2a4a526b47679800a703f30817ef574971941a081c66d0c843860dd0077",
+    "mmlupro_gold_lp.model.layers.2.linear_attn.out_proj.pt": "6ff94c4ef94da56a8d3e1f0db875914b68daa3cc630d77437e866c464ced2e92",
+    "mmlupro_gold_lp.model.layers.2.mlp.down_proj.pt": "6dcc432ae1030ca4bfd1fbf923b153cdc9db74ecf50198e95ee8e868966efc05",
+    "mmlupro_gold_lp.model.layers.3.mlp.down_proj.pt": "e95d07608f6726863baea4c1c3ed5c99123f853d67632efe0c3e272e64c99865",
+    "mmlupro_gold_lp.model.layers.3.self_attn.o_proj.pt": "e215f0087032636690208fa79b93b20dd1439a30a5dcf96a84a2d6fed3423bba",
+    "refusal_margin_harmful.model.layers.0.linear_attn.out_proj.pt": "7840c7d2deafabf46314b9173a65a688c703e39647d61ec9bb216fe6d19e4f22",
+    "refusal_margin_harmful.model.layers.0.mlp.down_proj.pt": "abbdcb68b1b7a1f71d144a9835ab2844b7d3e7bc6ce17f9ced27855d0677be4e",
+    "refusal_margin_harmful.model.layers.1.linear_attn.out_proj.pt": "7a2d53f5bf18fce064c897c1a2421a03553cea8dd774cfc99ae5d53649380e85",
+    "refusal_margin_harmful.model.layers.1.mlp.down_proj.pt": "c515f8a7621ef786d0c5da0704a5e7065a561673008c5a6442af8a5aee425c53",
+    "refusal_margin_harmful.model.layers.2.linear_attn.out_proj.pt": "5f72210fded6f56f79f002303419c19e8f11afbe098f0bb135fcc2d08b93c9d0",
+    "refusal_margin_harmful.model.layers.2.mlp.down_proj.pt": "d5f1dbd9d2f34ea4b576a2fa95c37e63d81b3141cf4a7236b57df02e5e8c18b9",
+    "refusal_margin_harmful.model.layers.3.mlp.down_proj.pt": "4fbffb1f1c197910efe1f8ef2026bdbef1c1d94e501d1129bb75359c8ad37cfe",
+    "refusal_margin_harmful.model.layers.3.self_attn.o_proj.pt": "cf2a4b560bb4d6635c01bc66eb9696204ce34cb631d7b4ac3c7068522b40a7ed",
+    "refusal_margin_harmless.model.layers.0.linear_attn.out_proj.pt": "f5b64eef4736c32969744c8b48df0435b9c331cf2e685582fae912135a77555e",
+    "refusal_margin_harmless.model.layers.0.mlp.down_proj.pt": "8743e23051688f081a1001d7641aa11ef61b0cc72c5105e66a41dbb5b57a2338",
+    "refusal_margin_harmless.model.layers.1.linear_attn.out_proj.pt": "be6c8d6d863b2e9188f88691b4477dae61717f33bcce8705cb7a9539b653cabf",
+    "refusal_margin_harmless.model.layers.1.mlp.down_proj.pt": "c72f18c4cfaa892c9a0c3b042060a8cff8ca61be64528a9db212f3a0c6308e4a",
+    "refusal_margin_harmless.model.layers.2.linear_attn.out_proj.pt": "9006a28b690bb1b78331d800f7fcef02b2bc92ebd5dbec3a92271d90333fde51",
+    "refusal_margin_harmless.model.layers.2.mlp.down_proj.pt": "381e4783473375a3e8dd3e76fe7e3f517f3665b1d361d803f877b7515d8525c7",
+    "refusal_margin_harmless.model.layers.3.mlp.down_proj.pt": "463f3fc2db37073e004172505855d92032dca0ffe6e1f21cc5e4ecb147c4b0a4",
+    "refusal_margin_harmless.model.layers.3.self_attn.o_proj.pt": "62628b0102e7f3cb2225362a58322fd2dabb5f62dc8678412c88720afc80e5cd",
+    "sycophancy_real.model.layers.0.linear_attn.out_proj.pt": "f5febc18aee3ec78a0a99b7a8aa9b6ae29e8a6761d82faba31f6fc8982b1d45a",
+    "sycophancy_real.model.layers.0.mlp.down_proj.pt": "bc93f137ff3ca0ccf8e3f3e075ba966f73a09c28646d6e2e03799cc2d108ebd3",
+    "sycophancy_real.model.layers.1.linear_attn.out_proj.pt": "83ebfb592ac7b876ac958cc402575f5d0349b09c11b32bc4e4e1b4fdb96bf8e0",
+    "sycophancy_real.model.layers.1.mlp.down_proj.pt": "d759112427464b0c3a102d8707a24f8f448972b2b9465b229ef3127c2f3a9148",
+    "sycophancy_real.model.layers.2.linear_attn.out_proj.pt": "390624c8118a046ebb748a2bad6b7f0c2c694bd65e328eba2f9bd6ba0f9bcccc",
+    "sycophancy_real.model.layers.2.mlp.down_proj.pt": "306eb31319e85e75f1db71f0ccb0f928c685a834979aaa37329850d7cf35bf50",
+    "sycophancy_real.model.layers.3.mlp.down_proj.pt": "8fc86f347e5127942f3e39d0d4937d3598e211d5c30713eb15b47a432b94d2af",
+    "sycophancy_real.model.layers.3.self_attn.o_proj.pt": "57a62c61714aad4855de60cf2b55a796ffbd665429df9c1f4a9422c352ef09e5",
+    "wikitext_nll.model.layers.0.linear_attn.out_proj.pt": "31b3e13176971237faed9c6bab00d0b0d60beb154843700839db3004908e8cd5",
+    "wikitext_nll.model.layers.0.mlp.down_proj.pt": "c19f13908ad60454ff221268be05089dd2a9507e20cdb7dafe5f139afa141a6b",
+    "wikitext_nll.model.layers.1.linear_attn.out_proj.pt": "b92aea4a0ae3d1dc0ce3b6392449077f9c03d4801807c29d68d8160812270764",
+    "wikitext_nll.model.layers.1.mlp.down_proj.pt": "e144fadadf392a5132581018d7611e9ebd7ba97d364e9a5e24cf4157ede18a3b",
+    "wikitext_nll.model.layers.2.linear_attn.out_proj.pt": "3bce8a4143cc22729478b3ca749bf12f78f93b1dafc91be853e929e6f466b021",
+    "wikitext_nll.model.layers.2.mlp.down_proj.pt": "cd97a3d0797ccfdcbfaec329b55812aff430ec67f88ee9702008bf69ce11a2c9",
+    "wikitext_nll.model.layers.3.mlp.down_proj.pt": "34eb592b14f5dff218e5767f2b01300b3f24f7936814a64747d58a3c8f3d7d1c",
+    "wikitext_nll.model.layers.3.self_attn.o_proj.pt": "689d6351e4cd515a0b26b66dfc49b4ea9ada6d4336d70fe82930bf3b920d516d"
+   },
+   "manifest_sha256": "9df5f491ff09cc695fdf0299ad6172fdedf628433aab6cb277ff6ae8ef4c43f1",
+   "panels_content_hash": {
+    "gsm8k_gold_lp": "74570449e0779fe817f1f1763809bc7bed15bf97a7687bb04d3e34caa7c147e7",
+    "mmlupro_gold_lp": "39c6e20f8e4d2b8fda64fc9f2d5e747a9c7208ba940496c58d777afcf3f38da6",
+    "refusal_margin_harmful": "59b04edec73c50ac8e1a7c8ac8aec77ca4280c07c701b979805e6fa798bc2ebb",
+    "refusal_margin_harmless": "682601455b9f86b2abcf049ab9b00c2b2fca0bf1d1c16e2dc65f3a341976ca9f",
+    "sycophancy_real": "b7ec273d7bf8c3f94828e54275686b34938f959929c026f7bccd7bb13372f828",
+    "wikitext_nll": "a9e9b7053ec07e4454a05e117eca5ca9009c811edea4a6397ea293dac9aeaf96"
+   },
+   "quarantine": "w/state/field_quarantine/20261121T215121Z",
+   "seed": 20261107,
+   "theta_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+   "timing_s": {
+    "gsm8k_gold_lp.g0": 13.097730845000001,
+    "mmlupro_gold_lp.g0": 13.100847155999986,
+    "refusal_margin_harmful.g0": 20.98597889299998,
+    "refusal_margin_harmless.g0": 12.243810326999949,
+    "sycophancy_real.g0": 10.52656878800002,
+    "wikitext_nll.g0": 53.770173973
+   },
+   "wall_s": 262.69574999809265
+  },
+  "B": {
+   "file_sha256": {
+    "gsm8k_gold_lp.g0.pt": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7",
+    "mmlupro_gold_lp.g0.pt": "703e56543b56dad0c93e9074a3be8ce872094fdbef8443cd14b0a9e210f4335d",
+    "refusal_margin_harmful.g0.pt": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a",
+    "refusal_margin_harmless.g0.pt": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2",
+    "sycophancy_real.g0.pt": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305",
+    "wikitext_nll.g0.pt": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6"
+   },
+   "implementation_sha256": "635dd060bcfe7089cb910fe484fe4462b462d834fa7e24d07b15da3e72e2156a",
+   "kept_sha256": {
+    "gsm8k_gold_lp.model.layers.0.linear_attn.out_proj.pt": "812813e056ab652f7f5bdb3b18a1fd9aeb72ee8f81018244e9539fee1a1a1170",
+    "gsm8k_gold_lp.model.layers.0.mlp.down_proj.pt": "36cd2edaf3430de978d829f092bdb53e3b20b5a270f59e06ffe47af7e45ccb36",
+    "gsm8k_gold_lp.model.layers.1.linear_attn.out_proj.pt": "41575357ea78ab8b110842490a222d8a22f4cfe4046b6db43475f570b63dd7df",
+    "gsm8k_gold_lp.model.layers.1.mlp.down_proj.pt": "ae5ed58bd3839b7835d83204bc269f66cfc0acca91eae7c86a97000b8144079f",
+    "gsm8k_gold_lp.model.layers.2.linear_attn.out_proj.pt": "7b6ea287f247d18be1a8b8736bfe0826083e97e3becd8719557b18e347d180f6",
+    "gsm8k_gold_lp.model.layers.2.mlp.down_proj.pt": "29016a8c9a5c990d00cf8524978fccd486a340dd48398effa91b660d56634f99",
+    "gsm8k_gold_lp.model.layers.3.mlp.down_proj.pt": "f7822a7d20e676464381521fe1d1c8d4cc93285a68299ec4f404965431a775ab",
+    "gsm8k_gold_lp.model.layers.3.self_attn.o_proj.pt": "945d0037d06b4a6f30152a7675f12375458c15041755316c903dac1477e9656e",
+    "mmlupro_gold_lp.model.layers.0.linear_attn.out_proj.pt": "639ede323146c30f3e6d736a5f684d8d4c03c36c93c9c6d5f847e3c5fc1c0e00",
+    "mmlupro_gold_lp.model.layers.0.mlp.down_proj.pt": "4fca461677f70bffe847ea30d45d3e2a3e1f81e33dc175f06be1b2f09b67ca69",
+    "mmlupro_gold_lp.model.layers.1.linear_attn.out_proj.pt": "0ef53319a0a04599494f88ba789fed617ec45d453ffc2b2d5d0539e0494da180",
+    "mmlupro_gold_lp.model.layers.1.mlp.down_proj.pt": "3626a2a4a526b47679800a703f30817ef574971941a081c66d0c843860dd0077",
+    "mmlupro_gold_lp.model.layers.2.linear_attn.out_proj.pt": "6ff94c4ef94da56a8d3e1f0db875914b68daa3cc630d77437e866c464ced2e92",
+    "mmlupro_gold_lp.model.layers.2.mlp.down_proj.pt": "6dcc432ae1030ca4bfd1fbf923b153cdc9db74ecf50198e95ee8e868966efc05",
+    "mmlupro_gold_lp.model.layers.3.mlp.down_proj.pt": "e95d07608f6726863baea4c1c3ed5c99123f853d67632efe0c3e272e64c99865",
+    "mmlupro_gold_lp.model.layers.3.self_attn.o_proj.pt": "e215f0087032636690208fa79b93b20dd1439a30a5dcf96a84a2d6fed3423bba",
+    "refusal_margin_harmful.model.layers.0.linear_attn.out_proj.pt": "7840c7d2deafabf46314b9173a65a688c703e39647d61ec9bb216fe6d19e4f22",
+    "refusal_margin_harmful.model.layers.0.mlp.down_proj.pt": "abbdcb68b1b7a1f71d144a9835ab2844b7d3e7bc6ce17f9ced27855d0677be4e",
+    "refusal_margin_harmful.model.layers.1.linear_attn.out_proj.pt": "7a2d53f5bf18fce064c897c1a2421a03553cea8dd774cfc99ae5d53649380e85",
+    "refusal_margin_harmful.model.layers.1.mlp.down_proj.pt": "c515f8a7621ef786d0c5da0704a5e7065a561673008c5a6442af8a5aee425c53",
+    "refusal_margin_harmful.model.layers.2.linear_attn.out_proj.pt": "5f72210fded6f56f79f002303419c19e8f11afbe098f0bb135fcc2d08b93c9d0",
+    "refusal_margin_harmful.model.layers.2.mlp.down_proj.pt": "d5f1dbd9d2f34ea4b576a2fa95c37e63d81b3141cf4a7236b57df02e5e8c18b9",
+    "refusal_margin_harmful.model.layers.3.mlp.down_proj.pt": "4fbffb1f1c197910efe1f8ef2026bdbef1c1d94e501d1129bb75359c8ad37cfe",
+    "refusal_margin_harmful.model.layers.3.self_attn.o_proj.pt": "cf2a4b560bb4d6635c01bc66eb9696204ce34cb631d7b4ac3c7068522b40a7ed",
+    "refusal_margin_harmless.model.layers.0.linear_attn.out_proj.pt": "f5b64eef4736c32969744c8b48df0435b9c331cf2e685582fae912135a77555e",
+    "refusal_margin_harmless.model.layers.0.mlp.down_proj.pt": "8743e23051688f081a1001d7641aa11ef61b0cc72c5105e66a41dbb5b57a2338",
+    "refusal_margin_harmless.model.layers.1.linear_attn.out_proj.pt": "be6c8d6d863b2e9188f88691b4477dae61717f33bcce8705cb7a9539b653cabf",
+    "refusal_margin_harmless.model.layers.1.mlp.down_proj.pt": "c72f18c4cfaa892c9a0c3b042060a8cff8ca61be64528a9db212f3a0c6308e4a",
+    "refusal_margin_harmless.model.layers.2.linear_attn.out_proj.pt": "9006a28b690bb1b78331d800f7fcef02b2bc92ebd5dbec3a92271d90333fde51",
+    "refusal_margin_harmless.model.layers.2.mlp.down_proj.pt": "381e4783473375a3e8dd3e76fe7e3f517f3665b1d361d803f877b7515d8525c7",
+    "refusal_margin_harmless.model.layers.3.mlp.down_proj.pt": "463f3fc2db37073e004172505855d92032dca0ffe6e1f21cc5e4ecb147c4b0a4",
+    "refusal_margin_harmless.model.layers.3.self_attn.o_proj.pt": "62628b0102e7f3cb2225362a58322fd2dabb5f62dc8678412c88720afc80e5cd",
+    "sycophancy_real.model.layers.0.linear_attn.out_proj.pt": "f5febc18aee3ec78a0a99b7a8aa9b6ae29e8a6761d82faba31f6fc8982b1d45a",
+    "sycophancy_real.model.layers.0.mlp.down_proj.pt": "bc93f137ff3ca0ccf8e3f3e075ba966f73a09c28646d6e2e03799cc2d108ebd3",
+    "sycophancy_real.model.layers.1.linear_attn.out_proj.pt": "83ebfb592ac7b876ac958cc402575f5d0349b09c11b32bc4e4e1b4fdb96bf8e0",
+    "sycophancy_real.model.layers.1.mlp.down_proj.pt": "d759112427464b0c3a102d8707a24f8f448972b2b9465b229ef3127c2f3a9148",
+    "sycophancy_real.model.layers.2.linear_attn.out_proj.pt": "390624c8118a046ebb748a2bad6b7f0c2c694bd65e328eba2f9bd6ba0f9bcccc",
+    "sycophancy_real.model.layers.2.mlp.down_proj.pt": "306eb31319e85e75f1db71f0ccb0f928c685a834979aaa37329850d7cf35bf50",
+    "sycophancy_real.model.layers.3.mlp.down_proj.pt": "8fc86f347e5127942f3e39d0d4937d3598e211d5c30713eb15b47a432b94d2af",
+    "sycophancy_real.model.layers.3.self_attn.o_proj.pt": "57a62c61714aad4855de60cf2b55a796ffbd665429df9c1f4a9422c352ef09e5",
+    "wikitext_nll.model.layers.0.linear_attn.out_proj.pt": "31b3e13176971237faed9c6bab00d0b0d60beb154843700839db3004908e8cd5",
+    "wikitext_nll.model.layers.0.mlp.down_proj.pt": "c19f13908ad60454ff221268be05089dd2a9507e20cdb7dafe5f139afa141a6b",
+    "wikitext_nll.model.layers.1.linear_attn.out_proj.pt": "b92aea4a0ae3d1dc0ce3b6392449077f9c03d4801807c29d68d8160812270764",
+    "wikitext_nll.model.layers.1.mlp.down_proj.pt": "e144fadadf392a5132581018d7611e9ebd7ba97d364e9a5e24cf4157ede18a3b",
+    "wikitext_nll.model.layers.2.linear_attn.out_proj.pt": "3bce8a4143cc22729478b3ca749bf12f78f93b1dafc91be853e929e6f466b021",
+    "wikitext_nll.model.layers.2.mlp.down_proj.pt": "cd97a3d0797ccfdcbfaec329b55812aff430ec67f88ee9702008bf69ce11a2c9",
+    "wikitext_nll.model.layers.3.mlp.down_proj.pt": "34eb592b14f5dff218e5767f2b01300b3f24f7936814a64747d58a3c8f3d7d1c",
+    "wikitext_nll.model.layers.3.self_attn.o_proj.pt": "689d6351e4cd515a0b26b66dfc49b4ea9ada6d4336d70fe82930bf3b920d516d"
+   },
+   "manifest_sha256": "c298ec4cb184d0140c1a05fe7906d3f3d757d715a13a6183e0bd5f7702583990",
+   "panels_content_hash": {
+    "gsm8k_gold_lp": "74570449e0779fe817f1f1763809bc7bed15bf97a7687bb04d3e34caa7c147e7",
+    "mmlupro_gold_lp": "39c6e20f8e4d2b8fda64fc9f2d5e747a9c7208ba940496c58d777afcf3f38da6",
+    "refusal_margin_harmful": "59b04edec73c50ac8e1a7c8ac8aec77ca4280c07c701b979805e6fa798bc2ebb",
+    "refusal_margin_harmless": "682601455b9f86b2abcf049ab9b00c2b2fca0bf1d1c16e2dc65f3a341976ca9f",
+    "sycophancy_real": "b7ec273d7bf8c3f94828e54275686b34938f959929c026f7bccd7bb13372f828",
+    "wikitext_nll": "a9e9b7053ec07e4454a05e117eca5ca9009c811edea4a6397ea293dac9aeaf96"
+   },
+   "quarantine": "w/state/field_quarantine/20261121T215529Z",
+   "seed": 20261107,
+   "theta_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+   "timing_s": {
+    "gsm8k_gold_lp.g0": 8.711779195000076,
+    "mmlupro_gold_lp.g0": 10.55175491700004,
+    "refusal_margin_harmful.g0": 10.933721701999957,
+    "refusal_margin_harmless.g0": 10.90070021200006,
+    "sycophancy_real.g0": 8.504556285000035,
+    "wikitext_nll.g0": 50.914208192000046
+   },
+   "wall_s": 248.11901092529297
+  }
+ },
+ "commit": "68defa6cb0a6ba4f4ec16facaa864ec07b7d49b6",
+ "compare": {
+  "files": {
+   "gsm8k_gold_lp.g0.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true,
+    "B_eq_run3": true,
+    "B_eq_run5": true,
+    "sha256": {
+     "A": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7",
+     "B": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7",
+     "run3": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7",
+     "run5": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7"
+    }
+   },
+   "mmlupro_gold_lp.g0.pt": {
+    "A_eq_B": false,
+    "A_eq_run3": true,
+    "A_eq_run5": false,
+    "B_eq_run3": false,
+    "B_eq_run5": false,
+    "sha256": {
+     "A": "b5f7b8e4beca6124916118d2da174a5c2badfbf71178cf83a077ff89992d3294",
+     "B": "703e56543b56dad0c93e9074a3be8ce872094fdbef8443cd14b0a9e210f4335d",
+     "run3": "b5f7b8e4beca6124916118d2da174a5c2badfbf71178cf83a077ff89992d3294",
+     "run5": "45d4e3f70f49fe0c0506a3981ca958d2077be6d3e40f983112789e5419dbd1a9"
+    }
+   },
+   "refusal_margin_harmful.g0.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true,
+    "B_eq_run3": true,
+    "B_eq_run5": true,
+    "sha256": {
+     "A": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a",
+     "B": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a",
+     "run3": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a",
+     "run5": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a"
+    }
+   },
+   "refusal_margin_harmless.g0.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true,
+    "B_eq_run3": true,
+    "B_eq_run5": true,
+    "sha256": {
+     "A": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2",
+     "B": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2",
+     "run3": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2",
+     "run5": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2"
+    }
+   },
+   "sycophancy_real.g0.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true,
+    "B_eq_run3": true,
+    "B_eq_run5": true,
+    "sha256": {
+     "A": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305",
+     "B": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305",
+     "run3": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305",
+     "run5": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305"
+    }
+   },
+   "wikitext_nll.g0.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true,
+    "B_eq_run3": true,
+    "B_eq_run5": true,
+    "sha256": {
+     "A": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6",
+     "B": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6",
+     "run3": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6",
+     "run5": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6"
+    }
+   }
+  },
+  "implementation_sha256": {
+   "A": "635dd060bcfe7089cb910fe484fe4462b462d834fa7e24d07b15da3e72e2156a",
+   "B": "635dd060bcfe7089cb910fe484fe4462b462d834fa7e24d07b15da3e72e2156a",
+   "run5": "635dd060bcfe7089cb910fe484fe4462b462d834fa7e24d07b15da3e72e2156a"
+  },
+  "kept": {
+   "gsm8k_gold_lp.model.layers.0.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "gsm8k_gold_lp.model.layers.0.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "gsm8k_gold_lp.model.layers.1.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "gsm8k_gold_lp.model.layers.1.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "gsm8k_gold_lp.model.layers.2.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "gsm8k_gold_lp.model.layers.2.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "gsm8k_gold_lp.model.layers.3.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "gsm8k_gold_lp.model.layers.3.self_attn.o_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "mmlupro_gold_lp.model.layers.0.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "mmlupro_gold_lp.model.layers.0.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "mmlupro_gold_lp.model.layers.1.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "mmlupro_gold_lp.model.layers.1.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "mmlupro_gold_lp.model.layers.2.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "mmlupro_gold_lp.model.layers.2.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "mmlupro_gold_lp.model.layers.3.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "mmlupro_gold_lp.model.layers.3.self_attn.o_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmful.model.layers.0.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmful.model.layers.0.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmful.model.layers.1.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmful.model.layers.1.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmful.model.layers.2.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmful.model.layers.2.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmful.model.layers.3.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmful.model.layers.3.self_attn.o_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmless.model.layers.0.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmless.model.layers.0.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmless.model.layers.1.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmless.model.layers.1.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmless.model.layers.2.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmless.model.layers.2.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmless.model.layers.3.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "refusal_margin_harmless.model.layers.3.self_attn.o_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "sycophancy_real.model.layers.0.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "sycophancy_real.model.layers.0.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "sycophancy_real.model.layers.1.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "sycophancy_real.model.layers.1.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "sycophancy_real.model.layers.2.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "sycophancy_real.model.layers.2.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "sycophancy_real.model.layers.3.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "sycophancy_real.model.layers.3.self_attn.o_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "wikitext_nll.model.layers.0.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "wikitext_nll.model.layers.0.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "wikitext_nll.model.layers.1.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "wikitext_nll.model.layers.1.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "wikitext_nll.model.layers.2.linear_attn.out_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "wikitext_nll.model.layers.2.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "wikitext_nll.model.layers.3.mlp.down_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   },
+   "wikitext_nll.model.layers.3.self_attn.o_proj.pt": {
+    "A_eq_B": true,
+    "A_eq_run3": true,
+    "A_eq_run5": true
+   }
+  },
+  "kept_all": {
+   "A_eq_B": true,
+   "A_eq_run3": true,
+   "A_eq_run5": true
+  },
+  "model_state_hash": {
+   "A": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+   "B": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+   "all_equal": true,
+   "hello_theta0": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+   "run3_theta0": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+   "run5": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5"
+  },
+  "panels_content_hash": {
+   "A": {
+    "gsm8k_gold_lp": "74570449e0779fe817f1f1763809bc7bed15bf97a7687bb04d3e34caa7c147e7",
+    "mmlupro_gold_lp": "39c6e20f8e4d2b8fda64fc9f2d5e747a9c7208ba940496c58d777afcf3f38da6",
+    "refusal_margin_harmful": "59b04edec73c50ac8e1a7c8ac8aec77ca4280c07c701b979805e6fa798bc2ebb",
+    "refusal_margin_harmless": "682601455b9f86b2abcf049ab9b00c2b2fca0bf1d1c16e2dc65f3a341976ca9f",
+    "sycophancy_real": "b7ec273d7bf8c3f94828e54275686b34938f959929c026f7bccd7bb13372f828",
+    "wikitext_nll": "a9e9b7053ec07e4454a05e117eca5ca9009c811edea4a6397ea293dac9aeaf96"
+   },
+   "A_eq_B": true,
+   "A_eq_run5": true,
+   "B": {
+    "gsm8k_gold_lp": "74570449e0779fe817f1f1763809bc7bed15bf97a7687bb04d3e34caa7c147e7",
+    "mmlupro_gold_lp": "39c6e20f8e4d2b8fda64fc9f2d5e747a9c7208ba940496c58d777afcf3f38da6",
+    "refusal_margin_harmful": "59b04edec73c50ac8e1a7c8ac8aec77ca4280c07c701b979805e6fa798bc2ebb",
+    "refusal_margin_harmless": "682601455b9f86b2abcf049ab9b00c2b2fca0bf1d1c16e2dc65f3a341976ca9f",
+    "sycophancy_real": "b7ec273d7bf8c3f94828e54275686b34938f959929c026f7bccd7bb13372f828",
+    "wikitext_nll": "a9e9b7053ec07e4454a05e117eca5ca9009c811edea4a6397ea293dac9aeaf96"
+   },
+   "run3": null,
+   "run3_note": "run3 did not record panel content hashes (its field manifest was on the run3 instance); the 14 bundle data inputs of run3 (bundle c6803a57, commit 5060e32) and run5 (d3e31c0) are byte-identical and no file on the collection path changed between 5060e32 and d3e31c0",
+   "run5": {
+    "gsm8k_gold_lp": "74570449e0779fe817f1f1763809bc7bed15bf97a7687bb04d3e34caa7c147e7",
+    "mmlupro_gold_lp": "39c6e20f8e4d2b8fda64fc9f2d5e747a9c7208ba940496c58d777afcf3f38da6",
+    "refusal_margin_harmful": "59b04edec73c50ac8e1a7c8ac8aec77ca4280c07c701b979805e6fa798bc2ebb",
+    "refusal_margin_harmless": "682601455b9f86b2abcf049ab9b00c2b2fca0bf1d1c16e2dc65f3a341976ca9f",
+    "sycophancy_real": "b7ec273d7bf8c3f94828e54275686b34938f959929c026f7bccd7bb13372f828",
+    "wikitext_nll": "a9e9b7053ec07e4454a05e117eca5ca9009c811edea4a6397ea293dac9aeaf96"
+   }
+  }
+ },
+ "d2_branch": "a",
+ "driver_script_sha256": "d5a6b1c43f3f5e75f9f2fab92453c4c25cccfa5008fa8737156efeb263a3470c",
+ "field_on_disk_before": {},
+ "hello": {
+  "code_sha": "68defa6cb0a6ba4f4ec16facaa864ec07b7d49b6",
+  "driver": "570.148.08",
+  "gen_engine": {
+   "amendment": "PREREG_WME \u00a7II.31 (v2l)",
+   "batch": 128,
+   "deterministic": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8 (process-wide, set before the first CUDA call)",
+    "attention": "SDPA math backend only (flash, memory-efficient and cuDNN attention off); model attn_implementation in ['sdpa', 'eager']",
+    "cudnn": {
+     "benchmark": false,
+     "deterministic": true
+    },
+    "linear_attention": "transformers torch path (no fla / causal_conv1d / kernels-hub function bound)",
+    "scope": "inside each HF generate call; teacher-forced evaluation unchanged",
+    "torch.use_deterministic_algorithms": {
+     "mode": true,
+     "warn_only": false
+    }
+   },
+   "engine": "hf generate (wm.genaudit, unchanged)",
+   "greedy": true,
+   "max_new_tokens": 128,
+   "mode": "hf_deterministic",
+   "non_thinking": true,
+   "order": "file order; contiguous chunks of 128 (the last the remainder); one generate call per chunk",
+   "padding": "left",
+   "sampled_audit": "T 0.7, top-p 1.0, gen.sampled_seeds",
+   "stop": [
+    "eos",
+    "<|im_end|>"
+   ]
+  },
+  "global_state": {
+   "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+   "cudnn_benchmark": false,
+   "cudnn_deterministic": false,
+   "deterministic_algorithms": false,
+   "sdp": {
+    "cudnn": true,
+    "flash": true,
+    "math": true,
+    "mem_efficient": true
+   },
+   "warn_only": false
+  },
+  "theta0": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5"
+ },
+ "iid": "a44312195b1e4604a8fa3a8091853c07",
+ "owner_epoch": 11,
+ "references": {
+  "run3_eligible": {
+   "file_sha256": {
+    "gsm8k_gold_lp.g0.pt": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7",
+    "mmlupro_gold_lp.g0.pt": "b5f7b8e4beca6124916118d2da174a5c2badfbf71178cf83a077ff89992d3294",
+    "refusal_margin_harmful.g0.pt": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a",
+    "refusal_margin_harmless.g0.pt": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2",
+    "sycophancy_real.g0.pt": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305",
+    "wikitext_nll.g0.pt": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6"
+   },
+   "kept_sha256": {
+    "gsm8k_gold_lp.model.layers.0.linear_attn.out_proj.pt": "812813e056ab652f7f5bdb3b18a1fd9aeb72ee8f81018244e9539fee1a1a1170",
+    "gsm8k_gold_lp.model.layers.0.mlp.down_proj.pt": "36cd2edaf3430de978d829f092bdb53e3b20b5a270f59e06ffe47af7e45ccb36",
+    "gsm8k_gold_lp.model.layers.1.linear_attn.out_proj.pt": "41575357ea78ab8b110842490a222d8a22f4cfe4046b6db43475f570b63dd7df",
+    "gsm8k_gold_lp.model.layers.1.mlp.down_proj.pt": "ae5ed58bd3839b7835d83204bc269f66cfc0acca91eae7c86a97000b8144079f",
+    "gsm8k_gold_lp.model.layers.2.linear_attn.out_proj.pt": "7b6ea287f247d18be1a8b8736bfe0826083e97e3becd8719557b18e347d180f6",
+    "gsm8k_gold_lp.model.layers.2.mlp.down_proj.pt": "29016a8c9a5c990d00cf8524978fccd486a340dd48398effa91b660d56634f99",
+    "gsm8k_gold_lp.model.layers.3.mlp.down_proj.pt": "f7822a7d20e676464381521fe1d1c8d4cc93285a68299ec4f404965431a775ab",
+    "gsm8k_gold_lp.model.layers.3.self_attn.o_proj.pt": "945d0037d06b4a6f30152a7675f12375458c15041755316c903dac1477e9656e",
+    "mmlupro_gold_lp.model.layers.0.linear_attn.out_proj.pt": "639ede323146c30f3e6d736a5f684d8d4c03c36c93c9c6d5f847e3c5fc1c0e00",
+    "mmlupro_gold_lp.model.layers.0.mlp.down_proj.pt": "4fca461677f70bffe847ea30d45d3e2a3e1f81e33dc175f06be1b2f09b67ca69",
+    "mmlupro_gold_lp.model.layers.1.linear_attn.out_proj.pt": "0ef53319a0a04599494f88ba789fed617ec45d453ffc2b2d5d0539e0494da180",
+    "mmlupro_gold_lp.model.layers.1.mlp.down_proj.pt": "3626a2a4a526b47679800a703f30817ef574971941a081c66d0c843860dd0077",
+    "mmlupro_gold_lp.model.layers.2.linear_attn.out_proj.pt": "6ff94c4ef94da56a8d3e1f0db875914b68daa3cc630d77437e866c464ced2e92",
+    "mmlupro_gold_lp.model.layers.2.mlp.down_proj.pt": "6dcc432ae1030ca4bfd1fbf923b153cdc9db74ecf50198e95ee8e868966efc05",
+    "mmlupro_gold_lp.model.layers.3.mlp.down_proj.pt": "e95d07608f6726863baea4c1c3ed5c99123f853d67632efe0c3e272e64c99865",
+    "mmlupro_gold_lp.model.layers.3.self_attn.o_proj.pt": "e215f0087032636690208fa79b93b20dd1439a30a5dcf96a84a2d6fed3423bba",
+    "refusal_margin_harmful.model.layers.0.linear_attn.out_proj.pt": "7840c7d2deafabf46314b9173a65a688c703e39647d61ec9bb216fe6d19e4f22",
+    "refusal_margin_harmful.model.layers.0.mlp.down_proj.pt": "abbdcb68b1b7a1f71d144a9835ab2844b7d3e7bc6ce17f9ced27855d0677be4e",
+    "refusal_margin_harmful.model.layers.1.linear_attn.out_proj.pt": "7a2d53f5bf18fce064c897c1a2421a03553cea8dd774cfc99ae5d53649380e85",
+    "refusal_margin_harmful.model.layers.1.mlp.down_proj.pt": "c515f8a7621ef786d0c5da0704a5e7065a561673008c5a6442af8a5aee425c53",
+    "refusal_margin_harmful.model.layers.2.linear_attn.out_proj.pt": "5f72210fded6f56f79f002303419c19e8f11afbe098f0bb135fcc2d08b93c9d0",
+    "refusal_margin_harmful.model.layers.2.mlp.down_proj.pt": "d5f1dbd9d2f34ea4b576a2fa95c37e63d81b3141cf4a7236b57df02e5e8c18b9",
+    "refusal_margin_harmful.model.layers.3.mlp.down_proj.pt": "4fbffb1f1c197910efe1f8ef2026bdbef1c1d94e501d1129bb75359c8ad37cfe",
+    "refusal_margin_harmful.model.layers.3.self_attn.o_proj.pt": "cf2a4b560bb4d6635c01bc66eb9696204ce34cb631d7b4ac3c7068522b40a7ed",
+    "refusal_margin_harmless.model.layers.0.linear_attn.out_proj.pt": "f5b64eef4736c32969744c8b48df0435b9c331cf2e685582fae912135a77555e",
+    "refusal_margin_harmless.model.layers.0.mlp.down_proj.pt": "8743e23051688f081a1001d7641aa11ef61b0cc72c5105e66a41dbb5b57a2338",
+    "refusal_margin_harmless.model.layers.1.linear_attn.out_proj.pt": "be6c8d6d863b2e9188f88691b4477dae61717f33bcce8705cb7a9539b653cabf",
+    "refusal_margin_harmless.model.layers.1.mlp.down_proj.pt": "c72f18c4cfaa892c9a0c3b042060a8cff8ca61be64528a9db212f3a0c6308e4a",
+    "refusal_margin_harmless.model.layers.2.linear_attn.out_proj.pt": "9006a28b690bb1b78331d800f7fcef02b2bc92ebd5dbec3a92271d90333fde51",
+    "refusal_margin_harmless.model.layers.2.mlp.down_proj.pt": "381e4783473375a3e8dd3e76fe7e3f517f3665b1d361d803f877b7515d8525c7",
+    "refusal_margin_harmless.model.layers.3.mlp.down_proj.pt": "463f3fc2db37073e004172505855d92032dca0ffe6e1f21cc5e4ecb147c4b0a4",
+    "refusal_margin_harmless.model.layers.3.self_attn.o_proj.pt": "62628b0102e7f3cb2225362a58322fd2dabb5f62dc8678412c88720afc80e5cd",
+    "sycophancy_real.model.layers.0.linear_attn.out_proj.pt": "f5febc18aee3ec78a0a99b7a8aa9b6ae29e8a6761d82faba31f6fc8982b1d45a",
+    "sycophancy_real.model.layers.0.mlp.down_proj.pt": "bc93f137ff3ca0ccf8e3f3e075ba966f73a09c28646d6e2e03799cc2d108ebd3",
+    "sycophancy_real.model.layers.1.linear_attn.out_proj.pt": "83ebfb592ac7b876ac958cc402575f5d0349b09c11b32bc4e4e1b4fdb96bf8e0",
+    "sycophancy_real.model.layers.1.mlp.down_proj.pt": "d759112427464b0c3a102d8707a24f8f448972b2b9465b229ef3127c2f3a9148",
+    "sycophancy_real.model.layers.2.linear_attn.out_proj.pt": "390624c8118a046ebb748a2bad6b7f0c2c694bd65e328eba2f9bd6ba0f9bcccc",
+    "sycophancy_real.model.layers.2.mlp.down_proj.pt": "306eb31319e85e75f1db71f0ccb0f928c685a834979aaa37329850d7cf35bf50",
+    "sycophancy_real.model.layers.3.mlp.down_proj.pt": "8fc86f347e5127942f3e39d0d4937d3598e211d5c30713eb15b47a432b94d2af",
+    "sycophancy_real.model.layers.3.self_attn.o_proj.pt": "57a62c61714aad4855de60cf2b55a796ffbd665429df9c1f4a9422c352ef09e5",
+    "wikitext_nll.model.layers.0.linear_attn.out_proj.pt": "31b3e13176971237faed9c6bab00d0b0d60beb154843700839db3004908e8cd5",
+    "wikitext_nll.model.layers.0.mlp.down_proj.pt": "c19f13908ad60454ff221268be05089dd2a9507e20cdb7dafe5f139afa141a6b",
+    "wikitext_nll.model.layers.1.linear_attn.out_proj.pt": "b92aea4a0ae3d1dc0ce3b6392449077f9c03d4801807c29d68d8160812270764",
+    "wikitext_nll.model.layers.1.mlp.down_proj.pt": "e144fadadf392a5132581018d7611e9ebd7ba97d364e9a5e24cf4157ede18a3b",
+    "wikitext_nll.model.layers.2.linear_attn.out_proj.pt": "3bce8a4143cc22729478b3ca749bf12f78f93b1dafc91be853e929e6f466b021",
+    "wikitext_nll.model.layers.2.mlp.down_proj.pt": "cd97a3d0797ccfdcbfaec329b55812aff430ec67f88ee9702008bf69ce11a2c9",
+    "wikitext_nll.model.layers.3.mlp.down_proj.pt": "34eb592b14f5dff218e5767f2b01300b3f24f7936814a64747d58a3c8f3d7d1c",
+    "wikitext_nll.model.layers.3.self_attn.o_proj.pt": "689d6351e4cd515a0b26b66dfc49b4ea9ada6d4336d70fe82930bf3b920d516d"
+   },
+   "unit_file": "d9a19d518e2a0a4989658e979aba53105a3753560831c125d44b79fbfbe46b11.a1.json"
+  },
+  "run5_quarantined": {
+   "file_sha256": {
+    "gsm8k_gold_lp.g0.pt": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7",
+    "mmlupro_gold_lp.g0.pt": "45d4e3f70f49fe0c0506a3981ca958d2077be6d3e40f983112789e5419dbd1a9",
+    "refusal_margin_harmful.g0.pt": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a",
+    "refusal_margin_harmless.g0.pt": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2",
+    "sycophancy_real.g0.pt": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305",
+    "wikitext_nll.g0.pt": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6"
+   },
+   "kept_sha256": {
+    "gsm8k_gold_lp.model.layers.0.linear_attn.out_proj.pt": "812813e056ab652f7f5bdb3b18a1fd9aeb72ee8f81018244e9539fee1a1a1170",
+    "gsm8k_gold_lp.model.layers.0.mlp.down_proj.pt": "36cd2edaf3430de978d829f092bdb53e3b20b5a270f59e06ffe47af7e45ccb36",
+    "gsm8k_gold_lp.model.layers.1.linear_attn.out_proj.pt": "41575357ea78ab8b110842490a222d8a22f4cfe4046b6db43475f570b63dd7df",
+    "gsm8k_gold_lp.model.layers.1.mlp.down_proj.pt": "ae5ed58bd3839b7835d83204bc269f66cfc0acca91eae7c86a97000b8144079f",
+    "gsm8k_gold_lp.model.layers.2.linear_attn.out_proj.pt": "7b6ea287f247d18be1a8b8736bfe0826083e97e3becd8719557b18e347d180f6",
+    "gsm8k_gold_lp.model.layers.2.mlp.down_proj.pt": "29016a8c9a5c990d00cf8524978fccd486a340dd48398effa91b660d56634f99",
+    "gsm8k_gold_lp.model.layers.3.mlp.down_proj.pt": "f7822a7d20e676464381521fe1d1c8d4cc93285a68299ec4f404965431a775ab",
+    "gsm8k_gold_lp.model.layers.3.self_attn.o_proj.pt": "945d0037d06b4a6f30152a7675f12375458c15041755316c903dac1477e9656e",
+    "mmlupro_gold_lp.model.layers.0.linear_attn.out_proj.pt": "639ede323146c30f3e6d736a5f684d8d4c03c36c93c9c6d5f847e3c5fc1c0e00",
+    "mmlupro_gold_lp.model.layers.0.mlp.down_proj.pt": "4fca461677f70bffe847ea30d45d3e2a3e1f81e33dc175f06be1b2f09b67ca69",
+    "mmlupro_gold_lp.model.layers.1.linear_attn.out_proj.pt": "0ef53319a0a04599494f88ba789fed617ec45d453ffc2b2d5d0539e0494da180",
+    "mmlupro_gold_lp.model.layers.1.mlp.down_proj.pt": "3626a2a4a526b47679800a703f30817ef574971941a081c66d0c843860dd0077",
+    "mmlupro_gold_lp.model.layers.2.linear_attn.out_proj.pt": "6ff94c4ef94da56a8d3e1f0db875914b68daa3cc630d77437e866c464ced2e92",
+    "mmlupro_gold_lp.model.layers.2.mlp.down_proj.pt": "6dcc432ae1030ca4bfd1fbf923b153cdc9db74ecf50198e95ee8e868966efc05",
+    "mmlupro_gold_lp.model.layers.3.mlp.down_proj.pt": "e95d07608f6726863baea4c1c3ed5c99123f853d67632efe0c3e272e64c99865",
+    "mmlupro_gold_lp.model.layers.3.self_attn.o_proj.pt": "e215f0087032636690208fa79b93b20dd1439a30a5dcf96a84a2d6fed3423bba",
+    "refusal_margin_harmful.model.layers.0.linear_attn.out_proj.pt": "7840c7d2deafabf46314b9173a65a688c703e39647d61ec9bb216fe6d19e4f22",
+    "refusal_margin_harmful.model.layers.0.mlp.down_proj.pt": "abbdcb68b1b7a1f71d144a9835ab2844b7d3e7bc6ce17f9ced27855d0677be4e",
+    "refusal_margin_harmful.model.layers.1.linear_attn.out_proj.pt": "7a2d53f5bf18fce064c897c1a2421a03553cea8dd774cfc99ae5d53649380e85",
+    "refusal_margin_harmful.model.layers.1.mlp.down_proj.pt": "c515f8a7621ef786d0c5da0704a5e7065a561673008c5a6442af8a5aee425c53",
+    "refusal_margin_harmful.model.layers.2.linear_attn.out_proj.pt": "5f72210fded6f56f79f002303419c19e8f11afbe098f0bb135fcc2d08b93c9d0",
+    "refusal_margin_harmful.model.layers.2.mlp.down_proj.pt": "d5f1dbd9d2f34ea4b576a2fa95c37e63d81b3141cf4a7236b57df02e5e8c18b9",
+    "refusal_margin_harmful.model.layers.3.mlp.down_proj.pt": "4fbffb1f1c197910efe1f8ef2026bdbef1c1d94e501d1129bb75359c8ad37cfe",
+    "refusal_margin_harmful.model.layers.3.self_attn.o_proj.pt": "cf2a4b560bb4d6635c01bc66eb9696204ce34cb631d7b4ac3c7068522b40a7ed",
+    "refusal_margin_harmless.model.layers.0.linear_attn.out_proj.pt": "f5b64eef4736c32969744c8b48df0435b9c331cf2e685582fae912135a77555e",
+    "refusal_margin_harmless.model.layers.0.mlp.down_proj.pt": "8743e23051688f081a1001d7641aa11ef61b0cc72c5105e66a41dbb5b57a2338",
+    "refusal_margin_harmless.model.layers.1.linear_attn.out_proj.pt": "be6c8d6d863b2e9188f88691b4477dae61717f33bcce8705cb7a9539b653cabf",
+    "refusal_margin_harmless.model.layers.1.mlp.down_proj.pt": "c72f18c4cfaa892c9a0c3b042060a8cff8ca61be64528a9db212f3a0c6308e4a",
+    "refusal_margin_harmless.model.layers.2.linear_attn.out_proj.pt": "9006a28b690bb1b78331d800f7fcef02b2bc92ebd5dbec3a92271d90333fde51",
+    "refusal_margin_harmless.model.layers.2.mlp.down_proj.pt": "381e4783473375a3e8dd3e76fe7e3f517f3665b1d361d803f877b7515d8525c7",
+    "refusal_margin_harmless.model.layers.3.mlp.down_proj.pt": "463f3fc2db37073e004172505855d92032dca0ffe6e1f21cc5e4ecb147c4b0a4",
+    "refusal_margin_harmless.model.layers.3.self_attn.o_proj.pt": "62628b0102e7f3cb2225362a58322fd2dabb5f62dc8678412c88720afc80e5cd",
+    "sycophancy_real.model.layers.0.linear_attn.out_proj.pt": "f5febc18aee3ec78a0a99b7a8aa9b6ae29e8a6761d82faba31f6fc8982b1d45a",
+    "sycophancy_real.model.layers.0.mlp.down_proj.pt": "bc93f137ff3ca0ccf8e3f3e075ba966f73a09c28646d6e2e03799cc2d108ebd3",
+    "sycophancy_real.model.layers.1.linear_attn.out_proj.pt": "83ebfb592ac7b876ac958cc402575f5d0349b09c11b32bc4e4e1b4fdb96bf8e0",
+    "sycophancy_real.model.layers.1.mlp.down_proj.pt": "d759112427464b0c3a102d8707a24f8f448972b2b9465b229ef3127c2f3a9148",
+    "sycophancy_real.model.layers.2.linear_attn.out_proj.pt": "390624c8118a046ebb748a2bad6b7f0c2c694bd65e328eba2f9bd6ba0f9bcccc",
+    "sycophancy_real.model.layers.2.mlp.down_proj.pt": "306eb31319e85e75f1db71f0ccb0f928c685a834979aaa37329850d7cf35bf50",
+    "sycophancy_real.model.layers.3.mlp.down_proj.pt": "8fc86f347e5127942f3e39d0d4937d3598e211d5c30713eb15b47a432b94d2af",
+    "sycophancy_real.model.layers.3.self_attn.o_proj.pt": "57a62c61714aad4855de60cf2b55a796ffbd665429df9c1f4a9422c352ef09e5",
+    "wikitext_nll.model.layers.0.linear_attn.out_proj.pt": "31b3e13176971237faed9c6bab00d0b0d60beb154843700839db3004908e8cd5",
+    "wikitext_nll.model.layers.0.mlp.down_proj.pt": "c19f13908ad60454ff221268be05089dd2a9507e20cdb7dafe5f139afa141a6b",
+    "wikitext_nll.model.layers.1.linear_attn.out_proj.pt": "b92aea4a0ae3d1dc0ce3b6392449077f9c03d4801807c29d68d8160812270764",
+    "wikitext_nll.model.layers.1.mlp.down_proj.pt": "e144fadadf392a5132581018d7611e9ebd7ba97d364e9a5e24cf4157ede18a3b",
+    "wikitext_nll.model.layers.2.linear_attn.out_proj.pt": "3bce8a4143cc22729478b3ca749bf12f78f93b1dafc91be853e929e6f466b021",
+    "wikitext_nll.model.layers.2.mlp.down_proj.pt": "cd97a3d0797ccfdcbfaec329b55812aff430ec67f88ee9702008bf69ce11a2c9",
+    "wikitext_nll.model.layers.3.mlp.down_proj.pt": "34eb592b14f5dff218e5767f2b01300b3f24f7936814a64747d58a3c8f3d7d1c",
+    "wikitext_nll.model.layers.3.self_attn.o_proj.pt": "689d6351e4cd515a0b26b66dfc49b4ea9ada6d4336d70fe82930bf3b920d516d"
+   }
+  }
+ },
+ "repair_record": null,
+ "tag": "l5d",
+ "tensor_compare_A_vs_B": {
+  "mmlupro_gold_lp.g0.pt": {
+   "factors": {
+    "model.layers.0.linear_attn.out_proj": {
+     "A_equal": true,
+     "G_equal": true,
+     "count_equal": true
+    },
+    "model.layers.0.mlp.down_proj": {
+     "A_equal": true,
+     "G_equal": true,
+     "count_equal": true
+    },
+    "model.layers.1.linear_attn.out_proj": {
+     "A_equal": true,
+     "G_equal": true,
+     "count_equal": true
+    },
+    "model.layers.1.mlp.down_proj": {
+     "A_equal": true,
+     "G_equal": true,
+     "count_equal": true
+    },
+    "model.layers.2.linear_attn.out_proj": {
+     "A_equal": true,
+     "G_equal": true,
+     "count_equal": true
+    },
+    "model.layers.2.mlp.down_proj": {
+     "A_equal": true,
+     "G_equal": true,
+     "count_equal": true
+    },
+    "model.layers.3.mlp.down_proj": {
+     "A_equal": true,
+     "G_equal": true,
+     "count_equal": true
+    },
+    "model.layers.3.self_attn.o_proj": {
+     "A_equal": true,
+     "G_equal": true,
+     "count_equal": true
+    }
+   },
+   "gradients": {
+    "model.layers.0.linear_attn.out_proj.weight": {
+     "dtype": "torch.float32",
+     "equal": false,
+     "max_abs": 0.9249963760375977,
+     "max_abs_diff": 0.001302093267440796,
+     "n_diff": 11913994,
+     "numel": 16777216,
+     "rel_max": 0.001407673912214193,
+     "shape": [
+      4096,
+      4096
+     ]
+    },
+    "model.layers.0.mlp.down_proj.weight": {
+     "dtype": "torch.float32",
+     "equal": false,
+     "max_abs": 0.04083896800875664,
+     "max_abs_diff": 0.00016275979578495026,
+     "n_diff": 32882142,
+     "numel": 50331648,
+     "rel_max": 0.003985404228384309,
+     "shape": [
+      4096,
+      12288
+     ]
+    },
+    "model.layers.1.linear_attn.out_proj.weight": {
+     "dtype": "torch.float32",
+     "equal": false,
+     "max_abs": 0.06829178333282471,
+     "max_abs_diff": 8.138269186019897e-05,
+     "n_diff": 7894505,
+     "numel": 16777216,
+     "rel_max": 0.0011916908285082384,
+     "shape": [
+      4096,
+      4096
+     ]
+    },
+    "model.layers.1.mlp.down_proj.weight": {
+     "dtype": "torch.float32",
+     "equal": false,
+     "max_abs": 0.032952263951301575,
+     "max_abs_diff": 4.069041460752487e-05,
+     "n_diff": 7833291,
+     "numel": 50331648,
+     "rel_max": 0.001234829105146132,
+     "shape": [
+      4096,
+      12288
+     ]
+    },
+    "model.layers.2.linear_attn.out_proj.weight": {
+     "dtype": "torch.float32",
+     "equal": false,
+     "max_abs": 0.04720659181475639,
+     "max_abs_diff": 2.0345672965049744e-05,
+     "n_diff": 27367,
+     "numel": 16777216,
+     "rel_max": 0.000430992202209562,
+     "shape": [
+      4096,
+      4096
+     ]
+    },
+    "model.layers.2.mlp.down_proj.weight": {
+     "dtype": "torch.float32",
+     "equal": false,
+     "max_abs": 0.34408435225486755,
+     "max_abs_diff": 1.271604560315609e-06,
+     "n_diff": 248,
+     "numel": 50331648,
+     "rel_max": 3.6956186818217055e-06,
+     "shape": [
+      4096,
+      12288
+     ]
+    },
+    "model.layers.3.mlp.down_proj.weight": {
+     "dtype": "torch.float32",
+     "equal": true,
+     "shape": [
+      4096,
+      12288
+     ]
+    },
+    "model.layers.3.self_attn.o_proj.weight": {
+     "dtype": "torch.float32",
+     "equal": true,
+     "shape": [
+      4096,
+      4096
+     ]
+    }
+   }
+  }
+ },
+ "tree_clean": true,
+ "unit_result": null,
+ "what": "D1 diagnostic, RULING-wme-c1-bank-halt addendum 2: field g0 re-collected twice on one instance"
+}

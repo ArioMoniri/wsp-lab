@@ -45,6 +45,11 @@ ALIAS = {"parity": "wmec1p", "main": "wmec1"}
 TYPES = {"parity": LO.TYPE2, "main": LO.TYPE}
 PANEL_ID = "wme-c1:89739c7818e29d618ac3bcb52d7e51cd29a9361e7774a71b412646775c630c1d"
 READER_MODEL = "claude-opus-5-5"  # amendment G2
+# RULING-wme-c1-bank-halt addendum 4 (T4): the contract transition to the deterministic field collection
+TRANSITION_RULING = "docs/council/2026-11-21/RULING-wme-c1-bank-halt.md"
+TRANSITION_PREP = "docs/reviews/wme/wme-c1-transition-prep-2026-11-21-l5p.json"
+TRANSITION_CAUSE = "driver_or_cuda"  # a non-deterministic CUDA backward kernel in the registered-mode collection
+TRANSITION_RESOLVES = ("field_repair_mismatch",)  # incident seq 277 (run5 K3 halt)
 BUNDLE_FILES = [
     "scripts/wme_c1_remote_setup.sh",
     "scripts/wme_c1_remote_worker.sh",
@@ -395,8 +400,10 @@ def require_code_and_state(cs: dict):
         raise SystemExit(f"PRECONDITION FAILED: registered test gate {cs['gate']}")
 
 
-def ec_sha() -> str:
-    return hashlib.sha256(json.dumps(engine_config(), sort_keys=True).encode()).hexdigest()
+def ec_sha(field: bool = True) -> str:
+    """sha256 of :func:`engine_config`; ``field=False``: the pre-transition configuration (generation 0, before the
+    T4 field entry of RULING-wme-c1-bank-halt addendum 4)."""
+    return hashlib.sha256(json.dumps(engine_config(field=field), sort_keys=True).encode()).hexdigest()
 
 
 def cmd_phasel_parity(a):
@@ -462,13 +469,13 @@ def cmd_phasel_parity(a):
         )
 
 
-def engine_config() -> dict:
+def engine_config(field: bool = True) -> dict:
     from wsp.wm.c1 import genengine as GE
     from wsp.wm.c1 import modelops as MO
     from wsp.wm.c1 import vllmops as VO
 
     man = MO.manifest()
-    return {
+    ec = {
         "model": "Qwen/Qwen3.5-9B@c202236235762e1c871ad0ccb60c8ee5ba337b9a",
         "theta0": man["target.theta0_hash"],
         "lock_sha256": sha(ROOT / "scripts/wme_c1_remote_lock.txt"),
@@ -493,6 +500,9 @@ def engine_config() -> dict:
             "vllm_tokens": VO.CANARY_TOKENS,
         },
     }
+    if field:  # RULING-wme-c1-bank-halt addendum 4, T4 item 1: the deterministic field collection
+        ec["field"] = GE.field_config()
+    return ec
 
 
 def cmd_phasel_main(a):
@@ -663,15 +673,18 @@ def cmd_phasel_resume(a):
     if not att_p.exists() or not (STUDY / RG.LOG_NAME).exists():
         raise SystemExit("REFUSED: --resume needs an existing study (attestation.json and the study log)")
     att_bytes = att_p.read_bytes()
-    att_fields = json.loads(att_bytes)
-    att = load_att()
+    att = load_att()  # the current contract (generation 0 before the T4 transition)
+    att_fields = RG._att_fields(att)
     contract = RG.contract_digest(att)
     state = RG.read_study(STUDY)
     if state.contract != contract:
         raise SystemExit(f"REFUSED: attestation contract {contract[:12]} != study log {str(state.contract)[:12]}")
+    if state.contracts[0]["digest"] != RG.contract_digest(RG.LaunchAttestation(**json.loads(att_bytes))):
+        raise SystemExit("REFUSED: attestation.json is not the study's generation-0 attestation")
     ecs = ec_sha()
-    if att.engine_config_sha256 != ecs:
-        raise SystemExit("REFUSED: the engine config differs from the attested one (a resume keeps the contract)")
+    pre_transition = contract_state() == "pre_transition"  # T4: resume under generation 0, then `transition`
+    if pre_transition:
+        log("the current contract predates the T4 field entry: the contract transition must follow this resume")
     par_path = str(Path(a.parity_evidence))
     par = json.loads((ROOT / par_path).read_text())
     PL.check_binding(par, ecs, "parity evidence")
@@ -714,7 +727,13 @@ def cmd_phasel_resume(a):
         raise SystemExit(f"INCIDENT: resume canaries differ from the committed references {rc['pairs']}")
     tim, _ = rem.call("timing", g.epoch, inst, "t" * 64, "timing", {})
     tag = f"{utc_date()}-{a.tag}"
-    common = {"engine_config_sha256": ecs, "instance": inst, "contract": contract, "resume": True}
+    common = {
+        "engine_config_sha256": ecs,
+        "instance": inst,
+        "contract": contract,
+        "resume": True,
+        "pre_transition": pre_transition,
+    }
     paths = []
     for name, obj in (
         (f"wme-c1-resume-inert-{tag}.json", {**common, "hello": hello, "inert_identity": inert}),
@@ -764,8 +783,39 @@ def MO_theta0() -> str:
 
 
 def load_att():
+    """The attestation of the CURRENT contract. Once the study log exists it is read from the log's last
+    ``attestation`` / ``contract_transition`` record (hash-chained; its digest is checked against the log's contract);
+    ``attestation.json`` stays the generation-0 file and is never rewritten (Board A B1)."""
+    if (STUDY / RG.LOG_NAME).exists():
+        s = RG.read_study(STUDY)
+        if s.contracts:
+            r = s.contracts[-1]
+            att = RG.LaunchAttestation(**{k: r[k] for k in RG.LaunchAttestation.__dataclass_fields__})
+            if RG.contract_digest(att) != s.contract:
+                raise SystemExit("INTERNAL: the study log's contract record does not reproduce its digest")
+            return att
     d = json.loads((RUNS / "attestation.json").read_text())
     return RG.LaunchAttestation(**d)
+
+
+def contract_state() -> str:
+    """``current``: the current contract binds this commit's engine config. ``pre_transition``: it binds the
+    configuration before the T4 field entry (RULING-wme-c1-bank-halt addendum 4): only ``phasel-main --resume``,
+    ``field-timing``, ``transition`` and ``close`` may run. Anything else refuses."""
+    att = load_att()
+    if att.engine_config_sha256 == ec_sha():
+        return "current"
+    if att.engine_config_sha256 == ec_sha(field=False):
+        return "pre_transition"
+    raise SystemExit("REFUSED: the engine config differs from the current contract's (neither current nor pre-transition)")
+
+
+def require_current_contract(what: str):
+    if contract_state() != "current":
+        raise SystemExit(
+            f"REFUSED: {what} needs the post-transition contract; the contract transition is pending "
+            f"(RULING-wme-c1-bank-halt addendum 4: run `transition` first)"
+        )
 
 
 def cmd_run(a):
@@ -774,6 +824,7 @@ def cmd_run(a):
     from wsp.wm.c1 import controller as CO
     from wsp.wm.c1 import modelops as MO
 
+    require_current_contract("run")
     tr, rem = remote_for("main", a.iid)
     att = load_att()
     man = MO.manifest()
@@ -839,6 +890,7 @@ def cmd_repair_field(a):
     from wsp.wm.c1 import controller as CO
     from wsp.wm.c1 import modelops as MO
 
+    require_current_contract("repair-field")
     tr, rem = remote_for("main", a.iid)
     man = MO.manifest()
     st = SD.Study(STUDY, RUNS, load_att(), man["target.theta0_hash"], PANEL_ID, log=log)
@@ -847,6 +899,188 @@ def cmd_repair_field(a):
     res = co.repair_field(man, roots, commit=git_sha())
     log("field repair verified", res["verified"], "units")
     print(json.dumps({k: res[k] for k in ("verified", "instance")}))
+
+
+def same_code(commit: str) -> bool:
+    """P2 across evidence-only commits: ``commit`` is HEAD, or an ancestor of HEAD from which only ``docs/`` changed
+    (the run's own evidence commits: resume, timing)."""
+    from wsp.wm.c1 import phasel as PL
+
+    head = PL.git("rev-parse", "HEAD")
+    if not commit or commit == head:
+        return bool(commit)
+    try:
+        PL.git("merge-base", "--is-ancestor", commit, head)
+        changed = PL.git("diff", "--name-only", commit, head).split()
+    except subprocess.CalledProcessError:
+        return False
+    return all(p.startswith("docs/") for p in changed)
+
+
+def evidence_entry(rel: str) -> str:
+    return f"{rel} sha256:{sha(ROOT / rel)}"
+
+
+def cmd_field_timing(a):
+    """RULING-wme-c1-bank-halt addendum 4, T4 item 3: on the live main instance (after ``phasel-main --resume``), one
+    non-unit ``field_timing`` request: field group g0 collected registered, deterministic, registered (the first run
+    warms the process); the slowdown against the warm registered run, per objective and in total. Evidence only: no
+    unit, no field written."""
+    from wsp.wm.c1 import phasel as PL
+
+    state = contract_state()
+    head = PL.git("rev-parse", "HEAD")
+    tr, rem = remote_for("main", a.iid)
+    inst = LO.guard_instance(a.iid)
+    st = SD.Study(STUDY, RUNS, load_att(), MO_theta0(), PANEL_ID, log=log)
+    g = st.guard("bank", inst)
+    C.take_over(tr, rem, g)
+    uk = hashlib.sha256(f"wme-c1-field-timing:{a.tag}".encode()).hexdigest()
+    p, _ = rem.call("field_timing", g.epoch, inst, uk, "field_timing:g0", {"group": 0})
+    det = next(r for r in p["runs"] if r["mode"] == "deterministic")
+    warm = [r for r in p["runs"] if r["mode"] == "registered"][-1]
+    per = {k: det["seconds"][k] / warm["seconds"][k] for k in det["seconds"]}
+    total = sum(det["seconds"].values()) / sum(warm["seconds"].values())
+    ev = {
+        "what": "T4 item 3 (RULING-wme-c1-bank-halt addendum 4): field g0 registered vs deterministic timing",
+        "engine_config_sha256": ec_sha(),
+        "commit": head,
+        "contract_state": state,
+        "instance": inst,
+        "group": p["group"],
+        "modules": p["modules"],
+        "runs": p["runs"],
+        "slowdown": {
+            "per_objective": per,
+            "total": total,
+            "baseline": "the second (warm) registered collection",
+        },
+    }
+    pth, h = write_evidence(f"wme-c1-field-timing-{utc_date()}-{a.tag}.json", ev)
+    commit_evidence([pth], f"wme-c1 T4 item 3: field g0 timing on {inst} (deterministic/registered {total:.3f})")
+    log("field timing", pth, h, json.dumps({"total": total, "per_objective": per}))
+    print(json.dumps({"evidence": pth, "sha256": h, "slowdown": ev["slowdown"]}))
+    return ev
+
+
+def cmd_transition(a):
+    """RULING-wme-c1-bank-halt addendum 4, T4 item 2: the contract transition on the live main instance, after
+    ``phasel-main --resume`` (generation 0) and ``field-timing``.
+
+    1. offline, before any write: the current contract is the pre-transition one (its engine config is this commit's
+       minus the ``field`` entry); the parity and timing evidence are bound to this commit's engine config and code
+       (P2 across evidence-only commits); the parity passed (C2); every open incident is one this transition resolves;
+    2. the new attestation: the same launch facts and canary reference, this commit's engine config, the evidence
+       list extended by the ruling, the T1-T3 preparation, the parity and the timing evidence;
+    3. a new owner under the registered guard mechanism with a ``ContractTransition`` (outcome-blind): every
+       attempt of the earlier generation (all bank-phase and field units) becomes ``superseded_contract``;
+    4. the open ``field_repair_mismatch`` incident resolved, citing the ruling and the transition record;
+    5. the instance opened under the new contract, any on-disk field quarantined (C4), the start canary against the
+       unchanged reference. ``attestation.json`` (generation 0) is never rewritten; the new attestation is kept in
+       ``attestation-g<generation>.json`` and, authoritatively, in the study log."""
+    from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import phasel as PL
+
+    if not (STUDY / RG.LOG_NAME).exists():
+        raise SystemExit("REFUSED: no study to transition")
+    old = load_att()
+    ecs = ec_sha()
+    if old.engine_config_sha256 == ecs:
+        raise SystemExit("REFUSED: nothing to transition: the current contract already binds this engine config")
+    if old.engine_config_sha256 != ec_sha(field=False):
+        raise SystemExit("REFUSED: the current contract is not the pre-transition contract")
+    head = PL.git("rev-parse", "HEAD")
+    par_path = str(Path(a.parity_evidence))
+    par = json.loads((ROOT / par_path).read_text())
+    if par.get("engine_config_sha256") != ecs:
+        raise SystemExit("PRECONDITION FAILED: the parity evidence is not bound to this engine config")
+    if not same_code((par.get("code_identity") or {}).get("controller_commit")):
+        raise SystemExit("PRECONDITION FAILED: the parity evidence was not produced by this code (P2)")
+    ev = par["evaluation"]
+    if not ev["proceed"] or ev["selected_engine"] != GE.GEN_ENGINE:
+        raise SystemExit(f"PRECONDITION FAILED: parity evaluation {ev['selected_engine']} / {ev['proceed']}")
+    if GE.GEN_ENGINE == "hf_deterministic" and ev["pass_rule"].get("hf_gen_eq_committed") is not True:
+        raise SystemExit("PRECONDITION FAILED: the parity run did not reproduce the committed hf_gen reference (C2)")
+    tim_path = str(Path(a.timing_evidence))
+    tim = json.loads((ROOT / tim_path).read_text())
+    if tim.get("engine_config_sha256") != ecs or not same_code(tim.get("commit")):
+        raise SystemExit("PRECONDITION FAILED: the field timing evidence is not bound to this engine config and code")
+    if not any(r.get("mode") == "deterministic" for r in tim.get("runs", [])):
+        raise SystemExit("PRECONDITION FAILED: the field timing evidence has no deterministic collection")
+    s = RG.read_study(STUDY)
+    other = [i["kind"] for i in s.incidents if i["kind"] not in TRANSITION_RESOLVES]
+    if other:
+        raise SystemExit(f"REFUSED: open incidents this transition does not resolve: {other}")
+    resolves = [(i["kind"], i["seq"]) for i in s.incidents]
+    for rel in (TRANSITION_RULING, TRANSITION_PREP):
+        if not (ROOT / rel).exists():
+            raise SystemExit(f"PRECONDITION FAILED: {rel} is missing")
+    new = RG.LaunchAttestation(
+        old.inert_identity_bitwise,
+        old.gpu_parity_bitwise,
+        old.canary_reference,
+        ecs,
+        sorted(set(old.evidence) | {evidence_entry(r) for r in (TRANSITION_RULING, TRANSITION_PREP, par_path, tim_path)}),
+    )
+    gen = len(s.contracts)
+    ap = RUNS / f"attestation-g{gen}.json"
+    if ap.exists():
+        raise SystemExit(f"REFUSED: {ap.name} exists (never overwritten)")
+    att_bytes = (RUNS / "attestation.json").read_bytes()
+    desc = (
+        f"{TRANSITION_RULING} addendum 4 (T4): field and vocabulary collection under the registered deterministic "
+        f"context (engine config {old.engine_config_sha256[:12]} -> {ecs[:12]}, field entry added). The "
+        "registered-mode collection backward was not reproducible (D1: two collections on one instance differed in "
+        "the mmlupro_gold_lp gradients); T2: 3/3 bitwise under the deterministic context. Every bank-phase and field "
+        f"unit of generation {s.generation} is superseded; resolves open incident(s) {resolves}; canary reference "
+        f"unchanged ({old.canary_reference[:12]}); parity {par_path}; field timing {tim_path}"
+    )
+    tr, rem = remote_for("main", a.iid)
+    inst = LO.guard_instance(a.iid)
+    st = SD.Study(STUDY, RUNS, new, MO_theta0(), PANEL_ID, log=log)
+    g = st.guard(
+        "bank", inst, transition=RG.ContractTransition(TRANSITION_CAUSE, desc, head, outcome_blind=True)
+    )
+    C.take_over(tr, rem, g)
+    trec = RG.read_study(STUDY).contracts[-1]
+    PL.write_new(ap, RG._att_fields(new))
+    log("contract transition", json.dumps({"generation": g.generation, "seq": trec["seq"], "contract": g.contract}))
+    if resolves:
+        g.resolve_incidents(
+            f"superseded by the contract transition to generation {g.generation} (study log seq {trec['seq']}): "
+            f"the field is re-collected under the deterministic context and every bank-phase unit recomputed; "
+            f"incident(s) {resolves}",
+            f"{TRANSITION_RULING} addendum 4",
+        )
+    g.open_instance(1)
+    q, _ = rem.call("field_quarantine", g.epoch, inst, "q" * 64, "field_quarantine: before the transition", {})
+    rec = C.run_canary(g, rem)
+    log("start canary (new contract, unchanged reference)", rec["pass"])
+    if not rec["pass"]:
+        g.incident("canary_mismatch", {"where": "transition start canary", "composite": rec["composite"]})
+        raise SystemExit("INCIDENT: start canary != the reference under the new contract")
+    if (RUNS / "attestation.json").read_bytes() != att_bytes:
+        raise SystemExit("INTERNAL: attestation.json changed during the transition")
+    out = {
+        "what": "T4 contract transition (RULING-wme-c1-bank-halt addendum 4)",
+        "instance": inst,
+        "epoch": g.epoch,
+        "generation": g.generation,
+        "previous_contract": trec["previous"],
+        "contract": g.contract,
+        "transition_seq": trec["seq"],
+        "cause": TRANSITION_CAUSE,
+        "resolved_incidents": resolves,
+        "attestation": RG._att_fields(new),
+        "attestation_file": ap.name,
+        "quarantine": q,
+        "canary": {k: rec[k] for k in ("engines", "composite", "pass")},
+        "commit": head,
+    }
+    pth, h = write_evidence(f"wme-c1-transition-{utc_date()}-{a.tag}.json", out)
+    commit_evidence([pth], f"wme-c1 T4 contract transition on {inst}: generation {g.generation} ({g.contract[:12]})")
+    print(json.dumps({k: out[k] for k in ("generation", "contract", "transition_seq", "resolved_incidents")}, default=str))
+    return out
 
 
 def cmd_close(a):
@@ -1022,6 +1256,14 @@ def main():
     r.add_argument("--stages", required=True)
     fr = sub.add_parser("repair-field")
     fr.add_argument("--iid", required=True)
+    ft = sub.add_parser("field-timing")  # RULING-wme-c1-bank-halt addendum 4, T4 item 3
+    ft.add_argument("--iid", required=True)
+    ft.add_argument("--tag", required=True)
+    tn = sub.add_parser("transition")  # RULING-wme-c1-bank-halt addendum 4, T4 item 2
+    tn.add_argument("--iid", required=True)
+    tn.add_argument("--tag", required=True)
+    tn.add_argument("--parity-evidence", required=True)
+    tn.add_argument("--timing-evidence", required=True)
     c = sub.add_parser("close")
     c.add_argument("--iid", required=True)
     c.add_argument("--phase", default="confirmatory")
@@ -1038,6 +1280,8 @@ def main():
         "phasel-main": cmd_phasel_main,
         "run": cmd_run,
         "repair-field": cmd_repair_field,
+        "field-timing": cmd_field_timing,
+        "transition": cmd_transition,
         "close": cmd_close,
         "status": cmd_status,
         "results": cmd_results,

@@ -189,7 +189,7 @@ def resume_setup(tmp_path, monkeypatch, engines):
         "parity": {"canary_gpu0": {"tf": "1" * 64, "hf_gen": REF_HF}, "vllm_gpu0": "3" * 64},
     }  # fmt: skip
     (tmp_path / "par.json").write_text(json.dumps(par))
-    monkeypatch.setattr(mod, "ec_sha", lambda: "c" * 64)
+    monkeypatch.setattr(mod, "ec_sha", lambda field=True: "c" * 64)
     monkeypatch.setattr(PL, "git", lambda *a, **k: "a" * 40)
     monkeypatch.setattr(PL, "committed_references", lambda att, root=None: {"engines": ENGINES})
     monkeypatch.setattr(PL, "parser_check", lambda: {"pass": True})
@@ -257,7 +257,7 @@ def test_b1_a_failed_resume_check_leaves_attestation_json_unchanged(tmp_path, mo
 
 def test_b1_resume_refuses_a_contract_or_engine_config_drift_offline(tmp_path, monkeypatch):
     mod, _runs, a, rem, _commits = resume_setup(tmp_path, monkeypatch, ENGINES)
-    monkeypatch.setattr(mod, "ec_sha", lambda: "e" * 64)
+    monkeypatch.setattr(mod, "ec_sha", lambda field=True: "e" * 64)
     with pytest.raises(SystemExit, match="engine config"):
         mod.cmd_phasel_main(a)
     assert rem.calls == []
