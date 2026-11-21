@@ -116,3 +116,40 @@ state, for example the K1 model reload.
 
 **Cost.** Option (a) means redoing about 4.5 GPU-h-eq of bank work. The 110 cap still holds; if R8 raises it, the
 user is told.
+
+## Addendum 3 (21 Nov 2026): branch (a) confirmed; the transition plan
+
+**Input.** The D1 diagnostic is recorded in `wme-c1-diag-g0-2026-11-21-l5d.json` on branch `run/wme-c1-run5` at commit
+`fa347ad`.
+- On one instance, two collections of the `mmlupro_gold_lp` gradients for field g0 differed.
+- The nondeterminism enters at the layer-2 linear-attention block, in the backward pass.
+- Everything else matched bitwise: all other objectives, every K-FAC factor and every kept factor.
+
+The pre-declared branch (a) therefore applies.
+
+**T1. Close the ledger gap first.**
+- Write the reconcile record for `1addc266`, using its API-confirmed 0.502 h. This stops the 0.756 GPU-h-eq phantom
+  surplus.
+- This is a ledger fix only.
+
+**T2. Determinism probe** (diagnostic; it may run outside the repo).
+- On one instance, run the `mmlupro` g0 collection 3 times under `torch.use_deterministic_algorithms(True)`, with
+  `CUBLAS_WORKSPACE_CONFIG=:4096:8` and deterministic SDPA.
+- Report bitwise equality across the 3 runs and the slowdown.
+- If a kernel raises because it has no deterministic implementation, report which kernel. Do not substitute a kernel.
+
+**T3. Field persistence options.** Price them before any choice is made.
+- (i) A Lambda persistent filesystem in the run's region. Report price and availability from the API and docs; the
+  field needs about 204 GB.
+- (ii) Keeping one instance alive from field collection to the end of E2 and S-BoN.
+
+The chair chooses between them after T2. Any extra dollar cost counts toward the user's $1,000.
+
+**T4. The transition itself** must be implemented and then checked quickly by Board A before it runs.
+- Supersede every bank-phase unit through a registered contract transition.
+- Collect the field once, deterministically if T2 passes.
+- If T2 fails, collect the field once **without** bitwise repair. It is then never re-collected for the rest of the
+  run, so persistence becomes mandatory.
+- Recompute the bank.
+
+This is outcome-blind: the bank is construction data, nothing sealed has been read, and no claim outcome exists.
