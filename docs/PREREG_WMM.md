@@ -1,4 +1,4 @@
-# PREREG_WMM: study M′ (MedGemma 1.5 4B), EXPLORATORY plan, W3 revision for the Board A conditions check (21 Nov 2026)
+# PREREG_WMM: study M′ (MedGemma 1.5 4B), EXPLORATORY plan, W3 + addendum revision for the Board A conditions check (21 Nov 2026)
 
 **Status.**
 - **Confirmatory M′ is killed** (`docs/council/2026-11-21/RULING-wmm-prereg.md` W1). The study continues as a
@@ -7,6 +7,11 @@
   results Z". It may never present a result as confirmed.
 - Written before any M′ data. No M′ generation has run. No sealed outcome has been read.
 - The plan freezes as tag `prereg-wmm-exploratory` after a short Board A check of the W3 conditions (W4).
+- **Addendum (`RULING-wmm-prereg.md`, 21 Nov 2026), applied here:**
+  - the C6 note;
+  - the local cap raised to **42 GPU-h**;
+  - **M-A restored** (user-chosen), with the cut order: M-A down to its declared minimum, then M-TE's ARC guard;
+  - the **expected M-SYC failures** on G-CAL and the neutral-accuracy limit stated explicitly (§3.2).
 
 **Binding inputs.**
 - `RULING-wmm-prereg.md` W1–W4;
@@ -31,9 +36,9 @@
 - `wmm_gcal_calibration.json` (C2);
 - `wmm_powersim.json` (C4).
 
-**Tests:** `tests/test_wmm_prereg.py` (25), `test_wmm_powersim.py` (6), `test_wmm_provenance.py` (8).
+**Tests:** `tests/test_wmm_prereg.py` (27), `test_wmm_powersim.py` (6), `test_wmm_provenance.py` (8).
 
-## BLUF (W3)
+## BLUF (W3 + addendum)
 
 1. **G-CAL replaces the generated-answer Brier guard** (C1).
    - Proper multi-class Brier on direct-answer letter probabilities, teacher-forced after `Final Answer: (` with no
@@ -61,10 +66,20 @@
    - **M-KD:** α_f is fixed at 0.025/3, and an all-items (truncated = wrong) superiority test is added, conjunctive
      with untruncated-in-both.
    - **M-A** is declared expected-null and descriptive. The SE = 0 → NaN bug is fixed, with a test.
-5. **Compute** is re-priced at prompt-length-order throughput (F10): about **30.4 local GPU-h** against a **cap of 30**.
-   - The M-A bank is shrunk first, to 0 (M-A is not run, saving about 10.7 GPU-h).
-   - The M-TE construction pool is halved to 512.
-   - A hard stop with a priority order governs the remainder.
+5. **M-SYC is expected to fail two of its conditions** (addendum).
+   - **G-CAL:** dev ΔBS +0.040 against the +0.01 margin.
+   - **The neutral-accuracy limit:** dev −1.8 pp. The limit is −3 pp, but its pass probability at the dev effect is
+     only 0.28.
+
+   The exploratory report is the trade-off: the adoption reduction against its calibration and accuracy cost, each
+   with its CI.
+6. **M-A is restored**, expected null and descriptive.
+   - Full bank of 32 units, with a declared minimum of 20.
+   - Power: ≤ 0.27 for the full bank, ≤ 0.05 for the minimum.
+7. **Compute:** re-priced at prompt-length-order throughput (F10), about **41.2 local GPU-h** against the **42 GPU-h
+   cap**.
+   - The M-TE construction pool stays at 512.
+   - The schedule realises the cut order under a hard stop: M-A's remaining 12 units go first, then M-TE's ARC guard.
    - **Panel enlargement is not adopted:** ARC to 6,000 needs +12.8 GPU-h and benign to 4,000 needs +2.4, and neither
      fits.
 
@@ -123,9 +138,11 @@ no-space and space-prefixed variants pooled. Base, and the Gate 1 `syc_lora@1` f
 
 **Verdict: G-CAL is measurable on MedGemma 1.5.** It is not vacuous, and it detects a temperature-0.5 sharpening.
 
-**Chair note (C6).** The reading of SYNTHESIS-r12 R4 that G-CAL relies on — G-CAL measures the model's own
-probabilities and is not a surrogate — is to be dated by the chair under `docs/council/` before the freeze. It is not
-written by the drafter.
+**Chair note (C6).** Recorded in the `RULING-wmm-prereg.md` addendum.
+- G-CAL is a teacher-forced calibration probe on no-reasoning letter probabilities, and a guard in its own right.
+- It is not a surrogate for, and does not predict, any generated-output guard.
+- Harmful compliance, benign over-refusal and general ability stay measured on generated output (SYNTHESIS-r12 R4).
+- G-CAL replaces the generated-answer Brier guard, which Board A showed reduced to an accuracy limit.
 
 ## 1. Target, harness, engines
 
@@ -148,7 +165,7 @@ written by the drafter.
 |---|---|---|
 | `mq` | 1,544 | neutral and suggested-wrong prompts |
 | `mm` | 2,000 | neutral |
-| `ma` | 200 | sealed, unused (M-A not run) |
+| `ma` | 200 | M-A (suggested-wrong prompts) |
 | `harm` | 1,700 | harmful-compliance guard |
 | `benign` | 1,500 | over-refusal guard |
 | `gen` | 2,161 | general-ability guard |
@@ -160,7 +177,7 @@ written by the drafter.
 | `pool_msyc` | 128 | |
 | `pool_mte` | 1,024 | the first 512 in rank order are used |
 | `pool_mkd` | 1,024 | |
-| `pool_ma` | 256 | unused |
+| `pool_ma` | 256 | M-A LoRA seeds (2 shards) |
 
 **Panel enlargement** (W3, optional): **not adopted**, because it does not fit the cap (§8).
 
@@ -203,8 +220,17 @@ written by the drafter.
 
 Δ parse rate is reported with its bound.
 
-**Expectation.** On dev, the edit fails G-CAL (+0.040) and sits at −1.8 pp neutral. The expected result is "adoption
-reduced; G-CAL guard failed". It is reported as such.
+**Expected failures (addendum; `prereg.MSYC["expected"]`).** These are disclosed, not fixed.
+
+| Condition | Dev evidence (exposed Gate 1) | Expected |
+|---|---|---|
+| G-CAL, UB ≤ +0.01 | ΔBS +0.0404, UB +0.0496 (n 500) | **fail** |
+| Neutral accuracy, LB ≥ −0.03 | Δ −1.8 pp; pass probability 0.28 at the dev effect (simulation) | **fail** |
+
+The M-SYC claim is therefore expected **not** to be made.
+
+The exploratory report is the trade-off itself: the adoption reduction, its G-CAL calibration cost and its neutral
+accuracy cost, each with its CI, plus the other guards.
 
 **Wording (E10).** "Descriptive second-model observation" of the H-E1 sycophancy direction. Never pooled with WM-E.
 
@@ -243,28 +269,34 @@ with the M-TE endpoints as point estimates and CIs.
 
 The M-TE token and low-budget endpoints (tokens, accuracy at 512 and 1,024) are reported descriptively.
 
-**Power** with guards is declared before M-KD runs. Its GPU is not within the 30 GPU-h M′ cap; it needs separate
+**Power** with guards is declared before M-KD runs. Its GPU is not within the 42 GPU-h M′ cap; it needs separate
 approval.
 
 ### 3.6 Separation from WM-E
 
 Never pooled. Separate salts, panels and budget.
 
-## 4. M-A: expected null, descriptive, not run in M′ (E7, W3)
+## 4. M-A: expected null, descriptive, restored (E7; RULING-wmm-prereg addendum)
 
-**Status.** M-A is declared **"expected null (power ≤ 0.27)"**. The simulation gives 0.00–0.27 over the spread and
-feature-correlation grid at 200 items per unit.
+**Status.** M-A is declared **"expected null"**. Power is ≤ 0.27 for the full 32-unit bank and ≤ 0.05 for the
+20-unit minimum, over the spread and feature-correlation grid at 200 items per unit (§7).
 
 **Wording rule.** A non-pass may be worded only "beyond-dose prediction not established on study M". It is never "no
-beyond-dose structure". The r13 R5 closure of (a) on study M is administrative: no further (a) spending on study M.
+beyond-dose structure". The r13 R5 closure of (a) on study M is administrative.
 
-**Not run.** The re-priced plan exceeds the 30 GPU-h cap, so the bank is shrunk first, to 0 units (W3).
+**Restored.** The user chose M-A, and the cap is now 42 GPU-h.
+- **Bank:** `prereg.ma_bank()`, 32 units in 4 types (§4 of draft 1, unchanged).
+- **Declared minimum** (`prereg.ma_bank(minimum=True)`, `MA["minimum_rule"]`; 20 units):
+  - τ-slices on layer groups 0–3, 8–11, 16–19 and 24–27, attention and MLP (8 units);
+  - LoRA seeds 0–3 (4);
+  - random 0–3 (4);
+  - all 4 shams.
 
-**Retained** for a later run, if a cap is raised:
-- the bank specification (`prereg.ma_bank`, 32 units in 4 types);
-- the test (`ma_test`, run-cluster sign-flip);
-- the nulls (`ma_nulls`);
-- the sealed `ma` panel.
+  Every type keeps its matched norm.
+- **The minimum runs first.** The remaining 12 units run only after M-TE's ARC guard (§8).
+
+**Analysis.** Targets, baseline (pooled + dose), R0/R1 features, the run-cluster sign-flip test and the three nulls
+(size ≤ 0.035) are as specified in `prereg.ma_test` and `ma_nulls`.
 
 **Bug fixed (F9).** Bitwise-inert shams give SE = 0, which made the cluster statistic NaN. Each unit's SE is now
 floored at the median positive non-sham SE, or 1/√200 if there is none (`prereg.se_floor`).
@@ -300,8 +332,8 @@ G-CAL with n 3,544 and SD s_U = 0.111):
 |---|---|---|---|---|---|---|---|
 | Half effect, null guards (planning) | 0.835 | 0.94 | 0.53 | 0.87 | 0.79 | 1.00 | **0.282** |
 | Dev effect, null guards | 1.00 | 0.94 | 0.53 | 0.87 | 0.79 | 1.00 | **0.330** |
-| Half effect, dev guard effects | 0.835 | 0.28 | 1.00 | 0.99 | 0.90 | 0.00 | **0.000** |
-| Dev effect, dev guard effects | 1.00 | 0.28 | 1.00 | 0.99 | 0.90 | 0.00 | **0.000** |
+| Half effect, dev guard effects (**expected**) | 0.835 | 0.28 | 1.00 | 0.99 | 0.90 | 0.00 | **0.000** |
+| Dev effect, dev guard effects (**expected**) | 1.00 | 0.28 | 1.00 | 0.99 | 0.90 | 0.00 | **0.000** |
 | Sensitivity: G-CAL at +0.01 | 0.835 | — | — | — | — | 0.029 | 0.009 |
 
 | M-TE, null guards (token cut μ = Δlog) | Full-budget Δ 0: endpoint-only / joint | Full-budget Δ −1 pp: endpoint-only / joint |
@@ -310,12 +342,19 @@ G-CAL with n 3,544 and SD s_U = 0.111):
 | −1.0 | 0.68 / 0.23 | 0.18 / 0.07 |
 | −1.5 | 0.68 / 0.23 | 0.18 / 0.07 |
 
+M-A (100 replicates per cell; beyond-dose spread × feature correlation r):
+
+| Bank | spread 0.5 SE | spread 1 SE | spread 2 SE (r 0.3 / 0.5 / 0.7) |
+|---|---|---|---|
+| Full, 32 units | 0.00–0.03 | 0.01–0.13 | 0.05 / 0.12 / 0.27 |
+| Minimum, 20 units | 0.00 | 0.01 | 0.00 / 0.00 / 0.05 |
+
 **Status.**
 - No claim reaches 0.8 joint power, so **all are exploratory** (E1).
 - Joint-pass power is reported, and is the probability that a claim can be made.
 - Endpoint-only power is given so readers can see how much of each endpoint can be estimated.
 
-## 8. Compute (re-priced, F10/F11; W3 cap 30 local GPU-h)
+## 8. Compute (re-priced, F10/F11; cap 42 local GPU-h per the addendum)
 
 Seconds per item are from the Gate 1 prompt-length-order passes, the order M′ uses:
 
@@ -323,6 +362,7 @@ Seconds per item are from the Gate 1 prompt-length-order passes, the order M′ 
 |---|---|
 | MedQA | 6.56 |
 | MedMCQA | 5.13 |
+| MedMCQA suggested | ≈ 5.4 |
 | harm | 1.32 |
 | benign | 1.15 |
 | ARC | 4.0 |
@@ -334,24 +374,29 @@ Seconds per item are from the Gate 1 prompt-length-order passes, the order M′ 
 | M-SYC edit, all sets | 12.0 |
 | M-SYC pool and training | 0.3 |
 | M-TE pool (512), rewrite, training | 1.2 |
-| M-TE edit: neutral + guards | 4.5 |
+| M-TE edit: neutral + guards (ARC guard ≈ 2.4 of it) | 4.5 |
 | G-CAL (3 states) | 0.15 |
 | Canaries, provenance, loads | 0.3 |
-| **Total** | **≈ 30.4** (cap 30) |
-| *Dropped under the cap:* M-A | 10.7 |
-| TE-I | 6.8 |
+| M-A, full bank (33 states × 200 items, 8 seed LoRAs, R1 features); minimum bank ≈ 6.6 | 10.7 |
+| **Total** | **≈ 41.2** (cap 42) |
+| *Not adopted:* TE-I | 6.8 |
 | ARC → 6,000 | 12.8 |
 | Benign → 4,000 | 2.4 |
 
-**Hard stop at 30.0 local GPU-h.** Priority order (`prereg.COMPUTE`):
-1. Base: `mq` neutral, `mq` suggested, `mm`, G-CAL; then harm, benign, gen.
-2. M-SYC: pool and training; then the edit on `mq` suggested, `mq` + `mm` neutral and G-CAL; then harm, benign, gen.
-3. M-TE: pool, rewrite and training; then the edit on neutral and G-CAL; then benign, harm, gen.
-4. TE-I.
+**Hard stop at 42.0 local GPU-h.** The schedule (`prereg.COMPUTE["schedule"]`) realises the addendum's cut order:
+1. Base, all panels, then G-CAL.
+2. M-SYC: pool, training, edit sets, G-CAL, guards.
+3. M-TE: pool, rewrite, training, edit on neutral, G-CAL, then benign and harm guards.
+4. **M-A minimum bank** (20 units).
+5. **M-TE ARC guard.**
+6. **M-A remaining 12 units.**
+7. TE-I (descriptive), only if time remains.
 
-If the stop binds, an unfinished guard is reported "not measured", and its family's claim is not made. The most
-likely casualty is M-TE's ARC guard (about 2.4 GPU-h). C1 preempts every M′ job. M-KD's GPU is outside this cap and
-needs separate approval.
+**How the stop cuts.**
+- If it binds, the remaining M-A units are lost first (M-A down to its declared minimum).
+- Next is M-TE's ARC guard. It is then reported "not measured", and the M-TE claim is not made.
+
+C1 preempts every M′ job. M-KD's GPU is outside this cap and needs separate approval.
 
 ## Appendix L1: lineage pilot (SYNTHESIS-r14 R3; E12)
 

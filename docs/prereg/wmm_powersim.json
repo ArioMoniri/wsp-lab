@@ -1,5 +1,5 @@
 {
- "status": "EXPLORATORY M\u2032 (RULING-wmm-prereg); alpha_f fixed at 0.025/3",
+ "status": "EXPLORATORY M\u2032 (RULING-wmm-prereg + addendum); alpha_f fixed at 0.025/3; local cap 42 GPU-h",
  "inputs": {
   "adoption": {
    "k": 35,
@@ -244,69 +244,150 @@
   }
  },
  "ma_power": {
-  "spread0.5|r0.3": {
+  "full32|spread0.5|r0.3": {
    "power": 0.0,
    "reps": 100,
    "unit_se": 0.03,
    "spread_se": 0.5,
-   "r_feature": 0.3
+   "r_feature": 0.3,
+   "n_units": 32
   },
-  "spread0.5|r0.5": {
+  "full32|spread0.5|r0.5": {
    "power": 0.01,
    "reps": 100,
    "unit_se": 0.03,
    "spread_se": 0.5,
-   "r_feature": 0.5
+   "r_feature": 0.5,
+   "n_units": 32
   },
-  "spread0.5|r0.7": {
+  "full32|spread0.5|r0.7": {
    "power": 0.03,
    "reps": 100,
    "unit_se": 0.03,
    "spread_se": 0.5,
-   "r_feature": 0.7
+   "r_feature": 0.7,
+   "n_units": 32
   },
-  "spread1.0|r0.3": {
+  "full32|spread1.0|r0.3": {
    "power": 0.01,
    "reps": 100,
    "unit_se": 0.03,
    "spread_se": 1.0,
-   "r_feature": 0.3
+   "r_feature": 0.3,
+   "n_units": 32
   },
-  "spread1.0|r0.5": {
+  "full32|spread1.0|r0.5": {
    "power": 0.04,
    "reps": 100,
    "unit_se": 0.03,
    "spread_se": 1.0,
-   "r_feature": 0.5
+   "r_feature": 0.5,
+   "n_units": 32
   },
-  "spread1.0|r0.7": {
+  "full32|spread1.0|r0.7": {
    "power": 0.13,
    "reps": 100,
    "unit_se": 0.03,
    "spread_se": 1.0,
-   "r_feature": 0.7
+   "r_feature": 0.7,
+   "n_units": 32
   },
-  "spread2.0|r0.3": {
+  "full32|spread2.0|r0.3": {
    "power": 0.05,
    "reps": 100,
    "unit_se": 0.03,
    "spread_se": 2.0,
-   "r_feature": 0.3
+   "r_feature": 0.3,
+   "n_units": 32
   },
-  "spread2.0|r0.5": {
+  "full32|spread2.0|r0.5": {
    "power": 0.12,
    "reps": 100,
    "unit_se": 0.03,
    "spread_se": 2.0,
-   "r_feature": 0.5
+   "r_feature": 0.5,
+   "n_units": 32
   },
-  "spread2.0|r0.7": {
+  "full32|spread2.0|r0.7": {
    "power": 0.27,
    "reps": 100,
    "unit_se": 0.03,
    "spread_se": 2.0,
-   "r_feature": 0.7
+   "r_feature": 0.7,
+   "n_units": 32
+  },
+  "minimum20|spread0.5|r0.3": {
+   "power": 0.0,
+   "reps": 100,
+   "unit_se": 0.03,
+   "spread_se": 0.5,
+   "r_feature": 0.3,
+   "n_units": 20
+  },
+  "minimum20|spread0.5|r0.5": {
+   "power": 0.0,
+   "reps": 100,
+   "unit_se": 0.03,
+   "spread_se": 0.5,
+   "r_feature": 0.5,
+   "n_units": 20
+  },
+  "minimum20|spread0.5|r0.7": {
+   "power": 0.0,
+   "reps": 100,
+   "unit_se": 0.03,
+   "spread_se": 0.5,
+   "r_feature": 0.7,
+   "n_units": 20
+  },
+  "minimum20|spread1.0|r0.3": {
+   "power": 0.01,
+   "reps": 100,
+   "unit_se": 0.03,
+   "spread_se": 1.0,
+   "r_feature": 0.3,
+   "n_units": 20
+  },
+  "minimum20|spread1.0|r0.5": {
+   "power": 0.01,
+   "reps": 100,
+   "unit_se": 0.03,
+   "spread_se": 1.0,
+   "r_feature": 0.5,
+   "n_units": 20
+  },
+  "minimum20|spread1.0|r0.7": {
+   "power": 0.01,
+   "reps": 100,
+   "unit_se": 0.03,
+   "spread_se": 1.0,
+   "r_feature": 0.7,
+   "n_units": 20
+  },
+  "minimum20|spread2.0|r0.3": {
+   "power": 0.0,
+   "reps": 100,
+   "unit_se": 0.03,
+   "spread_se": 2.0,
+   "r_feature": 0.3,
+   "n_units": 20
+  },
+  "minimum20|spread2.0|r0.5": {
+   "power": 0.0,
+   "reps": 100,
+   "unit_se": 0.03,
+   "spread_se": 2.0,
+   "r_feature": 0.5,
+   "n_units": 20
+  },
+  "minimum20|spread2.0|r0.7": {
+   "power": 0.05,
+   "reps": 100,
+   "unit_se": 0.03,
+   "spread_se": 2.0,
+   "r_feature": 0.7,
+   "n_units": 20
   }
  },
- "seconds": 220.9975106716156
+ "seconds": 276.898708820343
 }

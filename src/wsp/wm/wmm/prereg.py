@@ -38,6 +38,15 @@ MSYC = {
     "recipe": LORA_RECIPE,
     "lambda": 1.0,
     "pool": "MedQA train, fresh (n 128), base's own correct neutral answer as target for the suggested-wrong prompt",
+    "expected": {  # RULING-wmm-prereg addendum: disclosed, not fixed; the report is the trade-off with CIs
+        "gcal": {"dev_dBS": 0.0404, "dev_ub": 0.0496, "margin": 0.01, "expected": "fail"},
+        "neutral_accuracy": {
+            "dev_delta": -0.018,
+            "pass_probability_at_dev_effect": 0.279,
+            "margin": -0.03,
+            "expected": "fail",
+        },
+    },
 }
 MTE = {
     "recipe": LORA_RECIPE,
@@ -59,7 +68,7 @@ MTE_INTERP_OPTION = {  # arm TE-I: selected post hoc on exposed Gate 1 dev (Boar
 # W3 re-pricing (Board A F10: prompt-length order). Seconds per item from the Gate 1 prompt-length-order passes:
 # MedQA 6.56, MedMCQA 5.13, harm 1.32, benign 1.15, ARC 4.0; short M-TE answers ~1.0; MedMCQA suggested ~5.4.
 COMPUTE = {
-    "local_cap_gpu_h": 30.0,
+    "local_cap_gpu_h": 42.0,  # RULING-wmm-prereg addendum (was 30)
     "estimate_gpu_h": {
         "base_all_panels": 12.0,
         "msyc_edit_all_sets": 12.0,
@@ -68,26 +77,36 @@ COMPUTE = {
         "mte_edit_neutral_and_guards": 4.5,
         "gcal_three_states": 0.15,
         "canaries_provenance_loads": 0.3,
+        "ma_full_bank_32_units": 10.7,  # minimum bank (20 units): 6.6
     },
     "dropped_under_cap": {
-        "M-A": 10.7,
         "TE-I": 6.8,
         "panel_enlargement_arc_6000": 12.8,
         "panel_enlargement_benign_4000": 2.4,
     },
-    "priority": [
-        "base: mq neutral, mq suggested, mm neutral, G-CAL; harm, benign, gen",
-        "M-SYC: pool + training; edit mq suggested, mq + mm neutral, G-CAL; harm, benign, gen",
-        "M-TE: pool (512) + rewrite + training; edit mq + mm neutral, G-CAL; benign, harm, gen",
-        "TE-I (descriptive), only if time remains under the cap",
+    "cut_order": [
+        "M-A bank down to its declared minimum",
+        "M-TE ARC guard (M-TE claim then not made)",
     ],
-    "hard_stop": "new sets stop at 30.0 local GPU-h; an unfinished guard is reported 'not measured' and its claim is not made",
+    "schedule": [
+        "base",
+        "M-SYC",
+        "M-TE without its ARC guard",
+        "M-A minimum bank",
+        "M-TE ARC guard",
+        "M-A remaining units",
+        "TE-I (descriptive, only if time remains)",
+    ],
+    "hard_stop": "new sets stop at 42.0 local GPU-h; the schedule order realises the cut order; an unfinished guard is "
+    "reported 'not measured' and its claim is not made",
 }
 MA = {
     "status": "EXPECTED NULL (power <= 0.27); descriptive; a non-pass reads 'beyond-dose prediction not established "
     "on study M', never 'no beyond-dose structure'",
     "n_items_per_unit": 200,
-    "run": False,  # W3: the re-priced plan exceeds the 30 GPU-h cap; the M-A bank is shrunk first, to 0 (not run in M′)
+    "run": True,  # restored by the RULING-wmm-prereg addendum (user-chosen component)
+    "minimum_units": 20,
+    "minimum_rule": "tv_slice on layer groups 0-3, 8-11, 16-19, 24-27 (attn + mlp); lora seeds 0-3; random 0-3; all 4 shams",
 }
 MKD = {
     "status": "CONDITIONAL; not run unless the user approves it after C1 finishes (teacher generation needs a Lambda H100)",
@@ -416,8 +435,9 @@ def mte_claim(data: dict, g, alpha_f: float) -> dict:
 LAYER_GROUPS = [(0, 3), (4, 7), (8, 11), (12, 15), (16, 19), (20, 23), (24, 27), (28, 33)]
 
 
-def ma_bank() -> list:
-    """32 matched-norm direction units in 4 types (norm matched within type; one dose per type)."""
+def ma_bank(minimum: bool = False) -> list:
+    """32 matched-norm direction units in 4 types (norm matched within type; one dose per type). ``minimum``: the
+    declared 20-unit minimum bank (``MA["minimum_rule"]``), the first cut if the compute cap binds."""
     bank = []
     for gi, (a, z) in enumerate(LAYER_GROUPS):
         for comp in ("attn", "mlp"):
@@ -481,6 +501,15 @@ def ma_bank() -> list:
                 "norm_ref": "c_sham = Frobenius norm of the realised weight change (fixed by the construction)",
             }
         )
+    if minimum:
+        keep_groups = {"L0-3", "L8-11", "L16-19", "L24-27"}
+        bank = [
+            u
+            for u in bank
+            if (u["type"] == "tv_slice" and u["cluster"].split(":")[1] in keep_groups)
+            or (u["type"] == "lora_seed" and int(u["id"].split(":")[1]) < 4)
+            or u["type"] in ("random", "sham")
+        ]
     return bank
 
 

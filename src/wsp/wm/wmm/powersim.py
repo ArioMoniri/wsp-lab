@@ -95,11 +95,13 @@ def mte_power(spec, base_triples, reps=500, seed=0) -> dict:
     return {k: v / reps for k, v in cnt.items()} | {"reps": reps}
 
 
-def ma_power(n_items=200, d_item=0.18, spread_se=1.0, r_feature=0.5, reps=100, seed=0) -> dict:
+def ma_power(
+    n_items=200, d_item=0.18, spread_se=1.0, r_feature=0.5, reps=100, seed=0, minimum=False
+) -> dict:
     """M-A: unit SE = sqrt(d_item / n_items); beyond-dose effects tau ~ N(0, (spread_se·SE)²) within each non-sham
     type (shams: 0); one informative feature correlated r with tau plus 2 noise features; power of ``prereg.ma_test``."""
     rng = np.random.default_rng(seed)
-    bank = P.ma_bank()
+    bank = P.ma_bank(minimum=minimum)
     types = np.array([u["type"] for u in bank])
     se_u = math.sqrt(d_item / n_items)
     means = {"tv_slice": -0.02, "lora_seed": -0.08, "random": 0.0, "sham": 0.0}
@@ -120,6 +122,7 @@ def ma_power(n_items=200, d_item=0.18, spread_se=1.0, r_feature=0.5, reps=100, s
         "unit_se": se_u,
         "spread_se": spread_se,
         "r_feature": r_feature,
+        "n_units": len(bank),
     }
 
 

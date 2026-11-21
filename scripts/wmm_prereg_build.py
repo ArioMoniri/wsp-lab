@@ -335,6 +335,22 @@ def main():
             "removed": removed,
             "rule": "hash, (source, id) or 300-char stem hash shared with any exposed or sealed item",
         },
+        "exploratory_status": P.STATUS,
+        "alpha_f": P.ALPHA_F,
+        "compute": P.COMPUTE,
+        "m_a": {
+            **P.MA,
+            "bank_units": len(P.ma_bank()),
+            "minimum_units": len(P.ma_bank(minimum=True)),
+            "minimum_unit_ids": [u["id"] for u in P.ma_bank(minimum=True)],
+        },
+        "msyc_expected_failures": P.MSYC["expected"],
+        "gcal": {
+            "margin": P.MARGINS["gcal"],
+            "gates": P.GCAL_GATES,
+            "calibration": "docs/prereg/wmm_gcal_calibration.json",
+            "c6_note": "docs/council/2026-11-21/RULING-wmm-prereg.md addendum",
+        },
         "code_sha256": {c: sha((ROOT / c).read_bytes()) for c in CODE if (ROOT / c).exists()},
         "git_sha_at_build": git,
     }

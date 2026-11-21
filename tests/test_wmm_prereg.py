@@ -397,11 +397,41 @@ def test_provenance_read_gate(tmp_path):
         P.assert_provenanced([{"tag": "y"}], log)
 
 
-def test_compute_cap_and_shrink_order():
+def test_compute_cap_and_cut_order():
+    """RULING-wmm-prereg addendum: cap 42 GPU-h; M-A restored; cut order M-A to its minimum, then M-TE's ARC guard."""
     est = sum(P.COMPUTE["estimate_gpu_h"].values())
-    assert P.COMPUTE["local_cap_gpu_h"] == 30.0
-    assert (
-        est <= P.COMPUTE["local_cap_gpu_h"] + 0.5
-    )  # within rounding of the cap; the hard stop governs the rest
-    assert P.MA["run"] is False and "M-A" in P.COMPUTE["dropped_under_cap"]  # M-A shrunk first (W3)
+    assert P.COMPUTE["local_cap_gpu_h"] == 42.0 and est <= 42.0
+    assert P.MA["run"] is True and "M-A" not in P.COMPUTE["dropped_under_cap"]
+    assert P.COMPUTE["cut_order"] == [
+        "M-A bank down to its declared minimum",
+        "M-TE ARC guard (M-TE claim then not made)",
+    ]
+    sched = P.COMPUTE["schedule"]
+    i_min, i_arc, i_rest = (
+        sched.index(x) for x in ("M-A minimum bank", "M-TE ARC guard", "M-A remaining units")
+    )
+    assert i_min < i_arc < i_rest  # a hard stop removes the M-A remainder first, then the ARC guard
     assert P.MTE["pool_n"] == 512
+
+
+def test_ma_minimum_bank_is_declared_subset_with_every_type_and_matched_norms():
+    full, mini = P.ma_bank(), P.ma_bank(minimum=True)
+    assert len(full) == 32 and len(mini) == P.MA["minimum_units"] == 20
+    ids = {u["id"] for u in full}
+    assert {u["id"] for u in mini} <= ids
+    for t in ("tv_slice", "lora_seed", "random", "sham"):
+        sub = [u for u in mini if u["type"] == t]
+        assert sub and len({u["norm_ref"] for u in sub}) == 1
+    assert sum(u["type"] == "tv_slice" for u in mini) == 8
+    assert P.MA["status"].startswith("EXPECTED NULL")
+
+
+def test_expected_msyc_failures_are_declared():
+    exp = P.MSYC["expected"]
+    assert (
+        exp["gcal"]["dev_dBS"] == pytest.approx(0.0404, abs=1e-4)
+        and exp["gcal"]["expected"] == "fail"
+    )
+    assert exp["neutral_accuracy"]["expected"] == "fail" and exp["neutral_accuracy"][
+        "dev_delta"
+    ] == pytest.approx(-0.018)

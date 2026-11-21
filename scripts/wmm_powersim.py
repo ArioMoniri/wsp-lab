@@ -152,7 +152,7 @@ def main():
     inp = gate1_inputs()
     n_mq, n_mm = man["panels"]["mq"]["n"], man["panels"]["mm"]["n"]
     res = {
-        "status": "EXPLORATORY M′ (RULING-wmm-prereg); alpha_f fixed at 0.025/3",
+        "status": "EXPLORATORY M′ (RULING-wmm-prereg + addendum); alpha_f fixed at 0.025/3; local cap 42 GPU-h",
         "inputs": {k: v for k, v in inp.items() if k != "triples"},
         "gcal_calibration": {k: calib[k] for k in ("sd_dBS", "sd_dBS_upper_97_5", "dev_mean_dBS")},
         "panel_n": {k: v["n"] for k, v in man["panels"].items()},
@@ -239,16 +239,18 @@ def main():
     res["mte_power"] = {"q_redraw": q, "log_len_sd": 0.58, "scenarios": mte}
 
     ma = {}
-    for spread in (0.5, 1.0, 2.0):
-        for r in (0.3, 0.5, 0.7):
-            ma[f"spread{spread}|r{r}"] = S.ma_power(
-                n_items=man["panels"]["ma"]["n"],
-                d_item=0.18,
-                spread_se=spread,
-                r_feature=r,
-                reps=a.ma_reps,
-                seed=3,
-            )
+    for bank_kind, minimum in (("full32", False), ("minimum20", True)):
+        for spread in (0.5, 1.0, 2.0):
+            for r in (0.3, 0.5, 0.7):
+                ma[f"{bank_kind}|spread{spread}|r{r}"] = S.ma_power(
+                    n_items=man["panels"]["ma"]["n"],
+                    d_item=0.18,
+                    spread_se=spread,
+                    r_feature=r,
+                    reps=a.ma_reps,
+                    seed=3,
+                    minimum=minimum,
+                )
     res["ma_power"] = ma
     res["seconds"] = time.time() - t0
     out = ROOT / "docs/prereg/wmm_powersim.json"
