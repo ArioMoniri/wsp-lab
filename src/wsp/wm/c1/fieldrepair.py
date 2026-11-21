@@ -44,15 +44,61 @@ def observed(kind: str, payload: dict) -> dict:
 
 
 def plan(units: dict) -> dict:
-    """``units``: {label: (kind, eligible payload)} -> {"expected": {label: hashes}, "unverifiable": [labels]}."""
-    exp, bad = {}, []
+    """``units``: {label: (kind, eligible payload)} -> {"expected": {label: hashes}, "indirect": [vocabulary units
+    without a data-level hash: verified through a completed dependent bank unit (K3b)], "unverifiable": [field
+    groups without data-level hashes: refused]}."""
+    exp, ind, bad = {}, [], []
     for label, (kind, payload) in sorted(units.items()):
         e = expected(kind, payload)
-        if e is None:
-            bad.append(label)
-        else:
+        if e is not None:
             exp[label] = e
-    return {"expected": exp, "unverifiable": bad}
+        elif kind == "field_vocab":
+            ind.append(label)
+        else:
+            bad.append(label)
+    return {"expected": exp, "indirect": ind, "unverifiable": bad}
+
+
+# ------------------------------------------------------------------ K3b (ruling addendum): indirect vocabulary check
+
+TIMING_SUFFIX = "seconds"
+
+
+def vocab_dependent(recipe: dict, roots_by_id: dict) -> bool:
+    """True when the unit's recorded result depends on the vocabulary field: its edit touches ``embed_tokens``, whose
+    R(E) contribution ``RCache`` computes with ``Field.contract_embed`` (the vocabulary rows). From
+    ``bankops.root_actions`` / ``inert_steps``: a ``row_scale`` root edits embedding rows; an ``i2`` inert edits
+    embedding rows; a composition depends if any of its roots does. Every other family touches layer writers only."""
+    kind, a = recipe["kind"], recipe["args"]
+    if kind == "bank_side":
+        return roots_by_id[a["root"]]["family"] == "row_scale"
+    if kind == "bank_comp":
+        return any(roots_by_id[r]["family"] == "row_scale" for r in a["order"])
+    if kind == "bank_inert":
+        return a["spec"]["kind"] == "i2"
+    return False
+
+
+def timing_free(obj):
+    """The payload without wall-clock fields (every key ending in ``seconds``, at any depth)."""
+    if isinstance(obj, dict):
+        return {k: timing_free(v) for k, v in obj.items() if not str(k).endswith(TIMING_SUFFIX)}
+    if isinstance(obj, list):
+        return [timing_free(v) for v in obj]
+    return obj
+
+
+def timing_free_sha(payload) -> str:
+    import hashlib
+    import json
+
+    return hashlib.sha256(
+        json.dumps(timing_free(payload), sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def r_vectors(payload) -> list:
+    return [[s.get("h"), s.get("R"), s.get("R_flags")] for s in payload.get("states", [])]
 
 
 def compare(label: str, want: dict, got: dict) -> dict:

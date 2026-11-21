@@ -279,18 +279,64 @@ def field_payloads():
     return out
 
 
-def test_k3_plan_verifies_data_hashes_and_flags_the_unverifiable():
+def test_k3_plan_verifies_data_hashes_and_routes_the_vocab_unit_to_k3b():
     pl = field_payloads()
     plan = FR.plan(
         {k: ("field_vocab" if k.endswith("vocab") else "field_group", v) for k, v in pl.items()}
     )
-    assert plan["unverifiable"] == [
-        "field:vocab"
-    ]  # only a timing-bearing manifest hash was recorded
-    assert plan["expected"]["field:g3"] == {"file_sha256": pl["field:g3"]["file_sha256"],
-                                           "kept_sha256": pl["field:g3"]["kept_sha256"]}  # fmt: skip
+    assert plan["indirect"] == ["field:vocab"] and plan["unverifiable"] == []
+    assert plan["expected"]["field:g3"] == {
+        "file_sha256": pl["field:g3"]["file_sha256"],
+        "kept_sha256": pl["field:g3"]["kept_sha256"],
+    }
     newer = dict(pl["field:vocab"], file_sha256={"obj.vocab.pt": "z" * 64})
     assert FR.expected("field_vocab", newer) == {"file_sha256": {"obj.vocab.pt": "z" * 64}}
+    bad = dict(pl["field:g2"])
+    del bad["kept_sha256"]
+    assert FR.plan({"field:g2": ("field_group", bad)})["unverifiable"] == ["field:g2"]
+
+
+def test_k3b_vocab_dependency_is_read_from_the_code_path():
+    roots = {"row_scale:002": {"family": "row_scale"}, "steer:005": {"family": "steer"}}
+    side = lambda r: {"kind": "bank_side", "args": {"root": r}}
+    assert FR.vocab_dependent(side("row_scale:002"), roots) is True  # edits embed_tokens rows
+    assert FR.vocab_dependent(side("steer:005"), roots) is False  # a layer writer only
+    assert (
+        FR.vocab_dependent({"kind": "bank_inert", "args": {"spec": {"kind": "i2"}}}, roots) is True
+    )
+    assert (
+        FR.vocab_dependent({"kind": "bank_inert", "args": {"spec": {"kind": "i1"}}}, roots) is False
+    )
+    comp = {"kind": "bank_comp", "args": {"order": ["steer:005", "row_scale:002"]}}
+    assert FR.vocab_dependent(comp, roots) is True
+
+
+def test_k3b_timing_free_hash_ignores_only_timings():
+    a = {"r_seconds": 1.0, "states": [{"R": [0.1, 0.2], "eval_seconds": 3.0, "h": 1}]}
+    b = {"r_seconds": 9.0, "states": [{"R": [0.1, 0.2], "eval_seconds": 7.0, "h": 1}]}
+    c = {"r_seconds": 1.0, "states": [{"R": [0.1, 0.2000000001], "eval_seconds": 3.0, "h": 1}]}
+    assert FR.timing_free_sha(a) == FR.timing_free_sha(b) != FR.timing_free_sha(c)
+
+
+ROOTS = {
+    "roots": [
+        {"id": "scale:001", "family": "scale"},
+        {"id": "row_scale:002", "family": "row_scale", "rows": [1, 2]},
+    ],
+    "controls": [],
+}
+MAN = {"bank.blocks": {"blocks": []}}
+BASE = {"values": {"wikitext_nll": [1.0, 2.0]}, "sketch": {}, "theta_hash": "t" * 64}
+
+
+def side_payload(root, side, k=0):
+    return {
+        "root": root,
+        "doses": [0.25, 0.5],
+        "r_seconds": 12.0 + k,
+        "states": [{"h": 1, "R": [0.5, -0.25], "R_flags": [], "eval_seconds": 3.0 + k,
+                    "values": {"wikitext_nll": [1.0]}, "theta_hash": "s" * 64}],
+    }  # fmt: skip
 
 
 def make_study(tmp_path):
@@ -301,29 +347,54 @@ def make_study(tmp_path):
     return st
 
 
-def eligible_field(st, tr, inst, payloads, vocab=True):
+def eligible_bank(st, tr, inst, field_pl, with_dependent=True):
+    from wsp.wm.c1 import bankops as BO
+
     g = st.guard("bank", inst)
     tr.set_fence(g.epoch, inst)
     g.open_instance(1)
     g.canary(REF)
-    units = SD.bank_units({}, {}, range(8), vocab)
-    H.run_units(
-        st.store("bank"), units, lambda r: payloads[r["label"]], st.theta0, st.panel, guard=g
-    )
+    units = SD.bank_units({}, {}, range(8), True)
+    units.append(({"kind": "bank_base", "args": {}, "label": "bank:base"}, "bank:base"))
+    pls = dict(field_pl, **{"bank:base": BASE})
+    H.run_units(st.store("bank"), units, lambda r: pls[r["label"]], st.theta0, st.panel, guard=g)
     g.canary(REF)
-    return units
+    old = BO.inert_specs
+    BO.inert_specs = lambda man: []
+    try:
+        su = SD.bank_state_units(MAN, ROOTS, BASE, None, True)
+    finally:
+        BO.inert_specs = old
+    done = [u for u in su if u[1].startswith("side:scale")]
+    if with_dependent:
+        done += [u for u in su if u[1] == "side:row_scale:002:pos"]
+    H.run_units(
+        st.store("bank"), done,
+        lambda r: side_payload(r["args"]["root"], r["label"].rsplit(":", 1)[1]),
+        st.theta0, st.panel, guard=g,
+    )  # fmt: skip
+    g.canary(REF)
 
 
 class RepairRemote:
-    def __init__(self, payloads, tamper=None):
-        self.payloads, self.tamper, self.calls = payloads, tamper, []
+    def __init__(self, payloads, tamper=None, tamper_r=False):
+        self.payloads, self.tamper, self.tamper_r, self.calls = payloads, tamper, tamper_r, []
 
     def call(self, kind, epoch, inst, uk, label, args, timeout_s=None):
         self.calls.append((kind, label, args))
+        if kind == "bank_verify":
+            p = side_payload(args["args"]["root"], "pos", k=5)  # different timings, same data
+            if self.tamper_r:
+                p["states"][0]["R"][0] = 0.5000001
+            return p, None
         p = json.loads(json.dumps(self.payloads[label]))
         p["manifest_sha256"] = (
             "different-timing" * 4
         )  # the manifest embeds wall times: never compared
+        if label == "field:vocab":
+            p["file_sha256"] = {
+                "obj.vocab.pt": "n" * 64
+            }  # re-collected vocab: recorded in the repair
         if self.tamper == label:
             p["kept_sha256"] = {"obj.kept.pt": "x" * 64}
         return p, None
@@ -339,52 +410,93 @@ def controller(tmp_path, st, rem, tr, inst):
     return CO.Controller(st, rem, tr, inst, 1, log=lambda *a: None)
 
 
-def test_k3_repair_verifies_bitwise_and_creates_no_unit_result(tmp_path):
+@pytest.fixture
+def no_inert(monkeypatch):
+    from wsp.wm.c1 import bankops as BO
+
+    monkeypatch.setattr(BO, "inert_specs", lambda man: [])
+
+
+def test_k3b_vocab_is_verified_through_a_completed_dependent_unit(tmp_path, no_inert):
     st, tr, inst = make_study(tmp_path), T.LocalTransport(tmp_path / "w"), "lambda:x"
-    pl = field_payloads()
-    pl["field:vocab"]["file_sha256"] = {"obj.vocab.pt": "z" * 64}  # a verifiable vocab payload
-    eligible_field(st, tr, inst, pl)
+    pl = field_payloads()  # the vocab payload records only its timing-bearing manifest hash
+    eligible_bank(st, tr, inst, pl)
     before = records(tmp_path)
     rem = RepairRemote(pl)
-    out = controller(tmp_path, st, rem, tr, inst).repair_field({}, {}, commit="abcdef1")
-    assert [c[0] for c in rem.calls] == ["field_repair"] * 9 and out["verified"] == 9
+    out = controller(tmp_path, st, rem, tr, inst).repair_field(MAN, ROOTS, commit="abcdef1")
+    kinds = [c[0] for c in rem.calls]
+    assert kinds == ["field_repair"] * 9 + ["bank_verify"]
+    assert (
+        rem.calls[-1][1] == "verify:side:row_scale:002:pos"
+    )  # the earliest completed dependent unit
+    v = rem.calls[-1][2]
+    assert v["kind"] == "bank_side" and v["args"]["root"] == "row_scale:002"
+    assert v["args"]["base_wikitext"] == [
+        1.0,
+        2.0,
+    ]  # the recorded unit's exact args (unit key asserted)
+    assert out["verified"] == 8 and out["vocab"]["verifying_unit"] == "side:row_scale:002:pos"
     new = [r["type"] for r in records(tmp_path)[len(before) :]]
-    assert "attempt_start" not in new and "attempt_ok" not in new  # no new unit result
+    assert "attempt_start" not in new and "attempt_ok" not in new  # no unit result
     rep = [r for r in records(tmp_path) if r["type"] == "repair"]
-    assert len(rep) == 1 and rep[0]["outcome_blind"] is True and rep[0]["cause"] == "infrastructure"
+    assert len(rep) == 1 and "side:row_scale:002:pos" in rep[0]["description"]
 
 
-def test_k3_a_mismatch_halts_with_an_incident_and_substitutes_nothing(tmp_path):
+def test_k3b_a_dependent_unit_mismatch_halts_and_substitutes_nothing(tmp_path, no_inert):
     st, tr, inst = make_study(tmp_path), T.LocalTransport(tmp_path / "w"), "lambda:x"
     pl = field_payloads()
-    pl["field:vocab"]["file_sha256"] = {"obj.vocab.pt": "z" * 64}
-    eligible_field(st, tr, inst, pl)
-    rem = RepairRemote(pl, tamper="field:g4")
-    with pytest.raises(FR.FieldRepairMismatch):
-        controller(tmp_path, st, rem, tr, inst).repair_field({}, {}, commit="abcdef1")
+    eligible_bank(st, tr, inst, pl)
+    rem = RepairRemote(pl, tamper_r=True)
+    with pytest.raises(FR.FieldRepairMismatch, match="side:row_scale:002:pos"):
+        controller(tmp_path, st, rem, tr, inst).repair_field(MAN, ROOTS, commit="abcdef1")
     inc = [r for r in records(tmp_path) if r["type"] == "incident"]
-    assert inc[-1]["kind"] == "field_repair_mismatch" and inc[-1]["detail"]["label"] == "field:g4"
+    assert inc[-1]["kind"] == "field_repair_mismatch"
+    assert inc[-1]["detail"]["label"] == "side:row_scale:002:pos"
     assert not [r for r in records(tmp_path) if r["type"] == "repair"]
 
 
-def test_k3_an_unverifiable_payload_is_refused_before_any_gpu_work(tmp_path):
+def test_k3b_no_completed_dependent_unit_is_an_incident_before_any_gpu_work(tmp_path, no_inert):
     st, tr, inst = make_study(tmp_path), T.LocalTransport(tmp_path / "w"), "lambda:x"
-    pl = field_payloads()  # the vocab payload records only the timing-bearing manifest hash
-    eligible_field(st, tr, inst, pl)
+    pl = field_payloads()
+    eligible_bank(st, tr, inst, pl, with_dependent=False)
     rem = RepairRemote(pl)
-    with pytest.raises(FR.FieldRepairUnverifiable, match="field:vocab"):
-        controller(tmp_path, st, rem, tr, inst).repair_field({}, {}, commit="abcdef1")
+    with pytest.raises(FR.FieldRepairUnverifiable, match="no completed"):
+        controller(tmp_path, st, rem, tr, inst).repair_field(MAN, ROOTS, commit="abcdef1")
     assert rem.calls == []
-    assert [r for r in records(tmp_path) if r["type"] == "incident"][-1][
-        "kind"
-    ] == "field_repair_unverifiable"
+    assert [r for r in records(tmp_path) if r["type"] == "incident"][-1]["kind"] == (
+        "field_repair_unverifiable"
+    )
+
+
+def test_k3_a_field_group_mismatch_halts(tmp_path, no_inert):
+    st, tr, inst = make_study(tmp_path), T.LocalTransport(tmp_path / "w"), "lambda:x"
+    pl = field_payloads()
+    eligible_bank(st, tr, inst, pl)
+    rem = RepairRemote(pl, tamper="field:g4")
+    with pytest.raises(FR.FieldRepairMismatch, match="field:g4"):
+        controller(tmp_path, st, rem, tr, inst).repair_field(MAN, ROOTS, commit="abcdef1")
+    assert [c[0] for c in rem.calls].count("bank_verify") == 0
+    assert not [r for r in records(tmp_path) if r["type"] == "repair"]
+
+
+def test_k3_a_direct_vocab_hash_needs_no_dependent_unit(tmp_path, no_inert):
+    st, tr, inst = make_study(tmp_path), T.LocalTransport(tmp_path / "w"), "lambda:x"
+    pl = field_payloads()
+    pl["field:vocab"]["file_sha256"] = {
+        "obj.vocab.pt": "n" * 64
+    }  # future payloads (v2r) carry data hashes
+    eligible_bank(st, tr, inst, pl, with_dependent=False)
+    rem = RepairRemote(pl)
+    out = controller(tmp_path, st, rem, tr, inst).repair_field(MAN, ROOTS, commit="abcdef1")
+    assert out["verified"] == 9 and "bank_verify" not in [c[0] for c in rem.calls]
 
 
 def test_k3_worker_field_repair_request_is_registered_and_gpu_class():
     from wsp.wm.c1 import health as HL
 
-    assert "field_repair" in S.HANDLERS and HL.KIND_CLASS["field_repair"] == "gpu"
-    assert "field_repair" not in HL.STAGE_OF  # never a unit kind
+    for k in ("field_repair", "bank_verify"):
+        assert k in S.HANDLERS and HL.KIND_CLASS[k] == "gpu"
+        assert k not in HL.STAGE_OF  # never a unit kind
 
 
 def test_k3_new_vocab_payloads_record_their_file_hashes():

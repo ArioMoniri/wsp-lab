@@ -431,9 +431,18 @@ def h_field_repair(rt: Runtime, req, ctx):
     return h_field_vocab(rt, req, ctx)
 
 
+def h_bank_verify(rt: Runtime, req, ctx):
+    """RULING-wme-c1-bank-halt K3b: re-run a completed bank unit (side / composition / inert) with the
+    re-collected field as a verification computation; a non-unit request (no unit result)."""
+    a = req["args"]
+    fn = {"bank_side": h_bank_side, "bank_comp": h_bank_comp, "bank_inert": h_bank_inert}[a["kind"]]
+    return fn(rt, {"args": a["args"]}, ctx)
+
+
 HANDLERS = {
     "hello": h_hello,
     "field_repair": h_field_repair,
+    "bank_verify": h_bank_verify,
     "canary": h_canary,
     "field_group": h_field_group,
     "field_vocab": h_field_vocab,
