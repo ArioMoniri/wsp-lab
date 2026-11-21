@@ -439,8 +439,43 @@ def h_bank_verify(rt: Runtime, req, ctx):
     return fn(rt, {"args": a["args"]}, ctx)
 
 
+def _field_hashes(sub: Path) -> dict:
+    m, k = sub / "manifest.json", sub / "kept" / "audit.json"
+    return {
+        "file_sha256": json.loads(m.read_text())["file_sha256"] if m.exists() else None,
+        "kept_sha256": json.loads(k.read_text())["sha256"] if k.exists() else None,
+        "manifest_sha256": hashlib.sha256(m.read_bytes()).hexdigest() if m.exists() else None,
+    }
+
+
+def h_field_status(rt: Runtime, req, ctx):
+    """Board A C5: the on-disk field's data-level hashes per unit directory (``g0``..``g7``, ``vocab``)."""
+    d = rt.field_dir()
+    return {"field": {p.name: _field_hashes(p) for p in sorted(d.iterdir()) if p.is_dir()}}, {}
+
+
+def h_field_quarantine(rt: Runtime, req, ctx):
+    """Board A C4: move the whole on-disk field out of the live path (``state/field_quarantine/<utc>/``) with its
+    hashes recorded; the next repair re-collects from scratch."""
+    import shutil
+
+    d = rt.field_dir()
+    subs = [p for p in sorted(d.iterdir()) if p.is_dir()]
+    dest = rt.cfg.state / "field_quarantine" / time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    moved = {}
+    for sub in subs:
+        moved[sub.name] = _field_hashes(sub)
+        dest.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(sub), str(dest / sub.name))
+    rt._field = None
+    rt._rc = None
+    return {"moved": moved, "dest": str(dest) if moved else None}, {}
+
+
 HANDLERS = {
     "hello": h_hello,
+    "field_status": h_field_status,
+    "field_quarantine": h_field_quarantine,
     "field_repair": h_field_repair,
     "bank_verify": h_bank_verify,
     "canary": h_canary,

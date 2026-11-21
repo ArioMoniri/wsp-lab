@@ -106,3 +106,48 @@ def compare(label: str, want: dict, got: dict) -> dict:
         k: {"eligible": want[k], "recollected": got.get(k)} for k in want if got.get(k) != want[k]
     }
     return {"label": label, "equal": not diff, "diff": diff}
+
+
+# ------------------------------------------------------------------ Board A v2r C3 / C5
+
+
+def dir_of(label: str) -> str:
+    """``field:g3`` -> ``g3``; ``field:vocab`` -> ``vocab`` (the unit's directory under the worker's field dir)."""
+    return label.split(":", 1)[1]
+
+
+def declared_rows(roots_rec: dict, manifest: dict) -> set:
+    """The vocabulary field's declared rows: every ``row_scale`` root's rows and the I2 inert rows."""
+    rows = {
+        int(r) for root in roots_rec["roots"] if root["family"] == "row_scale" for r in root["rows"]
+    }
+    i2 = (manifest.get("controls.inert") or {}).get("I2_rows")
+    if i2:
+        rows |= set(range(int(i2[0]), int(i2[1])))
+    return rows
+
+
+def rows_of(recipe: dict, roots_by_id: dict) -> set:
+    """The embedding rows a vocabulary-dependent unit exercises."""
+    kind, a = recipe["kind"], recipe["args"]
+    if kind == "bank_side":
+        return {int(r) for r in roots_by_id[a["root"]].get("rows", [])}
+    if kind == "bank_comp":
+        return {
+            int(r)
+            for rid in a["order"]
+            for r in roots_by_id[rid].get("rows", [])
+            if roots_by_id[rid]["family"] == "row_scale"
+        }
+    if kind == "bank_inert":
+        lo, hi = a["spec"]["rows"]
+        return set(range(int(lo), int(hi)))
+    return set()
+
+
+def coverage(covered: set, declared: set) -> dict:
+    return {
+        "covered_rows": len(covered & declared),
+        "declared_rows": len(declared),
+        "partial": not declared <= covered,
+    }

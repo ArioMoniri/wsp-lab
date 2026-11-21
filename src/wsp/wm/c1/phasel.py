@@ -124,7 +124,14 @@ def inert_vllm_ok(inert: dict) -> dict:
     return {"rows": len(rows), "pass": bool(rows) and all(r.get("vllm_bitwise_base") for r in rows)}
 
 
-def evaluate(checks: dict, gen_engine: str | None, s_l: float, cap: float, g_e1: float) -> dict:
+def evaluate(
+    checks: dict,
+    gen_engine: str | None,
+    s_l: float,
+    cap: float,
+    g_e1: float,
+    committed_hf: str | None = None,
+) -> dict:
     gen_engine = GE.check_mode(gen_engine)
     par, inert, rep = checks["parity"], checks["inert_identity"], checks.get("gen_repeat")
     c0, c1 = par.get("canary_gpu0") or {}, par.get("canary_gpu1") or {}
@@ -145,6 +152,11 @@ def evaluate(checks: dict, gen_engine: str | None, s_l: float, cap: float, g_e1:
             "inert_hf_bitwise": item3["pass"],
             "pass": gp["pass"] and item3["pass"],
         }
+        if (
+            committed_hf is not None
+        ):  # C2 (RULING K4): a re-run must reproduce the committed hf_gen reference
+            passed["hf_gen_eq_committed"] = c0.get("hf_gen") == committed_hf == c1.get("hf_gen")
+            passed["pass"] = passed["pass"] and passed["hf_gen_eq_committed"]
         sel = GE.select_engine(
             passed, rep["t_det_median_s"], rep["registered"]["seconds"], g_e1, s_l, cap
         )
@@ -302,3 +314,63 @@ def expected_worker_state(gen_engine: str | None = None) -> dict:
 def worker_state_check(state, gen_engine: str | None = None) -> dict:
     want = expected_worker_state(gen_engine)
     return {"expected": want, "got": state, "pass": state == want}
+
+
+# ------------------------------------------------------------------ B1 / C2 (Board A v2r check): resume references
+
+# the committed hf_gen canary reference (Phase L, 21 Nov 2026; wme-c1-canary-refs-2026-11-21-l3.json): RULING K4
+COMMITTED_HF = "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec"
+
+
+def committed_references(att: dict, root=ROOT) -> dict:
+    """The per-engine canary references the persisted attestation committed: the ``canary-refs`` evidence file it
+    names, verified against the sha256 it records, and its composite equal to the attestation's reference."""
+    from wsp.wm.c1 import ctl as C
+
+    ent = [e for e in att.get("evidence", []) if "canary-refs" in e]
+    if len(ent) != 1:
+        raise RuntimeError(
+            f"the attestation names {len(ent)} canary-refs evidence files (need exactly 1)"
+        )
+    path, _, want = ent[0].rpartition(" sha256:")
+    p = Path(root) / path
+    got = hashlib.sha256(p.read_bytes()).hexdigest()
+    if got != want:
+        raise RuntimeError(f"{path}: sha256 {got[:12]} != the attestation's {want[:12]}")
+    engines = json.loads(p.read_text())["engines"]
+    if C.composite_canary(engines) != att["canary_reference"]:
+        raise RuntimeError(
+            "the committed per-engine canaries do not form the attestation's composite reference"
+        )
+    return {"path": path, "sha256": got, "engines": engines}
+
+
+def resume_canaries(
+    engines: dict, parity_evidence: dict, committed: dict, composite_ref: str
+) -> dict:
+    """B1/C2: on resume every observed per-engine canary must equal the committed reference AND the new parity
+    instance's GPU-0 value, ``hf_gen`` must equal ``COMMITTED_HF``, and the composite must equal the persisted
+    reference (the contract is kept; no new reference is minted)."""
+    from wsp.wm.c1 import ctl as C
+
+    cross = cross_instance_canaries(engines, parity_evidence)
+    pairs = {}
+    for eng, h in sorted(engines.items()):
+        pairs[eng] = {
+            "main": h,
+            "committed": committed.get(eng),
+            "parity_gpu0": cross["pairs"][eng]["parity_gpu0"],
+            "equal": h == committed.get(eng) and cross["pairs"][eng]["equal"],
+        }
+    hf_ok = "hf_gen" not in engines or engines["hf_gen"] == COMMITTED_HF
+    comp = C.composite_canary(engines)
+    return {
+        "pairs": pairs,
+        "hf_gen_eq_committed": hf_ok,
+        "composite": comp,
+        "composite_eq_persisted": comp == composite_ref,
+        "pass": bool(pairs)
+        and all(p["equal"] for p in pairs.values())
+        and hf_ok
+        and comp == composite_ref,
+    }
