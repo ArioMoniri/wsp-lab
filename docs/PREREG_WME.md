@@ -4332,3 +4332,36 @@ file. The stored record is unchanged. Regression test: `test_unitstore_concurren
 
 **Observation O1 (no change).** R8 gives no raise once every remaining phase has overrun its price (the priced
 remainder is 0). That is mechanical and outcome-blind, a liveness cost only. No floor is registered.
+
+### II.31.10 Note (21 Nov 2026): run-health additions after the bank halt (engineering, outcome-blind)
+
+**Context.** This note is appended before any sealed read, and no confirmatory result exists yet. It records
+run-health machinery added after the bank-phase halt and the resume hang.
+
+**Rulings.** These are set out in `docs/council/2026-11-21/RULING-wme-c1-bank-halt.md`, together with Board A's
+reviews `board-a-wme-c1-v2r-2026-11-21.md`, B1 and C2–C5.
+
+**Canaries**
+- HF canaries and non-unit generation checks run in fresh child processes (K1).
+- An error inside a canary is a run-health incident (K2).
+
+**Field and vocabulary repair**
+- The field repair is verified bitwise (K3).
+- The vocabulary field is verified indirectly through every completed vocabulary-dependent unit (K3b and C3).
+- Re-collected fields go to quarantine (C4).
+- A field gate runs before the bank stages (C5).
+- `phasel-main --resume` keeps the existing contract. It never rewrites the attestation (B1).
+- The HF-generate canary must equal the committed reference `7299ac4f…` on every instance (C2).
+
+**Fail-fast (FF)**
+- **Two new incident kinds.** `request_rejected` (stale epoch, fenced while running, malformed) and
+  `request_deadline`.
+- **Deadline table.** Every request kind has a response deadline in `src/wsp/wm/c1/deadlines.py`:
+  - units: 8× the registered per-unit estimate;
+  - checks: hello 10 min, canary and timing 30 min, inert identity and parity 1 h.
+- **No attempt consumed.** Both kinds use the existing incident-abort path and consume no attempt.
+
+**Provenance.** The instance's NVIDIA driver is recorded in the evidence. This is informational only; the canary
+comparison stays binding.
+
+**Scope.** No claim, test, α, N, margin, seed, price rule, cap or stopping rule changes.
