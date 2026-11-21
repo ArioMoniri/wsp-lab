@@ -88,6 +88,154 @@ class Controller:
             fn=fn,
         )
 
+    # ------------------------------------------------------------------ K3 field repair (no unit result)
+    def repair_field(
+        self, manifest, roots_rec, field_groups=range(8), vocab=True, commit=""
+    ) -> dict:
+        """RULING-wme-c1-bank-halt K3 + K3b: re-materialise the field on this instance, verified bitwise.
+
+        * Field groups: their re-collected data-level hashes must equal each eligible payload's.
+        * The vocabulary unit: directly if its payload records data hashes; otherwise (K3b) re-collected and verified
+          through the earliest completed, eligible bank unit whose result depends on the vocabulary field
+          (``fieldrepair.vocab_dependent``), re-run as a non-unit ``bank_verify`` request: its timing-free payload
+          hash (and its R vectors) must equal the eligible payload's.
+
+        Refuses before any GPU work if a payload is missing / not eligible / unverifiable, or if K3b finds no
+        completed dependent unit; halts with an incident on the first mismatch; nothing is substituted. Success is
+        one ``repair`` record naming the verifying unit. Never calls ``run_units``: no attempt, no unit result."""
+        from wsp.wm import runguard as RG
+        from wsp.wm.c1 import fieldrepair as FR
+
+        g = self.guard("bank")
+        store = self.study.store("bank")
+        units = SD.bank_units(manifest, roots_rec, field_groups, vocab)
+        eligible = {}
+        for recipe, label in units:
+            res = g.resolve(store, self.study.key(recipe))
+            if res is None or (isinstance(res, dict) and res.get("fallback")):
+                g.incident(
+                    "field_repair_unverifiable", {"label": label, "reason": "no eligible payload"}
+                )
+                raise FR.FieldRepairUnverifiable(f"{label}: no eligible payload to verify against")
+            eligible[label] = (recipe["kind"], res)
+        pl = FR.plan(eligible)
+        if pl["unverifiable"]:
+            g.incident(
+                "field_repair_unverifiable",
+                {
+                    "labels": pl["unverifiable"],
+                    "reason": "the eligible payload records no data-level hash",
+                },
+            )
+            raise FR.FieldRepairUnverifiable(f"cannot verify bitwise: {pl['unverifiable']}")
+        verifier = None
+        if pl[
+            "indirect"
+        ]:  # K3b: the earliest completed, eligible unit that depends on the vocabulary field
+            verifier = self._vocab_verifier(g, store, manifest, roots_rec)
+            if verifier is None:
+                g.incident(
+                    "field_repair_unverifiable",
+                    {
+                        "labels": pl["indirect"],
+                        "reason": "K3b: no completed eligible unit depends on the vocabulary",
+                    },
+                )
+                raise FR.FieldRepairUnverifiable(
+                    f"{pl['indirect']}: no completed eligible unit depends on the vocabulary field (K3b)"
+                )
+        out, recollected = [], {}
+        for recipe, label in units:
+            got, _d = self.remote.call(
+                "field_repair", g.epoch, g.instance, self.study.key(recipe), label, dict(recipe["args"]),
+                timeout_s=7200,
+            )  # fmt: skip
+            recollected[label] = {k: got.get(k) for k in ("file_sha256", "kept_sha256")}
+            if label in pl["indirect"]:
+                self.log("field repair", label, "re-collected (verified through K3b)")
+                continue
+            cmp_ = FR.compare(label, pl["expected"][label], FR.observed(recipe["kind"], got))
+            out.append(cmp_)
+            self.log("field repair", label, "equal" if cmp_["equal"] else "MISMATCH")
+            if not cmp_["equal"]:
+                g.incident("field_repair_mismatch", cmp_)
+                raise FR.FieldRepairMismatch(
+                    f"{label}: re-collected field differs from its eligible payload"
+                )
+        vocab_rec = None
+        if verifier is not None:
+            vrecipe, vlabel, vpayload = verifier
+            got, _d = self.remote.call(
+                "bank_verify", g.epoch, g.instance, self.study.key(vrecipe), f"verify:{vlabel}",
+                {"kind": vrecipe["kind"], "args": vrecipe["args"]}, timeout_s=7200,
+            )  # fmt: skip
+            want_h, got_h = FR.timing_free_sha(vpayload), FR.timing_free_sha(got)
+            r_equal = FR.r_vectors(vpayload) == FR.r_vectors(got)
+            vocab_rec = {
+                "verifying_unit": vlabel,
+                "eligible_payload_sha256": RG._digest(vpayload),
+                "timing_free_sha256": {"eligible": want_h, "rerun": got_h},
+                "r_vectors_equal": r_equal,
+                "recollected_vocab": recollected.get("field:vocab"),
+            }
+            self.log(
+                "field repair K3b", vlabel, "equal" if (want_h == got_h and r_equal) else "MISMATCH"
+            )
+            if want_h != got_h or not r_equal:
+                g.incident("field_repair_mismatch", {"label": vlabel, **vocab_rec})
+                raise FR.FieldRepairMismatch(
+                    f"{vlabel}: the K3b re-run differs from its eligible payload (vocabulary not accepted)"
+                )
+        desc = (
+            f"field re-materialised on {g.instance} (K3): {len(out)} units verified bitwise against their eligible "
+            "payloads"
+        )
+        if vocab_rec:
+            desc += (
+                f"; vocabulary verified indirectly (K3b) through {vocab_rec['verifying_unit']} "
+                f"(timing-free payload sha256 {vocab_rec['timing_free_sha256']['eligible']}, R vectors equal)"
+            )
+        g.retry.repair(
+            "infrastructure",
+            desc + "; no unit result created",
+            commit or "unknown",
+            outcome_blind=True,
+        )
+        res = {"verified": len(out), "units": out, "vocab": vocab_rec, "instance": g.instance}
+        self.save("field_repair", res)
+        return res
+
+    def _vocab_verifier(self, g, store, manifest, roots_rec):
+        """The earliest (by its eligible ``attempt_ok``) completed bank-state unit whose result depends on the
+        vocabulary field, with its eligible payload; None if there is none. The recipe is rebuilt with the
+        registered ``bank_state_units`` from the eligible bank base, so its unit key equals the recorded one."""
+        from wsp.wm import runguard as RG
+        from wsp.wm.c1 import fieldrepair as FR
+
+        base = g.resolve(
+            store, self.study.key({"kind": "bank_base", "args": {}, "label": "bank:base"})
+        )
+        if base is None:
+            return None
+        roots = {r["id"]: r for r in roots_rec["roots"]}
+        roots.update(
+            {c["id"]: {**c, "family": "proj_remove_control"} for c in roots_rec.get("controls", [])}
+        )
+        state = RG.read_study(self.study.state)
+        cands = []
+        for recipe, label in SD.bank_state_units(manifest, roots_rec, base):
+            if not FR.vocab_dependent(recipe, roots):
+                continue
+            key = self.study.key(recipe)
+            ok = [a for a in state.ok.get(key, []) if state.status(a) == "eligible"]
+            payload = g.resolve(store, key)
+            if ok and isinstance(payload, dict) and not payload.get("fallback"):
+                cands.append((ok[0]["seq"], recipe, label, payload))
+        if not cands:
+            return None
+        _seq, recipe, label, payload = min(cands, key=lambda c: c[0])
+        return recipe, label, payload
+
     # ------------------------------------------------------------------ bank
     def stage_bank(
         self,

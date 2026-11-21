@@ -242,36 +242,50 @@ def h_hello(rt: Runtime, req, ctx):
 
 def h_canary(rt: Runtime, req, ctx):
     """Per-engine canaries (``genengine.canary_engines``): ``tf``; ``hf_gen`` (C1(a)) or, under the C1(b) engine,
-    ``vllm_gen`` (a second vLLM block: the 64 items at the E1 generation settings); ``vllm`` (stage-W, 2,048)."""
+    ``vllm_gen`` (a second vLLM block: the 64 items at the E1 generation settings); ``vllm`` (stage-W, 2,048).
+
+    RULING-wme-c1-bank-halt K1: the worker first releases all its GPU state (model, field and R-cache tensors);
+    the teacher-forced and HF canaries then run in a fresh child process (``wm.c1.hfchild``), the vLLM ones in the
+    vLLM child as before. No canary shares a process with bank-phase tensors."""
     from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import hfchild as HC
     from wsp.wm.c1 import vllmops as VO
 
-    m = rt.hf()
-    t0 = time.time()
-    eng = {"tf": m.canary_tf(MO.tf_canary_items(MO.PANEL_P2))}
     vllm_gen = GE.GEN_ENGINE == "vllm"
-    if not vllm_gen:
-        eng["hf_gen"] = m.canary_hf(MO.gen_canary_items())
-    elif not rt.cfg.vllm:
+    if vllm_gen and not rt.cfg.vllm:
         raise RuntimeError(
             "generation engine 'vllm' needs the vLLM engine (worker started with --no-vllm)"
         )
-    tok = m.tok
+    rt.release()
+    t0 = time.time()
+    child = HC.spawn(HC.job(rt, [{"op": "canary", "hf": not vllm_gen}]), ctx.scratch / "hfchild")
+    eng = dict(child["canary"])
     ctx.check()
     t1 = time.time()
-    detail = {"tf_hf_seconds": t1 - t0, "gen_engine": GE.GEN_ENGINE}
+    detail = {"tf_hf_seconds": t1 - t0, "gen_engine": GE.GEN_ENGINE, "child": True}
     if rt.cfg.vllm:
-        rt.release()
         prompts = _gen_canary_prompts(rt)
         job = VO.canary_job(rt.cfg.repo, prompts, smoke=rt.cfg.smoke)
         if vllm_gen:
-            job["blocks"].append(GE.vllm_block("vllm_gen", tok, _gen_canary_user_prompts()))
+            job["blocks"].append(
+                GE.vllm_block("vllm_gen", _canary_tokenizer(rt), _gen_canary_user_prompts())
+            )
         out = VO.spawn(job, ctx.scratch / "vllm")
         eng["vllm"] = out["blocks"][0]["ids_sha256"]
         if vllm_gen:
             eng["vllm_gen"] = out["blocks"][1]["ids_sha256"]
         detail["vllm_seconds"] = out["seconds"]
     return {"engines": eng, "detail": detail}, {}
+
+
+def _canary_tokenizer(rt: Runtime):
+    from transformers import AutoTokenizer
+
+    from wsp.wm import hf
+
+    return AutoTokenizer.from_pretrained(
+        str(hf.snapshot_dir(rt.cfg.repo, hf.TARGETS[rt.cfg.repo])), local_files_only=True
+    )
 
 
 def _gen_canary_user_prompts():
@@ -377,8 +391,10 @@ def h_field_vocab(rt: Runtime, req, ctx):
     )
     rt._field = None
     rt._rc = None
+    man = json.loads((d / "manifest.json").read_text())
     return {
         "manifest_sha256": hashlib.sha256((d / "manifest.json").read_bytes()).hexdigest(),
+        "file_sha256": man["file_sha256"],  # data-level hashes (the manifest embeds wall times; K3)
         "seconds": time.time() - t0,
     }, {}
 
@@ -406,8 +422,27 @@ def h_rstats(rt: Runtime, req, ctx):
     return {"rcache": rt.rcache().stats() if rt._rc is not None else None}, {}
 
 
+def h_field_repair(rt: Runtime, req, ctx):
+    """RULING-wme-c1-bank-halt K3: re-collect one field unit (a group, or the vocabulary rows) on this instance with
+    the registered handler; a non-unit request (the controller verifies the hashes; no unit result)."""
+    a = req["args"]
+    if "group" in a:
+        return h_field_group(rt, req, ctx)
+    return h_field_vocab(rt, req, ctx)
+
+
+def h_bank_verify(rt: Runtime, req, ctx):
+    """RULING-wme-c1-bank-halt K3b: re-run a completed bank unit (side / composition / inert) with the
+    re-collected field as a verification computation; a non-unit request (no unit result)."""
+    a = req["args"]
+    fn = {"bank_side": h_bank_side, "bank_comp": h_bank_comp, "bank_inert": h_bank_inert}[a["kind"]]
+    return fn(rt, {"args": a["args"]}, ctx)
+
+
 HANDLERS = {
     "hello": h_hello,
+    "field_repair": h_field_repair,
+    "bank_verify": h_bank_verify,
     "canary": h_canary,
     "field_group": h_field_group,
     "field_vocab": h_field_vocab,

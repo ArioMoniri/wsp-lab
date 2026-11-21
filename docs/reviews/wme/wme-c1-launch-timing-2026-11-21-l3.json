@@ -1,0 +1,13 @@
+{
+ "P_bank_gpu_h": 4.530551290639242,
+ "engine_config_sha256": "cd2b3496537492b9813e66c79bd013cea7fcd98919c8c187c99f96f86ea35f2e",
+ "label": "PREREG_WME \u00a7II.30 re-pricing inputs (synthetic matrices; outcome-blind)",
+ "rule": "P_bank = 4.1268 + (192 t_eigh(12288) + 576 t_eigh(4096) + 13095 x 6 t_contract) / 3600",
+ "timing": {
+  "contraction_s": 0.012081146240234375,
+  "eigh_12288_s": 1.9858548641204834,
+  "eigh_4096_s": 0.21355009078979492,
+  "rank_12288": 1999,
+  "rank_4096": 1905
+ }
+}

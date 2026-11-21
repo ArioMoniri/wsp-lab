@@ -20,6 +20,7 @@ import os
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 from wsp.wm.c1 import modelops as MO
 from wsp.wm.c1.serve import HANDLERS
@@ -44,16 +45,18 @@ def _inert_endpoints(rt, m):
     return out
 
 
-@register("inert_identity")
-def h_inert_identity(rt, req, ctx):
+def inert_hf_rows(rt, scratch) -> dict:
+    """The HF part of the pinned-engine inert identity (teacher-forced and, under C1(a), HF generation at every
+    inert endpoint; the realised tensors saved for the vLLM rows). Runs INSIDE the hfchild process (K1)."""
     import torch
 
     from wsp.wm.c1 import genengine as GE
-    from wsp.wm.c1 import vllmops as VO
 
+    scratch = Path(scratch)
+    scratch.mkdir(parents=True, exist_ok=True)
     m = rt.hf()
     m.at_base()
-    hf_gen = GE.GEN_ENGINE != "vllm"  # under C1(b) the generation identity is the vLLM rows below
+    hf_gen = GE.GEN_ENGINE != "vllm"  # under C1(b) the generation identity is the vLLM rows
     tf_items = MO.tf_canary_items(MO.PANEL_P2)
     gen_items = MO.gen_canary_items()
     base_tf = m.canary_tf(tf_items)
@@ -83,9 +86,9 @@ def h_inert_identity(rt, req, ctx):
                         L = m.rm.layer_of(n)
                         role = "down" if "down_proj" in n else "o"
                         tensors[(L, role)] = m.sess.params[n].detach().cpu().clone()
-                p = ctx.scratch / f"inert_{len(vllm_states)}.pt"
+                p = scratch / f"inert_{len(vllm_states)}.pt"
                 torch.save(tensors, p)
-                vllm_states.append((spec, str(p)))
+                vllm_states.append([spec, str(p)])
         finally:
             m.restore()
         rows.append(
@@ -99,7 +102,26 @@ def h_inert_identity(rt, req, ctx):
                 "hf_bitwise_base": None if hf is None else hf == base_hf,
             }
         )
-        ctx.check()
+    return {"base": {"tf": base_tf, "hf_gen": base_hf}, "rows": rows, "vllm_states": vllm_states}
+
+
+@register("inert_identity")
+def h_inert_identity(rt, req, ctx):
+    """Pinned-engine inert identity. K1: the worker releases its GPU state; the HF part runs in a fresh child
+    (``inert_hf_rows``); the vLLM rows in the vLLM child."""
+    from wsp.wm.c1 import hfchild as HC
+    from wsp.wm.c1 import vllmops as VO
+
+    rt.release()
+    out = HC.spawn(
+        HC.job(rt, [{"op": "inert", "scratch": str(ctx.scratch / "inert")}]),
+        ctx.scratch / "hfchild",
+    )
+    inert = out["inert"]
+    rows, vllm_states = inert["rows"], [tuple(x) for x in inert["vllm_states"]]
+    base_tf, base_hf = inert["base"]["tf"], inert["base"]["hf_gen"]
+    gen_items = MO.gen_canary_items()
+    ctx.check()
     vrows = []
     if rt.cfg.vllm:
         from wsp.wm import p3gen as G
@@ -226,10 +248,13 @@ def h_parity(rt, req, ctx):
     k2 = {i: (k1[i] if i % 2 == 0 else g1["chunks"][str(i)]) for i in range(n)}
     gpu1_all = {i: g1["chunks"][str(i)] for i in range(n)}
     from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import hfchild as HC
 
-    eng0 = {"tf": m.canary_tf()}
-    if GE.GEN_ENGINE != "vllm":
-        eng0["hf_gen"] = m.canary_hf()
+    # K1: the GPU-0 canaries in a fresh child after the worker released its GPU state
+    rt.release()
+    eng0 = HC.spawn(
+        HC.job(rt, [{"op": "canary", "hf": GE.GEN_ENGINE != "vllm"}]), ctx.scratch / "hfchild"
+    )["canary"]
     res = {
         "chunks_k1": k1,
         "chunks_k2": k2,
@@ -293,26 +318,27 @@ if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[1] == "gpu1":
 def h_gen_repeat(rt, req, ctx):
     """§II.31 C1(a) Phase L check on one GPU: ``n`` (3) runs of the hf_gen canary under the deterministic engine,
     then one run of the registered (non-deterministic) path for the throughput ratio only (its hash is recorded,
-    never used as a reference). Exposed canary items only."""
+    never used as a reference). Exposed canary items only. K1: all runs in one fresh child process after the worker
+    released its GPU state."""
     from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import hfchild as HC
 
     n = int((req.get("args") or {}).get("n", 3))
-    m = rt.hf()
-    items = MO.gen_canary_items()
-    det = []
-    for _ in range(n):
-        h, s = m.canary_hf_timed(items, mode="hf_deterministic")
-        det.append({"sha256": h, "seconds": s})
-        ctx.check()
-    h_reg, s_reg = m.canary_hf_timed(items, mode="hf_registered")
+    rt.release()
+    out = HC.spawn(HC.job(rt, [{"op": "gen_repeat", "n": n}]), ctx.scratch / "hfchild")[
+        "gen_repeat"
+    ]
+    det, reg = out["deterministic"], out["registered"]
+    ctx.check()
     t_det = sorted(r["seconds"] for r in det)[len(det) // 2]
     return {
         "deterministic": det,
-        "registered": {"sha256": h_reg, "seconds": s_reg},
+        "registered": reg,
         "repeat_bitwise": len({r["sha256"] for r in det}) == 1,
         "t_det_median_s": t_det,
-        "throughput_ratio": t_det / s_reg,
+        "throughput_ratio": t_det / reg["seconds"],
         "engine": GE.config("hf_deterministic"),
+        "child": True,
     }, {}
 
 

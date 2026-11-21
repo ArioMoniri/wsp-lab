@@ -84,6 +84,8 @@ GPU_KINDS = (
     "gen_repeat",
     "timing",
 )
+# non-unit requests on the GPU: the K3 field repair (RULING-wme-c1-bank-halt)
+GPU_KINDS = (*GPU_KINDS, "field_repair", "bank_verify")
 CPU_KINDS = ("fit", "e2_arm", "theta_of", "describe", "edit_bundles", "rstats", "hello")
 KIND_CLASS = {**dict.fromkeys(GPU_KINDS, "gpu"), **dict.fromkeys(CPU_KINDS, "cpu")}
 TRACE_RE = re.compile(
