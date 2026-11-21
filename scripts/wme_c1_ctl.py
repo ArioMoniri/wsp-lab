@@ -677,16 +677,17 @@ def cmd_phasel_resume(a):
     st = SD.Study(STUDY, RUNS, att, MO_theta0(), PANEL_ID, log=log)
     g = st.guard("bank", inst)
     tr.set_fence(g.epoch, inst)
-    hello, _ = rem.call("hello", 0, inst, "m" * 64, "hello", {})
+    # every request after the fence carries the owner epoch: the worker rejects older ones as stale (run4 halt)
+    hello, _ = rem.call("hello", g.epoch, inst, "m" * 64, "hello", {})
     if hello.get("gen_engine") != GE.config():
         raise SystemExit("PRECONDITION FAILED: the worker's generation engine is not the recorded one")
     cs = code_and_state(hello, a.iid)
     require_code_and_state(cs)
-    inert, _ = rem.call("inert_identity", 0, inst, "n" * 64, "inert", {}, timeout_s=7200)
+    inert, _ = rem.call("inert_identity", g.epoch, inst, "n" * 64, "inert", {}, timeout_s=7200)
     log("inert identity pass:", inert["pass"])
     if not inert["pass"]:
         raise SystemExit("PRECONDITION FAILED: pinned-engine inert identity")
-    can, _ = rem.call("canary", 0, inst, "o" * 64, "canary-resume", {}, timeout_s=7200)
+    can, _ = rem.call("canary", g.epoch, inst, "o" * 64, "canary-resume", {}, timeout_s=7200)
     eng = can["engines"]
     if set(eng) != GE.canary_engines():
         raise SystemExit(f"PRECONDITION FAILED: canary engines {sorted(eng)}")
@@ -695,7 +696,7 @@ def cmd_phasel_resume(a):
     if not rc["pass"]:
         g.incident("canary_mismatch", {"where": "phasel-main --resume", **rc})
         raise SystemExit(f"INCIDENT: resume canaries differ from the committed references {rc['pairs']}")
-    tim, _ = rem.call("timing", 0, inst, "t" * 64, "timing", {}, timeout_s=7200)
+    tim, _ = rem.call("timing", g.epoch, inst, "t" * 64, "timing", {}, timeout_s=7200)
     tag = f"{utc_date()}-{a.tag}"
     common = {"engine_config_sha256": ecs, "instance": inst, "contract": contract, "resume": True}
     paths = []
