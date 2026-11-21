@@ -325,7 +325,7 @@
   "c6_note": "docs/council/2026-11-21/RULING-wmm-prereg.md addendum"
  },
  "code_sha256": {
-  "src/wsp/wm/wmm/prereg.py": "283e976be51b958d5a66867d3a57701af3d9b211efb047daa2ef77819ad3253e",
+  "src/wsp/wm/wmm/prereg.py": "e31e40a6691f7281904372119f3e69487a223284da95ef642a674bd3bc718592",
   "src/wsp/wm/wmm/powersim.py": "969137846d56f7edbe2c11314ead992187726a9021400c9efd5377e8f6567df8",
   "src/wsp/wm/wmm/provenance.py": "a49f7c696273125acc9561f102546eea5852b41aeb90a1a92b95241d8091cca7",
   "src/wsp/wm/wmm/canary.py": "0b8233746bdb23466b8c46e18f2b1b13bc37fb1fa26cac8c262b97223f25814f",
@@ -337,5 +337,5 @@
   "scripts/wmm_powersim.py": "9c7d0f7103da07c147a88a0422993fa61e2980ccbf4175b7f7114932b4f8e7e5",
   "scripts/wmm_gcal_calibration.py": "9670b26aa69a37a0620e8ff79a24d90a0f2c3e48d4b3ce7a877edfaaf80e63bb"
  },
- "git_sha_at_build": "f0b8f7ebf349c94be2882926467995ac1807720c"
+ "git_sha_at_build": "9bc0760c162e70e55d505a017a921aba93b7de83"
 }

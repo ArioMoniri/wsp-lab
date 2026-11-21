@@ -90,7 +90,8 @@
 - **Gate 0b:** 71.0 % on fresh MedQA dev under the frozen harness.
 - **Gate 1:** no accuracy edit was positive. The sycophancy LoRA reduced adoption by 8.5 pp (2.8–14.2) at λ 1.
 
-**Draft 1 (`0a4cabe`) was rejected by Board A as confirmatory.** It failed its own power rule.
+**Draft 1 was rejected by Board A as confirmatory.** It failed its own power rule. On this branch it is commit
+`e02868a`, the rebased form of `0988b3c`; both are content-identical to the reviewed `e502aed` (FC3).
 
 **F1 identity (Board A; Gate 1 exposed data, syc_lora@1 vs `base_s`, 456 items parsed in both).** The draft-1 Brier
 guard, on letters read *after the model's own reasoning*, is −Δaccuracy:

@@ -53,7 +53,7 @@ MTE = {
     "lambda": 1.0,
     "short_max_tokens": 256,
     "budgets_low": [512, 1024],
-    "pool_n": 512,  # first 512 of the sealed pool_mte (wmm-p1 rank order); halved under the 30 GPU-h cap (W3)
+    "pool_n": 512,  # first 512 of the sealed pool_mte (wmm-p1 rank order); halved in W3; kept at 512 under the 42 GPU-h cap (addendum)
     "rewrite_prompt": (
         "Here is a worked answer to a multiple-choice medical question. Rewrite it as a short answer of at most "
         '150 words that keeps only the essential reasoning, and end with the line "Final Answer: (X)" where X is '
@@ -416,6 +416,7 @@ def mte_claim(data: dict, g, alpha_f: float) -> dict:
     keep = (te == 0) & (tb == 0)
     ni = paired_binary(ce[keep], cb[keep], GUARD_ALPHA)
     out = {
+        "status": STATUS,
         "tokens": {
             **tok,
             "pass": tok["ub"] < 0,

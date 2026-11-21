@@ -169,6 +169,7 @@ def test_mte_claim_conditions():
     data = {"base": (c_base, base_len, t0), "edit": (c_edit, edit_len, t0)}
     c = P.mte_claim(data, _guards(rng), alpha_f=0.0125)
     assert c["tokens"]["pass"] and c["low_budget"]["pass"] and c["pass"], c
+    assert c["status"] == "EXPLORATORY"  # FC4
     assert set(c["low_budget"]["passing_budgets"]) <= {512, 1024}
     same = {"base": data["base"], "edit": data["base"]}
     assert not P.mte_claim(same, _guards(rng), alpha_f=0.0125)["pass"]
