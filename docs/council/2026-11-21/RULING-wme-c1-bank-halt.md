@@ -153,3 +153,32 @@ The chair chooses between them after T2. Any extra dollar cost counts toward the
 - Recompute the bank.
 
 This is outcome-blind: the bank is construction data, nothing sealed has been read, and no claim outcome exists.
+
+## Addendum 4 (21 Nov 2026): T2 passed; persistence option (ii); T4 specification
+
+**Input:** `docs/reviews/wme/wme-c1-transition-prep-2026-11-21.md`, at commit `4fc91d6`.
+- **T1.** `1addc266` was reconciled at 0.502 h. The study ledger now equals the dead-man total, 9.607 GPU-h-eq.
+- **T2.** Collection under the project's existing deterministic settings was bitwise reproducible in 3 of 3 runs. No
+  kernel raised and none was substituted.
+
+**P. Persistence: option (ii), approved.**
+- Keep one instance alive from field collection through the end of S-BoN.
+- No filesystem is created. That keeps launches free to use any region, and avoids an unapproved dollar cost.
+- **If the instance is lost:** re-collect the field deterministically, then do a normal bitwise K3 repair against the
+  hashes recorded in the transition contract.
+
+**T4. Contract transition.** Implement it with TDD; Board A does a quick check before it runs.
+
+1. **Field collection runs under the deterministic context.** This is the existing `deterministic()` context manager,
+   with R11 restore semantics. It applies to field and vocabulary collection only. Every other unit and engine keeps
+   its registered settings, and global state must be restored afterwards. A test covers this.
+2. **Contract transition** under the registered guard mechanism:
+   - every bank-phase unit and every field unit is superseded;
+   - the open incident `field_repair_mismatch` (seq 277) is resolved by the transition record, which cites this ruling;
+   - the new field's per-file hashes are recorded in the first new field payloads, which supports later K3 repair.
+3. **Timing first.** Run one full deterministic collection of g0 across all six objectives. Report the slowdown
+   against the registered collection, with wikitext's long sequences as the known risk. If the projection then goes
+   over the 110 cap, R8 applies and the user is told.
+4. **Recovery path.** A lost instance triggers deterministic re-collection plus bitwise K3. Both are tested.
+5. **New commit.** Because the code changes, a parity run on the new clean commit is required. The canary reference
+   stays `7299ac4f…`.
