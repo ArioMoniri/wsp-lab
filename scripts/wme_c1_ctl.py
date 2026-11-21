@@ -320,6 +320,37 @@ def write_evidence(name, obj) -> tuple[str, str]:
         return str(p), h
 
 
+def commit_evidence(paths: list, message: str):
+    """git add + commit of run evidence (the commit hooks apply)."""
+    subprocess.run(["git", "add", *paths], cwd=ROOT, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", message], cwd=ROOT, check=True)
+
+
+def study_exists() -> bool:
+    return (RUNS / "attestation.json").exists() or (STUDY / RG.LOG_NAME).exists()
+
+
+def backup_attestation() -> Path | None:
+    """Board A B1: a copy of attestation.json before any step that could write; never overwritten."""
+    src = RUNS / "attestation.json"
+    if not src.exists():
+        return None
+    dst = RUNS / f"attestation.json.bak-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}"
+    if not dst.exists():
+        shutil.copy2(src, dst)
+    return dst
+
+
+def write_attestation_once(att) -> None:
+    """The first launch only: attestation.json is written once and never overwritten (Board A B1)."""
+    p = RUNS / "attestation.json"
+    if p.exists():
+        raise SystemExit("REFUSED: attestation.json exists; a launch never rewrites it (use phasel-main --resume)")
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(json.dumps(RG._att_fields(att), indent=1))
+    tmp.replace(p)
+
+
 def instance_record(iid: str) -> dict:
     p = RUNS / "instances" / f"{iid}.json"
     return json.loads(p.read_text()) if p.exists() else {}
@@ -382,7 +413,13 @@ def cmd_phasel_parity(a):
         s_l = LO.deadman_gpu_h(dm.state())  # all Phase L check instances so far, this one to now
         cap = cap_state()[0]
         g_e1 = GE.e1_gen_gpu_h(json.loads((ROOT / "docs/prereg/wme_manifest.json").read_text()))
-        ev = PL.evaluate(checks, GE.GEN_ENGINE, s_l, cap, g_e1)
+        committed_hf = None
+        if (RUNS / "attestation.json").exists():  # C2: a re-run must reproduce the committed hf_gen reference
+            refs = PL.committed_references(json.loads((RUNS / "attestation.json").read_text()))
+            committed_hf = refs["engines"].get("hf_gen")
+            if GE.GEN_ENGINE == "hf_deterministic" and committed_hf != PL.COMMITTED_HF:
+                raise SystemExit(f"the committed hf_gen reference {committed_hf} is not {PL.COMMITTED_HF}")
+        ev = PL.evaluate(checks, GE.GEN_ENGINE, s_l, cap, g_e1, committed_hf=committed_hf)
         path, h = write_evidence(
             f"wme-c1-launch-parity-{utc_date()}-{a.tag}.json",
             {
@@ -446,6 +483,12 @@ def cmd_phasel_main(a):
     from wsp.wm.c1 import genengine as GE
     from wsp.wm.c1 import phasel as PL
 
+    if getattr(a, "resume", False):
+        return cmd_phasel_resume(a)
+    if study_exists():  # Board A B1: a first launch never touches an existing study (before any write)
+        raise SystemExit(
+            "REFUSED: a wme-c1 study already exists (attestation / study log); use phasel-main --resume"
+        )
     ecs = ec_sha()
     par_path = str(Path(a.parity_evidence))
     par = json.loads((ROOT / par_path).read_text())
@@ -538,21 +581,9 @@ def cmd_phasel_main(a):
             f"{cs_path} sha256:{cs_sha}",
         ]
     )
-    subprocess.run(
-        ["git", "add", par_path, inert_path, can_path, ec_path, tim_path, pz_path, cs_path],
-        cwd=ROOT,
-        check=True,
-    )
-    subprocess.run(
-        [
-            "git",
-            "commit",
-            "-q",
-            "-m",
-            "wme-c1 launch: committed per-engine canary references, pinned-engine inert identity, parity evidence and engine config (before any confirmatory unit)",
-        ],
-        cwd=ROOT,
-        check=True,
+    commit_evidence(
+        [par_path, inert_path, can_path, ec_path, tim_path, pz_path, cs_path],
+        "wme-c1 launch: committed per-engine canary references, pinned-engine inert identity, parity evidence and engine config (before any confirmatory unit)",
     )
     att = RG.LaunchAttestation(
         inert_identity_bitwise=True,
@@ -561,7 +592,7 @@ def cmd_phasel_main(a):
         engine_config_sha256=hashlib.sha256(json.dumps(ec, sort_keys=True).encode()).hexdigest(),
         evidence=evidence,
     )
-    (RUNS / "attestation.json").write_text(json.dumps(RG._att_fields(att), indent=1))
+    write_attestation_once(att)
     st = SD.Study(STUDY, RUNS, att, hello["theta0"], PANEL_ID, log=log)
     # bind every phase's registered fallback in the study log before the first unit (precondition 4)
     for ph in ("ste", "sbon", "confirmatory"):
@@ -594,6 +625,127 @@ def cmd_phasel_main(a):
     )
 
 
+def cmd_phasel_resume(a):
+    """Board A B1 (v2r check): resume the EXISTING study on a new main instance under the persisted contract.
+
+    Never writes attestation.json (it is backed up first and its bytes are asserted unchanged at the end), records
+    no contract transition, mints no new canary reference. Order:
+    1. offline: the attestation's contract digest equals the study log's; the engine config is unchanged; the parity
+       evidence is bound to this engine config and this commit (P2) and passed, including C2; the committed
+       per-engine references are read from the attestation's own canary-refs evidence (sha256 verified);
+    2. a new owner (guard) on the persisted contract, then on the new instance: hello (code identity, worker
+       globals), inert identity, the canaries: every engine equal to the committed reference AND the parity GPU 0,
+       hf_gen == 7299ac4f..., the composite == the persisted reference (C2; otherwise a canary_mismatch incident);
+    3. evidence files (run-tagged) and their commit, one registered ``repair`` record naming them (cause
+       infrastructure: the halted instance was replaced), reconciliation of terminated instances not yet reconciled;
+    4. the new instance opened and the start canary passed against the persisted reference.
+    Every eligible unit stays eligible (same contract and generation)."""
+    from wsp.wm.c1 import genengine as GE
+    from wsp.wm.c1 import phasel as PL
+
+    att_p = RUNS / "attestation.json"
+    if not att_p.exists() or not (STUDY / RG.LOG_NAME).exists():
+        raise SystemExit("REFUSED: --resume needs an existing study (attestation.json and the study log)")
+    att_bytes = att_p.read_bytes()
+    att_fields = json.loads(att_bytes)
+    att = load_att()
+    contract = RG.contract_digest(att)
+    state = RG.read_study(STUDY)
+    if state.contract != contract:
+        raise SystemExit(f"REFUSED: attestation contract {contract[:12]} != study log {str(state.contract)[:12]}")
+    ecs = ec_sha()
+    if att.engine_config_sha256 != ecs:
+        raise SystemExit("REFUSED: the engine config differs from the attested one (a resume keeps the contract)")
+    par_path = str(Path(a.parity_evidence))
+    par = json.loads((ROOT / par_path).read_text())
+    PL.check_binding(par, ecs, "parity evidence")
+    head = PL.git("rev-parse", "HEAD")
+    if (par.get("code_identity") or {}).get("controller_commit") != head:  # P2
+        raise SystemExit("PRECONDITION FAILED: the parity evidence was not produced by this commit")
+    ev = par["evaluation"]
+    if not ev["proceed"] or ev["selected_engine"] != GE.GEN_ENGINE:
+        raise SystemExit(f"PRECONDITION FAILED: parity evaluation {ev['selected_engine']} / {ev['proceed']}")
+    if GE.GEN_ENGINE == "hf_deterministic" and ev["pass_rule"].get("hf_gen_eq_committed") is not True:
+        raise SystemExit("PRECONDITION FAILED: the parity run did not reproduce the committed hf_gen reference (C2)")
+    refs = PL.committed_references(att_fields)
+    parsers = PL.parser_check()  # R9
+    if not parsers["pass"]:
+        raise SystemExit(f"PRECONDITION FAILED: gen.parsers check {parsers}")
+    bak = backup_attestation()
+    tr, rem = remote_for("main", a.iid)
+    inst = LO.guard_instance(a.iid)
+    st = SD.Study(STUDY, RUNS, att, MO_theta0(), PANEL_ID, log=log)
+    g = st.guard("bank", inst)
+    tr.set_fence(g.epoch, inst)
+    hello, _ = rem.call("hello", 0, inst, "m" * 64, "hello", {})
+    if hello.get("gen_engine") != GE.config():
+        raise SystemExit("PRECONDITION FAILED: the worker's generation engine is not the recorded one")
+    cs = code_and_state(hello, a.iid)
+    require_code_and_state(cs)
+    inert, _ = rem.call("inert_identity", 0, inst, "n" * 64, "inert", {}, timeout_s=7200)
+    log("inert identity pass:", inert["pass"])
+    if not inert["pass"]:
+        raise SystemExit("PRECONDITION FAILED: pinned-engine inert identity")
+    can, _ = rem.call("canary", 0, inst, "o" * 64, "canary-resume", {}, timeout_s=7200)
+    eng = can["engines"]
+    if set(eng) != GE.canary_engines():
+        raise SystemExit(f"PRECONDITION FAILED: canary engines {sorted(eng)}")
+    rc = PL.resume_canaries(eng, par, refs["engines"], att.canary_reference)
+    log("resume canaries", json.dumps(rc))
+    if not rc["pass"]:
+        g.incident("canary_mismatch", {"where": "phasel-main --resume", **rc})
+        raise SystemExit(f"INCIDENT: resume canaries differ from the committed references {rc['pairs']}")
+    tim, _ = rem.call("timing", 0, inst, "t" * 64, "timing", {}, timeout_s=7200)
+    tag = f"{utc_date()}-{a.tag}"
+    common = {"engine_config_sha256": ecs, "instance": inst, "contract": contract, "resume": True}
+    paths = []
+    for name, obj in (
+        (f"wme-c1-resume-inert-{tag}.json", {**common, "hello": hello, "inert_identity": inert}),
+        (f"wme-c1-resume-canaries-{tag}.json", {**common, "engines": eng, "check": rc, "detail": can.get("detail")}),
+        (f"wme-c1-resume-code-{tag}.json", {**common, **cs, "attestation_backup": str(bak.name) if bak else None}),
+        (f"wme-c1-resume-timing-{tag}.json", {**common, "timing": tim, "note": "recorded only; no re-pricing"}),
+        (f"wme-c1-resume-parsers-{tag}.json", {**common, "gen_parsers_check": parsers}),
+    ):
+        pth, h = write_evidence(name, obj)
+        paths.append((pth, h))
+    commit_evidence(
+        [par_path] + [p for p, _ in paths],
+        f"wme-c1 resume on {inst}: evidence under the persisted contract {contract[:12]} (no new attestation)",
+    )
+    g.retry.repair(
+        "infrastructure",
+        f"resume on {inst} after the bank halt under the persisted contract {contract} (no transition, no new "
+        f"reference): parity {par_path}; evidence "
+        + "; ".join(f"{p} sha256:{h}" for p, h in paths),
+        PL.git("rev-parse", "HEAD"),
+        outcome_blind=True,
+    )
+    dms = json.loads((LO.STATE / "state.json").read_text())
+    done = set(RG.read_study(STUDY).auth)
+    for oid, rec in sorted(dms["instances"].items()):
+        if oid == a.iid or rec.get("confirmed_terminated_at") is None or LO.guard_instance(oid) in done:
+            continue
+        gp = LO.GPUS.get(rec.get("type"), 1)
+        la, te = LO.reconcile(g, LO.STATE, oid, gp)
+        log(f"earlier instance {rec.get('name')} reconciled: {(te - la) / 3600 * gp:.3f} GPU-h-eq")
+    g.open_instance(1)
+    rec = C.run_canary(g, rem)
+    log("start canary (persisted reference)", rec["pass"])
+    if not rec["pass"]:
+        g.incident("canary_mismatch", {"where": "resume start canary", "composite": rec["composite"]})
+        raise SystemExit("INCIDENT: start canary != the persisted reference")
+    if att_p.read_bytes() != att_bytes:
+        raise SystemExit("INTERNAL: attestation.json changed during the resume")
+    print(json.dumps({"resumed": inst, "contract": contract, "canary_reference": att.canary_reference,
+                      "epoch": g.epoch, "report": g.report()}, default=str))  # fmt: skip
+
+
+def MO_theta0() -> str:
+    from wsp.wm.c1 import modelops as MO
+
+    return MO.manifest()["target.theta0_hash"]
+
+
 def load_att():
     d = json.loads((RUNS / "attestation.json").read_text())
     return RG.LaunchAttestation(**d)
@@ -611,6 +763,7 @@ def cmd_run(a):
     st = SD.Study(STUDY, RUNS, att, man["target.theta0_hash"], PANEL_ID, log=log)
     client = lambda role: L.ClaudeCLI(READER_MODEL)
     co = CO.Controller(st, rem, tr, LO.guard_instance(a.iid), 1, log=log, client_factory=client)
+    co.field_inputs = (man, json.loads((ROOT / "data/wme/bank_roots/roots-9b-20261117/roots.json").read_text()))
     roots = json.loads((ROOT / "data/wme/bank_roots/roots-9b-20261117/roots.json").read_text())
     stages = a.stages.split(",")
     saved = lambda s: json.loads((RUNS / "stages" / f"{s}.json").read_text())
@@ -845,6 +998,7 @@ def main():
     m.add_argument("--iid", required=True)
     m.add_argument("--tag", required=True)
     m.add_argument("--parity-evidence", required=True)  # repo-relative path of the bound parity evidence
+    m.add_argument("--resume", action="store_true")  # Board A B1: keep the persisted contract
     m.add_argument("--parity-iid", default=None)
     r = sub.add_parser("run")
     r.add_argument("--iid", required=True)

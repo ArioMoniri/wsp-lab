@@ -86,8 +86,14 @@ GPU_KINDS = (
 )
 # non-unit requests on the GPU: the K3 field repair (RULING-wme-c1-bank-halt)
 GPU_KINDS = (*GPU_KINDS, "field_repair", "bank_verify")
+# non-unit requests reading or moving files (Board A v2r C4, C5)
+CPU_KINDS_EXTRA = ("field_status", "field_quarantine")
 CPU_KINDS = ("fit", "e2_arm", "theta_of", "describe", "edit_bundles", "rstats", "hello")
-KIND_CLASS = {**dict.fromkeys(GPU_KINDS, "gpu"), **dict.fromkeys(CPU_KINDS, "cpu")}
+KIND_CLASS = {
+    **dict.fromkeys(GPU_KINDS, "gpu"),
+    **dict.fromkeys(CPU_KINDS, "cpu"),
+    **dict.fromkeys(CPU_KINDS_EXTRA, "cpu"),
+}
 TRACE_RE = re.compile(
     r"Traceback \(most recent call last\)|^\s*(?:[\w.]+(?:Error|Exception)|CUDA error|RuntimeError)\b[:\s]",
     re.MULTILINE,
@@ -427,7 +433,29 @@ class HealthMonitor:
              "message": str(exc)[:500]},
         )  # fmt: skip
 
+    r_flag_watch = (
+        False  # Board A C3: set when the K3b vocabulary verification covered only part of its rows
+    )
+
     def check_payload(self, guard, recipe: dict, payload):
+        if self.r_flag_watch and isinstance(payload, dict):
+            flags = [
+                (st.get("h"), st.get("R_flags"))
+                for st in payload.get("states", [])
+                if isinstance(st, dict) and st.get("R_flags")
+            ]
+            if flags:
+                self._incident(
+                    guard,
+                    "r_flag_after_partial_vocab_check",
+                    {"kind": recipe.get("kind"), "label": recipe.get("label"), "flags": flags[:10]},
+                )
+                raise PostCompletionError(
+                    f"R flags {flags[:3]} after a partial vocabulary verification (Board A C3)"
+                )
+        self._check_payload_traceback(guard, recipe, payload)
+
+    def _check_payload_traceback(self, guard, recipe: dict, payload):
         if payload_traceback(payload):
             self._incident(
                 guard,

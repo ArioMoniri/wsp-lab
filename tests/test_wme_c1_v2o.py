@@ -185,6 +185,8 @@ PASSING_CS = {
 def main_setup(tmp_path, monkeypatch, engines, commit=None):
     mod = load_ctl()
     monkeypatch.setattr(mod, "EVID", tmp_path)
+    monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")  # a first launch: no existing study
+    monkeypatch.setattr(mod, "STUDY", tmp_path / "runs" / "study")
     ev = {
         "engine_config_sha256": mod.ec_sha(),
         "evaluation": {"proceed": True, "selected_engine": GE.GEN_ENGINE},

@@ -196,6 +196,9 @@ def drive_parity(tmp_path, monkeypatch, c):
     terminated = []
     monkeypatch.setattr(mod, "remote_for", lambda kind, iid: (None, rem))
     monkeypatch.setattr(mod, "EVID", tmp_path)
+    monkeypatch.setattr(
+        mod, "RUNS", tmp_path / "runs"
+    )  # a first launch: no study (never the real data dir)
     monkeypatch.setattr(mod, "cap_state", lambda: (110.0, 106.2, 0))
     dm = types.SimpleNamespace(state=lambda: {"instances": {}})
     monkeypatch.setattr(mod.LO, "deadman", lambda *a, **k: dm)
@@ -251,6 +254,8 @@ def test_r2_phasel_main_refuses_unbound_evidence_and_uses_the_engine_canary_set(
 ):
     mod = load_ctl()
     monkeypatch.setattr(mod, "EVID", tmp_path)
+    monkeypatch.setattr(mod, "RUNS", tmp_path / "runs")  # a first launch: no existing study
+    monkeypatch.setattr(mod, "STUDY", tmp_path / "runs" / "study")
     ev = {
         "engine_config_sha256": "0" * 64,
         "evaluation": {"proceed": True, "selected_engine": GE.GEN_ENGINE},

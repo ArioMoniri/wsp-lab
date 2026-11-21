@@ -382,6 +382,8 @@ class RepairRemote:
 
     def call(self, kind, epoch, inst, uk, label, args, timeout_s=None):
         self.calls.append((kind, label, args))
+        if kind == "field_quarantine":  # Board A C4 (v2s)
+            return {"moved": {}, "dest": None}, None
         if kind == "bank_verify":
             p = side_payload(args["args"]["root"], "pos", k=5)  # different timings, same data
             if self.tamper_r:
@@ -425,7 +427,7 @@ def test_k3b_vocab_is_verified_through_a_completed_dependent_unit(tmp_path, no_i
     rem = RepairRemote(pl)
     out = controller(tmp_path, st, rem, tr, inst).repair_field(MAN, ROOTS, commit="abcdef1")
     kinds = [c[0] for c in rem.calls]
-    assert kinds == ["field_repair"] * 9 + ["bank_verify"]
+    assert kinds == ["field_quarantine"] + ["field_repair"] * 9 + ["bank_verify"]
     assert (
         rem.calls[-1][1] == "verify:side:row_scale:002:pos"
     )  # the earliest completed dependent unit
@@ -435,7 +437,7 @@ def test_k3b_vocab_is_verified_through_a_completed_dependent_unit(tmp_path, no_i
         1.0,
         2.0,
     ]  # the recorded unit's exact args (unit key asserted)
-    assert out["verified"] == 8 and out["vocab"]["verifying_unit"] == "side:row_scale:002:pos"
+    assert out["verified"] == 8 and out["vocab"]["verifying_units"] == ["side:row_scale:002:pos"]
     new = [r["type"] for r in records(tmp_path)[len(before) :]]
     assert "attempt_start" not in new and "attempt_ok" not in new  # no unit result
     rep = [r for r in records(tmp_path) if r["type"] == "repair"]

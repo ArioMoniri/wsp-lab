@@ -133,6 +133,14 @@ class Study:
             cap=CAP,
         )
 
+    def vocab_partially_verified(self) -> bool:
+        """Board A C3: the last field repair verified the vocabulary rows only partially (K3b coverage)."""
+        p = self.runs / "stages" / "field_repair.json"
+        if not p.exists():
+            return False
+        v = json.loads(p.read_text()).get("vocab") or {}
+        return bool((v.get("coverage") or {}).get("partial"))
+
     def skip_stage(self, stage: str, reason: str):
         """Declare a registered §II.18 stage skipped by the registered data flow (R6: through the shared, locked
         monitor state, so the run's own monitor sees it)."""
@@ -196,6 +204,7 @@ class Study:
                     limits=self.health_limits,
                 )
             mon = self.monitor
+            mon.r_flag_watch = self.vocab_partially_verified()  # Board A C3
             fn = mon.wrap_fn(guard, fn)
             canary = mon.wrap_canary(guard, canary)
             on_chunk = lambda rec, n: mon.chunk_summary(guard, rec, n)

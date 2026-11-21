@@ -92,17 +92,20 @@ class Controller:
     def repair_field(
         self, manifest, roots_rec, field_groups=range(8), vocab=True, commit=""
     ) -> dict:
-        """RULING-wme-c1-bank-halt K3 + K3b: re-materialise the field on this instance, verified bitwise.
+        """RULING-wme-c1-bank-halt K3 + K3b, with Board A's v2r conditions C3 and C4: re-materialise the field on this
+        instance from scratch, verified bitwise.
 
-        * Field groups: their re-collected data-level hashes must equal each eligible payload's.
-        * The vocabulary unit: directly if its payload records data hashes; otherwise (K3b) re-collected and verified
-          through the earliest completed, eligible bank unit whose result depends on the vocabulary field
-          (``fieldrepair.vocab_dependent``), re-run as a non-unit ``bank_verify`` request: its timing-free payload
-          hash (and its R vectors) must equal the eligible payload's.
-
-        Refuses before any GPU work if a payload is missing / not eligible / unverifiable, or if K3b finds no
-        completed dependent unit; halts with an incident on the first mismatch; nothing is substituted. Success is
-        one ``repair`` record naming the verifying unit. Never calls ``run_units``: no attempt, no unit result."""
+        * Before any GPU work: every field unit needs an eligible payload; field groups need their data-level hashes;
+          a vocabulary payload without them needs at least one completed eligible dependent unit (K3b).
+        * C4: any field already on disk is quarantined (moved out of the live path, hashes recorded) first.
+        * Field groups: re-collected; ``file_sha256`` and ``kept_sha256`` must equal each eligible payload's.
+        * K3b + C3: the vocabulary unit is re-collected and verified through EVERY completed eligible unit whose
+          result depends on the vocabulary field, each re-run as a non-unit ``bank_verify``: timing-free payload
+          sha256 and R vectors equal. The covered rows against the declared rows are recorded; a partial coverage
+          arms the R-flag watch for later units.
+        * C4: on any mismatch the re-collected field is quarantined before the incident is recorded and the run
+          halts. Nothing is substituted; no ``run_units``, no attempt, no unit result. Success: one ``repair`` record
+          naming the instance and every verifying unit."""
         from wsp.wm import runguard as RG
         from wsp.wm.c1 import fieldrepair as FR
 
@@ -128,12 +131,12 @@ class Controller:
                 },
             )
             raise FR.FieldRepairUnverifiable(f"cannot verify bitwise: {pl['unverifiable']}")
-        verifier = None
+        verifiers = []
         if pl[
             "indirect"
-        ]:  # K3b: the earliest completed, eligible unit that depends on the vocabulary field
-            verifier = self._vocab_verifier(g, store, manifest, roots_rec)
-            if verifier is None:
+        ]:  # K3b + C3: every completed eligible unit that depends on the vocabulary field
+            verifiers = self._vocab_verifiers(g, store, manifest, roots_rec)
+            if not verifiers:
                 g.incident(
                     "field_repair_unverifiable",
                     {
@@ -144,6 +147,7 @@ class Controller:
                 raise FR.FieldRepairUnverifiable(
                     f"{pl['indirect']}: no completed eligible unit depends on the vocabulary field (K3b)"
                 )
+        q0 = self._quarantine(g, "before the repair (re-collect from scratch)")
         out, recollected = [], {}
         for recipe, label in units:
             got, _d = self.remote.call(
@@ -158,42 +162,57 @@ class Controller:
             out.append(cmp_)
             self.log("field repair", label, "equal" if cmp_["equal"] else "MISMATCH")
             if not cmp_["equal"]:
-                g.incident("field_repair_mismatch", cmp_)
+                q = self._quarantine(g, f"mismatch in {label}")
+                g.incident("field_repair_mismatch", {**cmp_, "quarantine": q})
                 raise FR.FieldRepairMismatch(
                     f"{label}: re-collected field differs from its eligible payload"
                 )
         vocab_rec = None
-        if verifier is not None:
-            vrecipe, vlabel, vpayload = verifier
-            got, _d = self.remote.call(
-                "bank_verify", g.epoch, g.instance, self.study.key(vrecipe), f"verify:{vlabel}",
-                {"kind": vrecipe["kind"], "args": vrecipe["args"]}, timeout_s=7200,
-            )  # fmt: skip
-            want_h, got_h = FR.timing_free_sha(vpayload), FR.timing_free_sha(got)
-            r_equal = FR.r_vectors(vpayload) == FR.r_vectors(got)
+        if verifiers:
+            roots = self._roots_by_id(roots_rec)
+            checks, covered = [], set()
+            for vrecipe, vlabel, vpayload in verifiers:
+                got, _d = self.remote.call(
+                    "bank_verify", g.epoch, g.instance, self.study.key(vrecipe), f"verify:{vlabel}",
+                    {"kind": vrecipe["kind"], "args": vrecipe["args"]}, timeout_s=7200,
+                )  # fmt: skip
+                want_h, got_h = FR.timing_free_sha(vpayload), FR.timing_free_sha(got)
+                r_equal = FR.r_vectors(vpayload) == FR.r_vectors(got)
+                rec = {
+                    "verifying_unit": vlabel,
+                    "eligible_payload_sha256": RG._digest(vpayload),
+                    "timing_free_sha256": {"eligible": want_h, "rerun": got_h},
+                    "r_vectors_equal": r_equal,
+                }
+                checks.append(rec)
+                self.log(
+                    "field repair K3b",
+                    vlabel,
+                    "equal" if (want_h == got_h and r_equal) else "MISMATCH",
+                )
+                if want_h != got_h or not r_equal:
+                    q = self._quarantine(g, f"K3b mismatch in {vlabel}")
+                    g.incident("field_repair_mismatch", {"label": vlabel, **rec, "quarantine": q})
+                    raise FR.FieldRepairMismatch(
+                        f"{vlabel}: the K3b re-run differs from its eligible payload (vocabulary not accepted)"
+                    )
+                covered |= FR.rows_of(vrecipe, roots)
             vocab_rec = {
-                "verifying_unit": vlabel,
-                "eligible_payload_sha256": RG._digest(vpayload),
-                "timing_free_sha256": {"eligible": want_h, "rerun": got_h},
-                "r_vectors_equal": r_equal,
+                "verifying_units": [c["verifying_unit"] for c in checks],
+                "checks": checks,
+                "coverage": FR.coverage(covered, FR.declared_rows(roots_rec, manifest)),
                 "recollected_vocab": recollected.get("field:vocab"),
             }
-            self.log(
-                "field repair K3b", vlabel, "equal" if (want_h == got_h and r_equal) else "MISMATCH"
-            )
-            if want_h != got_h or not r_equal:
-                g.incident("field_repair_mismatch", {"label": vlabel, **vocab_rec})
-                raise FR.FieldRepairMismatch(
-                    f"{vlabel}: the K3b re-run differs from its eligible payload (vocabulary not accepted)"
-                )
         desc = (
             f"field re-materialised on {g.instance} (K3): {len(out)} units verified bitwise against their eligible "
             "payloads"
         )
         if vocab_rec:
+            cov = vocab_rec["coverage"]
             desc += (
-                f"; vocabulary verified indirectly (K3b) through {vocab_rec['verifying_unit']} "
-                f"(timing-free payload sha256 {vocab_rec['timing_free_sha256']['eligible']}, R vectors equal)"
+                f"; vocabulary verified indirectly (K3b, C3) through {', '.join(vocab_rec['verifying_units'])} "
+                f"(timing-free payload sha256 and R vectors equal; rows covered {cov['covered_rows']} of "
+                f"{cov['declared_rows']} declared{' - PARTIAL: R flags on later units are incidents' if cov['partial'] else ''})"
             )
         g.retry.repair(
             "infrastructure",
@@ -201,14 +220,44 @@ class Controller:
             commit or "unknown",
             outcome_blind=True,
         )
-        res = {"verified": len(out), "units": out, "vocab": vocab_rec, "instance": g.instance}
+        res = {
+            "verified": len(out),
+            "units": out,
+            "vocab": vocab_rec,
+            "instance": g.instance,
+            "quarantine_before": q0,
+            "recollected": recollected,
+        }
         self.save("field_repair", res)
         return res
 
-    def _vocab_verifier(self, g, store, manifest, roots_rec):
-        """The earliest (by its eligible ``attempt_ok``) completed bank-state unit whose result depends on the
-        vocabulary field, with its eligible payload; None if there is none. The recipe is rebuilt with the
-        registered ``bank_state_units`` from the eligible bank base, so its unit key equals the recorded one."""
+    def _quarantine(self, g, why: str) -> dict:
+        """Board A C4: move the worker's on-disk field out of the live path; the hashes are returned and recorded."""
+        q, _d = self.remote.call(
+            "field_quarantine",
+            g.epoch,
+            g.instance,
+            "q" * 64,
+            f"field_quarantine: {why}",
+            {},
+            timeout_s=1800,
+        )
+        if q.get("moved"):
+            self.log("field quarantined", why, q.get("dest"), sorted(q["moved"]))
+        return q
+
+    @staticmethod
+    def _roots_by_id(roots_rec) -> dict:
+        roots = {r["id"]: r for r in roots_rec["roots"]}
+        roots.update(
+            {c["id"]: {**c, "family": "proj_remove_control"} for c in roots_rec.get("controls", [])}
+        )
+        return roots
+
+    def _vocab_verifiers(self, g, store, manifest, roots_rec) -> list:
+        """Every completed bank-state unit (eligible ``attempt_ok``) whose result depends on the vocabulary field, in
+        log order, with its eligible payload (Board A C3). Recipes are rebuilt with the registered
+        ``bank_state_units`` from the eligible bank base, so each unit key equals the recorded one."""
         from wsp.wm import runguard as RG
         from wsp.wm.c1 import fieldrepair as FR
 
@@ -216,11 +265,8 @@ class Controller:
             store, self.study.key({"kind": "bank_base", "args": {}, "label": "bank:base"})
         )
         if base is None:
-            return None
-        roots = {r["id"]: r for r in roots_rec["roots"]}
-        roots.update(
-            {c["id"]: {**c, "family": "proj_remove_control"} for c in roots_rec.get("controls", [])}
-        )
+            return []
+        roots = self._roots_by_id(roots_rec)
         state = RG.read_study(self.study.state)
         cands = []
         for recipe, label in SD.bank_state_units(manifest, roots_rec, base):
@@ -231,10 +277,77 @@ class Controller:
             payload = g.resolve(store, key)
             if ok and isinstance(payload, dict) and not payload.get("fallback"):
                 cands.append((ok[0]["seq"], recipe, label, payload))
-        if not cands:
-            return None
-        _seq, recipe, label, payload = min(cands, key=lambda c: c[0])
-        return recipe, label, payload
+        return [(r, lab, p) for _s, r, lab, p in sorted(cands, key=lambda c: c[0])]
+
+    # ------------------------------------------------------------------ C5: the field gate
+    field_inputs = None  # (manifest, roots_rec) set by the driver; the gate runs whenever it is set
+
+    def require_field(self, g, field_groups=range(8), vocab=True) -> dict:
+        """Board A C5: no unit that reads the field is issued unless the on-disk field on THIS instance is the
+        registered one: either produced here by the eligible field units themselves, or re-materialised here by a
+        successful ``repair_field`` (its record names this instance). The on-disk data hashes must equal the eligible
+        payloads' (the K3b-verified re-collection for a vocabulary payload without data hashes). Refuses with an
+        incident before any attempt otherwise. Before any field unit is eligible (first bank run) there is nothing
+        to check."""
+        from wsp.wm import runguard as RG
+        from wsp.wm.c1 import fieldrepair as FR
+
+        if self.field_inputs is None:
+            return {"mode": "unchecked"}
+        manifest, roots_rec = self.field_inputs
+        units = SD.bank_units(manifest, roots_rec, field_groups, vocab)
+        store = self.study.store("bank")
+        state = RG.read_study(self.study.state)
+        elig = {}
+        for recipe, label in units:
+            key = self.study.key(recipe)
+            ok = [a for a in state.ok.get(key, []) if state.status(a) == "eligible"]
+            if ok:
+                elig[label] = (recipe, g.resolve(store, key), ok[0]["instance"])
+        if not elig:
+            return {"mode": "fresh"}
+
+        def refuse(reason, **detail):
+            g.incident("field_unverified", {"reason": reason, **detail})
+            raise FR.FieldRepairUnverifiable(f"field gate (C5): {reason}")
+
+        if len(elig) != len(units):
+            refuse(
+                "some field units have no eligible result",
+                missing=sorted({u[1] for u in units} - set(elig)),
+            )
+        produced_here = all(inst == g.instance for _r, _p, inst in elig.values())
+        rep_p = self.out / "field_repair.json"
+        rep = json.loads(rep_p.read_text()) if rep_p.exists() else None
+        logged = any(g.instance in r.get("description", "") for r in state.repairs)
+        repaired_here = bool(rep) and rep.get("instance") == g.instance and logged
+        if not (produced_here or repaired_here):
+            refuse(
+                "the field on this instance is neither produced nor repaired here",
+                instance=g.instance,
+            )
+        status, _d = self.remote.call(
+            "field_status", g.epoch, g.instance, "s" * 64, "field_status", {}, timeout_s=1800
+        )
+        disk = status["field"]
+        diffs = []
+        for label, (recipe, payload, _inst) in sorted(elig.items()):
+            want = FR.expected(recipe["kind"], payload)
+            if (
+                want is None
+            ):  # an old vocabulary payload: the K3b-verified re-collection, or produced here
+                if repaired_here:
+                    rv = (rep.get("recollected") or {}).get(label) or {}
+                    want = {"file_sha256": rv.get("file_sha256")}
+                else:
+                    continue
+            got = disk.get(FR.dir_of(label)) or {}
+            cmp_ = FR.compare(label, want, {k: got.get(k) for k in want})
+            if not cmp_["equal"]:
+                diffs.append(cmp_)
+        if diffs:
+            refuse("the on-disk field differs from the registered field", diffs=diffs[:3])
+        return {"mode": "produced_here" if produced_here else "repaired_here", "checked": len(elig)}
 
     # ------------------------------------------------------------------ bank
     def stage_bank(
@@ -259,6 +372,9 @@ class Controller:
         if missing:
             raise RuntimeError(f"field units without eligible results: {missing}")
         g = self.guard("bank")
+        self.require_field(
+            g, field_groups, vocab
+        )  # Board A C5: the registered field is on this instance
         states = self.run(g, SD.bank_state_units(manifest, roots_rec, base, blocks, inert))
         out = {"pre": res, "states": states}
         self.save("bank", out)
@@ -313,6 +429,7 @@ class Controller:
     def stage_e2(self, prep: dict, episodes=range(SD.N_EP), arms=None, b: int = SD.B) -> dict:
         inputs, uploads = self.e2_inputs(prep)
         g = self.guard("confirmatory")
+        self.require_field(g)  # Board A C5: E2 reads the field (R(E))
         units = SD.e2_units(inputs, uploads, episodes, arms, b)
 
         def fn(recipe):
@@ -358,6 +475,7 @@ class Controller:
         inputs, uploads = self.e2_inputs(prep, with_fit=False)
         self.study.set_sbon_price(bpar["B_par"])
         g = self.guard("sbon")
+        self.require_field(g)  # Board A C5
         res = self.run(g, SD.sbon_units(inputs, uploads, bpar["B_par"], episodes))
         self.save("sbon", {"bpar": bpar, "results": res})
         return res
