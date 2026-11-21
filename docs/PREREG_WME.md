@@ -4365,3 +4365,23 @@ reviews `board-a-wme-c1-v2r-2026-11-21.md`, B1 and C2–C5.
 comparison stays binding.
 
 **Scope.** No claim, test, α, N, margin, seed, price rule, cap or stopping rule changes.
+
+### II.31.11 Note (21 Nov 2026): deterministic field collection and contract generation 1 (engineering, outcome-blind)
+
+**Status.** This note is recorded before any sealed read; no confirmatory result exists yet.
+
+**What was found.** Field collection on this stack is not bitwise reproducible. The nondeterminism sits in a CUDA
+backward kernel in the linear-attention blocks, and it affects the mmlupro objective
+(`docs/reviews/wme/wme-c1-diag-g0-2026-11-21-l5d.json`). Under the existing deterministic settings, collection was
+bitwise reproducible in 3 of 3 runs (`wme-c1-transition-prep-2026-11-21.md`).
+
+**Changes.** These follow `docs/council/2026-11-21/RULING-wme-c1-bank-halt.md`, addenda 2–4:
+1. Field and vocabulary collection now run under the `deterministic()` context. This is recorded as the engine-config
+   entry `field`. Every other unit keeps its registered settings.
+2. A contract transition to generation 1, with cause `driver_or_cuda`, supersedes every bank-phase unit and every
+   field unit. Those units are recomputed.
+3. The field is kept on one live instance from field collection through S-BoN. If that instance is lost, the field is
+   re-collected deterministically and K3 repairs it bitwise.
+
+**Unchanged.** No claim, test, α, N, margin, seed, price rule, cap or stopping rule changes. Bank units are
+construction data, and no sealed item has been read.
