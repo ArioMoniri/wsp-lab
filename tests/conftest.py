@@ -1,5 +1,20 @@
+import os
+
 import pytest
 import torch
+
+# A git hook (pre-commit runs the suite) exports GIT_INDEX_FILE / GIT_DIR etc. Tests that build throwaway repos with
+# `git commit` would otherwise write into the outer repository (21 Nov 2026 incident). Scrub them for the session.
+for _k in (
+    "GIT_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_WORK_TREE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_PREFIX",
+    "GIT_COMMON_DIR",
+):
+    os.environ.pop(_k, None)
 
 # Tiny fixtures run faster without oversubscribing the shared build host.
 torch.set_num_threads(min(2, torch.get_num_threads()))
