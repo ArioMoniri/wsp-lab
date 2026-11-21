@@ -56,3 +56,27 @@ may not report it as a confirmed claim.
 2. A short Board A check of the conditions only.
 3. Freeze the exploratory plan (tag `prereg-wmm-exploratory`).
 4. Run locally. C1 keeps priority on everything shared.
+
+## Addendum (21 Nov 2026): chair notes before the exploratory freeze
+
+**C6 note (SYNTHESIS-r12 R4).**
+- **What G-CAL is.** It is a teacher-forced calibration probe on no-reasoning letter probabilities, and is a guard in
+  its own right. It is **not** a surrogate for any generated-output guard and does not predict one.
+- **What stays measured on generated output.** Harmful compliance, benign over-refusal and general ability, as R4
+  requires.
+- **What G-CAL replaces.** The generated-answer Brier guard. Board A showed that guard reduced to an accuracy limit.
+
+**Local compute cap and M-A.**
+- The user explicitly chose the narrowed study *with* the edit-direction prediction test (M-A). Dropping M-A to 0 units
+  to fit 30 GPU-h would remove a user-selected component.
+- **The local cap rises to 42 GPU-h**, at $0 on the shared local GPU with ≤ 16 GB VRAM. C1 has priority.
+- M-A is restored with its re-priced bank, about 10.7 GPU-h. If the 42 GPU-h cap still binds, cut in this order:
+  1. M-A bank size, down to its declared minimum;
+  2. then M-TE's ARC guard, with M-TE's claim then not made.
+- M-A stays declared expected-null and descriptive.
+
+**Expected guard failures are disclosed, not fixed.**
+- On dev, the sycophancy LoRA worsens G-CAL by +0.040, against the +0.01 margin.
+- The plan must state that the M-SYC edit is expected to fail G-CAL and the neutral-accuracy limit.
+- The exploratory report is then the trade-off itself: the adoption reduction against its calibration and accuracy
+  cost, each reported with its CI.
