@@ -5,6 +5,9 @@ ssh config alias kept outside the repository; the host address is never printed 
 
 * ``put(req)``: write ``inbox/<id>.json`` atomically (temp name without the ``.json`` suffix, then rename);
 * ``ready(rid)``: the result directory exists;
+* ``status(rid)``: "ready" (a result), "rejected" (the worker refused or aborted it without a result: a reason file
+  ``rejected/<id>.reason.json`` or, from an older worker, the request in ``rejected/``) or "pending"; one round trip;
+* ``rejection(rid)``: the worker's reason record ({"reason": "unknown"} when the worker wrote none), or None;
 * ``fetch(rid, dest)``: copy ``outbox/<id>/`` to ``dest`` (the controller verifies it, ``protocol.verify_result``);
 * ``set_fence(epoch, instance)``: publish the current owner epoch (takeover stops older requests);
 * ``alive_age()``: seconds since the worker's last ``alive`` touch (None if unknown);
@@ -45,6 +48,24 @@ class LocalTransport:
 
     def ready(self, rid: str) -> bool:
         return (self.root / "outbox" / rid / P.RESULT).exists()
+
+    def status(self, rid: str) -> str:
+        if self.ready(rid):
+            return "ready"
+        rej = self.root / P.REJECTED
+        if (rej / P.reason_name(rid)).exists() or (rej / f"{rid}.json").exists():
+            return "rejected"
+        return "pending"
+
+    def rejection(self, rid: str) -> dict | None:
+        rej = self.root / P.REJECTED
+        p = rej / P.reason_name(rid)
+        if p.exists():
+            try:
+                return json.loads(p.read_text())
+            except json.JSONDecodeError:
+                return {"reason": "unknown", "detail": "unreadable reason file"}
+        return {"reason": "unknown"} if (rej / f"{rid}.json").exists() else None
 
     def fetch(self, rid: str, dest) -> Path:
         dest = Path(dest)
@@ -149,6 +170,32 @@ class SSHTransport:
             f"test -f {shlex.quote(f'{self.rroot}/outbox/{rid}/{P.RESULT}')} && echo yes || echo no"
         )
         return out.strip() == "yes"
+
+    def status(self, rid: str) -> str:
+        r = self.rroot
+        res = shlex.quote(f"{r}/outbox/{rid}/{P.RESULT}")
+        why = shlex.quote(f"{r}/{P.REJECTED}/{P.reason_name(rid)}")
+        req = shlex.quote(f"{r}/{P.REJECTED}/{rid}.json")
+        out = self.sh(
+            f"if test -f {res}; then echo ready; elif test -f {why} || test -f {req}; then echo rejected; "
+            "else echo pending; fi"
+        ).strip()
+        if out not in ("ready", "rejected", "pending"):
+            raise P.TransportError(f"status of {rid}: unexpected reply {out[:80]!r}")
+        return out
+
+    def rejection(self, rid: str) -> dict | None:
+        why = shlex.quote(f"{self.rroot}/{P.REJECTED}/{P.reason_name(rid)}")
+        req = shlex.quote(f"{self.rroot}/{P.REJECTED}/{rid}.json")
+        out = self.sh(f"cat {why} 2>/dev/null || (test -f {req} && echo UNKNOWN) || true").strip()
+        if not out:
+            return None
+        if out == "UNKNOWN":
+            return {"reason": "unknown"}
+        try:
+            return json.loads(out)
+        except json.JSONDecodeError:
+            return {"reason": "unknown", "detail": "unreadable reason file"}
 
     def fetch(self, rid: str, dest) -> Path:
         dest = Path(dest)

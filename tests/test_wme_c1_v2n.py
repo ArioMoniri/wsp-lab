@@ -184,7 +184,9 @@ PASSING_CS = {
 
 def drive_parity(tmp_path, monkeypatch, c):
     mod = load_ctl()
-    monkeypatch.setattr(mod, "code_and_state", lambda hello, iid: PASSING_CS)  # v2o tests cover it
+    monkeypatch.setattr(
+        mod, "code_and_state", lambda hello, iid, parity=None: PASSING_CS
+    )  # v2o tests cover it
     rem = FakeRemote(
         {
             "hello": {"gen_engine": GE.config(), "theta0": "t", "versions": {}, "physical": {}},
@@ -278,7 +280,7 @@ def test_r2_phasel_main_refuses_unbound_evidence_and_uses_the_engine_canary_set(
         "parity": {"canary_gpu0": {"tf": A}, "vllm_gpu0": A, "vllm_gen_gpu0": A},
     }
     (tmp_path / "par.json").write_text(json.dumps(ev))
-    monkeypatch.setattr(mod, "code_and_state", lambda hello, iid: PASSING_CS)
+    monkeypatch.setattr(mod, "code_and_state", lambda hello, iid, parity=None: PASSING_CS)
 
     class Stop(Exception):
         pass

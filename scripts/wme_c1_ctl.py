@@ -356,9 +356,24 @@ def instance_record(iid: str) -> dict:
     return json.loads(p.read_text()) if p.exists() else {}
 
 
-def code_and_state(hello: dict, iid: str) -> dict:
+def driver_record(hello: dict, parity: dict | None = None) -> dict:
+    """The instance's NVIDIA driver (``hello.physical.driver``) beside the parity instance's (chair note after run4:
+    recorded in the launch and resume evidence). Informational: a different driver alone is not a stop; the binding
+    test is the canary comparison against the committed references."""
+    mine = (hello.get("physical") or {}).get("driver")
+    par = None if parity is None else ((parity.get("hello") or {}).get("physical") or {}).get("driver")
+    return {
+        "version": mine,
+        "gpu_names": (hello.get("physical") or {}).get("gpu_names"),
+        "parity_instance": par,
+        "same_as_parity": None if par is None or mine is None else mine == par,
+        "binding_test": "the canary comparison with the committed references (a driver difference alone is not a stop)",
+    }
+
+
+def code_and_state(hello: dict, iid: str, parity: dict | None = None) -> dict:
     """§II.31.9 N4 (b): controller commit (clean tree) = the worker bundle's CODE_SHA, the bundle sha256, the worker's
-    process globals at start (R11) and the N6 gate result recorded at ``up``."""
+    process globals at start (R11) and the N6 gate result recorded at ``up``; the NVIDIA driver (informational)."""
     from wsp.wm.c1 import genengine as GE
     from wsp.wm.c1 import phasel as PL
 
@@ -367,6 +382,7 @@ def code_and_state(hello: dict, iid: str) -> dict:
         "code_identity": PL.code_identity(hello.get("code_sha"), rec.get("bundle_sha256")),
         "worker_global_state": PL.worker_state_check(hello.get("global_state"), GE.GEN_ENGINE),
         "gate": rec.get("gate"),
+        "driver": driver_record(hello, parity),
     }
 
 
@@ -398,7 +414,7 @@ def cmd_phasel_parity(a):
     def call(kind, args):
         n["i"] += 1
         uk = hashlib.sha256(f"phasel-parity:{kind}:{n['i']}".encode()).hexdigest()
-        p, _ = rem.call(kind, 0, inst, uk, kind, args, timeout_s=7200)
+        p, _ = rem.call(kind, 0, inst, uk, kind, args)
         log(kind, json.dumps({k: p[k] for k in p if k not in ("chunks_k1", "chunks_k2", "rows")})[:2000])
         return p
 
@@ -507,14 +523,14 @@ def cmd_phasel_main(a):
     hello, _ = rem.call("hello", 0, inst, "m" * 64, "hello", {})
     if hello.get("gen_engine") != GE.config():
         raise SystemExit("PRECONDITION FAILED: the worker's generation engine is not the recorded one")
-    cs = code_and_state(hello, a.iid)
+    cs = code_and_state(hello, a.iid, par)
     require_code_and_state(cs)
     log("hello", json.dumps({k: hello[k] for k in ("theta0", "versions", "physical")}))
-    inert, _ = rem.call("inert_identity", 0, inst, "n" * 64, "inert", {}, timeout_s=7200)
+    inert, _ = rem.call("inert_identity", 0, inst, "n" * 64, "inert", {})
     log("inert identity pass:", inert["pass"])
     if not inert["pass"]:
         raise SystemExit("PRECONDITION FAILED: pinned-engine inert identity")
-    can, _ = rem.call("canary", 0, inst, "o" * 64, "canary-reference", {}, timeout_s=7200)
+    can, _ = rem.call("canary", 0, inst, "o" * 64, "canary-reference", {})
     eng = can["engines"]
     if set(eng) != GE.canary_engines():  # R2: the canary set of the recorded engine
         raise SystemExit(f"PRECONDITION FAILED: canary engines {sorted(eng)}")
@@ -522,7 +538,7 @@ def cmd_phasel_main(a):
     log("cross-instance canaries", json.dumps(cross))
     if not cross["pass"]:
         raise SystemExit(f"PRECONDITION FAILED: main vs parity canaries {cross['pairs']}")
-    tim, _ = rem.call("timing", 0, inst, "t" * 64, "timing", {}, timeout_s=7200)
+    tim, _ = rem.call("timing", 0, inst, "t" * 64, "timing", {})
     p_bank = (
         SD.PRICE["bank"]
         + (192 * tim["eigh_12288_s"] + 576 * tim["eigh_4096_s"] + 13095 * 6 * tim["contraction_s"])
@@ -598,7 +614,7 @@ def cmd_phasel_main(a):
     for ph in ("ste", "sbon", "confirmatory"):
         st.guard(ph, inst)
     g = st.guard("bank", inst)
-    tr.set_fence(g.epoch, inst)
+    C.take_over(tr, rem, g)
     # every earlier study instance (the parity check, failed boots) enters the combined charge (precondition 7)
     dms = json.loads((LO.STATE / "state.json").read_text())
     for oid, rec in sorted(dms["instances"].items()):
@@ -676,17 +692,18 @@ def cmd_phasel_resume(a):
     inst = LO.guard_instance(a.iid)
     st = SD.Study(STUDY, RUNS, att, MO_theta0(), PANEL_ID, log=log)
     g = st.guard("bank", inst)
-    tr.set_fence(g.epoch, inst)
-    hello, _ = rem.call("hello", 0, inst, "m" * 64, "hello", {})
+    C.take_over(tr, rem, g)
+    # every request after the fence carries the owner epoch: the worker rejects older ones as stale (run4 halt)
+    hello, _ = rem.call("hello", g.epoch, inst, "m" * 64, "hello", {})
     if hello.get("gen_engine") != GE.config():
         raise SystemExit("PRECONDITION FAILED: the worker's generation engine is not the recorded one")
-    cs = code_and_state(hello, a.iid)
+    cs = code_and_state(hello, a.iid, par)
     require_code_and_state(cs)
-    inert, _ = rem.call("inert_identity", 0, inst, "n" * 64, "inert", {}, timeout_s=7200)
+    inert, _ = rem.call("inert_identity", g.epoch, inst, "n" * 64, "inert", {})
     log("inert identity pass:", inert["pass"])
     if not inert["pass"]:
         raise SystemExit("PRECONDITION FAILED: pinned-engine inert identity")
-    can, _ = rem.call("canary", 0, inst, "o" * 64, "canary-resume", {}, timeout_s=7200)
+    can, _ = rem.call("canary", g.epoch, inst, "o" * 64, "canary-resume", {})
     eng = can["engines"]
     if set(eng) != GE.canary_engines():
         raise SystemExit(f"PRECONDITION FAILED: canary engines {sorted(eng)}")
@@ -695,7 +712,7 @@ def cmd_phasel_resume(a):
     if not rc["pass"]:
         g.incident("canary_mismatch", {"where": "phasel-main --resume", **rc})
         raise SystemExit(f"INCIDENT: resume canaries differ from the committed references {rc['pairs']}")
-    tim, _ = rem.call("timing", 0, inst, "t" * 64, "timing", {}, timeout_s=7200)
+    tim, _ = rem.call("timing", g.epoch, inst, "t" * 64, "timing", {})
     tag = f"{utc_date()}-{a.tag}"
     common = {"engine_config_sha256": ecs, "instance": inst, "contract": contract, "resume": True}
     paths = []
@@ -836,7 +853,7 @@ def cmd_close(a):
     tr, rem = remote_for("main", a.iid)
     st = SD.Study(STUDY, RUNS, load_att(), "", PANEL_ID, log=log)
     g = st.guard(a.phase, LO.guard_instance(a.iid))
-    tr.set_fence(g.epoch, g.instance)
+    C.take_over(tr, rem, g)
     rec = C.run_canary(g, rem)
     log("closing canary", rec["pass"])
     g.close_instance()

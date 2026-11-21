@@ -18,6 +18,7 @@ from wsp.wm.c1 import fieldrepair as FR
 from wsp.wm.c1 import genengine as GE
 from wsp.wm.c1 import health as HL
 from wsp.wm.c1 import phasel as PL
+from wsp.wm.c1 import protocol as P
 from wsp.wm.c1 import study as SD
 from wsp.wm.c1 import transport as T
 
@@ -193,7 +194,9 @@ def resume_setup(tmp_path, monkeypatch, engines):
     monkeypatch.setattr(PL, "committed_references", lambda att, root=None: {"engines": ENGINES})
     monkeypatch.setattr(PL, "parser_check", lambda: {"pass": True})
     monkeypatch.setattr(mod, "MO_theta0", lambda: "t" * 64)
-    monkeypatch.setattr(mod, "code_and_state", lambda hello, iid: {"code_identity": {"pass": True}})
+    monkeypatch.setattr(
+        mod, "code_and_state", lambda hello, iid, parity=None: {"code_identity": {"pass": True}}
+    )
     monkeypatch.setattr(mod, "require_code_and_state", lambda cs: None)
     commits = []
     monkeypatch.setattr(mod, "commit_evidence", lambda paths, msg: commits.append(paths))
@@ -467,3 +470,44 @@ def test_c5_produced_here_mode(tmp_path, no_inert):
     co = controller(st, RepairRemote(pl, disk=disk_of(pl)), tr, inst="lambda:x")
     co.field_inputs = (MAN, ROOTS)
     assert co.require_field(co.guard("bank"))["mode"] == "produced_here"
+
+
+# ------------------------------------------------------------------ v2t: the resume run4 halt (fencing)
+
+
+class FencedRemote(FakeRemote):
+    """As the real worker does: a request whose epoch is below the worker fence is rejected (never answered)."""
+
+    def __init__(self, payloads, transport):
+        super().__init__(payloads)
+        self.t, self.epochs = transport, []
+
+    def call(self, kind, epoch, inst, uk, label, args, timeout_s=None):
+        fp = self.t.root / P.FENCE
+        fence = int(json.loads(fp.read_text()).get("epoch", -1)) if fp.exists() else -1
+        self.epochs.append((kind, epoch, fence))
+        if fence > int(epoch):  # worker.Worker.handle: moved to rejected/, never answered
+            raise AssertionError(
+                f"{kind} at epoch {epoch} behind the worker fence {fence}: rejected_stale, no result"
+            )
+        return super().call(kind, epoch, inst, uk, label, args, timeout_s)
+
+
+def test_v2t_every_resume_request_carries_the_new_owner_epoch(tmp_path, monkeypatch):
+    """run4 halt (21 Nov 2026): resume set the worker fence to the new owner epoch, then sent hello at epoch 0; the
+    worker rejected it as stale and the controller waited forever. Every resume request must carry the owner epoch."""
+    mod, runs, a, rem, commits = resume_setup(tmp_path, monkeypatch, ENGINES)
+    tr = T.LocalTransport(tmp_path / "w")
+    frem = FencedRemote(rem.payloads, tr)
+    monkeypatch.setattr(mod, "remote_for", lambda kind, iid: (tr, frem))
+    mod.cmd_phasel_main(a)
+    epochs = {e for _k, e, _f in frem.epochs}
+    assert len(epochs) == 1 and all(e >= f for _k, e, f in frem.epochs)
+    assert [k for k, _e, _f in frem.epochs] == [
+        "hello",
+        "inert_identity",
+        "canary",
+        "timing",
+        "canary",
+    ]
+    assert statuses(runs)[0] == ["eligible", "eligible"] and commits

@@ -24,6 +24,15 @@ from pathlib import Path
 SCHEMA = "wme-c1-rpc-v1"
 RESULT = "result.json"
 FENCE = "fence.json"
+REJECTED = "rejected"
+
+
+def reason_name(rid: str) -> str:
+    """``rejected/<id>.reason.json``: why the worker refused or aborted a request without a result (chair item FF):
+    ``stale_epoch`` (below the fence on arrival), ``fenced_while_running`` (the fence moved past it while it ran; the
+    request file goes to ``done/``) or ``malformed`` (``check_request`` failed). Written before the request file
+    moves, so a controller that sees the request in ``rejected/`` also finds its reason."""
+    return f"{rid}.reason.json"
 
 
 class ProtocolError(RuntimeError):

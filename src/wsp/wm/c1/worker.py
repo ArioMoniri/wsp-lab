@@ -146,6 +146,14 @@ class Worker:
         os.rename(tmp, out)
         _fsync_dir(out.parent)
 
+    def reject_reason(self, rid: str, rec: dict):
+        """``rejected/<id>.reason.json`` (``protocol.reason_name``), atomically, before the request file moves."""
+        d = self.root / P.REJECTED
+        d.mkdir(parents=True, exist_ok=True)
+        tmp = d / f".{rid}.reason.tmp"
+        tmp.write_text(json.dumps(dict(rec, id=rid, t=time.time()), sort_keys=True))
+        os.replace(tmp, d / P.reason_name(rid))
+
     # -------------------------------------------------- one request
     def handle(self, path: Path) -> str:
         try:
@@ -154,10 +162,20 @@ class Worker:
             return "withdrawn"  # cancelled by the controller between listing and reading (R6)
         except (json.JSONDecodeError, P.ProtocolError) as exc:
             self.log(f"malformed request {path.name}: {exc}")
+            self.reject_reason(path.stem, {"reason": "malformed", "detail": str(exc)[:500]})
             _move(path, self.root / "rejected" / path.name)
             return "malformed"
         f = self.fence()
         if f is not None and int(f.get("epoch", -1)) > int(req["epoch"]):
+            self.reject_reason(
+                req["id"],
+                {
+                    "reason": "stale_epoch",
+                    "request_epoch": int(req["epoch"]),
+                    "fence_epoch": int(f["epoch"]),
+                    "fence_instance": f.get("instance"),
+                },
+            )
             _move(path, self.root / "rejected" / path.name)
             self.progress({"id": req["id"], "kind": req["kind"], "event": "rejected_stale"})
             return "stale"
@@ -194,6 +212,16 @@ class Worker:
             self._write_result(req, rec, files or {})
         except Fenced as exc:
             self.log(f"{req['id']}: fenced ({exc}); no result")
+            f = self.fence() or {}
+            self.reject_reason(
+                req["id"],
+                {
+                    "reason": "fenced_while_running",
+                    "request_epoch": int(req["epoch"]),
+                    "fence_epoch": f.get("epoch"),
+                    "fence_instance": f.get("instance"),
+                },
+            )
             status = "fenced"
         except Exception as exc:  # noqa: BLE001 - reported to the controller, which classifies and charges
             status = "error"

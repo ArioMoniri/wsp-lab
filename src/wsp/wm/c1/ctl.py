@@ -8,6 +8,13 @@
 * :func:`run_bracketed` runs units through ``harness.run_units`` with the mandatory ``ProductionGuard`` in chunks,
   each followed by a canary (start canary first), so every result is bracketed; it then resolves only eligible
   results (``guard.resolve``), never a pending or ineligible one.
+* Fail fast (chair item FF, after the run4 resume halt): a request the worker refuses or aborts without a result
+  (``rejected/``: stale epoch, fenced while running, malformed) is detected at the next poll and is a
+  ``request_rejected`` run-health incident naming the reason; a request without a result or a rejection by its
+  response deadline (``wsp.wm.c1.deadlines``) is withdrawn and is a ``request_deadline`` incident. Both are
+  ``IncidentAbort``: an in-flight unit attempt is ``attempt_aborted`` (charged, never counted). The incident is written
+  through the guard bound by :func:`take_over` (every owner takeover: fence + bind); without a guard (the parity
+  instance, the first-launch checks) it is journalled and raised all the same.
 * :func:`composite_canary`: the guard holds one ``canary_reference``; it is the sha256 of the committed per-engine
   reference map, and every canary point runs every engine (``wm.c1.canary``).
 
@@ -22,6 +29,7 @@ from pathlib import Path
 
 from wsp.wm import harness as H
 from wsp.wm import runguard as RG
+from wsp.wm.c1 import deadlines as DL
 from wsp.wm.c1 import protocol as P
 
 
@@ -31,6 +39,27 @@ class InstanceLost(RuntimeError):
 
 class WorkerDead(RuntimeError):
     """The worker process stopped touching ``alive`` for longer than the tolerance."""
+
+
+class RequestRejected(RG.IncidentAbort):
+    """The worker refused or aborted the request without a result (its reason is in the message and the incident)."""
+
+    incident_kind = "request_rejected"
+
+
+class RequestDeadline(RG.IncidentAbort):
+    """No result and no rejection within the request's response deadline; the request was withdrawn."""
+
+    incident_kind = "request_deadline"
+
+
+def take_over(transport, remote, guard):
+    """An owner takeover: the worker fence moves to the guard's epoch (older requests are refused or aborted) and the
+    guard is bound to the remote, so every request failure is recorded with the current owner."""
+    transport.set_fence(guard.epoch, guard.instance)
+    bind = getattr(remote, "bind", None)
+    if bind is not None:
+        bind(guard)
 
 
 def technical(exc: BaseException) -> str | None:
@@ -58,7 +87,12 @@ class Remote:
         watch=None,
         restart=None,
         withdraw_grace_s: float = 120.0,
+        clock=time.time,
     ):
+        self.clock = clock
+        self.guard = (
+            None  # bound by take_over / Study.run: the owner that records request incidents
+        )
         self.restart = restart  # kills and restarts the worker process (a withdrawn request that does not stop)
         self.withdraw_grace_s = withdraw_grace_s
         self.watch = (
@@ -81,6 +115,29 @@ class Remote:
 
         with open(self.journal, "a") as f:
             f.write(json.dumps({"t": time.time(), **rec}) + "\n")
+
+    def bind(self, guard):
+        self.guard = guard
+
+    def _incident(self, exc_type, req: dict, detail: dict):
+        """Record a request incident (bound guard, else the dispatch journal only) and return the exception."""
+        d = {
+            "id": req["id"],
+            "kind": req["kind"],
+            "label": req["label"],
+            "epoch": req["epoch"],
+            **detail,
+        }
+        self._journal({"event": "incident", "incident": exc_type.incident_kind, **d})
+        if self.guard is not None:
+            try:
+                self.guard.incident(exc_type.incident_kind, d)
+            except Exception as exc:  # noqa: BLE001 - a stale owner cannot write; the raise below still halts
+                self._journal(
+                    {"event": "incident_unrecorded", "id": req["id"], "error": str(exc)[:300]}
+                )
+        self.log(f"INCIDENT {exc_type.incident_kind}: {d}")
+        return exc_type(f"{exc_type.incident_kind} {req['label']} ({req['kind']}): {detail}")
 
     def _with_retry(self, fn, what):
         t0 = time.time()
@@ -110,8 +167,8 @@ class Remote:
         hb_of = getattr(self.t, "heartbeat", None)
         out = "unconfirmed"
         if hb_of is not None:
-            t0 = time.time()
-            while time.time() - t0 <= self.withdraw_grace_s:
+            t0 = self.clock()
+            while self.clock() - t0 <= self.withdraw_grace_s:
                 hb = self._with_retry(hb_of, "heartbeat") or {}
                 if (hb.get("inflight") or {}).get("id") != req["id"]:
                     out = "fenced"
@@ -131,11 +188,35 @@ class Remote:
             {"event": "put", "id": req["id"], "kind": kind, "label": label, "epoch": epoch}
         )
         self._with_retry(lambda: self.t.put(req), "put")
-        t0 = time.time()
+        t0 = self.clock()
+        deadline = (
+            float(timeout_s) if timeout_s is not None else DL.DEADLINE_S.get(kind, DL.DEFAULT_S)
+        )
+        status_of = getattr(self.t, "status", None)
         revived = False
         while True:
-            if self._with_retry(lambda: self.t.ready(req["id"]), "poll"):
+            if status_of is not None:
+                st = self._with_retry(lambda: status_of(req["id"]), "poll")
+            else:
+                st = (
+                    "ready"
+                    if self._with_retry(lambda: self.t.ready(req["id"]), "poll")
+                    else "pending"
+                )
+            if st == "ready":
                 break
+            if st == "rejected":
+                why = self._with_retry(lambda: self.t.rejection(req["id"]), "rejection") or {}
+                detail = {"reason": why.get("reason", "unknown")}
+                detail.update({k: v for k, v in why.items() if k not in ("id", "t", "reason")})
+                raise self._incident(RequestRejected, req, detail)
+            if self.clock() - t0 > deadline:
+                # the incident first (a withdrawal may wait or restart the worker), then withdraw (R6), then halt
+                exc = self._incident(
+                    RequestDeadline, req, {"deadline_s": deadline, "waited_s": self.clock() - t0}
+                )
+                self.withdraw(req)
+                raise exc
             if self.lost():
                 raise InstanceLost(f"{label}: instance lost while waiting")
             if self.watch is not None:
@@ -153,17 +234,14 @@ class Remote:
                         f"{label}: worker silent for {age:.0f} s; restarting the worker process"
                     )
                     self.revive()
-                    t_rev = time.time()
-                    while time.time() - t_rev < self.dead_after_s:
+                    t_rev = self.clock()
+                    while self.clock() - t_rev < self.dead_after_s:
                         a2 = self._with_retry(self.t.alive_age, "alive")
                         if a2 is not None and a2 < self.dead_after_s:
                             break
                         self.sleep(self.poll_s)
                     continue
                 raise WorkerDead(f"{label}: worker silent for {age:.0f} s")
-            if timeout_s is not None and time.time() - t0 > timeout_s:
-                self._with_retry(lambda: self.t.cancel(req["id"]), "cancel")
-                raise P.TransportError(f"{label}: no result within {timeout_s} s")
             self.sleep(self.poll_s)
         dest = self.local / "results" / req["id"]
         self._with_retry(lambda: self.t.fetch(req["id"], dest), "fetch")
