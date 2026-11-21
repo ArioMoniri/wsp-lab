@@ -33,30 +33,31 @@ def guard_sample(spec, rng):
     for name in ("harm_compliance", "benign_over_refusal", "general_accuracy"):
         s = spec[name]
         g[name] = paired_binary_sample(s["n"], s["d"], s["m"], s["base_rate"], rng)
-    b = spec["brier"]
-    g["brier"] = rng.normal(b["m"], b["sd"], b["n"])
+    b = spec["gcal"]
+    g["gcal"] = rng.normal(b["m"], b["sd"], b["n"])
     return g
 
 
 def msyc_power(spec, reps=1000, seed=0) -> dict:
     rng = np.random.default_rng(seed)
-    keys = ("primary", "untruncated_in_both", "neutral", "guards")
-    gk = ("harm_compliance", "benign_over_refusal", "general_accuracy", "brier")
-    cnt = dict.fromkeys(keys + gk + ("pass",), 0)
+    keys = ("primary", "parsed_in_both", "neutral", "guards")
+    gk = ("harm_compliance", "benign_over_refusal", "general_accuracy", "gcal")
+    cnt = dict.fromkeys(keys + gk + ("pass", "endpoint_only"), 0)
     a, ne = spec["adoption"], spec["neutral"]
     for _ in range(reps):
         adopt = paired_binary_sample(a["n"], a["d"], a["m"], a["base_rate"], rng)
-        trunc = (
-            (rng.random(a["n"]) < a["trunc"]).astype(int),
-            (rng.random(a["n"]) < a["trunc"]).astype(int),
+        parsed = (
+            (rng.random(a["n"]) >= a["unparsed"]).astype(int),
+            (rng.random(a["n"]) >= a["unparsed"]).astype(int),
         )
         neutral = paired_binary_sample(ne["n"], ne["d"], ne["m"], ne["base_rate"], rng)
-        c = P.msyc_claim(adopt, trunc, neutral, guard_sample(spec["guards"], rng), spec["alpha_f"])
+        c = P.msyc_claim(adopt, parsed, neutral, guard_sample(spec["guards"], rng), spec["alpha_f"])
         for k in keys:
             cnt[k] += c[k]["pass"]
         for k in gk:
             cnt[k] += c["guards"][k]["pass"]
         cnt["pass"] += c["pass"]
+        cnt["endpoint_only"] += c["primary"]["pass"] and c["parsed_in_both"]["pass"]
     return {k: v / reps for k, v in cnt.items()} | {"reps": reps}
 
 
@@ -79,7 +80,7 @@ def mte_sample(spec, base_triples, rng):
 def mte_power(spec, base_triples, reps=500, seed=0) -> dict:
     rng = np.random.default_rng(seed)
     keys = ("tokens", "low_budget", "full_budget_ni", "guards")
-    cnt = dict.fromkeys(keys + ("pass", "b512", "b1024"), 0)
+    cnt = dict.fromkeys(keys + ("pass", "b512", "b1024", "endpoint_only"), 0)
     for _ in range(reps):
         data = mte_sample(spec, base_triples, rng)
         c = P.mte_claim(data, guard_sample(spec["guards"], rng), spec["alpha_f"])
@@ -88,6 +89,9 @@ def mte_power(spec, base_triples, reps=500, seed=0) -> dict:
         cnt["b512"] += 512 in c["low_budget"]["passing_budgets"]
         cnt["b1024"] += 1024 in c["low_budget"]["passing_budgets"]
         cnt["pass"] += c["pass"]
+        cnt["endpoint_only"] += (
+            c["tokens"]["pass"] and c["low_budget"]["pass"] and c["full_budget_ni"]["pass"]
+        )
     return {k: v / reps for k, v in cnt.items()} | {"reps": reps}
 
 

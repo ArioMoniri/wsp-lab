@@ -76,6 +76,7 @@ CODE = [
     "src/wsp/wm/gemma3.py",
     "scripts/wmm_prereg_build.py",
     "scripts/wmm_powersim.py",
+    "scripts/wmm_gcal_calibration.py",
 ]
 
 
@@ -191,6 +192,12 @@ def main():
         it["source"] = "arc_challenge"
     by_hash = {it["hash"]: it for it in mq + mq_train + mm + arc + harm + ben}
     ex["stems"] = {by_hash[h]["stem"] for h in ex["hashes"] if h in by_hash}
+    # E11: Gate 0 items carry their own question text (incl. the 32 MedMCQA-train ladder items, whose split the
+    # pinned datasets above do not load); add their stems directly.
+    g0 = json.loads((ROOT / "data/wmm/gate0-2026-11-19/items.json").read_text())
+    g0_stems = {P.stem_hash(it["question"]) for v in g0.values() for it in v}
+    g0_mm_train = [it for it in g0["ladder"] if it["source"] == "medmcqa"]
+    ex["stems"] |= g0_stems
 
     # 3. sealed panels
     panels, stats = {}, {}
@@ -311,6 +318,17 @@ def main():
                 "disjointness_violations": len(viol[k]),
             }
             for k, v in pools.items()
+        },
+        "gate0_medmcqa_train_stem_check": {
+            "n_items": len(g0_mm_train),
+            "stem_hits_in_panels_or_pools": sum(
+                P.stem_hash(it["question"])
+                in (
+                    {x["stem"] for v in panels.values() for x in v}
+                    | {x["stem"] for v in pools.values() for x in v}
+                )
+                for it in g0_mm_train
+            ),
         },
         "training_pool_exclusions": {
             "pool_in": n_in,

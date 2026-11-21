@@ -74,7 +74,7 @@ def gate1_inputs():
             "n": len(ab),
             "m": float(np.mean(ae - ab)),
             "base_rate": float(ab.mean()),
-            "trunc": float(np.mean(bs["mq_syc"]["truncated"])),
+            "unparsed": float(np.mean([x is None for x in bs["mq_syc"]["letter"]])),
         },
         "neutral": {
             "k": int(np.sum(cb != ce)),
@@ -106,7 +106,20 @@ def gate1_inputs():
     }
 
 
-def guards_spec(inp, man, null: bool):
+CALIB = ROOT / "docs/prereg/wmm_gcal_calibration.json"
+
+
+def gcal_spec(man, calib: dict, m: float) -> dict:
+    """C4: G-CAL over all mq + mm neutral items (no parse condition), SD = the 97.5 % upper bound s_U from the
+    committed calibration run, mean m (0 at null, the dev ΔBS in the dev scenario, +0.01 for the sensitivity check)."""
+    return {
+        "n": man["panels"]["mq"]["n"] + man["panels"]["mm"]["n"],
+        "m": m,
+        "sd": calib["sd_dBS_upper_97_5"],
+    }
+
+
+def guards_spec(inp, man, calib, null: bool, gcal_m=None):
     n = {
         k: man["panels"][p]["n"]
         for k, p in (
@@ -122,30 +135,29 @@ def guards_spec(inp, man, null: bool):
         m = 0.0 if null else x["m"]
         # conservative: keep the Wilson-upper discordance; raise the base rate to the smallest feasible value
         g[k] = {"n": n[k], "d": d, "m": m, "base_rate": max(x["base_rate"], (d - m) / 2 + 1e-9)}
-    n_neutral = man["panels"]["mq"]["n"] + man["panels"]["mm"]["n"]
-    g["brier"] = {
-        "n": int(0.95 * n_neutral),
-        "m": 0.0 if null else inp["brier"]["m"],
-        "sd": inp["brier"]["sd"],
-    }
+    if gcal_m is None:
+        gcal_m = 0.0 if null else calib["dev_mean_dBS"]
+    g["gcal"] = gcal_spec(man, calib, gcal_m)
     return g
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--reps", type=int, default=1000)
+    ap.add_argument("--reps", type=int, default=2000)
     ap.add_argument("--ma-reps", type=int, default=100)
     a = ap.parse_args()
     t0 = time.time()
     man = json.loads((ROOT / "docs/prereg/wmm_manifest.json").read_text())
+    calib = json.loads(CALIB.read_text())
     inp = gate1_inputs()
     n_mq, n_mm = man["panels"]["mq"]["n"], man["panels"]["mm"]["n"]
     res = {
+        "status": "EXPLORATORY M′ (RULING-wmm-prereg); alpha_f fixed at 0.025/3",
         "inputs": {k: v for k, v in inp.items() if k != "triples"},
+        "gcal_calibration": {k: calib[k] for k in ("sd_dBS", "sd_dBS_upper_97_5", "dev_mean_dBS")},
         "panel_n": {k: v["n"] for k, v in man["panels"].items()},
+        "alpha_f": P.ALPHA_F,
     }
-
-    # ---------------- analytic round-11 sizing (N per benchmark-pool; alpha one-sided)
     ad, ne = inp["adoption"], inp["neutral"]
     d_ad = S.wilson_upper(ad["k"], ad["n"])
     d_ne = S.wilson_upper(ne["k"], ne["n"])
@@ -153,54 +165,60 @@ def main():
         "msyc_adoption": {
             "d_wilson_upper": d_ad,
             "dev_gain": ad["m"],
-            "N_half_gain_alpha_0.0125": G1.sizing_n(d_ad, abs(ad["m"]) / 2, alpha=0.0125),
-            "N_full_gain_alpha_0.0125": G1.sizing_n(d_ad, abs(ad["m"]), alpha=0.0125),
+            "N_half_gain": G1.sizing_n(d_ad, abs(ad["m"]) / 2, alpha=P.ALPHA_F),
+            "N_full_gain": G1.sizing_n(d_ad, abs(ad["m"]), alpha=P.ALPHA_F),
             "available": n_mq,
         },
         "mte_low_budget_1024": {
             tag: {
                 "d_wilson_upper": S.wilson_upper(x["k"], x["n"]),
                 "dev_gain": x["gain"],
-                "N_delta_0.05_alpha_0.00625": G1.sizing_n(
-                    S.wilson_upper(x["k"], x["n"]), 0.05, alpha=0.00625
+                "N_delta_0.05_holm_first": G1.sizing_n(
+                    S.wilson_upper(x["k"], x["n"]), 0.05, alpha=P.ALPHA_F / 2
                 ),
             }
             for tag, x in inp["low_budget_1024"].items()
         }
         | {"available": n_mq + n_mm},
-        "noninferiority_note": "NI bounds (neutral −0.03, M-TE −0.02, guards) are sized by simulation below, not by the superiority formula",
     }
 
-    # ---------------- M-SYC conjunctive power
+    def msyc_spec(m_ad, null, gcal_m=None, neutral_m=None):
+        return {
+            "adoption": {
+                "n": n_mq,
+                "d": d_ad,
+                "m": m_ad,
+                "base_rate": ad["base_rate"],
+                "unparsed": ad["unparsed"],
+            },
+            "neutral": {
+                "n": n_mq + n_mm,
+                "d": d_ne,
+                "m": (0.0 if null else ne["m"]) if neutral_m is None else neutral_m,
+                "base_rate": ne["base_rate"],
+            },
+            "guards": guards_spec(inp, man, calib, null, gcal_m),
+            "alpha_f": P.ALPHA_F,
+        }
+
     msyc = {}
     for label, m_ad, null in (
-        ("dev_effect_dev_guards", ad["m"], False),
-        ("half_effect_dev_guards", ad["m"] / 2, False),
-        ("dev_effect_null_guards", ad["m"], True),
         ("half_effect_null_guards", ad["m"] / 2, True),
+        ("dev_effect_null_guards", ad["m"], True),
+        ("half_effect_dev_guards", ad["m"] / 2, False),
+        ("dev_effect_dev_guards", ad["m"], False),
     ):
-        for fams in (["M-SYC", "M-TE"], ["M-SYC", "M-TE", "M-KD"]):
-            spec = {
-                "adoption": {
-                    "n": n_mq,
-                    "d": d_ad,
-                    "m": m_ad,
-                    "base_rate": ad["base_rate"],
-                    "trunc": ad["trunc"],
-                },
-                "neutral": {
-                    "n": n_mq + n_mm,
-                    "d": d_ne,
-                    "m": 0.0 if null else ne["m"],
-                    "base_rate": ne["base_rate"],
-                },
-                "guards": guards_spec(inp, man, null),
-                "alpha_f": P.family_alpha(fams),
-            }
-            msyc[f"{label}|{len(fams)}fam"] = S.msyc_power(spec, reps=a.reps, seed=1)
+        msyc[label] = S.msyc_power(msyc_spec(m_ad, null), reps=a.reps, seed=1)
+    msyc["sensitivity_gcal_at_margin"] = S.msyc_power(
+        msyc_spec(ad["m"] / 2, True, gcal_m=0.01), reps=a.reps, seed=1
+    )
     res["msyc_power"] = msyc
+    res["gcal_checks"] = {
+        "pass_at_null": msyc["half_effect_null_guards"]["gcal"],
+        "fail_at_margin": 1 - msyc["sensitivity_gcal_at_margin"]["gcal"],
+        "required": {"pass_at_null": 0.95, "fail_at_margin": 0.97},
+    }
 
-    # ---------------- M-TE conjunctive power (no dev estimate of the short-form LoRA: scenario grid)
     p = float(np.mean(inp["triples"][0]))
     q = d_ne / (2 * p * (1 - p))
     mte = {}
@@ -212,15 +230,14 @@ def main():
                 "sd": 0.58,
                 "q": q,
                 "delta_full": dfull,
-                "guards": guards_spec(inp, man, True),
-                "alpha_f": P.family_alpha(["M-SYC", "M-TE"]),
+                "guards": guards_spec(inp, man, calib, True),
+                "alpha_f": P.ALPHA_F,
             }
             mte[f"mu{mu}|dfull{dfull}"] = S.mte_power(
-                spec, inp["triples"], reps=max(200, a.reps // 2), seed=2
+                spec, inp["triples"], reps=max(500, a.reps // 2), seed=2
             )
     res["mte_power"] = {"q_redraw": q, "log_len_sd": 0.58, "scenarios": mte}
 
-    # ---------------- M-A power (grid; exploratory)
     ma = {}
     for spread in (0.5, 1.0, 2.0):
         for r in (0.3, 0.5, 0.7):
@@ -239,10 +256,12 @@ def main():
     print(
         json.dumps(
             {
-                "msyc": {k: (v["primary"], v["pass"]) for k, v in msyc.items()},
-                "mte": {k: v["pass"] for k, v in mte.items()},
+                "msyc": {
+                    k: {q: v[q] for q in ("endpoint_only", "pass", "gcal")} for k, v in msyc.items()
+                },
+                "gcal_checks": res["gcal_checks"],
+                "mte": {k: {q: v[q] for q in ("endpoint_only", "pass")} for k, v in mte.items()},
                 "ma": {k: v["power"] for k, v in ma.items()},
-                "sizing": res["round11_sizing"],
             },
             indent=1,
             default=float,

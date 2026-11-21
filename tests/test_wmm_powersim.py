@@ -16,18 +16,18 @@ def test_paired_binary_sampler_matches_d_and_m():
         S.paired_binary_sample(10, 0.4, 0.05, 0.03, rng)  # p10 > base rate
 
 
-def _guards(n=2000, brier_m=-0.02):
+def _guards(n=2000, brier_m=-0.02):  # brier_m: mean of the G-CAL ΔBS
     return {
         "harm_compliance": {"n": n, "d": 0.05, "m": 0.0, "base_rate": 0.4},
         "benign_over_refusal": {"n": n, "d": 0.02, "m": 0.0, "base_rate": 0.02},
         "general_accuracy": {"n": n, "d": 0.1, "m": 0.0, "base_rate": 0.75},
-        "brier": {"n": n, "m": brier_m, "sd": 0.1},
+        "gcal": {"n": n, "m": brier_m, "sd": 0.1},
     }
 
 
 def test_msyc_power_increases_with_effect_and_fails_with_unpowered_brier():
     base = {
-        "adoption": {"n": 1500, "d": 0.2, "m": -0.08, "base_rate": 0.25, "trunc": 0.03},
+        "adoption": {"n": 1500, "d": 0.2, "m": -0.08, "base_rate": 0.25, "unparsed": 0.03},
         "neutral": {"n": 3500, "d": 0.1, "m": 0.0, "base_rate": 0.65},
         "guards": _guards(),
         "alpha_f": 0.0125,
@@ -37,9 +37,9 @@ def test_msyc_power_increases_with_effect_and_fails_with_unpowered_brier():
     lo = S.msyc_power({**base, "adoption": {**base["adoption"], "m": -0.01}}, reps=60, seed=1)
     assert lo["primary"] < hi["primary"]
     g = _guards()
-    g["brier"] = {"n": 3500, "m": 0.0, "sd": 0.44}
+    g["gcal"] = {"n": 3500, "m": 0.0, "sd": 0.44}
     nob = S.msyc_power({**base, "guards": g}, reps=60, seed=1)
-    assert nob["brier"] < 0.4 and nob["pass"] < hi["pass"]
+    assert nob["gcal"] < 0.4 and nob["pass"] < hi["pass"]
 
 
 def test_mte_sampler_and_power():
@@ -78,3 +78,20 @@ def test_ma_power_monotone_in_feature_information():
 
 def test_wilson_upper():
     assert S.wilson_upper(13, 100) == pytest.approx(0.2098, abs=1e-3)
+
+
+def test_gcal_spec_uses_all_neutral_items_and_the_calibration_upper_sd():
+    """Board A C4: the G-CAL guard is simulated over n = |mq| + |mm| (3,544) with SD = s_U from the committed JSON."""
+    import importlib.util
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("psim", root / "scripts/wmm_powersim.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    man = json.loads((root / "docs/prereg/wmm_manifest.json").read_text())
+    calib = json.loads((root / "docs/prereg/wmm_gcal_calibration.json").read_text())
+    g = mod.gcal_spec(man, calib, 0.0)
+    assert g["n"] == 3544 == man["panels"]["mq"]["n"] + man["panels"]["mm"]["n"]
+    assert g["sd"] == calib["sd_dBS_upper_97_5"] and g["m"] == 0.0
