@@ -335,12 +335,19 @@ def h_field_group(rt: Runtime, req, ctx):
 
         shutil.rmtree(d)
     t0 = time.time()
-    C.collect_grouped(
-        m.model, m.tok, specs, panels, [mods], "cuda", d, fisher=True, theta_hash=m.base_hash
-    )
+    from wsp.wm.c1 import genengine as GE
+
+    with GE.field_collection(
+        m.model
+    ):  # RULING-wme-c1-bank-halt addendum 4, T4 item 1 (collection only)
+        C.collect_grouped(
+            m.model, m.tok, specs, panels, [mods], "cuda", d, fisher=True, theta_hash=m.base_hash
+        )
     ctx.check()
     t1 = time.time()
-    kept = F.compute_kept(d, "cuda")
+    kept = F.compute_kept(
+        d, "cuda"
+    )  # the kept-factor eigendecompositions keep their registered settings
     ctx.check()
     man = json.loads((d / "manifest.json").read_text())
     rt._field = None
@@ -378,17 +385,22 @@ def h_field_vocab(rt: Runtime, req, ctx):
     specs = P2.objective_specs(objs, panels, P.PanelConfig())
     d = rt.field_dir() / "vocab"
     t0 = time.time()
-    VF.collect_vocab_rows(
-        m.model,
-        m.tok,
-        specs,
-        panels,
-        rt.declared_rows(m),
-        "cuda",
-        d,
-        embed=m.embed.rsplit(".", 1)[0],
-        theta_hash=m.base_hash,
-    )
+    from wsp.wm.c1 import genengine as GE
+
+    with GE.field_collection(
+        m.model
+    ):  # RULING-wme-c1-bank-halt addendum 4, T4 item 1 (collection only)
+        VF.collect_vocab_rows(
+            m.model,
+            m.tok,
+            specs,
+            panels,
+            rt.declared_rows(m),
+            "cuda",
+            d,
+            embed=m.embed.rsplit(".", 1)[0],
+            theta_hash=m.base_hash,
+        )
     rt._field = None
     rt._rc = None
     man = json.loads((d / "manifest.json").read_text())
@@ -397,6 +409,79 @@ def h_field_vocab(rt: Runtime, req, ctx):
         "file_sha256": man["file_sha256"],  # data-level hashes (the manifest embeds wall times; K3)
         "seconds": time.time() - t0,
     }, {}
+
+
+def h_field_timing(rt: Runtime, req, ctx):
+    """RULING-wme-c1-bank-halt addendum 4, T4 item 3: one field group collected registered, deterministic
+    (``genengine.field_collection``), registered again (the first run warms the process), each into the request's
+    scratch directory and deleted after its hashes and timings are read. A non-unit request: nothing is written to
+    the live field and no result enters the study."""
+    import shutil
+
+    from wsp.wm import collect as C
+    from wsp.wm import panel as P
+    from wsp.wm import panel2 as P2
+    from wsp.wm import scorers as Sc
+    from wsp.wm.c1 import field as F
+    from wsp.wm.c1 import genengine as GE
+
+    g = int(req["args"].get("group", 0))
+    m = rt.hf()
+    m.at_base()
+    field_items, _, _ = rt.shard_items()
+    scored = rt.scored_hashes()
+    panels = {
+        f"construction:{o}": Sc.field_panel(f"construction:{o}", its, scored)
+        for o, its in field_items.items()
+    }
+    objs = [o for o in F.T2_OBJECTIVES if o in field_items]
+    specs = P2.objective_specs(objs, panels, P.PanelConfig())
+    layers = [L for L in F.group_layers(g) if L < m.rm.n_layers]
+    mods = [F.module_of(m.rm.name(L, r)) for L in layers for r in ("down", "o")]
+    runs = []
+    for i, mode in enumerate(("registered", "deterministic", "registered")):
+        d = Path(ctx.scratch) / f"field_timing_{i}_{mode}"
+        t0 = time.time()
+        if mode == "deterministic":
+            with GE.field_collection(m.model):
+                C.collect_grouped(
+                    m.model,
+                    m.tok,
+                    specs,
+                    panels,
+                    [mods],
+                    "cuda",
+                    d,
+                    fisher=True,
+                    theta_hash=m.base_hash,
+                )
+        else:
+            C.collect_grouped(
+                m.model,
+                m.tok,
+                specs,
+                panels,
+                [mods],
+                "cuda",
+                d,
+                fisher=True,
+                theta_hash=m.base_hash,
+            )
+        wall = time.time() - t0
+        ctx.check()
+        man = json.loads((d / "manifest.json").read_text())
+        runs.append(
+            {
+                "mode": mode,
+                "wall_s": wall,
+                "seconds": {k: v["seconds"] for k, v in man["identity"]["timing"].items()},
+                "file_sha256": man["file_sha256"],
+            }
+        )
+        shutil.rmtree(d, ignore_errors=True)
+    rt._field = None
+    rt._rc = None
+    return {"group": g, "modules": mods, "runs": runs}, {}
 
 
 def h_bank_base(rt: Runtime, req, ctx):
@@ -477,6 +562,7 @@ HANDLERS = {
     "field_status": h_field_status,
     "field_quarantine": h_field_quarantine,
     "field_repair": h_field_repair,
+    "field_timing": h_field_timing,
     "bank_verify": h_bank_verify,
     "canary": h_canary,
     "field_group": h_field_group,

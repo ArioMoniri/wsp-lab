@@ -264,6 +264,41 @@ def deterministic(model, bindings=None):
         restore_state(prev, env=False)
 
 
+# ------------------------------------------------------------------ field collection (RULING-wme-c1-bank-halt addendum 4)
+
+# T4 item 1: the field (K-FAC groups) and vocabulary-row collection runs under the registered deterministic context
+# above. The D1 diagnostic found the registered-mode collection backward non-reproducible (mmlupro_gold_lp gradients,
+# entering at the layer-2 linear-attention block); the T2 probe found it bitwise reproducible 3/3 under this context.
+# Scope: the collection calls only (``wm.collect.collect_grouped``, ``wm.vocabfield.collect_vocab_rows``). The
+# kept-factor eigendecompositions, every other unit kind and every engine keep their registered settings.
+FIELD_MODE = "deterministic"
+
+
+def field_config() -> dict:
+    """The recorded field-collection configuration (``engine_config()["field"]``; bound by the transition's
+    attestation)."""
+    det = dict(config("hf_deterministic")["deterministic"])
+    det["scope"] = (
+        "inside wm.collect.collect_grouped (field groups) and wm.vocabfield.collect_vocab_rows (vocabulary rows) "
+        "only; kept-factor eigendecompositions, every other unit kind and every engine keep their registered settings"
+    )
+    return {
+        "mode": FIELD_MODE,
+        "ruling": "docs/council/2026-11-21/RULING-wme-c1-bank-halt.md addendum 4 (T4 item 1)",
+        "deterministic": det,
+    }
+
+
+@contextlib.contextmanager
+def field_collection(model, bindings=None):
+    """T4 item 1: the registered deterministic context (:func:`deterministic`, R11 restore semantics) around one field
+    or vocabulary collection call."""
+    if FIELD_MODE != "deterministic":
+        raise RuntimeError(f"field mode {FIELD_MODE!r} is not registered")
+    with deterministic(model, bindings):
+        yield
+
+
 def hf_generate(model, tok, prompts, max_new_tokens, batch, device, sample=None, mode=None) -> list:
     """Every HF generate call of the run. ``sample`` = None (greedy) or {temperature, top_p, seed}."""
     from wsp.wm import genaudit as GA
