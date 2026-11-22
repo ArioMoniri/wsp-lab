@@ -199,3 +199,105 @@ def test_a_failed_attempt_counts_as_executed_and_keeps_its_canary(tmp_path):
 
     C.run_bracketed(g, store, [({"u": 0}, "u0")], flaky, "t" * 64, "p", canary, chunk=1)
     assert len(calls) == 2  # start + the chunk that executed (a failed then a successful attempt)
+
+
+# ------------------------------------------------------------------ R3: the explicit repair record for inert:05:comp
+
+
+def load_ctl():
+    import importlib.util
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("wme_c1_ctl_v2z", root / "scripts/wme_c1_ctl.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def cli_study(tmp_path, monkeypatch, fail_cause=None):
+    import json
+
+    from wsp.wm.c1 import study as SD
+
+    mod = load_ctl()
+    runs = tmp_path / "runs"
+    monkeypatch.setattr(mod, "RUNS", runs)
+    monkeypatch.setattr(mod, "STUDY", runs / "study")
+    from wsp.wm.c1 import phasel as PLm
+
+    monkeypatch.setattr(PLm, "git", lambda *a, **k: "a" * 40)
+    runs.mkdir()
+    (runs / "attestation.json").write_text(json.dumps(RG._att_fields(ATT)))
+    st = SD.Study(runs / "study", runs, ATT, "t" * 64, mod.PANEL_ID, log=lambda *a: None)
+    g = st.guard("bank", "lambda:x")
+    g.open_instance(1)
+    g.canary(REF)
+
+    def bad(r):
+        if fail_cause == "technical":
+            raise P.TransportError("infrastructure")
+        raise ValueError("UnsupportedTensor: model.layers.12.mlp.up_proj.weight")
+
+    try:  # a technical failure is retried to exhaustion (then the fallback); a non-technical one halts
+        H.run_units(st.store("bank"), [({"kind": "bank_inert", "u": 5}, "inert:05:comp")], bad, "t" * 64, "p",
+                    guard=g)  # fmt: skip
+    except ValueError:
+        pass
+    return mod, runs
+
+
+def test_record_repair_writes_the_registered_repair_record_citing_the_ruling(tmp_path, monkeypatch):
+    mod, runs = cli_study(tmp_path, monkeypatch)
+    a = types.SimpleNamespace(cause="code_defect_crash", label="inert:05:comp",
+                              ruling="RULING-wme-c1-bank-halt.md addendum 8")  # fmt: skip
+    out = mod.cmd_record_repair(a)
+    s = RG.read_study(runs / "study")
+    rp = s.repairs[-1]
+    assert (
+        rp["cause"] == "code_defect_crash"
+        and rp["outcome_blind"] is True
+        and rp["commit"] == "a" * 40
+    )
+    assert "inert:05:comp" in rp["description"] and "addendum 8" in rp["description"]
+    assert out["seq"] == rp["seq"]
+    with pytest.raises(SystemExit, match="no failure awaiting a repair"):
+        mod.cmd_record_repair(a)  # the failure is now repaired
+
+
+def test_record_repair_refuses_without_a_pending_unrepaired_failure(tmp_path, monkeypatch):
+    mod, runs = cli_study(tmp_path, monkeypatch, fail_cause="technical")
+    log0 = (runs / "study" / RG.LOG_NAME).read_bytes()
+    a = types.SimpleNamespace(
+        cause="code_defect_crash", label="inert:05:comp", ruling="RULING addendum 8"
+    )
+    with pytest.raises(SystemExit, match="no failure awaiting a repair"):
+        mod.cmd_record_repair(a)
+    a2 = types.SimpleNamespace(
+        cause="not_a_cause", label="inert:05:comp", ruling="RULING addendum 8"
+    )
+    with pytest.raises(SystemExit, match="registered technical cause"):
+        mod.cmd_record_repair(a2)
+    assert (runs / "study" / RG.LOG_NAME).read_bytes() == log0
+
+
+def test_record_repair_still_names_the_unit_after_a_resume_repair_record(tmp_path, monkeypatch):
+    """The run order writes the resume's own repair record (cause infrastructure, naming the instance) before the
+    unit's named repair; the named record is still accepted, once."""
+    from wsp.wm.c1 import study as SD
+
+    mod, runs = cli_study(tmp_path, monkeypatch)
+    st = SD.Study(runs / "study", runs, ATT, "t" * 64, mod.PANEL_ID, log=lambda *a: None)
+    g = st.guard("bank", "lambda:y")
+    g.retry.repair(
+        "infrastructure",
+        "resume on lambda:y after the halt (no transition)",
+        "a" * 40,
+        outcome_blind=True,
+    )
+    a = types.SimpleNamespace(
+        cause="code_defect_crash", label="inert:05:comp", ruling="RULING addendum 8"
+    )
+    mod.cmd_record_repair(a)
+    with pytest.raises(SystemExit, match="no failure awaiting"):
+        mod.cmd_record_repair(a)
