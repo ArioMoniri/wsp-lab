@@ -320,7 +320,13 @@ class World:
         assert m.current(g.epoch), "I2 a unit ran under a stale owner"
         assert m.active(g.instance), ("I2 a unit ran without an active instance", g.instance)
         assert not m.halted, "I2 a unit ran while the clock is halted"
-        assert len(m.starts.get(k, [])) <= ATTEMPTS, "I2 more than 3 attempts"
+        # PREREG_WME §II.31.12 (Board A v2u C1): the attempt budget is counted per contract generation
+        cur = [
+            a
+            for a in m.starts.get(k, [])
+            if a.get("generation") == m.gen and a.get("contract") == m.contracts[-1][0]
+        ]
+        assert len(cur) <= ATTEMPTS, "I2 more than 3 attempts in the current contract generation"
         assert m.starts[k][-1]["instance"] == g.instance
         assert m.expected(k, self.store) is None, "I2 a resolved unit was recomputed"
         total = max(m.unit_s / 3600, sum(m.charges(m.max_t).values()))

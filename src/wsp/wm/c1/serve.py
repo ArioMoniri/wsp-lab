@@ -414,8 +414,9 @@ def h_field_vocab(rt: Runtime, req, ctx):
 def h_field_timing(rt: Runtime, req, ctx):
     """RULING-wme-c1-bank-halt addendum 4, T4 item 3: one field group collected registered, deterministic
     (``genengine.field_collection``), registered again (the first run warms the process), each into the request's
-    scratch directory and deleted after its hashes and timings are read. A non-unit request: nothing is written to
-    the live field and no result enters the study."""
+    scratch directory and deleted after its hashes and timings are read. First (Board A v2u C4), one scratch-only
+    vocabulary-row collection under the deterministic context; if it raises, its error is returned and no timing run
+    follows. A non-unit request: nothing is written to the live field and no result enters the study."""
     import shutil
 
     from wsp.wm import collect as C
@@ -438,7 +439,46 @@ def h_field_timing(rt: Runtime, req, ctx):
     specs = P2.objective_specs(objs, panels, P.PanelConfig())
     layers = [L for L in F.group_layers(g) if L < m.rm.n_layers]
     mods = [F.module_of(m.rm.name(L, r)) for L in layers for r in ("down", "o")]
+    # Board A v2u C4: first, one scratch-only vocabulary-row collection under the deterministic context (the
+    # vocabulary path had never run under use_deterministic_algorithms). A kernel without a deterministic
+    # implementation raises here and is reported verbatim; nothing is substituted and no timing run follows.
+    from wsp.wm import vocabfield as VF
+
+    dv = Path(ctx.scratch) / "field_timing_vocab_probe"
+    t0 = time.time()
+    try:
+        with GE.field_collection(m.model):
+            VF.collect_vocab_rows(
+                m.model,
+                m.tok,
+                specs,
+                panels,
+                rt.declared_rows(m),
+                "cuda",
+                dv,
+                embed=m.embed.rsplit(".", 1)[0],
+                theta_hash=m.base_hash,
+            )
+        vman = json.loads((dv / "manifest.json").read_text())
+        vocab = {"ok": True, "seconds": time.time() - t0, "file_sha256": vman["file_sha256"]}
+    except Exception as exc:  # noqa: BLE001 - reported (the chair rules), never worked around
+        import traceback
+
+        vocab = {
+            "ok": False,
+            "seconds": time.time() - t0,
+            "error": {
+                "type": type(exc).__name__,
+                "message": str(exc)[:4000],
+                "trace": traceback.format_exc()[-4000:],
+            },
+        }
+    shutil.rmtree(dv, ignore_errors=True)
     runs = []
+    if not vocab["ok"]:
+        rt._field = None
+        rt._rc = None
+        return {"group": g, "modules": mods, "vocab_probe": vocab, "runs": runs}, {}
     for i, mode in enumerate(("registered", "deterministic", "registered")):
         d = Path(ctx.scratch) / f"field_timing_{i}_{mode}"
         t0 = time.time()
@@ -481,7 +521,7 @@ def h_field_timing(rt: Runtime, req, ctx):
         shutil.rmtree(d, ignore_errors=True)
     rt._field = None
     rt._rc = None
-    return {"group": g, "modules": mods, "runs": runs}, {}
+    return {"group": g, "modules": mods, "vocab_probe": vocab, "runs": runs}, {}
 
 
 def h_bank_base(rt: Runtime, req, ctx):

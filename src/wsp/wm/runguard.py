@@ -33,7 +33,10 @@ The registered rules enforced on that state (unchanged in substance from §II.22
   canary under the current contract generation must equal the reference, otherwise :class:`CanaryMismatch`.
 * **Attempts and relaunches.** At most :data:`UNIT_ATTEMPTS` = 3 attempts per unit in total, counted from the log
   across processes, objects, instances and relaunches; then the registered fallback. At most
-  :data:`PHASE_RELAUNCHES` = 1 relaunch per phase.
+  :data:`PHASE_RELAUNCHES` = 1 relaunch per phase. The attempt budget is counted per contract generation
+  (PREREG_WME §II.31.12; Board A v2u C1): a contract transition supersedes every attempt of the earlier generation,
+  and a unit gets 3 counted attempts under the new one (attempt numbers stay global; failure causes are scoped to
+  the generation; a transition over a recorded unit fallback is refused). The relaunch counter stays global.
 * **Failures.** A failed attempt's measured seconds are charged. A failure is retried only if the classifier maps it
   to one of :data:`TECHNICAL_CAUSES`; anything else halts (re-raised, still charged).
 * **Results and eligibility.** Each successful attempt is stored under its own key (``<unit>.a<n>``, n global per
@@ -105,6 +108,11 @@ class IncidentAbort(RuntimeError):
     toward the attempt limit, never a failure cause."""
 
     incident_kind = "incident"
+
+
+class TransitionRefused(ValueError):
+    """A contract transition that the per-generation attempt rule cannot apply to (Board A v2u C1): the superseded
+    generation holds a unit ``fallback`` record."""
 
 
 class RepairRequired(RuntimeError):
@@ -215,6 +223,19 @@ class StudyState:
         self.aborted: dict = {}  # unit -> attempts aborted by a run-health incident (not counted, R4)
         self.last_fail_seq: dict = {}  # unit -> seq of its last attempt_fail
         self.incidents: list = []  # open run-health incidents
+        # Board A v2u C1: the attempt budget per contract generation. Keys (unit, generation, contract) of the
+        # attempt_start; an abort or failure belongs to the generation of the start its ``start_seq`` names.
+        self.start_gen: dict = {}  # attempt_start seq -> (generation, contract)
+        self.gen_starts: dict = {}  # (unit, generation, contract) -> attempts started
+        self.gen_aborted: dict = {}  # (unit, generation, contract) -> incident aborts (not counted, R4)
+        self.gen_last_cause: dict = {}  # (unit, generation, contract) -> cause of its last failure
+        self.gen_last_fail_seq: dict = {}  # (unit, generation, contract) -> seq of its last attempt_fail
+
+    def counted(self, unit: str, generation, contract) -> int:
+        """Attempts counted toward the limit for ``unit`` under (contract, generation): its starts in that generation
+        minus the incident aborts of those starts (Board A v2u C1; R4)."""
+        k = (unit, generation, contract)
+        return self.gen_starts.get(k, 0) - self.gen_aborted.get(k, 0)
 
     @property
     def generation(self):
@@ -264,13 +285,22 @@ class StudyState:
         elif t == "attempt_start":
             self.attempts[r["unit"]] = self.attempts.get(r["unit"], 0) + 1
             self.inflight[r["unit"]] = r
+            gk = (r.get("generation"), r.get("contract"))
+            self.start_gen[r["seq"]] = gk
+            k = (r["unit"], *gk)
+            self.gen_starts[k] = self.gen_starts.get(k, 0) + 1
         elif t == "attempt_fail":
             self.inflight.pop(r["unit"], None)
             self.last_cause[r["unit"]] = r["cause"]
             self.last_fail_seq[r["unit"]] = r["seq"]
+            k = (r["unit"], *self.start_gen.get(r.get("start_seq"), (None, None)))
+            self.gen_last_cause[k] = r["cause"]
+            self.gen_last_fail_seq[k] = r["seq"]
         elif t == "attempt_aborted":
             self.inflight.pop(r["unit"], None)
             self.aborted[r["unit"]] = self.aborted.get(r["unit"], 0) + 1
+            k = (r["unit"], *self.start_gen.get(r.get("start_seq"), (None, None)))
+            self.gen_aborted[k] = self.gen_aborted.get(k, 0) + 1
         elif t == "attempt_ok":
             self.inflight.pop(r["unit"], None)
             self.ok.setdefault(r["unit"], []).append(r)
@@ -855,10 +885,9 @@ class RetryPolicy(_View):
         if cause is not None and cause not in TECHNICAL_CAUSES:
             raise ValueError(f"retry cause {cause!r} is not a registered technical cause")
         with self._op() as s:
-            n = s.attempts.get(unit, 0) + 1  # attempt numbers stay unique (attempt keys)
-            counted = s.attempts.get(unit, 0) - s.aborted.get(
-                unit, 0
-            )  # incident aborts never count (R4)
+            n = s.attempts.get(unit, 0) + 1  # attempt numbers stay global and unique (attempt keys)
+            # Board A v2u C1: counted per contract generation; incident aborts never count (R4)
+            counted = s.counted(unit, fields.get("generation"), fields.get("contract"))
             if counted + 1 > UNIT_ATTEMPTS:
                 raise RetryExhausted(
                     f"{unit}: {UNIT_ATTEMPTS} attempts used; take its registered fallback"
@@ -1109,6 +1138,13 @@ class ProductionGuard:
                         "results without an explicit ContractTransition"
                     )
                 transition.check()
+                if (
+                    s.fallback_units
+                ):  # Board A v2u C1: a superseded generation's fallback needs a ruling
+                    raise TransitionRefused(
+                        f"the superseded generation holds unit fallback(s) {sorted(s.fallback_units)[:3]}; "
+                        "a transition over a recorded fallback needs a ruling"
+                    )
             elif transition is not None:
                 raise ValueError("a ContractTransition was given but there is no other contract")
             reg = s.fallbacks.get(phase)
@@ -1375,10 +1411,15 @@ class ProductionGuard:
                 raise CanaryMismatch(
                     f"{label}: an attempt is pending its closing canary; close it (or declare its instance lost)"
                 )
-            fs = s.last_fail_seq.get(key)
+            gk = (
+                key,
+                self.generation,
+                self.contract,
+            )  # Board A v2u C1: causes scoped to this generation
+            fs = s.gen_last_fail_seq.get(gk)
             if (
                 fs is not None
-                and s.last_cause.get(key) not in TECHNICAL_CAUSES
+                and s.gen_last_cause.get(gk) not in TECHNICAL_CAUSES
                 and not any(rp["seq"] > fs for rp in s.repairs)
             ):
                 raise RepairRequired(
@@ -1389,7 +1430,7 @@ class ProductionGuard:
             )
             return self.retry.attempt(
                 key,
-                s.last_cause.get(key),
+                s.gen_last_cause.get(gk),
                 label=label,
                 instance=self.instance,
                 generation=self.generation,
@@ -1462,7 +1503,7 @@ class ProductionGuard:
         with self._op() as s:
             fb = s.fallback_units.get(key)
             if fb is None:
-                if s.attempts.get(key, 0) < UNIT_ATTEMPTS:
+                if s.counted(key, self.generation, self.contract) < UNIT_ATTEMPTS:  # Board A v2u C1
                     raise ValueError(f"{label}: attempts remain; no fallback yet")
                 if any(s.status(a) == "eligible" for a in s.ok.get(key, [])):
                     raise UnitResolved(f"{label}: has an eligible result")
