@@ -299,3 +299,6 @@ skip its closing canary. A chunk with zero executed units has no result to brack
 
 **R3. Incident 2356 is resolved** under this addendum. Diagnosis: R(E) support handling for the compensated inerts,
 fixed by R1. The retry of `inert:05:comp` uses a repair record that cites this addendum.
+
+**Addendum 8, erratum (22 Nov 2026).** R1 says "for every bank unit". The binding scope is **inert units only**, which
+is how the chair instructed it and how v2z implements it. Every non-inert unit still raises on an unsupported tensor.
