@@ -208,3 +208,40 @@ No attempt was consumed and no field was collected.
 4. A new drill scenario I: transition followed by bank start.
 
 Incidents 338 and 340 are resolved under this addendum, citing the diagnoses above.
+
+## Addendum 6 (22 Nov 2026): run7, canary OOM mid-bank
+
+**Input.** `docs/reviews/wme/wme-c1-run-halt-bank-oom-2026-11-22.md`, on branch `run/wme-c1-run7` at commit
+`e9f2e0e`.
+
+**Status before the halt.** The following all passed:
+- preflight and the heartbeat gate;
+- parity, with hf_gen `7299ac4f…`;
+- the resume;
+- the resolution of incidents 338 and 340;
+- the deterministic field collection and `bank:base`;
+- two bank chunks;
+- the order monitor.
+
+**The fault.** A chunk-closing canary ran out of memory in its child process. `Runtime.release()` emptied the CUDA
+cache before dropping the R-cache, bank and field tensors, so the parent process still held about 24 GiB. This was
+recorded as incident `worker_error` (seq 569).
+
+The 16 bank sides that were waiting on that canary are `retained_ineligible`. Each consumed one generation-1
+attempt, as registered. No sealed read and no claim outcome exists.
+
+**Decisions.**
+1. **The v2x fix is approved.**
+   - `Runtime.release()` first drops every GPU reference, then runs `gc.collect()`, then `empty_cache()`.
+   - The parent's free GPU memory is checked and recorded before any child process starts. If it is below the
+     child's requirement, that is an incident and the child does not start.
+   - A CPU test covers the release order.
+   - A small **local-GPU** smoke test must also run before the next launch: allocate a stand-in tensor of at least
+     4 GiB as R-cache or field, call `release()`, and verify the memory is returned.
+     - It is engineering only and touches no study data.
+     - Limits: ≤ 8 GB of VRAM, and it must coexist with the running study M′ job.
+2. **Incident 569 is resolved** under this addendum. Diagnosis: the release order in `Runtime.release()`, fixed in
+   v2x.
+3. **Recovery.** Re-collect the generation-1 field deterministically and verify it with a bitwise K3 repair against
+   its recorded per-file hashes. The 16 ineligible sides are re-run with their remaining 2 attempts. No other
+   change.
