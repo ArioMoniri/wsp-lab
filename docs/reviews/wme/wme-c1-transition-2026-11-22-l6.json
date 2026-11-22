@@ -1,0 +1,68 @@
+{
+ "attestation": {
+  "canary_reference": "c7d87cd5e116f61f90385d4be0c3833faf1b3bd5a345a82778520c14eeaabac6",
+  "engine_config_sha256": "b98713ec2ff3ad38ac615307633648ec0b43420635d576f91fd6a945a8a772f8",
+  "evidence": [
+   "docs/council/2026-11-21/RULING-wme-c1-bank-halt.md sha256:668b7c5845e2a2f30f9d5aa8dcc6a84256bafe8c810d8802e5923e7027d2812f",
+   "docs/reviews/wme/wme-c1-canary-refs-2026-11-21-l3.json sha256:f8b3814ae668ddece07dba391dac0fe24e66dd2de6d465a73180219066684cad",
+   "docs/reviews/wme/wme-c1-engine-config-2026-11-21-l3.json sha256:a3c97ef1a5b2f192c92daa7388a0e7f94f734eb746d6a513de005cb1ac07a453",
+   "docs/reviews/wme/wme-c1-field-timing-2026-11-22-l6.json sha256:efd97aadf881c523cbfc48fb320480d5ef60acb3ae018e07457844c19b9a7f4b",
+   "docs/reviews/wme/wme-c1-launch-code-2026-11-21-l3.json sha256:cc2dfe80bfa62c1785c99140d468995ead8cb79870993c3c6c9044cdd9ebcece",
+   "docs/reviews/wme/wme-c1-launch-inert-2026-11-21-l3.json sha256:397cd6773bd4332622bc49786d2aa0fef607b65d20de3b95d8db6beafea8c28d",
+   "docs/reviews/wme/wme-c1-launch-parity-2026-11-20-l3.json sha256:c20ec05932a21754ed67a46325a70310916e466c89e08c011a5680945c000882",
+   "docs/reviews/wme/wme-c1-launch-parity-2026-11-22-l6.json sha256:0f67112425aff5b29d1051b558272e85150dda9137258532d3fd65aab18e5dfc",
+   "docs/reviews/wme/wme-c1-launch-parsers-2026-11-21-l3.json sha256:eab5fab28c707a43c73535f69cf85cafa3a8d7713de28ce252bddd394d0a5751",
+   "docs/reviews/wme/wme-c1-launch-timing-2026-11-21-l3.json sha256:5f5bfe0ab6e467020f22b9af7d11a80f19e2d8bda97ac92001f75fba4461bdd7",
+   "docs/reviews/wme/wme-c1-transition-prep-2026-11-21-l5p.json sha256:d0e18f3bf4f668f60850c19dd4eb1c24652f1f767d86acd6bec488ed453f701d"
+  ],
+  "gpu_parity_bitwise": true,
+  "inert_identity_bitwise": true
+ },
+ "attestation_file": "attestation-g1.json",
+ "canary": {
+  "composite": "c7d87cd5e116f61f90385d4be0c3833faf1b3bd5a345a82778520c14eeaabac6",
+  "engines": {
+   "hf_gen": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+   "tf": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+   "vllm": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+  },
+  "pass": true
+ },
+ "cause": "driver_or_cuda",
+ "commit": "efedcfd131ba8af926dfdf11aa50bb89dee1c034",
+ "contract": "8f38d82ca70d19dee3cae6996d46b81fcb274423f5b10e0c68d292ed9cded179",
+ "epoch": 16,
+ "generation": 1,
+ "hello": {
+  "code_sha": "2fa4fa72a88f664f9837711132e6227e16936c41",
+  "driver": "570.148.08",
+  "gpu_names": [
+   "NVIDIA H100 80GB HBM3"
+  ],
+  "versions": {
+   "cuda": "13.0",
+   "gpu": [
+    "NVIDIA H100 80GB HBM3"
+   ],
+   "numpy": "2.3.5",
+   "python": "3.12.16",
+   "torch": "2.14.0+cu130",
+   "transformers": "5.22.2",
+   "vllm": "0.34.0"
+  }
+ },
+ "instance": "lambda:8170aef3c9a64dc28efb8a5384e09506",
+ "previous_contract": "0a8efdacc98baac922b0727f9e122516ada9d0cb636add794b9f80d27c20bc2f",
+ "quarantine": {
+  "dest": null,
+  "moved": {}
+ },
+ "resolved_incidents": [
+  [
+   "field_repair_mismatch",
+   277
+  ]
+ ],
+ "transition_seq": 326,
+ "what": "T4 contract transition (RULING-wme-c1-bank-halt addendum 4)"
+}
