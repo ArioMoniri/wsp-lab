@@ -1287,6 +1287,28 @@ def cmd_resolve_incident(a):
     return out
 
 
+def cmd_resume_phase(a):
+    """RULING-wme-c1-bank-halt addendum 7 (§II.13 item 9, §II.14): record the chair's resumption of a paused phase
+    from ledger seconds only. Refuses, before any write, unless the 1.25x pause is pending for the phase's next unit
+    (measured unit GPU-h + its registered estimate > 1.25 x its price) and the phase was not resumed before."""
+    s = RG.read_study(STUDY)
+    st = SD.Study(STUDY, RUNS, load_att(), MO_theta0(), PANEL_ID, log=log)
+    phase = a.phase
+    if phase in s.phase_resumes:
+        raise SystemExit(f"REFUSED: {phase} already resumed (seq {s.phase_resumes[phase]['seq']})")
+    measured = s.unit_s.get(phase, 0.0) / 3600
+    est = SD.EST_UNIT_GPU_H[phase]
+    thr = RG.PHASE_PAUSE * float(st.priced[phase])
+    if not measured + est > thr:
+        raise SystemExit(f"REFUSED: {phase}: no PhasePause pending ({measured:.3f} + {est:.3f} <= {thr:.3f} GPU-h)")
+    g = st.guard(phase, "operator:resume-phase")
+    rec = g.resume_phase(phase, a.ruling)
+    out = {k: rec[k] for k in ("seq", "resumed_phase", "decided_by", "date", "ruling", "outcome_blind", "basis")}
+    log("phase resumed", json.dumps(out))
+    print(json.dumps(out))
+    return out
+
+
 def cmd_close(a):
     tr, rem = remote_for("main", a.iid)
     st = SD.Study(STUDY, RUNS, load_att(), "", PANEL_ID, log=log)
@@ -1473,6 +1495,9 @@ def main():
     ri.add_argument("--diagnosis", required=True)
     ri.add_argument("--ruling", required=True)
     sub.add_parser("preflight")  # addendum 5
+    rp = sub.add_parser("resume-phase")  # addendum 7: the chair's PhasePause resumption
+    rp.add_argument("--phase", required=True)
+    rp.add_argument("--ruling", required=True)
     c = sub.add_parser("close")
     c.add_argument("--iid", required=True)
     c.add_argument("--phase", default="confirmatory")
@@ -1492,6 +1517,7 @@ def main():
         "field-timing": cmd_field_timing,
         "resolve-incident": cmd_resolve_incident,
         "preflight": cmd_preflight,
+        "resume-phase": cmd_resume_phase,
         "transition": cmd_transition,
         "close": cmd_close,
         "status": cmd_status,

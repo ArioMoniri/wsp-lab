@@ -55,6 +55,10 @@ The registered rules enforced on that state (unchanged in substance from §II.22
 * **Absolute cap.** Charged total = max(measured unit GPU time, instance time); before every attempt, charged +
   the priced unit estimate must stay <= :data:`CAP_GPU_H` and <= :data:`CAP_USD` (:class:`CapExceeded`); a phase above
   1.25x its price raises :class:`PhasePause`.
+* **Phase pause and resumption.** A phase above 1.25x its price raises :class:`PhasePause`; the chair may resume it
+  from ledger seconds only (§II.13 item 9, §II.14): :meth:`ProductionGuard.resume_phase` writes a dated
+  ``phase_resume`` record (refused unless the pause is pending), after which that phase no longer pauses; the
+  absolute cap and R8 are unchanged.
 * **Cap generations (PREREG_WME §II.31).** The cap in force is the last persisted ``cap_generation`` record (else the
   registered :data:`CAP_GPU_H`). A cap generation only raises the cap, is dated, names its decider and source (a raise
   after §II.31 is the chair's and must have been announced to the user), never lets the cap exceed :data:`CAP_USD` at
@@ -226,6 +230,7 @@ class StudyState:
         self.last_fail_seq: dict = {}  # unit -> seq of its last attempt_fail
         self.incidents: list = []  # open run-health incidents
         self.incident_seqs: set = set()  # every incident record ever written
+        self.phase_resumes: dict = {}  # phase -> the chair's phase_resume record (§II.13 item 9, §II.14)
         # Board A v2u C1: the attempt budget per contract generation. Keys (unit, generation, contract) of the
         # attempt_start; an abort or failure belongs to the generation of the start its ``start_seq`` names.
         self.start_gen: dict = {}  # attempt_start seq -> (generation, contract)
@@ -322,6 +327,10 @@ class StudyState:
             self.incident_seqs.add(r["seq"])
         elif t == "incidents_resolved":
             self.incidents = []
+        elif (
+            t == "phase_resume"
+        ):  # RULING-wme-c1-bank-halt addendum 7: the 1.25x pause lifted for this phase
+            self.phase_resumes[r["resumed_phase"]] = r
         elif t == "incident_resolved":  # RULING-wme-c1-bank-halt addendum 5: one incident, named
             self.incidents = [i for i in self.incidents if i["seq"] != r["incident_seq"]]
 
@@ -831,7 +840,7 @@ class CombinedLedger(_View):
         return sum(max(0.0, float(v) - self.unit_gpu_h(p)) for p, v in self.priced.items())
 
     def check_before(self, phase: str, est_gpu_h: float, contract=None, generation=None):
-        with self._op():
+        with self._op() as s:
             tot = self.gpu_h() + est_gpu_h
             cap = self.cap_gpu_h()
             if self.r8 and tot > cap and tot * USD_PER_GPU_H <= CAP_USD:
@@ -863,7 +872,11 @@ class CombinedLedger(_View):
                 raise CapExceeded(
                     f"combined cap: {tot - est_gpu_h:.3f} + {est_gpu_h:.3f} GPU-h-eq > {cap} or $ > {CAP_USD}"
                 )
-            if self.unit_gpu_h(phase) + est_gpu_h > PHASE_PAUSE * self.priced[phase]:
+            if (
+                phase
+                not in s.phase_resumes  # §II.14: a recorded chair resumption lifts the pause (cap unchanged)
+                and self.unit_gpu_h(phase) + est_gpu_h > PHASE_PAUSE * self.priced[phase]
+            ):
                 raise PhasePause(
                     f"{phase}: above {PHASE_PAUSE} x its priced {self.priced[phase]} GPU-h"
                 )
@@ -1332,6 +1345,44 @@ class ProductionGuard:
     def open_incidents(self) -> list:
         with self.log.locked() as s:
             return [dict(r) for r in s.incidents]
+
+    def resume_phase(self, phase: str, ruling: str) -> dict:
+        """The chair's resumption of a paused phase (§II.13 item 9, §II.14: "the chair may resume from ledger seconds
+        only, within the absolute cap"; RULING-wme-c1-bank-halt addendum 7). A dated ``phase_resume`` record naming
+        the phase, the ruling and its ledger-seconds basis (outcome-blind). Refused unless the pause is pending for
+        this guard's next unit and the phase was not resumed before. It lifts the 1.25x pause for that phase only;
+        the absolute cap and R8 still apply."""
+        if not ruling:
+            raise ValueError("name the chair ruling")
+        with self._op() as s:
+            if phase in s.phase_resumes:
+                raise ValueError(f"{phase}: already resumed (seq {s.phase_resumes[phase]['seq']})")
+            measured = self.ledger.unit_gpu_h(phase)
+            priced = float(self.ledger.priced[phase])
+            est = self.est if phase == self.phase else 0.0
+            thr = PHASE_PAUSE * priced
+            if not measured + est > thr:
+                raise ValueError(
+                    f"{phase}: no PhasePause pending ({measured:.3f} + {est:.3f} <= {thr:.3f} GPU-h)"
+                )
+            now = self.ledger._trusted_now()
+            return self._append(
+                "phase_resume",
+                resumed_phase=phase,
+                decided_by="chair",
+                date=time.strftime("%Y-%m-%d", time.gmtime(now)),
+                ruling=ruling,
+                outcome_blind=True,
+                scope="the rest of the phase; the absolute cap and R8 still apply",
+                basis={
+                    "measured_unit_gpu_h": measured,
+                    "next_unit_estimate_gpu_h": est,
+                    "priced_gpu_h": priced,
+                    "threshold_gpu_h": thr,
+                    "charged_gpu_h": self.ledger.gpu_h(),
+                    "cap_gpu_h": self.ledger.cap_gpu_h(),
+                },
+            )
 
     def resolve_incident(self, seq: int, diagnosis: str, ruling: str) -> dict:
         """Close ONE open incident (RULING-wme-c1-bank-halt addendum 5): an ``incident_resolved`` record naming the
