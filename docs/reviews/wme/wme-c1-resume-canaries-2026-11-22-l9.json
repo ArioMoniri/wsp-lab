@@ -1,0 +1,67 @@
+{
+ "check": {
+  "composite": "c7d87cd5e116f61f90385d4be0c3833faf1b3bd5a345a82778520c14eeaabac6",
+  "composite_eq_persisted": true,
+  "hf_gen_eq_committed": true,
+  "pairs": {
+   "hf_gen": {
+    "committed": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "equal": true,
+    "main": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "parity_gpu0": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec"
+   },
+   "tf": {
+    "committed": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "equal": true,
+    "main": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "parity_gpu0": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b"
+   },
+   "vllm": {
+    "committed": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896",
+    "equal": true,
+    "main": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896",
+    "parity_gpu0": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   }
+  },
+  "pass": true
+ },
+ "contract": "8f38d82ca70d19dee3cae6996d46b81fcb274423f5b10e0c68d292ed9cded179",
+ "detail": {
+  "child": true,
+  "gen_engine": "hf_deterministic",
+  "parent_memory": {
+   "hf": {
+    "checked": true,
+    "child": "hf",
+    "free_gib": 78.57452392578125,
+    "parent_reserved_gib": 0.0,
+    "pass": true,
+    "required_gib": 60.0,
+    "t": 1795372705.8387816,
+    "total_gib": 79.1788330078125
+   },
+   "vllm": {
+    "checked": true,
+    "child": "vllm",
+    "free_gib": 78.57452392578125,
+    "parent_reserved_gib": 0.0,
+    "pass": true,
+    "required_gib": 69.677373046875,
+    "t": 1795372737.7568574,
+    "total_gib": 79.1788330078125,
+    "util": 0.88
+   }
+  },
+  "tf_hf_seconds": 31.41452431678772,
+  "vllm_seconds": 56.309335708618164
+ },
+ "engine_config_sha256": "b98713ec2ff3ad38ac615307633648ec0b43420635d576f91fd6a945a8a772f8",
+ "engines": {
+  "hf_gen": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+  "tf": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+  "vllm": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+ },
+ "instance": "lambda:7161f03311804785b9b78957a4be3aa0",
+ "pre_transition": false,
+ "resume": true
+}
