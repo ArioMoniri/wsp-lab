@@ -61,7 +61,9 @@ The registered rules enforced on that state (unchanged in substance from §II.22
   :data:`USD_PER_GPU_H`, binds the contract generation it was recorded under, and is recorded before the units it
   funds. It is not a contract transition: no result or canary is superseded.
 * **Run-health incidents (§II.31 run-health duties).** An ``incident`` record halts issuing: :meth:`ProductionGuard.begin`
-  raises :class:`HealthHalt` (before any attempt is recorded) until an ``incidents_resolved`` record names the
+  raises :class:`HealthHalt` (before any attempt is recorded) until it is resolved: one incident by an
+  ``incident_resolved`` record (its seq, the diagnosis, the chair ruling; addendum 5), or all by an
+  ``incidents_resolved`` record that names the
   diagnosis and the chair report.
 """
 
@@ -223,6 +225,7 @@ class StudyState:
         self.aborted: dict = {}  # unit -> attempts aborted by a run-health incident (not counted, R4)
         self.last_fail_seq: dict = {}  # unit -> seq of its last attempt_fail
         self.incidents: list = []  # open run-health incidents
+        self.incident_seqs: set = set()  # every incident record ever written
         # Board A v2u C1: the attempt budget per contract generation. Keys (unit, generation, contract) of the
         # attempt_start; an abort or failure belongs to the generation of the start its ``start_seq`` names.
         self.start_gen: dict = {}  # attempt_start seq -> (generation, contract)
@@ -316,8 +319,11 @@ class StudyState:
             self.caps.append(r)
         elif t == "incident":
             self.incidents.append(r)
+            self.incident_seqs.add(r["seq"])
         elif t == "incidents_resolved":
             self.incidents = []
+        elif t == "incident_resolved":  # RULING-wme-c1-bank-halt addendum 5: one incident, named
+            self.incidents = [i for i in self.incidents if i["seq"] != r["incident_seq"]]
 
     @property
     def cap_gpu_h(self) -> float:
@@ -1326,6 +1332,21 @@ class ProductionGuard:
     def open_incidents(self) -> list:
         with self.log.locked() as s:
             return [dict(r) for r in s.incidents]
+
+    def resolve_incident(self, seq: int, diagnosis: str, ruling: str) -> dict:
+        """Close ONE open incident (RULING-wme-c1-bank-halt addendum 5): an ``incident_resolved`` record naming the
+        incident's seq, the diagnosis and the chair ruling it cites. Refuses a seq that is no incident record and an
+        incident already resolved (singly or by :meth:`resolve_incidents`)."""
+        if not diagnosis or not ruling:
+            raise ValueError("name the diagnosis and the chair ruling")
+        with self._op() as s:
+            if int(seq) not in s.incident_seqs:
+                raise ValueError(f"seq {seq}: no incident record")
+            if not any(i["seq"] == int(seq) for i in s.incidents):
+                raise ValueError(f"incident seq {seq} is already resolved")
+            return self._append(
+                "incident_resolved", incident_seq=int(seq), diagnosis=diagnosis, ruling=ruling
+            )
 
     def resolve_incidents(self, diagnosis: str, report: str) -> dict:
         """Close every open incident after diagnosis and the report to the chair (both named)."""

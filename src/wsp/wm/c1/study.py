@@ -149,7 +149,10 @@ class Study:
         mon = self.monitor or HL.HealthMonitor(
             self.runs, log=self.log, order=self.health_order, classes=self.health_kinds
         )
-        mon.skip_stage(stage, reason)
+        gen = RG.read_study(self.state).generation if (self.state / RG.LOG_NAME).exists() else None
+        mon.skip_stage(
+            stage, reason, generation=gen
+        )  # addendum 5: scoped to the current contract generation
 
     def store(self, phase: str) -> H.UnitStore:
         return H.UnitStore(self.runs / phase / "units")

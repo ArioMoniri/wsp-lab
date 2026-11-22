@@ -386,12 +386,35 @@ class HealthMonitor:
         return rec
 
     # -------------------------------------------------- order (§II.18)
-    def skip_stage(self, stage: str, reason: str):
-        """Declare a registered stage skipped by the registered data flow (e.g. E1 not designated)."""
+    @staticmethod
+    def _scope(st: dict, generation) -> None:
+        """RULING-wme-c1-bank-halt addendum 5: the stage pointer and its skip declarations belong to one contract
+        generation. State written before v2w has no ``generation`` and is generation 0's. A new generation (a
+        contract transition supersedes every earlier unit) starts from the initial pointer, before the first
+        registered stage; the earlier generation's pointer and skips are kept in ``history``."""
+        if generation is None:
+            return
+        g, cur = int(generation), int(st.get("generation", 0))
+        if g != cur:
+            st.setdefault("history", []).append(
+                {
+                    "generation": cur,
+                    "stage": st["stage"],
+                    "skipped": list(st["skipped"]),
+                    "skip_reasons": dict(st.get("skip_reasons", {})),
+                }
+            )
+            st["stage"], st["skipped"], st["skip_reasons"] = -1, [], {}
+        st["generation"] = g
+
+    def skip_stage(self, stage: str, reason: str, generation=None):
+        """Declare a registered stage skipped by the registered data flow (e.g. E1 not designated), for the given
+        contract generation (``Study.skip_stage`` passes the current one)."""
         names = [s for s, _k in self.stages]
         if stage not in names:
             raise KeyError(stage)
         with self._state() as st:
+            self._scope(st, generation)
             st["skipped"] = sorted(set(st["skipped"]) | {stage})
             st.setdefault("skip_reasons", {})[stage] = reason
 
@@ -401,6 +424,9 @@ class HealthMonitor:
         kind = recipe.get("kind")
         names = [s for s, _k in self.stages]
         with self._state() as st:
+            self._scope(
+                st, getattr(guard, "generation", None)
+            )  # addendum 5: per contract generation
             cur = int(st["stage"])
             i = self.stage_of.get(kind)
             between = (

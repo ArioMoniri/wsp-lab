@@ -169,6 +169,10 @@ def cmd_up(a):
         raise SystemExit(f"REFUSED: the registered test gate failed {gate['counts']} (N6)")
     LO.STATE.mkdir(parents=True, exist_ok=True)
     ensure_watcher()
+    pf = preflight_checks()  # addendum 5: before any poll
+    log("preflight", json.dumps(pf, default=str))
+    if not pf["pass"]:
+        raise SystemExit("REFUSED: preflight failed (addendum 5)")
     dm = LO.deadman()
     spent = dm.cost_usd(dm.state())
     cap, rem, cap_gen = cap_state()
@@ -270,8 +274,109 @@ def cmd_up(a):
     print(json.dumps(rec))
 
 
+# ------------------------------------------------------------------ addendum 5: heartbeats, preflight
+
+
+def watcher_running() -> bool:
+    return "wme-c1-dm" in subprocess.run(["agent-tmux", "-l"], capture_output=True, text=True).stdout
+
+
+def tick_health(state_dir, watcher_running: bool, need: int = 2, wait_s: float = 180.0, sleep=time.sleep,
+                poll_s: float = 5.0) -> dict:  # fmt: skip
+    """The dead-man watcher is alive and clean: its ``last_tick`` advances ``need`` times within ``wait_s`` and no
+    ``error`` action follows its latest ``start``."""
+    state_dir = Path(state_dir)
+    read = lambda: float(json.loads((state_dir / "state.json").read_text()).get("last_tick", 0.0))  # noqa: E731
+    last, ticks, waited = read(), 0, 0.0
+    while watcher_running and ticks < need and waited < wait_s:
+        sleep(poll_s)
+        waited += poll_s
+        t = read()
+        if t > last:
+            ticks, last = ticks + 1, t
+    acts = [json.loads(x) for x in (state_dir / "actions.jsonl").read_text().splitlines()] if (
+        state_dir / "actions.jsonl").exists() else []  # fmt: skip
+    starts = [i for i, e in enumerate(acts) if e.get("event") == "start"]
+    since = acts[starts[-1] + 1 :] if starts else acts
+    errors = sum(e.get("event") == "error" for e in since)
+    return {
+        "watcher_running": watcher_running,
+        "ticks": ticks,
+        "errors_since_start": errors,
+        "pass": bool(watcher_running and ticks >= need and errors == 0),
+    }
+
+
+def preflight_checks(wait_s: float = 180.0) -> dict:
+    """RULING-wme-c1-bank-halt addendum 5, before any poll: (1) the worktree's ``.venv`` link and interpreter (the
+    heartbeat job runs ``.venv/bin/python``); (2) the heartbeat script runs once successfully against a dry target
+    (an empty dead-man state: no live instance, the loop ends cleanly); (3) the dead-man watcher's tick health."""
+    import tempfile
+
+    py = ROOT / ".venv" / "bin" / "python"
+    try:
+        ok = py.exists() and subprocess.run([str(py), "-c", "import sys"], capture_output=True, timeout=60).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        ok = False
+    venv = {"path": str(ROOT / ".venv"), "interpreter": str(py), "pass": bool(ok)}
+    with tempfile.TemporaryDirectory() as td:
+        env = {k: v for k, v in os.environ.items() if k != "WME_HB_PYTHON"}
+        try:
+            p = subprocess.run(
+                ["bash", str(ROOT / "scripts/wme_c1_hb.sh"), "dry", str(Path(td) / "dm"), "/nonexistent"],
+                capture_output=True, text=True, timeout=120, env=env,
+            )  # fmt: skip
+            hb = {"rc": p.returncode, "out": (p.stdout + p.stderr)[-500:],
+                  "pass": p.returncode == 0 and "no live instance" in p.stdout}  # fmt: skip
+        except (OSError, subprocess.SubprocessError) as exc:
+            hb = {"rc": None, "out": str(exc)[:300], "pass": False}
+    ticks = tick_health(LO.STATE, watcher_running(), wait_s=wait_s)
+    return {
+        "venv": venv,
+        "heartbeat_dry_run": hb,
+        "deadman_ticks": ticks,
+        "pass": venv["pass"] and hb["pass"] and ticks["pass"],
+    }
+
+
+def cmd_preflight(a):
+    rep = preflight_checks()
+    log("preflight", json.dumps(rep, default=str))
+    print(json.dumps(rep, default=str))
+    if not rep["pass"]:
+        raise SystemExit("PREFLIGHT FAILED: " + ", ".join(k for k in ("venv", "heartbeat_dry_run", "deadman_ticks")
+                                                          if not rep[k]["pass"]))  # fmt: skip
+    return rep
+
+
+def require_heartbeats(iid: str, alias: str, need: int = 2, wait_s: float = 900.0, poll_s: float = 15.0) -> int:
+    """Addendum 5: no request reaches a live instance until at least ``need`` progress heartbeats from its worker
+    (``heartbeats.jsonl``, written by ``wme_c1_hb.sh`` for ``alias``) have landed after the instance's launch. Waits up
+    to ``wait_s``, then refuses."""
+    t0 = time.time()
+    while True:
+        st = json.loads((LO.STATE / "state.json").read_text())
+        launched = float((st.get("instances", {}).get(iid) or {}).get("launched_at") or 0.0)
+        p = LO.STATE / "heartbeats.jsonl"
+        n = 0
+        if p.exists():
+            for ln in p.read_text().splitlines():
+                try:
+                    r = json.loads(ln)
+                except json.JSONDecodeError:
+                    continue
+                n += r.get("alias") == alias and r.get("source") == "progress" and float(r.get("t", 0)) > launched
+        if n >= need:
+            return n
+        if time.time() - t0 >= wait_s:
+            raise SystemExit(f"REFUSED: {n} progress heartbeat(s) from {alias} since the launch; {need} needed "
+                             "before any request (addendum 5)")  # fmt: skip
+        time.sleep(poll_s)
+
+
 def remote_for(kind: str, iid: str):
     alias = ALIAS[kind]
+    require_heartbeats(iid, alias)  # addendum 5: the heartbeat job must be landing before any request
     tr = T.SSHTransport(alias, LO.SSH_CONFIG, f"{REMOTE}/w")
     dm = LO.deadman()
 
@@ -1156,6 +1261,32 @@ def cmd_transition(a):
     return out
 
 
+def cmd_resolve_incident(a):
+    """RULING-wme-c1-bank-halt addendum 5: resolve ONE open run-health incident, naming its seq, the diagnosis and
+    the chair ruling it cites. Refuses (before any write) a seq that is no incident record or is already resolved."""
+    s = RG.read_study(STUDY)
+    seq = int(a.seq)
+    if seq not in s.incident_seqs:
+        raise SystemExit(f"REFUSED: seq {seq}: no incident record")
+    inc = next((i for i in s.incidents if i["seq"] == seq), None)
+    if inc is None:
+        raise SystemExit(f"REFUSED: incident seq {seq} is already resolved")
+    st = SD.Study(STUDY, RUNS, load_att(), MO_theta0(), PANEL_ID, log=log)
+    g = st.guard("bank", "operator:resolve-incident")
+    rec = g.resolve_incident(seq, a.diagnosis, a.ruling)
+    out = {
+        "incident_seq": seq,
+        "kind": inc["kind"],
+        "resolution_seq": rec["seq"],
+        "diagnosis": a.diagnosis,
+        "ruling": a.ruling,
+        "open_after": [(i["kind"], i["seq"]) for i in RG.read_study(STUDY).incidents],
+    }
+    log("incident resolved", json.dumps(out))
+    print(json.dumps(out))
+    return out
+
+
 def cmd_close(a):
     tr, rem = remote_for("main", a.iid)
     st = SD.Study(STUDY, RUNS, load_att(), "", PANEL_ID, log=log)
@@ -1337,6 +1468,11 @@ def main():
     tn.add_argument("--tag", required=True)
     tn.add_argument("--parity-evidence", required=True)
     tn.add_argument("--timing-evidence", required=True)
+    ri = sub.add_parser("resolve-incident")  # RULING-wme-c1-bank-halt addendum 5
+    ri.add_argument("--seq", required=True, type=int)
+    ri.add_argument("--diagnosis", required=True)
+    ri.add_argument("--ruling", required=True)
+    sub.add_parser("preflight")  # addendum 5
     c = sub.add_parser("close")
     c.add_argument("--iid", required=True)
     c.add_argument("--phase", default="confirmatory")
@@ -1354,6 +1490,8 @@ def main():
         "run": cmd_run,
         "repair-field": cmd_repair_field,
         "field-timing": cmd_field_timing,
+        "resolve-incident": cmd_resolve_incident,
+        "preflight": cmd_preflight,
         "transition": cmd_transition,
         "close": cmd_close,
         "status": cmd_status,
