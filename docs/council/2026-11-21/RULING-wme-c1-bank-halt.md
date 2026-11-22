@@ -182,3 +182,29 @@ This is outcome-blind: the bank is construction data, nothing sealed has been re
 4. **Recovery path.** A lost instance triggers deterministic re-collection plus bitwise K3. Both are tested.
 5. **New commit.** Because the code changes, a parity run on the new clean commit is required. The canary reference
    stays `7299ac4f…`.
+
+## Addendum 5 (22 Nov 2026): run6 bank-start halt
+
+**Input.** `docs/reviews/wme/wme-c1-run-halt-bank-order-2026-11-22.md`, on branch `run/wme-c1-run6` at commit
+`99fddd1`.
+
+**What passed.** Parity, resume, field timing and the transition to generation 1 (seq 326) all passed. Two checks
+from the earlier rulings came out as follows:
+- **C5:** the projection is 96.98 GPU-h-eq. That is under the 110 cap, so no R8 raise is triggered.
+- **C6:** the deterministic mmlupro hash equals T2's on a different instance. Bitwise K3 recovery across instances is
+  therefore supported.
+
+**What failed.** The bank stage was refused before any attempt by an `order` incident (seq 338). The order monitor's
+stage pointer was not scoped to the contract generation, so it still held generation 0's position. Separately, the
+heartbeat setup was broken: the worktree had no `.venv` link. The dead-man therefore terminated the idle main
+instance. A close-canary that then ran against the dead instance recorded `worker_error` (seq 340).
+
+No attempt was consumed and no field was collected.
+
+**Decisions.** The v2w fix covers four items:
+1. The order monitor is scoped to the contract generation.
+2. A `resolve-incident` command is added.
+3. Heartbeat hardening, plus a preflight that requires two live heartbeats before any unit is issued.
+4. A new drill scenario I: transition followed by bank start.
+
+Incidents 338 and 340 are resolved under this addendum, citing the diagnoses above.
