@@ -4385,3 +4385,32 @@ bitwise reproducible in 3 of 3 runs (`wme-c1-transition-prep-2026-11-21.md`).
 
 **Unchanged.** No claim, test, α, N, margin, seed, price rule, cap or stopping rule changes. Bank units are
 construction data, and no sealed item has been read.
+
+### II.31.12 Note (22 Nov 2026): the attempt budget is counted per contract generation (engineering, outcome-blind)
+
+**Status.** This note is recorded before any sealed read; no confirmatory result exists yet. It records the chair's
+acceptance of Board A's condition C1 (`docs/reviews/council/board-a-wme-c1-v2u-2026-11-21.md`, Q3 and C1).
+
+**Reading.** The registered limit of 3 attempts per unit "in total, counted across processes, instances and
+relaunches" (§II.22.6, §II.26) applies within one contract generation. Attempts and canaries bind to (contract
+digest, generation), and a contract transition supersedes every attempt of the earlier generation irreversibly. A
+unit recomputed under a new generation therefore has 3 counted attempts there, whatever its history before the
+transition. Counting across generations would give units that happened to run before a transition fewer attempts than
+units that had not yet run, an order-dependent difference introduced by an engineering defect.
+
+**Rule (implemented in `wsp.wm.runguard`).**
+1. For a unit under the current contract C and generation G, the counted attempts are its `attempt_start` records
+   with generation G and contract C, minus the `attempt_aborted` records whose `start_seq` names such a start
+   (incident aborts never count, §II.31.8 R4). A new attempt is refused when counted + 1 > 3; the registered
+   fallback then applies.
+2. Attempt numbers stay global per unit (the next is the previous maximum + 1), so attempt keys stay unique.
+3. The fallback precondition ("attempts remain") uses the same per-generation count.
+4. The last failure cause and its repair requirement are scoped to the generation: a failure in an earlier
+   generation neither blocks nor licenses a retry in the current one.
+5. A contract transition is refused while any unit `fallback` record exists; that case needs a ruling.
+6. The relaunch counter (1 per phase) and every other counter stay global.
+
+**Consequence for generation 1.** The 26 bank-phase units superseded by the T4 transition (§II.31.11) each have 3
+counted attempts under generation 1, the same as every bank unit not yet run.
+
+**Unchanged.** No claim, test, α, N, margin, seed, price rule, cap or stopping rule changes.

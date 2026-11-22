@@ -50,6 +50,8 @@ TRANSITION_RULING = "docs/council/2026-11-21/RULING-wme-c1-bank-halt.md"
 TRANSITION_PREP = "docs/reviews/wme/wme-c1-transition-prep-2026-11-21-l5p.json"
 TRANSITION_CAUSE = "driver_or_cuda"  # a non-deterministic CUDA backward kernel in the registered-mode collection
 TRANSITION_RESOLVES = ("field_repair_mismatch",)  # incident seq 277 (run5 K3 halt)
+# T2 (RULING-wme-c1-bank-halt addendum 3): the deterministic mmlupro_gold_lp.g0.pt, 3/3 on one instance
+T2_MMLUPRO_DET = "af39a61786527eba9c5e497106e514269e697deee8259cb4011aa2bb5bac62c4"
 BUNDLE_FILES = [
     "scripts/wme_c1_remote_setup.sh",
     "scripts/wme_c1_remote_worker.sh",
@@ -901,20 +903,62 @@ def cmd_repair_field(a):
     print(json.dumps({k: res[k] for k in ("verified", "instance")}))
 
 
+def _evidence_only_path(rel: str) -> bool:
+    """A path an evidence-only commit may touch (Board A v2u C2): under ``docs/``, never under ``docs/prereg/`` and
+    never a bundled file (``BUNDLE_FILES``: the manifest and the shard file are code inputs of the worker)."""
+    return rel.startswith("docs/") and not rel.startswith("docs/prereg/") and rel not in BUNDLE_FILES
+
+
 def same_code(commit: str) -> bool:
-    """P2 across evidence-only commits: ``commit`` is HEAD, or an ancestor of HEAD from which only ``docs/`` changed
-    (the run's own evidence commits: resume, timing)."""
+    """P2 across evidence-only commits (Board A v2u C2): ``commit`` is HEAD, or an ancestor of HEAD such that every
+    path changed since (``git diff --no-renames --name-status``: a rename is a deletion plus an addition) is an
+    evidence path (:func:`_evidence_only_path`)."""
     from wsp.wm.c1 import phasel as PL
 
-    head = PL.git("rev-parse", "HEAD")
+    head = PL.git("rev-parse", "HEAD", cwd=ROOT)
     if not commit or commit == head:
         return bool(commit)
     try:
-        PL.git("merge-base", "--is-ancestor", commit, head)
-        changed = PL.git("diff", "--name-only", commit, head).split()
+        PL.git("merge-base", "--is-ancestor", commit, head, cwd=ROOT)
+        out = PL.git("diff", "--no-renames", "--name-status", commit, head, cwd=ROOT)
     except subprocess.CalledProcessError:
         return False
-    return all(p.startswith("docs/") for p in changed)
+    paths = [ln.split("\t", 1)[1] for ln in out.splitlines() if "\t" in ln]
+    return all(_evidence_only_path(p) for p in paths)
+
+
+def require_clean_tree(what: str):
+    """Board A v2u C2: ``field-timing`` and ``transition`` run only from a clean tracked tree."""
+    from wsp.wm.c1 import phasel as PL
+
+    dirty = PL.git("status", "--porcelain", "--untracked-files=no", cwd=ROOT)
+    if dirty:
+        raise SystemExit(f"REFUSED: {what} needs a clean tracked tree:\n{dirty}")
+
+
+def hello_identity(hello: dict) -> dict:
+    return {
+        "code_sha": hello.get("code_sha"),
+        "driver": (hello.get("physical") or {}).get("driver"),
+        "gpu_names": (hello.get("physical") or {}).get("gpu_names"),
+        "versions": hello.get("versions"),
+    }
+
+
+def c6_record(runs: list) -> dict:
+    """Board A v2u C6 (report only): the deterministic mmlupro_gold_lp.g0.pt of field-timing against T2's."""
+    det = next((r for r in runs if r.get("mode") == "deterministic"), None)
+    got = None if det is None else (det.get("file_sha256") or {}).get("mmlupro_gold_lp.g0.pt")
+    eq = got == T2_MMLUPRO_DET
+    return {
+        "t2": T2_MMLUPRO_DET,
+        "field_timing": got,
+        "equal": eq,
+        "note": "cross-instance deterministic reproduction: K3 recovery on a new instance is supported"
+        if eq
+        else "differs from T2 (another instance): a lost instance cannot be repaired bitwise; the one live "
+        "instance rule (persistence option (ii)) is strictly binding",
+    }
 
 
 def evidence_entry(rel: str) -> str:
@@ -928,6 +972,7 @@ def cmd_field_timing(a):
     unit, no field written."""
     from wsp.wm.c1 import phasel as PL
 
+    require_clean_tree("field-timing")  # Board A v2u C2
     state = contract_state()
     head = PL.git("rev-parse", "HEAD")
     tr, rem = remote_for("main", a.iid)
@@ -935,8 +980,19 @@ def cmd_field_timing(a):
     st = SD.Study(STUDY, RUNS, load_att(), MO_theta0(), PANEL_ID, log=log)
     g = st.guard("bank", inst)
     C.take_over(tr, rem, g)
+    hello, _ = rem.call("hello", g.epoch, inst, "m" * 64, "hello", {})  # Board A v2u C3: the worker's code
+    hid = hello_identity(hello)
+    if not same_code(hid["code_sha"]):
+        raise SystemExit(f"REFUSED: the worker runs {hid['code_sha']}, not this code (P2)")
     uk = hashlib.sha256(f"wme-c1-field-timing:{a.tag}".encode()).hexdigest()
     p, _ = rem.call("field_timing", g.epoch, inst, uk, "field_timing:g0", {"group": 0})
+    if not p["vocab_probe"]["ok"]:  # Board A v2u C4: halt and report; nothing is substituted
+        ev = {"what": "T4 item 3 / Board A v2u C4: the deterministic vocabulary probe raised",
+              "engine_config_sha256": ec_sha(), "commit": head, "instance": inst, "hello": hid,
+              "vocab_probe": p["vocab_probe"]}  # fmt: skip
+        pth, h = write_evidence(f"wme-c1-field-timing-{utc_date()}-{a.tag}.json", ev)
+        commit_evidence([pth], f"wme-c1 T4: the deterministic vocabulary probe raised on {inst} (halt)")
+        raise SystemExit(f"HALT: the deterministic vocabulary probe raised: {p['vocab_probe']['error']['message'][:400]}")
     det = next(r for r in p["runs"] if r["mode"] == "deterministic")
     warm = [r for r in p["runs"] if r["mode"] == "registered"][-1]
     per = {k: det["seconds"][k] / warm["seconds"][k] for k in det["seconds"]}
@@ -947,9 +1003,12 @@ def cmd_field_timing(a):
         "commit": head,
         "contract_state": state,
         "instance": inst,
+        "hello": hid,
         "group": p["group"],
         "modules": p["modules"],
+        "vocab_probe": p["vocab_probe"],
         "runs": p["runs"],
+        "c6": c6_record(p["runs"]),
         "slowdown": {
             "per_objective": per,
             "total": total,
@@ -959,7 +1018,8 @@ def cmd_field_timing(a):
     pth, h = write_evidence(f"wme-c1-field-timing-{utc_date()}-{a.tag}.json", ev)
     commit_evidence([pth], f"wme-c1 T4 item 3: field g0 timing on {inst} (deterministic/registered {total:.3f})")
     log("field timing", pth, h, json.dumps({"total": total, "per_objective": per}))
-    print(json.dumps({"evidence": pth, "sha256": h, "slowdown": ev["slowdown"]}))
+    print(json.dumps({"evidence": pth, "sha256": h, "slowdown": ev["slowdown"], "c6": ev["c6"],
+                      "vocab_probe_s": p["vocab_probe"]["seconds"]}))  # fmt: skip
     return ev
 
 
@@ -983,6 +1043,7 @@ def cmd_transition(a):
 
     if not (STUDY / RG.LOG_NAME).exists():
         raise SystemExit("REFUSED: no study to transition")
+    require_clean_tree("transition")  # Board A v2u C2
     old = load_att()
     ecs = ec_sha()
     if old.engine_config_sha256 == ecs:
@@ -1007,6 +1068,11 @@ def cmd_transition(a):
         raise SystemExit("PRECONDITION FAILED: the field timing evidence is not bound to this engine config and code")
     if not any(r.get("mode") == "deterministic" for r in tim.get("runs", [])):
         raise SystemExit("PRECONDITION FAILED: the field timing evidence has no deterministic collection")
+    inst = LO.guard_instance(a.iid)
+    if tim.get("instance") != inst:  # Board A v2u C3: the timing came from this live instance
+        raise SystemExit(f"PRECONDITION FAILED: the field timing ran on instance {tim.get('instance')}, not {inst}")
+    if (tim.get("vocab_probe") or {}).get("ok") is not True:  # Board A v2u C4
+        raise SystemExit("PRECONDITION FAILED: the deterministic vocab probe is missing or did not pass")
     s = RG.read_study(STUDY)
     other = [i["kind"] for i in s.incidents if i["kind"] not in TRANSITION_RESOLVES]
     if other:
@@ -1036,7 +1102,13 @@ def cmd_transition(a):
         f"unchanged ({old.canary_reference[:12]}); parity {par_path}; field timing {tim_path}"
     )
     tr, rem = remote_for("main", a.iid)
-    inst = LO.guard_instance(a.iid)
+    # Board A v2u C3: before any write, the live worker runs the parity commit's code (hello at the current fence
+    # epoch: the owner that ran field-timing on this instance; no new owner is written)
+    hello, _ = rem.call("hello", s.epoch, inst, "m" * 64, "hello", {})
+    hid = hello_identity(hello)
+    pc = (par.get("code_identity") or {}).get("controller_commit")
+    if hid["code_sha"] != pc or not same_code(hid["code_sha"]):
+        raise SystemExit(f"PRECONDITION FAILED: the worker runs {hid['code_sha']}, not the parity commit {pc}")
     st = SD.Study(STUDY, RUNS, new, MO_theta0(), PANEL_ID, log=log)
     g = st.guard(
         "bank", inst, transition=RG.ContractTransition(TRANSITION_CAUSE, desc, head, outcome_blind=True)
@@ -1076,6 +1148,7 @@ def cmd_transition(a):
         "quarantine": q,
         "canary": {k: rec[k] for k in ("engines", "composite", "pass")},
         "commit": head,
+        "hello": hid,
     }
     pth, h = write_evidence(f"wme-c1-transition-{utc_date()}-{a.tag}.json", out)
     commit_evidence([pth], f"wme-c1 T4 contract transition on {inst}: generation {g.generation} ({g.contract[:12]})")

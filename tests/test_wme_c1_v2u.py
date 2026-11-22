@@ -280,7 +280,21 @@ class CanaryRemote:
             return {"engines": self.engines}, None
         if kind == "field_quarantine":
             return {"moved": {}, "dest": None}, None
+        if kind == "hello":  # Board A v2u C3: the worker runs the parity commit's code
+            return {"code_sha": "a" * 40, "physical": {"driver": "x"}, "versions": {}}, None
         raise AssertionError(f"unexpected request {kind}")
+
+
+def fake_git(*a, **k):
+    """HEAD is "a"*40, the tracked tree is clean, history since an ancestor is evidence-only; any other commit is
+    not an ancestor (as git merge-base --is-ancestor reports)."""
+    import subprocess
+
+    if a and a[0] in ("status", "diff"):
+        return ""
+    if a and a[0] == "merge-base" and a[2] != "a" * 40:
+        raise subprocess.CalledProcessError(1, ["git", *a])
+    return "a" * 40
 
 
 def transition_setup(tmp_path, monkeypatch):
@@ -288,7 +302,8 @@ def transition_setup(tmp_path, monkeypatch):
     runs, _st, _units = study_with_halt(tmp_path, monkeypatch, mod)
     new_ec = "e" * 64
     monkeypatch.setattr(mod, "ec_sha", lambda field=True: new_ec if field else OLD_EC)
-    monkeypatch.setattr(PL, "git", lambda *a, **k: "a" * 40)
+    # a clean tracked tree and evidence-only history (Board A v2u C2; tested in test_wme_c1_v2v)
+    monkeypatch.setattr(PL, "git", fake_git)
     monkeypatch.setattr(mod, "MO_theta0", lambda: "t" * 64)
     commits = []
     monkeypatch.setattr(mod, "commit_evidence", lambda paths, msg: commits.append((paths, msg)))
@@ -296,7 +311,8 @@ def transition_setup(tmp_path, monkeypatch):
     ev.mkdir()
     par = {"engine_config_sha256": new_ec, "code_identity": {"controller_commit": "a" * 40},
            "evaluation": {"proceed": True, "selected_engine": GE.GEN_ENGINE, "pass_rule": {"hf_gen_eq_committed": True}}}  # fmt: skip
-    tim = {"engine_config_sha256": new_ec, "commit": "a" * 40, "group": 0,
+    tim = {"engine_config_sha256": new_ec, "commit": "a" * 40, "group": 0, "instance": "lambda:NEW",
+           "vocab_probe": {"ok": True},  # Board A v2u C3, C4 (tested in test_wme_c1_v2v)
            "runs": [{"mode": "registered"}, {"mode": "deterministic"}, {"mode": "registered"}]}  # fmt: skip
     (ev / "par.json").write_text(json.dumps(par))
     (ev / "tim.json").write_text(json.dumps(tim))
