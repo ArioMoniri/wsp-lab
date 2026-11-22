@@ -118,7 +118,9 @@ GIB = 2**30
 
 
 def test_require_records_and_refuses_a_shortfall(monkeypatch):
-    monkeypatch.setattr(CM, "free_info", lambda: None)  # "no CUDA" below, whatever the test machine has
+    monkeypatch.setattr(
+        CM, "free_info", lambda: None
+    )  # "no CUDA" below, whatever the test machine has
     rec = CM.require("hf", required_gib=60.0, info=(70 * GIB, 80 * GIB))
     assert rec["pass"] is True and rec["free_gib"] == 70.0 and rec["required_gib"] == 60.0
     with pytest.raises(CM.ChildMemoryInsufficient, match="56.00 GiB free < 60.00 GiB"):
