@@ -245,3 +245,29 @@ attempt, as registered. No sealed read and no claim outcome exists.
 3. **Recovery.** Re-collect the generation-1 field deterministically and verify it with a bitwise K3 repair against
    its recorded per-file hashes. The 16 ineligible sides are re-run with their remaining 2 attempts. No other
    change.
+
+## Addendum 7 (22 Nov 2026): chair decision on the registered bank PhasePause (§II.13 item 9, §II.14)
+
+**Input.** `docs/reviews/wme/wme-c1-run-pause-bank-2026-11-22.md`, on branch `run/wme-c1-run8` at commit `c7db897`.
+
+**Ledger seconds. These are the only basis for this decision.**
+
+| Quantity | Value |
+|---|---|
+| Bank phase measured | 5.320 GPU-h (generation 0: 0.873, superseded; generation 1: 4.447) |
+| Pause threshold | 5.663 GPU-h (1.25 × 4.531) |
+| Remaining | 44 units, about 1 GPU-h of unit time plus about 1 GPU-h of instance overhead |
+| Combined spent | 19.229 GPU-h-eq |
+| Conservative projection | 105.2 GPU-h-eq, against the 110 cap |
+
+The overrun comes from engineering re-execution: the superseded generation 0, and run7's 16 sides that became
+ineligible. It does not come from the registered work itself.
+
+**Decision: RESUME the bank phase beyond 1.25 × its price** for the remaining 44 registered units, within the absolute
+cap.
+- This decision uses no outcome. No bank result was inspected for it, and no sealed or claim data exists.
+- R8 governs any later cap raise mechanically. Any raise is announced to the user.
+- The C1 agent records this decision in the study log as the chair's PhasePause resumption, citing this addendum.
+
+**Parity.** Reuse run8's parity evidence if the registered code accepts it for the unchanged commit `b2f1f71`.
+Otherwise, re-run parity on `b2f1f71`.
