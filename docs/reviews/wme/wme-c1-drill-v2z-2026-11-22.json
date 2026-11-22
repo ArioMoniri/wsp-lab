@@ -1,6 +1,6 @@
 {
  "all_pass": true,
- "commit": "989d28a4451c2f247958c94de946d54181362dcb",
+ "commit": "075358772e34f2a809b3db9ca8747fa7d8bfad51",
  "label": "wme-c1 CPU deployment drill (fixtures; engineering only; not confirmatory)",
  "log": {
   "records": 119,
@@ -64,7 +64,7 @@
    "second_relaunch_refused": true
   },
   "F_reconcile": {
-   "added_gpu_h": 3.994447964164946,
+   "added_gpu_h": 3.9944479403893154,
    "pass": true
   },
   "G_fresh_replay_detects_change": {
