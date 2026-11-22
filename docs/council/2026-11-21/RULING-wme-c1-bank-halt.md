@@ -271,3 +271,31 @@ cap.
 
 **Parity.** Reuse run8's parity evidence if the registered code accepts it for the unchanged commit `b2f1f71`.
 Otherwise, re-run parity on `b2f1f71`.
+
+## Addendum 8 (22 Nov 2026): run9, compensated inerts outside the field support
+
+**Input.** `docs/reviews/wme/wme-c1-run-halt-bank-inert-2026-11-22.md`, on branch `run/wme-c1-run9` at commit `655b2ff`.
+
+**Where the run stands.** 207 of the 210 bank units are eligible under generation 1. The 3 that are not are the
+compensated inert units `inert:05/06/07:comp`. Each one edits `mlp.up_proj`, which is outside the R1 field support,
+so the R(E) contraction raised `UnsupportedTensor` (seq 2356).
+
+No sealed read has taken place, and no claim outcome exists.
+
+**R1. Option (a).** For every bank unit, R(E) is contracted over the **supported tensors only**, meaning the field's
+writers and the vocabulary rows.
+- The omitted tensors are recorded per unit as `r_omitted: [tensor names]`.
+- Rationale. At access tier R1 the world model can only see the collected field. A function-preserving edit whose
+  compensation sits partly outside that support is the case the inert control exists to probe: does the WM
+  falsely predict an effect from what it can see?
+- The measured bank outcome for these units is still computed in full, exactly as registered.
+- D-C2 and C2-I stay descriptive (§II.21.1). The D-C2 report must state that the R(E) for these 3 units excludes
+  `up_proj`.
+- No other unit is affected. No other registered bank or E2 unit has run into an unsupported tensor.
+- This decision is outcome-blind and engineering only. Record it as a PREREG_WME §II.31.13 note, append-only.
+
+**R2. The efficiency fix is approved.** When a chunk runs no unit, because every unit in it was already eligible,
+skip its closing canary. A chunk with zero executed units has no result to bracket. A test covers this.
+
+**R3. Incident 2356 is resolved** under this addendum. Diagnosis: R(E) support handling for the compensated inerts,
+fixed by R1. The retry of `inert:05:comp` uses a repair record that cites this addendum.
