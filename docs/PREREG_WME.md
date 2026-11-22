@@ -4414,3 +4414,31 @@ units that had not yet run, an order-dependent difference introduced by an engin
 counted attempts under generation 1, the same as every bank unit not yet run.
 
 **Unchanged.** No claim, test, α, N, margin, seed, price rule, cap or stopping rule changes.
+
+### II.31.13 Note (22 Nov 2026): R(E) of the compensated inerts over the field support; empty chunks (engineering, outcome-blind)
+
+**Status.** This note is recorded before any sealed read; no confirmatory result exists yet. It records the chair's
+ruling `docs/council/2026-11-21/RULING-wme-c1-bank-halt.md` addendum 8 (input:
+`docs/reviews/wme/wme-c1-run-halt-bank-inert-2026-11-22.md`).
+
+**What was found.** The three registered compensated inert constructions (`controls.inert` "compensated", mlp layers
+12–15 and attention layer 15) edit `mlp.up_proj`, which is outside the R1 field support (the K-FAC writers `down`
+and `o`/`out_proj`, and the vocabulary rows). The R(E) contraction raised `UnsupportedTensor` (incident seq 2356).
+
+**R1 (option (a)).** For the inert units only, R(E) is contracted over the supported tensors, and the tensors
+outside the support are recorded per state and per unit as `r_omitted`. The field's writers and the vocabulary rows
+are the support. A unit with nothing omitted keeps its registered payload shape (no `r_omitted` key). The measured
+bank outcome of these units is computed in full, as registered.
+
+Every other unit (bank sides, compositions and any later unit) still refuses a tensor outside the support, so the
+rule cannot widen silently.
+
+Rationale (the ruling): at access tier R1 the world model sees only the collected field; a function-preserving edit
+whose compensation sits partly outside that support is the case the inert control probes. D-C2 and C2-I remain
+descriptive (§II.21.1); the D-C2 report states that the R(E) of these three units excludes `up_proj`.
+
+**R2.** A bracketing chunk in which no unit executed (every unit in it already eligible) gets no closing canary:
+there is no result to bracket. A chunk with any executed attempt, successful or failed, keeps its closing canary.
+
+**Unchanged.** No claim, test, α, N, margin, seed, price rule, cap or stopping rule changes. Bank units are
+construction data, and no sealed item has been read.

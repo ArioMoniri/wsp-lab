@@ -1309,6 +1309,51 @@ def cmd_resume_phase(a):
     return out
 
 
+def cmd_record_repair(a):
+    """The registered repair record (``RetryPolicy.repair``: a registered technical cause, the code commit,
+    outcome-blind) for a unit whose last failure in the current contract generation had no registered technical
+    cause (§II.31.8 R3; RULING-wme-c1-bank-halt addendum 8: ``inert:05:comp``), naming the unit and the ruling.
+    "Awaiting" means no later repair record names the unit (a resume's own repair record, which also licenses the
+    retry under the guard's rule, does not name it). Refuses, before any write, an unregistered cause or a unit with
+    no failure awaiting its named repair."""
+    from wsp.wm.c1 import phasel as PL
+
+    if a.cause not in RG.TECHNICAL_CAUSES:
+        raise SystemExit(f"REFUSED: {a.cause!r} is not a registered technical cause {RG.TECHNICAL_CAUSES}")
+    s = RG.read_study(STUDY)
+    awaiting = {
+        fs
+        for (_u, g, c), fs in s.gen_last_fail_seq.items()
+        if g == s.generation
+        and c == s.contract
+        and s.gen_last_cause.get((_u, g, c)) not in RG.TECHNICAL_CAUSES
+    }
+    fails = {}
+    for line in (STUDY / RG.LOG_NAME).read_text().splitlines():
+        r = json.loads(line)
+        if r["type"] == "attempt_fail" and r["seq"] in awaiting:
+            named = any(rp["seq"] > r["seq"] and f"{r['label']}:" in rp.get("description", "") for rp in s.repairs)
+            if not named:
+                fails[r["label"]] = r
+    if a.label not in fails:
+        raise SystemExit(
+            f"REFUSED: {a.label}: no failure awaiting a repair in generation {s.generation} "
+            f"(awaiting: {sorted(fails)})"
+        )
+    f = fails[a.label]
+    st = SD.Study(STUDY, RUNS, load_att(), MO_theta0(), PANEL_ID, log=log)
+    g = st.guard(f.get("phase") or "bank", "operator:record-repair")
+    desc = (
+        f"{a.label}: retry licensed after its failure (study log seq {f['seq']}, {f.get('error')}, no registered "
+        f"technical cause) by {a.ruling}; no unit result created"
+    )
+    rec = g.retry.repair(a.cause, desc, PL.git("rev-parse", "HEAD"), outcome_blind=True)
+    out = {"seq": rec["seq"], "cause": a.cause, "label": a.label, "failure_seq": f["seq"], "ruling": a.ruling}
+    log("repair recorded", json.dumps(out))
+    print(json.dumps(out))
+    return out
+
+
 def cmd_close(a):
     tr, rem = remote_for("main", a.iid)
     st = SD.Study(STUDY, RUNS, load_att(), "", PANEL_ID, log=log)
@@ -1495,6 +1540,10 @@ def main():
     ri.add_argument("--diagnosis", required=True)
     ri.add_argument("--ruling", required=True)
     sub.add_parser("preflight")  # addendum 5
+    rr = sub.add_parser("record-repair")  # addendum 8: the repair record that licenses a non-technical retry
+    rr.add_argument("--label", required=True)
+    rr.add_argument("--cause", required=True)
+    rr.add_argument("--ruling", required=True)
     rp = sub.add_parser("resume-phase")  # addendum 7: the chair's PhasePause resumption
     rp.add_argument("--phase", required=True)
     rp.add_argument("--ruling", required=True)
@@ -1518,6 +1567,7 @@ def main():
         "resolve-incident": cmd_resolve_incident,
         "preflight": cmd_preflight,
         "resume-phase": cmd_resume_phase,
+        "record-repair": cmd_record_repair,
         "transition": cmd_transition,
         "close": cmd_close,
         "status": cmd_status,
