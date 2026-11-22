@@ -278,7 +278,16 @@ class RCache:
         self.seconds += time.time() - t0
         return rec
 
-    def warm(self, bundles_list):
+    def supported(self, name: str) -> bool:
+        """In the R1 field support: a field writer (``Field.param_group``) or the vocabulary rows (the embedding)."""
+        return name == self.m.embed or name in self.f.param_group
+
+    def omitted_of(self, bundles) -> list:
+        """The tensors a state touches outside the field support (sorted)."""
+        names = {a.tensor for step in bundles for a in step}
+        return sorted(n for n in names if not self.supported(n))
+
+    def warm(self, bundles_list, omit_unsupported: bool = False):
         """Fill the cache tensor-major for many states (each tensor's factors are loaded once)."""
         need: dict = {}
         for bundles in bundles_list:
@@ -287,6 +296,8 @@ class RCache:
                 for a in step:
                     by_tensor.setdefault(a.tensor, []).append(a)
             for name, acts in by_tensor.items():
+                if omit_unsupported and not self.supported(name):
+                    continue
                 key = (name, tuple(a.key() for a in acts))
                 if key not in self.cache:
                     need.setdefault(name, {})[key] = acts
@@ -294,18 +305,23 @@ class RCache:
             for _key, acts in sorted(need[name].items()):
                 self._tensor_contrib(name, acts)
 
-    def r_of_many(self, bundles_list) -> list:
-        self.warm(bundles_list)
-        return [self.r_of(b) for b in bundles_list]
+    def r_of_many(self, bundles_list, omit_unsupported: bool = False) -> list:
+        self.warm(bundles_list, omit_unsupported)
+        return [self.r_of(b, omit_unsupported) for b in bundles_list]
 
-    def r_of(self, bundles) -> tuple[np.ndarray, list]:
+    def r_of(self, bundles, omit_unsupported: bool = False) -> tuple[np.ndarray, list]:
         """R(E) through the registered builder ``wmcp.r_from_contractions`` (per-tensor contributions in sorted
-        tensor order; unsupported q enters as 0 and is flagged by the builder)."""
+        tensor order; unsupported q enters as 0 and is flagged by the builder). A tensor outside the field support
+        raises ``UnsupportedTensor``, except with ``omit_unsupported`` (inert units only, RULING-wme-c1-bank-halt
+        addendum 8 R1): R(E) is then contracted over the supported tensors only and the caller records
+        :meth:`omitted_of`."""
         from wsp.wm import wmcp as CP
 
         by_tensor: dict = {}
         for step in bundles:
             for a in step:
+                if omit_unsupported and not self.supported(a.tensor):
+                    continue
                 by_tensor.setdefault(a.tensor, []).append(a)
         con = {o: {} for o in self.objs}
         sq = {"writers": 0.0, "embed_rows": 0.0}

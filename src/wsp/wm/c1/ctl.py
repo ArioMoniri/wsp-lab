@@ -6,8 +6,9 @@
 * :func:`technical` maps failures to the registered technical causes; anything unrecognised (including a result
   that does not answer its request) is ``None``, so ``run_units`` halts (still charged).
 * :func:`run_bracketed` runs units through ``harness.run_units`` with the mandatory ``ProductionGuard`` in chunks,
-  each followed by a canary (start canary first), so every result is bracketed; it then resolves only eligible
-  results (``guard.resolve``), never a pending or ineligible one.
+  each followed by a canary (start canary first), so every result is bracketed; a chunk that executed no unit (all
+  already eligible) gets no closing canary (RULING-wme-c1-bank-halt addendum 8 R2: nothing to bracket); it then
+  resolves only eligible results (``guard.resolve``), never a pending or ineligible one.
 * Fail fast (chair item FF, after the run4 resume halt): a request the worker refuses or aborts without a result
   (``rejected/``: stale epoch, fenced while running, malformed) is detected at the next poll and is a
   ``request_rejected`` run-health incident naming the reason; a request without a result or a rejection by its
@@ -301,23 +302,35 @@ def run_bracketed(
     before_begin=None,
 ) -> dict:
     """Start canary, then chunks of at most ``chunk`` units (or ``max_chunk_s`` of wall time), each closed by a
-    canary. A failed canary halts (``CanaryMismatch``) after it is recorded: results since the previous canary are
+    canary unless it executed no unit (addendum 8 R2; a failed attempt counts as executed). A failed canary halts (``CanaryMismatch``) after it is recorded: results since the previous canary are
     then retained-ineligible by the guard. Returns {label: eligible payload | fallback | None}."""
     units = list(units)
     rec = canary()
     if not rec["pass"]:
         raise RG.CanaryMismatch(f"start canary {rec['composite'][:12]} != reference")
+    ran = {"n": 0}
+
+    def counted(recipe):  # an executed attempt (successful or failed) calls the unit function
+        ran["n"] += 1
+        return fn(recipe)
+
     i = 0
     while i < len(units):
         t0 = clock()
         j = i
+        ran["n"] = 0
         while j < len(units) and j - i < chunk:
             H.run_units(
-                store, [units[j]], fn, theta0, panel, guard=guard, before_begin=before_begin
+                store, [units[j]], counted, theta0, panel, guard=guard, before_begin=before_begin
             )
             j += 1
             if clock() - t0 > max_chunk_s:
                 break
+        if (
+            ran["n"] == 0
+        ):  # RULING-wme-c1-bank-halt addendum 8 R2: no executed unit, no result to bracket
+            i = j
+            continue
         rec = canary()
         if on_chunk is not None:  # the chunk-boundary health summary (§II.31), before any halt
             on_chunk(rec, j - i)

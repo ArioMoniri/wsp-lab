@@ -139,13 +139,21 @@ class BankWorld:
             "eval_seconds": time.time() - t0,
         }
 
-    def _with_r(self, states, bundles_list):
-        """R(E) of every scored state, computed tensor-major in one batch (``RCache.r_of_many``)."""
+    def _with_r(self, states, bundles_list, omit_unsupported: bool = False):
+        """R(E) of every scored state, computed tensor-major in one batch (``RCache.r_of_many``). Only inert units
+        pass ``omit_unsupported`` (RULING-wme-c1-bank-halt addendum 8 R1): R(E) over the supported tensors, with the
+        omitted tensors recorded per state as ``r_omitted`` (absent when none); every other unit raises."""
         t0 = time.time()
-        rows = self.rc.r_of_many([b for b in bundles_list]) if bundles_list else []
-        for st, (r, flags) in zip(states, rows, strict=True):
+        rows = (
+            self.rc.r_of_many([b for b in bundles_list], omit_unsupported) if bundles_list else []
+        )
+        for st, b, (r, flags) in zip(states, bundles_list, rows, strict=True):
             st["R"] = [float(x) for x in r]
             st["R_flags"] = list(flags)
+            if omit_unsupported:
+                om = self.rc.omitted_of(b)
+                if om:
+                    st["r_omitted"] = om
         self.check()
         return time.time() - t0
 
@@ -216,16 +224,20 @@ class BankWorld:
             rec["h"] = h
             states.append(rec)
             bl.append(steps[:h])
-        self._with_r(states, bl)
+        self._with_r(states, bl, omit_unsupported=True)  # addendum 8 R1 (inert units only)
         end = states[-1]
         same = all(end["values"][o] == base_values[o] for o in base_values)
-        return {
+        out = {
             "spec": spec,
             "states": states,
             "endpoint_theta_is_base": end["theta_hash"] == m.base_hash,
             "endpoint_outputs_bitwise_base": bool(same),
             "power_of_two_safe": bool(safe),
         }
+        omitted = sorted({n for s in states for n in s.get("r_omitted", [])})
+        if omitted:  # the unit's tensors outside the R1 field support (R(E) excludes them; the outcome does not)
+            out["r_omitted"] = omitted
+        return out
 
 
 def inert_specs(manifest: dict) -> list:
