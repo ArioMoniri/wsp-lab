@@ -8,7 +8,9 @@ is a charged technical failure and the restarted worker's late result for the de
 (C) controller kill mid-unit and takeover: fresh verified replay, new owner epoch, fence moved, the old in-flight
 request is refused/aborted and the unit re-attempted; (D) a torn log tail fails closed until the audited repair;
 (E) instance loss: declare_lost disposes unbracketed attempts, the registered relaunch continues on a new instance id;
-(F) dead-man reconciliation adds authoritative time; (G) fail closed on a corrupted earlier record (fresh replay).
+(F) dead-man reconciliation adds authoritative time; (G) fail closed on a corrupted earlier record (fresh replay);
+(H) run health; (I) a contract transition followed at once by bank-stage unit issue (RULING-wme-c1-bank-halt
+addendum 5).
 
     wme_c1_drill.py --dir data/wme/runs/smoke/drill --out docs/reviews/wme/wme-c1-drill-2026-11-19.json
 """
@@ -473,6 +475,67 @@ def main():
         and inc == ["square:gpu_idle"] * 4 + ["plan:no_progress"],
         "incidents": inc,
         "cpu_kind_on_idle_gpu_incidents": inc_a,
+    }
+    # I (RULING-wme-c1-bank-halt addendum 5): a contract transition followed at once by bank-stage unit issue under
+    #    the registered §II.18 order on the real worker loop (run6 halted here: the order pointer kept generation 0's
+    #    position). Generation 0 reaches bank_states; after the transition, field and bank units run again.
+    def study_i(attest):
+        s_ = SD.Study(d / "study_i", d / "runs_i", attest, THETA0, PANEL, health=True)  # registered order
+        s_.priced = {"bank": 100.0, "confirmatory": 100.0, "sbon": 100.0, "ste": 100.0}
+        return s_
+
+    inst_i = "lambda:drill-i"
+    f_i = [({"kind": "field_group", "args": {"x": 0}, "label": "field:0"}, "field:0")]
+    b_i = [({"kind": "bank_side", "args": {"x": 1}, "label": "side:1"}, "side:1")]
+    si0 = study_i(att())
+    gi0 = si0.guard("bank", inst_i)
+    C.take_over(tr, rem, gi0)
+    gi0.open_instance(1)
+    si0.run(gi0, rem, tr, f_i, chunk=1)
+    si0.run(gi0, rem, tr, b_i, chunk=1)
+    pointer0 = json.loads((d / "runs_i" / "health" / "state.json").read_text())["stage"]
+    att_i1 = RG.LaunchAttestation(
+        True, True, C.composite_canary(DW.ENGINES), "f" * 64, ["drill fixture", "scenario I transition"]
+    )
+    si1 = study_i(att_i1)
+    gi1 = si1.guard(
+        "bank",
+        inst_i,
+        transition=RG.ContractTransition("driver_or_cuda", "drill scenario I", rep["commit"], True),
+    )
+    C.take_over(tr, rem, gi1)
+    gi1.open_instance(1)
+    err_i, out_i = None, {}
+    try:
+        out_i = si1.run(gi1, rem, tr, f_i, chunk=1) | si1.run(gi1, rem, tr, b_i, chunk=1)
+    except Exception as exc:  # noqa: BLE001 - recorded: the scenario fails
+        err_i = f"{type(exc).__name__}: {str(exc)[:200]}"
+    st_i = RG.read_study(d / "study_i")
+    oks_i = [a for v in st_i.ok.values() for a in v]
+    g1_i = [a for a in oks_i if a["generation"] == 1]
+    g0_i = [a for a in oks_i if a["generation"] == 0]
+    inc_i = [(r["kind"], r["seq"]) for r in st_i.incidents]
+    all_inc_i = [
+        json.loads(x)["kind"]
+        for x in (d / "study_i" / RG.LOG_NAME).read_text().splitlines()
+        if '"type":"incident"' in x.replace(" ", "")
+    ]
+    rep["scenarios"]["I_transition_then_bank"] = {
+        "pass": err_i is None
+        and pointer0 == 1
+        and not all_inc_i
+        and st_i.generation == 1
+        and len(g1_i) == 2
+        and all(st_i.status(a) == "eligible" for a in g1_i)
+        and len(g0_i) == 2
+        and all(st_i.status(a) == "superseded_contract" for a in g0_i)
+        and out_i.get("field:0", {}).get("v") == 0
+        and out_i.get("side:1", {}).get("v") == 10,
+        "error": err_i,
+        "generation0_pointer": pointer0,
+        "incidents": all_inc_i,
+        "open_incidents": inc_i,
+        "generation1_attempts": [(a["label"], a["attempt_key"].rsplit(".", 1)[1]) for a in g1_i],
     }
     rep["log"] = {"records": len(records(d)), "types": sorted({r["type"] for r in records(d)})}
     rep["all_pass"] = all(v["pass"] for v in rep["scenarios"].values())

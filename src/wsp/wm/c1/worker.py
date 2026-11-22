@@ -254,6 +254,9 @@ class Worker:
         return sorted(p for p in (self.root / "inbox").glob("*.json"))
 
     def serve(self, stop_file: str = "STOP", max_idle_s: float | None = None):
+        # RULING-wme-c1-bank-halt addendum 5: a started worker is progress (the heartbeat job can beat before the
+        # first request; the controller requires two heartbeats before any request)
+        self.progress({"event": "worker_start", "pid": os.getpid()})
         idle_since = time.time()
         if self.sampler is not None:
             self.sampler.start()

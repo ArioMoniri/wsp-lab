@@ -1,0 +1,128 @@
+{
+ "c6": {
+  "equal": true,
+  "field_timing": "af39a61786527eba9c5e497106e514269e697deee8259cb4011aa2bb5bac62c4",
+  "note": "cross-instance deterministic reproduction: K3 recovery on a new instance is supported",
+  "t2": "af39a61786527eba9c5e497106e514269e697deee8259cb4011aa2bb5bac62c4"
+ },
+ "commit": "341b7a3fd4b94166a7e0874c0b4f2bd4c1261a28",
+ "contract_state": "pre_transition",
+ "engine_config_sha256": "b98713ec2ff3ad38ac615307633648ec0b43420635d576f91fd6a945a8a772f8",
+ "group": 0,
+ "hello": {
+  "code_sha": "2fa4fa72a88f664f9837711132e6227e16936c41",
+  "driver": "570.148.08",
+  "gpu_names": [
+   "NVIDIA H100 80GB HBM3"
+  ],
+  "versions": {
+   "cuda": "13.0",
+   "gpu": [
+    "NVIDIA H100 80GB HBM3"
+   ],
+   "numpy": "2.3.5",
+   "python": "3.12.16",
+   "torch": "2.14.0+cu130",
+   "transformers": "5.22.2",
+   "vllm": "0.34.0"
+  }
+ },
+ "instance": "lambda:8170aef3c9a64dc28efb8a5384e09506",
+ "modules": [
+  "model.layers.0.mlp.down_proj",
+  "model.layers.0.linear_attn.out_proj",
+  "model.layers.1.mlp.down_proj",
+  "model.layers.1.linear_attn.out_proj",
+  "model.layers.2.mlp.down_proj",
+  "model.layers.2.linear_attn.out_proj",
+  "model.layers.3.mlp.down_proj",
+  "model.layers.3.self_attn.o_proj"
+ ],
+ "runs": [
+  {
+   "file_sha256": {
+    "gsm8k_gold_lp.g0.pt": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7",
+    "mmlupro_gold_lp.g0.pt": "48fe73acf9cd662db634619528a1509ac5634dae9c38f7ecdd113af73927f235",
+    "refusal_margin_harmful.g0.pt": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a",
+    "refusal_margin_harmless.g0.pt": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2",
+    "sycophancy_real.g0.pt": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305",
+    "wikitext_nll.g0.pt": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6"
+   },
+   "mode": "registered",
+   "seconds": {
+    "gsm8k_gold_lp.g0": 12.745237967000094,
+    "mmlupro_gold_lp.g0": 12.75352444300006,
+    "refusal_margin_harmful.g0": 20.621878575999972,
+    "refusal_margin_harmless.g0": 11.601054247000093,
+    "sycophancy_real.g0": 10.514610800000128,
+    "wikitext_nll.g0": 53.26958256799992
+   },
+   "wall_s": 186.63961267471313
+  },
+  {
+   "file_sha256": {
+    "gsm8k_gold_lp.g0.pt": "36cd490a431e4fd9edd2409c14db0b79d77dfb82258f09dcf910994320978358",
+    "mmlupro_gold_lp.g0.pt": "af39a61786527eba9c5e497106e514269e697deee8259cb4011aa2bb5bac62c4",
+    "refusal_margin_harmful.g0.pt": "4ec8836fb586660d5050a90cca280e1e23e763b6c72f73d10ddeed1559c51cad",
+    "refusal_margin_harmless.g0.pt": "e72b573976329f72b8e270df9f17b17fc56aa13fa42b9f66f8dcbb2c1fb7f3a5",
+    "sycophancy_real.g0.pt": "1d62daa024125379e847d7e1266c57a71a978a37bbc6fe3ef27dc4870b62193e",
+    "wikitext_nll.g0.pt": "b82402233b11f9555ea5013dc0e7157862a7bfbad5a9c55f36897e6d3ccd9b95"
+   },
+   "mode": "deterministic",
+   "seconds": {
+    "gsm8k_gold_lp.g0": 10.120135485999981,
+    "mmlupro_gold_lp.g0": 11.995439031999922,
+    "refusal_margin_harmful.g0": 12.025261410999974,
+    "refusal_margin_harmless.g0": 12.237300568999899,
+    "sycophancy_real.g0": 9.586921574000144,
+    "wikitext_nll.g0": 47.73715577000007
+   },
+   "wall_s": 157.17900276184082
+  },
+  {
+   "file_sha256": {
+    "gsm8k_gold_lp.g0.pt": "4deea013efd261f3b39dc8fce443873fac3541f3e0fc052d7cab8314c0acdee7",
+    "mmlupro_gold_lp.g0.pt": "45d4e3f70f49fe0c0506a3981ca958d2077be6d3e40f983112789e5419dbd1a9",
+    "refusal_margin_harmful.g0.pt": "21c74b8993447069b45171559729eab25040a034b1a99038be246f562ba7243a",
+    "refusal_margin_harmless.g0.pt": "8bcfe92c8c4dc631391cdf30bb16b99ceb1acb9e7b2f44ae1d3e4918fbca7db2",
+    "sycophancy_real.g0.pt": "5879a1530045d6a94331ff751658d5074764f73ad6f3edc702d0f6b15ab15305",
+    "wikitext_nll.g0.pt": "9ca5a2d564b1dae41d769935d48156289c7fbe51023bc1d987cdbd3cf392d5a6"
+   },
+   "mode": "registered",
+   "seconds": {
+    "gsm8k_gold_lp.g0": 8.882989154999905,
+    "mmlupro_gold_lp.g0": 10.866630117999875,
+    "refusal_margin_harmful.g0": 11.348046737000004,
+    "refusal_margin_harmless.g0": 11.02749272799997,
+    "sycophancy_real.g0": 8.612234216999923,
+    "wikitext_nll.g0": 51.70581353800003
+   },
+   "wall_s": 168.0073754787445
+  }
+ ],
+ "slowdown": {
+  "baseline": "the second (warm) registered collection",
+  "per_objective": {
+   "gsm8k_gold_lp.g0": 1.1392713994594639,
+   "mmlupro_gold_lp.g0": 1.1038784703024214,
+   "refusal_margin_harmful.g0": 1.0596767610933369,
+   "refusal_margin_harmless.g0": 1.1097083326954367,
+   "sycophancy_real.g0": 1.1131747386846793,
+   "wikitext_nll.g0": 0.9232454245191736
+  },
+  "total": 1.0122898081005138
+ },
+ "vocab_probe": {
+  "file_sha256": {
+   "gsm8k_gold_lp.vocab.pt": "69f86822c5590022980eadee3d4d17c2617080d3a96643ddd62736b5e56181e8",
+   "mmlupro_gold_lp.vocab.pt": "15660eee7238ad811370dfa0548d38b2a7efac446382f0f772c106ac60ad5c2a",
+   "refusal_margin_harmful.vocab.pt": "1bde60c4deb02b1de8319fb09731aa8f6fdf9c30dbdff922c43a74a9a1760f1c",
+   "refusal_margin_harmless.vocab.pt": "65f12d6c16c5013ea640f1e724aa0fc500f1c7c6a157507db5990ef826b8d4d1",
+   "sycophancy_real.vocab.pt": "67d9f7b2ded674eb67dedb0a6362c7632185b7444fcb9ad274b3b4d76c685e6c",
+   "wikitext_nll.vocab.pt": "7b2acdd4a51ae13e30e739939499a3d9c9a586d037b267577f9ba7995317ca58"
+  },
+  "ok": true,
+  "seconds": 104.32738590240479
+ },
+ "what": "T4 item 3 (RULING-wme-c1-bank-halt addendum 4): field g0 registered vs deterministic timing"
+}

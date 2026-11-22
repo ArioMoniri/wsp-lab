@@ -1,0 +1,83 @@
+{
+ "attestation_backup": "attestation.json.bak-20261122T020849Z",
+ "code_identity": {
+  "bundle_sha256": "8e0375d664f30e7c022ab1a25ffc0c09d7fd4b4e194f717a1034cd4ad3ee09ce",
+  "controller_commit": "2fa4fa72a88f664f9837711132e6227e16936c41",
+  "controller_tree_clean": true,
+  "pass": true,
+  "worker_code_sha": "2fa4fa72a88f664f9837711132e6227e16936c41"
+ },
+ "contract": "0a8efdacc98baac922b0727f9e122516ada9d0cb636add794b9f80d27c20bc2f",
+ "driver": {
+  "binding_test": "the canary comparison with the committed references (a driver difference alone is not a stop)",
+  "gpu_names": [
+   "NVIDIA H100 80GB HBM3"
+  ],
+  "parity_instance": "580.105.08",
+  "same_as_parity": false,
+  "version": "570.148.08"
+ },
+ "engine_config_sha256": "b98713ec2ff3ad38ac615307633648ec0b43420635d576f91fd6a945a8a772f8",
+ "gate": {
+  "command": "CUDA_VISIBLE_DEVICES= python -m pytest -q tests/test_wme_c1_*.py tests/test_wme_runguard.py tests/test_wme_runguard_property.py tests/test_wm_harness.py",
+  "counts": {
+   "deselected": 1,
+   "passed": 248,
+   "skipped": 1
+  },
+  "exit_code": 0,
+  "files": [
+   "tests/test_wm_harness.py",
+   "tests/test_wme_c1_analysis.py",
+   "tests/test_wme_c1_fit.py",
+   "tests/test_wme_c1_genops.py",
+   "tests/test_wme_c1_rpc.py",
+   "tests/test_wme_c1_shards.py",
+   "tests/test_wme_c1_v2l.py",
+   "tests/test_wme_c1_v2n.py",
+   "tests/test_wme_c1_v2o.py",
+   "tests/test_wme_c1_v2p.py",
+   "tests/test_wme_c1_v2q.py",
+   "tests/test_wme_c1_v2r.py",
+   "tests/test_wme_c1_v2s.py",
+   "tests/test_wme_c1_v2t.py",
+   "tests/test_wme_c1_v2u.py",
+   "tests/test_wme_c1_v2v.py",
+   "tests/test_wme_runguard.py",
+   "tests/test_wme_runguard_property.py"
+  ],
+  "pass": true
+ },
+ "instance": "lambda:8170aef3c9a64dc28efb8a5384e09506",
+ "pre_transition": true,
+ "resume": true,
+ "worker_global_state": {
+  "expected": {
+   "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+   "cudnn_benchmark": false,
+   "cudnn_deterministic": false,
+   "deterministic_algorithms": false,
+   "sdp": {
+    "cudnn": true,
+    "flash": true,
+    "math": true,
+    "mem_efficient": true
+   },
+   "warn_only": false
+  },
+  "got": {
+   "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+   "cudnn_benchmark": false,
+   "cudnn_deterministic": false,
+   "deterministic_algorithms": false,
+   "sdp": {
+    "cudnn": true,
+    "flash": true,
+    "math": true,
+    "mem_efficient": true
+   },
+   "warn_only": false
+  },
+  "pass": true
+ }
+}

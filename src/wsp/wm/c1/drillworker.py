@@ -68,14 +68,29 @@ def canary(req, ctx):
     return {"engines": dict(ENGINES)}, {}
 
 
+def bank_fixture(req, ctx):
+    """Scenario I (addendum 5): fixture ``field_group`` / ``bank_side`` units, so the registered §II.18 order (bank
+    field, then bank states) runs on the real worker loop across a contract transition."""
+    a = req["args"]
+    ctx.check()
+    return {"kind": req["kind"], "v": a.get("x", 0) * 10}, {}
+
+
+HANDLERS = {
+    "square": square,
+    "plan": plan,
+    "canary": canary,
+    "field_group": bank_fixture,
+    "bank_side": bank_fixture,
+}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True)
     a = ap.parse_args()
     sampler = HL.Sampler(a.root, period_s=0.1, sample=fixture_gpu(a.root))
-    W.Worker(
-        a.root, {"square": square, "plan": plan, "canary": canary}, poll_s=0.05, sampler=sampler
-    ).serve()
+    W.Worker(a.root, dict(HANDLERS), poll_s=0.05, sampler=sampler).serve()
 
 
 if __name__ == "__main__":

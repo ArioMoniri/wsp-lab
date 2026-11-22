@@ -1,0 +1,168 @@
+{
+ "cap_state": {
+  "cap_generation": 0,
+  "cap_gpu_h": 110.0,
+  "remaining_gpu_h": 100.39337640537155,
+  "spent_usd": 50.473162379515166
+ },
+ "clean_ticks_after_policy_write_utc": [
+  "01:41:40",
+  "01:42:10",
+  "01:42:40",
+  "01:43:10"
+ ],
+ "controller_commit": "2fa4fa72a88f664f9837711132e6227e16936c41",
+ "deadman_status": {
+  "alert": false,
+  "cost_usd": 50.473,
+  "instance_hours": 6.8905,
+  "instances": {
+   "18d0e93f2fc1433f8ac304904c9977f4": {
+    "confirmed_terminated_at": 1795289816.4319065,
+    "launched_at": 1795288384.5370553,
+    "name": "wsp-wme-c1-parity-20261119l5",
+    "region": "us-south-3",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "1addc266e4514d5687c91ac9b812475f": {
+    "confirmed_terminated_at": 1795294447.8867443,
+    "launched_at": 1795292640.0037935,
+    "name": "wsp-wme-c1-main-20261119l5m",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "5512dc5703c042908aaeeefb8b59b891": {
+    "confirmed_terminated_at": 1795219150.923657,
+    "launched_at": 1795217636.785856,
+    "name": "wsp-wme-c1-parity-20261119l3",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "7a3819a3ff67411cb359be8fd00a654b": {
+    "confirmed_terminated_at": 1795311661.8941066,
+    "launched_at": 1795310111.3617952,
+    "name": "wsp-wme-c1-parity-20261119l6",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "7d6a1235e1614b91b4037ede840822bc": {
+    "confirmed_terminated_at": 1795274861.9507723,
+    "launched_at": 1795269224.6675138,
+    "name": "wsp-wme-c1-main-20261119l3m",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "a44312195b1e4604a8fa3a8091853c07": {
+    "confirmed_terminated_at": 1795298384.7453582,
+    "launched_at": 1795296981.8490171,
+    "name": "wsp-wme-c1-main-20261119l5d",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "bf1f0eeb36fa4a03b79642c60a5348fc": {
+    "confirmed_terminated_at": 1795286403.3527634,
+    "launched_at": 1795284740.3993793,
+    "name": "wsp-wme-c1-main-20261119l4m",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "c1fb8fba284644b6959f8b75b8be75a5": {
+    "confirmed_terminated_at": 1795101659.387671,
+    "launched_at": 1795100239.2822192,
+    "name": "wsp-wme-c1-parity-20261119",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "d10681e851f7437ebdf32738510b32e5": {
+    "confirmed_terminated_at": 1795100203.6566699,
+    "launched_at": 1795094763.0810797,
+    "name": "wsp-wme-c1-parity-20261119",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "idle",
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "f0eb9435f1974838a541a2ff80281bce": {
+    "confirmed_terminated_at": 1795283366.9102352,
+    "launched_at": 1795281845.0402434,
+    "name": "wsp-wme-c1-parity-20261119l4",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "ffe275d0cc924d6f9088cc8c3b7edd14": {
+    "confirmed_terminated_at": 1795304257.9102983,
+    "launched_at": 1795302842.248664,
+    "name": "wsp-wme-c1-main-20261119l5p",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   }
+  },
+  "live": [],
+  "watcher_last_tick_age_s": 5.9
+ },
+ "effective_policy_via_reload": {
+  "alert_after_s": 900.0,
+  "idle_limit_s": 1800.0,
+  "margin_s": 300.0,
+  "max_price_usd_h": 9.6,
+  "max_usd": 526.9,
+  "t_max_hours": 107.28387461821238
+ },
+ "error_events_since_policy_write": [],
+ "label": "wme-c1 Phase L part 1: pre-poll dead-man check (chair's mandatory condition)",
+ "pass": true,
+ "policy_cap_file": {
+  "cap_generation": 0
+ },
+ "policy_file": {
+  "idle_limit_s": 1800.0,
+  "max_usd": 526.9,
+  "t_max_hours": 107.28387461821238
+ },
+ "watcher_start_event": {
+  "event": "start",
+  "pid": 1996441,
+  "policy": {
+   "alert_after_s": 900.0,
+   "idle_limit_s": 1800.0,
+   "margin_s": 300.0,
+   "max_price_usd_h": 9.6,
+   "max_usd": 1000.0,
+   "t_max_hours": 110.0
+  },
+  "t": 1795311700.1810966,
+  "utc": "2026-11-22T01:41:40Z"
+ }
+}

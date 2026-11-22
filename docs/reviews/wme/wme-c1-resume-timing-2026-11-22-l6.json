@@ -1,0 +1,15 @@
+{
+ "contract": "0a8efdacc98baac922b0727f9e122516ada9d0cb636add794b9f80d27c20bc2f",
+ "engine_config_sha256": "b98713ec2ff3ad38ac615307633648ec0b43420635d576f91fd6a945a8a772f8",
+ "instance": "lambda:8170aef3c9a64dc28efb8a5384e09506",
+ "note": "recorded only; no re-pricing",
+ "pre_transition": true,
+ "resume": true,
+ "timing": {
+  "contraction_s": 0.01425325870513916,
+  "eigh_12288_s": 1.9622440338134766,
+  "eigh_4096_s": 0.4002556800842285,
+  "rank_12288": 1999,
+  "rank_4096": 1905
+ }
+}
