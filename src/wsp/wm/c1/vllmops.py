@@ -241,8 +241,14 @@ def spawn(job: dict, workdir, python=sys.executable, timeout_s: float = 6 * 3600
     """Run a job in a child process (parent must have released its GPU model)."""
     import subprocess
 
+    from wsp.wm.c1 import childmem as CM
+
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
+    # addendum 6: the parent's free GPU memory, checked and recorded before the child starts (no child on a shortfall)
+    mem = CM.require(
+        "vllm", util=0.2 if job.get("smoke") else ENGINE["gpu_memory_utilization"], workdir=workdir
+    )
     jp, op = workdir / "vllm_job.json", workdir / "vllm_out.json"
     jp.write_text(json.dumps(job))
     env = child_env()
@@ -262,7 +268,10 @@ def spawn(job: dict, workdir, python=sys.executable, timeout_s: float = 6 * 3600
         if "out of memory" in tail.lower():
             raise MemoryError(f"CUDA out of memory in the vLLM child: {tail[-300:]}")
         raise RuntimeError(f"vLLM child exit {p.returncode}: {tail[-600:]}")
-    return json.loads(op.read_text())
+    out = json.loads(op.read_text())
+    if isinstance(out, dict):
+        out["parent_memory"] = mem
+    return out
 
 
 if __name__ == "__main__":

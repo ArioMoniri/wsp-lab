@@ -1,0 +1,23 @@
+{
+ "device": "NVIDIA RTX PRO 4500 Blackwell Server Edition",
+ "torch": "2.15.0+cu132",
+ "total_gib": 31.3760986328125,
+ "free_before_gib": 12.783447265625,
+ "standin_gib": 4.0,
+ "field_standin_gib": 0.25,
+ "baseline_reserved_gib": 0.0,
+ "run7_order": {
+  "after_alloc_reserved_gib": 4.2578125,
+  "after_release_reserved_gib": 4.2578125
+ },
+ "between_reserved_gib": 0.0,
+ "v2x": {
+  "after_alloc_reserved_gib": 4.2578125,
+  "release_seconds": 0.05858016014099121,
+  "after_release_reserved_gib": 0.0,
+  "after_release_allocated_gib": 0.0
+ },
+ "free_after_gib": 6.443603515625,
+ "pass": true,
+ "run7_order_retained_gib": 4.2578125
+}

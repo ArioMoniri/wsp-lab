@@ -81,13 +81,25 @@ class Runtime:
         return self.m
 
     def release(self):
-        if self.m is not None:
-            self.m.release()
-        self.m = None
+        """Free this process's GPU before a child process starts (K1). RULING-wme-c1-bank-halt addendum 6: EVERY GPU
+        reference is dropped first (the R cache, the bank world, the field's kept and gradient tensors, the model),
+        then ``gc.collect()``, then ``torch.cuda.empty_cache()``. In run7 the cache was emptied before the R cache and
+        bank were dropped, and about 24 GiB stayed reserved by the parent."""
+        from wsp.wm.c1 import childmem as CM
+
+        m, field = self.m, self._field
         self._rc = self._bank = None
-        if self._field is not None:
-            self._field._kept.clear()
-            self._field._grad.clear()
+        self._field = None  # reloaded lazily (``field()``)
+        self.m = None
+        if field is not None:
+            field._kept.clear()
+            field._grad.clear()
+        if m is not None:
+            m.release(
+                free=False
+            )  # drops the model's own references; the cache is emptied once, below
+        del m, field
+        CM.free_cuda()
 
     # -------------------------------------------------- data
     def construction(self) -> dict:
@@ -263,6 +275,9 @@ def h_canary(rt: Runtime, req, ctx):
     ctx.check()
     t1 = time.time()
     detail = {"tf_hf_seconds": t1 - t0, "gen_engine": GE.GEN_ENGINE, "child": True}
+    detail["parent_memory"] = {
+        "hf": child.get("parent_memory")
+    }  # addendum 6: checked before the child
     if rt.cfg.vllm:
         prompts = _gen_canary_prompts(rt)
         job = VO.canary_job(rt.cfg.repo, prompts, smoke=rt.cfg.smoke)
@@ -275,6 +290,7 @@ def h_canary(rt: Runtime, req, ctx):
         if vllm_gen:
             eng["vllm_gen"] = out["blocks"][1]["ids_sha256"]
         detail["vllm_seconds"] = out["seconds"]
+        detail["parent_memory"]["vllm"] = out.get("parent_memory")
     return {"engines": eng, "detail": detail}, {}
 
 
