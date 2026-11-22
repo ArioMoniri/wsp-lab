@@ -91,8 +91,14 @@ def run_job(j: dict, runtime=None) -> dict:
 
 def spawn(j: dict, workdir, python=sys.executable, timeout_s: float = 3 * 3600, argv=None) -> dict:
     """Run a job in a fresh child process (the parent must have released its GPU state)."""
+    from wsp.wm.c1 import childmem as CM
+
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
+    # addendum 6: the parent's free GPU memory, checked and recorded before the child starts (no child on a shortfall)
+    mem = CM.require(
+        "hf", CM.SMOKE_CHILD_GIB if j.get("smoke") else CM.HF_CHILD_GIB, workdir=workdir
+    )
     jp, op = workdir / "hf_job.json", workdir / "hf_out.json"
     jp.write_text(json.dumps(j))
     if op.exists():
@@ -107,7 +113,9 @@ def spawn(j: dict, workdir, python=sys.executable, timeout_s: float = 3 * 3600, 
     if p.returncode != 0:
         tail = (p.stderr or "")[-1500:]
         raise RuntimeError(f"HF child exit {p.returncode}: {tail[-800:]}")
-    return json.loads(op.read_text())
+    out = json.loads(op.read_text())
+    out["parent_memory"] = mem
+    return out
 
 
 if __name__ == "__main__":

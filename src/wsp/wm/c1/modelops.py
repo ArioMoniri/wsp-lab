@@ -191,17 +191,16 @@ class ModelCtx:
             torch.cuda.synchronize()
         return sha_ids([r["ids"] for r in out]), time.time() - t0
 
-    def release(self):
-        """Free the GPU (before a vLLM engine starts in this process)."""
-        import gc
-
-        import torch
-
+    def release(self, free: bool = True):
+        """Drop the model's GPU references; with ``free`` (the default) also ``gc.collect()`` and empty the CUDA
+        cache. ``serve.Runtime.release`` passes ``free=False`` and frees once, after every other GPU reference is
+        dropped (RULING-wme-c1-bank-halt addendum 6)."""
         self.sess = self.adapter = None
         self.model = None
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        if free:
+            from wsp.wm.c1 import childmem as CM
+
+            CM.free_cuda()
 
 
 def versions() -> dict:

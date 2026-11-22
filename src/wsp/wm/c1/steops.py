@@ -247,8 +247,14 @@ def train_job(job: dict) -> dict:
 def spawn_train(job: dict, workdir, python=sys.executable, timeout_s: float = 3 * 3600) -> dict:
     import subprocess
 
+    from wsp.wm.c1 import childmem as CM
+
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
+    # addendum 6: the parent's free GPU memory, checked and recorded before the child starts (no child on a shortfall)
+    mem = CM.require(
+        "train", CM.SMOKE_CHILD_GIB if job.get("smoke") else CM.TRAIN_CHILD_GIB, workdir=workdir
+    )
     jp, op = workdir / "train_job.json", workdir / "train_out.json"
     jp.write_text(json.dumps(job))
     p = subprocess.run(
@@ -266,7 +272,10 @@ def spawn_train(job: dict, workdir, python=sys.executable, timeout_s: float = 3 
         if "out of memory" in tail.lower():
             raise MemoryError(f"CUDA out of memory in the training child: {tail[-300:]}")
         raise RuntimeError(f"training child exit {p.returncode}: {tail[-600:]}")
-    return json.loads(op.read_text())
+    out = json.loads(op.read_text())
+    if isinstance(out, dict):
+        out["parent_memory"] = mem
+    return out
 
 
 @register("ste_train")
