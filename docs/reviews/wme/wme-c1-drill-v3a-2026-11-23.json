@@ -1,0 +1,129 @@
+{
+ "all_pass": true,
+ "commit": "f7c900547eb401adae4829180ec3acae4e8939b9",
+ "label": "wme-c1 CPU deployment drill (fixtures; engineering only; not confirmatory)",
+ "log": {
+  "records": 119,
+  "types": [
+   "attempt_disposed",
+   "attempt_ok",
+   "attempt_start",
+   "attestation",
+   "canary",
+   "cap_generation",
+   "fallback_registered",
+   "instance_authoritative",
+   "instance_close",
+   "instance_lost",
+   "instance_open",
+   "instance_resume",
+   "log_repaired",
+   "owner_epoch",
+   "relaunch",
+   "tick",
+   "unit_time"
+  ]
+ },
+ "scenarios": {
+  "A_bracketed_eligible": {
+   "canaries": 3,
+   "pass": true
+  },
+  "B_worker_loss": {
+   "attempts": 1,
+   "fail_causes": [],
+   "failed_attempts_charged_s": [],
+   "pass": true,
+   "revivals": 1
+  },
+  "C_takeover": {
+   "killed_controller_attempt_retained": true,
+   "old_owner_refused": true,
+   "owner_epochs": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "pass": true,
+   "worker_events": [
+    "fenced",
+    "ok",
+    "worker_start"
+   ]
+  },
+  "D_torn_tail": {
+   "pass": true,
+   "refused_before_repair": true,
+   "repaired": true
+  },
+  "E_instance_loss": {
+   "attempts_u7": 2,
+   "pass": true,
+   "relaunches": 1,
+   "second_relaunch_refused": true
+  },
+  "F_reconcile": {
+   "added_gpu_h": 3.994447897275289,
+   "pass": true
+  },
+  "G_fresh_replay_detects_change": {
+   "pass": true
+  },
+  "H_gpu_and_cpu_kinds": {
+   "cpu_kind_on_idle_gpu_incidents": [],
+   "incidents": [
+    "square:gpu_idle",
+    "square:gpu_idle",
+    "square:gpu_idle",
+    "square:gpu_idle",
+    "plan:no_progress"
+   ],
+   "pass": true
+  },
+  "H_run_health_halt": {
+   "attempts_u20": 2,
+   "attempts_u21": 2,
+   "errors": [
+    "HealthHalt",
+    null,
+    "WorkerError",
+    "RepairRequired",
+    null
+   ],
+   "pass": true,
+   "technical_cause_recorded": [
+    "infrastructure"
+   ]
+  },
+  "H_withdrawal_and_no_attempt_burn": {
+   "aborted_attempts_u31": 3,
+   "failures": 0,
+   "pass": true,
+   "restarted": true,
+   "trips": [
+    "HealthIncident",
+    "HealthIncident",
+    "HealthIncident"
+   ]
+  },
+  "I_transition_then_bank": {
+   "error": null,
+   "generation0_pointer": 1,
+   "generation1_attempts": [
+    [
+     "field:0",
+     "a2"
+    ],
+    [
+     "side:1",
+     "a2"
+    ]
+   ],
+   "incidents": [],
+   "open_incidents": [],
+   "pass": true
+  }
+ },
+ "tracked_tree_clean": true
+}
