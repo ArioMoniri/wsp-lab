@@ -99,3 +99,60 @@ def test_release_without_an_e2_cache_is_unchanged():
     rt._e2 = None
     rt.release()
     assert rt._e2 is None and rt.m is None
+
+
+def test_a_chunk_boundary_canary_between_two_e2_units_rebuilds_the_env(tmp_path, monkeypatch):
+    """The run10 latent path (addendum 13): E2 unit 1 builds the Env through ``env_for``; the chunk's closing canary
+    releases the model (``Runtime.release`` before its child engines); E2 unit 2 must get a new Env on the reloaded
+    model, never the cached one holding the released model (``sess`` None)."""
+    import json as _json
+    import types
+
+    from wsp.wm.c1 import e2ops as EO
+
+    built = []
+
+    class Lib:
+        def __init__(self, path, rm, smoke=False):
+            self.index = {}
+
+    class World(FakeWorld):
+        def __init__(self, m, items, base, lib, check=None):
+            super().__init__(m)
+            built.append(self)
+
+    monkeypatch.setattr(EO, "Library", Lib)
+    monkeypatch.setattr(EO, "DevWorld", World)
+    monkeypatch.setattr(SE, "_verified", lambda p, sha: p)
+    monkeypatch.setattr(SE, "_dev_items", lambda rt: [])
+    monkeypatch.setattr(SE, "_c1_manifest", lambda rt: {})
+    dev = tmp_path / "dev_base.json"
+    dev.write_text(_json.dumps({"records": []}))
+    rt = S.Runtime.__new__(S.Runtime)
+    rt.cfg = types.SimpleNamespace(smoke=False)
+    rt.m, rt._field, rt._rc, rt._bank = None, None, None, None
+
+    def hf():
+        if rt.m is None:
+            rt.m = FakeModel()
+            rt.m.rm = None
+        return rt.m
+
+    rt.hf, rt.rcache = hf, lambda: Blob()
+    rt.shard_items = lambda: (None, [], None)
+    args = {
+        "library_sha256": "l",
+        "dev_base_sha256": "d",
+        "library_file": tmp_path / "lib.pt",
+        "dev_base_file": dev,
+    }
+    ctx = types.SimpleNamespace(check=lambda: None, tick=lambda *a, **k: None)
+    env1 = SE.env_for(rt, args, ctx, need_fit=False)  # E2 unit 1
+    assert SE.env_for(rt, args, ctx, need_fit=False) is env1  # cached within a chunk
+    m1 = env1.m
+    CLOSED.clear()
+    rt.release()  # the chunk-boundary canary
+    assert m1.sess is None and CLOSED == [1]
+    env2 = SE.env_for(rt, args, ctx, need_fit=False)  # E2 unit 2
+    assert env2 is not env1 and env2.m is rt.m and env2.m is not m1 and env2.m.sess is not None
+    assert len(built) == 2
