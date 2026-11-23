@@ -302,3 +302,43 @@ fixed by R1. The retry of `inert:05:comp` uses a repair record that cites this a
 
 **Addendum 8, erratum (22 Nov 2026).** R1 says "for every bank unit". The binding scope is **inert units only**, which
 is how the chair instructed it and how v2z implements it. Every non-inert unit still raises on an unsupported tensor.
+
+## Addendum 9 (23 Nov 2026): E2 stopped for re-pricing under R9.2
+
+**Input.** `docs/reviews/wme/wme-c1-run-stop-e2-rate-2026-11-23.md`, on branch `run/wme-c1-run10` at commit
+`c1fc5fa`.
+
+**Where the run stands.**
+- The bank is complete: 210 of 210 units are eligible, and prep is done.
+- Two E2 arm-episodes have been measured, at 1.84× and 1.63× the registered estimate of 699.8 s.
+- At that pace E2 alone is projected at about 85–90 GPU-h, against a confirmatory price of 53.67.
+- No sealed read has happened and no claim outcome exists.
+
+**P1. Profile at $0 before re-pricing.** This is CPU only, read-only, and uses the existing logs and heartbeats for
+`wm_e:00` and `statnn:00`. Decompose each arm-episode's wall time into four parts:
+- GPU-busy evaluation;
+- planner and fit compute, split into CPU and GPU;
+- waits on LLM readers;
+- overheads.
+
+Report the GPU-busy fraction.
+
+**P2. Outcome-preserving speed-up (optional).** If a speed-up is available, it counts as engineering only if it
+meets all of the following:
+- it changes no registered quantity: arms, budgets, items, seeds or the planner algorithm;
+- it reproduces both completed E2 units **bitwise**, in their full payloads with timing fields removed. This must be
+  verified on the instance before any new E2 data;
+- it comes with tests;
+- it lands as a new commit, followed by parity.
+
+**P3. Re-pricing amendment.** After P1 and P2, append a PREREG_WME §II.31.14 note, dated and append-only. It
+records:
+- the measured per-arm-episode rate, including any P2 speed-up;
+- the resulting confirmatory price.
+
+This is outcome-blind: only ledger seconds are used, and no outcome is read.
+
+**P4. Cap.** If the re-priced projection exceeds 110, the chair raises the cap before the E2 units that need it.
+- The raise is to the re-priced projection × 1.10, and never beyond the user's $1,000 total for the 9B study.
+- It is announced to the user at the time it is made.
+- No claim, α, N, margin or stopping rule changes.
