@@ -1,0 +1,36 @@
+{
+ "label": "wme-c1 run12 checkout record (RULING-wme-c1-bank-halt addendum 11; P2 evidence)",
+ "checkout_path": ".worktrees/run/wme-c1-run10 (the fixed run10 checkout path, recreated fresh)",
+ "commit": "8e2e9b9d72d84dc8953efb5308b152859f92ea07",
+ "branch": "run/wme-c1-run12",
+ "tracked_tree_clean": true,
+ "links": {
+  ".venv": "<repo>/.venv",
+  "data": "<repo>/data"
+ },
+ "bundle": "96a4ca2000b7c24c981d22d9ee43ecc2523aa08e19b7ad1a0a38a277ac5db367",
+ "p2": "P2 memos in e2arms.run_planner (f7c9005, merged in 8e2e9b9); verified on the instance by verify-e2 before any new E2 data",
+ "prelaunch_key_check": {
+  "pass": true,
+  "checks": [
+   {
+    "label": "e2:wm_e:00",
+    "recomputed": "f210cf6f3b2a52bac5e4c9f7d52ec20be57353512109a6783d1db9fe7605dcdb",
+    "logged": "f210cf6f3b2a52bac5e4c9f7d52ec20be57353512109a6783d1db9fe7605dcdb",
+    "equal": true
+   },
+   {
+    "label": "e2:statnn:00",
+    "recomputed": "83f62b48176340527b4514e464b6029bed073fc7f468e25a2fbbe3bb84350a6a",
+    "logged": "83f62b48176340527b4514e464b6029bed073fc7f468e25a2fbbe3bb84350a6a",
+    "equal": true
+   },
+   {
+    "label": "e2:random:00",
+    "recomputed": "ae9fa6e40a6253a7b936b3742f3af52d95f3160c822296865df9008811b47cc6",
+    "logged": "ae9fa6e40a6253a7b936b3742f3af52d95f3160c822296865df9008811b47cc6",
+    "equal": true
+   }
+  ]
+ }
+}

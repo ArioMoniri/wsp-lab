@@ -1,0 +1,288 @@
+{
+ "cap_state": {
+  "cap_generation": 0,
+  "cap_gpu_h": 110.0,
+  "remaining_gpu_h": 82.7295848269595,
+  "spent_usd": 136.38462821344336
+ },
+ "clean_ticks_after_policy_write_utc": [
+  "10:23:55",
+  "10:24:25",
+  "10:24:55",
+  "10:25:25"
+ ],
+ "controller_commit": "8e2e9b9d72d84dc8953efb5308b152859f92ea07",
+ "deadman_status": {
+  "alert": false,
+  "cost_usd": 136.385,
+  "instance_hours": 21.8428,
+  "instances": {
+   "0005e4689cf1422586eaabebbbb6dc86": {
+    "confirmed_terminated_at": 1795357999.4176645,
+    "launched_at": 1795340354.2346787,
+    "name": "wsp-wme-c1-main-20261119l8m",
+    "region": "us-south-3",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "18d0e93f2fc1433f8ac304904c9977f4": {
+    "confirmed_terminated_at": 1795289816.4319065,
+    "launched_at": 1795288384.5370553,
+    "name": "wsp-wme-c1-parity-20261119l5",
+    "region": "us-south-3",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "1addc266e4514d5687c91ac9b812475f": {
+    "confirmed_terminated_at": 1795294447.8867443,
+    "launched_at": 1795292640.0037935,
+    "name": "wsp-wme-c1-main-20261119l5m",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "369d8f7079aa4b0bbf71931771fa4289": {
+    "confirmed_terminated_at": 1795325073.5709822,
+    "launched_at": 1795320037.17186,
+    "name": "wsp-wme-c1-main-20261119l7m",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "4feef28132b0458796396ece760ed3ab": {
+    "confirmed_terminated_at": 1795370363.6565046,
+    "launched_at": 1795368820.431324,
+    "name": "wsp-wme-c1-parity-20261119l9",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "5512dc5703c042908aaeeefb8b59b891": {
+    "confirmed_terminated_at": 1795219150.923657,
+    "launched_at": 1795217636.785856,
+    "name": "wsp-wme-c1-parity-20261119l3",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "593df3a755aa46e6bbfd8272abfb8301": {
+    "confirmed_terminated_at": 1795385484.6947901,
+    "launched_at": 1795383563.2214527,
+    "name": "wsp-wme-c1-parity-20261119l10",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "5c467b8958e048aeb182b981a39bf062": {
+    "confirmed_terminated_at": 1795393882.072935,
+    "launched_at": 1795385933.2161057,
+    "name": "wsp-wme-c1-main-20261119l10m",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "7126c7d35e7e4987b8b540e8cb65238c": {
+    "confirmed_terminated_at": 1795336166.8158948,
+    "launched_at": 1795334581.8327708,
+    "name": "wsp-wme-c1-parity-20261119l8",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "7161f03311804785b9b78957a4be3aa0": {
+    "confirmed_terminated_at": 1795378811.7864637,
+    "launched_at": 1795371514.3719828,
+    "name": "wsp-wme-c1-main-20261119l9m",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "7a3819a3ff67411cb359be8fd00a654b": {
+    "confirmed_terminated_at": 1795311661.8941066,
+    "launched_at": 1795310111.3617952,
+    "name": "wsp-wme-c1-parity-20261119l6",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "7d6a1235e1614b91b4037ede840822bc": {
+    "confirmed_terminated_at": 1795274861.9507723,
+    "launched_at": 1795269224.6675138,
+    "name": "wsp-wme-c1-main-20261119l3m",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "8170aef3c9a64dc28efb8a5384e09506": {
+    "confirmed_terminated_at": 1795315305.3045206,
+    "launched_at": 1795312866.3970313,
+    "name": "wsp-wme-c1-main-20261119l6m",
+    "region": "us-south-3",
+    "terminate_reasons": [
+     "idle"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "a44312195b1e4604a8fa3a8091853c07": {
+    "confirmed_terminated_at": 1795298384.7453582,
+    "launched_at": 1795296981.8490171,
+    "name": "wsp-wme-c1-main-20261119l5d",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "ad99bc7437a1462fbf6a5082fcc6ff93": {
+    "confirmed_terminated_at": 1795429411.2674737,
+    "launched_at": 1795427830.865719,
+    "name": "wsp-wme-c1-parity-20261119l12",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "b99b3d34f34e4e89a4313dbc515129f4": {
+    "confirmed_terminated_at": 1795414468.293474,
+    "launched_at": 1795412901.4338565,
+    "name": "wsp-wme-c1-parity-20261119l11",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "bf1f0eeb36fa4a03b79642c60a5348fc": {
+    "confirmed_terminated_at": 1795286403.3527634,
+    "launched_at": 1795284740.3993793,
+    "name": "wsp-wme-c1-main-20261119l4m",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "c1fb8fba284644b6959f8b75b8be75a5": {
+    "confirmed_terminated_at": 1795101659.387671,
+    "launched_at": 1795100239.2822192,
+    "name": "wsp-wme-c1-parity-20261119",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "c89fabef9801455b8881b23344ca9d50": {
+    "confirmed_terminated_at": 1795319595.5667326,
+    "launched_at": 1795317971.3442543,
+    "name": "wsp-wme-c1-parity-20261119l7",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "d10681e851f7437ebdf32738510b32e5": {
+    "confirmed_terminated_at": 1795100203.6566699,
+    "launched_at": 1795094763.0810797,
+    "name": "wsp-wme-c1-parity-20261119",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "idle",
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "f0eb9435f1974838a541a2ff80281bce": {
+    "confirmed_terminated_at": 1795283366.9102352,
+    "launched_at": 1795281845.0402434,
+    "name": "wsp-wme-c1-parity-20261119l4",
+    "region": "us-southeast-1",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_2x_h100_sxm5"
+   },
+   "f784093d666440de892006a29e9cac20": {
+    "confirmed_terminated_at": 1795419048.4754038,
+    "launched_at": 1795415408.1787279,
+    "name": "wsp-wme-c1-main-20261119l11m",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   },
+   "ffe275d0cc924d6f9088cc8c3b7edd14": {
+    "confirmed_terminated_at": 1795304257.9102983,
+    "launched_at": 1795302842.248664,
+    "name": "wsp-wme-c1-main-20261119l5p",
+    "region": "us-south-2",
+    "terminate_reasons": [
+     "requested"
+    ],
+    "type": "gpu_1x_h100_sxm5"
+   }
+  },
+  "live": [],
+  "watcher_last_tick_age_s": 6.0
+ },
+ "effective_policy_via_reload": {
+  "alert_after_s": 900.0,
+  "idle_limit_s": 1800.0,
+  "margin_s": 300.0,
+  "max_price_usd_h": 9.6,
+  "max_usd": 526.9,
+  "t_max_hours": 104.57236722760729
+ },
+ "error_events_since_policy_write": [],
+ "label": "wme-c1 Phase L part 1: pre-poll dead-man check (chair's mandatory condition)",
+ "pass": true,
+ "policy_cap_file": {
+  "cap_generation": 0
+ },
+ "policy_file": {
+  "idle_limit_s": 1800.0,
+  "max_usd": 526.9,
+  "t_max_hours": 104.57236722760729
+ },
+ "watcher_start_event": {
+  "event": "start",
+  "pid": 3483743,
+  "policy": {
+   "alert_after_s": 900.0,
+   "idle_limit_s": 1800.0,
+   "margin_s": 300.0,
+   "max_price_usd_h": 9.6,
+   "max_usd": 1000.0,
+   "t_max_hours": 110.0
+  },
+  "t": 1795429435.8298032,
+  "utc": "2026-11-23T10:23:55Z"
+ }
+}
