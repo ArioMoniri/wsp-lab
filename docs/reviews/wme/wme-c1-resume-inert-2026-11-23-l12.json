@@ -1,0 +1,283 @@
+{
+ "contract": "8f38d82ca70d19dee3cae6996d46b81fcb274423f5b10e0c68d292ed9cded179",
+ "engine_config_sha256": "b98713ec2ff3ad38ac615307633648ec0b43420635d576f91fd6a945a8a772f8",
+ "hello": {
+  "code_sha": "8e2e9b9d72d84dc8953efb5308b152859f92ea07",
+  "cublas_workspace_config": ":4096:8",
+  "gen_engine": {
+   "amendment": "PREREG_WME \u00a7II.31 (v2l)",
+   "batch": 128,
+   "deterministic": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8 (process-wide, set before the first CUDA call)",
+    "attention": "SDPA math backend only (flash, memory-efficient and cuDNN attention off); model attn_implementation in ['sdpa', 'eager']",
+    "cudnn": {
+     "benchmark": false,
+     "deterministic": true
+    },
+    "linear_attention": "transformers torch path (no fla / causal_conv1d / kernels-hub function bound)",
+    "scope": "inside each HF generate call; teacher-forced evaluation unchanged",
+    "torch.use_deterministic_algorithms": {
+     "mode": true,
+     "warn_only": false
+    }
+   },
+   "engine": "hf generate (wm.genaudit, unchanged)",
+   "greedy": true,
+   "max_new_tokens": 128,
+   "mode": "hf_deterministic",
+   "non_thinking": true,
+   "order": "file order; contiguous chunks of 128 (the last the remainder); one generate call per chunk",
+   "padding": "left",
+   "sampled_audit": "T 0.7, top-p 1.0, gen.sampled_seeds",
+   "stop": [
+    "eos",
+    "<|im_end|>"
+   ]
+  },
+  "global_state": {
+   "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+   "cudnn_benchmark": false,
+   "cudnn_deterministic": false,
+   "deterministic_algorithms": false,
+   "sdp": {
+    "cudnn": true,
+    "flash": true,
+    "math": true,
+    "mem_efficient": true
+   },
+   "warn_only": false
+  },
+  "load_s": 10.97125768661499,
+  "physical": {
+   "driver": "570.148.08",
+   "gpu_names": [
+    "NVIDIA H100 80GB HBM3"
+   ],
+   "gpu_uuid_sha256": [
+    "5c081fe578c299aeffaea2b894baecb7d3dcacb152913073c5258ed56c0ac73e"
+   ],
+   "machine_id_sha256": "2336045000cff999d24624ea2c252cad4143311e050ff0bdd507314b0542b5ca"
+  },
+  "repo": "Qwen/Qwen3.5-9B",
+  "smoke": false,
+  "theta0": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+  "versions": {
+   "cuda": "13.0",
+   "gpu": [
+    "NVIDIA H100 80GB HBM3"
+   ],
+   "numpy": "2.3.5",
+   "python": "3.12.16",
+   "torch": "2.14.0+cu130",
+   "transformers": "5.22.2",
+   "vllm": "0.34.0"
+  }
+ },
+ "inert_identity": {
+  "base": {
+   "hf_gen": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+   "tf": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b"
+  },
+  "n_constructions": 8,
+  "pass": true,
+  "rows": [
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "kind": "i1",
+     "shape": "2step",
+     "tensors": [
+      [
+       16,
+       "down"
+      ]
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+    "theta_is_base": true
+   },
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "kind": "i1",
+     "shape": "4step",
+     "tensors": [
+      [
+       8,
+       "down"
+      ],
+      [
+       19,
+       "o"
+      ]
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+    "theta_is_base": true
+   },
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "factor": 1.5,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "05512b74423a7768c94c16a8ae5dff88d98dedf46bc0091e90e83e5ea0455b91",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "factor": 0.5,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "4a454a27e73a6065a800c415241966809d85751aa61d3409cfcad20fd9a6f112",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "factor": -1.0,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "a12dfb980c2f0eb5bb1558009b4ea68cbfd376f7b7e32fd3debb0d741385350b",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": null,
+    "hf_sha256": null,
+    "spec": {
+     "index": 0,
+     "kind": "comp"
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "a291de2e7b558ace3a2b66ce7983cd351fa55cbc6fa56f6583d8d40e2484b75a",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": null,
+    "hf_sha256": null,
+    "spec": {
+     "index": 1,
+     "kind": "comp"
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "3b093977a4dfb40c0271480fd66912870459447be952999997f4a9e66216d11e",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": null,
+    "hf_sha256": null,
+    "spec": {
+     "index": 2,
+     "kind": "comp"
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "6a3c2ff83c1d7422fd0784c4929d81688bb1fbbda342cb6e47c8402cda1e4376",
+    "theta_is_base": false
+   }
+  ],
+  "vllm_rows": [
+   {
+    "spec": {
+     "kind": "i1",
+     "shape": "2step",
+     "tensors": [
+      [
+       16,
+       "down"
+      ]
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   },
+   {
+    "spec": {
+     "kind": "i1",
+     "shape": "4step",
+     "tensors": [
+      [
+       8,
+       "down"
+      ],
+      [
+       19,
+       "o"
+      ]
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   },
+   {
+    "spec": {
+     "factor": 1.5,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   },
+   {
+    "spec": {
+     "factor": 0.5,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   },
+   {
+    "spec": {
+     "factor": -1.0,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   }
+  ]
+ },
+ "instance": "lambda:2d9a3d31a33c4f00a5fc814946642b31",
+ "pre_transition": false,
+ "resume": true
+}
