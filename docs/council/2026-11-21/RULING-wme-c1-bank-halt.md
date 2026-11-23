@@ -342,3 +342,35 @@ This is outcome-blind: only ledger seconds are used, and no outcome is read.
 - The raise is to the re-priced projection × 1.10, and never beyond the user's $1,000 total for the 9B study.
 - It is announced to the user at the time it is made.
 - No claim, α, N, margin or stopping rule changes.
+
+## Addendum 10 (23 Nov 2026): P1 result, P2 approved, P3/P4 rules
+
+**P1** (`docs/reviews/wme/wme-c1-e2-profile-2026-11-23.md`, branch `run/wme-c1-9b-p1`).
+- The GPU work per arm-episode is about 450 s, under the registered 699.8 s.
+- The whole overrun is CPU planner time, which the registered price did not include.
+- That planner time is dominated by exact repeats: 86–87 % of rows repeat, and the R(E) calls cover only about 1k
+  distinct tuples.
+
+**P2 approved.** Two memos inside `e2arms.run_planner`:
+- an R(E) memo keyed by the primitive-id tuple;
+- a whole-batch prediction memo keyed by exact bytes.
+
+Expected saving: about 5.3 GPU-h-eq, bringing `wm_e` to about 1.25× and `statnn` to about 1.07× of registered.
+
+Two conditions:
+- Row-level deduplication and any thread-count change are **excluded**, because neither is bitwise.
+- Before any new E2 data, re-run `e2:wm_e:00` and `e2:statnn:00` on the instance as verification. Each must match its
+  committed run10 payload exactly, ignoring timing fields only. A mismatch is an incident and halts the run.
+
+**P3. Re-pricing**, recorded as a PREREG_WME §II.31.14 note, append-only and based on ledger seconds only.
+- The E2 per-arm-episode estimate becomes the registered estimate × 1.30. This covers the post-memo `wm_e` rate
+  measured in the verification run, rounded up to the nearest 0.05× if that rate turns out higher.
+- The S-BoN estimate is scaled by the same factor, since it uses the same planner.
+- Every other phase keeps its registered price.
+- R9.2 still applies to the new estimate. If any arm's measured rate exceeds 1.5× **its re-priced estimate**, E2 stops
+  again for re-pricing.
+
+**P4. Cap.**
+- After P3, compute the projection as spent plus the re-priced remainder of every phase, plus instance overheads.
+- If the projection exceeds 110, the cap rises to the projection × 1.10, never beyond the user's $1,000 total.
+- The raise is logged as a cap generation before the units it funds, and announced to the user by the chair.
