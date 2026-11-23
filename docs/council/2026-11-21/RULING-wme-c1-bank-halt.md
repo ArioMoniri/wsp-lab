@@ -443,3 +443,41 @@ unit had executed since the start canary, so under R2 no closing canary was owed
 - Then `run --stages e2,…` and every later registered phase.
 - `reprice` and the P4 cap generation (128.386) stand. No further raise is authorised: any further raise means stop
   and report first.
+
+## Addendum 13 (23 Nov 2026): run13, a stale E2 environment after the canary's model release (incident 2868)
+
+**Input.** `docs/reviews/wme/wme-c1-run-halt-e2-env-release-2026-11-23.md`, on branch `run/wme-c1-run13` at commit
+`c531688`. The fix is on branch `run/wme-c1-9b-v3c` at commits `be46617` (code), `c0093b2` (drill evidence) and
+the chunk-boundary test commit.
+
+**Problem.** `Runtime.release()`, which runs before a canary's child engines, did not drop the cached E2 environment
+(`rt._e2`). The next E2 request reused an Env holding the released model, and `e2:random:00` failed in
+`modelops.at_base` (incident 2868; `attempt_fail` with cause None). `verify-e2` had passed (seq 2856). No E2 result,
+no sealed read and no claim outcome exist.
+
+**Decision 1: v3c approved.** `Runtime.release()` drops and closes the cached E2 Env. A test covers the run10 latent
+path: a chunk-boundary canary between two E2 units rebuilds the Env through `env_for`. It fails on the pre-v3c code.
+
+**Decision 2: the attempt budget of `e2:random:00`.** The run10 attempt (seq 2705, generation 1, epoch 46) was in
+flight when E2 was stopped under R9.2. That stop was chair-ordered and was not a failure, and the attempt produced
+no payload and has no outcome. Under §II.31.8 R4, the last sentence of §II.31.10 N1 and §II.31.5 item 3 ("a halt
+never consumes an attempt"), it is ruled **uncounted**: charged, but not counted toward the 3. Today's code-defect
+failure (seq 2867/2870) counts, and so does the retry after the repair record.
+
+**Implementation note.** The log has only one writer of `attempt_aborted`: `ProductionGuard.failed` with an
+`IncidentAbort`, and only for an attempt in flight under the current owner epoch. Disposing of the run10 attempt
+would need a new write path, which this ruling forbids. The conservative count is therefore kept: the replayed
+budget counts 2 of 3, so 1 attempt remains in generation 1. If that attempt fails, the registered fallback applies.
+
+The fix to the count (a persisted disposition of an interrupted attempt from a closed owner) is deferred to after the
+study, together with the path-independent keys (addendum 11, option (b)). The only unit with an R9.2-interrupted
+attempt is `e2:random:00` (seq 2705). It is the only `attempt_start` in the log without an outcome.
+
+**Decision 3: repair.** `resolve-incident 2868` and `record-repair --label e2:random:00 --cause code_defect_crash`,
+both citing this addendum, are written before any further E2 data.
+
+**Resume.**
+- Run from the merged main commit at the fixed run10 checkout path: pre-checks, preflight, parity, main launch,
+  `phasel-main --resume`, `repair-field`, the key check, a fresh `verify-e2`, then `run --stages e2,…`.
+- No cap raise beyond 128.386 is authorised. Any further raise, or a projection above the cap, means stop and report
+  first.
