@@ -374,3 +374,24 @@ Two conditions:
 - After P3, compute the projection as spent plus the re-priced remainder of every phase, plus instance overheads.
 - If the projection exceeds 110, the cap rises to the projection × 1.10, never beyond the user's $1,000 total.
 - The raise is logged as a cap generation before the units it funds, and announced to the user by the chair.
+
+## Addendum 11 (23 Nov 2026): run11, E2 unit keys depend on the checkout path
+
+**Input.** `docs/reviews/wme/wme-c1-run-halt-e2-verify-key-2026-11-23.md`, on branch `run/wme-c1-run11` at commit
+`2f9beb6`.
+
+**Problem.** E2, prep, S-BoN, sealed and gen recipes carry absolute local paths, so their unit keys changed with the
+checkout directory. `verify-e2` refused, as designed (seq 2750). No E2 data, no sealed read and no claim outcome
+exist.
+
+**Decision: option (a), with no code change.** From now on, every run is made from a fresh clean checkout of the
+named commit **at the fixed run10 checkout path**. The agent recreates that directory for each run, and the
+recomputed keys reproduce the logged keys exactly. The agent records the path in the P2 evidence.
+- Option (b), path-independent keys, is deferred to after the study. It would remap every eligible key mid-run.
+- Incident 2750 is resolved under this addendum. Diagnosis: path-dependent recipe keys, fixed procedurally by (a).
+- Before `verify-e2`, check that the recomputed keys for `e2:wm_e:00`, `e2:statnn:00` and `e2:random:00` equal the
+  logged keys. Any mismatch halts the run.
+
+**Cap.** The P4 cap at the current ledger is 125.90 GPU-h-eq, +1.7 % against the announced 123.83. That is within
+the 5 % bound, so it is approved. After `cap-raise`, re-base the dead-man's instance-hour limit with the same rule
+`up` uses.
