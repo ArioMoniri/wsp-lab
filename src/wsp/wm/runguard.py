@@ -64,6 +64,11 @@ The registered rules enforced on that state (unchanged in substance from §II.22
   after §II.31 is the chair's and must have been announced to the user), never lets the cap exceed :data:`CAP_USD` at
   :data:`USD_PER_GPU_H`, binds the contract generation it was recorded under, and is recorded before the units it
   funds. It is not a contract transition: no result or canary is superseded.
+* **Re-pricing (PREREG_WME §II.31.14; RULING-wme-c1-bank-halt addendum 10, P3).** A ``reprice`` record raises one
+  phase's price by a factor (>= 1.30, on the 0.05 grid, never lowered) applied to a registered part of it or to the
+  whole phase; the 1.25x pause, R8 and the projection use the re-priced price (:meth:`CombinedLedger.price`). A chair
+  cap generation is the mechanical R8 raise or the addendum 10 P4 raise (:func:`p4_cap`: projection x 1.10 from the
+  ledger basis, never beyond $1,000).
 * **Run-health incidents (§II.31 run-health duties).** An ``incident`` record halts issuing: :meth:`ProductionGuard.begin`
   raises :class:`HealthHalt` (before any attempt is recorded) until it is resolved: one incident by an
   ``incident_resolved`` record (its seq, the diagnosis, the chair ruling; addendum 5), or all by an
@@ -231,6 +236,8 @@ class StudyState:
         self.incidents: list = []  # open run-health incidents
         self.incident_seqs: set = set()  # every incident record ever written
         self.phase_resumes: dict = {}  # phase -> the chair's phase_resume record (§II.13 item 9, §II.14)
+        self.reprices: dict = {}  # phase -> its latest reprice record (§II.31.14; addendum 10 P3)
+        self.e2_verified: list = []  # e2_speedup_verified records (addendum 10 P2 verification)
         # Board A v2u C1: the attempt budget per contract generation. Keys (unit, generation, contract) of the
         # attempt_start; an abort or failure belongs to the generation of the start its ``start_seq`` names.
         self.start_gen: dict = {}  # attempt_start seq -> (generation, contract)
@@ -331,6 +338,12 @@ class StudyState:
             t == "phase_resume"
         ):  # RULING-wme-c1-bank-halt addendum 7: the 1.25x pause lifted for this phase
             self.phase_resumes[r["resumed_phase"]] = r
+        elif t == "reprice":  # §II.31.14 (addendum 10 P3): the phase's price in force
+            self.reprices[r["repriced_phase"]] = r
+        elif (
+            t == "e2_speedup_verified"
+        ):  # addendum 10 P2: timing-free bitwise re-run of completed E2 units
+            self.e2_verified.append(r)
         elif t == "incident_resolved":  # RULING-wme-c1-bank-halt addendum 5: one incident, named
             self.incidents = [i for i in self.incidents if i["seq"] != r["incident_seq"]]
 
@@ -835,9 +848,14 @@ class CombinedLedger(_View):
                 **cap.fields(),
             )
 
+    def price(self, phase: str) -> float:
+        """The phase's price in force: the registered price, raised by its latest ``reprice`` record (§II.31.14)."""
+        with self._read() as s:
+            return repriced(float(self.priced[phase]), s.reprices.get(phase))
+
     def priced_remainder(self) -> float:
-        """GPU-h-eq of the registered design not yet measured: sum over priced phases of max(0, price - measured)."""
-        return sum(max(0.0, float(v) - self.unit_gpu_h(p)) for p, v in self.priced.items())
+        """GPU-h-eq of the (re-priced) design not yet measured: sum over priced phases of max(0, price - measured)."""
+        return sum(max(0.0, self.price(p) - self.unit_gpu_h(p)) for p in self.priced)
 
     def check_before(self, phase: str, est_gpu_h: float, contract=None, generation=None):
         with self._op() as s:
@@ -875,10 +893,10 @@ class CombinedLedger(_View):
             if (
                 phase
                 not in s.phase_resumes  # §II.14: a recorded chair resumption lifts the pause (cap unchanged)
-                and self.unit_gpu_h(phase) + est_gpu_h > PHASE_PAUSE * self.priced[phase]
+                and self.unit_gpu_h(phase) + est_gpu_h > PHASE_PAUSE * self.price(phase)
             ):
                 raise PhasePause(
-                    f"{phase}: above {PHASE_PAUSE} x its priced {self.priced[phase]} GPU-h"
+                    f"{phase}: above {PHASE_PAUSE} x its priced {self.price(phase)} GPU-h"
                 )
 
 
@@ -976,10 +994,10 @@ class EngineeringGuard:
 
 @dataclass
 class CapGeneration:
-    """One dated cap decision (PREREG_WME §II.31, §II.31.8 R8): ``decided_by`` "user" (the §II.31 decision, rule
-    "user") or "chair" (a later raise, only by the mechanical rule "R8": its ledger-only ``basis`` must reproduce the
-    cap, and ``outcome_blind`` attests that no outcome was read). Announcing a raise to the user is a notification,
-    not a gate."""
+    """One dated cap decision (PREREG_WME §II.31, §II.31.8 R8, §II.31.14): ``decided_by`` "user" (the §II.31 decision,
+    rule "user") or "chair" (a later raise, only by a mechanical rule: "R8", or "P4" of RULING-wme-c1-bank-halt
+    addendum 10; its ledger-only ``basis`` must reproduce the cap, and ``outcome_blind`` attests that no outcome was
+    read). Announcing a raise to the user is a notification, not a gate."""
 
     cap_gpu_h: float
     date: str
@@ -1002,14 +1020,14 @@ class CapGeneration:
         if self.decided_by == "user" and self.rule != "user":
             raise ValueError("the user's cap decision carries rule 'user'")
         if self.decided_by == "chair":
-            if self.rule != "R8" or not isinstance(self.basis, dict):
+            if self.rule not in ("R8", "P4") or not isinstance(self.basis, dict):
                 raise ValueError(
-                    "a later raise is only the mechanical R8 raise, with its ledger basis"
+                    "a later raise is only the mechanical R8 or P4 raise, with its ledger basis"
                 )
-            want = r8_cap(self.basis)
+            want = r8_cap(self.basis) if self.rule == "R8" else p4_cap(self.basis)
             if want is None or abs(float(self.cap_gpu_h) - want) > 1e-9:
                 raise ValueError(
-                    f"cap {self.cap_gpu_h} is not the R8 value {want} for basis {self.basis}"
+                    f"cap {self.cap_gpu_h} is not the {self.rule} value {want} for basis {self.basis}"
                 )
         if (
             not (CAP_GPU_H <= float(self.cap_gpu_h))
@@ -1043,6 +1061,36 @@ def r8_cap(basis: dict) -> float | None:
     if (charged + rem) * USD_PER_GPU_H > CAP_USD:
         return None
     return min(prev + PHASE_PAUSE * rem, CAP_USD / USD_PER_GPU_H)
+
+
+P4_THRESHOLD_GPU_H = (
+    110.0  # addendum 10 P4: a raise only when the projection exceeds the user's 110 GPU-h-eq cap
+)
+P4_MARGIN = 1.10
+P3_MIN_FACTOR, P3_GRID = 1.30, 0.05
+
+
+def p4_cap(basis: dict) -> float | None:
+    """RULING-wme-c1-bank-halt addendum 10 P4: projection = charged + the re-priced remainder of every phase + the
+    instance overheads (the basis must add up); if it exceeds 110 the cap is projection x 1.10, never beyond the
+    $1,000 ceiling (ledger convention). None: no raise."""
+    parts = sum(
+        float(basis[k]) for k in ("charged_gpu_h", "repriced_remainder_gpu_h", "overhead_gpu_h")
+    )
+    proj = float(basis["projection_gpu_h"])
+    if abs(proj - parts) > 1e-9:
+        raise ValueError(f"projection {proj} != charged + re-priced remainder + overheads {parts}")
+    if proj <= P4_THRESHOLD_GPU_H:
+        return None
+    return min(proj * P4_MARGIN, CAP_USD / USD_PER_GPU_H)
+
+
+def repriced(base_gpu_h: float, rec: dict | None) -> float:
+    """A phase's price under its ``reprice`` record: base + (factor - 1) x part (the whole phase if no part)."""
+    if rec is None:
+        return float(base_gpu_h)
+    part = float(base_gpu_h) if rec.get("part_gpu_h") is None else float(rec["part_gpu_h"])
+    return float(base_gpu_h) + (float(rec["factor"]) - 1.0) * part
 
 
 @dataclass
@@ -1358,7 +1406,7 @@ class ProductionGuard:
             if phase in s.phase_resumes:
                 raise ValueError(f"{phase}: already resumed (seq {s.phase_resumes[phase]['seq']})")
             measured = self.ledger.unit_gpu_h(phase)
-            priced = float(self.ledger.priced[phase])
+            priced = self.ledger.price(phase)
             est = self.est if phase == self.phase else 0.0
             thr = PHASE_PAUSE * priced
             if not measured + est > thr:
@@ -1382,6 +1430,76 @@ class ProductionGuard:
                     "charged_gpu_h": self.ledger.gpu_h(),
                     "cap_gpu_h": self.ledger.cap_gpu_h(),
                 },
+            )
+
+    def reprice(self, phase: str, factor: float, ruling: str, part_gpu_h: float | None = None,
+                part: str = "whole phase", basis: dict | None = None) -> dict | None:  # fmt: skip
+        """PREREG_WME §II.31.14 (RULING-wme-c1-bank-halt addendum 10, P3): a dated, outcome-blind ``reprice`` record
+        raising ``phase``'s price by ``factor`` applied to ``part_gpu_h`` (a registered part of the phase price, or
+        the whole phase when None). The factor is at least 1.30 and on the 0.05 grid; a phase's factor is never
+        lowered or its part changed; an identical record is not written twice (returns None)."""
+        if not ruling:
+            raise ValueError("name the chair ruling")
+        f = round(float(factor), 2)
+        if abs(f - float(factor)) > 1e-9 or abs(round(f / P3_GRID) * P3_GRID - f) > 1e-9:
+            raise ValueError(f"factor {factor}: not on the {P3_GRID} grid")
+        if f < P3_MIN_FACTOR:
+            raise ValueError(f"factor {f} below the re-priced minimum {P3_MIN_FACTOR}")
+        base = float(self.ledger.priced[phase])  # KeyError: an unpriced phase
+        if part_gpu_h is not None and not 0.0 < float(part_gpu_h) <= base:
+            raise ValueError(f"part {part_gpu_h} GPU-h is not within the phase price {base}")
+        with self._op() as s:
+            prev = s.reprices.get(phase)
+            if prev is not None:
+                same_part = prev.get("part_gpu_h") == (
+                    None if part_gpu_h is None else float(part_gpu_h)
+                )
+                if not same_part:
+                    raise ValueError(f"{phase}: re-priced part differs from seq {prev['seq']}")
+                if f < float(prev["factor"]):
+                    raise ValueError(
+                        f"{phase}: a re-pricing never lowers the factor ({f} < {prev['factor']})"
+                    )
+                if f == float(prev["factor"]):
+                    return None
+            now = self.ledger._trusted_now()
+            rec = {"factor": f, "part_gpu_h": None if part_gpu_h is None else float(part_gpu_h)}
+            return self._append(
+                "reprice",
+                repriced_phase=phase,
+                factor=f,
+                part=part,
+                part_gpu_h=rec["part_gpu_h"],
+                registered_price_gpu_h=base,
+                repriced_gpu_h=repriced(base, rec),
+                decided_by="chair",
+                date=time.strftime("%Y-%m-%d", time.gmtime(now)),
+                ruling=ruling,
+                outcome_blind=True,
+                basis=dict(basis or {}),
+            )
+
+    def record_e2_verified(
+        self, checks: list, commit: str, wm_e_rate_x: float, p3_factor: float
+    ) -> dict:
+        """RULING-wme-c1-bank-halt addendum 10 P2: the on-instance verification passed (every re-run unit equals its
+        eligible payload without timing fields), on this instance, contract generation and code commit."""
+        if not checks or not all(c.get("equal") is True for c in checks):
+            raise ValueError("a verification record needs every check equal")
+        if not commit:
+            raise ValueError("name the code commit")
+        with self._op():
+            return self._append(
+                "e2_speedup_verified",
+                checks=list(checks),
+                equal=True,
+                commit=commit,
+                instance=self.instance,
+                generation=self.generation,
+                contract=self.contract,
+                wm_e_rate_x=float(wm_e_rate_x),
+                p3_factor=float(p3_factor),
+                outcome_blind=True,
             )
 
     def resolve_incident(self, seq: int, diagnosis: str, ruling: str) -> dict:

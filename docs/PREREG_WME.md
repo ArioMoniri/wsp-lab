@@ -4442,3 +4442,52 @@ there is no result to bracket. A chunk with any executed attempt, successful or 
 
 **Unchanged.** No claim, test, α, N, margin, seed, price rule, cap or stopping rule changes. Bank units are
 construction data, and no sealed item has been read.
+
+### II.31.14 Note (23 Nov 2026): E2 planner speed-up, re-pricing of E2 and S-BoN, cap rule (engineering, outcome-blind)
+
+**Status.** This note is recorded before any sealed read; no confirmatory result exists yet. It records the chair's
+ruling `docs/council/2026-11-21/RULING-wme-c1-bank-halt.md` addenda 9 and 10 (inputs:
+`docs/reviews/wme/wme-c1-run-stop-e2-rate-2026-11-23.md` and `docs/reviews/wme/wme-c1-e2-profile-2026-11-23.md`).
+
+**What was found.** E2 was stopped under R9.2 (§II.13 item 9) after its first two arm-episodes, at 1.84× (`wm_e`)
+and 1.63× (`statnn`) of the registered estimate (48 × `t_bundle_s` 14.580 s + `planner_gpu_s` 0 = 699.8 s). The GPU
+dev evaluations took about 450 s per arm-episode, under the registered price. The overrun is the planner's CPU time,
+which the registered price did not include.
+
+**P2 (speed-up; engineering).** Inside `e2arms.run_planner` two memos skip exact repeats of a pure computation:
+- an R(E) memo keyed by the primitive-id tuple;
+- a whole-batch prediction memo keyed by the exact input bytes.
+
+No registered quantity changes: arms, budgets, items, seeds, the planner algorithm, the evaluations and their order
+all stay as registered. Row-level deduplication and any thread-count change are excluded, because neither is bitwise.
+
+Before any new E2 data, `e2:wm_e:00` and `e2:statnn:00` are re-run on the instance and must equal their eligible
+payloads with only the timing fields removed (keys ending in `seconds`). A mismatch is an incident and halts the run.
+The pass is logged as an `e2_speedup_verified` record, and E2 is not issued without one for the code in use.
+
+**P3 (re-pricing; ledger seconds only).**
+- The E2 per-arm-episode estimate becomes the registered estimate × 1.30. If the post-memo `wm_e` rate measured in
+  the verification run is higher, the factor is that rate rounded up to the next 0.05×. The confirmatory phase price
+  is raised by (factor − 1) × its registered E2 part: 24 × 11 × 48 × `t_bundle_s` plus the `lora_sft` arm's training
+  seconds, 51.609 GPU-h-eq of the registered 53.666.
+- The S-BoN price (B_par from ledger seconds) is scaled by the same factor.
+- Every other phase keeps its registered price.
+- The change is logged as `reprice` records (outcome-blind, citing addendum 10). The 1.25× phase pause, R8 and the
+  projection use the re-priced prices.
+- R9.2 applies to the re-priced estimate: an arm whose measured rate exceeds 1.5 × its re-priced estimate stops E2
+  again for re-pricing. At 1.30 that is 1.5 × 909.8 s = 1,364.7 s per arm-episode.
+
+**P4 (cap).** After P3, compute:
+- projection = charged GPU-h-eq + the re-priced remainder of every phase (max(0, price − measured)) + the instance
+  overheads.
+- The overheads come from the study log only. The first part is one launch at the mean of the last three complete
+  parity-plus-main launches: parity GPU-h + main GPU-h − unit GPU-h. The second part is the remaining bracketing
+  canaries at the median canary duration of the current contract generation. That means one canary per 16 remaining
+  E2 and S-BoN units, plus a start and a closing canary for each later stage.
+- If the projection exceeds 110, the cap rises to projection × 1.10, never beyond the user's $1,000 (ledger
+  convention).
+- The raise is logged as a chair cap generation with rule "P4" and its ledger basis, before the units it funds. The
+  chair announces it to the user.
+
+**Unchanged.** No claim, test, α, N, margin, seed, arm, budget, item, planner rule or stopping rule changes. The
+absolute $1,000 limit and R8 still apply.

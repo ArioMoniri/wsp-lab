@@ -1,0 +1,116 @@
+{
+ "ruling": "RULING-wme-c1-bank-halt.md addendum 10",
+ "date": "2026-11-23",
+ "code_commit": "f7c9005",
+ "p2_whole_episode_check": {
+  "wm_e": {
+   "arm": "wm_e",
+   "episode": 0,
+   "memo": {
+    "wall_s": 153.17185163497925,
+    "timing_free_sha256": "38e8d3d7c41ce421730c0956f2f302d3aac87cf60badee62f00c44a3aa851bb8",
+    "r_cache_misses": 474,
+    "ticks": 1963584,
+    "evaluated": 48
+   },
+   "plain": {
+    "wall_s": 539.2827336788177,
+    "timing_free_sha256": "38e8d3d7c41ce421730c0956f2f302d3aac87cf60badee62f00c44a3aa851bb8",
+    "r_cache_misses": 474,
+    "ticks": 1963584,
+    "evaluated": 48
+   },
+   "timing_free_equal": true,
+   "misses_equal": true,
+   "ticks_equal": true,
+   "wall_ratio_memo_over_plain": 0.2840288443690546
+  },
+  "statnn": {
+   "arm": "statnn",
+   "episode": 0,
+   "memo": {
+    "wall_s": 140.3164780139923,
+    "timing_free_sha256": "0b6bf6abc02ade4296bf6382151c69165089f7398e2e55cade2232c91ae42047",
+    "r_cache_misses": 536,
+    "ticks": 1926757,
+    "evaluated": 48
+   },
+   "plain": {
+    "wall_s": 545.873556137085,
+    "timing_free_sha256": "0b6bf6abc02ade4296bf6382151c69165089f7398e2e55cade2232c91ae42047",
+    "r_cache_misses": 536,
+    "ticks": 1926757,
+    "evaluated": 48
+   },
+   "timing_free_equal": true,
+   "misses_equal": true,
+   "ticks_equal": true,
+   "wall_ratio_memo_over_plain": 0.2570494145328313
+  }
+ },
+ "p2_whole_episode_note": "scripts/wme_c1_p2_episode_check.py on this development host (CPU, 1 thread): the prep fit.pkl, the real library.pt with the pinned 9B role map, episode 0, PLANNER_CONFIG, B 48; stand-in field contributions and dev evaluations",
+ "p4_dry_run": {
+  "reprice": {
+   "factor": 1.3,
+   "written": [
+    2722,
+    2724
+   ],
+   "prices_gpu_h": {
+    "bank": 4.530551290639242,
+    "confirmatory": 69.14897693341445,
+    "ste": 1.844836772316389,
+    "sbon": 13.910580789453453
+   }
+  },
+  "projection": 112.57296882716103,
+  "cap": 123.83026570987715,
+  "raised": true,
+  "charged": 25.38874408668942,
+  "remainder": 84.13824462376873,
+  "overhead": 3.045980116702893,
+  "prices": {
+   "bank": 4.530551290639242,
+   "confirmatory": 69.14897693341445,
+   "ste": 1.844836772316389,
+   "sbon": 13.910580789453453
+  },
+  "measured": {
+   "bank": 6.034911358820067,
+   "confirmatory": 0.7661498714155621,
+   "ste": 0.0,
+   "sbon": 0.0
+  },
+  "ob": {
+   "overhead_gpu_h": 3.045980116702893,
+   "launch_overhead_gpu_h": 2.288297184683659,
+   "launches_sampled": [
+    {
+     "parity_gpu_h": 0.880546180009842,
+     "main_gpu_h": 4.901439718272951,
+     "unit_gpu_h": 3.5957392706473654,
+     "overhead_gpu_h": 2.1862466276354273
+    },
+    {
+     "parity_gpu_h": 0.857347322569953,
+     "main_gpu_h": 2.027059578034613,
+     "unit_gpu_h": 0.6966153295834859,
+     "overhead_gpu_h": 2.1877915710210805
+    },
+    {
+     "parity_gpu_h": 1.0674851874510447,
+     "main_gpu_h": 2.2080157859457863,
+     "unit_gpu_h": 0.7846476180023617,
+     "overhead_gpu_h": 2.490853355394469
+    }
+   ],
+   "launches_projected": 1,
+   "canary_median_s": 101.02439093589783,
+   "canaries_projected": 27,
+   "canary_gpu_h": 0.7576829320192338,
+   "e2_units_remaining": 262
+  },
+  "usd_ceiling_gpu_h": 185.90816136828406
+ },
+ "p4_dry_run_note": "ctl reprice --factor 1.30 then ctl cap-raise (computed overheads) run by the committed code on a throwaway copy of the study log; nothing was written to the study log"
+}
