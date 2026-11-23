@@ -1070,6 +1070,12 @@ P4_MARGIN = 1.10
 P3_MIN_FACTOR, P3_GRID = 1.30, 0.05
 
 
+def _cap_persisted(caps: list, cap: CapGeneration) -> bool:
+    """True when ``cap`` (every field of :meth:`CapGeneration.fields`) is already a persisted cap generation."""
+    f = cap.fields()
+    return any(all(c.get(k) == v for k, v in f.items()) for c in caps)
+
+
 def p4_cap(basis: dict) -> float | None:
     """RULING-wme-c1-bank-halt addendum 10 P4: projection = charged + the re-priced remainder of every phase + the
     instance overheads (the basis must add up); if it exceeds 110 the cap is projection x 1.10, never beyond the
@@ -1242,7 +1248,9 @@ class ProductionGuard:
                     "fallback_registered", payload=fallback_value, payload_sha256=fb_digest
                 )
             self.contract, self.generation = s.contract, s.generation
-            if cap is not None:
+            if cap is not None and not _cap_persisted(s.caps, cap):
+                # the registered cap generation is recorded once; after a later raise (R8, P4) it is not re-recorded
+                # (re-recording it would lower the cap and is refused; run12 halt, 23 Nov 2026)
                 self.ledger.record_cap(cap, contract=s.contract, generation=s.generation)
             self.fallback_payload = s.fallbacks[phase]["payload"]
             self.fallback_sha256 = fb_digest
