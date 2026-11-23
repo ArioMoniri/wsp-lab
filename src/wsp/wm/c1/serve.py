@@ -91,6 +91,12 @@ class Runtime:
         self._rc = self._bank = None
         self._field = None  # reloaded lazily (``field()``)
         self.m = None
+        # run13 halt (v3c): the E2 environment cache (``serve_e2.env_for``) holds the model context too; drop it so the
+        # next E2 request rebuilds its Env on the reloaded model instead of reusing a released one
+        e2, self._e2 = getattr(self, "_e2", None), None
+        if e2 is not None and e2.world is not None:
+            e2.world.close()
+        del e2
         if field is not None:
             field._kept.clear()
             field._grad.clear()
