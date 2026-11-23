@@ -395,3 +395,51 @@ recomputed keys reproduce the logged keys exactly. The agent records the path in
 **Cap.** The P4 cap at the current ledger is 125.90 GPU-h-eq, +1.7 % against the announced 123.83. That is within
 the 5 % bound, so it is approved. After `cap-raise`, re-base the dead-man's instance-hour limit with the same rule
 `up` uses.
+
+## Addendum 12 (23 Nov 2026): run12, guard construction after the P4 cap raise
+
+**Input.** `docs/reviews/wme/wme-c1-run-halt-guard-cap-2026-11-23.md`, on branch `run/wme-c1-run12` at commit
+`75c5462`. The fix is on branch `run/wme-c1-9b-v3b` at commits `23e1a65` (code) and `e2d3241` (drill evidence).
+
+**Problem.** `ProductionGuard.__init__` re-recorded the registered §II.31 cap generation (110) on every
+construction. After the P4 raise to 128.386 GPU-h-eq (cap generation 1, seq 2812), `record_cap` refused it ("a cap
+generation never lowers the cap"). No guard could then be constructed, so `run --stages e2` failed before any unit
+was issued. Steps 1–7 of the run12 GO had completed:
+- parity passed;
+- the resume passed;
+- K3 was bitwise;
+- incident 2750 was resolved (seq 2799);
+- the key check passed;
+- `verify-e2` passed (seq 2803);
+- `reprice` recorded seqs 2806 and 2808;
+- `cap-raise` recorded seq 2812;
+- the dead-man was re-based.
+
+No E2 data, no sealed read and no claim outcome exist.
+
+**Decision 1: v3b approved as written.**
+- The constructor re-records the registered cap only if no persisted cap generation equals it field for field
+  (`_cap_persisted`).
+- A lower cap absent from the log is still refused, and that test is kept.
+- The change to `test_wme_c1_v2l::test_cap_generation_rules` is confirmed. Its intent was "an old guard cannot lower
+  the cap", and that intent is preserved: the cap stays raised and no new record is written. The refusal on
+  construction was the defect.
+- It is a code change, so a new parity run precedes the resume.
+
+**Decision 2: the first main node's setup failure is accepted as an infrastructure retry of the launch.** The node
+failed with `SETUP_FAILED:cuda-runtime` before any request. No unit and no incident were involved, and termination
+was confirmed. A fresh dead-man pre-check (l12m2) preceded the relaunch. The node's time, about 0.44 GPU-h-eq, is
+reconciled at the next resume.
+
+**Decision 3: closing the halted main instance through the ledger is accepted.** `ctl close` could not construct a
+guard. The instance was therefore terminated through the dead-man API and confirmed, then closed in the study log at
+its API-confirmed termination time by the ledger's own `reconcile_instance` (dead-man source), at 1.631 GPU-h-eq. No
+unit had executed since the start canary, so under R2 no closing canary was owed.
+
+**Resume.**
+- Run from the merged main commit at the fixed run10 checkout path (addendum 11): pre-checks, preflight, parity, main
+  launch, `phasel-main --resume`, `repair-field`, the key check.
+- Re-run `verify-e2`, because `runguard.py` changed since `8e2e9b9`.
+- Then `run --stages e2,…` and every later registered phase.
+- `reprice` and the P4 cap generation (128.386) stand. No further raise is authorised: any further raise means stop
+  and report first.
