@@ -142,6 +142,49 @@ consensus labels, so the claim stays unmade (G-CAL also failed). **Its basis cha
 +1.4 pp with a 25-point-wide interval. On study M, the data neither show that the sycophancy edit increases harmful
 compliance nor show that it does not.
 
+## 6. POST HOC, DESCRIPTIVE: paired harmful-compliance re-label (unregistered; chair decision, 23 Nov 2026)
+
+**Status.** **Post hoc, descriptive, unregistered.** It cannot change any registered guard outcome or claim. The M-SYC
+and M-TE harmful-compliance guards stay **FAIL** as recorded in §5, and both claims stay unmade.
+
+**Setup.**
+- **Items:** a seeded random subset of 300 items (seed `wmm-p1:posthoc-paired-harm`) from the sealed 1,700-item
+  harmful panel. The **same** items were used for base, M-SYC and M-TE, giving 900 responses. These were the existing
+  M′ generations; nothing was regenerated.
+- **Judges:** two blind claude-opus-5-5 judges with the E4 prompts and setup. The 900 responses were shuffled together
+  under neutral ids, and no state was shown. Each judge was split into 12 shards and read every item in full.
+- **Unlabelled:** 0 for both judges. No shard reported a cut-short read.
+- **Handling:** packets, outputs and labels stay internal under `data/wmm/`; this section gives aggregates only.
+
+**Agreement (post hoc, descriptive).**
+
+| State | Judge–judge agreement | Rule–judge agreement | Consensus refusal | Rule refusal | Rule misses a refusal / rule false refusal |
+|---|---|---|---|---|---|
+| base | 0.987 | 0.777 | 83.4 % | 61.7 % | 64 / 2 |
+| M-SYC | 0.993 | 0.748 | 84.9 % | 60.7 % | 73 / 2 |
+| M-TE | 0.983 | 0.773 | 84.7 % | 62.7 % | 65 / 2 |
+
+This confirms the E4 finding on a 4× larger sample: the frozen rule undercounts refusals on this model by about
+22 points.
+
+**Paired harmful compliance (post hoc, descriptive; consensus labels; items with consensus in both states; paired
+Tango 95 % CI).**
+
+| Comparison | n paired | Compliance, edit / base | Change [95 % CI] | Edit complies, base refused / reverse |
+|---|---|---|---|---|
+| M-SYC − base | 294 | 14.6 % / 16.0 % | **−1.4 pp [−4.7, +1.8]** | 8 / 12 |
+| M-TE − base | 292 | 14.4 % / 16.4 % | **−2.1 pp [−5.3, +0.9]** | 6 / 12 |
+
+**Post hoc, descriptive reading.**
+- **M-SYC.** On a paired sample of 294 harmful requests, the sycophancy edit showed **no increase** in harmful
+  compliance. The point estimate is a 1.4 pp decrease, and the interval excludes increases larger than 1.8 pp. This
+  descriptive result agrees with the §5 conclusion that no increase was shown, and it narrows the uncertainty a great
+  deal.
+- **M-TE.** The same holds: −2.1 pp [−5.3, +0.9]. The +11.9 pp in §5 came from comparing two separately drawn
+  75-item samples, and the paired comparison does not reproduce it.
+- **Registered outcome unchanged.** The registered guards still read FAIL. This section may be cited only as post
+  hoc, descriptive evidence.
+
 ## Final exploratory summary
 
 1. **M-SYC:** large adoption reduction (−14.9 pp), neutral accuracy unchanged; claim not made because G-CAL failed

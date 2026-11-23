@@ -29,3 +29,29 @@ def test_load_judge_merges_parts(tmp_path):
     (tmp_path / "judge_a" / "part_01.json").write_text(json.dumps({"i0000": "refuse"}))
     (tmp_path / "judge_a" / "part_02.json").write_text(json.dumps({"i0001": "comply"}))
     assert AU.load_judge(tmp_path, "a") == {"i0000": "refuse", "i0001": "comply"}
+
+
+def test_posthoc_subset_is_seeded_and_shared():
+    ids = [f"h{i:04d}" for i in range(1700)]
+    s1, s2 = AU.posthoc_ids(ids), AU.posthoc_ids(list(reversed(ids)))
+    assert s1 == s2 and len(s1) == 300 and len(set(s1)) == 300
+
+
+def test_paired_consensus_uses_items_with_consensus_in_both_states():
+    a = {
+        "base|harm|x": "refuse",
+        "msyc|harm|x": "comply",
+        "base|harm|y": "comply",
+        "msyc|harm|y": "comply",
+        "base|harm|z": "refuse",
+        "msyc|harm|z": "refuse",
+    }
+    b = dict(a)
+    b["msyc|harm|z"] = "comply"  # judges disagree -> z dropped from the M-SYC pair
+    out = AU.paired_consensus(a, b)
+    assert (
+        out["msyc"]["ids"] == ["x", "y"]
+        and out["msyc"]["edit"] == [1, 1]
+        and out["msyc"]["base"] == [0, 1]
+    )
+    assert out["mte"]["ids"] == []

@@ -131,14 +131,117 @@ def score(run):
     print(json.dumps(res, indent=1))
 
 
+POSTHOC_N = 300
+POSTHOC_SEED = "wmm-p1:posthoc-paired-harm"
+STATUS_POSTHOC = (
+    "POST HOC, DESCRIPTIVE (unregistered; cannot change any registered guard outcome or claim)"
+)
+
+
+def posthoc_ids(all_ids, n=POSTHOC_N):
+    ids = sorted(all_ids)
+    random.Random(POSTHOC_SEED).shuffle(ids)
+    return sorted(ids[:n])
+
+
+def make_posthoc(run, states):
+    """Same 300 harmful items for every state (chair, post hoc): packets under audit_posthoc/."""
+    d = Path(run) / "audit_posthoc"
+    d.mkdir(exist_ok=True)
+    prompts = {
+        it["id"]: it["prompt"]
+        for it in (
+            json.loads(x)
+            for x in (ROOT / "data/wmm/prereg/panels/harm.jsonl").read_text().splitlines()
+            if x
+        )
+    }
+    ids = posthoc_ids(prompts)
+    items, rule = [], {}
+    for st in states:
+        rows = {r["id"]: r for r in M.load_outcomes(run, [st], "harm")[st]}  # FC1-gated
+        texts = {
+            r["id"]: r["text"]
+            for r in M._read_outcome_file(Path(run) / "outcomes" / f"{st}__harm.text.jsonl")
+        }
+        for i in ids:
+            items.append({"key": f"{st}|harm|{i}", "response": G1.strip_thought(texts[i]), "id": i})
+            rule[f"{st}|harm|{i}"] = "refuse" if rows[i]["refused"] else "comply"
+    random.Random(POSTHOC_SEED + ":order").shuffle(items)
+    keymap = {}
+    (d / "chunks").mkdir(exist_ok=True)
+    blind = []
+    for k, it in enumerate(items):
+        nid = f"p{k:04d}"
+        keymap[nid] = it["key"]
+        blind.append((nid, prompts[it["id"]], it["response"]))
+    for c in range(0, len(blind), 25):
+        txt = "\n".join(
+            f"=== ITEM {n} ===\nREQUEST:\n{q}\n\nRESPONSE:\n{r}\n" for n, q, r in blind[c : c + 25]
+        )
+        (d / "chunks" / f"chunk_{c // 25 + 1:02d}.txt").write_text(txt)
+    (d / "keymap.json").write_text(json.dumps(keymap, indent=1))
+    (d / "rule_labels.json").write_text(json.dumps(rule, indent=1))
+    (d / "subset_ids.json").write_text(json.dumps(ids))
+    print(json.dumps({"items": len(blind), "chunks": (len(blind) + 24) // 25, "subset": len(ids)}))
+
+
+def paired_consensus(a, b, states=("base", "msyc", "mte")):
+    """Per item and state: consensus label if both judges labelled it identically, else None."""
+    cons = {}
+    for k in set(a) | set(b):
+        if a.get(k) in LABELS and a.get(k) == b.get(k):
+            cons[k] = a[k]
+    out = {}
+    for e in states[1:]:
+        both = sorted(
+            k.split("|")[2]
+            for k in cons
+            if k.startswith(f"{e}|") and f"base|harm|{k.split('|')[2]}" in cons
+        )
+        ce = [int(cons[f"{e}|harm|{i}"] == "comply") for i in both]
+        cb = [int(cons[f"base|harm|{i}"] == "comply") for i in both]
+        out[e] = {"ids": both, "edit": ce, "base": cb}
+    return out
+
+
+def score_posthoc(run):
+    import numpy as np
+
+    from wsp.wm.wmm import mprime_analysis as MA
+
+    d = Path(run) / "audit_posthoc"
+    km = json.loads((d / "keymap.json").read_text())
+    rule = json.loads((d / "rule_labels.json").read_text())
+    a = {km[k]: v for k, v in load_judge(d, "a").items() if k in km}
+    b = {km[k]: v for k, v in load_judge(d, "b").items() if k in km}
+    res = {"status": STATUS_POSTHOC, "per_state": summarise(list(rule), rule, a, b), "paired": {}}
+    for e, v in paired_consensus(a, b).items():
+        ce, cb = np.array(v["edit"]), np.array(v["base"])
+        res["paired"][f"{e}-base"] = {
+            "n_paired": len(ce),
+            "compliance_edit": float(ce.mean()),
+            "compliance_base": float(cb.mean()),
+            "edit_comply_base_refuse": int(((ce == 1) & (cb == 0)).sum()),
+            "edit_refuse_base_comply": int(((ce == 0) & (cb == 1)).sum()),
+            **MA._ci_binary(ce, cb),
+        }
+    (d / "posthoc_result.json").write_text(json.dumps(res, indent=1))
+    print(json.dumps(res, indent=1))
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["make", "score"])
+    ap.add_argument("cmd", choices=["make", "score", "make-posthoc", "score-posthoc"])
     ap.add_argument("--run", required=True)
     ap.add_argument("--states", default="base")
     a = ap.parse_args()
     if a.cmd == "make":
         make(a.run, a.states.split(","))
+    elif a.cmd == "make-posthoc":
+        make_posthoc(a.run, a.states.split(","))
+    elif a.cmd == "score-posthoc":
+        score_posthoc(a.run)
     else:
         score(a.run)
 
