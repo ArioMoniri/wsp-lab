@@ -22,6 +22,14 @@ from wsp.wm.c1 import study as SD
 from wsp.wm.c1.schema import ARMS_PRIMARY, ARMS_SECONDARY
 
 LLM_ARMS = ("wsr_reader", "fugu_team")
+P2_VERIFY_LABELS = (
+    "e2:wm_e:00",
+    "e2:statnn:00",
+)  # RULING-wme-c1-bank-halt addendum 10: the completed run10 units
+
+
+class E2VerifyMismatch(RuntimeError):
+    """Addendum 10 P2: a re-run E2 unit differs from its eligible payload without timing fields (an incident)."""
 
 
 def sha_file(p) -> str:
@@ -447,27 +455,68 @@ class Controller:
         self.save("e2", res)
         return res
 
+    # ------------------------------------------------------------------ P2 verification (addendum 10; no unit result)
+    def verify_e2(self, prep: dict, labels=P2_VERIFY_LABELS, commit: str = "") -> dict:
+        """RULING-wme-c1-bank-halt addendum 10 P2: before any new E2 data, re-run each completed E2 unit in ``labels``
+        on this instance under the current code (a non-unit ``e2_arm`` request labelled ``verify:<label>``; no
+        attempt, no unit result) and require its payload to equal the unit's eligible payload without timing fields
+        (``fieldrepair.timing_free_sha``). A unit without an eligible payload, or any difference, is an incident and
+        halts. Success: one ``e2_speedup_verified`` record with every check, the measured ``wm_e`` rate (re-run wall
+        seconds / the registered ``B x t_bundle``) and the P3 factor it implies (:func:`e2arms.p3_factor`)."""
+        from wsp.wm.c1 import e2arms as EA
+        from wsp.wm.c1 import fieldrepair as FR
+
+        g = self.guard("confirmatory")
+        self.require_field(g)  # Board A C5: E2 reads the field (R(E))
+        store = self.study.store("confirmatory")
+        inputs, uploads = self.e2_inputs(prep)
+        units = {lab: r for r, lab in SD.e2_units(inputs, uploads)}
+        checks, rate = [], None
+        for lab in labels:
+            recipe = units[lab]
+            key = self.study.key(recipe)
+            want = g.resolve(store, key)
+            if not isinstance(want, dict) or want.get("fallback"):
+                g.incident(
+                    "e2_speedup_unverifiable", {"label": lab, "reason": "no eligible payload"}
+                )
+                raise E2VerifyMismatch(f"{lab}: no eligible payload to verify against")
+            args = dict(recipe["args"])
+            for name, local in (recipe.get("uploads") or {}).items():
+                args[name] = self.t.push(local)
+            t0 = time.time()
+            got, _d = self.remote.call(
+                recipe["kind"], g.epoch, g.instance, key, f"verify:{lab}", args
+            )
+            wall = time.time() - t0
+            want_h, got_h = FR.timing_free_sha(want), FR.timing_free_sha(got)
+            rec = {
+                "label": lab,
+                "eligible_payload_sha256": RG._digest(want),
+                "timing_free_sha256": {"eligible": want_h, "rerun": got_h},
+                "equal": want_h == got_h,
+                "rerun_wall_s": wall,
+                "rate_x": wall / EA.E2_UNIT_EST_S,
+            }
+            checks.append(rec)
+            self.log(
+                "P2 verification", lab, "equal" if rec["equal"] else "MISMATCH", f"{wall:.1f} s"
+            )
+            if not rec["equal"]:
+                g.incident("e2_speedup_mismatch", rec)
+                raise E2VerifyMismatch(
+                    f"{lab}: the re-run differs from its eligible payload (timing-free)"
+                )
+            if recipe["args"]["arm"] == "wm_e":
+                rate = rec["rate_x"]
+        factor = EA.p3_factor(rate if rate is not None else 0.0)
+        out = g.record_e2_verified(checks, commit, rate if rate is not None else 0.0, factor)
+        self.save("p2_verify", out)
+        return {"seq": out["seq"], "checks": checks, "wm_e_rate_x": rate, "p3_factor": factor}
+
     # ------------------------------------------------------------------ S-BoN at B_par from ledger seconds
     def b_par(self) -> dict:
-        st = RG.read_study(self.study.state)
-        bank_s = field_s = 0.0
-        for r in st_records(self.study.state):
-            if r.get("type") == "unit_time" and r.get("phase") == "bank":
-                if str(r.get("note", "")).startswith("field:"):
-                    field_s += float(r["gpu_s"])
-                else:
-                    bank_s += float(r["gpu_s"])
-        _ = st
-        b = SD.parity_budget(bank_s, field_s)
-        return {
-            "B_par": b,
-            "inputs": {
-                "bank_gpu_s": bank_s,
-                "field_gpu_s": field_s,
-                "n_ep": SD.N_EP,
-                "t_bundle_s": SD.T_BUNDLE_S,
-            },
-        }
+        return ledger_b_par(self.study.state)
 
     def stage_sbon(self, prep: dict, bpar: dict, episodes=range(SD.N_EP)) -> dict:
         inputs, uploads = self.e2_inputs(prep, with_fit=False)
@@ -682,6 +731,28 @@ class Controller:
         rec = C.run_canary(g, self.remote, self.canary_args)
         g.close_instance()
         return rec
+
+
+def ledger_b_par(state_dir) -> dict:
+    """§II.5 B_par from ledger seconds: the bank phase's measured unit seconds, R1 field units (``field:`` notes)
+    apart."""
+    bank_s = field_s = 0.0
+    for r in st_records(state_dir):
+        if r.get("type") == "unit_time" and r.get("phase") == "bank":
+            if str(r.get("note", "")).startswith("field:"):
+                field_s += float(r["gpu_s"])
+            else:
+                bank_s += float(r["gpu_s"])
+    b = SD.parity_budget(bank_s, field_s)
+    return {
+        "B_par": b,
+        "inputs": {
+            "bank_gpu_s": bank_s,
+            "field_gpu_s": field_s,
+            "n_ep": SD.N_EP,
+            "t_bundle_s": SD.T_BUNDLE_S,
+        },
+    }
 
 
 def st_records(state_dir) -> list:

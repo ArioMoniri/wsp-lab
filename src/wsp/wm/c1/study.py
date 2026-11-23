@@ -77,6 +77,17 @@ def sbon_price(b_par: float) -> float:
     return b_par * N_EP * T_BUNDLE_S / 3600.0
 
 
+def e2_registered_gpu_h() -> float:
+    """The E2 part of the registered confirmatory price (``powersim_v1.price`` terms of the 264 arm-episodes): 24
+    episodes x 11 arms x B bundles at ``t_bundle``, plus the ``lora_sft`` arm's per-episode training seconds
+    (``cost.unit_times``; ``planner_gpu_s`` is 0). The part that PREREG_WME §II.31.14 (addendum 10 P3) re-prices."""
+    from wsp.wm.c1 import modelops as MO
+
+    unit = MO.manifest()["cost.unit_times"]["unit"]
+    n_arm_ep = N_EP * (len(ARMS_PRIMARY) + len(ARMS_SECONDARY))
+    return (n_arm_ep * B * T_BUNDLE_S + N_EP * float(unit["lora_sft_s"])) / 3600.0
+
+
 class Study:
     def __init__(
         self,

@@ -19,6 +19,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -964,6 +965,7 @@ def cmd_run(a):
             man["bank.folds.inner_seed"],
         )
     if "e2" in stages:
+        require_p2_verified()  # RULING-wme-c1-bank-halt addendum 10: no new E2 data before the P2 verification
         co.stage_e2(saved("prep"))
     if "sbon" in stages:
         bp = co.b_par()
@@ -1298,7 +1300,9 @@ def cmd_resume_phase(a):
         raise SystemExit(f"REFUSED: {phase} already resumed (seq {s.phase_resumes[phase]['seq']})")
     measured = s.unit_s.get(phase, 0.0) / 3600
     est = SD.EST_UNIT_GPU_H[phase]
-    thr = RG.PHASE_PAUSE * float(st.priced[phase])
+    if phase == "sbon" and "sbon" not in st.priced:
+        st.set_sbon_price(CO_ledger_b_par()["B_par"])
+    thr = RG.PHASE_PAUSE * RG.repriced(float(st.priced[phase]), s.reprices.get(phase))  # §II.31.14: re-priced
     if not measured + est > thr:
         raise SystemExit(f"REFUSED: {phase}: no PhasePause pending ({measured:.3f} + {est:.3f} <= {thr:.3f} GPU-h)")
     g = st.guard(phase, "operator:resume-phase")
@@ -1351,6 +1355,205 @@ def cmd_record_repair(a):
     out = {"seq": rec["seq"], "cause": a.cause, "label": a.label, "failure_seq": f["seq"], "ruling": a.ruling}
     log("repair recorded", json.dumps(out))
     print(json.dumps(out))
+    return out
+
+
+# ------------------------------------------------------------------ RULING-wme-c1-bank-halt addendum 10 (P2-P4)
+
+
+def CO_ledger_b_par() -> dict:
+    from wsp.wm.c1 import controller as CO
+
+    return CO.ledger_b_par(STUDY)
+
+
+def cmd_verify_e2(a):
+    """Addendum 10 P2: on the live main instance (after the resume and the field repair), re-run the completed E2
+    units ``e2:wm_e:00`` and ``e2:statnn:00`` under the current code and require timing-free equality with their
+    eligible payloads; a mismatch is an incident and halts. Prints the measured ``wm_e`` rate and the P3 factor."""
+    from wsp.wm.c1 import controller as CO
+    from wsp.wm.c1 import modelops as MO
+
+    require_current_contract("verify-e2")
+    tr, rem = remote_for("main", a.iid)
+    man = MO.manifest()
+    st = SD.Study(STUDY, RUNS, load_att(), man["target.theta0_hash"], PANEL_ID, log=log)
+    co = CO.Controller(st, rem, tr, LO.guard_instance(a.iid), 1, log=log)
+    co.field_inputs = (man, json.loads((ROOT / "data/wme/bank_roots/roots-9b-20261117/roots.json").read_text()))
+    prep = json.loads((RUNS / "stages" / "prep.json").read_text())
+    out = co.verify_e2(prep, commit=git_sha())
+    log("P2 verification passed", json.dumps(out))
+    print(json.dumps(out))
+    return out
+
+
+def require_p2_verified() -> dict:
+    """Addendum 10 P2: new E2 data needs a passing ``e2_speedup_verified`` record of the current contract generation
+    on this code (HEAD, or an ancestor with evidence-only changes since: :func:`same_code`)."""
+    s = RG.read_study(STUDY)
+    ok = [
+        r
+        for r in s.e2_verified
+        if r.get("generation") == s.generation and r.get("contract") == s.contract and same_code(r.get("commit"))
+    ]
+    if not ok:
+        raise SystemExit(
+            "REFUSED: new E2 data needs a passing P2 verification (verify-e2) of this code in this contract "
+            "generation (RULING-wme-c1-bank-halt addendum 10)"
+        )
+    return ok[-1]
+
+
+def _study_with_sbon():
+    st = SD.Study(STUDY, RUNS, load_att(), MO_theta0(), PANEL_ID, log=log)
+    bp = CO_ledger_b_par()
+    st.set_sbon_price(bp["B_par"])  # B_par from ledger seconds (the bank is complete)
+    return st, bp
+
+
+def cmd_reprice(a):
+    """Addendum 10 P3 (PREREG_WME §II.31.14): two ``reprice`` records at ``--factor`` (1.30, or the verified post-memo
+    ``wm_e`` rate rounded up to 0.05 if higher): the E2 part of the confirmatory price (``e2_registered_gpu_h``) and
+    the whole S-BoN price at B_par from ledger seconds. Every other phase keeps its registered price."""
+    st, bp = _study_with_sbon()
+    g = st.guard("confirmatory", "operator:reprice")
+    part = SD.e2_registered_gpu_h()
+    basis = {"B_par": bp, "e2_registered_gpu_h": part, "rule": "addendum 10 P3: ledger seconds only"}
+    recs = [
+        g.reprice("confirmatory", a.factor, a.ruling, part_gpu_h=part,
+                  part="E2: 264 arm-episodes (B x t_bundle) and the lora_sft training", basis=basis),
+        g.reprice("sbon", a.factor, a.ruling, part="whole phase (B_par x 24 x t_bundle)", basis=basis),
+    ]  # fmt: skip
+    s = RG.read_study(STUDY)
+    out = {
+        "factor": float(a.factor),
+        "written": [r["seq"] for r in recs if r],
+        "prices_gpu_h": {p: RG.repriced(float(v), s.reprices.get(p)) for p, v in st.priced.items()},
+    }
+    log("re-priced", json.dumps(out))
+    print(json.dumps(out))
+    return out
+
+
+P4_LAUNCH_SAMPLE = 3
+P4_CHUNK = 16  # Controller.chunk: one closing canary per chunk of units
+
+
+def instance_overhead_basis(records: list) -> dict:
+    """Addendum 10 P4 instance overheads, from the study log only: (i) one launch at the mean overhead of the last
+    3 complete main instances that ran units, each with its 2-GPU parity instance launched before it (parity GPU-h +
+    main GPU-h - unit GPU-h under the main's owner epochs); (ii) the remaining bracketing canaries (one per chunk
+    of 16 remaining E2 and S-BoN units, and a start and a closing canary for each later stage: sbon, sealed, gen,
+    ste) at the median canary duration of the current contract generation (the tick interval ending at each
+    canary)."""
+    import math
+
+    ep2inst = {r["epoch"]: r.get("instance") for r in records if r["type"] == "owner_epoch"}
+    unit_by_inst: dict = {}
+    for r in records:
+        if r["type"] == "unit_time":
+            i = ep2inst.get(r.get("epoch"))
+            unit_by_inst[i] = unit_by_inst.get(i, 0.0) + float(r["gpu_s"]) / 3600
+    auth = sorted((r for r in records if r["type"] == "instance_authoritative"), key=lambda r: r["launched_at"])
+    charge = lambda r: (float(r["terminated_at"]) - float(r["launched_at"])) * int(r["gpus"]) / 3600
+    launches = []
+    for k, r in enumerate(auth):
+        if int(r["gpus"]) != 1 or unit_by_inst.get(r["instance"], 0.0) <= 0:
+            continue
+        par = next((q for q in reversed(auth[:k]) if int(q["gpus"]) == 2), None)
+        if par is None:
+            continue
+        u = unit_by_inst[r["instance"]]
+        launches.append({"parity_gpu_h": charge(par), "main_gpu_h": charge(r), "unit_gpu_h": u,
+                         "overhead_gpu_h": charge(par) + charge(r) - u})  # fmt: skip
+    launches = launches[-P4_LAUNCH_SAMPLE:]
+    if not launches:
+        raise SystemExit("REFUSED: no complete parity + main launch in the ledger to measure the overhead from")
+    launch_h = sum(x["overhead_gpu_h"] for x in launches) / len(launches)
+    contracts = [r for r in records if r["type"] in ("attestation", "contract_transition")]
+    gen = len(contracts) - 1
+    ticks, durs = [], []
+    for r in records:
+        if r["type"] == "tick":
+            ticks.append(float(r["t"]))
+        elif r["type"] == "canary" and r.get("generation") == gen and len(ticks) >= 2:
+            durs.append(ticks[-1] - ticks[-2])
+    durs = sorted(durs)
+    if not durs:
+        raise SystemExit("REFUSED: no canary of the current contract generation to time")
+    med = durs[len(durs) // 2] if len(durs) % 2 else (durs[len(durs) // 2 - 1] + durs[len(durs) // 2]) / 2
+    done = {
+        r["note"]
+        for r in records
+        if r["type"] == "unit_time" and r.get("status") == "ok" and re.match(r"^e2:[a-z_]+:\d\d$", str(r.get("note")))
+    }
+    e2_left = 264 - len(done)
+    n_can = math.ceil(e2_left / P4_CHUNK) + math.ceil(SD.N_EP / P4_CHUNK) + 2 * 4
+    canary_h = n_can * med / 3600
+    return {
+        "overhead_gpu_h": launch_h + canary_h,
+        "launch_overhead_gpu_h": launch_h,
+        "launches_sampled": launches,
+        "launches_projected": 1,
+        "canary_median_s": med,
+        "canaries_projected": n_can,
+        "canary_gpu_h": canary_h,
+        "e2_units_remaining": e2_left,
+        "rule": instance_overhead_basis.__doc__.split(":", 1)[1].strip().replace("\n", " "),
+    }
+
+
+def cmd_cap_raise(a):
+    """Addendum 10 P4: after P3, projection = charged + the re-priced remainder of every phase + the instance
+    overheads (:func:`instance_overhead_basis`, or ``--overhead-gpu-h``); above 110 the cap rises to projection x
+    1.10, never beyond $1,000, as a chair cap generation (rule "P4") citing the ruling and its ledger basis, before
+    the units it funds. One P4 raise: an existing one is reported, not repeated."""
+    s = RG.read_study(STUDY)
+    if not {"confirmatory", "sbon"} <= set(s.reprices):
+        raise SystemExit("REFUSED: P4 needs the P3 reprice records first (run `reprice`)")
+    prior = [c for c in s.caps if c.get("rule") == "P4"]
+    if prior:
+        out = {"raised": False, "existing_seq": prior[-1]["seq"], "cap_gpu_h": prior[-1]["cap_gpu_h"]}
+        print(json.dumps(out))
+        return out
+    st, _bp = _study_with_sbon()
+    g = st.guard("confirmatory", "operator:cap-raise")
+    if a.overhead_gpu_h is None:
+        ob = instance_overhead_basis([json.loads(x) for x in (STUDY / RG.LOG_NAME).read_text().splitlines()])
+    else:
+        ob = {"overhead_gpu_h": float(a.overhead_gpu_h), "rule": "given (--overhead-gpu-h)"}
+    led = g.ledger
+    basis = {
+        "charged_gpu_h": led.gpu_h(),
+        "repriced_remainder_gpu_h": led.priced_remainder(),
+        "overhead_gpu_h": float(ob["overhead_gpu_h"]),
+        "previous_cap_gpu_h": led.cap_gpu_h(),
+        "prices_gpu_h": {p: led.price(p) for p in led.priced},
+        "measured_unit_gpu_h": {p: led.unit_gpu_h(p) for p in led.priced},
+        "overhead_basis": ob,
+    }
+    basis["projection_gpu_h"] = basis["charged_gpu_h"] + basis["repriced_remainder_gpu_h"] + basis["overhead_gpu_h"]
+    cap = RG.p4_cap(basis)
+    out = {"projection_gpu_h": basis["projection_gpu_h"], "basis": basis}
+    if cap is None or cap <= basis["previous_cap_gpu_h"]:
+        out.update(raised=False, cap_gpu_h=basis["previous_cap_gpu_h"])
+    else:
+        rec = led.record_cap(
+            RG.CapGeneration(
+                cap_gpu_h=cap,
+                date=time.strftime("%Y-%m-%d", time.gmtime(led._trusted_now())),
+                decided_by="chair",
+                source=f"{a.ruling} (P4); PREREG_WME §II.31.14",
+                announced_to_user=False,  # the chair announces it to the user (a notification, not a gate)
+                rule="P4",
+                basis=basis,
+            ),
+            contract=s.contract,
+            generation=s.generation,
+        )
+        out.update(raised=True, cap_gpu_h=cap, seq=rec["seq"], usd_ceiling_gpu_h=RG.CAP_USD / RG.USD_PER_GPU_H)
+    log("P4", json.dumps({k: v for k, v in out.items() if k != "basis"}))
+    print(json.dumps(out, default=str))
     return out
 
 
@@ -1544,6 +1747,14 @@ def main():
     rr.add_argument("--label", required=True)
     rr.add_argument("--cause", required=True)
     rr.add_argument("--ruling", required=True)
+    ve = sub.add_parser("verify-e2")  # addendum 10 P2: the on-instance bitwise verification
+    ve.add_argument("--iid", required=True)
+    rq = sub.add_parser("reprice")  # addendum 10 P3 (PREREG_WME §II.31.14)
+    rq.add_argument("--factor", type=float, required=True)
+    rq.add_argument("--ruling", required=True)
+    cr = sub.add_parser("cap-raise")  # addendum 10 P4
+    cr.add_argument("--ruling", required=True)
+    cr.add_argument("--overhead-gpu-h", type=float, default=None)
     rp = sub.add_parser("resume-phase")  # addendum 7: the chair's PhasePause resumption
     rp.add_argument("--phase", required=True)
     rp.add_argument("--ruling", required=True)
@@ -1568,6 +1779,9 @@ def main():
         "preflight": cmd_preflight,
         "resume-phase": cmd_resume_phase,
         "record-repair": cmd_record_repair,
+        "verify-e2": cmd_verify_e2,
+        "reprice": cmd_reprice,
+        "cap-raise": cmd_cap_raise,
         "transition": cmd_transition,
         "close": cmd_close,
         "status": cmd_status,

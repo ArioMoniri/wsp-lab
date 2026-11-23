@@ -16,10 +16,20 @@ Choices fixed by the registration's code where the text is silent (amendments G1
   at 1 bundle each, budget reserved for them; winner by §6.5.5;
 * ``lora_sft``: 64 construction/e2 suggested rows, 2 epochs x 8 rows = 16 steps, checkpoints at every step
   (``direct.checkpoint_steps``), each evaluated at lambda 1 as one checkpoint bundle.
+
+Speed-up (RULING-wme-c1-bank-halt addenda 9-10, P2; engineering, no registered quantity changes): inside
+``run_planner`` two memos skip exact repeats of a pure computation, an R(E) memo keyed by the primitive-id tuple
+(:func:`memo_r_of`) and a whole-batch prediction memo keyed by the exact input bytes (:func:`memo_predict`). The first
+visit runs the original code and returns its result; a repeat returns a copy of the stored result. The payload is
+the unmemoised one apart from its timing fields. Row-level deduplication and thread-count changes are excluded (not
+bitwise).
 """
 
 from __future__ import annotations
 
+import copy
+import hashlib
+import math
 import time
 
 import numpy as np
@@ -27,6 +37,7 @@ import numpy as np
 from wsp.wm import adapter9b as AD
 from wsp.wm import e2 as E2
 from wsp.wm import plan as PL
+from wsp.wm import runguard as RG
 from wsp.wm.access import AccessError, R0Guard  # noqa: F401
 from wsp.wm.arms import direct as DI
 from wsp.wm.arms import pool as PO
@@ -125,16 +136,103 @@ class Env:
         return out
 
 
+# ------------------------------------------------------------------ P2: memos of exact repeats (addenda 9-10)
+
+E2_B_REGISTERED = 48
+E2_UNIT_EST_S = (
+    E2_B_REGISTERED * SB.T_BUNDLE_S
+)  # the registered E2 arm-episode estimate: B x t_bundle (+ 0 planner)
+P3_MIN_FACTOR, P3_GRID = RG.P3_MIN_FACTOR, RG.P3_GRID  # addendum 10 P3
+
+
+def p3_factor(rate_x: float) -> float:
+    """Addendum 10 P3: the E2 re-pricing factor, 1.30 x registered, or the measured post-memo ``wm_e`` rate rounded
+    up to the next 0.05 x if that is higher."""
+    up = math.ceil(round(float(rate_x) / P3_GRID, 9)) * P3_GRID
+    return round(max(P3_MIN_FACTOR, up), 2)
+
+
+def memo_r_of(env, prim):
+    """The planner's ``r_of(steps)`` with an R(E) memo keyed by the tuple of primitive ids (an ordered composition).
+    A first visit calls ``env.r_of_pids`` (the R-cache, its misses and its progress tick) and returns its result; a
+    repeat returns a copy of the stored vector and still ticks, so the heartbeat progress is unchanged."""
+    memo: dict = {}
+
+    def r_of(st):
+        pids = [prim(a, d) for a, d in st]
+        key = tuple(pids)
+        hit = memo.get(key)
+        if hit is None:
+            out = env.r_of_pids(pids)
+            memo[key] = np.array(out, copy=True)
+            return out
+        env.tick("e2_r_of")
+        return hit.copy()
+
+    return r_of
+
+
+def _batch_key(trajs) -> bytes:
+    """sha256 of the exact content of a batch of trajectories: per trajectory and key (sorted), the array's shape,
+    dtype and bytes (other values by ``repr``), length-prefixed; row order and batch size are part of the key."""
+    h = hashlib.sha256()
+
+    def put(b: bytes):
+        h.update(len(b).to_bytes(8, "little"))
+        h.update(b)
+
+    put(str(len(trajs)).encode())
+    for t in trajs:
+        put(str(len(t)).encode())
+        for k in sorted(t):
+            v = t[k]
+            put(str(k).encode())
+            if isinstance(v, np.ndarray):
+                put(f"nd{v.shape}{v.dtype.str}".encode())
+                put(np.ascontiguousarray(v).tobytes())
+            else:
+                put(("py" + repr(v)).encode())
+    return h.digest()
+
+
+def _copy_out(out: dict) -> dict:
+    return {
+        k: (np.array(v, copy=True) if isinstance(v, np.ndarray) else copy.deepcopy(v))
+        for k, v in out.items()
+    }
+
+
+def memo_predict(run):
+    """A scorer's batched prediction ``run(trajs)`` with a whole-batch memo keyed by :func:`_batch_key`. Only an
+    identical batch is a hit (a row predicted inside another batch is not bitwise the same, so rows are never
+    deduplicated). The first call returns the original output; the memo keeps a copy; a hit returns a copy."""
+    memo: dict = {}
+
+    def wrapped(trajs):
+        key = _batch_key(trajs)
+        hit = memo.get(key)
+        if hit is None:
+            out = run(trajs)
+            memo[key] = _copy_out(out)
+            return out
+        return _copy_out(hit)
+
+    return wrapped
+
+
 # ------------------------------------------------------------------ planner arms (wm_e, statnn, field_ranked)
 
 
-def run_planner(env: Env, arm: str, ep: dict, B: int) -> dict:
+def run_planner(env: Env, arm: str, ep: dict, B: int, memo: bool = True) -> dict:
     from wsp.wm.c1 import field as F
 
     spec = F.spec_9b()
     acts, doses = AD.episode_actions(ep, env.lib_index)
     prim = lambda a, d: AD._primitive_id(env.lib_index, ep, a, d)
-    r_of = lambda st: env.r_of_pids([prim(a, d) for a, d in st])
+    if memo:  # P2 (a)
+        r_of = memo_r_of(env, prim)
+    else:
+        r_of = lambda st: env.r_of_pids([prim(a, d) for a, d in st])
     if arm == "wm_e":
         model, q_hat, mode = env.fitted["wm"], env.q_hats["wm"], env.mode
     elif arm == "statnn":
@@ -160,6 +258,8 @@ def run_planner(env: Env, arm: str, ep: dict, B: int) -> dict:
         mode=mode,
         primitive_of=prim,
     )
+    if memo:  # P2 (b)
+        pa._run = memo_predict(pa._run)
     ledger = PL.BudgetLedger(B, [arm])
     t0 = time.time()
     r0 = env.rc.stats()
