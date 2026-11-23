@@ -317,8 +317,10 @@ def test_cap_generation_rules(tmp_path):
     assert [c["cap_gpu_h"] for c in caps] == [110.0, 120.0] and caps[1]["index"] == 1
     assert g2.ledger.cap_gpu_h() == 120.0 and g2.generation == 0
     assert g2.resolve(store, H.unit_key({"u": 1}, "t" * 64, "p")) == {"v": 1}
-    with pytest.raises(ValueError):  # an older guard object cannot lower it back either
-        guard(tmp_path / "s", clk, cap=SD.CAP)
+    # an older guard object cannot lower it back either: the persisted registered cap is not re-recorded (v3b, run12
+    # halt: re-recording it refused every later guard construction) and the raised cap stays in force
+    g3 = guard(tmp_path / "s", clk, cap=SD.CAP)
+    assert g3.ledger.cap_gpu_h() == 120.0 and len(g3.ledger.cap_generations()) == 2
 
 
 def test_deadman_allowance_is_the_remaining_cap(tmp_path):
