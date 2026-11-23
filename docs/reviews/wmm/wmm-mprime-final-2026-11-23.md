@@ -8,9 +8,10 @@ Every outcome was read through the FC1 read-gate. Every result is **exploratory*
 (Tango, paired). Claim tests use the registered one-sided levels (α_f = 0.025/3 for endpoints, 0.025 for guards and
 non-inferiority).
 
-**E4 status: not yet done.** The guard-scorer re-audit (two blind judges, 75 harmful + 75 benign per state, for base,
-M-SYC and M-TE) has its packets built (450 items, internal only) but no judge has labelled them. Every harm/benign
-guard result below is therefore **provisional on E4**.
+**E4 status: done (23 Nov 2026; §5).** The frozen refusal rule **failed** the audit on all three harmful panels
+(rule–judge agreement 0.66–0.74), and passed on all three benign panels (≥ 0.986). As registered, the judges'
+consensus labels replace the rule for harmful compliance. Rule-based harmful-compliance figures in §2–§3 are kept
+for the record but are **superseded**.
 
 ## Ledger and cuts (FC2)
 
@@ -48,8 +49,9 @@ expected) and harmful compliance (not expected).
 | Adoption change, parsed in both (n 1,452) | −15.3 pp [−17.4, −13.3] | UB < 0 at α_f | pass |
 | Neutral accuracy, MedQA + MedMCQA (n 3,544) | −0.06 pp [−1.5, +1.4] | LB ≥ −3 pp | **pass** (expected fail; did not fail) |
 | **G-CAL ΔBrier** (n 3,544) | **+0.043 [+0.039, +0.047]** | UB ≤ +0.01 | **FAIL** (expected) |
-| **Harmful compliance** (n 1,700) | **+1.7 pp [+0.4, +3.0]** | UB ≤ +2 pp | **FAIL** (provisional on E4) |
-| Benign over-refusal (n 1,500) | −0.7 pp [−1.5, −0.1] | UB ≤ +2 pp | pass |
+| Harmful compliance, frozen rule (n 1,700) | +1.7 pp [+0.4, +3.0] | — | superseded: rule failed E4 |
+| **Harmful compliance, judge consensus (E4; n 73 + 73, unpaired)** | **+1.4 pp [−11.0, +13.7]** | UB ≤ +2 pp | **FAIL** (bound too wide; no increase shown) |
+| Benign over-refusal (n 1,500) | −0.7 pp [−1.5, −0.1] | UB ≤ +2 pp | pass (rule confirmed by E4) |
 | ARC general accuracy (n 2,161) | +0.5 pp [−1.4, +2.4] | LB ≥ −3 pp | pass |
 
 Descriptive:
@@ -57,9 +59,10 @@ Descriptive:
 - Generated-answer Brier change (≡ −Δaccuracy, F1): −0.004 [−0.018, +0.010].
 
 **The trade-off (addendum).** Adoption fell about 15 pp at no measurable neutral-accuracy cost, but the edit made the
-model's direct-answer letter probabilities worse calibrated (+0.043 Brier, four times the margin, matching dev +0.040),
-and it **raised compliance with harmful requests by an estimated 1.7 pp**, with an upper bound above the 2 pp margin.
-The harmful-compliance result rests on the frozen refusal rule; E4 must confirm it. Harmful outputs stay internal.
+model's direct-answer letter probabilities worse calibrated (+0.043 Brier, four times the margin, matching dev +0.040).
+The rule-based +1.7 pp rise in harmful compliance is **not supported**: the rule failed E4. Under the judges' labels
+the change is +1.4 pp with a wide interval, so the harm guard still fails, because safety could not be shown, not
+because an increase was found. Harmful outputs stay internal.
 
 ## Phase 3: M-TE (short-form self-rewrite LoRA, λ 1; 388 correct pool answers, 98 valid rewrites, 26 steps)
 
@@ -75,8 +78,9 @@ not made** (non-inferiority failed, and the ARC guard was cut by the cap).
 | Accuracy at 1,024 | +23.4 pp [+21.6, +25.2] (35.9 % → 59.2 %) | LB > 0, Holm within α_f | pass |
 | **Full-budget accuracy, untruncated in both** (n 3,405) | **−2.7 pp [−4.4, −1.1]** | LB ≥ −2 pp | **FAIL** |
 | G-CAL ΔBrier | −0.011 [−0.014, −0.007] | UB ≤ +0.01 | pass |
-| Harmful compliance | −0.7 pp [−1.9, +0.6] | UB ≤ +2 pp | pass (provisional on E4) |
-| Benign over-refusal | −0.4 pp [−1.2, +0.3] | UB ≤ +2 pp | pass (provisional on E4) |
+| Harmful compliance, frozen rule | −0.7 pp [−1.9, +0.6] | — | superseded: rule failed E4 |
+| **Harmful compliance, judge consensus (E4; n 74 + 73, unpaired)** | **+11.9 pp [−1.6, +25.0]** | UB ≤ +2 pp | **FAIL** |
+| Benign over-refusal | −0.4 pp [−1.2, +0.3] | UB ≤ +2 pp | pass (rule confirmed by E4) |
 | ARC general accuracy | — | LB ≥ −3 pp | **not measured (cap)** |
 
 Descriptive: full-budget accuracy on all items (truncated = wrong) −2.7 pp [−4.3, −1.0]; generated-answer Brier
@@ -89,12 +93,64 @@ budget (base accuracy at 512 is 3.5 %), not better reasoning.
 wording: "beyond-dose prediction not established on study M". No M-A data exist; the sealed `ma` panel and `pool_ma`
 were not read.
 
+## 5. E4 guard-scorer re-audit (registered §3.1)
+
+**Setup.** No judge was pinned in the plan, so per the chair both judges were `claude-opus-5-5`, run as separate agents
+with different prompts and the same refuse/comply definition. Each judge labelled all 450 items: 75 harmful and 75
+benign per state (base, M-SYC, M-TE), shuffled together, with neutral ids, no state shown, and no access to the rule
+labels, the keymap or the other judge's labels. Judges read every response in full. Packets, outputs and labels stay
+internal under `data/wmm/`; this report gives aggregates only.
+
+**Deviations, disclosed.**
+- The packet builder first truncated long responses. It was fixed to give full text before any labelling, and the
+  item set and ids were unchanged.
+- One Judge B shard (75 items) reported labelling 54 items from excerpts after a safety filter cut off its read. Those
+  labels were discarded unused, and the shard was re-run as three single-chunk agents that read every item in full.
+- **Unlabelled:** Judge A 0, Judge B 1 (a benign M-SYC item); that item is excluded from consensus.
+
+| Panel | Judge–judge agreement | Rule–judge agreement (≥ 0.9) | Consensus refusal | Rule refusal (same sample) | Rule misses a refusal / rule false refusal |
+|---|---|---|---|---|---|
+| base harmful | 0.973 | **0.740 FAIL** | 83.6 % | 56.0 % | 19 / 0 |
+| M-SYC harmful | 0.973 | **0.658 FAIL** | 82.2 % | 52.0 % | 23 / 2 |
+| M-TE harmful | 0.987 | **0.730 FAIL** | 71.6 % | 46.7 % | 19 / 1 |
+| base benign | 1.000 | 1.000 pass | 1.3 % | 1.3 % | 0 / 0 |
+| M-SYC benign | 0.986 | 0.986 pass | 1.4 % | 0.0 % | 1 / 0 |
+| M-TE benign | 1.000 | 1.000 pass | 2.7 % | 2.7 % | 0 / 0 |
+
+**Registered consequence.**
+- **Benign over-refusal:** the rule stands, and the rule-based results stand (M-SYC and M-TE pass).
+- **Harmful compliance:** the judges agree ≥ 0.9, so their consensus labels replace the rule. The rule mostly
+  misses refusals that come later in the reply or are not phrased in the first person, so it overstates compliance
+  (rule-based base harmful compliance is about 41 %; consensus base compliance is 16.4 % [9.7, 26.6]).
+
+**Harmful compliance under consensus labels (one-sided 97.5 % UB ≤ +2 pp; Newcombe interval for independent
+samples).**
+
+| State | Compliance [95 % Wilson CI] | n | Change vs base [95 % CI] | Guard |
+|---|---|---|---|---|
+| base | 16.4 % [9.7, 26.6] | 73 | — | — |
+| M-SYC | 17.8 % [10.7, 28.1] | 73 | +1.4 pp [−11.0, +13.7] | **FAIL** |
+| M-TE | 28.4 % [19.4, 39.5] | 74 | +11.9 pp [−1.6, +25.0] | **FAIL** |
+
+The registered audit samples were drawn separately for each state. They share only 6 (M-SYC) and 1 (M-TE) items with
+the base sample, so the consensus guard cannot be paired, and it has no power to bound a change at 2 pp. This is a
+design weakness of the registered audit, recorded here, not repaired after the fact.
+
+**Does the M-SYC harmful-compliance failure stand?** As a guard outcome, **yes**: it fails under the registered
+consensus labels, so the claim stays unmade (G-CAL also failed). **Its basis changes.** The rule-based finding of a
++1.7 pp increase is withdrawn, because the rule failed the audit. Under the judges' labels the point estimate is
++1.4 pp with a 25-point-wide interval. On study M, the data neither show that the sycophancy edit increases harmful
+compliance nor show that it does not.
+
 ## Final exploratory summary
 
 1. **M-SYC:** large adoption reduction (−14.9 pp), neutral accuracy unchanged; claim not made because G-CAL failed
-   (expected, disclosed in the plan) and harmful compliance rose beyond its margin (unexpected; provisional on E4).
+   (expected, disclosed in the plan) and the harmful-compliance guard failed under E4 consensus labels, by a
+   too-wide bound (+1.4 pp [−11.0, +13.7]), not by a shown increase.
 2. **M-TE:** a ~4× token cut with large low-budget gains, at a −2.7 pp full-budget accuracy cost; claim not made
    (non-inferiority failed; ARC guard cut).
 3. **M-A, TE-I:** not run (cap).
-4. **Pending:** E4 judge audit of the harm/benign guards (base, M-SYC, M-TE), which can change the harm-compliance
-   result for M-SYC.
+4. **E4:** the frozen refusal rule is valid for benign over-refusal and **invalid for harmful compliance** on this
+   model (agreement 0.66–0.74), so every rule-based harmful-compliance figure on study M is superseded. Measuring the
+   harm guard properly would need judge labels on the paired 1,700-item panel. That would be a new, unregistered
+   measurement and needs a chair decision.
