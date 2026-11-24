@@ -4513,3 +4513,26 @@ was not adopted after the timings were seen.
 
 **Unchanged.** No claim, test, α, N, margin, seed, arm, budget, item, episode order, planner rule or stopping rule
 changes. The log-level phase prices, the 1.25 × phase pause, the cap (128.386, P4) and R8 are unchanged.
+
+### II.31.16 Note (24 Nov 2026): measured E2 prices on `lora_tv` episodes 5–23 (engineering, outcome-blind)
+
+**Status.** This note is recorded before any sealed read; no confirmatory result exists yet. It records
+`docs/council/2026-11-21/RULING-wme-c1-bank-halt.md` addendum 15 and supersedes §II.31.15's re-pricing for episodes
+5–23.
+
+**Rule (one rule for all 11 arms).**
+- On the `lora_tv` episodes 5, 8, 11, 14, 17, 20 and 23, each arm's E2 unit estimate is max(909.8 s, its own
+  measured post-memo episode-2 unit seconds); `wm_e` stays 1,524.3 s. The R9.2 limit is 1.5 × the estimate.
+- `bon_steering` and `lora_sft` keep 909.8 s and 1,364.7 s until their own episode-2 unit completes. Then the same
+  rule applies, computed mechanically from the ledger before episode 5, with no further discretion.
+- Episode 2 keeps §II.31.15's limits. `steer` and `proj_remove` episodes keep 909.8 s and 1,364.7 s for every arm.
+
+**Basis.** For `direct_bon_two_stage` this is an R9.2 re-price after a measured breach: 4,892.7 s, limit 7,339 s.
+For every other arm the rule re-prices arms that are below the 1.5 × trigger, from one measurement per arm. It is a
+chair decision made before the data it governs, from ledger seconds only, to avoid relaunches. The workload model of
+§II.31.15 is withdrawn as a pricing basis. This is the last pre-emptive `lora_tv` re-price: after it, a breach stops
+E2 under R9.2.
+
+**Unchanged.** No claim, test, α, N, margin, seed, arm, budget, item, episode order, planner rule or stopping rule
+changes. The log-level phase prices, the 1.25 × phase pause, the cap (128.386, P4) and R8 are unchanged. The
+P4-rule projection (137.03 GPU-h-eq) is recorded as is.

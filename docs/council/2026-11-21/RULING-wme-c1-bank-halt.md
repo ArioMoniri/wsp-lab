@@ -576,3 +576,70 @@ study log before run15.
   an R8 record the operator re-bases by hand with the P4 procedure; otherwise the dead-man terminating the instance
   is the accepted safe failure. The launch of run15 despite that report-first condition is recorded as a deviation
   in the run15 evidence.
+
+## Addendum 15 (24 Nov 2026): run15, the R9.2 stop at `e2:direct_bon_two_stage:02`; measured `lora_tv` prices
+
+**Input.** `docs/reviews/wme/wme-c1-run-stop-e2-r92-bon2stage02-2026-11-24.md` and the run15 deviation record, on
+branch `run/wme-c1-run15` at commit `733b0d7`.
+
+**1. The stop stands; the diagnosis is accepted.** `e2:direct_bon_two_stage:02` took 4,892.7 s against its
+addendum-14 `lora_tv` limit of 2,286.5 s. Its 512 screens took 8.19 s each (median) instead of 1.93 s: a screen
+evaluates 4/64 of a bundle, and its fixed per-candidate cost (applying up to 4 × 16 tensors, theta hash,
+displacement norms) dominates. This is legitimate registered workload. The unit stays eligible and nothing is
+redrawn.
+
+Attempts without an outcome are kept on the conservative count (generation 1):
+
+| unit | counted | left |
+|---|---|---|
+| `e2:bon_steering:02` (seq 3217) | 1 | 2 |
+| `e2:statnn:02` | 2 | 1 (eligible) |
+| `e2:random:00` | 3 | 0 (eligible) |
+
+**2. The addendum-14 workload model is withdrawn as a pricing basis.** It failed on its first test:
+- `scripted_reader` measured 1,337.5 s, `fugu_team` 1,270.3 s and `random` 1,060.5 s, against predictions of
+  840–1,010 s;
+- it over-predicted `field_ranked` (942.4 s, predicted about 1,440 s) and `statnn` (1,378.0 s, predicted about
+  1,520 s);
+- it put `direct_bon_two_stage` at about 1,360 s against 4,892.7 s measured.
+
+**3. Measured rule for `lora_tv` episodes 5–23** (one rule for all 11 arms; a chair decision made before the data it
+governs, from ledger seconds only, to avoid relaunches):
+- **Estimate** = max(909.8 s, the arm's own measured post-memo episode-2 unit seconds). `wm_e` stays 1,524.3 s.
+  R9.2 limit = 1.5 × the estimate.
+- **`direct_bon_two_stage`:** 4,892.7 s, limit 7,339 s. This is an R9.2 re-price after a measured breach.
+- **Every other arm:** the rule re-prices arms that are below the 1.5 × trigger, from one measurement per arm. It
+  lowers `statnn` (1,378.0 s) and `field_ranked` (942.4 s) from 1,524.3 s.
+- **`bon_steering` and `lora_sft`:** 909.8 s and 1,364.7 s until their own episode-2 unit completes. Then the same
+  rule applies, computed mechanically from the ledger by the operator watch (`r92v3`) before episode 5. There is no
+  further discretion.
+- **Episode 2's remaining units** keep the addendum-14 limits.
+- **`steer` and `proj_remove` episodes** keep 909.8 s and 1,364.7 s for every arm.
+- This is the **last** pre-emptive `lora_tv` re-price. After it, a breach stops E2 under R9.2.
+- No claim, α, N, margin, arm, budget, item, order or stopping-rule change.
+
+**4. The chair's error.** The chair's estimate of about 4.9 GPU-h of `lora_tv` excess left `direct_bon_two_stage`
+at a guess. The measured excess for episodes 5–23 is **11.955 GPU-h-eq**, and it is incomplete: `bon_steering` and
+`lora_sft` are not yet measured.
+
+**5. Projection, recorded as is.**
+- Charged 44.680 + log remainder 77.001 + `lora_tv` excess 11.955 + canaries 0.716 + one relaunch 2.674 =
+  **137.03 GPU-h-eq**, above the cap of 128.386.
+- No estimate is lowered to fit and no chair raise is made: P4 is spent, and R8 is the only mechanism.
+- Relaunch is authorised: charged 44.680 is within the cap in force. The user is told 137.
+
+**6. R8 and the phase pause, checked on a copy of the log.** The ledger was walked forward from today's state at the
+measured instance-to-unit ratio (1.02), after one relaunch.
+- The confirmatory **1.25 × PhasePause** (69.149 × 1.25 = 86.44 measured) comes first, at charged about **126.9**.
+  It is a registered, resumable pause (§II.13 item 9, §II.14).
+- **R8 fires** at charged about 127.7, with a priced remainder of 1.845 (the unmeasured S-TE price), giving a cap
+  of 130.69. It repeats (+2.31 each time) while that remainder is positive, up to the $1,000 ceiling (185.9). With
+  a remainder of 0 there is no raise (O1).
+
+**7. Stepping between units.** The controller CLI has no existing single-unit, single-chunk, episode or stop
+option (`run` takes `--iid` and `--stages` only). So a watch stop still lands mid-unit and burns that unit's
+attempt. No `src/` change is made, and no engineering speed-up of the screen path either.
+
+**8. Operations.** The automatic dead-man re-base stays disabled. Reports go out at charged 110 and 120, on any R8
+record, on any halt and when E2 is done. On any further halt, the report also states the total spent so far on
+relaunch overhead.
