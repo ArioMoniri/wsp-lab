@@ -68,7 +68,7 @@ The diagnosis used CPU only and read only timing, ledger and R-cache fields, the
 - A `lora_tv` primitive touches **16 weight tensors** (64 distinct per episode). A `steer` or `proj_remove` primitive touches 1 (6 distinct per episode).
 - R(E) is cached per tensor and per exact action set on it, so `lora_tv` compositions multiply the misses: 3,168 against 137, and 480 s of GPU contraction against 23 s.
 - Each dev evaluation applies the bundle and measures displacement norms over 16–64 large tensors, so evaluations take about twice as long (870 s against 443 s for 48).
-- The planner's CPU time and the P2 memos are unchanged. Host contention was not involved: the planner runs on the instance and the GPU was busy throughout.
+- The planner's CPU time outside the R-cache is unchanged (about 155 s), so the P2 memos are not the cause. The planner runs on the instance; the controller host's load does not enter the unit time. GPU utilisation for this window cannot be checked: the local heartbeat records hold only liveness, and the instance-side samples were lost with the terminated instance. The whole difference is accounted for by the two GPU terms above.
 
 **Prediction for the other arms on `lora_tv` episodes.** Each arm's ep 00/01 time splits into evaluations, R-cache and the rest. On `lora_tv` episodes, evaluations scale by 870.4 / 442.6, and R(E)-using arms add the R-cache seconds observed for `lora_tv`. The model reproduces `wm_e:02` (1,506 s predicted, 1,524.3 s observed).
 - `statnn`: about 1,520 s. `field_ranked`: about 1,440–1,454 s. Both are above the unchanged 1,364.7 s limit.
