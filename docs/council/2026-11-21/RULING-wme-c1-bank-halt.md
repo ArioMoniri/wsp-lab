@@ -481,3 +481,76 @@ both citing this addendum, are written before any further E2 data.
   `phasel-main --resume`, `repair-field`, the key check, a fresh `verify-e2`, then `run --stages e2,…`.
 - No cap raise beyond 128.386 is authorised. Any further raise, or a projection above the cap, means stop and report
   first.
+
+## Addendum 14 (24 Nov 2026): run14, the R9.2 stop at `e2:wm_e:02`; re-pricing `lora_tv` episodes; cap tripwires withdrawn
+
+**Input.** `docs/reviews/wme/wme-c1-run-stop-e2-r92-wm_e02-2026-11-24.md`, with its $0 diagnosis, on branch
+`run/wme-c1-run14` at commits `6f32b2e`, `931be75` and `79ee0d4`.
+
+**1. Reading of R9.2.** The stop stands under the stricter per-unit reading (§II.13 item 9: "a measured unit rate").
+`e2:wm_e:02` took 1,524.3 s, which is 1.68 × its re-priced estimate of 909.8 s and above the limit of 1,364.7 s.
+Addendum 10 and §II.31.14 ("any arm's measured rate") would allow an arm-mean reading. On that reading `wm_e`
+averages 1,143 s over its three units (1.26 ×), or 1.18 × over the post-memo units alone, and would not have breached.
+The laxer reading is not adopted after seeing the timings.
+
+**2. Diagnosis (accepted): legitimate workload variation, not a defect.** Episode 02 is a `lora_tv` episode, as are
+episodes 2, 5, 8, 11, 14, 17, 20 and 23. Each of its primitives touches 16 weight tensors instead of 1. The R(E)
+cache misses rose from 137 to 3,168, with 480 s of GPU contraction instead of 23 s, and the dev evaluations took
+about twice as long (870 s against 443 s). Planner CPU time and the P2 memos are unchanged.
+
+**3. Re-pricing (supersedes item 3 of the earlier draft of this ruling).**
+- On `lora_tv` episodes only, `wm_e`, `statnn`, `field_ranked` and `direct_bon_two_stage` get a unit estimate of
+  1,524.3 s and an R9.2 limit of 2,286.5 s. That is 31 remaining units: `wm_e` 7, `statnn` 8, `field_ranked` 8,
+  `direct_bon_two_stage` 8.
+- Every other arm, and these four arms on `steer` and `proj_remove` episodes, keeps 909.8 s and 1,364.7 s.
+- For `statnn`, `field_ranked` and `direct_bon_two_stage` this rests on the workload model, not on a measured
+  breach. The model was checked against one unit (`wm_e:02`: 1,506 s predicted, 1,524.3 s observed).
+- This changes timing only. It is held in the operator watch (no `src/` change); the log-level phase price, the
+  1.25 × PhasePause and the cap are unchanged.
+
+**4. Projection and tripwires.**
+- The P4-rule projection with the `lora_tv` re-price and one relaunch, which is already in the overhead term and is
+  counted once, is **128.593 GPU-h-eq**:
+  - charged 39.517;
+  - re-priced remainder 80.366;
+  - `lora_tv` excess 31 × 614.5 s = 5.292;
+  - overheads 3.418, which is the registered P4 rule recomputed on the ledger (the last three launches now include
+    run13 and run14).
+- That exceeded the chair's projection gate by 0.207. The overhead value was not substituted and no estimate was
+  lowered to fit.
+- The chair's launch gate ("projection ≤ cap") and tripwire D(ii) ("charged + remaining above the cap means stop")
+  are **withdrawn**, together with the claim that reaching the cap would by itself abort the study. Reason: after the
+  one-shot P4 raise, §II.31.8 D1 leaves R8 as the only raise mechanism. R8 is mechanical: it applies when
+  `CapExceeded` would fire and (charged + priced remainder) × 5.379 ≤ $1,000. It leaves no room for a discretionary
+  raise or refusal. A chair gate that stopped short of R8 conflicted with it.
+- Launching is allowed: charged (39.517) is far below the cap.
+
+**5. Checks on a copy of the study log (no write to the real log).**
+- At charged 128.0, `check_before` records an R8 cap generation instead of raising `CapExceeded`. The new cap is
+  128.386 + 1.25 × the priced remainder.
+- The priced remainder covers the guard's priced phases: bank, confirmatory (with its reprice record) and S-TE.
+  S-BoN counts only inside the S-BoN stage's process. The `lora_tv` re-price is not included.
+- Examples: remainder 30.99 gives a cap of 167.13; 4.99 gives 134.63; 0.85 gives 129.44; 0 gives `CapExceeded`
+  (O1). The absolute ceiling is 185.9.
+- The dead-man's limits are set at launch from the cap in force. After an R8 raise it would terminate the instance
+  about 0.75 h later (its instance-hour and dollar limits equal the old cap) unless it is re-based. The operator
+  watch therefore re-bases it on any new cap generation, with the same rule `up` uses: `tighten` with the new
+  allowance and cap generation, then restart the watcher on the new cap, with clean ticks verified.
+
+**6. Notifications and halts.**
+- Report when charged first passes 110 and again at 120, with the projection. This is a notification only, not a
+  gate.
+- Report any R8 record immediately. The $1,000 ceiling (185.9) is absolute.
+- Tripwire D(i) stays as an ordinary halt: any further R9.2 or incident halt is reported as usual.
+
+**7. `e2:statnn:02`** (seq 3082) was in flight at the stop and has no payload. As in addendum 13, the conservative
+count is kept: 1 of 3 attempts used, and no new write path.
+
+**8.** `e2:wm_e:02`'s payload stays eligible. Nothing is redrawn.
+
+**9. Operator changes (no `src/` change).**
+- The watch is polled every ~30 s with the per-arm, per-family limits. It was unit-tested on the ledger: under the
+  old limits it flags exactly `wm_e:02`; under the new limits it flags none.
+- The launch gate's full output is written outside the repository (`ctl_gate_tee.py`).
+- Residual risk: any stop still lands mid-unit and burns that unit's attempt, because stopping between units needs
+  a `src/` change.

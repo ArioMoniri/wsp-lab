@@ -4491,3 +4491,25 @@ The pass is logged as an `e2_speedup_verified` record, and E2 is not issued with
 
 **Unchanged.** No claim, test, α, N, margin, seed, arm, budget, item, planner rule or stopping rule changes. The
 absolute $1,000 limit and R8 still apply.
+
+### II.31.15 Note (24 Nov 2026): R9.2 per-unit reading; E2 re-pricing on `lora_tv` episodes (engineering, outcome-blind)
+
+**Status.** This note is recorded before any sealed read; no confirmatory result exists yet. It records
+`docs/council/2026-11-21/RULING-wme-c1-bank-halt.md` addendum 14 (input:
+`docs/reviews/wme/wme-c1-run-stop-e2-r92-wm_e02-2026-11-24.md`).
+
+**R9.2 reading.** R9.2 applies per unit: "a measured unit rate" (§II.13 item 9). `e2:wm_e:02` took 1,524.3 s against
+its re-priced limit of 1,364.7 s, and E2 stopped. The arm-mean reading that §II.31.14's wording would allow (1.26 ×)
+was not adopted after the timings were seen.
+
+**Re-pricing (timing only).**
+- On the eight `lora_tv` episodes (2, 5, 8, 11, 14, 17, 20, 23), the E2 unit estimate of `wm_e`, `statnn`,
+  `field_ranked` and `direct_bon_two_stage` is 1,524.3 s, so their R9.2 limit is 2,286.5 s.
+- Every other arm, and these four arms on the other episodes, keeps 909.8 s and 1,364.7 s.
+- The basis is the observed `lora_tv` unit `e2:wm_e:02` (ledger seconds, after the memos). A `lora_tv` primitive
+  touches 16 weight tensors, so R(E) contraction and dev evaluations cost more.
+- For `statnn`, `field_ranked` and `direct_bon_two_stage` this rests on a workload model, not on a measured breach;
+  the model was checked against that one unit.
+
+**Unchanged.** No claim, test, α, N, margin, seed, arm, budget, item, episode order, planner rule or stopping rule
+changes. The log-level phase prices, the 1.25 × phase pause, the cap (128.386, P4) and R8 are unchanged.
