@@ -554,3 +554,25 @@ count is kept: 1 of 3 attempts used, and no new write path.
 - The launch gate's full output is written outside the repository (`ctl_gate_tee.py`).
 - Residual risk: any stop still lands mid-unit and burns that unit's attempt, because stopping between units needs
   a `src/` change.
+
+### Addendum 14, correction (24 Nov 2026, appended during run15)
+
+Item 5 of addendum 14 is completed and corrected as follows. These are the R8 facts established on copies of the
+study log before run15.
+- At charged 128.0 (charged + 0.75 > cap), `check_before` records an R8 cap generation instead of raising
+  `CapExceeded`. The new cap is the previous cap + 1.25 × the priced remainder, never beyond 185.9 GPU-h-eq.
+- **When the priced remainder is 0 (O1), there is no raise and `check_before` raises `CapExceeded`.** This was
+  reproduced with confirmatory and S-TE both measured above their prices.
+- R8's priced remainder is Σ max(0, re-priced price − measured) over the priced phases of the guard in use: bank,
+  confirmatory (with its `reprice` record) and S-TE. S-BoN is included only inside the S-BoN stage's process, where
+  `set_sbon_price` runs. **The `lora_tv` re-price of addendum 14 item 3 is not in R8's remainder:** it is held only
+  in the operator watch, and no log record carries it.
+- Examples on copies at charged 128.0: remainder 30.99 → cap 167.13; 4.99 → 134.63; 0.85 → 129.44; 0 →
+  `CapExceeded`.
+- The dead-man's limits are set at launch from the cap in force. After an R8 raise it would terminate the instance
+  about 0.75 h later unless it is re-based.
+- Addendum 14 item 5's statement that "the operator watch therefore re-bases it on any new cap generation" is
+  **withdrawn**. By the run15 ruling (item 2) the automatic re-base is disabled until it is tested and approved. On
+  an R8 record the operator re-bases by hand with the P4 procedure; otherwise the dead-man terminating the instance
+  is the accepted safe failure. The launch of run15 despite that report-first condition is recorded as a deviation
+  in the run15 evidence.
