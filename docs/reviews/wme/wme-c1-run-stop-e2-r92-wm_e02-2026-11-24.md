@@ -53,3 +53,28 @@ The run used a fresh clean checkout of `eeb324d` (merged main: v3c and addendum 
 - Charged 39.517 GPU-h-eq ($212.56 at the ledger convention). Dead-man: 32.10 instance-hours, $191.76. Confirmatory measured unit time: 4.538 GPU-h.
 - Cap 128.386 (generation 1, P4); no further raise. No `wsp-wme-c1` instance is live.
 - **Projection (P4 rule):** charged 39.517 + re-priced remainder 80.366 + overheads 3.046 = **122.93 GPU-h-eq**, under the cap.
+
+## Addendum (24 Nov 2026): $0 diagnosis of `wm_e` 621.5 s (ep 01) against 1,524.3 s (ep 02)
+
+The diagnosis used CPU only and read only timing, ledger and R-cache fields, the registered library index and the construction library. No outcome field was read and no planner code was changed.
+
+| unit | unit time | dev evals (48) | R-cache GPU seconds (misses) | planner CPU outside the R-cache |
+|---|---|---|---|---|
+| `wm_e:01` | 621.5 s | 442.6 s | 23.2 s (137) | about 155 s |
+| `wm_e:02` | 1,524.3 s | **870.4 s** | **480.4 s (3,168)** | about 156 s |
+
+**Cause: legitimate workload variation by primitive family (registered episode design), not a defect.**
+- The 24 episodes cycle through three families: `steer`, `proj_remove`, `lora_tv`. Episodes 2, 5, 8, 11, 14, 17, 20 and 23 are `lora_tv`.
+- A `lora_tv` primitive touches **16 weight tensors** (64 distinct per episode). A `steer` or `proj_remove` primitive touches 1 (6 distinct per episode).
+- R(E) is cached per tensor and per exact action set on it, so `lora_tv` compositions multiply the misses: 3,168 against 137, and 480 s of GPU contraction against 23 s.
+- Each dev evaluation applies the bundle and measures displacement norms over 16–64 large tensors, so evaluations take about twice as long (870 s against 443 s for 48).
+- The planner's CPU time and the P2 memos are unchanged. Host contention was not involved: the planner runs on the instance and the GPU was busy throughout.
+
+**Prediction for the other arms on `lora_tv` episodes.** Each arm's ep 00/01 time splits into evaluations, R-cache and the rest. On `lora_tv` episodes, evaluations scale by 870.4 / 442.6, and R(E)-using arms add the R-cache seconds observed for `lora_tv`. The model reproduces `wm_e:02` (1,506 s predicted, 1,524.3 s observed).
+- `statnn`: about 1,520 s. `field_ranked`: about 1,440–1,454 s. Both are above the unchanged 1,364.7 s limit.
+- `direct_bon_two_stage`: about 1,355–1,369 s, at the limit.
+- All other arms: about 840–1,010 s.
+
+A re-pricing of `wm_e` alone would therefore most likely stop E2 again at the next unit, `e2:statnn:02`.
+
+**In-flight attempt.** `e2:statnn:02` (seq 3082): no payload, no outcome. It is kept on the conservative count (addendum 13), with 1 of 3 attempts used.
