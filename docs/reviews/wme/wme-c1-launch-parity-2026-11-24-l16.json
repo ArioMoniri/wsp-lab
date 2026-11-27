@@ -1,0 +1,591 @@
+{
+ "code_identity": {
+  "bundle_sha256": "3d957a5ad0e1dd297a5d4e7f772fd7c14dd6deecbe3fd3bf82586220340c4610",
+  "controller_commit": "41a9a9f53c2b3337b22e95c0dbe2d97adbfb40c0",
+  "controller_tree_clean": true,
+  "pass": true,
+  "worker_code_sha": "41a9a9f53c2b3337b22e95c0dbe2d97adbfb40c0"
+ },
+ "driver": {
+  "binding_test": "the canary comparison with the committed references (a driver difference alone is not a stop)",
+  "gpu_names": [
+   "NVIDIA H100 80GB HBM3",
+   "NVIDIA H100 80GB HBM3"
+  ],
+  "parity_instance": null,
+  "same_as_parity": null,
+  "version": "570.148.08"
+ },
+ "engine_config": {
+  "canary": {
+   "gen_items": "wme-p3h holdout mmlupro_gen first 64",
+   "tf_items": "wme-p2 construction, 16 per objective by id, 7 objectives",
+   "vllm_tokens": 2048
+  },
+  "field": {
+   "deterministic": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8 (process-wide, set before the first CUDA call)",
+    "attention": "SDPA math backend only (flash, memory-efficient and cuDNN attention off); model attn_implementation in ['sdpa', 'eager']",
+    "cudnn": {
+     "benchmark": false,
+     "deterministic": true
+    },
+    "linear_attention": "transformers torch path (no fla / causal_conv1d / kernels-hub function bound)",
+    "scope": "inside wm.collect.collect_grouped (field groups) and wm.vocabfield.collect_vocab_rows (vocabulary rows) only; kept-factor eigendecompositions, every other unit kind and every engine keep their registered settings",
+    "torch.use_deterministic_algorithms": {
+     "mode": true,
+     "warn_only": false
+    }
+   },
+   "mode": "deterministic",
+   "ruling": "docs/council/2026-11-21/RULING-wme-c1-bank-halt.md addendum 4 (T4 item 1)"
+  },
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "hf_generate": {
+   "batch": 128,
+   "canary": {
+    "batch": 128,
+    "max_new_tokens": 128
+   },
+   "engine": {
+    "amendment": "PREREG_WME \u00a7II.31 (v2l)",
+    "batch": 128,
+    "deterministic": {
+     "CUBLAS_WORKSPACE_CONFIG": ":4096:8 (process-wide, set before the first CUDA call)",
+     "attention": "SDPA math backend only (flash, memory-efficient and cuDNN attention off); model attn_implementation in ['sdpa', 'eager']",
+     "cudnn": {
+      "benchmark": false,
+      "deterministic": true
+     },
+     "linear_attention": "transformers torch path (no fla / causal_conv1d / kernels-hub function bound)",
+     "scope": "inside each HF generate call; teacher-forced evaluation unchanged",
+     "torch.use_deterministic_algorithms": {
+      "mode": true,
+      "warn_only": false
+     }
+    },
+    "engine": "hf generate (wm.genaudit, unchanged)",
+    "greedy": true,
+    "max_new_tokens": 128,
+    "mode": "hf_deterministic",
+    "non_thinking": true,
+    "order": "file order; contiguous chunks of 128 (the last the remainder); one generate call per chunk",
+    "padding": "left",
+    "sampled_audit": "T 0.7, top-p 1.0, gen.sampled_seeds",
+    "stop": [
+     "eos",
+     "<|im_end|>"
+    ]
+   },
+   "greedy": true,
+   "max_new_tokens": {
+    "sycophancy": 128
+   },
+   "non_thinking": true,
+   "padding": "left"
+  },
+  "lock_sha256": "6869dd7209c1ab8bc122d7d98fb3d1ad20bf871bc67cc626fb5de3111276467f",
+  "model": "Qwen/Qwen3.5-9B@c202236235762e1c871ad0ccb60c8ee5ba337b9a",
+  "teacher_forced": {
+   "dtype": "bf16",
+   "panel_config": "wm.panel.PanelConfig() defaults (window 256, max_batch_tokens 16384)"
+  },
+  "theta0": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+  "vllm": {
+   "dtype": "bfloat16",
+   "enable_prefix_caching": false,
+   "engine": {
+    "gpu_memory_utilization": 0.88,
+    "max_model_len": 8192,
+    "max_num_seqs": 256
+   },
+   "seed": 0
+  }
+ },
+ "engine_config_sha256": "b98713ec2ff3ad38ac615307633648ec0b43420635d576f91fd6a945a8a772f8",
+ "evaluation": {
+  "active_engine": "hf_deterministic",
+  "inputs": {
+   "C": 128.38556600612085,
+   "G_E1": 0.5453724910815557,
+   "S_L": 45.38649106562137,
+   "hf_gen_gpu0": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+   "hf_gen_gpu1": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+   "inert_hf": {
+    "pass": true,
+    "rows": 5
+   },
+   "repeat_hashes": [
+    "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec"
+   ],
+   "t_det_median_s": 19.979429244995117,
+   "t_reg_s": 18.920802354812622
+  },
+  "other_preconditions": {
+   "inert_identity_pass": true,
+   "tf_canary_gpu0_eq_gpu1": true,
+   "tf_chunks_1_vs_2_gpu_bitwise": true,
+   "tf_gpu0_vs_gpu1_every_chunk_bitwise": true,
+   "vllm_gpu0_eq_gpu1": true
+  },
+  "pass_rule": {
+   "gpu0_eq_gpu1": true,
+   "hf_gen_eq_committed": true,
+   "inert_hf_bitwise": true,
+   "pass": true,
+   "repeat_3_of_3": true
+  },
+  "proceed": true,
+  "selected_engine": "hf_deterministic",
+  "selection": {
+   "a_fails_pass_rule": false,
+   "cap": 128.38556600612085,
+   "delta_e1_gpu_h": 0.03051382142247774,
+   "engine": "hf_deterministic",
+   "projection_without_delta": 131.38649106562139,
+   "throughput_breach": false,
+   "throughput_ratio": 1.0559504227321115
+  }
+ },
+ "gate": {
+  "command": "CUDA_VISIBLE_DEVICES= python -m pytest -q tests/test_wme_c1_*.py tests/test_wme_runguard.py tests/test_wme_runguard_property.py tests/test_wm_harness.py",
+  "counts": {
+   "deselected": 1,
+   "passed": 314,
+   "skipped": 1
+  },
+  "exit_code": 0,
+  "files": [
+   "tests/test_wm_harness.py",
+   "tests/test_wme_c1_analysis.py",
+   "tests/test_wme_c1_fit.py",
+   "tests/test_wme_c1_genops.py",
+   "tests/test_wme_c1_rpc.py",
+   "tests/test_wme_c1_shards.py",
+   "tests/test_wme_c1_v2l.py",
+   "tests/test_wme_c1_v2n.py",
+   "tests/test_wme_c1_v2o.py",
+   "tests/test_wme_c1_v2p.py",
+   "tests/test_wme_c1_v2q.py",
+   "tests/test_wme_c1_v2r.py",
+   "tests/test_wme_c1_v2s.py",
+   "tests/test_wme_c1_v2t.py",
+   "tests/test_wme_c1_v2u.py",
+   "tests/test_wme_c1_v2v.py",
+   "tests/test_wme_c1_v2w.py",
+   "tests/test_wme_c1_v2x.py",
+   "tests/test_wme_c1_v2y.py",
+   "tests/test_wme_c1_v2z.py",
+   "tests/test_wme_c1_v3a.py",
+   "tests/test_wme_c1_v3b.py",
+   "tests/test_wme_c1_v3c.py",
+   "tests/test_wme_runguard.py",
+   "tests/test_wme_runguard_property.py"
+  ],
+  "pass": true
+ },
+ "gen_repeat": {
+  "child": true,
+  "deterministic": [
+   {
+    "seconds": 20.938323974609375,
+    "sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec"
+   },
+   {
+    "seconds": 19.979429244995117,
+    "sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec"
+   },
+   {
+    "seconds": 19.963284730911255,
+    "sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec"
+   }
+  ],
+  "engine": {
+   "amendment": "PREREG_WME \u00a7II.31 (v2l)",
+   "batch": 128,
+   "deterministic": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8 (process-wide, set before the first CUDA call)",
+    "attention": "SDPA math backend only (flash, memory-efficient and cuDNN attention off); model attn_implementation in ['sdpa', 'eager']",
+    "cudnn": {
+     "benchmark": false,
+     "deterministic": true
+    },
+    "linear_attention": "transformers torch path (no fla / causal_conv1d / kernels-hub function bound)",
+    "scope": "inside each HF generate call; teacher-forced evaluation unchanged",
+    "torch.use_deterministic_algorithms": {
+     "mode": true,
+     "warn_only": false
+    }
+   },
+   "engine": "hf generate (wm.genaudit, unchanged)",
+   "greedy": true,
+   "max_new_tokens": 128,
+   "mode": "hf_deterministic",
+   "non_thinking": true,
+   "order": "file order; contiguous chunks of 128 (the last the remainder); one generate call per chunk",
+   "padding": "left",
+   "sampled_audit": "T 0.7, top-p 1.0, gen.sampled_seeds",
+   "stop": [
+    "eos",
+    "<|im_end|>"
+   ]
+  },
+  "registered": {
+   "seconds": 18.920802354812622,
+   "sha256": "470b8eda0bece3bbf1d2b08a5744e9e9c9ed60a09f70a71b22d65fb4a884c94f"
+  },
+  "repeat_bitwise": true,
+  "t_det_median_s": 19.979429244995117,
+  "throughput_ratio": 1.0559504227321115
+ },
+ "hello": {
+  "code_sha": "41a9a9f53c2b3337b22e95c0dbe2d97adbfb40c0",
+  "cublas_workspace_config": ":4096:8",
+  "gen_engine": {
+   "amendment": "PREREG_WME \u00a7II.31 (v2l)",
+   "batch": 128,
+   "deterministic": {
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8 (process-wide, set before the first CUDA call)",
+    "attention": "SDPA math backend only (flash, memory-efficient and cuDNN attention off); model attn_implementation in ['sdpa', 'eager']",
+    "cudnn": {
+     "benchmark": false,
+     "deterministic": true
+    },
+    "linear_attention": "transformers torch path (no fla / causal_conv1d / kernels-hub function bound)",
+    "scope": "inside each HF generate call; teacher-forced evaluation unchanged",
+    "torch.use_deterministic_algorithms": {
+     "mode": true,
+     "warn_only": false
+    }
+   },
+   "engine": "hf generate (wm.genaudit, unchanged)",
+   "greedy": true,
+   "max_new_tokens": 128,
+   "mode": "hf_deterministic",
+   "non_thinking": true,
+   "order": "file order; contiguous chunks of 128 (the last the remainder); one generate call per chunk",
+   "padding": "left",
+   "sampled_audit": "T 0.7, top-p 1.0, gen.sampled_seeds",
+   "stop": [
+    "eos",
+    "<|im_end|>"
+   ]
+  },
+  "global_state": {
+   "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+   "cudnn_benchmark": false,
+   "cudnn_deterministic": false,
+   "deterministic_algorithms": false,
+   "sdp": {
+    "cudnn": true,
+    "flash": true,
+    "math": true,
+    "mem_efficient": true
+   },
+   "warn_only": false
+  },
+  "load_s": 11.176173448562622,
+  "physical": {
+   "driver": "570.148.08",
+   "gpu_names": [
+    "NVIDIA H100 80GB HBM3",
+    "NVIDIA H100 80GB HBM3"
+   ],
+   "gpu_uuid_sha256": [
+    "a8aeafa38822eb16142c255ed8cb453d9a6bf79ea6232acd0741daf95341bb16",
+    "8faa166de1b2f92ed7d38b94f9b484e22b1a9acbd97de90c42179aac61bfa31d"
+   ],
+   "machine_id_sha256": "00dbbc81f8db2e59170d9d71b38ad71ae85e6ac109b136cb37dca784158c593b"
+  },
+  "repo": "Qwen/Qwen3.5-9B",
+  "smoke": false,
+  "theta0": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+  "versions": {
+   "cuda": "13.0",
+   "gpu": [
+    "NVIDIA H100 80GB HBM3",
+    "NVIDIA H100 80GB HBM3"
+   ],
+   "numpy": "2.3.5",
+   "python": "3.12.16",
+   "torch": "2.14.0+cu130",
+   "transformers": "5.22.2",
+   "vllm": "0.34.0"
+  }
+ },
+ "inert_identity": {
+  "base": {
+   "hf_gen": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+   "tf": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b"
+  },
+  "n_constructions": 8,
+  "pass": true,
+  "rows": [
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "kind": "i1",
+     "shape": "2step",
+     "tensors": [
+      [
+       16,
+       "down"
+      ]
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+    "theta_is_base": true
+   },
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "kind": "i1",
+     "shape": "4step",
+     "tensors": [
+      [
+       8,
+       "down"
+      ],
+      [
+       19,
+       "o"
+      ]
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "61988209d457878bc4d617ac09701f0f2687d1f3ee7cacc0e722e1bf18fb1fc5",
+    "theta_is_base": true
+   },
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "factor": 1.5,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "05512b74423a7768c94c16a8ae5dff88d98dedf46bc0091e90e83e5ea0455b91",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "factor": 0.5,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "4a454a27e73a6065a800c415241966809d85751aa61d3409cfcad20fd9a6f112",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": true,
+    "hf_sha256": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+    "spec": {
+     "factor": -1.0,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "a12dfb980c2f0eb5bb1558009b4ea68cbfd376f7b7e32fd3debb0d741385350b",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": null,
+    "hf_sha256": null,
+    "spec": {
+     "index": 0,
+     "kind": "comp"
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "a291de2e7b558ace3a2b66ce7983cd351fa55cbc6fa56f6583d8d40e2484b75a",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": null,
+    "hf_sha256": null,
+    "spec": {
+     "index": 1,
+     "kind": "comp"
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "3b093977a4dfb40c0271480fd66912870459447be952999997f4a9e66216d11e",
+    "theta_is_base": false
+   },
+   {
+    "hf_bitwise_base": null,
+    "hf_sha256": null,
+    "spec": {
+     "index": 2,
+     "kind": "comp"
+    },
+    "tf_bitwise_base": true,
+    "tf_sha256": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b",
+    "theta_hash": "6a3c2ff83c1d7422fd0784c4929d81688bb1fbbda342cb6e47c8402cda1e4376",
+    "theta_is_base": false
+   }
+  ],
+  "vllm_rows": [
+   {
+    "spec": {
+     "kind": "i1",
+     "shape": "2step",
+     "tensors": [
+      [
+       16,
+       "down"
+      ]
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   },
+   {
+    "spec": {
+     "kind": "i1",
+     "shape": "4step",
+     "tensors": [
+      [
+       8,
+       "down"
+      ],
+      [
+       19,
+       "o"
+      ]
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   },
+   {
+    "spec": {
+     "factor": 1.5,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   },
+   {
+    "spec": {
+     "factor": 0.5,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   },
+   {
+    "spec": {
+     "factor": -1.0,
+     "kind": "i2",
+     "rows": [
+      248077,
+      248320
+     ]
+    },
+    "vllm_bitwise_base": true,
+    "vllm_sha256": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+   }
+  ]
+ },
+ "instance": "lambda:cfc3ebab395f4f049377d5d1d7d80377",
+ "label": "wme-c1 Phase L re-run: preconditions 1-2 and the \u00a7II.31 pass rule / selection on a 2-GPU check instance; exposed engineering items only",
+ "parity": {
+  "canary_gpu0": {
+   "hf_gen": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+   "tf": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b"
+  },
+  "canary_gpu0_eq_gpu1": {
+   "hf_gen": true,
+   "tf": true
+  },
+  "canary_gpu1": {
+   "hf_gen": "7299ac4f37f4af0d5b057b76907ad9bd6325571c11763f0fc11ecb35232b61ec",
+   "tf": "86a8c5594676f88ef1d4f23b618e3f8987f65cc265fe7c9ddc0c19524850893b"
+  },
+  "chunks_k1": {
+   "0": "9b86b6ab9df2609eb88e21dcfb3be135793450c97648dc35aa6a3946a5d35404",
+   "1": "21895dbff3820ecd8c321819bc2d9c04d18cf7588dabee543ce4a2f94b97c2d5",
+   "2": "0d7ba00601d35f08ed1cd5daaa382349499167c975666c469006a18f7fe5d9e1",
+   "3": "bff24019fe50d165fa86c21a71a016ce2216ca91e857492d868d1b8f0aef21ef",
+   "4": "91bb85b649332bef59cf46a857d0d41cdda1d243e7d20224fdfff302355ea834",
+   "5": "344cb84d9a11bec6708a471fe0aeacb339ea24a3954c8f043f8f50136b55052d",
+   "6": "06b04cd842e69ad18b6d6ac8ae905567c8653110910c57579d995cfad1fbf70f"
+  },
+  "chunks_k2": {
+   "0": "9b86b6ab9df2609eb88e21dcfb3be135793450c97648dc35aa6a3946a5d35404",
+   "1": "21895dbff3820ecd8c321819bc2d9c04d18cf7588dabee543ce4a2f94b97c2d5",
+   "2": "0d7ba00601d35f08ed1cd5daaa382349499167c975666c469006a18f7fe5d9e1",
+   "3": "bff24019fe50d165fa86c21a71a016ce2216ca91e857492d868d1b8f0aef21ef",
+   "4": "91bb85b649332bef59cf46a857d0d41cdda1d243e7d20224fdfff302355ea834",
+   "5": "344cb84d9a11bec6708a471fe0aeacb339ea24a3954c8f043f8f50136b55052d",
+   "6": "06b04cd842e69ad18b6d6ac8ae905567c8653110910c57579d995cfad1fbf70f"
+  },
+  "gpu0_vs_gpu1_every_chunk_bitwise": true,
+  "gpu1_seconds": 170.71517086029053,
+  "parity_bitwise": true,
+  "vllm_gpu0": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896",
+  "vllm_gpu0_eq_gpu1": true,
+  "vllm_gpu1": "b34cc04e97b4d243191b9a9009f30d75bddb2e1ce5d1674c16f9e5deddf1e896"
+ },
+ "worker_global_state": {
+  "expected": {
+   "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+   "cudnn_benchmark": false,
+   "cudnn_deterministic": false,
+   "deterministic_algorithms": false,
+   "sdp": {
+    "cudnn": true,
+    "flash": true,
+    "math": true,
+    "mem_efficient": true
+   },
+   "warn_only": false
+  },
+  "got": {
+   "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+   "cudnn_benchmark": false,
+   "cudnn_deterministic": false,
+   "deterministic_algorithms": false,
+   "sdp": {
+    "cudnn": true,
+    "flash": true,
+    "math": true,
+    "mem_efficient": true
+   },
+   "warn_only": false
+  },
+  "pass": true
+ }
+}
