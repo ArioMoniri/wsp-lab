@@ -643,3 +643,78 @@ attempt. No `src/` change is made, and no engineering speed-up of the screen pat
 **8. Operations.** The automatic dead-man re-base stays disabled. Reports go out at charged 110 and 120, on any R8
 record, on any halt and when E2 is done. On any further halt, the report also states the total spent so far on
 relaunch overhead.
+
+## Addendum 16 (27 Nov 2026): run16, the R9.2 stop at `e2:field_ranked:05`; mechanical re-pricing replaces the stop
+
+**Input.** `docs/reviews/wme/wme-c1-run-stop-e2-r92-fr05-2026-11-24.md`, on branch `run/wme-c1-run16` at commit
+`317639c`.
+
+**1. The stop and its diagnosis are accepted.** `e2:field_ranked:05` took 1,638.8 s, against its addendum-15 limit
+of 1,413.6 s. Its R(E) cache reached 6,880 misses (840.6 s), against 496 (64.9 s) on episode 02. The unit stays
+eligible and nothing is redrawn.
+
+Attempts of the units with a start that has no outcome (conservative count, generation 1):
+
+| unit | start without outcome | counted | left |
+|---|---|---|---|
+| `e2:random:00` | seq 2705 | 3 | 0 (eligible) |
+| `e2:statnn:02` | seq 3082 | 2 | 1 (eligible) |
+| `e2:bon_steering:02` | seq 3217 | 2 | 1 (eligible) |
+| `e2:scripted_reader:05` | seq 3508 | 1 | 2 (to run) |
+
+**2. Diagnosis of the pattern.**
+- On `lora_tv` episodes, per-unit E2 time depends on which tensor combinations the episode's primitives reach (the
+  R-cache misses). No per-arm price fixed in advance is stable.
+- Five stops have cost **14.090 GPU-h-eq** of relaunch overhead plus burned attempts: the run10 rate stop, then
+  `wm_e:02` (run14), `direct_bon_two_stage:02` (run15) and `field_ranked:05` (run16). Meanwhile aggregate E2 cost
+  runs near or under its price.
+- The stop-on-breach rule is a chair rule (addendum 10 P3: "E2 stops again"), not frozen text. §II.13 item 9
+  requires a measured rate above 1.5 × to be re-priced by dated amendment before the data it governs. It does not
+  require a stop.
+
+**3. New rule for the rest of E2.** This replaces the addendum-10 stop. It is outcome-blind and concerns timing
+only: no claim, α, N, margin, arm, budget, item, order or stopping-rule change for the claims.
+- **a. Mechanical re-price, no stop.** When a completed unit exceeds 1.5 × its current estimate, its arm's estimate
+  for the remaining episodes of the same family (`steer`, `proj_remove` or `lora_tv`) becomes max(current estimate,
+  that unit's seconds). The watch writes this as a dated, sha256-chained, append-only record in an operator evidence
+  file outside the live checkout (`~/wme-c1-ops/reprice/records.jsonl`), before the next unit of that arm starts.
+  The pre-authorisation is this addendum. If the record cannot be written and verified, the watch stops the chain:
+  it fails closed.
+- **b. Defect stop kept.** Any unit above 4 × its current estimate, or above 3 h of wall time, still stops E2 and is
+  reported.
+- **c. Cost controls unchanged and binding:** the cap in force, R8, the $1,000 ceiling, the 1.25 × PhasePause and
+  the dead-man.
+- **d.** Every re-price record is committed with the run evidence at the next boundary, and listed in the E2-done
+  report with the per-arm estimates.
+
+**4. Test on the ledger (before launch).** Replaying the recorded units under the estimates in force when each ran
+produces **re-price records, not stops**, for exactly the three units named, and stops on nothing:
+
+| n | unit | family | estimate before | limit before | unit seconds | estimate after |
+|---|---|---|---|---|---|---|
+| 0 | `e2:wm_e:02` | `lora_tv` | 909.8 s | 1,364.7 s | 1,524.3 s | 1,524.3 s |
+| 1 | `e2:direct_bon_two_stage:02` | `lora_tv` | 1,524.3 s | 2,286.5 s | 4,892.7 s | 4,892.7 s |
+| 2 | `e2:field_ranked:05` | `lora_tv` | 942.4 s | 1,413.6 s | 1,638.8 s | 1,638.8 s |
+
+The estimates in force were: addendum 10 for `wm_e:02`, addendum 14 for the rest of episode 02, addendum 15 for
+episodes 5–23, and 909.8 s on `steer` and `proj_remove` episodes. These three records are the start of the live
+record file.
+
+Further tests on synthetic inputs:
+- a broken record chain fails closed (exit 5);
+- a unit above 4 × is a defect stop, with no record written;
+- a re-price applies to the same arm and family only, and is idempotent;
+- a write failure raises;
+- an in-flight unit above 3 h is a defect.
+
+**5. Projection.**
+- With the `field_ranked/lora_tv` re-price: **137.04 GPU-h-eq** without a launch, **139.72** with one relaunch.
+- The addendum-15 projection (138.55) is recorded as is.
+- No chair raise; R8 is the mechanism. The automatic dead-man re-base stays disabled.
+- Notifications at charged 110 and 120, on any R8 record, on any halt, and when E2 is done.
+
+**6. Reporting latency.**
+- The run16 stop was at 24 Nov 21:06:52Z. The instance was closed at 21:12:24Z and the stop report committed at
+  21:17:52Z. The report message went out at about 21:18–21:20Z.
+- A stall alarm is added: if the chain is stopped and no report has been marked sent within 30 min, an independent
+  waiter wakes the operator.

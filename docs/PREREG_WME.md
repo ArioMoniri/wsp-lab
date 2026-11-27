@@ -4536,3 +4536,26 @@ E2 under R9.2.
 **Unchanged.** No claim, test, α, N, margin, seed, arm, budget, item, episode order, planner rule or stopping rule
 changes. The log-level phase prices, the 1.25 × phase pause, the cap (128.386, P4) and R8 are unchanged. The
 P4-rule projection (137.03 GPU-h-eq) is recorded as is.
+
+### II.31.17 Note (27 Nov 2026): mechanical E2 re-pricing replaces the R9.2 stop for the rest of E2 (engineering, outcome-blind)
+
+**Status.** This note is recorded before any sealed read; no confirmatory result exists yet. It records
+`docs/council/2026-11-21/RULING-wme-c1-bank-halt.md` addendum 16.
+
+**Reading.** §II.13 item 9 requires a measured unit rate above 1.5 × its estimate to be re-priced by dated amendment
+before the data it governs; it does not require a stop. The stop-on-breach used since addendum 10 was a chair rule.
+On `lora_tv` episodes, per-unit time depends on which tensor combinations the episode's primitives reach, so no
+per-arm price fixed in advance is stable.
+
+**Rule for the rest of E2 (timing only).**
+- When a completed unit exceeds 1.5 × its current estimate, its arm's estimate for the remaining episodes of the
+  same family becomes max(current estimate, that unit's seconds).
+- This is written mechanically, before the next unit of that arm starts, as a dated, sha256-chained, append-only
+  operator record. That is the dated re-pricing §II.13 item 9 requires, pre-authorised by addendum 16. If the record
+  cannot be written, E2 stops: it fails closed.
+- A unit above 4 × its estimate, or above 3 h of wall time, stops E2 as a defect.
+- The re-price records are committed with the run evidence and listed in the E2-done report.
+
+**Unchanged.** No claim, test, α, N, margin, seed, arm, budget, item, episode order, planner rule or claims-level
+stopping rule changes. The cap in force (128.386), R8, the $1,000 ceiling, the 1.25 × phase pause and the dead-man
+are unchanged and binding.
